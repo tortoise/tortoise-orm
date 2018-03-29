@@ -122,4 +122,4 @@ class Tortoise:
                     related_model._meta.fields.add(backward_relation_name)
 
 
-__version__ = "0.1.0"
+__version__ = "0.1.2"
