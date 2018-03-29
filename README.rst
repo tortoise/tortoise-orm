@@ -70,15 +70,14 @@ Then you can start writing models like this:
         def __str__(self):
             return self.name
 
-Then in init part of your app you should init models like this
-make sure that you import your models before calling init):
+Then in init part of your app you should init models like this (make sure that you **import your models** before calling init):
 
 
 .. code-block:: python
 
     from tortoise.backends.asyncpg.client import AsyncpgDBClient
     from tortoise import Tortoise
-    from app import models
+    from app import models # without importing models Tortoise can't find and init them
 
 
     async def init():
