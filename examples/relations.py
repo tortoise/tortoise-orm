@@ -1,0 +1,87 @@
+import asyncio
+
+from examples import create_example_database
+from tortoise import Tortoise, fields
+from tortoise.backends.sqlite.client import SqliteClient
+from tortoise.exceptions import NoValuesFetched
+from tortoise.models import Model
+
+"""
+This example shows how relations between models work.
+
+Key points in this example are use of ForeignKeyField and ManyToManyField 
+to declare relations and use of .prefetch_related() and .fetch_related() 
+to get this related objects 
+"""
+
+
+class Tournament(Model):
+    id = fields.IntField(generated=True)
+    name = fields.StringField()
+
+    def __str__(self):
+        return self.name
+
+
+class Event(Model):
+    id = fields.IntField(generated=True)
+    name = fields.StringField()
+    tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
+    participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
+
+    def __str__(self):
+        return self.name
+
+
+class Team(Model):
+    id = fields.IntField(generated=True)
+    name = fields.StringField()
+
+    def __str__(self):
+        return self.name
+
+
+async def run():
+    db_name = create_example_database()
+    client = SqliteClient(db_name)
+    await client.create_connection()
+    Tortoise.init(client)
+    tournament = Tournament(name='New Tournament')
+    await tournament.save()
+    await Event(name='Without participants', tournament_id=tournament.id).save()
+    event = Event(name='Test', tournament_id=tournament.id)
+    await event.save()
+    participants = []
+    for i in range(2):
+        team = Team(name='Team {}'.format(i + 1))
+        await team.save()
+        participants.append(team)
+    await event.m2m_manager('participants').add(participants[0], participants[1])
+
+    try:
+        for team in event.participants:
+            print(team.id)
+    except NoValuesFetched:
+        pass
+
+    async for team in event.participants:
+        print(team.id)
+
+    for team in event.participants:
+        print(team.id)
+
+    assert event.participants[0] == participants[0].id
+
+    selected_events = await Event.filter(
+        participants=participants[0].id
+    ).prefetch_related('participants', 'tournament')
+    assert len(selected_events) == 1
+    assert selected_events[0].tournament.id == tournament.id
+    assert len(selected_events[0].participants) == 2
+    await participants[0].fetch_related('events')
+    assert participants[0].events[0] == event
+
+
+if __name__ == '__main__':
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(run())
