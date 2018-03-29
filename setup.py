@@ -44,7 +44,7 @@ with open('requirements.txt') as f:
 
 setup(
     # Application name:
-    name="Tortoise",
+    name="tortoise-orm",
 
     # Version number:
     version=version(),
