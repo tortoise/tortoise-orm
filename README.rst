@@ -18,7 +18,7 @@ First you have to install tortoise like this:
 
 .. code-block:: bash
 
-    pip install pypika
+    pip install tortoise-orm
 
 ..
 
