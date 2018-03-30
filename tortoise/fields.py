@@ -70,11 +70,11 @@ class BackwardFKRelation:
 
 
 class RelationQueryContainer:
-    def __init__(self, model, relation_field, instance):
+    def __init__(self, model, relation_field, instance, is_new):
         self.model = model
         self.relation_field = relation_field
         self.instance = instance
-        self._fetched = False
+        self._fetched = is_new
         self._custom_query = False
         self._query = self.model.filter(**{self.relation_field: self.instance.id})
         self.related_objects = []
@@ -135,8 +135,8 @@ class RelationQueryContainer:
 
 
 class ManyToManyRelationManager(RelationQueryContainer):
-    def __init__(self, model, instance, m2m_field):
-        super().__init__(model, m2m_field.related_name, instance)
+    def __init__(self, model, instance, m2m_field, is_new):
+        super().__init__(model, m2m_field.related_name, instance, is_new)
         self.field = m2m_field
         self.model = m2m_field.type
         self.instance = instance

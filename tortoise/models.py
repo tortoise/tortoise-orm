@@ -210,11 +210,13 @@ class ModelMeta(type):
 
 class Model(metaclass=ModelMeta):
     def __init__(self, *args, **kwargs):
+        is_new = not bool(kwargs.get('id'))
+
         for key, field in self._meta.fields_map.items():
             if isinstance(field, fields.BackwardFKRelation):
-                setattr(self, key, RelationQueryContainer(field.type, field.relation_field, self))
+                setattr(self, key, RelationQueryContainer(field.type, field.relation_field, self, is_new))
             elif isinstance(field, fields.ManyToManyField):
-                setattr(self, key, ManyToManyRelationManager(field.type, self, field))
+                setattr(self, key, ManyToManyRelationManager(field.type, self, field, is_new))
             elif isinstance(field, fields.Field):
                 setattr(self, key, field.default)
             else:
