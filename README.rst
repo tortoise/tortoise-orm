@@ -133,6 +133,11 @@ After that you can start using your models:
     # This will fetch all events for team and in those team tournament will be prefetched
     await Team.all().prefetch_related('events__tournament')
 
+    # You can filter and order by related models too
+    await Tournament.filter(
+        events__name__in=['Test', 'Prod']
+    ).order_by('-events__participants__name').distinct()
+
 You can read more examples (including transactions, several databases and a little more complex querying) in ``examples`` directory of this repository
 
 Also

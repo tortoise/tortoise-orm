@@ -1,6 +1,7 @@
 from pypika import PostgreSQLQuery as Query, Table, Order, JoinType
 from pypika.functions import Count
 
+from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import UnknownFilterParameter
 from tortoise.query_utils import Q
@@ -25,8 +26,8 @@ class AwaitableQuery:
             criterion, required_joins = node.resolve_for_model(model)
             for join in required_joins:
                 if join[0] not in self._joined_tables:
-                    self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
-                    self._joined_tables.append(join)
+                    self.query = self.query.join(join[0]).on(join[1])
+                    self._joined_tables.append(join[0])
             self.query = self.query.where(criterion)
         for key, value in filter_kwargs.items():
             param = model._meta.filters[key]
@@ -34,6 +35,62 @@ class AwaitableQuery:
                 self._filter_from_related_table(table, param, value)
             else:
                 self.query = self.query.where(param['operator'](getattr(table, param['field']), value))
+
+    def _join_table_by_field(self, table, related_field_name, related_field):
+        if isinstance(related_field, fields.ManyToManyField):
+            related_table = Table(related_field.type._meta.table)
+            through_table = Table(related_field.through)
+            if through_table not in self._joined_tables:
+                self.query = self.query.join(through_table, how=JoinType.left_outer).on(
+                    table.id == getattr(through_table, related_field.backward_key)
+                )
+                self._joined_tables.append(through_table)
+            if related_table not in self._joined_tables:
+                self.query = self.query.join(related_table, how=JoinType.left_outer).on(
+                    getattr(through_table, related_field.forward_key) == related_table.id
+                )
+                self._joined_tables.append(related_table)
+        elif isinstance(related_field, fields.BackwardFKRelation):
+            related_table = Table(related_field.type._meta.table)
+            if related_table not in self._joined_tables:
+                self.query = self.query.join(related_table, how=JoinType.left_outer).on(
+                    table.id == getattr(related_table, related_field.relation_field)
+                )
+                self._joined_tables.append(related_table)
+        else:
+            related_table = Table(related_field.type._meta.table)
+            if related_table not in self._joined_tables:
+                self.query = self.query.join(related_table, how=JoinType.left_outer).on(
+                    related_table.id == getattr(table, related_field_name)
+                )
+                self._joined_tables.append(related_table)
+
+    def resolve_ordering(self, model, orderings):
+        table = Table(model._meta.table)
+        for ordering in orderings:
+            field_name = ordering[0]
+            if field_name in model._meta.fetch_fields:
+                raise ValueError(
+                    "Filtering by relation is not possible filter by nested field of related model"
+                )
+            elif field_name.split('__')[0] in model._meta.fetch_fields:
+                related_field_name = field_name.split('__')[0]
+                related_field = model._meta.fields_map[related_field_name]
+                self._join_table_by_field(table, related_field_name, related_field)
+                self.resolve_ordering(related_field.type, [(
+                    '__'.join(field_name.split('__')[1:]), ordering[1]
+                )])
+            else:
+                assert field_name in model._meta.fields, (
+                    'Unknown field {} for model {}'.format(
+                        field_name,
+                        model.__name__,
+                    )
+                )
+                self.query = self.query.orderby(
+                    getattr(table, ordering[0]),
+                    order=ordering[1]
+                )
 
     def __await__(self):
         return self._execute().__await__()
@@ -69,6 +126,8 @@ class QuerySet(AwaitableQuery):
         for key, value in kwargs.items():
             if key in self.model._meta.filters:
                 self._filter_kwargs[key] = value
+            elif key.split('__')[0] in self.model._meta.fetch_fields:
+                self._q_objects_for_resolve.append(Q(**{key: value}))
             else:
                 raise UnknownFilterParameter()
         return self
@@ -83,7 +142,7 @@ class QuerySet(AwaitableQuery):
             else:
                 field_name = ordering
 
-            assert field_name in self.model._meta.fields, (
+            assert field_name.split('__')[0] in self.model._meta.fields, (
                 'Unknown field {} for model {}'.format(
                     field_name,
                     self.model.__name__,
@@ -103,6 +162,7 @@ class QuerySet(AwaitableQuery):
 
     def distinct(self):
         self._distinct = True
+        return self
 
     def values_list(self, *fields, flat=False):
         return ValuesListQuery(
@@ -201,8 +261,7 @@ class QuerySet(AwaitableQuery):
             self.query = self.query.offset(self._offset)
         if self._distinct:
             self.query = self.query.distinct()
-        for ordering in self._orderings:
-            self.query = self.query.orderby(ordering[0], order=ordering[1])
+        self.resolve_ordering(self.model, self._orderings)
         return self.query
 
     async def _execute(self):
@@ -280,8 +339,7 @@ class ValuesListQuery(AwaitableQuery):
             self.query = self.query.offset(offset)
         if distinct:
             self.query = self.query.distinct()
-        for ordering in orderings:
-            self.query = self.query.orderby(ordering[0], order=ordering[1])
+        self.resolve_ordering(model, orderings)
         self.flat = flat
         self.fields = fields
         self.model = model
@@ -318,6 +376,7 @@ class ValuesQuery(AwaitableQuery):
             self.query = self.query.distinct()
         for ordering in orderings:
             self.query = self.query.orderby(ordering[0], order=ordering[1])
+        self.resolve_ordering(model, orderings)
         self.fields = fields
         self.model = model
 

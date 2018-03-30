@@ -1,5 +1,7 @@
 from pypika import Table
 
+from tortoise import fields
+
 
 class Q:
     AND = 'AND'
@@ -26,44 +28,83 @@ class Q:
         criterion = param['operator'](getattr(param['table'], param['field']), value)
         return criterion, join
 
-    def resolve_filters(self, model, filter_kwargs):
+    def _resolve_nested_filter(self, model, key, value):
         table = Table(model._meta.table)
-        for key, value in filter_kwargs.items():
-            param = model._meta.filters[key]
-            if param.get('table'):
-                self._filter_from_related_table(table, param, value)
-            else:
-                self.query = self.query.where(param['operator'](getattr(table, param['field']), value))
+        required_joins = []
+        related_field_name = key.split('__')[0]
+        related_field = model._meta.fields_map[related_field_name]
+        if isinstance(related_field, fields.ManyToManyField):
+            related_table = Table(related_field.type._meta.table)
+            through_table = Table(related_field.through)
+            required_joins.append((
+                through_table,
+                table.id == getattr(through_table, related_field.backward_key)
+            ))
+            required_joins.append((
+                related_table,
+                getattr(through_table, related_field.forward_key) == related_table.id
+            ))
+        elif isinstance(related_field, fields.BackwardFKRelation):
+            related_table = Table(related_field.type._meta.table)
+            required_joins.append((
+                related_table,
+                table.id == getattr(related_table, related_field.relation_field)
+            ))
+        else:
+            related_table = Table(related_field.type._meta.table)
+            required_joins.append((
+                related_table,
+                related_table.id == getattr(table, related_field_name)
+            ))
 
-    def resolve_for_model(self, model):
+        new_criterion, new_joins = Q(
+            **{'__'.join(key.split('__')[1:]): value}
+        ).resolve_for_model(related_field.type)
+
+        required_joins += new_joins
+        return new_criterion, required_joins
+
+    def _resolve_kwargs(self, model):
         criterion = None
         table = Table(model._meta.table)
         required_joins = []
-        if self.filters:
-            for key, value in self.filters.items():
+        for key, value in self.filters.items():
+            if key not in model._meta.filters and key.split('__')[0] in model._meta.fetch_fields:
+                new_criterion, new_joins = self._resolve_nested_filter(model, key, value)
+                required_joins += new_joins
+            else:
                 param = model._meta.filters[key]
                 if param.get('table'):
                     new_criterion, join = self._get_from_related_table(param['table'], param, value)
                     required_joins.append(join)
                 else:
                     new_criterion = param['operator'](getattr(table, param['field']), value)
-                if not criterion:
-                    criterion = new_criterion
+            if not criterion:
+                criterion = new_criterion
+            else:
+                if self.join_type == self.AND:
+                    criterion &= new_criterion
                 else:
-                    if self.join_type == self.AND:
-                        criterion &= new_criterion
-                    else:
-                        criterion |= new_criterion
-            return criterion, required_joins
+                    criterion |= new_criterion
+        return criterion, required_joins
+
+    def _resolve_children(self, model):
+        criterion = None
+        required_joins = []
+        for node in self.children:
+            new_criterion, children_joins = node.resolve_for_model(model)
+            required_joins += children_joins
+            if not criterion:
+                criterion = new_criterion
+            else:
+                if self.join_type == self.AND:
+                    criterion &= new_criterion
+                else:
+                    criterion |= new_criterion
+        return criterion, required_joins
+
+    def resolve_for_model(self, model):
+        if self.filters:
+            return self._resolve_kwargs(model)
         else:
-            for node in self.children:
-                new_criterion, children_joins = node.resolve_for_model(model)
-                required_joins += children_joins
-                if not criterion:
-                    criterion = new_criterion
-                else:
-                    if self.join_type == self.AND:
-                        criterion &= new_criterion
-                    else:
-                        criterion |= new_criterion
-            return criterion, required_joins
+            return self._resolve_children(model)
