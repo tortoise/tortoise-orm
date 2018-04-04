@@ -1,9 +1,10 @@
 import asyncio
 
-from examples import create_example_database
+from examples import get_db_name
 from tortoise import Tortoise, fields
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.models import Model
+from tortoise.utils import generate_schema
 
 """
 This example demonstrates most basic operations with single model
@@ -11,7 +12,7 @@ This example demonstrates most basic operations with single model
 
 
 class Event(Model):
-    id = fields.IntField(generated=True)
+    id = fields.IntField(pk=True)
     name = fields.StringField()
 
     class Meta:
@@ -22,10 +23,11 @@ class Event(Model):
 
 
 async def run():
-    db_name = create_example_database()
+    db_name = get_db_name()
     client = SqliteClient(db_name)
     await client.create_connection()
     Tortoise.init(client)
+    await generate_schema(client)
     event = await Event.create(name='Test')
     await Event.filter(id=event.id).update(name='Updated name')
     saved_event = await Event.filter(name='Updated name').first()

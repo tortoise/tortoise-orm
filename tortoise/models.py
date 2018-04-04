@@ -168,11 +168,15 @@ class ModelMeta(type):
                 if isinstance(value, fields.ForeignKeyField):
                     key_field = '{}_id'.format(key)
                     fields_db_projection[key_field] = key_field
-                    fields_map[key_field] = fields.Field(int)
+                    fields_map[key_field] = fields.IntField(
+                        reference=value,
+                        null=value.null,
+                        default=value.default,
+                    )
                     filters.update(get_filters_for_field(
                         field_name=key_field,
                         field=fields_map[key_field],
-                        source_field=key_field
+                        source_field=key_field,
                     ))
                     fk_fields.add(key)
                 elif isinstance(value, fields.ManyToManyField):
@@ -237,7 +241,8 @@ class Model(metaclass=ModelMeta):
                     'You can\'t set m2m relations through init, use m2m_manager instead'
                 )
             elif key in self._meta.fields:
-                setattr(self, key, value)
+                field_object = self._meta.fields_map[key]
+                setattr(self, key, field_object.type(value))
             elif key in self._meta.db_fields:
                 setattr(self, self._meta.fields_db_projection_reverse.get(key), value)
 
@@ -275,10 +280,6 @@ class Model(metaclass=ModelMeta):
             model=self.__class__,
             db=db,
         ).execute_delete(self)
-
-    def m2m_manager(self, field_name, using_db=None):
-        assert field_name in self._meta.m2m_fields
-        return ManyToManyRelationManager(self, self._meta.fields_map[field_name], using_db)
 
     async def fetch_related(self, *args, using_db=None):
         db = using_db if using_db else self._meta.db

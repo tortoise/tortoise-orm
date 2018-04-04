@@ -36,8 +36,7 @@ Tutorial
 ========
 
 Primary entity of tortoise is ``tortoise.models.Model``.
-Sadly, currently tortoise can't generate db schema for you, so first of all you should generate your schema.
-Then you can start writing models like this:
+You can start writing models like this:
 
 
 .. code-block:: python
@@ -46,7 +45,7 @@ Then you can start writing models like this:
     from tortoise import fields
 
     class Tournament(Model):
-        id = fields.IntField(generated=True)
+        id = fields.IntField(pk=True)
         name = fields.StringField()
 
         def __str__(self):
@@ -54,7 +53,7 @@ Then you can start writing models like this:
 
 
     class Event(Model):
-        id = fields.IntField(generated=True)
+        id = fields.IntField(pk=True)
         name = fields.StringField()
         tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
         participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
@@ -64,13 +63,14 @@ Then you can start writing models like this:
 
 
     class Team(Model):
-        id = fields.IntField(generated=True)
+        id = fields.IntField(pk=True)
         name = fields.StringField()
 
         def __str__(self):
             return self.name
 
-Then in init part of your app you should init models like this (make sure that you **import your models** before calling init):
+Then in init part of your app you should init models like this
+(make sure that you **import your models** before calling init, tortoise must see them to init normally):
 
 
 .. code-block:: python
@@ -91,7 +91,8 @@ Then in init part of your app you should init models like this (make sure that y
 
         await db.create_connection()
         Tortoise.init(db)
-
+        # You can generate schema for your models like this, but don't do this if you have schema already:
+        await generate_schema(client)
 
 After that you can start using your models:
 
@@ -102,8 +103,8 @@ After that you can start using your models:
     await tournament.save()
 
     # Or by .create()
-    await Event.create(name='Without participants', tournament_id=tournament.id)
-    event = await Event.create(name='Test', tournament_id=tournament.id)
+    await Event.create(name='Without participants', tournament=tournament)
+    event = await Event.create(name='Test', tournament=tournament)
     participants = []
     for i in range(2):
         team = Team.create(name='Team {}'.format(i + 1))
@@ -138,7 +139,8 @@ After that you can start using your models:
         events__name__in=['Test', 'Prod']
     ).order_by('-events__participants__name').distinct()
 
-You can read more examples (including transactions, several databases and a little more complex querying) in ``examples`` directory of this repository
+You can read more examples (including transactions, several databases and a little more complex querying) in
+`examples <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples>`_ directory of this repository
 
 Also
 =======

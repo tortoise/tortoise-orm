@@ -9,6 +9,7 @@ from pypika import PostgreSQLQuery
 from pypika.terms import ValueWrapper, basestring
 
 from tortoise.backends.asyncpg.executor import AsyncpgExecutor
+from tortoise.backends.asyncpg.schema_generator import AsyncpgSchemaGenerator
 from tortoise.backends.base.client import BaseDBAsyncClient, ConnectionWrapper, SingleConnectionWrapper
 
 
@@ -16,6 +17,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     DSN_TEMPLATE = 'postgres://{user}:{password}@{host}:{port}/{database}'
     query_class = PostgreSQLQuery
     executor_class = AsyncpgExecutor
+    schema_generator = AsyncpgSchemaGenerator
 
     def __init__(self, user, password, database, host, port, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -80,6 +82,11 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     async def release_single_connection(self, single_connection):
         if not self.single_connection:
             await self._db_pool.release(single_connection.connection)
+
+    async def execute_script(self, script):
+        async with self.acquire_connection() as connection:
+            self.log.debug(script)
+            await connection.execute(script)
 
 
 class TransactionWrapper(AsyncpgDBClient):

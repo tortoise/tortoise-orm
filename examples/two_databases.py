@@ -1,9 +1,11 @@
 import asyncio
+from sqlite3 import OperationalError
 
-from examples import create_example_database
+from examples import get_db_name
 from tortoise import Tortoise, fields
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.models import Model
+from tortoise.utils import generate_schema
 
 """
 This example demonstrates how you can use Tortoise if you have to
@@ -18,7 +20,7 @@ and explicitly declaring model apps in class Meta
 
 
 class Tournament(Model):
-    id = fields.IntField(generated=True)
+    id = fields.IntField(pk=True)
     name = fields.StringField()
 
     def __str__(self):
@@ -29,7 +31,7 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.IntField(generated=True)
+    id = fields.IntField(pk=True)
     name = fields.StringField()
     tournament_id = fields.IntField()
     # Here we make link to events.Team, not models.Team
@@ -43,7 +45,7 @@ class Event(Model):
 
 
 class Team(Model):
-    id = fields.IntField(generated=True)
+    id = fields.IntField(pk=True)
     name = fields.StringField()
 
     def __str__(self):
@@ -54,20 +56,27 @@ class Team(Model):
 
 
 async def run():
-    db_name = create_example_database()
-    second_db_name = create_example_database()
+    db_name = get_db_name()
+    second_db_name = get_db_name()
     client = SqliteClient(db_name)
-    await client.create_connection()
     second_client = SqliteClient(second_db_name)
+    await client.create_connection()
+    await second_client.create_connection()
     Tortoise.init(db_routing={
         'tournaments': client,
         'events': second_client,
     })
-    await Tournament(name='Tournament').save()
-    await Event(name='Event').save()
+    await generate_schema(client)
+    await generate_schema(second_client)
 
-    results = await client.execute_query('SELECT * FROM "event"')
-    assert not results
+    tournament = await Tournament.create(name='Tournament')
+    await Event(name='Event', tournament_id=tournament.id).save()
+
+    try:
+        await client.execute_query('SELECT * FROM "event"')
+        assert False
+    except OperationalError:
+        pass
     results = await second_client.execute_query('SELECT * FROM "event"')
     assert results
 

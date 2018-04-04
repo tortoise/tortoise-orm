@@ -1,10 +1,11 @@
 import asyncio
 
-from examples import create_example_database
+from examples import get_db_name
 from tortoise import Tortoise, fields
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.exceptions import NoValuesFetched
 from tortoise.models import Model
+from tortoise.utils import generate_schema
 
 """
 This example shows how relations between models work.
@@ -16,7 +17,7 @@ to get this related objects
 
 
 class Tournament(Model):
-    id = fields.IntField(generated=True)
+    id = fields.IntField(pk=True)
     name = fields.StringField()
 
     def __str__(self):
@@ -24,7 +25,7 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.IntField(generated=True)
+    id = fields.IntField(pk=True)
     name = fields.StringField()
     tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
     participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
@@ -34,7 +35,7 @@ class Event(Model):
 
 
 class Team(Model):
-    id = fields.IntField(generated=True)
+    id = fields.IntField(pk=True)
     name = fields.StringField()
 
     def __str__(self):
@@ -42,10 +43,12 @@ class Team(Model):
 
 
 async def run():
-    db_name = create_example_database()
+    db_name = get_db_name()
     client = SqliteClient(db_name)
     await client.create_connection()
     Tortoise.init(client)
+    await generate_schema(client)
+
     tournament = Tournament(name='New Tournament')
     await tournament.save()
     await Event(name='Without participants', tournament_id=tournament.id).save()
@@ -56,7 +59,7 @@ async def run():
         team = Team(name='Team {}'.format(i + 1))
         await team.save()
         participants.append(team)
-    await event.m2m_manager('participants').add(participants[0], participants[1])
+    await event.participants.add(participants[0], participants[1])
 
     try:
         for team in event.participants:
@@ -70,7 +73,7 @@ async def run():
     for team in event.participants:
         print(team.id)
 
-    assert event.participants[0] == participants[0].id
+    assert event.participants[0].id == participants[0].id
 
     selected_events = await Event.filter(
         participants=participants[0].id

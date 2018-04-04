@@ -1,10 +1,11 @@
 import asyncio
 
-from examples import create_example_database
+from examples import get_db_name
 from tortoise import Tortoise, fields
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.models import Model
 from tortoise.query_utils import Q
+from tortoise.utils import generate_schema
 
 """
 This example shows some more complex querying
@@ -14,7 +15,7 @@ Key points are filtering by related names and using Q objects
 
 
 class Tournament(Model):
-    id = fields.IntField(generated=True)
+    id = fields.IntField(pk=True)
     name = fields.StringField()
 
     def __str__(self):
@@ -22,7 +23,7 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.IntField(generated=True)
+    id = fields.IntField(pk=True)
     name = fields.StringField()
     tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
     participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
@@ -32,7 +33,7 @@ class Event(Model):
 
 
 class Team(Model):
-    id = fields.IntField(generated=True)
+    id = fields.IntField(pk=True)
     name = fields.StringField()
 
     def __str__(self):
@@ -40,21 +41,25 @@ class Team(Model):
 
 
 async def run():
-    db_name = create_example_database()
+    db_name = get_db_name()
     client = SqliteClient(db_name)
     await client.create_connection()
     Tortoise.init(client)
+    await generate_schema(client)
 
     tournament = Tournament(name='Tournament')
     await tournament.save()
 
+    second_tournament = Tournament(name='Tournament 2')
+    await second_tournament.save()
+
     event_first = Event(name='1', tournament=tournament)
     await event_first.save()
-    event_second = Event(name='2')
+    event_second = Event(name='2', tournament=second_tournament)
     await event_second.save()
     event_third = Event(name='3', tournament=tournament)
     await event_third.save()
-    event_forth = Event(name='4')
+    event_forth = Event(name='4', tournament=second_tournament)
     await event_forth.save()
 
     team_first = Team(name='First')

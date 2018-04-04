@@ -3,11 +3,13 @@ import logging
 from pypika import Query
 
 from tortoise.backends.base.executor import BaseExecutor
+from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
 class BaseDBAsyncClient:
     query_class = Query
     executor_class = BaseExecutor
+    schema_generator = BaseSchemaGenerator
 
     def __init__(self, single_connection=False, *args, **kwargs):
         self.log = logging.getLogger('db_client')
@@ -27,7 +29,10 @@ class BaseDBAsyncClient:
     def in_transaction(self):
         raise NotImplementedError()
 
-    def execute_query(self, query):
+    async def execute_query(self, query):
+        raise NotImplementedError()
+
+    async def execute_script(self, script):
         raise NotImplementedError()
 
     async def get_single_connection(self):

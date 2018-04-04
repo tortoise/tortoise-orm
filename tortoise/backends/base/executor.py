@@ -1,3 +1,4 @@
+import datetime
 from pypika import Table
 
 from tortoise import fields
@@ -31,9 +32,15 @@ class BaseExecutor:
         table = Table(self.model._meta.table)
         query = self.connection.query_class.update(table)
         for field, db_field in self.model._meta.fields_db_projection.items():
-            if self.model._meta.fields_map[field].generated:
+            field_object = self.model._meta.fields_map[field]
+            if isinstance(field_object, fields.DatetimeField) and field_object.auto_now:
+                now = datetime.datetime.utcnow()
+                query = query.set(db_field, now)
+                setattr(instance, field, now)
+            elif field_object.generated:
                 continue
-            query = query.set(db_field, getattr(instance, field))
+            else:
+                query = query.set(db_field, getattr(instance, field))
         query = query.where(table.id == instance.id)
         await self.connection.execute_query(str(query))
         await self.db.release_single_connection(self.connection)

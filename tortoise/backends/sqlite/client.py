@@ -6,10 +6,12 @@ import aiosqlite
 from tortoise import BaseDBAsyncClient
 from tortoise.backends.base.client import ConnectionWrapper, SingleConnectionWrapper
 from tortoise.backends.sqlite.executor import SqliteExecutor
+from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
 
 
 class SqliteClient(BaseDBAsyncClient):
     executor_class = SqliteExecutor
+    schema_generator = SqliteSchemaGenerator
 
     def __init__(self, filename, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -43,6 +45,11 @@ class SqliteClient(BaseDBAsyncClient):
                 inserted_id = await cursor.fetchone()
                 return inserted_id
             return [dict(row) for row in results]
+
+    async def execute_script(self, script):
+        async with self.acquire_connection() as connection:
+            self.log.debug(script)
+            await connection.executescript(script)
 
     async def get_single_connection(self):
         connection = aiosqlite.connect(self.filename)

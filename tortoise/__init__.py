@@ -7,29 +7,32 @@ from tortoise.queryset import QuerySet
 
 
 class Tortoise:
-    models = {}
+    apps = {}
+    _inited = False
+    _db_routing = None
+    _global_connection = None
 
     @classmethod
     def register_model(cls, app, name, model):
-        if app not in cls.models:
-            cls.models[app] = {}
-        assert name not in cls.models[app], '{} duplicates in {}'.format(name, app)
-        cls.models[app][name] = model
+        if app not in cls.apps:
+            cls.apps[app] = {}
+        assert name not in cls.apps[app], '{} duplicates in {}'.format(name, app)
+        cls.apps[app][name] = model
 
     @classmethod
     def _set_connection_routing(cls, db_routing):
-        assert set(db_routing.keys()) == set(cls.models.keys()), (
+        assert set(db_routing.keys()) == set(cls.apps.keys()), (
             'No db instanced for apps: {}'
-            .format(", ".join(set(db_routing.keys()) ^ set(cls.models.keys())))
+            .format(", ".join(set(db_routing.keys()) ^ set(cls.apps.keys())))
         )
         for app, client in db_routing.items():
-            for model in cls.models[app].values():
+            for model in cls.apps[app].values():
                 model._meta.db = client
 
     @classmethod
     def _set_global_connection(cls, db_client):
-        for models in cls.models.values():
-            for model in models.values():
+        for app in cls.apps.values():
+            for model in app.values():
                 model._meta.db = db_client
 
     @classmethod
@@ -44,8 +47,8 @@ class Tortoise:
             assert all(isinstance(c, BaseDBAsyncClient) for c in db_routing.values())
             cls._set_connection_routing(db_routing)
 
-        for app, models in cls.models.items():
-            for model_name, model in models.items():
+        for app_name, app in cls.apps.items():
+            for model_name, model in app.items():
                 if not model._meta.table:
                     model._meta.table = model.__name__.lower()
 
@@ -53,7 +56,7 @@ class Tortoise:
                     field_object = model._meta.fields_map[field]
                     reference = field_object.model_name
                     related_app_name, related_model_name = reference.split('.')
-                    related_model = cls.models[related_app_name][related_model_name]
+                    related_model = cls.apps[related_app_name][related_model_name]
                     field_object.type = related_model
                     backward_relation_name = field_object.related_name
                     if not backward_relation_name:
@@ -87,7 +90,7 @@ class Tortoise:
 
                     reference = field_object.model_name
                     related_app_name, related_model_name = reference.split('.')
-                    related_model = cls.models[related_app_name][related_model_name]
+                    related_model = cls.apps[related_app_name][related_model_name]
 
                     field_object.type = related_model
 
@@ -101,7 +104,7 @@ class Tortoise:
                         )
                     )
                     relation = fields.ManyToManyField(
-                        '{}.{}'.format(app, model_name),
+                        '{}.{}'.format(app_name, model_name),
                         field_object.through,
                         forward_key=field_object.backward_key,
                         backward_key=field_object.forward_key,
@@ -121,5 +124,7 @@ class Tortoise:
                     related_model._meta.fields_map[backward_relation_name] = relation
                     related_model._meta.fields.add(backward_relation_name)
 
+        cls._inited = True
 
-__version__ = "0.2.0"
+
+__version__ = "0.3.0"

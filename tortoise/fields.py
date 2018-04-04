@@ -8,47 +8,83 @@ from tortoise.exceptions import NoValuesFetched
 from tortoise.utils import AsyncIteratorWrapper
 
 
+CASCADE = 'CASCADE'
+RESTRICT = 'RESTRICT'
+SET_NULL = 'SET NULL'
+
+
 class Field:
-    def __init__(self, type=None, source_field=None, generated=False, pk=False, null=False, default=None):
+    def __init__(self, type=None, source_field=None, generated=False, pk=False,
+                 null=False, default=None, *args, **kwargs):
         self.type = type
         self.source_field = source_field
         self.generated = generated
         self.pk = pk
         self.default = default
+        self.null = null
 
 
 class IntField(Field):
-    def __init__(self, source_field=None, *args, **kwargs):
+    def __init__(self, source_field=None, pk=False, *args, **kwargs):
+        kwargs['generated'] = bool(kwargs.get('generated')) | pk
         super().__init__(int, source_field, *args, **kwargs)
+        self.reference = kwargs.get('reference')
+        self.pk = pk
+
+
+class SmallIntField(Field):
+    def __init__(self, *args, **kwargs):
+        super().__init__(int, *args, **kwargs)
 
 
 class StringField(Field):
-    def __init__(self, source_field=None, *args, **kwargs):
-        super().__init__(str, source_field, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(str, *args, **kwargs)
 
 
 class BooleanField(Field):
-    def __init__(self, source_field=None, *args, **kwargs):
-        super().__init__(bool, source_field, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(bool, *args, **kwargs)
 
 
 class DecimalField(Field):
-    def __init__(self, source_field=None, *args, **kwargs):
-        super().__init__(decimal.Decimal, source_field, *args, **kwargs)
+    def __init__(self, max_digits, decimal_places, *args, **kwargs):
+        assert int(max_digits) >= 0 and int(decimal_places) >= 0
+        super().__init__(decimal.Decimal, *args, **kwargs)
+        self.max_digits = max_digits
+        self.decimal_places = decimal_places
 
 
 class DatetimeField(Field):
-    def __init__(self, source_field=None, *args, **kwargs):
-        super().__init__(datetime.datetime, source_field, *args, **kwargs)
+    def __init__(self, auto_now=False, auto_now_add=False, *args, **kwargs):
+        assert not (auto_now_add and auto_now), 'You can choose only auto_now or auto_now_add'
+        auto_now_add = auto_now_add | auto_now
+        kwargs['generated'] = bool(kwargs.get('generated')) | auto_now_add
+        super().__init__(datetime.datetime, *args, **kwargs)
+        self.auto_now = auto_now
+        self.auto_now_add = auto_now_add
+
+
+class DateField(Field):
+    def __init__(self, *args, **kwargs):
+        super().__init__(datetime.date, *args, **kwargs)
+
+
+class FloatField(Field):
+    def __init__(self, *args, **kwargs):
+        super().__init__(float, *args, **kwargs)
 
 
 class ForeignKeyField(Field):
-    def __init__(self, model_name, related_name=None, *args, **kwargs):
+    def __init__(self, model_name, related_name=None, on_delete=CASCADE, *args, **kwargs):
         super().__init__(*args, **kwargs)
         assert isinstance(model_name, str) and len(model_name.split(".")) == 2, \
             'Foreign key accepts model name in format "app.Model"'
         self.model_name = model_name
         self.related_name = related_name
+        assert on_delete in {CASCADE, RESTRICT, SET_NULL}
+        assert (on_delete == SET_NULL) == bool(kwargs.get('null'))
+        self.on_delete = on_delete
 
 
 class ManyToManyField(Field):
@@ -76,8 +112,14 @@ class RelationQueryContainer:
         self.instance = instance
         self._fetched = is_new
         self._custom_query = False
-        self._query = self.model.filter(**{self.relation_field: self.instance.id})
         self.related_objects = []
+
+    @property
+    def _query(self):
+        assert self.instance.id, (
+            "This objects hasn't been instanced, call .save() before calling related queries"
+        )
+        return self.model.filter(**{self.relation_field: self.instance.id})
 
     def __contains__(self, item):
         if not self._fetched:
