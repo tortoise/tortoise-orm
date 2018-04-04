@@ -187,11 +187,19 @@ class ManyToManyRelationManager(RelationQueryContainer):
     async def add(self, *instances, using_db=None):
         db = using_db if using_db else self._db
         through_table = Table(self.field.through)
+        select_query = db.query_class.from_(through_table).where(
+            getattr(through_table, self.field.backward_key) == self.instance.id
+        )
         query = db.query_class.into(through_table).columns(
             getattr(through_table, self.field.forward_key),
             getattr(through_table, self.field.backward_key),
         )
         for instance_to_add in instances:
+            already_existing = await db.execute_query(str(select_query.where(
+                getattr(through_table, self.field.forward_key) == instance_to_add.id
+            ).limit(1)))
+            if already_existing:
+                continue
             query = query.insert(instance_to_add.id, self.instance.id)
         await db.execute_query(str(query))
 

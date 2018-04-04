@@ -148,3 +148,12 @@ Also
 Huge thanks to https://github.com/kayak/pypika for making this possible.
 
 If you want to contribute check out issues, or just straightforwardly create PR
+
+
+Table Of Contents
+=================
+
+.. toctree::
+
+   models_and_fields
+   query

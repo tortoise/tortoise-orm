@@ -266,12 +266,6 @@ class Model(metaclass=ModelMeta):
         else:
             await self._update_instance(*args, **kwargs)
 
-    @classmethod
-    async def create(cls, **kwargs):
-        instance = cls(**kwargs)
-        await instance.save(kwargs.get('using_db'))
-        return instance
-
     async def delete(self, using_db=None):
         db = using_db if using_db else self._meta.db
         if not self.id:
@@ -315,6 +309,12 @@ class Model(metaclass=ModelMeta):
         if instance:
             return instance, False
         return await cls(**defaults, **kwargs).save(using_db=using_db), True
+
+    @classmethod
+    async def create(cls, **kwargs):
+        instance = cls(**kwargs)
+        await instance.save(kwargs.get('using_db'))
+        return instance
 
     @classmethod
     def first(cls):
