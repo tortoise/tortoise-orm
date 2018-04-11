@@ -242,7 +242,7 @@ class Model(metaclass=ModelMeta):
                 )
             elif key in self._meta.fields:
                 field_object = self._meta.fields_map[key]
-                if not isinstance(value, field_object.type):
+                if not isinstance(value, field_object.type) and value is not None:
                     setattr(self, key, field_object.type(value))
                 else:
                     setattr(self, key, value)
