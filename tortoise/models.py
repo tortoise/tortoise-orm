@@ -242,7 +242,10 @@ class Model(metaclass=ModelMeta):
                 )
             elif key in self._meta.fields:
                 field_object = self._meta.fields_map[key]
-                setattr(self, key, field_object.type(value))
+                if not isinstance(value, field_object.type):
+                    setattr(self, key, field_object.type(value))
+                else:
+                    setattr(self, key, value)
             elif key in self._meta.db_fields:
                 setattr(self, self._meta.fields_db_projection_reverse.get(key), value)
 
