@@ -15,13 +15,14 @@ SET_NULL = 'SET NULL'
 
 class Field:
     def __init__(self, type=None, source_field=None, generated=False, pk=False,
-                 null=False, default=None, *args, **kwargs):
+                 null=False, default=None, unique=False, *args, **kwargs):
         self.type = type
         self.source_field = source_field
         self.generated = generated
         self.pk = pk
         self.default = default
         self.null = null
+        self.unique = unique
 
 
 class IntField(Field):

@@ -1,7 +1,7 @@
 from tortoise import fields
 
 TABLE_CREATE_TEMPLATE = 'CREATE TABLE "{}" ({});'
-FIELD_TEMPLATE = '"{name}" {type} {nullable} {default}'
+FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique} {default}'
 FK_TEMPLATE = ' REFERENCES "{table}" (id) ON DELETE {on_delete}'
 M2M_TABLE_TEMPLATE = (
     'CREATE TABLE "{backward_table}_{forward_table}" '
@@ -42,6 +42,7 @@ class BaseSchemaGenerator:
                 fields_to_create.append(self._get_primary_key_create_string(field_name))
                 continue
             nullable = 'NOT NULL' if not field_object.null else ''
+            unique = 'UNIQUE' if field_object.unique else ''
             default_value_python = field_object.default if field_object.default is not None else None
             if default_value_python is not None:
                 if isinstance(field_object, fields.StringField):
@@ -63,6 +64,7 @@ class BaseSchemaGenerator:
                 name=db_field,
                 type=field_type,
                 nullable=nullable,
+                unique=unique,
                 default=default_value,
             ).strip()
             if hasattr(field_object, 'reference') and field_object.reference:

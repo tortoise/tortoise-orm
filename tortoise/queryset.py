@@ -119,20 +119,39 @@ class QuerySet(AwaitableQuery):
         self._q_objects_for_resolve = []
         self._distinct = False
 
+    def _clone(self):
+        queryset = self.__class__(self.model)
+        queryset._prefetch_map = self._prefetch_map
+        queryset._prefetch_queries = self._prefetch_queries
+        queryset._single = self._single
+        queryset._count = self._count
+        queryset._db = self._db
+        queryset._table = self._table
+        queryset._limit = self._limit
+        queryset._offset = self._offset
+        queryset._filter_kwargs = dict(self._filter_kwargs)
+        queryset._orderings = list(self._orderings)
+        queryset._joined_tables = list(self._joined_tables)
+        queryset._q_objects_for_resolve = list(self._q_objects_for_resolve)
+        queryset._distinct = self._distinct
+        return queryset
+
     def filter(self, *args, **kwargs):
+        queryset = self._clone()
         for arg in args:
             assert isinstance(arg, Q)
-            self._q_objects_for_resolve.append(arg)
+            queryset._q_objects_for_resolve.append(arg)
         for key, value in kwargs.items():
-            if key in self.model._meta.filters:
-                self._filter_kwargs[key] = value
+            if key in queryset.model._meta.filters:
+                queryset._filter_kwargs[key] = value
             elif key.split('__')[0] in self.model._meta.fetch_fields:
-                self._q_objects_for_resolve.append(Q(**{key: value}))
+                queryset._q_objects_for_resolve.append(Q(**{key: value}))
             else:
                 raise UnknownFilterParameter()
-        return self
+        return queryset
 
     def order_by(self, *orderings):
+        queryset = self._clone()
         new_ordering = []
         for ordering in orderings:
             order_type = Order.asc
@@ -149,20 +168,23 @@ class QuerySet(AwaitableQuery):
                 )
             )
             new_ordering.append((field_name, order_type))
-        self._orderings = new_ordering
-        return self
+        queryset._orderings = new_ordering
+        return queryset
 
     def limit(self, limit):
-        self._limit = limit
-        return self
+        queryset = self._clone()
+        queryset._limit = limit
+        return queryset
 
     def offset(self, offset):
-        self._offset = offset
-        return self
+        queryset = self._clone()
+        queryset._offset = offset
+        return queryset
 
     def distinct(self):
-        self._distinct = True
-        return self
+        queryset = self._clone()
+        queryset._distinct = True
+        return queryset
 
     def values_list(self, *fields, flat=False):
         return ValuesListQuery(
@@ -222,15 +244,17 @@ class QuerySet(AwaitableQuery):
         )
 
     def all(self):
-        return self
+        return self._clone()
 
     def first(self):
-        self.query = self.query.limit(1)
-        self._single = True
-        return self
+        queryset = self._clone()
+        queryset._limit = 1
+        queryset._single = True
+        return queryset
 
     def prefetch_related(self, *args):
-        self._prefetch_map = {}
+        queryset = self._clone()
+        queryset._prefetch_map = {}
 
         for relation in args:
             relation_split = relation.split('__')
@@ -242,15 +266,16 @@ class QuerySet(AwaitableQuery):
                 self.model._meta.table
             )
             if first_level_field not in self._prefetch_map.keys():
-                self._prefetch_map[first_level_field] = set()
+                queryset._prefetch_map[first_level_field] = set()
             forwarded_prefetch = '__'.join(relation_split[1:])
             if forwarded_prefetch:
-                self._prefetch_map[first_level_field].add(forwarded_prefetch)
-        return self
+                queryset._prefetch_map[first_level_field].add(forwarded_prefetch)
+        return queryset
 
     def using_db(self, _db: BaseDBAsyncClient):
-        self._db = _db
-        return self
+        queryset = self._clone()
+        queryset._db = _db
+        return queryset
 
     def _make_query(self):
         self.query = self._db.query_class.from_(self._table).select(*self.fields)

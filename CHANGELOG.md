@@ -1,3 +1,8 @@
+### 0.4.0
+
+Immutable QuerySet. `unique` flag for fields
+
+
 ### 0.3.0
 
 Added schema generation and more options for fields
