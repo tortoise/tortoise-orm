@@ -65,7 +65,7 @@ setup(
     # Details
     url="https://github.com/Zeliboba5/tortoise-orm",
 
-    description="Easy for use async ORM for python",
+    description="Easy async ORM for python, built with relations in mind",
     long_description=readme(),
 
     classifiers=[

@@ -11,6 +11,7 @@ from tortoise.utils import AsyncIteratorWrapper
 CASCADE = 'CASCADE'
 RESTRICT = 'RESTRICT'
 SET_NULL = 'SET NULL'
+SET_DEFAULT = 'SET DEFAULT'
 
 
 class Field:
@@ -38,7 +39,14 @@ class SmallIntField(Field):
         super().__init__(int, *args, **kwargs)
 
 
-class StringField(Field):
+class CharField(Field):
+    def __init__(self, max_length, *args, **kwargs):
+        self.max_length = int(max_length)
+        assert self.max_length > 0
+        super().__init__(str, *args, **kwargs)
+
+
+class TextField(Field):
     def __init__(self, *args, **kwargs):
         super().__init__(str, *args, **kwargs)
 
@@ -229,3 +237,6 @@ class ManyToManyRelationManager(RelationQueryContainer):
             condition
         ).delete()
         await db.execute_query(str(query))
+
+
+StringField = TextField

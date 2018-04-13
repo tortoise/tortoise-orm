@@ -13,7 +13,7 @@ This example demonstrates most basic operations with single model
 
 class Event(Model):
     id = fields.IntField(pk=True)
-    name = fields.StringField()
+    name = fields.TextField()
 
     class Meta:
         table = 'event'

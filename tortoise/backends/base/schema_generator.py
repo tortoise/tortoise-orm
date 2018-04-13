@@ -1,7 +1,7 @@
 from tortoise import fields
 
 TABLE_CREATE_TEMPLATE = 'CREATE TABLE "{}" ({});'
-FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique} {default}'
+FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}'
 FK_TEMPLATE = ' REFERENCES "{table}" (id) ON DELETE {on_delete}'
 M2M_TABLE_TEMPLATE = (
     'CREATE TABLE "{backward_table}_{forward_table}" '
@@ -15,7 +15,8 @@ class BaseSchemaGenerator:
         fields.BooleanField: 'BOOL',
         fields.IntField: 'INT',
         fields.SmallIntField: 'SMALLINT',
-        fields.StringField: 'TEXT',
+        fields.TextField: 'TEXT',
+        fields.CharField: 'VARCHAR({})',
         fields.DatetimeField: 'TIMESTAMP',
         fields.DecimalField: 'DECIMAL({},{})',
         fields.DateField: 'DATE',
@@ -43,29 +44,18 @@ class BaseSchemaGenerator:
                 continue
             nullable = 'NOT NULL' if not field_object.null else ''
             unique = 'UNIQUE' if field_object.unique else ''
-            default_value_python = field_object.default if field_object.default is not None else None
-            if default_value_python is not None:
-                if isinstance(field_object, fields.StringField):
-                    default_value = "'{}'".format(default_value_python)
-                elif isinstance(field_object, fields.DatetimeField):
-                    default_value = default_value_python.isoformat()
-                else:
-                    default_value = str(default_value_python)
-            else:
-                default_value = ''
-            if default_value:
-                default_value = 'DEFAULT {}'.format(default_value)
 
             field_type = self.field_type_map[field_object.__class__]
             if isinstance(field_object, fields.DecimalField):
                 field_type = field_type.format(field_object.max_digits, field_object.decimal_places)
+            elif isinstance(field_object, fields.CharField):
+                field_type = field_type.format(field_object.max_length)
 
             field_creation_string = FIELD_TEMPLATE.format(
                 name=db_field,
                 type=field_type,
                 nullable=nullable,
                 unique=unique,
-                default=default_value,
             ).strip()
             if hasattr(field_object, 'reference') and field_object.reference:
                 field_creation_string += FK_TEMPLATE.format(

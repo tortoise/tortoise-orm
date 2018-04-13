@@ -18,7 +18,7 @@ to get this related objects
 
 class Tournament(Model):
     id = fields.IntField(pk=True)
-    name = fields.StringField()
+    name = fields.TextField()
 
     def __str__(self):
         return self.name
@@ -26,7 +26,7 @@ class Tournament(Model):
 
 class Event(Model):
     id = fields.IntField(pk=True)
-    name = fields.StringField()
+    name = fields.TextField()
     tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
     participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
 
@@ -36,7 +36,7 @@ class Event(Model):
 
 class Team(Model):
     id = fields.IntField(pk=True)
-    name = fields.StringField()
+    name = fields.TextField()
 
     def __str__(self):
         return self.name

@@ -1,6 +1,6 @@
 import operator
 
-from pypika import Table
+from pypika import Table, functions
 
 from tortoise import fields
 from tortoise.fields import ManyToManyRelationManager, RelationQueryContainer
@@ -25,6 +25,30 @@ def is_null(field, value):
 
 def not_null(field, value):
     return field.notnull(value)
+
+
+def contains(field, value):
+    return field.like('%{}%'.format(value))
+
+
+def starts_with(field, value):
+    return field.like('{}%'.format(value))
+
+
+def ends_with(field, value):
+    return field.like('%{}'.format(value))
+
+
+def insensitive_contains(field, value):
+    return functions.Upper(field).like(functions.Upper('%{}%'.format(value)))
+
+
+def insensitive_starts_with(field, value):
+    return functions.Upper(field).like(functions.Upper('{}%'.format(value)))
+
+
+def insensitive_ends_with(field, value):
+    return functions.Upper(field).like(functions.Upper('%{}'.format(value)))
 
 
 def get_m2m_filters(field_name, field):
@@ -131,6 +155,30 @@ def get_filters_for_field(field_name: str, field: fields.Field, source_field: st
             'field': source_field,
             'operator': operator.lt,
         },
+        '{}__contains'.format(field_name): {
+            'field': source_field,
+            'operator': contains,
+        },
+        '{}__startswith'.format(field_name): {
+            'field': source_field,
+            'operator': starts_with,
+        },
+        '{}__endswith'.format(field_name): {
+            'field': source_field,
+            'operator': ends_with,
+        },
+        '{}__icontains'.format(field_name): {
+            'field': source_field,
+            'operator': insensitive_contains,
+        },
+        '{}__istartswith'.format(field_name): {
+            'field': source_field,
+            'operator': insensitive_starts_with,
+        },
+        '{}__iendswith'.format(field_name): {
+            'field': source_field,
+            'operator': insensitive_ends_with,
+        },
     }
     return filters
 
@@ -226,12 +274,15 @@ class Model(metaclass=ModelMeta):
             else:
                 setattr(self, key, None)
 
+        passed_fields = set(kwargs.keys())
         for key, value in kwargs.items():
             if key in self._meta.fk_fields:
                 assert hasattr(value, 'id') and value.id, (
                     'You should first call .save() on {} before referring to it'.format(value)
                 )
-                setattr(self, '{}_id'.format(key), value.id)
+                relation_field = '{}_id'.format(key)
+                setattr(self, relation_field, value.id)
+                passed_fields.add(relation_field)
             elif key in self._meta.backward_fk_fields:
                 raise AssertionError(
                     'You can\'t set backward relations through init, change related model instead'
@@ -242,12 +293,23 @@ class Model(metaclass=ModelMeta):
                 )
             elif key in self._meta.fields:
                 field_object = self._meta.fields_map[key]
+                if value is None and not field_object.null:
+                    raise ValueError('{} is non nullable field, but null was passed'.format(key))
                 if not isinstance(value, field_object.type) and value is not None:
                     setattr(self, key, field_object.type(value))
                 else:
                     setattr(self, key, value)
             elif key in self._meta.db_fields:
                 setattr(self, self._meta.fields_db_projection_reverse.get(key), value)
+
+        for key, field_object in self._meta.fields_map.items():
+            if key in passed_fields or key in self._meta.fetch_fields:
+                continue
+            else:
+                if callable(field_object.default):
+                    setattr(self, key, field_object.default())
+                else:
+                    setattr(self, key, field_object.default)
 
     async def _insert_instance(self, using_db=None):
         db = using_db if using_db else self._meta.db

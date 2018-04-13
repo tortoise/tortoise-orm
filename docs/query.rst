@@ -92,3 +92,29 @@ When you need to make ``OR`` query or something a little more challenging you co
         Q(id__in=[event_first.id, event_second.id]) | Q(name='3')
     )
 
+
+
+Filtering
+=========
+
+When using ``.filter()`` method you can use number of modifiers to field names to specify desired operation
+
+.. code-block:: python
+
+    teams = await Team.filter(name__icontains='CON')
+
+
+- ``in`` - checks if value of field is in passed list
+- ``not_in``
+- ``gte`` - greater or equals than passed value
+- ``gt`` - greater than passed value
+- ``lte`` - lower or equals than passed value
+- ``lt`` - lower than passed value
+- ``isnull`` - field is null
+- ``not_isnull``
+- ``contains`` - field contains specified substring
+- ``icontains`` - case insensitive ``contains``
+- ``startswith`` - if field starts with value
+- ``istartswith`` - case insensitive ``startswith``
+- ``endswith`` - if field ends with value
+- ``iendswith`` - case insensitive ``endswith``

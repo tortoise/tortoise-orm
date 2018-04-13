@@ -1,3 +1,10 @@
+### 0.5.0
+
+Added `contains` and other filter modifiers.
+
+Field kwarg `default` not accepts functions.
+
+
 ### 0.4.0
 
 Immutable QuerySet. `unique` flag for fields

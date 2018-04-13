@@ -16,7 +16,7 @@ Key points are filtering by related names and using Q objects
 
 class Tournament(Model):
     id = fields.IntField(pk=True)
-    name = fields.StringField()
+    name = fields.TextField()
 
     def __str__(self):
         return self.name
@@ -24,7 +24,7 @@ class Tournament(Model):
 
 class Event(Model):
     id = fields.IntField(pk=True)
-    name = fields.StringField()
+    name = fields.TextField()
     tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
     participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
 
@@ -34,7 +34,7 @@ class Event(Model):
 
 class Team(Model):
     id = fields.IntField(pk=True)
-    name = fields.StringField()
+    name = fields.TextField()
 
     def __str__(self):
         return self.name
@@ -79,6 +79,12 @@ async def run():
     await Tournament.filter(
         events__name__in=['1', '3']
     ).order_by('-events__participants__name').distinct()
+
+    teams = await Team.filter(name__icontains='CON')
+    assert len(teams) == 1 and teams[0].name == 'Second'
+
+    tournaments = await Tournament.filter(events__participants__name__startswith='Fir')
+    assert len(tournaments) == 1 and tournaments[0] == tournament
 
 
 if __name__ == '__main__':
