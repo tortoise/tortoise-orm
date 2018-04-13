@@ -8,7 +8,7 @@ class Q:
     OR = 'OR'
 
     def __init__(self, *args, join_type=AND, **kwargs):
-        assert bool(args) != bool(kwargs), 'you can pass only other Q nodes or filter kwargs in one Q node'
+        assert not (bool(args) and bool(kwargs)), 'you can pass only Q nodes or filter kwargs in one Q node'
         assert all(isinstance(node, Q) for node in args)
         self.children = args
         self.filters = kwargs
@@ -108,3 +108,4 @@ class Q:
             return self._resolve_kwargs(model)
         else:
             return self._resolve_children(model)
+

@@ -103,7 +103,7 @@ class BaseExecutor:
             model=related_query.model,
             db=self.connection,
             prefetch_map=related_query._prefetch_map,
-        ).prefetch_for_list(related_object_list)
+        ).fetch_for_list(related_object_list)
         related_object_map = {e.id: e for e in related_object_list}
         relation_map = {}
 
@@ -154,7 +154,7 @@ class BaseExecutor:
                 await self._do_prefetch(instance_list, field, related_query)
         return instance_list
 
-    async def prefetch_for_list(self, instance_list, *args):
+    async def fetch_for_list(self, instance_list, *args):
         self.connection = await self.db.get_single_connection()
         self.prefetch_map = {}
         for relation in args:

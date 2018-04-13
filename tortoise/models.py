@@ -345,7 +345,7 @@ class Model(metaclass=ModelMeta):
         await db.executor_class(
             model=self.__class__,
             db=db,
-        ).prefetch_for_list([self], *args)
+        ).fetch_for_list([self], *args)
 
     def __str__(self):
         return self.__class__.__name__
@@ -394,12 +394,12 @@ class Model(metaclass=ModelMeta):
         return QuerySet(cls)
 
     @classmethod
-    async def prefetch_for_list(cls, instance_list, *args, using_db=None):
+    async def fetch_for_list(cls, instance_list, *args, using_db=None):
         db = using_db if using_db else cls._meta.db
         await db.executor_class(
             model=cls,
             db=db,
-        ).prefetch_for_list(instance_list, *args)
+        ).fetch_for_list(instance_list, *args)
 
     class Meta:
         pass

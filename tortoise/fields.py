@@ -194,23 +194,37 @@ class ManyToManyRelationManager(RelationQueryContainer):
         self._db = self.model._meta.db
 
     async def add(self, *instances, using_db=None):
+        if not instances:
+            return
         db = using_db if using_db else self._db
         through_table = Table(self.field.through)
         select_query = db.query_class.from_(through_table).where(
             getattr(through_table, self.field.backward_key) == self.instance.id
-        )
+        ).select(self.field.backward_key, self.field.forward_key)
         query = db.query_class.into(through_table).columns(
             getattr(through_table, self.field.forward_key),
             getattr(through_table, self.field.backward_key),
         )
+        criterion = getattr(through_table, self.field.forward_key) == instances[0].id
+        for instance_to_add in instances[1:]:
+            criterion |= getattr(through_table, self.field.forward_key) == instance_to_add.id
+        select_query = select_query.where(
+            criterion
+        )
+
+        already_existing_relations_raw = await db.execute_query(str(select_query))
+        already_existing_relations = set(
+            (r[self.field.backward_key], r[self.field.forward_key]) for r in already_existing_relations_raw
+        )
+
+        insert_is_required = False
         for instance_to_add in instances:
-            already_existing = await db.execute_query(str(select_query.where(
-                getattr(through_table, self.field.forward_key) == instance_to_add.id
-            ).limit(1)))
-            if already_existing:
+            if (self.instance.id, instance_to_add.id) in already_existing_relations:
                 continue
             query = query.insert(instance_to_add.id, self.instance.id)
-        await db.execute_query(str(query))
+            insert_is_required = True
+        if insert_is_required:
+            await db.execute_query(str(query))
 
     async def clear(self, using_db=None):
         db = using_db if using_db else self._db

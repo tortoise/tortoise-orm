@@ -60,6 +60,7 @@ async def run():
         await team.save()
         participants.append(team)
     await event.participants.add(participants[0], participants[1])
+    await event.participants.add(participants[0], participants[1])
 
     try:
         for team in event.participants:
@@ -84,7 +85,7 @@ async def run():
     await participants[0].fetch_related('events')
     assert participants[0].events[0] == event
 
-    await Team.prefetch_for_list(participants, 'events')
+    await Team.fetch_for_list(participants, 'events')
 
 
 if __name__ == '__main__':
