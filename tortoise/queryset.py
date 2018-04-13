@@ -109,7 +109,7 @@ class QuerySet(AwaitableQuery):
         self._prefetch_queries = {}
         self._single = False
         self._count = False
-        self._db = self.model._meta.db
+        self._db = None
         self._table = Table(self.model._meta.table)
         self._limit = None
         self._offset = None
@@ -278,7 +278,8 @@ class QuerySet(AwaitableQuery):
         return queryset
 
     def _make_query(self):
-        self.query = self._db.query_class.from_(self._table).select(*self.fields)
+        db = self._db if self._db else self.model._meta.db
+        self.query = db.query_class.from_(self._table).select(*self.fields)
         self.resolve_filters(self.model, self._filter_kwargs, self._q_objects_for_resolve)
         if self._limit:
             self.query = self.query.limit(self._limit)
@@ -291,9 +292,10 @@ class QuerySet(AwaitableQuery):
 
     async def _execute(self):
         self.query = self._make_query()
-        instance_list = await self._db.executor_class(
+        db = self._db if self._db else self.model._meta.db
+        instance_list = await db.executor_class(
             model=self.model,
-            db=self._db,
+            db=db,
             prefetch_map=self._prefetch_map,
         ).execute_select(self.query)
         if not instance_list:
@@ -312,12 +314,12 @@ class QuerySet(AwaitableQuery):
 class UpdateQuery(AwaitableQuery):
     def __init__(self, model, filter_kwargs, update_kwargs, table, db, q_objects):
         super().__init__()
-        self.query = db.query_class.update(table)
+        self._db = db if db else model._meta.db
+        self.query = self._db.query_class.update(table)
         self.resolve_filters(model, filter_kwargs, q_objects)
 
         for key, value in update_kwargs.items():
             self.query = self.query.set(key, value)
-        self._db = db
 
     async def _execute(self):
         await self._db.execute_query(str(self.query))
@@ -326,10 +328,10 @@ class UpdateQuery(AwaitableQuery):
 class DeleteQuery(AwaitableQuery):
     def __init__(self, model, filter_kwargs, table, db, q_objects):
         super().__init__()
-        self.query = db.query_class.from_(table)
+        self._db = db if db else model._meta.db
+        self.query = self._db.query_class.from_(table)
         self.resolve_filters(model, filter_kwargs, q_objects)
         self.query = self.query.delete()
-        self._db = db
 
     async def _execute(self):
         await self._db.execute_query(str(self.query))
@@ -338,10 +340,10 @@ class DeleteQuery(AwaitableQuery):
 class CountQuery(AwaitableQuery):
     def __init__(self, model, filter_kwargs, table, db, q_objects):
         super().__init__()
-        self.query = db.query_class.from_(table)
+        self._db = db if db else model._meta.db
+        self.query = self._db.query_class.from_(table)
         self.resolve_filters(model, filter_kwargs, q_objects)
         self.query = self.query.select(Count(table.star))
-        self._db = db
 
     async def _execute(self):
         result = await self._db.execute_query(str(self.query))
@@ -355,7 +357,7 @@ class ValuesListQuery(AwaitableQuery):
         assert (len(fields) == 1) == flat, 'You can flat value_list only if contains one field'
         for field in fields:
             assert field in model._meta.fields_db_projection
-        self._db = db
+        self._db = db if db else model._meta.db
         self.query = self._db.query_class.from_(table).select(*fields)
         self.resolve_filters(model, filter_kwargs, q_objects)
         if limit:
@@ -390,7 +392,7 @@ class ValuesQuery(AwaitableQuery):
         super().__init__()
         for field in fields:
             assert field in model._meta.fields_db_projection
-        self._db = db
+        self._db = db if db else model._meta.db
         self.query = self._db.query_class.from_(table).select(*fields)
         self.resolve_filters(model, filter_kwargs, q_objects)
         if limit:
