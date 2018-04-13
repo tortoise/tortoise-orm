@@ -90,11 +90,12 @@ class BaseExecutor:
             getattr(through_table, field_object.forward_key).as_('_forward_relation_key')
         ).where(getattr(through_table, field_object.backward_key).isin(instance_id_set))
 
+        related_query_table = Table(related_query.model._meta.table)
         query = related_query.query.join(subquery).on(
-            subquery._forward_relation_key == related_query._table.id
+            subquery._forward_relation_key == related_query_table.id
         ).select(
             subquery._backward_relation_key.as_('_backward_relation_key'),
-            *[getattr(related_query._table, field).as_(field) for field in related_query.fields]
+            *[getattr(related_query_table, field).as_(field) for field in related_query.fields]
         )
         raw_results = await self.connection.execute_query(str(query))
         relations = {(e['_backward_relation_key'], e['id']) for e in raw_results}
