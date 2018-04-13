@@ -393,5 +393,13 @@ class Model(metaclass=ModelMeta):
     def all(cls):
         return QuerySet(cls)
 
+    @classmethod
+    async def prefetch_for_list(cls, instance_list, *args, using_db=None):
+        db = using_db if using_db else cls._meta.db
+        await db.executor_class(
+            model=cls,
+            db=db,
+        ).prefetch_for_list(instance_list, *args)
+
     class Meta:
         pass

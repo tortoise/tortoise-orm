@@ -84,6 +84,8 @@ async def run():
     await participants[0].fetch_related('events')
     assert participants[0].events[0] == event
 
+    await Team.prefetch_for_list(participants, 'events')
+
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
