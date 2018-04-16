@@ -109,3 +109,25 @@ class Q:
         else:
             return self._resolve_children(model)
 
+
+class Prefetch:
+    def __init__(self, relation, queryset):
+        self.relation = relation
+        self.queryset = queryset
+
+    def resolve_for_queryset(self, queryset):
+        relation_split = self.relation.split('__')
+        first_level_field = relation_split[0]
+        assert (
+                first_level_field in queryset.model._meta.fetch_fields
+        ), 'relation {} for {} not found'.format(
+            first_level_field,
+            queryset.model._meta.table
+        )
+        forwarded_prefetch = '__'.join(relation_split[1:])
+        if forwarded_prefetch:
+            if first_level_field not in queryset._prefetch_map.keys():
+                queryset._prefetch_map[first_level_field] = set()
+            queryset._prefetch_map[first_level_field].add(Prefetch(forwarded_prefetch, self.queryset))
+        else:
+            queryset._prefetch_queries[first_level_field] = self.queryset

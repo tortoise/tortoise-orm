@@ -5,12 +5,12 @@ from tortoise import fields
 
 
 class BaseExecutor:
-    def __init__(self, model, db=None, prefetch_map=None):
+    def __init__(self, model, db=None, prefetch_map=None, prefetch_queries=None):
         self.model = model
         self.db = db
         self.connection = None
-        self.prefetch_map = prefetch_map
-        self._prefetch_queries = {}
+        self.prefetch_map = prefetch_map if prefetch_map else {}
+        self._prefetch_queries = prefetch_queries if prefetch_queries else {}
 
     async def execute_select(self, query):
         self.connection = await self.db.get_single_connection()
@@ -133,9 +133,12 @@ class BaseExecutor:
 
     def _make_prefetch_queries(self):
         for field, forwarded_prefetches in self.prefetch_map.items():
-            related_model_field = self.model._meta.fields_map.get(field)
-            related_model = related_model_field.type
-            related_query = related_model.all().using_db(self.connection)
+            if field in self._prefetch_queries:
+                related_query = self._prefetch_queries.get(field)
+            else:
+                related_model_field = self.model._meta.fields_map.get(field)
+                related_model = related_model_field.type
+                related_query = related_model.all().using_db(self.connection)
             if forwarded_prefetches:
                 related_query = related_query.prefetch_related(*forwarded_prefetches)
             self._prefetch_queries[field] = related_query
@@ -149,7 +152,7 @@ class BaseExecutor:
             return await self._prefetch_direct_relation(instance_id_list, field, related_query)
 
     async def _execute_prefetch_queries(self, instance_list):
-        if instance_list and self.prefetch_map:
+        if instance_list and (self.prefetch_map or self._prefetch_queries):
             self._make_prefetch_queries()
             for field, related_query in self._prefetch_queries.items():
                 await self._do_prefetch(instance_list, field, related_query)

@@ -4,7 +4,7 @@ from pypika.functions import Count
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import UnknownFilterParameter
-from tortoise.query_utils import Q
+from tortoise.query_utils import Q, Prefetch
 from tortoise.utils import AsyncIteratorWrapper
 
 
@@ -245,11 +245,17 @@ class QuerySet(AwaitableQuery):
         queryset._single = True
         return queryset
 
+    def _resolve_prefetch_object(self, queryset, prefetch):
+        pass
+
     def prefetch_related(self, *args):
         queryset = self._clone()
         queryset._prefetch_map = {}
 
         for relation in args:
+            if isinstance(relation, Prefetch):
+                relation.resolve_for_queryset(queryset)
+                continue
             relation_split = relation.split('__')
             first_level_field = relation_split[0]
             assert (
@@ -258,7 +264,7 @@ class QuerySet(AwaitableQuery):
                 first_level_field,
                 self.model._meta.table
             )
-            if first_level_field not in self._prefetch_map.keys():
+            if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()
             forwarded_prefetch = '__'.join(relation_split[1:])
             if forwarded_prefetch:
@@ -291,6 +297,7 @@ class QuerySet(AwaitableQuery):
             model=self.model,
             db=db,
             prefetch_map=self._prefetch_map,
+            prefetch_queries=self._prefetch_queries,
         ).execute_select(self.query)
         if not instance_list:
             if self._single:

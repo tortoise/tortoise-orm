@@ -1,3 +1,8 @@
+### 0.6.0
+
+Added `Prefetch` object
+
+
 ### 0.5.0
 
 Added `contains` and other filter modifiers.

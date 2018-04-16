@@ -118,3 +118,17 @@ When using ``.filter()`` method you can use number of modifiers to field names t
 - ``istartswith`` - case insensitive ``startswith``
 - ``endswith`` - if field ends with value
 - ``iendswith`` - case insensitive ``endswith``
+
+
+Complex prefetch
+================
+
+Sometimes it is required to fetch only certain related records. You can achieve it with ``Prefetch`` object
+
+.. code-block:: python
+
+    tournament_with_filtered = await Tournament.all().prefetch_related(
+        Prefetch('events', queryset=Event.filter(name='First'))
+    ).first()
+
+You can view full example here: `examples <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples/complex_prefetching.py>`_
