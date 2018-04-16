@@ -2,6 +2,7 @@ from pypika import PostgreSQLQuery as Query, Table, Order, JoinType
 from pypika.functions import Count
 
 from tortoise import fields
+from tortoise.aggregation import Aggregate
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import UnknownFilterParameter
 from tortoise.query_utils import Q, Prefetch
@@ -117,6 +118,7 @@ class QuerySet(AwaitableQuery):
         self._joined_tables = []
         self._q_objects_for_resolve = []
         self._distinct = False
+        self._annotations = []
 
     def _clone(self):
         queryset = self.__class__(self.model)
@@ -132,6 +134,7 @@ class QuerySet(AwaitableQuery):
         queryset._joined_tables = list(self._joined_tables)
         queryset._q_objects_for_resolve = list(self._q_objects_for_resolve)
         queryset._distinct = self._distinct
+        queryset._annotations = self._annotations
         return queryset
 
     def filter(self, *args, **kwargs):
@@ -182,6 +185,13 @@ class QuerySet(AwaitableQuery):
     def distinct(self):
         queryset = self._clone()
         queryset._distinct = True
+        return queryset
+
+    def annotate(self, **kwargs):
+        queryset = self._clone()
+        for key, aggregation in kwargs.items():
+            assert isinstance(aggregation, Aggregate)
+            queryset._annotations.append((key, aggregation))
         return queryset
 
     def values_list(self, *fields, flat=False):
@@ -276,10 +286,22 @@ class QuerySet(AwaitableQuery):
         queryset._db = _db
         return queryset
 
+    def _resolve_annotate(self):
+        if not self._annotations:
+            return
+        table = Table(self.model._meta.table)
+        self.query = self.query.groupby(table.id)
+        for key, aggregate in self._annotations:
+            aggregation_info = aggregate.resolve_for_model(self.model)
+            for join in aggregation_info['joins']:
+                self._join_table_by_field(*join)
+            self.query = self.query.select(aggregation_info['field'].as_(key))
+
     def _make_query(self):
         db = self._db if self._db else self.model._meta.db
         table = Table(self.model._meta.table)
         self.query = db.query_class.from_(table).select(*self.fields)
+        self._resolve_annotate()
         self.resolve_filters(self.model, self._filter_kwargs, self._q_objects_for_resolve)
         if self._limit:
             self.query = self.query.limit(self._limit)
@@ -298,7 +320,7 @@ class QuerySet(AwaitableQuery):
             db=db,
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
-        ).execute_select(self.query)
+        ).execute_select(self.query, custom_fields=[a[0] for a in self._annotations])
         if not instance_list:
             if self._single:
                 return None

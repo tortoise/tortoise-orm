@@ -12,10 +12,16 @@ class BaseExecutor:
         self.prefetch_map = prefetch_map if prefetch_map else {}
         self._prefetch_queries = prefetch_queries if prefetch_queries else {}
 
-    async def execute_select(self, query):
+    async def execute_select(self, query, custom_fields=None):
         self.connection = await self.db.get_single_connection()
         raw_results = await self.connection.execute_query(str(query))
-        instance_list = [self.model(**row) for row in raw_results]
+        instance_list = []
+        for row in raw_results:
+            instance = self.model(**row)
+            if custom_fields:
+                for field in custom_fields:
+                    setattr(instance, field, row[field])
+            instance_list.append(instance)
         await self._execute_prefetch_queries(instance_list)
         await self.db.release_single_connection(self.connection)
         self.connection = None

@@ -2,6 +2,7 @@ import asyncio
 
 from examples import get_db_name
 from tortoise import Tortoise, fields
+from tortoise.aggregation import Count
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.exceptions import NoValuesFetched
 from tortoise.models import Model
