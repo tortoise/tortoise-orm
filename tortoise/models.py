@@ -20,11 +20,17 @@ def not_equal(field, value):
 
 
 def is_null(field, value):
-    return field.isnull(value)
+    if value:
+        return field.isnull()
+    else:
+        return field.notnull()
 
 
 def not_null(field, value):
-    return field.notnull(value)
+    if value:
+        return field.notnull()
+    else:
+        return field.isnull()
 
 
 def contains(field, value):

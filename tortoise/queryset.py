@@ -26,7 +26,7 @@ class AwaitableQuery:
             criterion, required_joins = node.resolve_for_model(model)
             for join in required_joins:
                 if join[0] not in self._joined_tables:
-                    self.query = self.query.join(join[0]).on(join[1])
+                    self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
                     self._joined_tables.append(join[0])
             self.query = self.query.where(criterion)
         for key, value in filter_kwargs.items():
