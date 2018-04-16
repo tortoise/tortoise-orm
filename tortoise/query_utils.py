@@ -54,7 +54,7 @@ class Q:
             related_table = Table(related_field.type._meta.table)
             required_joins.append((
                 related_table,
-                related_table.id == getattr(table, related_field_name)
+                related_table.id == getattr(table, '{}_id'.format(related_field_name))
             ))
 
         new_criterion, new_joins = Q(

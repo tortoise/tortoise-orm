@@ -87,6 +87,8 @@ async def run():
 
     await Team.fetch_for_list(participants, 'events')
 
+    await Team.filter(events__tournament__id=tournament.id)
+
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
