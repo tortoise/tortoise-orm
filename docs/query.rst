@@ -60,6 +60,7 @@ After you obtained queryset from object you can do following operations with it:
 - ``first()`` - limit queryset to one object and return one object instead of list
 - ``prefetch_related(*args)`` - like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
 - ``using_db(client)`` - executes query in other db client. Useful for transactions workaround.
+- ``annotate(**kwargs)`` - annotates result with aggregation result
 
 After making your QuerySet you just have to ``await`` it to get the result
 

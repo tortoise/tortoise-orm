@@ -1,3 +1,8 @@
+### 0.7.0
+
+Added `.annotate()` method and basic aggregation funcs
+
+
 ### 0.6.0
 
 Added `Prefetch` object
