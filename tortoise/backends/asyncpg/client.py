@@ -36,6 +36,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             database=self.database
         )
         self._db_pool = None
+        self._connection = None
 
         self._transaction_class = type('TransactionWrapper', (TransactionWrapper, self.__class__), {})
 
@@ -53,6 +54,13 @@ class AsyncpgDBClient(BaseDBAsyncClient):
                 port=self.port
             )
         )
+
+    async def close(self):
+        if not self.single_connection:
+            await self._db_pool.close()
+        else:
+            await self._connection.close()
+
 
     def acquire_connection(self):
         if not self.single_connection:

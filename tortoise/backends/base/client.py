@@ -23,6 +23,9 @@ class BaseDBAsyncClient:
     async def create_connection(self):
         raise NotImplementedError()
 
+    async def close(self):
+        raise NotImplementedError()
+
     def acquire_connection(self):
         raise NotImplementedError()
 

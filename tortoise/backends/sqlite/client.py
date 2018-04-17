@@ -26,6 +26,9 @@ class SqliteClient(BaseDBAsyncClient):
     async def create_connection(self):
         pass
 
+    async def close(self):
+        pass
+
     def acquire_connection(self):
         connection = aiosqlite.connect(self.filename)
         return connection
@@ -35,7 +38,6 @@ class SqliteClient(BaseDBAsyncClient):
 
     async def execute_query(self, query, get_inserted_id=False):
         self.log.debug(query)
-        print(query)
         async with self.acquire_connection() as connection:
             connection._conn.row_factory = sqlite3.Row
             cursor = await connection.execute(query)
