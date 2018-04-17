@@ -4,7 +4,7 @@ Query API
 
 Be sure to check `examples <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples>`_ for better understanding
 
-You start your query from your model instance:
+You start your query from your model class:
 
 .. code-block:: python
 

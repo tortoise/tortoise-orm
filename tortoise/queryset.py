@@ -13,6 +13,7 @@ class AwaitableQuery:
     def __init__(self):
         self._joined_tables = []
         self.query = None
+        self.model = None
 
     def _filter_from_related_table(self, table, param, value):
         if param['table'] not in self._joined_tables:
@@ -21,7 +22,7 @@ class AwaitableQuery:
             )
         self.query = self.query.where(param['operator'](getattr(param['table'], param['field']), value))
 
-    def resolve_filters(self, model, filter_kwargs, q_objects):
+    def resolve_filters(self, model, filter_kwargs, q_objects, having, annotations, custom_filters):
         table = Table(model._meta.table)
         for node in q_objects:
             criterion, required_joins = node.resolve_for_model(model)
@@ -36,6 +37,11 @@ class AwaitableQuery:
                 self._filter_from_related_table(table, param, value)
             else:
                 self.query = self.query.where(param['operator'](getattr(table, param['field']), value))
+        for key, value in having.items():
+            having_info = custom_filters[key]
+            aggregation = annotations[having_info['field']]
+            aggregation_info = aggregation.resolve_for_model(self.model)
+            self.query = self.query.having(having_info['operator'](aggregation_info['field'], value))
 
     def _join_table_by_field(self, table, related_field_name, related_field):
         if isinstance(related_field, fields.ManyToManyField):
@@ -66,7 +72,7 @@ class AwaitableQuery:
                 )
                 self._joined_tables.append(related_table)
 
-    def resolve_ordering(self, model, orderings):
+    def resolve_ordering(self, model, orderings, annotations):
         table = Table(model._meta.table)
         for ordering in orderings:
             field_name = ordering[0]
@@ -80,7 +86,14 @@ class AwaitableQuery:
                 self._join_table_by_field(table, related_field_name, related_field)
                 self.resolve_ordering(related_field.type, [(
                     '__'.join(field_name.split('__')[1:]), ordering[1]
-                )])
+                )], {})
+            elif field_name in annotations:
+                aggregation = annotations[field_name]
+                aggregation_info = aggregation.resolve_for_model(self.model)
+                self.query = self.query.orderby(
+                    aggregation_info['field'],
+                    order=ordering[1]
+                )
             else:
                 assert field_name in model._meta.fields, (
                     'Unknown field {} for model {}'.format(
@@ -118,7 +131,9 @@ class QuerySet(AwaitableQuery):
         self._joined_tables = []
         self._q_objects_for_resolve = []
         self._distinct = False
-        self._annotations = []
+        self._annotations = {}
+        self._having = {}
+        self._available_custom_filters = {}
 
     def _clone(self):
         queryset = self.__class__(self.model)
@@ -135,6 +150,8 @@ class QuerySet(AwaitableQuery):
         queryset._q_objects_for_resolve = list(self._q_objects_for_resolve)
         queryset._distinct = self._distinct
         queryset._annotations = self._annotations
+        queryset._having = self._having
+        queryset._available_custom_filters = self._available_custom_filters
         return queryset
 
     def filter(self, *args, **kwargs):
@@ -147,8 +164,12 @@ class QuerySet(AwaitableQuery):
                 queryset._filter_kwargs[key] = value
             elif key.split('__')[0] in self.model._meta.fetch_fields:
                 queryset._q_objects_for_resolve.append(Q(**{key: value}))
+            elif key in self._available_custom_filters:
+                queryset._having[key] = value
             else:
-                raise UnknownFilterParameter()
+                raise UnknownFilterParameter(
+                    'unknown filter param {}'.format(key)
+                )
         return queryset
 
     def order_by(self, *orderings):
@@ -162,7 +183,10 @@ class QuerySet(AwaitableQuery):
             else:
                 field_name = ordering
 
-            assert field_name.split('__')[0] in self.model._meta.fields, (
+            assert (
+                field_name.split('__')[0] in self.model._meta.fields
+                or field_name in self._annotations
+            ), (
                 'Unknown field {} for model {}'.format(
                     field_name,
                     self.model.__name__,
@@ -191,7 +215,9 @@ class QuerySet(AwaitableQuery):
         queryset = self._clone()
         for key, aggregation in kwargs.items():
             assert isinstance(aggregation, Aggregate)
-            queryset._annotations.append((key, aggregation))
+            queryset._annotations[key] = aggregation
+            from tortoise.models import get_filters_for_field
+            queryset._available_custom_filters.update(get_filters_for_field(key, None, key))
         return queryset
 
     def values_list(self, *fields, flat=False):
@@ -206,6 +232,9 @@ class QuerySet(AwaitableQuery):
             limit=self._limit,
             offset=self._offset,
             orderings=self._orderings,
+            annotations=self._annotations,
+            having=self._having,
+            custom_filters=self._available_custom_filters,
         )
 
     def values(self, *fields):
@@ -219,6 +248,9 @@ class QuerySet(AwaitableQuery):
             limit=self._limit,
             offset=self._offset,
             orderings=self._orderings,
+            annotations=self._annotations,
+            having=self._having,
+            custom_filters=self._available_custom_filters,
         )
 
     def delete(self):
@@ -227,6 +259,9 @@ class QuerySet(AwaitableQuery):
             model=self.model,
             filter_kwargs=self._filter_kwargs,
             q_objects=self._q_objects_for_resolve,
+            annotations=self._annotations,
+            having=self._having,
+            custom_filters=self._available_custom_filters,
         )
 
     def update(self, **kwargs):
@@ -236,6 +271,9 @@ class QuerySet(AwaitableQuery):
             filter_kwargs=self._filter_kwargs,
             update_kwargs=kwargs,
             q_objects=self._q_objects_for_resolve,
+            annotations=self._annotations,
+            having=self._having,
+            custom_filters=self._available_custom_filters,
         )
 
     def count(self):
@@ -244,6 +282,9 @@ class QuerySet(AwaitableQuery):
             model=self.model,
             filter_kwargs=self._filter_kwargs,
             q_objects=self._q_objects_for_resolve,
+            annotations=self._annotations,
+            having=self._having,
+            custom_filters=self._available_custom_filters,
         )
 
     def all(self):
@@ -291,7 +332,7 @@ class QuerySet(AwaitableQuery):
             return
         table = Table(self.model._meta.table)
         self.query = self.query.groupby(table.id)
-        for key, aggregate in self._annotations:
+        for key, aggregate in self._annotations.items():
             aggregation_info = aggregate.resolve_for_model(self.model)
             for join in aggregation_info['joins']:
                 self._join_table_by_field(*join)
@@ -302,14 +343,21 @@ class QuerySet(AwaitableQuery):
         table = Table(self.model._meta.table)
         self.query = db.query_class.from_(table).select(*self.fields)
         self._resolve_annotate()
-        self.resolve_filters(self.model, self._filter_kwargs, self._q_objects_for_resolve)
+        self.resolve_filters(
+            model=self.model,
+            filter_kwargs=self._filter_kwargs,
+            q_objects=self._q_objects_for_resolve,
+            annotations=self._annotations,
+            having=self._having,
+            custom_filters=self._available_custom_filters,
+        )
         if self._limit:
             self.query = self.query.limit(self._limit)
         if self._offset:
             self.query = self.query.offset(self._offset)
         if self._distinct:
             self.query = self.query.distinct()
-        self.resolve_ordering(self.model, self._orderings)
+        self.resolve_ordering(self.model, self._orderings, self._annotations)
         return self.query
 
     async def _execute(self):
@@ -320,7 +368,7 @@ class QuerySet(AwaitableQuery):
             db=db,
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
-        ).execute_select(self.query, custom_fields=[a[0] for a in self._annotations])
+        ).execute_select(self.query, custom_fields=list(self._annotations.keys()))
         if not instance_list:
             if self._single:
                 return None
@@ -335,12 +383,19 @@ class QuerySet(AwaitableQuery):
 
 
 class UpdateQuery(AwaitableQuery):
-    def __init__(self, model, filter_kwargs, update_kwargs, db, q_objects):
+    def __init__(self, model, filter_kwargs, update_kwargs, db, q_objects, annotations, having, custom_filters):
         super().__init__()
         self._db = db if db else model._meta.db
         table = Table(model._meta.table)
         self.query = self._db.query_class.update(table)
-        self.resolve_filters(model, filter_kwargs, q_objects)
+        self.resolve_filters(
+            model=model,
+            filter_kwargs=filter_kwargs,
+            q_objects=q_objects,
+            annotations=annotations,
+            having=having,
+            custom_filters=custom_filters
+        )
 
         for key, value in update_kwargs.items():
             self.query = self.query.set(key, value)
@@ -350,12 +405,19 @@ class UpdateQuery(AwaitableQuery):
 
 
 class DeleteQuery(AwaitableQuery):
-    def __init__(self, model, filter_kwargs, db, q_objects):
+    def __init__(self, model, filter_kwargs, db, q_objects, annotations, having, custom_filters):
         super().__init__()
         self._db = db if db else model._meta.db
         table = Table(model._meta.table)
         self.query = self._db.query_class.from_(table)
-        self.resolve_filters(model, filter_kwargs, q_objects)
+        self.resolve_filters(
+            model=model,
+            filter_kwargs=filter_kwargs,
+            q_objects=q_objects,
+            annotations=annotations,
+            having=having,
+            custom_filters=custom_filters
+        )
         self.query = self.query.delete()
 
     async def _execute(self):
@@ -363,12 +425,19 @@ class DeleteQuery(AwaitableQuery):
 
 
 class CountQuery(AwaitableQuery):
-    def __init__(self, model, filter_kwargs, db, q_objects):
+    def __init__(self, model, filter_kwargs, db, q_objects, annotations, having, custom_filters):
         super().__init__()
         self._db = db if db else model._meta.db
         table = Table(model._meta.table)
         self.query = self._db.query_class.from_(table)
-        self.resolve_filters(model, filter_kwargs, q_objects)
+        self.resolve_filters(
+            model=model,
+            filter_kwargs=filter_kwargs,
+            q_objects=q_objects,
+            annotations=annotations,
+            having=having,
+            custom_filters=custom_filters
+        )
         self.query = self.query.select(Count(table.star))
 
     async def _execute(self):
@@ -378,7 +447,7 @@ class CountQuery(AwaitableQuery):
 
 class ValuesListQuery(AwaitableQuery):
     def __init__(self, model, filter_kwargs, db, q_objects, fields, limit, offset, distinct,
-                 orderings, flat):
+                 orderings, flat, annotations, having, custom_filters):
         super().__init__()
         assert (len(fields) == 1) == flat, 'You can flat value_list only if contains one field'
         for field in fields:
@@ -386,14 +455,21 @@ class ValuesListQuery(AwaitableQuery):
         self._db = db if db else model._meta.db
         table = Table(model._meta.table)
         self.query = self._db.query_class.from_(table).select(*fields)
-        self.resolve_filters(model, filter_kwargs, q_objects)
+        self.resolve_filters(
+            model=model,
+            filter_kwargs=filter_kwargs,
+            q_objects=q_objects,
+            annotations=annotations,
+            having=having,
+            custom_filters=custom_filters
+        )
         if limit:
             self.query = self.query.limit(limit)
         if offset:
             self.query = self.query.offset(offset)
         if distinct:
             self.query = self.query.distinct()
-        self.resolve_ordering(model, orderings)
+        self.resolve_ordering(model, orderings, annotations)
         self.flat = flat
         self.fields = fields
         self.model = model
@@ -415,14 +491,21 @@ class ValuesListQuery(AwaitableQuery):
 
 class ValuesQuery(AwaitableQuery):
     def __init__(self, model, filter_kwargs, db, q_objects, fields, limit, offset, distinct,
-                 orderings):
+                 orderings, annotations, having, custom_filters):
         super().__init__()
         for field in fields:
             assert field in model._meta.fields_db_projection
         self._db = db if db else model._meta.db
         table = Table(model._meta.table)
         self.query = self._db.query_class.from_(table).select(*fields)
-        self.resolve_filters(model, filter_kwargs, q_objects)
+        self.resolve_filters(
+            model=model,
+            filter_kwargs=filter_kwargs,
+            q_objects=q_objects,
+            annotations=annotations,
+            having=having,
+            custom_filters=custom_filters
+        )
         if limit:
             self.query = self.query.limit(limit)
         if offset:
@@ -431,7 +514,7 @@ class ValuesQuery(AwaitableQuery):
             self.query = self.query.distinct()
         for ordering in orderings:
             self.query = self.query.orderby(ordering[0], order=ordering[1])
-        self.resolve_ordering(model, orderings)
+        self.resolve_ordering(model, orderings, annotations)
         self.fields = fields
         self.model = model
 
