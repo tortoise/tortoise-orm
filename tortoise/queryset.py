@@ -398,7 +398,18 @@ class UpdateQuery(AwaitableQuery):
         )
 
         for key, value in update_kwargs.items():
-            self.query = self.query.set(key, value)
+            field_object = model._meta.fields_map.get(key)
+            if not field_object:
+                raise AssertionError('Unknown keyword argument {} for model {}'.format(
+                    key, model
+                ))
+            assert not field_object.generated, 'Field {} is generated and can not be updated'
+            if isinstance(field_object, fields.ForeignKeyField):
+                db_field = '{}_id'.format(key)
+                value = value.id
+            else:
+                db_field = model._meta.fields_db_projection[key]
+            self.query = self.query.set(db_field, value)
 
     async def _execute(self):
         await self._db.execute_query(str(self.query))
