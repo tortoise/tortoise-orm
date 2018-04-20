@@ -127,4 +127,4 @@ class Tortoise:
         cls._inited = True
 
 
-__version__ = "0.7.5"
+__version__ = "0.7.6"
