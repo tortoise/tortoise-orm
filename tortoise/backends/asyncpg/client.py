@@ -109,6 +109,7 @@ class TransactionWrapper(AsyncpgDBClient):
             (SingleConnectionWrapper, self.__class__),
             {}
         )
+        self._transaction_class = self.__class__
 
     def acquire_connection(self):
         return ConnectionWrapper(self._connection)
