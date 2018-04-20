@@ -116,6 +116,24 @@ class TransactionWrapper(AsyncpgDBClient):
     async def _get_connection(self):
         return await self._pool._acquire(None)
 
+    async def start(self):
+        if not self._connection:
+            self._connection = await self._get_connection()
+        self.transaction = self._connection.transaction()
+        await self.transaction.start()
+
+    async def commit(self):
+        await self.transaction.commit()
+        if self._pool:
+            await self._pool.release(self._connection)
+            self._connection = None
+
+    async def rollback(self):
+        await self.transaction.rollback()
+        if self._pool:
+            await self._pool.release(self._connection)
+            self._connection = None
+
     async def __aenter__(self):
         if not self._connection:
             self._connection = await self._get_connection()
@@ -126,7 +144,11 @@ class TransactionWrapper(AsyncpgDBClient):
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if exc_type:
             await self.transaction.rollback()
+            if self._pool:
+                await self._pool.release(self._connection)
+                self._connection = None
             return False
         await self.transaction.commit()
         if self._pool:
             await self._pool.release(self._connection)
+            self._connection = None

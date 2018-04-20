@@ -87,6 +87,18 @@ class TransactionWrapper(SqliteClient):
     async def release_single_connection(self, single_connection):
         pass
 
+    async def start(self):
+        self._connection.start()
+        await self._connection._connect()
+
+    async def rollback(self):
+        await self._connection.rollback()
+        await self._connection.close()
+
+    async def commit(self):
+        await self._connection.commit()
+        await self._connection.close()
+
     async def __aenter__(self):
         self._connection.start()
         await self._connection._connect()
