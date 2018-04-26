@@ -61,7 +61,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         else:
             await self._connection.close()
 
-
     def acquire_connection(self):
         if not self.single_connection:
             return self._db_pool.acquire()

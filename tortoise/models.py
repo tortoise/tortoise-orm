@@ -1,6 +1,7 @@
 import operator
 
 from pypika import Table, functions
+from pypika.enums import SqlTypes
 
 from tortoise import fields
 from tortoise.fields import ManyToManyRelationManager, RelationQueryContainer
@@ -34,27 +35,33 @@ def not_null(field, value):
 
 
 def contains(field, value):
-    return field.like('%{}%'.format(value))
+    return functions.Cast(field, SqlTypes.CHAR).like('%{}%'.format(value))
 
 
 def starts_with(field, value):
-    return field.like('{}%'.format(value))
+    return functions.Cast(field, SqlTypes.CHAR).like('{}%'.format(value))
 
 
 def ends_with(field, value):
-    return field.like('%{}'.format(value))
+    return functions.Cast(field, SqlTypes.CHAR).like('%{}'.format(value))
 
 
 def insensitive_contains(field, value):
-    return functions.Upper(field).like(functions.Upper('%{}%'.format(value)))
+    return functions.Upper(
+        functions.Cast(field, SqlTypes.CHAR)
+    ).like(functions.Upper('%{}%'.format(value)))
 
 
 def insensitive_starts_with(field, value):
-    return functions.Upper(field).like(functions.Upper('{}%'.format(value)))
+    return functions.Upper(
+        functions.Cast(field, SqlTypes.CHAR)
+    ).like(functions.Upper('{}%'.format(value)))
 
 
 def insensitive_ends_with(field, value):
-    return functions.Upper(field).like(functions.Upper('%{}'.format(value)))
+    return functions.Upper(
+        functions.Cast(field, SqlTypes.CHAR)
+    ).like(functions.Upper('%{}'.format(value)))
 
 
 def get_m2m_filters(field_name, field):

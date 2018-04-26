@@ -85,6 +85,7 @@ async def run():
 
     tournaments = await Tournament.filter(events__participants__name__startswith='Fir')
     assert len(tournaments) == 1 and tournaments[0] == tournament
+    assert await Tournament.filter(id__icontains=1).count() == 1
 
 
 if __name__ == '__main__':

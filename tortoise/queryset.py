@@ -453,7 +453,7 @@ class CountQuery(AwaitableQuery):
 
     async def _execute(self):
         result = await self._db.execute_query(str(self.query))
-        return result[0][0]
+        return list(dict(result[0]).values())[0]
 
 
 class ValuesListQuery(AwaitableQuery):
