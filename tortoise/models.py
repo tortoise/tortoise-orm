@@ -35,32 +35,32 @@ def not_null(field, value):
 
 
 def contains(field, value):
-    return functions.Cast(field, SqlTypes.CHAR).like('%{}%'.format(value))
+    return functions.Cast(field, SqlTypes.VARCHAR).like('%{}%'.format(value))
 
 
 def starts_with(field, value):
-    return functions.Cast(field, SqlTypes.CHAR).like('{}%'.format(value))
+    return functions.Cast(field, SqlTypes.VARCHAR).like('{}%'.format(value))
 
 
 def ends_with(field, value):
-    return functions.Cast(field, SqlTypes.CHAR).like('%{}'.format(value))
+    return functions.Cast(field, SqlTypes.VARCHAR).like('%{}'.format(value))
 
 
 def insensitive_contains(field, value):
     return functions.Upper(
-        functions.Cast(field, SqlTypes.CHAR)
+        functions.Cast(field, SqlTypes.VARCHAR)
     ).like(functions.Upper('%{}%'.format(value)))
 
 
 def insensitive_starts_with(field, value):
     return functions.Upper(
-        functions.Cast(field, SqlTypes.CHAR)
+        functions.Cast(field, SqlTypes.VARCHAR)
     ).like(functions.Upper('{}%'.format(value)))
 
 
 def insensitive_ends_with(field, value):
     return functions.Upper(
-        functions.Cast(field, SqlTypes.CHAR)
+        functions.Cast(field, SqlTypes.VARCHAR)
     ).like(functions.Upper('%{}'.format(value)))
 
 
