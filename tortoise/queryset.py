@@ -67,8 +67,9 @@ class AwaitableQuery:
         else:
             related_table = Table(related_field.type._meta.table)
             if related_table not in self._joined_tables:
+                related_id_field_name = '{}_id'.format(related_field_name)
                 self.query = self.query.join(related_table, how=JoinType.left_outer).on(
-                    related_table.id == getattr(table, related_field_name)
+                    related_table.id == getattr(table, related_id_field_name)
                 )
                 self._joined_tables.append(related_table)
 

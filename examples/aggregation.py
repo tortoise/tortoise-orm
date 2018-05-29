@@ -2,7 +2,7 @@ import asyncio
 
 from examples import get_db_name
 from tortoise import Tortoise, fields
-from tortoise.aggregation import Count, Min
+from tortoise.aggregation import Count, Min, Sum
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.exceptions import NoValuesFetched
 from tortoise.models import Model
@@ -37,7 +37,6 @@ class Team(Model):
 
 async def run():
     db_name = get_db_name()
-    print(db_name)
     client = SqliteClient(db_name)
     await client.create_connection()
     Tortoise.init(client)
@@ -69,6 +68,8 @@ async def run():
 
     ordered_tournaments = await Tournament.all().annotate(events_count=Count('events')).order_by('events_count')
     assert len(ordered_tournaments) == 2 and ordered_tournaments[1].id == tournament.id
+    event_with_annotation = await Event.all().annotate(tournament_test_id=Sum('tournament__id')).first()
+    assert event_with_annotation.tournament_test_id == event_with_annotation.tournament_id
 
 
 if __name__ == '__main__':

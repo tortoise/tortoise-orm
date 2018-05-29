@@ -72,7 +72,7 @@ async def run():
 
     found_events = await Event.filter(
         Q(id__in=[event_first.id, event_second.id]) | Q(name='3')
-    ).filter(participants__not=team_second.id).distinct()
+    ).filter(participants__not=team_second.id).order_by('tournament__id').distinct()
     assert len(found_events) == 2
     assert found_events[0].id == event_first.id and found_events[1].id == event_third.id
     await Team.filter(events__tournament_id=tournament.id).order_by('-events__name')
