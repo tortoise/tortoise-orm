@@ -1,3 +1,7 @@
+### 0.8.0
+
+Added postgres `JSONField`
+
 ### 0.7.0
 
 Added `.annotate()` method and basic aggregation funcs

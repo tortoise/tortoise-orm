@@ -78,7 +78,14 @@ class Q:
                     new_criterion, join = self._get_from_related_table(param['table'], param, value)
                     required_joins.append(join)
                 else:
-                    new_criterion = param['operator'](getattr(table, param['field']), value)
+                    field_object = model._meta.fields_map[param['field']]
+                    value_encoder = (
+                        param['value_encoder'] if param.get('value_encoder') else field_object.to_db_value
+                    )
+                    new_criterion = param['operator'](
+                        getattr(table, param['field']),
+                        value_encoder(value)
+                    )
             if not criterion:
                 criterion = new_criterion
             else:

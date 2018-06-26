@@ -83,12 +83,14 @@ def get_m2m_filters(field_name, field):
             'backward_key': field.backward_key,
             'operator': is_in,
             'table': Table(field.through),
+            'value_encoder': list,
         },
         '{}__not_in'.format(field_name): {
             'field': field.forward_key,
             'backward_key': field.backward_key,
             'operator': not_in,
             'table': Table(field.through),
+            'value_encoder': list,
         },
     }
     return filters
@@ -113,12 +115,14 @@ def get_backward_fk_filters(field_name, field):
             'backward_key': field.relation_field,
             'operator': is_in,
             'table': Table(field.type._meta.table),
+            'value_encoder': list,
         },
         '{}__not_in'.format(field_name): {
             'field': 'id',
             'backward_key': field.relation_field,
             'operator': not_in,
             'table': Table(field.type._meta.table),
+            'value_encoder': list,
         },
     }
     return filters
@@ -139,10 +143,12 @@ def get_filters_for_field(field_name: str, field: fields.Field, source_field: st
         '{}__in'.format(field_name): {
             'field': source_field,
             'operator': is_in,
+            'value_encoder': list,
         },
         '{}__not_in'.format(field_name): {
             'field': source_field,
             'operator': not_in,
+            'value_encoder': list,
         },
         '{}__isnull'.format(field_name): {
             'field': source_field,
@@ -228,6 +234,7 @@ class ModelMeta(type):
                 fields_map[key] = value
                 if isinstance(value, fields.ForeignKeyField):
                     key_field = '{}_id'.format(key)
+                    value.source_field = key_field
                     fields_db_projection[key_field] = key_field
                     fields_map[key_field] = fields.IntField(
                         reference=value,
@@ -309,7 +316,7 @@ class Model(metaclass=ModelMeta):
                 if value is None and not field_object.null:
                     raise ValueError('{} is non nullable field, but null was passed'.format(key))
                 if not isinstance(value, field_object.type) and value is not None:
-                    setattr(self, key, field_object.type(value))
+                    setattr(self, key, field_object.to_python_value(value))
                 else:
                     setattr(self, key, value)
             elif key in self._meta.db_fields:

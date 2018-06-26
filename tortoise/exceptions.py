@@ -11,7 +11,7 @@ class MultiplyObjectsReturned(BaseORMException):
         super().__init__(message, *args)
 
 
-class UnknownFilterParameter(BaseORMException):
+class FieldError(BaseORMException):
     pass
 
 

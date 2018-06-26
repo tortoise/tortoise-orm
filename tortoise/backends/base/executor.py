@@ -27,6 +27,39 @@ class BaseExecutor:
         self.connection = None
         return instance_list
 
+    def _prepare_insert_columns(self):
+        columns = list(self.model._meta.fields_db_projection.values())
+        columns_filtered = []
+        python_generated_columns = []
+        now = datetime.datetime.utcnow()
+        for column in columns:
+            field_object = self.model._meta.fields_map[column]
+            if isinstance(field_object, fields.DatetimeField) and field_object.auto_now_add:
+                python_generated_columns.append((column, now))
+            elif field_object.generated:
+                continue
+            else:
+                columns_filtered.append(column)
+        return columns_filtered, python_generated_columns
+
+    def _get_prepared_value(self, instance, field):
+        field_object = self.model._meta.fields_map[field]
+        return field_object.to_db_value(getattr(
+            instance,
+            self.model._meta.fields_db_projection_reverse[field],
+        ))
+
+    def _prepare_insert_values(self, instance, columns, generated_columns):
+        values = [
+            self._get_prepared_value(instance, column)
+            for column in columns
+        ]
+        for column, value in generated_columns:
+            columns.append(column)
+            values.append(value)
+            setattr(instance, column, value)
+        return values
+
     async def execute_insert(self, instance):
         # Insert should implement returning new id to saved object
         # Each db has it's own methods for it, so each implementation should
@@ -46,7 +79,7 @@ class BaseExecutor:
             elif field_object.generated:
                 continue
             else:
-                query = query.set(db_field, getattr(instance, field))
+                query = query.set(db_field, field_object.to_db_value(getattr(instance, field)))
         query = query.where(table.id == instance.id)
         await self.connection.execute_query(str(query))
         await self.db.release_single_connection(self.connection)
@@ -87,7 +120,7 @@ class BaseExecutor:
         for instance in instance_list:
             instance_id_set.add(instance.id)
 
-        field_object = getattr(self.model, field)
+        field_object = self.model._meta.fields_map[field]
 
         through_table = Table(field_object.through)
 

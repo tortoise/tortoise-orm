@@ -90,6 +90,8 @@ async def run():
 
     await Team.filter(events__tournament__id=tournament.id)
 
+    await Event.filter(tournament=tournament)
+
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()

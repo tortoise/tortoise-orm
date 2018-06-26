@@ -25,6 +25,12 @@ class Field:
         self.null = null
         self.unique = unique
 
+    def to_db_value(self, value):
+        return self.type(value)
+
+    def to_python_value(self, value):
+        return self.type(value)
+
 
 class IntField(Field):
     def __init__(self, source_field=None, pk=False, *args, **kwargs):

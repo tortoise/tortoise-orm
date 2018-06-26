@@ -4,7 +4,7 @@ from pypika.functions import Count
 from tortoise import fields
 from tortoise.aggregation import Aggregate
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.exceptions import UnknownFilterParameter
+from tortoise.exceptions import FieldError
 from tortoise.query_utils import Q, Prefetch
 from tortoise.utils import AsyncIteratorWrapper
 
@@ -36,7 +36,13 @@ class AwaitableQuery:
             if param.get('table'):
                 self._filter_from_related_table(table, param, value)
             else:
-                self.query = self.query.where(param['operator'](getattr(table, param['field']), value))
+                field_object = model._meta.fields_map[param['field']]
+                value_encoder = (
+                    param['value_encoder'] if param.get('value_encoder') else field_object.to_db_value
+                )
+                self.query = self.query.where(
+                    param['operator'](getattr(table, param['field']), value_encoder(value))
+                )
         for key, value in having.items():
             having_info = custom_filters[key]
             aggregation = annotations[having_info['field']]
@@ -158,17 +164,21 @@ class QuerySet(AwaitableQuery):
     def filter(self, *args, **kwargs):
         queryset = self._clone()
         for arg in args:
-            assert isinstance(arg, Q)
+            if not isinstance(arg, Q):
+                raise TypeError('expected Q objects as args')
             queryset._q_objects_for_resolve.append(arg)
         for key, value in kwargs.items():
             if key in queryset.model._meta.filters:
                 queryset._filter_kwargs[key] = value
+            elif key in self.model._meta.fk_fields:
+                field_object = self.model._meta.fields_map[key]
+                queryset._filter_kwargs[field_object.source_field] = value.id
             elif key.split('__')[0] in self.model._meta.fetch_fields:
                 queryset._q_objects_for_resolve.append(Q(**{key: value}))
             elif key in self._available_custom_filters:
                 queryset._having[key] = value
             else:
-                raise UnknownFilterParameter(
+                raise FieldError(
                     'unknown filter param {}'.format(key)
                 )
         return queryset
@@ -184,15 +194,16 @@ class QuerySet(AwaitableQuery):
             else:
                 field_name = ordering
 
-            assert (
-                field_name.split('__')[0] in self.model._meta.fields
-                or field_name in self._annotations
-            ), (
-                'Unknown field {} for model {}'.format(
-                    field_name,
-                    self.model.__name__,
+            if not (
+                    field_name.split('__')[0] in self.model._meta.fields
+                    or field_name in self._annotations
+            ):
+                raise FieldError(
+                    'Unknown field {} for model {}'.format(
+                        field_name,
+                        self.model.__name__,
+                    )
                 )
-            )
             new_ordering.append((field_name, order_type))
         queryset._orderings = new_ordering
         return queryset
@@ -215,7 +226,8 @@ class QuerySet(AwaitableQuery):
     def annotate(self, **kwargs):
         queryset = self._clone()
         for key, aggregation in kwargs.items():
-            assert isinstance(aggregation, Aggregate)
+            if not isinstance(aggregation, Aggregate):
+                raise TypeError('value is expected to be Aggregate instance')
             queryset._annotations[key] = aggregation
             from tortoise.models import get_filters_for_field
             queryset._available_custom_filters.update(get_filters_for_field(key, None, key))
@@ -310,12 +322,13 @@ class QuerySet(AwaitableQuery):
                 continue
             relation_split = relation.split('__')
             first_level_field = relation_split[0]
-            assert (
+            if not (
                 first_level_field in self.model._meta.fetch_fields
-            ), 'relation {} for {} not found'.format(
-                first_level_field,
-                self.model._meta.table
-            )
+            ):
+                raise FieldError('relation {} for {} not found'.format(
+                    first_level_field,
+                    self.model._meta.table
+                ))
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()
             forwarded_prefetch = '__'.join(relation_split[1:])
@@ -401,7 +414,7 @@ class UpdateQuery(AwaitableQuery):
         for key, value in update_kwargs.items():
             field_object = model._meta.fields_map.get(key)
             if not field_object:
-                raise AssertionError('Unknown keyword argument {} for model {}'.format(
+                raise FieldError('Unknown keyword argument {} for model {}'.format(
                     key, model
                 ))
             assert not field_object.generated, 'Field {} is generated and can not be updated'
@@ -461,7 +474,8 @@ class ValuesListQuery(AwaitableQuery):
     def __init__(self, model, filter_kwargs, db, q_objects, fields, limit, offset, distinct,
                  orderings, flat, annotations, having, custom_filters):
         super().__init__()
-        assert (len(fields) == 1) == flat, 'You can flat value_list only if contains one field'
+        if not (len(fields) == 1) == flat:
+            raise TypeError('You can flat value_list only if contains one field')
         for field in fields:
             assert field in model._meta.fields_db_projection
         self._db = db if db else model._meta.db

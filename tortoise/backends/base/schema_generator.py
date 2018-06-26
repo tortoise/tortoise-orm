@@ -11,7 +11,7 @@ M2M_TABLE_TEMPLATE = (
 
 
 class BaseSchemaGenerator:
-    field_type_map = {
+    FIELD_TYPE_MAP = {
         fields.BooleanField: 'BOOL',
         fields.IntField: 'INT',
         fields.SmallIntField: 'SMALLINT',
@@ -45,7 +45,7 @@ class BaseSchemaGenerator:
             nullable = 'NOT NULL' if not field_object.null else ''
             unique = 'UNIQUE' if field_object.unique else ''
 
-            field_type = self.field_type_map[field_object.__class__]
+            field_type = self.FIELD_TYPE_MAP[field_object.__class__]
             if isinstance(field_object, fields.DecimalField):
                 field_type = field_type.format(field_object.max_digits, field_object.decimal_places)
             elif isinstance(field_object, fields.CharField):
