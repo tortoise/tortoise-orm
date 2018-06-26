@@ -17,7 +17,11 @@ class JSONField(Field):
             self.decoder = decoder
 
     def to_db_value(self, value):
+        if value is None:
+            return value
         return self.encoder(value)
 
     def to_python_value(self, value):
+        if value is None:
+            return value
         return self.decoder(value)

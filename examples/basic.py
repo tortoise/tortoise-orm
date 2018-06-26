@@ -14,6 +14,7 @@ This example demonstrates most basic operations with single model
 class Event(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
+    datetime = fields.DatetimeField(null=True)
 
     class Meta:
         table = 'event'

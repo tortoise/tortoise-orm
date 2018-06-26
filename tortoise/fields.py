@@ -26,9 +26,13 @@ class Field:
         self.unique = unique
 
     def to_db_value(self, value):
+        if value is None or isinstance(value, self.type):
+            return value
         return self.type(value)
 
     def to_python_value(self, value):
+        if value is None or isinstance(value, self.type):
+            return value
         return self.type(value)
 
 
