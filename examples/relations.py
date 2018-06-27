@@ -1,20 +1,18 @@
+"""
+This example shows how relations between models work.
+
+Key points in this example are use of ForeignKeyField and ManyToManyField
+to declare relations and use of .prefetch_related() and .fetch_related()
+to get this related objects
+"""
 import asyncio
 
 from examples import get_db_name
 from tortoise import Tortoise, fields
-from tortoise.aggregation import Count
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.exceptions import NoValuesFetched
 from tortoise.models import Model
 from tortoise.utils import generate_schema
-
-"""
-This example shows how relations between models work.
-
-Key points in this example are use of ForeignKeyField and ManyToManyField 
-to declare relations and use of .prefetch_related() and .fetch_related() 
-to get this related objects 
-"""
 
 
 class Tournament(Model):
@@ -29,7 +27,9 @@ class Event(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
     tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
-    participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
+    participants = fields.ManyToManyField(
+        'models.Team', related_name='events', through='event_team'
+    )
 
     def __str__(self):
         return self.name
@@ -77,9 +77,8 @@ async def run():
 
     assert event.participants[0].id == participants[0].id
 
-    selected_events = await Event.filter(
-        participants=participants[0].id
-    ).prefetch_related('participants', 'tournament')
+    selected_events = await Event.filter(participants=participants[0].id
+                                         ).prefetch_related('participants', 'tournament')
     assert len(selected_events) == 1
     assert selected_events[0].tournament.id == tournament.id
     assert len(selected_events[0].participants) == 2

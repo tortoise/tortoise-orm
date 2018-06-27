@@ -1,16 +1,12 @@
 import logging
 
-import asyncio
 import asyncpg
-from datetime import date
-
-from aenum import Enum
 from pypika import PostgreSQLQuery
-from pypika.terms import ValueWrapper, basestring
 
 from tortoise.backends.asyncpg.executor import AsyncpgExecutor
 from tortoise.backends.asyncpg.schema_generator import AsyncpgSchemaGenerator
-from tortoise.backends.base.client import BaseDBAsyncClient, ConnectionWrapper, SingleConnectionWrapper
+from tortoise.backends.base.client import (BaseDBAsyncClient, ConnectionWrapper,
+                                           SingleConnectionWrapper)
 
 
 class AsyncpgDBClient(BaseDBAsyncClient):
@@ -38,7 +34,9 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self._db_pool = None
         self._connection = None
 
-        self._transaction_class = type('TransactionWrapper', (TransactionWrapper, self.__class__), {})
+        self._transaction_class = type(
+            'TransactionWrapper', (TransactionWrapper, self.__class__), {}
+        )
 
     async def create_connection(self):
         if not self.single_connection:
@@ -48,10 +46,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self.log.debug(
             'Created connection with params: '
             'user={user} database={database} host={host} port={port}'.format(
-                user=self.user,
-                database=self.database,
-                host=self.host,
-                port=self.port
+                user=self.user, database=self.database, host=self.host, port=self.port
             )
         )
 
@@ -104,9 +99,7 @@ class TransactionWrapper(AsyncpgDBClient):
         self._pool = pool
         self.single_connection = True
         self._single_connection_class = type(
-            'SingleConnectionWrapper',
-            (SingleConnectionWrapper, self.__class__),
-            {}
+            'SingleConnectionWrapper', (SingleConnectionWrapper, self.__class__), {}
         )
         self._transaction_class = self.__class__
 

@@ -1,12 +1,3 @@
-import asyncio
-from sqlite3 import OperationalError
-
-from examples import get_db_name
-from tortoise import Tortoise, fields
-from tortoise.backends.sqlite.client import SqliteClient
-from tortoise.models import Model
-from tortoise.utils import generate_schema
-
 """
 This example demonstrates how you can use Tortoise if you have to
 separate databases
@@ -17,6 +8,14 @@ use relations between two databases
 Key notes of this example is using db_route for Tortoise init
 and explicitly declaring model apps in class Meta
 """
+import asyncio
+from sqlite3 import OperationalError
+
+from examples import get_db_name
+from tortoise import Tortoise, fields
+from tortoise.backends.sqlite.client import SqliteClient
+from tortoise.models import Model
+from tortoise.utils import generate_schema
 
 
 class Tournament(Model):
@@ -35,7 +34,9 @@ class Event(Model):
     name = fields.TextField()
     tournament_id = fields.IntField()
     # Here we make link to events.Team, not models.Team
-    participants = fields.ManyToManyField('events.Team', related_name='events', through='event_team')
+    participants = fields.ManyToManyField(
+        'events.Team', related_name='events', through='event_team'
+    )
 
     def __str__(self):
         return self.name

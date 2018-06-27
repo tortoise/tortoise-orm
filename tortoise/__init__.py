@@ -1,13 +1,13 @@
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.exceptions import MultiplyObjectsReturned
-from tortoise.fields import ManyToManyRelationManager
+from tortoise.exceptions import MultiplyObjectsReturned  # noqa
+from tortoise.fields import ManyToManyRelationManager  # noqa
 from tortoise.models import get_backward_fk_filters, get_m2m_filters
-from tortoise.queryset import QuerySet
+from tortoise.queryset import QuerySet  # noqa
 
 
 class Tortoise:
-    apps = {}
+    apps = {}  # type: dict
     _inited = False
     _db_routing = None
     _global_connection = None
@@ -63,8 +63,7 @@ class Tortoise:
                         backward_relation_name = '{}s'.format(model._meta.table)
                     assert backward_relation_name not in related_model._meta.fields, (
                         'backward relation "{}" duplicates in model {}'.format(
-                            backward_relation_name,
-                            related_model_name
+                            backward_relation_name, related_model_name
                         )
                     )
                     relation = fields.BackwardFKRelation(model, '{}_id'.format(field))
@@ -99,8 +98,7 @@ class Tortoise:
                         backward_relation_name = '{}s'.format(model._meta.table)
                     assert backward_relation_name not in related_model._meta.fields, (
                         'backward relation "{}" duplicates in model {}'.format(
-                            backward_relation_name,
-                            related_model_name
+                            backward_relation_name, related_model_name
                         )
                     )
                     relation = fields.ManyToManyField(
@@ -118,7 +116,9 @@ class Tortoise:
                         relation,
                     )
                     model._meta.filters.update(get_m2m_filters(field, field_object))
-                    related_model._meta.filters.update(get_m2m_filters(backward_relation_name, relation))
+                    related_model._meta.filters.update(
+                        get_m2m_filters(backward_relation_name, relation)
+                    )
                     related_model._meta.m2m_fields.add(backward_relation_name)
                     related_model._meta.fetch_fields.add(backward_relation_name)
                     related_model._meta.fields_map[backward_relation_name] = relation

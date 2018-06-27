@@ -4,7 +4,7 @@ from examples import get_db_name
 from tortoise import Tortoise, fields
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.models import Model
-from tortoise.query_utils import Q, Prefetch
+from tortoise.query_utils import Prefetch
 from tortoise.utils import generate_schema
 
 
@@ -20,7 +20,9 @@ class Event(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
     tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
-    participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
+    participants = fields.ManyToManyField(
+        'models.Team', related_name='events', through='event_team'
+    )
 
     def __str__(self):
         return self.name

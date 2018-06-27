@@ -12,6 +12,7 @@ help:
 	@echo  "    lint	Reports all linter violations"
 	@echo  "    test	Runs all tests"
 	@echo  "    docs 	Builds the documentation"
+	@echo  "    style       Auto-formats the code"
 
 up:
 	pip-compile -o requirements-dev.txt requirements-dev.in -U
@@ -23,7 +24,6 @@ deps:
 check: deps
 	flake8 $(checkfiles)
 	mypy $(mypy_flags) $(checkfiles)
-	pylint -E $(checkfiles)
 	python setup.py check -mrs
 
 lint: deps
@@ -41,3 +41,7 @@ travis: check test bench
 
 docs: deps
 	python setup.py build_sphinx -E
+
+style: deps
+	yapf -i -r $(checkfiles)
+	isort -rc $(checkfiles)

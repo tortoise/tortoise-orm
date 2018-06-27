@@ -1,4 +1,5 @@
 import datetime
+
 from pypika import Table
 
 from tortoise import fields
@@ -44,16 +45,15 @@ class BaseExecutor:
 
     def _get_prepared_value(self, instance, field):
         field_object = self.model._meta.fields_map[field]
-        return field_object.to_db_value(getattr(
-            instance,
-            self.model._meta.fields_db_projection_reverse[field],
-        ))
+        return field_object.to_db_value(
+            getattr(
+                instance,
+                self.model._meta.fields_db_projection_reverse[field],
+            )
+        )
 
     def _prepare_insert_values(self, instance, columns, generated_columns):
-        values = [
-            self._get_prepared_value(instance, column)
-            for column in columns
-        ]
+        values = [self._get_prepared_value(instance, column) for column in columns]
         for column, value in generated_columns:
             columns.append(column)
             values.append(value)
@@ -99,9 +99,9 @@ class BaseExecutor:
         backward_relation_manager = getattr(self.model, field)
         relation_field = backward_relation_manager.relation_field
 
-        related_object_list = await related_query.filter(**{
-            '{}__in'.format(relation_field): list(instance_id_set)
-        })
+        related_object_list = await related_query.filter(
+            **{'{}__in'.format(relation_field): list(instance_id_set)}
+        )
 
         related_object_map = {}
         for entry in related_object_list:
@@ -167,7 +167,9 @@ class BaseExecutor:
             related_object_list = await related_query.filter(id__in=list(related_objects_for_fetch))
             related_object_map = {obj.id: obj for obj in related_object_list}
             for instance in instance_list:
-                setattr(instance, field, related_object_map.get(getattr(instance, relation_key_field)))
+                setattr(
+                    instance, field, related_object_map.get(getattr(instance, relation_key_field))
+                )
         return instance_list
 
     def _make_prefetch_queries(self):
@@ -204,7 +206,7 @@ class BaseExecutor:
             relation_split = relation.split('__')
             first_level_field = relation_split[0]
             assert (
-                    first_level_field in self.model._meta.fetch_fields
+                first_level_field in self.model._meta.fetch_fields
             ), 'relation {} for {} not found'.format(first_level_field, self.model._meta.table)
             if first_level_field not in self.prefetch_map.keys():
                 self.prefetch_map[first_level_field] = set()

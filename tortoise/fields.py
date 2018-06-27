@@ -1,12 +1,10 @@
-import decimal
-
 import datetime
+import decimal
 
 from pypika import Table
 
 from tortoise.exceptions import NoValuesFetched
 from tortoise.utils import AsyncIteratorWrapper
-
 
 CASCADE = 'CASCADE'
 RESTRICT = 'RESTRICT'
@@ -15,8 +13,18 @@ SET_DEFAULT = 'SET DEFAULT'
 
 
 class Field:
-    def __init__(self, type=None, source_field=None, generated=False, pk=False,
-                 null=False, default=None, unique=False, *args, **kwargs):
+    def __init__(
+        self,
+        type=None,
+        source_field=None,
+        generated=False,
+        pk=False,
+        null=False,
+        default=None,
+        unique=False,
+        *args,
+        **kwargs
+    ):
         self.type = type
         self.source_field = source_field
         self.generated = generated
@@ -107,12 +115,24 @@ class ForeignKeyField(Field):
 
 
 class ManyToManyField(Field):
-    def __init__(self, model_name, through, forward_key=None, backward_key=None, related_name=None, *args, **kwargs):
+    def __init__(
+        self,
+        model_name,
+        through,
+        forward_key=None,
+        backward_key=None,
+        related_name=None,
+        *args,
+        **kwargs
+    ):
         super().__init__(*args, **kwargs)
-        assert len(model_name.split(".")) == 2, 'Foreign key accepts model name in format "app.Model"'
+        assert len(model_name.split(".")
+                   ) == 2, 'Foreign key accepts model name in format "app.Model"'
         self.model_name = model_name
         self.related_name = related_name
-        self.forward_key = forward_key if forward_key else '{}_id'.format(model_name.split(".")[1].lower())
+        self.forward_key = forward_key if forward_key else '{}_id'.format(
+            model_name.split(".")[1].lower()
+        )
         self.backward_key = backward_key
         self.through = through
         self._generated = False
@@ -142,27 +162,37 @@ class RelationQueryContainer:
 
     def __contains__(self, item):
         if not self._fetched:
-            raise NoValuesFetched('No values were fetched for this relation, first use .fetch_related()')
+            raise NoValuesFetched(
+                'No values were fetched for this relation, first use .fetch_related()'
+            )
         return item in self.related_objects
 
     def __iter__(self):
         if not self._fetched:
-            raise NoValuesFetched('No values were fetched for this relation, first use .fetch_related()')
+            raise NoValuesFetched(
+                'No values were fetched for this relation, first use .fetch_related()'
+            )
         return self.related_objects.__iter__()
 
     def __len__(self):
         if not self._fetched:
-            raise NoValuesFetched('No values were fetched for this relation, first use .fetch_related()')
+            raise NoValuesFetched(
+                'No values were fetched for this relation, first use .fetch_related()'
+            )
         return len(self.related_objects)
 
     def __bool__(self):
         if not self._fetched:
-            raise NoValuesFetched('No values were fetched for this relation, first use .fetch_related()')
+            raise NoValuesFetched(
+                'No values were fetched for this relation, first use .fetch_related()'
+            )
         return bool(self.related_objects)
 
     def __getitem__(self, item):
         if not self._fetched:
-            raise NoValuesFetched('No values were fetched for this relation, first use .fetch_related()')
+            raise NoValuesFetched(
+                'No values were fetched for this relation, first use .fetch_related()'
+            )
         return self.related_objects[item]
 
     async def __aiter__(self):
@@ -218,14 +248,11 @@ class ManyToManyRelationManager(RelationQueryContainer):
         criterion = getattr(through_table, self.field.forward_key) == instances[0].id
         for instance_to_add in instances[1:]:
             criterion |= getattr(through_table, self.field.forward_key) == instance_to_add.id
-        select_query = select_query.where(
-            criterion
-        )
+        select_query = select_query.where(criterion)
 
         already_existing_relations_raw = await db.execute_query(str(select_query))
-        already_existing_relations = set(
-            (r[self.field.backward_key], r[self.field.forward_key]) for r in already_existing_relations_raw
-        )
+        already_existing_relations = set((r[self.field.backward_key], r[self.field.forward_key])
+                                         for r in already_existing_relations_raw)
 
         insert_is_required = False
         for instance_to_add in instances:
@@ -257,9 +284,7 @@ class ManyToManyRelationManager(RelationQueryContainer):
                 getattr(through_table, self.field.forward_key) == instance_to_remove.id
                 & getattr(through_table, self.field.backward_key) == self.instance.id
             )
-        query = db.query_class.from_(through_table).where(
-            condition
-        ).delete()
+        query = db.query_class.from_(through_table).where(condition).delete()
         await db.execute_query(str(query))
 
 

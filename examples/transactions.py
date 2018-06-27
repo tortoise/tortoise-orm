@@ -1,3 +1,10 @@
+"""
+This example demonstrates how you can use transactions with tortoise
+
+Currently tortoise doesn't have some kind of magic transaction wrapper
+like django's transaction.atomic, but if you have to make something in transaction
+you could still do it like this
+"""
 import asyncio
 import sqlite3
 
@@ -6,14 +13,6 @@ from tortoise import Tortoise, fields
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.models import Model
 from tortoise.utils import generate_schema
-
-"""
-This example demonstrates how you can use transactions with tortoise
-
-Currently tortoise doesn't have some kind of magic transaction wrapper
-like django's transaction.atomic, but if you have to make something in transaction 
-you could still do it like this
-"""
 
 
 class Event(Model):

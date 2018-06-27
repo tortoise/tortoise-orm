@@ -1,9 +1,9 @@
 from pypika import Table
-from pypika.functions import Count as PypikaCount
-from pypika.functions import Sum as PypikaSum
-from pypika.functions import Min as PypikaMin
-from pypika.functions import Max as PypikaMax
 from pypika.functions import Avg as PypikaAvg
+from pypika.functions import Count as PypikaCount
+from pypika.functions import Max as PypikaMax
+from pypika.functions import Min as PypikaMin
+from pypika.functions import Sum as PypikaSum
 
 
 class Aggregate:
@@ -23,15 +23,21 @@ class Aggregate:
                 related_field = model._meta.fields_map[field_split[0]]
                 join = (Table(model._meta.table), field_split[0], related_field)
                 aggregation['joins'].append(join)
-                aggregation['field'] = self.aggregation_func(Table(related_field.type._meta.table).id)
+                aggregation['field'] = self.aggregation_func(
+                    Table(related_field.type._meta.table).id
+                )
             else:
-                aggregation['field'] = self.aggregation_func(getattr(Table(model._meta.table), field_split[0]))
+                aggregation['field'] = self.aggregation_func(
+                    getattr(Table(model._meta.table), field_split[0])
+                )
             return aggregation
         else:
             assert field_split[0] in model._meta.fetch_fields
             related_field = model._meta.fields_map[field_split[0]]
             join = (Table(model._meta.table), field_split[0], related_field)
-            aggregation = self._resolve_field_for_model('__'.join(field_split[1:]), related_field.type)
+            aggregation = self._resolve_field_for_model(
+                '__'.join(field_split[1:]), related_field.type
+            )
             aggregation['joins'].append(join)
             return aggregation
 

@@ -1,22 +1,16 @@
+"""
+This example showcases special postgres features
+"""
 import asyncio
-import uuid
 from copy import copy
 
 from asyncpg import InvalidCatalogNameError
 
-from examples import get_db_name
 from tortoise import Tortoise, fields
-from tortoise.aggregation import Count
 from tortoise.backends.asyncpg.client import AsyncpgDBClient
 from tortoise.backends.asyncpg.fields import JSONField
-from tortoise.backends.sqlite.client import SqliteClient
-from tortoise.exceptions import NoValuesFetched
 from tortoise.models import Model
 from tortoise.utils import generate_schema
-
-"""
-This example showcases special postgres features
-"""
 
 
 class Report(Model):
@@ -42,9 +36,7 @@ async def run():
     await client.create_connection()
 
     try:
-        await client.execute_script(
-            'DROP DATABASE {}'.format(test_db_name)
-        )
+        await client.execute_script('DROP DATABASE {}'.format(test_db_name))
     except InvalidCatalogNameError:
         pass
     await client.execute_script(

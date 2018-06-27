@@ -15,9 +15,7 @@ class BaseDBAsyncClient:
         self.log = logging.getLogger('db_client')
         self.single_connection = single_connection
         self._single_connection_class = type(
-            'SingleConnectionWrapper',
-            (SingleConnectionWrapper, self.__class__),
-            {}
+            'SingleConnectionWrapper', (SingleConnectionWrapper, self.__class__), {}
         )
 
     async def create_connection(self):
