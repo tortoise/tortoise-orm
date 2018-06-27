@@ -11,8 +11,9 @@ It is built with relations between models in mind and provides simple api for it
 You can find docs at `readthedocs <http://tortoise-orm.readthedocs.io/en/latest/>`_
 
 Disclaimer
-==========
+----------
 Tortoise is young project and breaking changes without following semantic versioning are to be expected
+
 
 Installation
 ===============
@@ -22,17 +23,12 @@ First you have to install tortoise like this:
 
     pip install tortoise-orm
 
-..
-
 Then you should install your db driver
 
 .. code-block:: bash
 
-    pip install asyncpg
+    pip install asyncpg aiosqlite
 
-..
-
-Apart from ``asyncpg`` there is also support for ``sqlite`` through ``aiosqlite``, but this driver is rather slow and mainly used for testing. (It is quite easy to implement more backends if there is appropriate asyncio driver for this db)
 
 Tutorial
 ========
@@ -41,7 +37,7 @@ Primary entity of tortoise is ``tortoise.models.Model``.
 You can start writing models like this:
 
 
-.. code-block:: python
+.. code-block:: python3
 
     from tortoise.models import Model
     from tortoise import fields
@@ -75,7 +71,7 @@ Then in init part of your app you should init models like this
 (make sure that you **import your models** before calling init, tortoise must see them to init normally):
 
 
-.. code-block:: python
+.. code-block:: python3
 
     from tortoise.backends.asyncpg.client import AsyncpgDBClient
     from tortoise import Tortoise
@@ -94,11 +90,11 @@ Then in init part of your app you should init models like this
         await db.create_connection()
         Tortoise.init(db)
         # You can generate schema for your models like this, but don't do this if you have schema already:
-        await generate_schema(client)
+        await generate_schema(db)
 
 After that you can start using your models:
 
-.. code-block:: python
+.. code-block:: python3
 
     # Create instance by save
     tournament = Tournament(name='New Tournament')
@@ -141,11 +137,9 @@ After that you can start using your models:
         events__name__in=['Test', 'Prod']
     ).order_by('-events__participants__name').distinct()
 
-You can read more examples (including transactions, several databases and a little more complex querying) in
-`examples <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples>`_ directory of this repository and also check out  `documentation <http://tortoise-orm.readthedocs.io/en/latest/>`_.
 
-Also
-=======
+Thanks
+======
 
 Huge thanks to https://github.com/kayak/pypika for making this possible.
 
