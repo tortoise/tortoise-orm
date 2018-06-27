@@ -1,0 +1,23 @@
+-r requirements.txt
+
+# Optional dependencies
+
+## Database Drivers
+asyncpg
+aiosqlite
+
+# Dev Tools
+
+## Administration tools
+pip-tools
+sphinx
+
+## Linter tools
+mypy
+flake8-isort
+pylint
+docutils
+pygments
+
+## Test tools
+tox
