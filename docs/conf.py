@@ -19,14 +19,24 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'tortoise'
+
+project = 'Tortoise'
 copyright = '2018, Andrey Bondar'
 author = 'Andrey Bondar'
 
+import re
+def get_version():
+    verstrline = open('../tortoise/__init__.py', "rt").read()
+    mob = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", verstrline, re.M)
+    if mob:
+        return mob.group(1)
+    else:
+        raise RuntimeError("Unable to find version string")
+
 # The short X.Y version
-version = ''
+version = get_version()
 # The full version, including alpha/beta/rc tags
-release = ''
+release = version
 
 
 # -- General configuration ---------------------------------------------------
@@ -81,8 +91,7 @@ html_theme = 'alabaster'
 html_sidebars = {
     '**': [
         'about.html',
-        'localtoc.html',
-        'navigation.html',
+        'globaltoc.html',
         'relations.html',
         'searchbox.html',
     ]
