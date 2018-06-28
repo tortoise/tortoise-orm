@@ -1,3 +1,6 @@
+"""
+This example demonstrates most basic operations with single model
+"""
 import asyncio
 
 from examples import get_db_name
@@ -5,10 +8,6 @@ from tortoise import Tortoise, fields
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.models import Model
 from tortoise.utils import generate_schema
-
-"""
-This example demonstrates most basic operations with single model
-"""
 
 
 class Event(Model):

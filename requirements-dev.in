@@ -18,6 +18,7 @@ flake8-isort
 pylint
 docutils
 pygments
+yapf
 
 ## Test tools
 tox

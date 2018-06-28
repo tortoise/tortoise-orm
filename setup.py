@@ -1,10 +1,9 @@
 # coding: utf8
 
 import ast
-
 import sys
-from setuptools import setup
 
+from setuptools import setup
 
 if sys.version_info < (3, 5, 3):
     raise RuntimeError("tortoise requires Python 3.5.3+")
@@ -41,7 +40,6 @@ def version():
 with open('requirements.txt') as f:
     required = f.read().splitlines()
 
-
 setup(
     # Application name:
     name="tortoise-orm",
@@ -64,10 +62,8 @@ setup(
 
     # Details
     url="https://github.com/Zeliboba5/tortoise-orm",
-
     description="Easy async ORM for python, built with relations in mind",
     long_description=readme(),
-
     classifiers=[
         'License :: OSI Approved :: Apache Software License',
         'Development Status :: 5 - Production/Stable',

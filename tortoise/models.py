@@ -47,21 +47,21 @@ def ends_with(field, value):
 
 
 def insensitive_contains(field, value):
-    return functions.Upper(
-        functions.Cast(field, SqlTypes.VARCHAR)
-    ).like(functions.Upper('%{}%'.format(value)))
+    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
+        functions.Upper('%{}%'.format(value))
+    )
 
 
 def insensitive_starts_with(field, value):
-    return functions.Upper(
-        functions.Cast(field, SqlTypes.VARCHAR)
-    ).like(functions.Upper('{}%'.format(value)))
+    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
+        functions.Upper('{}%'.format(value))
+    )
 
 
 def insensitive_ends_with(field, value):
-    return functions.Upper(
-        functions.Cast(field, SqlTypes.VARCHAR)
-    ).like(functions.Upper('%{}'.format(value)))
+    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
+        functions.Upper('%{}'.format(value))
+    )
 
 
 def get_m2m_filters(field_name, field):
@@ -241,28 +241,33 @@ class ModelMeta(type):
                         null=value.null,
                         default=value.default,
                     )
-                    filters.update(get_filters_for_field(
-                        field_name=key_field,
-                        field=fields_map[key_field],
-                        source_field=key_field,
-                    ))
+                    filters.update(
+                        get_filters_for_field(
+                            field_name=key_field,
+                            field=fields_map[key_field],
+                            source_field=key_field,
+                        )
+                    )
                     fk_fields.add(key)
                 elif isinstance(value, fields.ManyToManyField):
                     m2m_fields.add(key)
                 else:
                     fields_db_projection[key] = value.source_field if value.source_field else key
-                    filters.update(get_filters_for_field(
-                        field_name=key,
-                        field=fields_map[key],
-                        source_field=fields_db_projection[key]
-                    ))
+                    filters.update(
+                        get_filters_for_field(
+                            field_name=key,
+                            field=fields_map[key],
+                            source_field=fields_db_projection[key]
+                        )
+                    )
         new_class = super().__new__(mcs, name, bases, attrs)
 
         new_class._meta = meta
         new_class._meta.fields_map = fields_map
         new_class._meta.fields_db_projection = fields_db_projection
         new_class._meta.fields_db_projection_reverse = {
-            value: key for key, value in fields_db_projection.items()
+            value: key
+            for key, value in fields_db_projection.items()
         }
         new_class._meta.fields = set(fields_map.keys())
         new_class._meta.db_fields = set(fields_db_projection.values())
@@ -286,7 +291,10 @@ class Model(metaclass=ModelMeta):
 
         for key, field in self._meta.fields_map.items():
             if isinstance(field, fields.BackwardFKRelation):
-                setattr(self, key, RelationQueryContainer(field.type, field.relation_field, self, is_new))
+                setattr(
+                    self, key,
+                    RelationQueryContainer(field.type, field.relation_field, self, is_new)
+                )
             elif isinstance(field, fields.ManyToManyField):
                 setattr(self, key, ManyToManyRelationManager(field.type, self, field, is_new))
             elif isinstance(field, fields.Field):
@@ -371,10 +379,7 @@ class Model(metaclass=ModelMeta):
         return self.__class__.__name__
 
     def __repr__(self):
-        return '<{}: {}>'.format(
-            self.__class__.__name__,
-            self.__str__()
-        )
+        return '<{}: {}>'.format(self.__class__.__name__, self.__str__())
 
     def __hash__(self):
         if not hasattr(self.id) or not self.id:

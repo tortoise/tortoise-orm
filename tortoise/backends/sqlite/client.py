@@ -16,11 +16,11 @@ class SqliteClient(BaseDBAsyncClient):
     def __init__(self, filename, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.filename = filename
-        self._transaction_class = type('TransactionWrapper', (TransactionWrapper, self.__class__), {})
+        self._transaction_class = type(
+            'TransactionWrapper', (TransactionWrapper, self.__class__), {}
+        )
         self._single_connection_class = type(
-            'SingleConnectionWrapper',
-            (SingleConnectionWrapper, self.__class__),
-            {}
+            'SingleConnectionWrapper', (SingleConnectionWrapper, self.__class__), {}
         )
 
     async def create_connection(self):
@@ -73,9 +73,7 @@ class TransactionWrapper(SqliteClient):
         self.log = logging.getLogger('db_client')
         self.single_connection = True
         self._single_connection_class = type(
-            'SingleConnectionWrapper',
-            (SingleConnectionWrapper, self.__class__),
-            {}
+            'SingleConnectionWrapper', (SingleConnectionWrapper, self.__class__), {}
         )
         self._transaction_class = self.__class__
 

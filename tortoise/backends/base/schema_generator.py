@@ -66,21 +66,20 @@ class BaseSchemaGenerator:
             fields_to_create.append(field_creation_string)
 
         table_fields_string = ', '.join(fields_to_create)
-        table_create_string = TABLE_CREATE_TEMPLATE.format(
-            model._meta.table,
-            table_fields_string
-        )
+        table_create_string = TABLE_CREATE_TEMPLATE.format(model._meta.table, table_fields_string)
 
         for m2m_field in model._meta.m2m_fields:
             field_object = model._meta.fields_map[m2m_field]
             if field_object._generated:
                 continue
-            m2m_tables_for_create.append(M2M_TABLE_TEMPLATE.format(
-                backward_table=model._meta.table,
-                forward_table=field_object.type._meta.table,
-                backward_key=field_object.backward_key,
-                forward_key=field_object.forward_key,
-            ))
+            m2m_tables_for_create.append(
+                M2M_TABLE_TEMPLATE.format(
+                    backward_table=model._meta.table,
+                    forward_table=field_object.type._meta.table,
+                    backward_key=field_object.backward_key,
+                    forward_key=field_object.forward_key,
+                )
+            )
 
         return {
             'table': model._meta.table,
@@ -127,4 +126,3 @@ class BaseSchemaGenerator:
 
     async def generate_from_string(self, creation_string):
         await self.client.execute_script(creation_string)
-

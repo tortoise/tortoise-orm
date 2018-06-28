@@ -8,7 +8,8 @@ class Q:
     OR = 'OR'
 
     def __init__(self, *args, join_type=AND, **kwargs):
-        assert not (bool(args) and bool(kwargs)), 'you can pass only Q nodes or filter kwargs in one Q node'
+        assert not (bool(args)
+                    and bool(kwargs)), 'you can pass only Q nodes or filter kwargs in one Q node'
         assert all(isinstance(node, Q) for node in args)
         self.children = args
         self.filters = kwargs
@@ -36,20 +37,17 @@ class Q:
         if isinstance(related_field, fields.ManyToManyField):
             related_table = Table(related_field.type._meta.table)
             through_table = Table(related_field.through)
+            required_joins.append(
+                (through_table, table.id == getattr(through_table, related_field.backward_key))
+            )
             required_joins.append((
-                through_table,
-                table.id == getattr(through_table, related_field.backward_key)
-            ))
-            required_joins.append((
-                related_table,
-                getattr(through_table, related_field.forward_key) == related_table.id
+                related_table, getattr(through_table, related_field.forward_key) == related_table.id
             ))
         elif isinstance(related_field, fields.BackwardFKRelation):
             related_table = Table(related_field.type._meta.table)
-            required_joins.append((
-                related_table,
-                table.id == getattr(related_table, related_field.relation_field)
-            ))
+            required_joins.append(
+                (related_table, table.id == getattr(related_table, related_field.relation_field))
+            )
         else:
             related_table = Table(related_field.type._meta.table)
             required_joins.append((
@@ -57,9 +55,9 @@ class Q:
                 related_table.id == getattr(table, '{}_id'.format(related_field_name))
             ))
 
-        new_criterion, new_joins = Q(
-            **{'__'.join(key.split('__')[1:]): value}
-        ).resolve_for_model(related_field.type)
+        new_criterion, new_joins = Q(**{'__'.join(key.split('__')[1:]): value}).resolve_for_model(
+                                            related_field.type
+                                        )
 
         required_joins += new_joins
         return new_criterion, required_joins
@@ -80,11 +78,11 @@ class Q:
                 else:
                     field_object = model._meta.fields_map[param['field']]
                     value_encoder = (
-                        param['value_encoder'] if param.get('value_encoder') else field_object.to_db_value
+                        param['value_encoder']
+                        if param.get('value_encoder') else field_object.to_db_value
                     )
                     new_criterion = param['operator'](
-                        getattr(table, param['field']),
-                        value_encoder(value)
+                        getattr(table, param['field']), value_encoder(value)
                     )
             if not criterion:
                 criterion = new_criterion
@@ -126,15 +124,14 @@ class Prefetch:
         relation_split = self.relation.split('__')
         first_level_field = relation_split[0]
         assert (
-                first_level_field in queryset.model._meta.fetch_fields
-        ), 'relation {} for {} not found'.format(
-            first_level_field,
-            queryset.model._meta.table
-        )
+            first_level_field in queryset.model._meta.fetch_fields
+        ), 'relation {} for {} not found'.format(first_level_field, queryset.model._meta.table)
         forwarded_prefetch = '__'.join(relation_split[1:])
         if forwarded_prefetch:
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()
-            queryset._prefetch_map[first_level_field].add(Prefetch(forwarded_prefetch, self.queryset))
+            queryset._prefetch_map[first_level_field].add(
+                Prefetch(forwarded_prefetch, self.queryset)
+            )
         else:
             queryset._prefetch_queries[first_level_field] = self.queryset
