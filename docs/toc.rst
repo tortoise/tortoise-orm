@@ -8,4 +8,5 @@ Table Of Contents
    getting_started
    models_and_fields
    query
+   static_analysis
    CHANGELOG
