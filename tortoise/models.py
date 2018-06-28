@@ -1,4 +1,5 @@
 import operator
+from typing import Dict, Optional, Set  # noqa
 
 from pypika import Table, functions
 from pypika.enums import SqlTypes
@@ -208,16 +209,16 @@ class MetaInfo:
         self.abstract = getattr(meta, 'abstract', False)
         self.table = getattr(meta, 'table', None)
         self.app = getattr(meta, 'app', 'models')
-        self.fields = set()
-        self.db_fields = set()
-        self.m2m_fields = set()
-        self.fk_fields = set()
-        self.backward_fk_fields = set()
-        self.fetch_fields = set()
-        self.fields_db_projection = {}
-        self.fields_db_projection_reverse = {}
-        self.filters = {}
-        self.fields_map = {}
+        self.fields = set()  # type: Set[str]
+        self.db_fields = set()  # type: Set[str]
+        self.m2m_fields = set()  # type: Set[str]
+        self.fk_fields = set()  # type: Set[str]
+        self.backward_fk_fields = set()  # type: Set[str]
+        self.fetch_fields = set()  # type: Set[str]
+        self.fields_db_projection = {}  # type: Dict[str,str]
+        self.fields_db_projection_reverse = {}  # type: Dict[str,str]
+        self.filters = {}  # type: Dict[str, Dict[str, dict]]
+        self.fields_map = {}  # type: Dict[str, fields.Field]
         self.db = None
 
 
@@ -225,10 +226,9 @@ class ModelMeta(type):
     def __new__(mcs, name, bases, attrs, *args, **kwargs):
         fields_db_projection = {}
         fields_map = {}
-        filters = {}
+        filters = {}  # type: Dict[str, Dict[str, dict]]
         fk_fields = set()
         m2m_fields = set()
-        meta = MetaInfo(attrs.get('Meta'))
 
         for key, value in attrs.items():
             if isinstance(value, fields.Field):
@@ -261,28 +261,34 @@ class ModelMeta(type):
                             source_field=fields_db_projection[key]
                         )
                     )
-        new_class = super().__new__(mcs, name, bases, attrs)
 
-        new_class._meta = meta
-        new_class._meta.fields_map = fields_map
-        new_class._meta.fields_db_projection = fields_db_projection
-        new_class._meta.fields_db_projection_reverse = {
+        attrs['_meta'] = meta = MetaInfo(attrs.get('Meta'))
+
+        if 'id' not in attrs:
+            attrs['id'] = None
+
+        meta = meta
+        meta.fields_map = fields_map
+        meta.fields_db_projection = fields_db_projection
+        meta.fields_db_projection_reverse = {
             value: key
             for key, value in fields_db_projection.items()
         }
-        new_class._meta.fields = set(fields_map.keys())
-        new_class._meta.db_fields = set(fields_db_projection.values())
-        new_class._meta.filters = filters
-        new_class._meta.fk_fields = fk_fields
-        new_class._meta.backward_fk_fields = set()
-        new_class._meta.m2m_fields = m2m_fields
-        new_class._meta.fetch_fields = fk_fields | m2m_fields
-        new_class._meta.db = None
+        meta.fields = set(fields_map.keys())
+        meta.db_fields = set(fields_db_projection.values())
+        meta.filters = filters
+        meta.fk_fields = fk_fields
+        meta.backward_fk_fields = set()
+        meta.m2m_fields = m2m_fields
+        meta.fetch_fields = fk_fields | m2m_fields
+        meta.db = None
         if not fields_map:
-            new_class._meta.abstract = True
-        if not new_class._meta.abstract:
+            meta.abstract = True
+
+        new_class = super().__new__(mcs, name, bases, attrs)
+        if not meta.abstract:
             from tortoise import Tortoise
-            Tortoise.register_model(new_class._meta.app, new_class.__name__, new_class)
+            Tortoise.register_model(meta.app, new_class.__name__, new_class)
         return new_class
 
 
@@ -380,7 +386,7 @@ class Model(metaclass=ModelMeta):
         return '<{}: {}>'.format(self.__class__.__name__, self.__str__())
 
     def __hash__(self):
-        if not hasattr(self.id) or not self.id:
+        if self.id:
             raise TypeError('Model instances without id are unhashable')
         return hash(self.id)
 
