@@ -4,10 +4,11 @@ from pypika.functions import Count as PypikaCount
 from pypika.functions import Max as PypikaMax
 from pypika.functions import Min as PypikaMin
 from pypika.functions import Sum as PypikaSum
+from pypika.terms import AggregateFunction
 
 
 class Aggregate:
-    aggregation_func = None
+    aggregation_func = AggregateFunction
 
     def __init__(self, field):
         self.field = field

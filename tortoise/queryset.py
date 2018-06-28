@@ -321,7 +321,7 @@ class QuerySet(AwaitableQuery):
                 continue
             relation_split = relation.split('__')
             first_level_field = relation_split[0]
-            if not (first_level_field in self.model._meta.fetch_fields):
+            if first_level_field not in self.model._meta.fetch_fields:
                 raise FieldError(
                     'relation {} for {} not found'.format(
                         first_level_field, self.model._meta.table
