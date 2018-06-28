@@ -21,7 +21,8 @@ Then you should install your db driver
 
 ..
 
-Apart from ``asyncpg`` there is also support for ``sqlite`` through ``aiosqlite`` but this driver is rather slow and mainly used for testing. (It is quite easy to implement more backends if there is appropriate asyncio driver for this db)
+Apart from ``asyncpg`` there is also support for ``sqlite`` through ``aiosqlite``.
+It is quite easy to implement more backends if there is appropriate asyncio driver for this db.
 
 Tutorial
 ========
