@@ -13,6 +13,7 @@ babel==2.6.0              # via sphinx
 certifi==2018.4.16        # via requests
 chardet==3.0.4            # via requests
 click==6.7                # via pip-tools
+cloud-sptheme==1.9.4
 docutils==0.14
 first==2.0.1              # via pip-tools
 flake8-isort==2.5

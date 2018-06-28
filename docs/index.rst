@@ -68,17 +68,4 @@ Thanks
 =======
 Huge thanks to https://github.com/kayak/pypika for making this possible.
 
-
-Table Of Contents
-=================
-
-.. toctree::
-   :maxdepth: 3
-
-   getting_started
-   models_and_fields
-   query
-   CHANGELOG
-
-
 If you want to contribute check out issues, or just straightforwardly create PR

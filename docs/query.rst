@@ -132,4 +132,4 @@ Sometimes it is required to fetch only certain related records. You can achieve 
         Prefetch('events', queryset=Event.filter(name='First'))
     ).first()
 
-You can view full example here: `examples <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples/complex_prefetching.py>`_
+You can view full example here: `complex_prefetching <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples/complex_prefetching.py>`_
