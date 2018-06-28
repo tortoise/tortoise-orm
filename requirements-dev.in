@@ -10,7 +10,9 @@ aiosqlite
 
 ## Administration tools
 pip-tools
-sphinx
+
+## Documentation tools
+-r docs/requirements.txt
 
 ## Linter tools
 mypy

@@ -1,18 +1,6 @@
-========
-Tortoise
-========
-
-Introduction
-============
-Tortoise is easy-to-use asyncio ORM inspired by Django.
-
-It is built with relations between models in mind and provides simple api for it, that gives you potential for building web services with easy abstractions.
-
-You can find docs at `readthedocs <http://tortoise-orm.readthedocs.io/en/latest/>`_
-
-Disclaimer
-----------
-Tortoise is young project and breaking changes without following semantic versioning are to be expected
+===============
+Getting started
+===============
 
 
 Installation
@@ -23,12 +11,18 @@ First you have to install tortoise like this:
 
     pip install tortoise-orm
 
+..
+
 Then you should install your db driver
 
 .. code-block:: bash
 
-    pip install asyncpg aiosqlite
+    pip install asyncpg
 
+..
+
+Apart from ``asyncpg`` there is also support for ``sqlite`` through ``aiosqlite``.
+It is quite easy to implement more backends if there is appropriate asyncio driver for this db.
 
 Tutorial
 ========
@@ -109,7 +103,7 @@ After that you can start using your models:
         participants.append(team)
 
     # M2M Relationship management is quite straightforward
-    # (also look for methods .remove(...) and .clear())
+    # (look for methods .remove(...) and .clear())
     await event.participants.add(*participants)
 
     # You can query related entity just with async for
@@ -129,7 +123,7 @@ After that you can start using your models:
     ).prefetch_related('participants', 'tournament')
 
     # Tortoise supports variable depth of prefetching related entities
-    # This will fetch all events for team and in those events tournaments will be prefetched
+    # This will fetch all events for team and in those team tournament will be prefetched
     await Team.all().prefetch_related('events__tournament')
 
     # You can filter and order by related models too
@@ -137,10 +131,7 @@ After that you can start using your models:
         events__name__in=['Test', 'Prod']
     ).order_by('-events__participants__name').distinct()
 
+You can read more examples (including transactions, several databases and a little more complex querying) in
+`examples <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples>`_ directory of this repository
 
-Thanks
-======
 
-Huge thanks to https://github.com/kayak/pypika for making this possible.
-
-If you want to contribute check out issues, or just straightforwardly create PR

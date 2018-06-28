@@ -26,7 +26,7 @@ Changelog
 -----
 - Added schema generation and more options for fields:
 
-  .. code-block:: python
+  .. code-block:: python3
 
     from tortoise import Tortoise
     from tortoise.backends.sqlite.client import SqliteClient
@@ -41,7 +41,7 @@ Changelog
 -----
 - Added filtering and ordering by related models fields:
 
-  .. code-block:: python
+  .. code-block:: python3
 
     await Tournament.filter(
         events__name__in=['1', '3']

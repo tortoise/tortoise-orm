@@ -6,7 +6,7 @@ Be sure to check `examples <https://github.com/Zeliboba5/tortoise-orm/tree/maste
 
 You start your query from your model class:
 
-.. code-block:: python
+.. code-block:: python3
 
     Event.filter(id=1)
 
@@ -31,7 +31,7 @@ Also instance of model itself has these methods:
 
 Another approach to work with related objects on instance is to query them explicitly in ``async for``:
 
-.. code-block:: python
+.. code-block:: python3
 
     async for team in event.participants:
         print(team.name)
@@ -76,7 +76,7 @@ Tortoise provides api for working with M2M relations
 
 You can use them like this:
 
-.. code-block:: python
+.. code-block:: python3
 
     await event.participants.add(participant_1, participant_2)
 
@@ -87,7 +87,7 @@ Q objects
 
 When you need to make ``OR`` query or something a little more challenging you could use Q objects for it. It is as easy as this:
 
-.. code-block:: python
+.. code-block:: python3
 
     found_events = await Event.filter(
         Q(id__in=[event_first.id, event_second.id]) | Q(name='3')
@@ -100,7 +100,7 @@ Filtering
 
 When using ``.filter()`` method you can use number of modifiers to field names to specify desired operation
 
-.. code-block:: python
+.. code-block:: python3
 
     teams = await Team.filter(name__icontains='CON')
 
@@ -126,10 +126,10 @@ Complex prefetch
 
 Sometimes it is required to fetch only certain related records. You can achieve it with ``Prefetch`` object
 
-.. code-block:: python
+.. code-block:: python3
 
     tournament_with_filtered = await Tournament.all().prefetch_related(
         Prefetch('events', queryset=Event.filter(name='First'))
     ).first()
 
-You can view full example here: `examples <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples/complex_prefetching.py>`_
+You can view full example here: `complex_prefetching <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples/complex_prefetching.py>`_
