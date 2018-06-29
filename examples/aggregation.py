@@ -21,7 +21,9 @@ class Event(Model):
     name = fields.TextField()
     tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
     participants = fields.ManyToManyField(
-        'models.Team', related_name='events', through='event_team'
+        'models.Team',
+        related_name='events',
+        through='event_team',
     )
 
     def __str__(self):
@@ -57,8 +59,9 @@ async def run():
     await event.participants.add(participants[0], participants[1])
     await event.participants.add(participants[0], participants[1])
 
-    tournaments_with_count = await Tournament.all().annotate(events_count=Count('events')
-                                                             ).filter(events_count__gte=1)
+    tournaments_with_count = await Tournament.all().annotate(
+        events_count=Count('events'),
+    ).filter(events_count__gte=1)
     assert len(tournaments_with_count) == 1 and tournaments_with_count[0].events_count == 2
 
     event_with_lowest_team_id = await Event.filter(id=event.id).first().annotate(
@@ -66,11 +69,13 @@ async def run():
     )
     assert event_with_lowest_team_id.lowest_team_id == participants[0].id
 
-    ordered_tournaments = await Tournament.all().annotate(events_count=Count('events')
-                                                          ).order_by('events_count')
+    ordered_tournaments = await Tournament.all().annotate(
+        events_count=Count('events'),
+    ).order_by('events_count')
     assert len(ordered_tournaments) == 2 and ordered_tournaments[1].id == tournament.id
-    event_with_annotation = await Event.all().annotate(tournament_test_id=Sum('tournament__id')
-                                                       ).first()
+    event_with_annotation = await Event.all().annotate(
+        tournament_test_id=Sum('tournament__id'),
+    ).first()
     assert event_with_annotation.tournament_test_id == event_with_annotation.tournament_id
 
 

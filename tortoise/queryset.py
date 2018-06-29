@@ -462,7 +462,7 @@ class CountQuery(AwaitableQuery):
             q_objects=q_objects,
             annotations=annotations,
             having=having,
-            custom_filters=custom_filters
+            custom_filters=custom_filters,
         )
         self.query = self.query.select(Count(table.star))
 
@@ -479,18 +479,27 @@ class ValuesListQuery(AwaitableQuery):
         super().__init__()
         if not (len(fields) == 1) == flat:
             raise TypeError('You can flat value_list only if contains one field')
-        for field in fields:
-            assert field in model._meta.fields_db_projection
+        db_fields = []
+        for i, field in enumerate(fields):
+            if field not in model._meta.fields_db_projection:
+                raise ValueError(
+                    'Field {} not valid for model {}'.format(
+                        field,
+                        self.model.__name__,
+                    )
+                )
+            else:
+                db_fields.append(model._meta.fields_db_projection[field])
         self._db = db if db else model._meta.db
         table = Table(model._meta.table)
-        self.query = self._db.query_class.from_(table).select(*fields)
+        self.query = self._db.query_class.from_(table).select(*db_fields)
         self.resolve_filters(
             model=model,
             filter_kwargs=filter_kwargs,
             q_objects=q_objects,
             annotations=annotations,
             having=having,
-            custom_filters=custom_filters
+            custom_filters=custom_filters,
         )
         if limit:
             self.query = self.query.limit(limit)
@@ -524,18 +533,27 @@ class ValuesQuery(AwaitableQuery):
         annotations, having, custom_filters
     ):
         super().__init__()
-        for field in fields:
-            assert field in model._meta.fields_db_projection
+        db_fields = []
+        for i, field in enumerate(fields):
+            if field not in model._meta.fields_db_projection:
+                raise ValueError(
+                    'Field {} not valid for model {}'.format(
+                        field,
+                        self.model.__name__,
+                    )
+                )
+            else:
+                db_fields.append(model._meta.fields_db_projection[field])
         self._db = db if db else model._meta.db
         table = Table(model._meta.table)
-        self.query = self._db.query_class.from_(table).select(*fields)
+        self.query = self._db.query_class.from_(table).select(*db_fields)
         self.resolve_filters(
             model=model,
             filter_kwargs=filter_kwargs,
             q_objects=q_objects,
             annotations=annotations,
             having=having,
-            custom_filters=custom_filters
+            custom_filters=custom_filters,
         )
         if limit:
             self.query = self.query.limit(limit)
@@ -550,4 +568,10 @@ class ValuesQuery(AwaitableQuery):
         self.model = model
 
     async def _execute(self):
-        return await self._db.execute_query(str(self.query))
+        result = await self._db.execute_query(str(self.query))
+        reformatted_result = [{
+            self.model._meta.fields_db_projection_reverse[key]: value
+            for key, value in item.items()
+        }
+                              for item in result]
+        return reformatted_result

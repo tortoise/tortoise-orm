@@ -29,36 +29,31 @@ class BaseExecutor:
         return instance_list
 
     def _prepare_insert_columns(self):
-        columns = list(self.model._meta.fields_db_projection.values())
-        columns_filtered = []
-        python_generated_columns = []
+        regular_columns = []
+        python_generated_column_pairs = []
         now = datetime.datetime.utcnow()
-        for column in columns:
+        for column in self.model._meta.fields_db_projection.keys():
             field_object = self.model._meta.fields_map[column]
             if isinstance(field_object, fields.DatetimeField) and field_object.auto_now_add:
-                python_generated_columns.append((column, now))
+                python_generated_column_pairs.append((column, now))
             elif field_object.generated:
                 continue
             else:
-                columns_filtered.append(column)
-        return columns_filtered, python_generated_columns
+                regular_columns.append(column)
+        return regular_columns, python_generated_column_pairs
 
-    def _get_prepared_value(self, instance, field):
-        field_object = self.model._meta.fields_map[field]
-        return field_object.to_db_value(
-            getattr(
-                instance,
-                self.model._meta.fields_db_projection_reverse[field],
-            )
-        )
+    def _get_prepared_value(self, instance, column):
+        field_object = self.model._meta.fields_map[column]
+        return field_object.to_db_value(getattr(instance, column))
 
-    def _prepare_insert_values(self, instance, columns, generated_columns):
-        values = [self._get_prepared_value(instance, column) for column in columns]
-        for column, value in generated_columns:
-            columns.append(column)
+    def _prepare_insert_values(self, instance, regular_columns, generated_column_pairs):
+        values = [self._get_prepared_value(instance, column) for column in regular_columns]
+        result_columns = [self.model._meta.fields_db_projection[c] for c in regular_columns]
+        for column, value in generated_column_pairs:
+            result_columns.append(self.model._meta.fields_db_projection[column])
             values.append(value)
             setattr(instance, column, value)
-        return values
+        return result_columns, values
 
     async def execute_insert(self, instance):
         # Insert should implement returning new id to saved object

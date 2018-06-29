@@ -39,7 +39,7 @@ class Event(Model):
 
 class Team(Model):
     id = fields.IntField(pk=True)
-    name = fields.StringField()
+    name = fields.StringField(source_field='title')
 
     def __str__(self):
         return self.name
@@ -61,6 +61,9 @@ async def run():
     await event.save()
     assert event.modified > old_time
     assert len(event.token) == 32
+    await Team.create(name='test')
+    result = await Team.all().values('name')
+    assert result[0]['name'] == 'test'
 
 
 if __name__ == '__main__':

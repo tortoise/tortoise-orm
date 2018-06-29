@@ -91,6 +91,9 @@ async def run():
 
     await Event.filter(tournament=tournament)
 
+    await Tournament.filter(events__name__in=['Test', 'Prod']
+                            ).order_by('-events__participants__name').distinct()
+
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
