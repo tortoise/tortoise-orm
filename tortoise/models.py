@@ -387,6 +387,7 @@ class Model(metaclass=ModelMeta):
         return hash(self.id)
 
     def __eq__(self, other):
+        # pylint: disable=C0123
         if type(self) == type(other) and self.id == other.id:
             return True
         return False

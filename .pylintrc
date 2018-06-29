@@ -15,14 +15,14 @@ ignore-patterns=
 
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
-#init-hook=
+init-hook='import sys; sys.path.append(".")'
 
 # Use multiple processes to speed up Pylint.
 jobs=0
 
 # List of plugins (as comma separated values of python modules names) to load,
 # usually to register additional checkers.
-load-plugins=pylint.extensions.bad_builtin
+load-plugins=pylint.extensions.bad_builtin,tortoise.pylint
 
 # Pickle collected data for later comparisons.
 persistent=yes
@@ -56,7 +56,7 @@ confidence=
 # --disable=W"
 disable=C0301,C0330,C0412,C0411,
         W0613,W0212,
-        R,C0111, # tune down
+        R, # tune down
         print-statement,
         parameter-unpacking,
         unpacking-in-except,
@@ -357,7 +357,9 @@ good-names=i,
            ex,
            Run,
            _,
-	   id
+	   id,
+	   db,
+	   pk
 
 # Include a hint for the correct naming format with invalid-name
 include-naming-hint=no

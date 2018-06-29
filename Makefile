@@ -24,6 +24,7 @@ deps:
 check: deps
 	flake8 $(checkfiles)
 	mypy $(mypy_flags) $(checkfiles)
+	pylint -E $(checkfiles)
 	python setup.py check -mrs
 
 lint: deps

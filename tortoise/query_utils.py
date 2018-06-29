@@ -3,7 +3,7 @@ from pypika import Table
 from tortoise import fields
 
 
-class Q:
+class Q:  # pylint: disable=C0103
     AND = 'AND'
     OR = 'OR'
 
