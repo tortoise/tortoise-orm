@@ -1,0 +1,11 @@
+language: python
+python:
+  - 3.6
+  - 3.5
+dist: trusty
+sudo: false
+cache: pip
+install:
+  - pip install -r requirements-dev.txt
+script:
+  - make travis
