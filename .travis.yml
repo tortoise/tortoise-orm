@@ -8,4 +8,4 @@ cache: pip
 install:
   - pip install -r requirements-dev.txt
 script:
-  - make travis
+  - make ci

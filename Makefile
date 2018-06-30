@@ -33,12 +33,10 @@ lint: deps
 	-pylint $(checkfiles)
 	-python setup.py check -mrs
 
-testtox:
+test: deps
 	green -rvv
 
-test: deps testtox
-
-travis: check test
+ci: check test
 
 docs: deps
 	python setup.py build_sphinx -E

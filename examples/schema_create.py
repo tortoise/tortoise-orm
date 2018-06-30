@@ -1,6 +1,7 @@
 import asyncio
+import binascii
 import datetime
-import secrets
+import os
 
 from examples import get_db_name
 from tortoise import Tortoise, fields
@@ -19,7 +20,7 @@ class Tournament(Model):
 
 
 def generate_token():
-    return secrets.token_hex(16)
+    return binascii.hexlify(os.urandom(16)).decode('ascii')
 
 
 class Event(Model):
