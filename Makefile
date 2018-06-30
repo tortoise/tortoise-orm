@@ -38,7 +38,7 @@ testtox:
 
 test: deps testtox
 
-travis: check test bench
+travis: check test
 
 docs: deps
 	python setup.py build_sphinx -E
