@@ -13,6 +13,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
 import os
+import re
 import sys
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
@@ -25,7 +26,7 @@ project = 'Tortoise'
 copyright = '2018, Andrey Bondar'
 author = 'Andrey Bondar'
 
-import re
+
 def get_version():
     verstrline = open('../tortoise/__init__.py', "rt").read()
     mob = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", verstrline, re.M)
@@ -33,6 +34,7 @@ def get_version():
         return mob.group(1)
     else:
         raise RuntimeError("Unable to find version string")
+
 
 # The short X.Y version
 version = get_version()
@@ -108,7 +110,6 @@ html_theme_options = {
     'roottarget': index_doc,
     'sidebarwidth': '3in',
     'hyphenation_language': 'en',
-    #'sidebar_localtoc_title': 'Table of Contents',
 }
 
 # Add any paths that contain custom themes here, relative to this directory.

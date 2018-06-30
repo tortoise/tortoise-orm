@@ -34,7 +34,7 @@ lint: deps
 	-python setup.py check -mrs
 
 testtox:
-	@echo "Not Implemented"
+	green -rvv
 
 test: deps testtox
 
@@ -44,5 +44,5 @@ docs: deps
 	python setup.py build_sphinx -E
 
 style: deps
-	yapf -i -r $(checkfiles)
+	@#yapf -i -r $(checkfiles)
 	isort -rc $(checkfiles)

@@ -97,6 +97,10 @@ ENV/
 # Rope project settings
 .ropeproject
 
+# KDevelop
+.kdev4/
+*.kdev4
+
 # MyPy caches
 .mypy_cache/
 

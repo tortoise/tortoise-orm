@@ -3,7 +3,7 @@ import decimal
 
 from pypika import Table
 
-from tortoise.exceptions import NoValuesFetched
+from tortoise.exceptions import FieldError, NoValuesFetched
 from tortoise.utils import AsyncIteratorWrapper
 
 CASCADE = 'CASCADE'
@@ -76,7 +76,10 @@ class BooleanField(Field):
 
 class DecimalField(Field):
     def __init__(self, max_digits, decimal_places, *args, **kwargs):
-        assert int(max_digits) >= 0 and int(decimal_places) >= 0
+        if int(max_digits) < 0:
+            raise FieldError('max_digits must be >= 0')
+        if int(decimal_places) < 0:
+            raise FieldError('decimal_places must be >= 0')
         super().__init__(decimal.Decimal, *args, **kwargs)
         self.max_digits = max_digits
         self.decimal_places = decimal_places
@@ -84,7 +87,8 @@ class DecimalField(Field):
 
 class DatetimeField(Field):
     def __init__(self, auto_now=False, auto_now_add=False, *args, **kwargs):
-        assert not (auto_now_add and auto_now), 'You can choose only auto_now or auto_now_add'
+        if auto_now_add and auto_now:
+            raise FieldError('You can choose only auto_now or auto_now_add')
         auto_now_add = auto_now_add | auto_now
         kwargs['generated'] = bool(kwargs.get('generated')) | auto_now_add
         super().__init__(datetime.datetime, *args, **kwargs)
