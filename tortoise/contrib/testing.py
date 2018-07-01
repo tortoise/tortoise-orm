@@ -10,9 +10,11 @@ from tortoise.utils import generate_schema
 
 class TestCase(asynctest.TestCase):
 
+    def getDB(self):
+        return SqliteClient('/tmp/test-{}.sqlite'.format(uuid.uuid4().hex))
+
     async def _setUpDB(self):
-        super()._setUp()
-        self.db = SqliteClient('/tmp/test-{}.sqlite'.format(uuid.uuid4().hex))
+        self.db = self.getDB()
         await self.db.create_connection()
         Tortoise._client_routing(self.db)
         if not Tortoise._inited:
@@ -21,7 +23,6 @@ class TestCase(asynctest.TestCase):
         await generate_schema(self.db)
 
     async def _tearDownDB(self):
-        super()._tearDown()
         await self.db.close()
 
     def _setUp(self):

@@ -4,6 +4,7 @@ Tortoise PyLint plugin
 import astroid
 from astroid import MANAGER, inference_tip, nodes, scoped_nodes
 from astroid.node_classes import Assign
+from astroid.nodes import ClassDef
 
 MODELS = {}  # type: dict
 FUTURE_RELATIONS = {}  # type: dict
@@ -33,7 +34,15 @@ def transform_model(cls):
     Also keep track of relationships and make them in the related model class.
     '''
     if cls.name != 'Model':
-        mname = 'models.%s' % (cls.name, )
+        appname = 'models'
+        for mcls in cls.get_children():
+            if isinstance(mcls, ClassDef):
+                for attr in mcls.get_children():
+                    if isinstance(attr, Assign):
+                        if attr.targets[0].name == 'app':
+                            appname = attr.value.value
+
+        mname = '%s.%s' % (appname, cls.name)
         MODELS[mname] = cls
 
         for relname, relval in FUTURE_RELATIONS.get(mname, []):
