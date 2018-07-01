@@ -3,6 +3,7 @@ import decimal
 
 from pypika import Table
 
+import ciso8601
 from tortoise.exceptions import ConfigurationError, NoValuesFetched
 from tortoise.utils import AsyncIteratorWrapper
 
@@ -95,10 +96,38 @@ class DatetimeField(Field):
         self.auto_now = auto_now
         self.auto_now_add = auto_now_add
 
+    def to_db_value(self, value):
+        if value is None or isinstance(value, self.type):
+            return value
+        if isinstance(value, str):
+            return ciso8601.parse_datetime(value)
+        return self.type(value)
+
+    def to_python_value(self, value):
+        if value is None or isinstance(value, self.type):
+            return value
+        if isinstance(value, str):
+            return ciso8601.parse_datetime(value)
+        return self.type(value)
+
 
 class DateField(Field):
     def __init__(self, *args, **kwargs):
         super().__init__(datetime.date, *args, **kwargs)
+
+    def to_db_value(self, value):
+        if value is None or isinstance(value, self.type):
+            return value
+        if isinstance(value, str):
+            return ciso8601.parse_datetime(value).date()
+        return self.type(value)
+
+    def to_python_value(self, value):
+        if value is None or isinstance(value, self.type):
+            return value
+        if isinstance(value, str):
+            return ciso8601.parse_datetime(value).date()
+        return self.type(value)
 
 
 class FloatField(Field):

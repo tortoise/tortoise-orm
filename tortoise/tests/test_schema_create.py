@@ -1,5 +1,4 @@
 import datetime
-import unittest
 
 import asynctest
 
@@ -9,7 +8,6 @@ from tortoise.tests.testmodels import Event, Team, Tournament
 
 class TestSchemaCreate(TestCase):
 
-    @unittest.expectedFailure
     @asynctest.strict
     async def test_schema_create(self):
         tournament = await Tournament.create(name='Test')

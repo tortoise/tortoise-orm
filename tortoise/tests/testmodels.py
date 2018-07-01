@@ -15,8 +15,7 @@ def generate_token():
 class Tournament(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
-    # datetime = fields.DatetimeField(null=True)
-    # created = fields.DatetimeField(auto_now_add=True)
+    created = fields.DatetimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
@@ -29,9 +28,8 @@ class Event(Model):
     participants = fields.ManyToManyField(
         'models.Team', related_name='events', through='event_team'
     )
-    # modified = fields.DatetimeField(auto_now=True)
-    # prize = fields.DecimalField(max_digits=10, decimal_places=2, null=True)
-    # token = fields.TextField(default=generate_token)
+    modified = fields.DatetimeField(auto_now=True)
+    token = fields.TextField(default=generate_token)
 
     def __str__(self):
         return self.name
