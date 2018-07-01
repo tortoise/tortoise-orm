@@ -22,7 +22,7 @@ jobs=0
 
 # List of plugins (as comma separated values of python modules names) to load,
 # usually to register additional checkers.
-load-plugins=pylint.extensions.bad_builtin,tortoise.pylint
+load-plugins=pylint.extensions.bad_builtin,tortoise.contrib.pylint
 
 # Pickle collected data for later comparisons.
 persistent=yes

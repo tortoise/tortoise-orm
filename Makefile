@@ -34,7 +34,7 @@ lint: deps
 	-python setup.py check -mrs
 
 test: deps
-	green -rvv
+	green
 
 ci: check test
 

@@ -2,8 +2,6 @@
 branch = True
 source =
     tortoise
-omit =
-
 [report]
 show_missing = True
 
