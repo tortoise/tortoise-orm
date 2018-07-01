@@ -35,15 +35,18 @@ class TestFiltering(TestCase):
             Q(id__in=[event_first.id, event_second.id])
             | Q(name='3')
         ).filter(participants__not=team_second.id).order_by('tournament__id').distinct()
-        assert len(found_events) == 2
-        assert found_events[0].id == event_first.id and found_events[1].id == event_third.id
+        self.assertEquals(len(found_events), 2)
+        self.assertEquals(found_events[0].id, event_first.id)
+        self.assertEquals(found_events[1].id, event_third.id)
         await Team.filter(events__tournament_id=tournament.id).order_by('-events__name')
         await Tournament.filter(
             events__name__in=['1', '3'],
         ).order_by('-events__participants__name').distinct()
 
         teams = await Team.filter(name__icontains='CON')
-        assert len(teams) == 1 and teams[0].name == 'Second'
+        self.assertEquals(len(teams), 1)
+        self.assertEquals(teams[0].name, 'Second')
 
         tournaments = await Tournament.filter(events__participants__name__startswith='Fir')
-        assert len(tournaments) == 1 and tournaments[0] == tournament
+        self.assertEquals(len(tournaments), 1)
+        self.assertEquals(tournaments[0], tournament)

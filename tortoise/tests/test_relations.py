@@ -1,7 +1,6 @@
 import asynctest
 
 from tortoise.contrib.testing import TestCase
-from tortoise.exceptions import NoValuesFetched
 from tortoise.tests.testmodels import Event, Team, Tournament
 
 
@@ -21,28 +20,25 @@ class TestRelations(TestCase):
         await event.participants.add(participants[0], participants[1])
         await event.participants.add(participants[0], participants[1])
 
-        try:
-            for team in event.participants:
-                print(team.id)
-        except NoValuesFetched:
-            pass
+        self.assertEquals([team.id for team in event.participants], [])
 
+        teamids = []
         async for team in event.participants:
-            print(team.id)
+            teamids.append(team.id)
+        self.assertEquals(teamids, [1, 2])
 
-        for team in event.participants:
-            print(team.id)
+        self.assertEquals([team.id for team in event.participants], [1, 2])
 
-        assert event.participants[0].id == participants[0].id
+        self.assertEquals(event.participants[0].id, participants[0].id)
 
         selected_events = await Event.filter(
             participants=participants[0].id
         ).prefetch_related('participants', 'tournament')
-        assert len(selected_events) == 1
-        assert selected_events[0].tournament.id == tournament.id
-        assert len(selected_events[0].participants) == 2
+        self.assertEquals(len(selected_events), 1)
+        self.assertEquals(selected_events[0].tournament.id, tournament.id)
+        self.assertEquals(len(selected_events[0].participants), 2)
         await participants[0].fetch_related('events')
-        assert participants[0].events[0] == event
+        self.assertEquals(participants[0].events[0], event)
 
         await Team.fetch_for_list(participants, 'events')
 
@@ -54,7 +50,7 @@ class TestRelations(TestCase):
                                 ).order_by('-events__participants__name').distinct()
 
         result = await Event.filter(id=event.id).values('id', 'name', tournament='tournament__name')
-        assert result[0]['tournament'] == tournament.name
+        self.assertEquals(result[0]['tournament'], tournament.name)
 
         result = await Event.filter(id=event.id).values_list('id', 'participants__name')
-        assert len(result) == 2
+        self.assertEquals(len(result), 2)

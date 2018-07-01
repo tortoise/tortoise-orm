@@ -10,7 +10,13 @@ class TestBasic(TestCase):
         event = await Tournament.create(name='Test')
         await Tournament.filter(id=event.id).update(name='Updated name')
         saved_event = await Tournament.filter(name='Updated name').first()
-        assert saved_event.id == event.id
+        self.assertEquals(saved_event.id, event.id)
         await Tournament(name='Test 2').save()
-        await Tournament.all().values_list('id', flat=True)
-        await Tournament.all().values('id', 'name')
+        self.assertEquals(
+            await Tournament.all().values_list('id', flat=True),
+            [1, 2]
+        )
+        self.assertEquals(
+            await Tournament.all().values('id', 'name'),
+            [{'id': 1, 'name': 'Updated name'}, {'id': 2, 'name': 'Test 2'}]
+        )

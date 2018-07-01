@@ -25,18 +25,21 @@ class TestAggregation(TestCase):
         tournaments_with_count = await Tournament.all().annotate(
             events_count=Count('events'),
         ).filter(events_count__gte=1)
-        assert len(tournaments_with_count) == 1 and tournaments_with_count[0].events_count == 2
+        self.assertEquals(len(tournaments_with_count), 1)
+        self.assertEquals(tournaments_with_count[0].events_count, 2)
 
         event_with_lowest_team_id = await Event.filter(id=event.id).first().annotate(
             lowest_team_id=Min('participants__id')
         )
-        assert event_with_lowest_team_id.lowest_team_id == participants[0].id
+        self.assertEquals(event_with_lowest_team_id.lowest_team_id, participants[0].id)
 
         ordered_tournaments = await Tournament.all().annotate(
             events_count=Count('events'),
         ).order_by('events_count')
-        assert len(ordered_tournaments) == 2 and ordered_tournaments[1].id == tournament.id
+        self.assertEquals(len(ordered_tournaments), 2)
+        self.assertEquals(ordered_tournaments[1].id, tournament.id)
         event_with_annotation = await Event.all().annotate(
             tournament_test_id=Sum('tournament__id'),
         ).first()
-        assert event_with_annotation.tournament_test_id == event_with_annotation.tournament_id
+        self.assertEquals(event_with_annotation.tournament_test_id,
+                          event_with_annotation.tournament_id)
