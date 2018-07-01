@@ -1,26 +1,11 @@
-import uuid
-
 import asynctest
 
-from tortoise import Tortoise
-from tortoise.backends.sqlite.client import SqliteClient
+from tortoise.contrib.testing import TestCase
 from tortoise.exceptions import NoValuesFetched
 from tortoise.tests.testmodels import Event, Team, Tournament
-from tortoise.utils import generate_schema
 
 
-class TestRelations(asynctest.TestCase):
-    use_default_loop = True
-
-    async def setUp(self):
-        self.db = SqliteClient('/tmp/test-{}.sqlite'.format(uuid.uuid4().hex))
-        await self.db.create_connection()
-        Tortoise.init(self.db)
-        await generate_schema(self.db)
-
-    async def tearDown(self):
-        await self.db.close()
-
+class TestRelations(TestCase):
     @asynctest.strict
     async def test_tourment(self):
         tournament = Tournament(name='New Tournament')

@@ -1,6 +1,6 @@
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.exceptions import MultiplyObjectsReturned  # noqa
+from tortoise.exceptions import ConfigurationError, MultiplyObjectsReturned  # noqa
 from tortoise.fields import ManyToManyRelationManager  # noqa
 from tortoise.models import get_backward_fk_filters, get_m2m_filters
 from tortoise.queryset import QuerySet  # noqa
@@ -36,7 +36,7 @@ class Tortoise:
                 model._meta.db = db_client
 
     @classmethod
-    def init(cls, global_client=None, db_routing=None):
+    def _client_routing(cls, global_client=None, db_routing=None):
         assert bool(global_client) != bool(db_routing), (
             'You must pass either global connection or routing'
         )
@@ -47,6 +47,8 @@ class Tortoise:
             assert all(isinstance(c, BaseDBAsyncClient) for c in db_routing.values())
             cls._set_connection_routing(db_routing)
 
+    @classmethod
+    def _init_relations(cls):
         for app_name, app in cls.apps.items():
             for model_name, model in app.items():
                 if not model._meta.table:
@@ -124,6 +126,12 @@ class Tortoise:
                     related_model._meta.fields_map[backward_relation_name] = relation
                     related_model._meta.fields.add(backward_relation_name)
 
+    @classmethod
+    def init(cls, global_client=None, db_routing=None):
+        if cls._inited:
+            raise ConfigurationError('Already initialised')
+        cls._client_routing(global_client=global_client, db_routing=db_routing)
+        cls._init_relations()
         cls._inited = True
 
 

@@ -17,3 +17,7 @@ class FieldError(BaseORMException):
 
 class NoValuesFetched(BaseORMException):
     pass
+
+
+class ConfigurationError(Exception):
+    pass
