@@ -1,14 +1,11 @@
 import sqlite3
 
-import asynctest
-
 from tortoise.contrib.testing import TestCase
 from tortoise.tests.testmodels import Tournament
 
 
 class TestTransactions(TestCase):
 
-    @asynctest.strict
     async def test_transactions(self):
         try:
             async with self.db.in_transaction() as connection:

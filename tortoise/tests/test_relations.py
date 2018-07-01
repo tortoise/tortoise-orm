@@ -1,11 +1,8 @@
-import asynctest
-
 from tortoise.contrib.testing import TestCase
 from tortoise.tests.testmodels import Event, Team, Tournament
 
 
 class TestRelations(TestCase):
-    @asynctest.strict
     async def test_relations(self):
         tournament = Tournament(name='New Tournament')
         await tournament.save()

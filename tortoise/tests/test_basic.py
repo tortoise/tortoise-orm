@@ -1,11 +1,8 @@
-import asynctest
-
 from tortoise.contrib.testing import TestCase
 from tortoise.tests.testmodels import Tournament
 
 
 class TestBasic(TestCase):
-    @asynctest.strict
     async def test_basic(self):
         event = await Tournament.create(name='Test')
         await Tournament.filter(id=event.id).update(name='Updated name')

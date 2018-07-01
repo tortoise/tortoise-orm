@@ -1,14 +1,11 @@
 import datetime
 
-import asynctest
-
 from tortoise.contrib.testing import TestCase
 from tortoise.tests.testmodels import Event, Team, Tournament
 
 
 class TestSchemaCreate(TestCase):
 
-    @asynctest.strict
     async def test_schema_create(self):
         tournament = await Tournament.create(name='Test')
         self.assertEquals(tournament.created and tournament.created.date(), datetime.date.today())
