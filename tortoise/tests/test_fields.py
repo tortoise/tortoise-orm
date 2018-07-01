@@ -1,10 +1,10 @@
-import unittest
+from unittest import TestCase
 
 from tortoise import fields
 from tortoise.exceptions import ConfigurationError
 
 
-class TestFieldErrors(unittest.TestCase):
+class TestFieldErrors(TestCase):
 
     def test_decimal_field_neg_digits(self):
         with self.assertRaises(ConfigurationError):

@@ -7,7 +7,7 @@ from tortoise.tests.testmodels import Event, Team, Tournament
 
 class TestRelations(TestCase):
     @asynctest.strict
-    async def test_tourment(self):
+    async def test_relations(self):
         tournament = Tournament(name='New Tournament')
         await tournament.save()
         await Event(name='Without participants', tournament_id=tournament.id).save()

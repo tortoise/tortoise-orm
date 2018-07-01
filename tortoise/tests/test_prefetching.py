@@ -5,7 +5,7 @@ from tortoise.query_utils import Prefetch
 from tortoise.tests.testmodels import Event, Tournament
 
 
-class TestRelations(TestCase):
+class TestPrefetching(TestCase):
     @asynctest.strict
     async def test_prefetching(self):
         tournament = await Tournament.create(name='tournament')
