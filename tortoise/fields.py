@@ -118,7 +118,7 @@ class ManyToManyField(Field):
     def __init__(
         self,
         model_name,
-        through,
+        through=None,
         forward_key=None,
         backward_key=None,
         related_name=None,

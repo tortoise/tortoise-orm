@@ -4,7 +4,7 @@ TABLE_CREATE_TEMPLATE = 'CREATE TABLE "{}" ({});'
 FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}'
 FK_TEMPLATE = ' REFERENCES "{table}" (id) ON DELETE {on_delete}'
 M2M_TABLE_TEMPLATE = (
-    'CREATE TABLE "{backward_table}_{forward_table}" '
+    'CREATE TABLE "{table_name}" '
     '("{backward_key}" INT NOT NULL REFERENCES "{backward_table}" (id) ON DELETE CASCADE, '
     '"{forward_key}" INT NOT NULL REFERENCES "{forward_table}" (id) ON DELETE CASCADE);'
 )
@@ -74,6 +74,7 @@ class BaseSchemaGenerator:
                 continue
             m2m_tables_for_create.append(
                 M2M_TABLE_TEMPLATE.format(
+                    table_name=field_object.through,
                     backward_table=model._meta.table,
                     forward_table=field_object.type._meta.table,
                     backward_key=field_object.backward_key,

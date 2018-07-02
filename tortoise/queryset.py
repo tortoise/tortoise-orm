@@ -549,8 +549,8 @@ class FieldSelectQuery(AwaitableQuery):
 
 class ValuesListQuery(FieldSelectQuery):
     def __init__(
-        self, model, filter_kwargs, db, q_objects, fields_for_select_list,
-        limit, offset, distinct, orderings, flat, annotations, having, custom_filters
+        self, model, filter_kwargs, db, q_objects, fields_for_select_list, limit, offset, distinct,
+        orderings, flat, annotations, having, custom_filters
     ):
         super().__init__()
         if not (len(fields_for_select_list) == 1) == flat:
@@ -560,10 +560,7 @@ class ValuesListQuery(FieldSelectQuery):
         table = Table(model._meta.table)
         self._db = db if db else model._meta.db
         self.query = self._db.query_class.from_(table)
-        fields_for_select = {
-            str(i): field
-            for i, field in enumerate(fields_for_select_list)
-        }
+        fields_for_select = {str(i): field for i, field in enumerate(fields_for_select_list)}
 
         for positional_number, field in fields_for_select.items():
             self.add_field_to_select_query(field, positional_number)

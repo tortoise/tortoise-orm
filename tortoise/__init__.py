@@ -101,6 +101,18 @@ class Tortoise:
                             backward_relation_name, related_model_name
                         )
                     )
+
+                    if not field_object.through:
+                        related_model_table_name = (
+                            related_model._meta.table
+                            if related_model._meta.table else related_model.__name__.lower()
+                        )
+
+                        field_object.through = '{}_{}'.format(
+                            model._meta.table,
+                            related_model_table_name,
+                        )
+
                     relation = fields.ManyToManyField(
                         '{}.{}'.format(app_name, model_name),
                         field_object.through,

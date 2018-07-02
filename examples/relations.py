@@ -77,8 +77,9 @@ async def run():
 
     assert event.participants[0].id == participants[0].id
 
-    selected_events = await Event.filter(participants=participants[0].id
-                                         ).prefetch_related('participants', 'tournament')
+    selected_events = await Event.filter(
+        participants=participants[0].id,
+    ).prefetch_related('participants', 'tournament')
     assert len(selected_events) == 1
     assert selected_events[0].tournament.id == tournament.id
     assert len(selected_events[0].participants) == 2
@@ -91,8 +92,9 @@ async def run():
 
     await Event.filter(tournament=tournament)
 
-    await Tournament.filter(events__name__in=['Test', 'Prod']
-                            ).order_by('-events__participants__name').distinct()
+    await Tournament.filter(
+        events__name__in=['Test', 'Prod'],
+    ).order_by('-events__participants__name').distinct()
 
     result = await Event.filter(id=event.id).values('id', 'name', tournament='tournament__name')
     assert result[0]['tournament'] == tournament.name
