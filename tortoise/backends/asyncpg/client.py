@@ -39,6 +39,26 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         )
 
     async def create_connection(self):
+        if self.create_db:
+            single_connection = self.single_connection
+            self.single_connection = True
+            self._connection = await asyncpg.connect(self.DSN_TEMPLATE.format(
+                user=self.user,
+                password=self.password,
+                host=self.host,
+                port=self.port,
+                database=''
+            ))
+            try:
+                await self.execute_script('DROP DATABASE {}'.format(self.database))
+            except asyncpg.InvalidCatalogNameError:
+                pass
+            await self.execute_script(
+                'CREATE DATABASE {} OWNER {}'.format(self.database, self.user)
+            )
+            await self._connection.close()
+            self.single_connection = single_connection
+
         if not self.single_connection:
             self._db_pool = await asyncpg.create_pool(self.dsn)
         else:
@@ -55,6 +75,23 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             await self._db_pool.close()
         else:
             await self._connection.close()
+
+        if self.delete_db:
+            single_connection = self.single_connection
+            self.single_connection = True
+            self._connection = await asyncpg.connect(self.DSN_TEMPLATE.format(
+                user=self.user,
+                password=self.password,
+                host=self.host,
+                port=self.port,
+                database=''
+            ))
+            try:
+                await self.execute_script('DROP DATABASE {}'.format(self.database))
+            except asyncpg.InvalidCatalogNameError:
+                pass
+            await self._connection.close()
+            self.single_connection = single_connection
 
     def acquire_connection(self):
         if not self.single_connection:

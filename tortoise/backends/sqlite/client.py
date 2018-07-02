@@ -1,4 +1,5 @@
 import logging
+import os
 import sqlite3
 
 import aiosqlite
@@ -27,7 +28,11 @@ class SqliteClient(BaseDBAsyncClient):
         pass
 
     async def close(self):
-        pass
+        if self.delete_db:
+            try:
+                os.remove(self.filename)
+            except FileNotFoundError:
+                pass
 
     def acquire_connection(self):
         connection = aiosqlite.connect(self.filename)

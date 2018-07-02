@@ -9,16 +9,17 @@ from tortoise.utils import generate_schema
 class TestTwoDatabases(TestCase):
     async def setUp(self):
         await self._tearDownDB()
-        self.db = self.getDB()
-        await self.db.create_connection()
-        self.second_db = self.getDB()
-        await self.second_db.create_connection()
+        self.db = await self.getDB()
+        self.second_db = await self.getDB()
         Tortoise._client_routing(db_routing={
             'models': self.db,
             'events': self.second_db,
         })
         await generate_schema(self.db)
         await generate_schema(self.second_db)
+
+    async def tearDown(self):
+        await self.second_db.close()
 
     async def test_two_databases(self):
         tournament = await Tournament.create(name='Tournament')

@@ -1,31 +1,43 @@
 import asyncio
-import uuid
+import os
 
 import asynctest
 
 from tortoise import Tortoise
-from tortoise.backends.sqlite.client import SqliteClient
+from tortoise.backends.base.client import BaseDBAsyncClient
+from tortoise.backends.base.db_url import expand_db_url
 from tortoise.utils import generate_schema
+
+TORTOISE_TEST_DB = os.environ.get('TORTOISE_TEST_DB', 'sqlite:///tmp/test-{}.sqlite')
 
 
 class TestCase(asynctest.TestCase):
+    '''
+    An asyncio capable TestCase that will ensure that an isolated test db
+      is available for each test.
 
-    def getDB(self):
-        return SqliteClient('/tmp/test-{}.sqlite'.format(uuid.uuid4().hex))
+    Based on ``asynctest``.
+    '''
+
+    async def getDB(self) -> BaseDBAsyncClient:
+        dbconf = expand_db_url(TORTOISE_TEST_DB, testing=True)
+        db = dbconf['client'](**dbconf['params'])
+        await db.create_connection()
+
+        return db
 
     async def _setUpDB(self):
-        self.db = self.getDB()
-        await self.db.create_connection()
+        self.db = await self.getDB()
         if not Tortoise._inited:
             Tortoise.init(self.db)
         else:
             Tortoise._client_routing(self.db)
         await generate_schema(self.db)
 
-    async def _tearDownDB(self):
+    async def _tearDownDB(self) -> None:
         await self.db.close()
 
-    def _setUp(self):
+    def _setUp(self) -> None:
         self._init_loop()
 
         # initialize post-test checks
@@ -43,7 +55,7 @@ class TestCase(asynctest.TestCase):
         # don't take into account if the loop ran during setUp
         self.loop._asynctest_ran = False
 
-    def _tearDown(self):
+    def _tearDown(self) -> None:
         self.loop.run_until_complete(self._tearDownDB())
         if asyncio.iscoroutinefunction(self.tearDown):
             self.loop.run_until_complete(self.tearDown())
