@@ -23,7 +23,7 @@ class TestTwoDatabases(TestCase):
 
     async def test_two_databases(self):
         tournament = await Tournament.create(name='Tournament')
-        event = await EventTwo.create(name='Event', tournament_id=tournament.id)
+        await EventTwo.create(name='Event', tournament_id=tournament.id)
 
         with self.assertRaises(OperationalError):
             await self.db.execute_query('SELECT * FROM "eventtwo"')
@@ -45,4 +45,3 @@ class TestTwoDatabases(TestCase):
         for i in range(2):
             team = await TeamTwo.create(name='Team {}'.format(i + 1))
             await event.participants.add(team)
-
