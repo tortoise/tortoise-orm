@@ -27,7 +27,7 @@ To use:
 
 .. code-block:: python3
 
-    from tortoise.contrib.testing import TestCase
+    from tortoise.contrib.test import TestCase
 
     class TestSomething(TestCase):
         async def test_something(self):

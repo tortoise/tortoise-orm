@@ -1,6 +1,6 @@
 import datetime
 
-from tortoise.contrib.testing import TestCase
+from tortoise.contrib.test import TestCase
 from tortoise.tests.testmodels import Event, Team, Tournament
 
 

@@ -1,4 +1,4 @@
-from tortoise.contrib.testing import TestCase
+from tortoise.contrib.test import TestCase
 from tortoise.query_utils import Prefetch
 from tortoise.tests.testmodels import Event, Tournament
 

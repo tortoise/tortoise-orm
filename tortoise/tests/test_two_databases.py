@@ -1,7 +1,7 @@
 from sqlite3 import OperationalError
 
 from tortoise import Tortoise
-from tortoise.contrib.testing import TestCase
+from tortoise.contrib.test import TestCase
 from tortoise.tests.testmodels import EventTwo, TeamTwo, Tournament
 from tortoise.utils import generate_schema
 
