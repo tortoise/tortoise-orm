@@ -77,8 +77,9 @@ async def run():
     assert len(found_events) == 2
     assert found_events[0].id == event_first.id and found_events[1].id == event_third.id
     await Team.filter(events__tournament_id=tournament.id).order_by('-events__name')
-    await Tournament.filter(events__name__in=['1', '3']
-                            ).order_by('-events__participants__name').distinct()
+    await Tournament.filter(
+        events__name__in=['1', '3'],
+    ).order_by('-events__participants__name').distinct()
 
     teams = await Team.filter(name__icontains='CON')
     assert len(teams) == 1 and teams[0].name == 'Second'

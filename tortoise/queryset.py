@@ -106,12 +106,13 @@ class AwaitableQuery:
                 aggregation_info = aggregation.resolve_for_model(self.model)
                 self.query = self.query.orderby(aggregation_info['field'], order=ordering[1])
             else:
-                assert field_name in model._meta.fields, (
-                    'Unknown field {} for model {}'.format(
-                        field_name,
-                        model.__name__,
+                if field_name not in model._meta.fields:
+                    raise FieldError(
+                        'Unknown field {} for model {}'.format(
+                            field_name,
+                            self.model.__name__,
+                        )
                     )
-                )
                 self.query = self.query.orderby(getattr(table, ordering[0]), order=ordering[1])
 
     def __await__(self):
@@ -239,7 +240,7 @@ class QuerySet(AwaitableQuery):
             filter_kwargs=self._filter_kwargs,
             q_objects=self._q_objects_for_resolve,
             flat=flat,
-            fields=fields,
+            fields_for_select_list=fields,
             distinct=self._distinct,
             limit=self._limit,
             offset=self._offset,
@@ -249,13 +250,24 @@ class QuerySet(AwaitableQuery):
             custom_filters=self._available_custom_filters,
         )
 
-    def values(self, *fields):
+    def values(self, *args, **kwargs):
+        fields_for_select = {}
+        for field in args:
+            if field in fields_for_select:
+                raise FieldError('Duplicate key {}'.format(field))
+            fields_for_select[field] = field
+
+        for return_as, field in kwargs.items():
+            if return_as in fields_for_select:
+                raise FieldError('Duplicate key {}'.format(return_as))
+            fields_for_select[return_as] = field
+
         return ValuesQuery(
             db=self._db,
             model=self.model,
             filter_kwargs=self._filter_kwargs,
             q_objects=self._q_objects_for_resolve,
-            fields=fields,
+            fields_for_select=fields_for_select,
             distinct=self._distinct,
             limit=self._limit,
             offset=self._offset,
@@ -462,7 +474,7 @@ class CountQuery(AwaitableQuery):
             q_objects=q_objects,
             annotations=annotations,
             having=having,
-            custom_filters=custom_filters
+            custom_filters=custom_filters,
         )
         self.query = self.query.select(Count(table.star))
 
@@ -471,26 +483,98 @@ class CountQuery(AwaitableQuery):
         return list(dict(result[0]).values())[0]
 
 
-class ValuesListQuery(AwaitableQuery):
+class FieldSelectQuery(AwaitableQuery):
+    def _join_table_with_forwarded_fields(self, model, field, forwarded_fields):
+        table = Table(model._meta.table)
+        if field in model._meta.fields_db_projection and not forwarded_fields:
+            db_field = model._meta.fields_db_projection[field]
+            return table, db_field
+        elif field in model._meta.fields_db_projection and forwarded_fields:
+            raise FieldError(
+                'Field "{}" for model "{}" is not relation'.format(
+                    field,
+                    model.__name__,
+                )
+            )
+
+        if field in self.model._meta.fetch_fields and not forwarded_fields:
+            raise ValueError(
+                'Selecting relation "{}" is not possible, select concrete field on related model'
+                .format(field)
+            )
+
+        field_object = model._meta.fields_map.get(field)
+        if not field_object:
+            raise FieldError('Unknown field "{}" for model "{}"'.format(
+                field,
+                model.__name__,
+            ))
+
+        self._join_table_by_field(table, field, field_object)
+        forwarded_fields_split = forwarded_fields.split('__')
+        return self._join_table_with_forwarded_fields(
+            model=field_object.type,
+            field=forwarded_fields_split[0],
+            forwarded_fields='__'.join(forwarded_fields_split[1:]),
+        )
+
+    def add_field_to_select_query(self, field, return_as):
+        table = Table(self.model._meta.table)
+        if field in self.model._meta.fields_db_projection:
+            db_field = self.model._meta.fields_db_projection[field]
+            self.query = self.query.select(getattr(table, db_field).as_(return_as))
+            return
+
+        if field in self.model._meta.fetch_fields:
+            raise ValueError(
+                'Selecting relation "{}" is not possible, select concrete field on related model'
+                .format(field)
+            )
+
+        field_split = field.split('__')
+        if field_split[0] in self.model._meta.fetch_fields:
+            related_table, related_db_field = self._join_table_with_forwarded_fields(
+                model=self.model,
+                field=field_split[0],
+                forwarded_fields='__'.join(field_split[1:]),
+            )
+            self.query = self.query.select(getattr(related_table, related_db_field).as_(return_as))
+            return
+
+        raise FieldError('Unknown field "{}" for model "{}"'.format(
+            field,
+            self.model.__name__,
+        ))
+
+
+class ValuesListQuery(FieldSelectQuery):
     def __init__(
-        self, model, filter_kwargs, db, q_objects, fields, limit, offset, distinct, orderings, flat,
-        annotations, having, custom_filters
+        self, model, filter_kwargs, db, q_objects, fields_for_select_list,
+        limit, offset, distinct, orderings, flat, annotations, having, custom_filters
     ):
         super().__init__()
-        if not (len(fields) == 1) == flat:
+        if not (len(fields_for_select_list) == 1) == flat:
             raise TypeError('You can flat value_list only if contains one field')
-        for field in fields:
-            assert field in model._meta.fields_db_projection
-        self._db = db if db else model._meta.db
+
+        self.model = model
         table = Table(model._meta.table)
-        self.query = self._db.query_class.from_(table).select(*fields)
+        self._db = db if db else model._meta.db
+        self.query = self._db.query_class.from_(table)
+        fields_for_select = {
+            str(i): field
+            for i, field in enumerate(fields_for_select_list)
+        }
+
+        for positional_number, field in fields_for_select.items():
+            self.add_field_to_select_query(field, positional_number)
+
         self.resolve_filters(
             model=model,
             filter_kwargs=filter_kwargs,
             q_objects=q_objects,
             annotations=annotations,
             having=having,
-            custom_filters=custom_filters
+            custom_filters=custom_filters,
         )
         if limit:
             self.query = self.query.limit(limit)
@@ -500,42 +584,40 @@ class ValuesListQuery(AwaitableQuery):
             self.query = self.query.distinct()
         self.resolve_ordering(model, orderings, annotations)
         self.flat = flat
-        self.fields = fields
-        self.model = model
+        self.fields = fields_for_select
 
     async def _execute(self):
         result = await self._db.execute_query(str(self.query))
         if self.flat:
-            db_field = self.model._meta.fields_db_projection[self.fields[0]]
-            return [entry[db_field] for entry in result]
+            return [entry['0'] for entry in result]
         values_list = []
+        column_numbers = sorted(list(self.fields.keys()))
         for entry in result:
-            values = []
-            for field in self.fields:
-                db_field = self.model._meta.fields_db_projection[field]
-                values.append(entry[db_field])
+            values = [entry[column] for column in column_numbers]
             values_list.append(values)
         return values_list
 
 
-class ValuesQuery(AwaitableQuery):
+class ValuesQuery(FieldSelectQuery):
     def __init__(
-        self, model, filter_kwargs, db, q_objects, fields, limit, offset, distinct, orderings,
-        annotations, having, custom_filters
+        self, model, filter_kwargs, db, q_objects, fields_for_select, limit, offset, distinct,
+        orderings, annotations, having, custom_filters
     ):
         super().__init__()
-        for field in fields:
-            assert field in model._meta.fields_db_projection
-        self._db = db if db else model._meta.db
+        self.model = model
         table = Table(model._meta.table)
-        self.query = self._db.query_class.from_(table).select(*fields)
+        self._db = db if db else model._meta.db
+        self.query = self._db.query_class.from_(table)
+        for returns_as, field in fields_for_select.items():
+            self.add_field_to_select_query(field, returns_as)
+
         self.resolve_filters(
             model=model,
             filter_kwargs=filter_kwargs,
             q_objects=q_objects,
             annotations=annotations,
             having=having,
-            custom_filters=custom_filters
+            custom_filters=custom_filters,
         )
         if limit:
             self.query = self.query.limit(limit)
@@ -546,8 +628,7 @@ class ValuesQuery(AwaitableQuery):
         for ordering in orderings:
             self.query = self.query.orderby(ordering[0], order=ordering[1])
         self.resolve_ordering(model, orderings, annotations)
-        self.fields = fields
-        self.model = model
+        self.fields_for_select = fields_for_select
 
     async def _execute(self):
         return await self._db.execute_query(str(self.query))

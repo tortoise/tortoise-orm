@@ -110,7 +110,7 @@ class ForeignKeyField(Field):
         self.model_name = model_name
         self.related_name = related_name
         assert on_delete in {CASCADE, RESTRICT, SET_NULL}
-        assert (on_delete == SET_NULL) == bool(kwargs.get('null'))
+        assert ((on_delete == SET_NULL) == bool(kwargs.get('null'))) or on_delete != SET_NULL
         self.on_delete = on_delete
 
 
