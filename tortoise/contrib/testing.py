@@ -16,10 +16,10 @@ class TestCase(asynctest.TestCase):
     async def _setUpDB(self):
         self.db = self.getDB()
         await self.db.create_connection()
-        Tortoise._client_routing(self.db)
         if not Tortoise._inited:
-            Tortoise._init_relations()
-            Tortoise._inited = True
+            Tortoise.init(self.db)
+        else:
+            Tortoise._client_routing(self.db)
         await generate_schema(self.db)
 
     async def _tearDownDB(self):

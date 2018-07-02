@@ -49,7 +49,7 @@ class EventTwo(Model):
     tournament_id = fields.IntField()
     # Here we make link to events.Team, not models.Team
     participants = fields.ManyToManyField(
-        'events.TeamTwo', related_name='events', through='event_teamtwo'
+        'events.TeamTwo', related_name='events', through='eventtwo_teamtwo'
     )
 
     class Meta:
