@@ -1,5 +1,6 @@
-from tortoise import fields
 from unittest import TestCase
+
+from tortoise import fields
 from tortoise.exceptions import ConfigurationError
 
 
