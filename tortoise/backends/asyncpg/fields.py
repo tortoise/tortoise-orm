@@ -2,8 +2,8 @@ from tortoise.fields import Field
 
 
 class JSONField(Field):
-    def __init__(self, encoder=None, decoder=None, *args, **kwargs):
-        super().__init__(dict, *args, **kwargs)
+    def __init__(self, encoder=None, decoder=None, **kwargs):
+        super().__init__(dict, **kwargs)
         if encoder is None:
             from json import dumps
             self.encoder = dumps

@@ -590,7 +590,7 @@ class ValuesListQuery(FieldSelectQuery):
         values_list = []
         column_numbers = sorted(list(self.fields.keys()))
         for entry in result:
-            values = [entry[column] for column in column_numbers]
+            values = (entry[column] for column in column_numbers)
             values_list.append(values)
         return values_list
 
@@ -628,4 +628,4 @@ class ValuesQuery(FieldSelectQuery):
         self.fields_for_select = fields_for_select
 
     async def _execute(self):
-        return await self._db.execute_query(str(self.query))
+        return await self._db.execute_query_dict(str(self.query))

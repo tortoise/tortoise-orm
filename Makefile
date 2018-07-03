@@ -33,16 +33,14 @@ lint: deps
 	-pylint $(checkfiles)
 	-python setup.py check -mrs
 
-testtox:
-	@echo "Not Implemented"
+test: deps
+	green
 
-test: deps testtox
-
-travis: check test bench
+ci: check test
 
 docs: deps
 	python setup.py build_sphinx -E
 
 style: deps
-	yapf -i -r $(checkfiles)
+	@#yapf -i -r $(checkfiles)
 	isort -rc $(checkfiles)

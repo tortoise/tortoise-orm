@@ -3,7 +3,8 @@ import decimal
 
 from pypika import Table
 
-from tortoise.exceptions import NoValuesFetched
+import ciso8601
+from tortoise.exceptions import ConfigurationError, NoValuesFetched
 from tortoise.utils import AsyncIteratorWrapper
 
 CASCADE = 'CASCADE'
@@ -22,7 +23,6 @@ class Field:
         null=False,
         default=None,
         unique=False,
-        *args,
         **kwargs
     ):
         self.type = type
@@ -45,66 +45,98 @@ class Field:
 
 
 class IntField(Field):
-    def __init__(self, source_field=None, pk=False, *args, **kwargs):
+    def __init__(self, source_field=None, pk=False, **kwargs):
         kwargs['generated'] = bool(kwargs.get('generated')) | pk
-        super().__init__(int, source_field, *args, **kwargs)
+        super().__init__(int, source_field, **kwargs)
         self.reference = kwargs.get('reference')
         self.pk = pk
 
 
 class SmallIntField(Field):
-    def __init__(self, *args, **kwargs):
-        super().__init__(int, *args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(int, **kwargs)
 
 
 class CharField(Field):
-    def __init__(self, max_length, *args, **kwargs):
+    def __init__(self, max_length, **kwargs):
         self.max_length = int(max_length)
         assert self.max_length > 0
-        super().__init__(str, *args, **kwargs)
+        super().__init__(str, **kwargs)
 
 
 class TextField(Field):
-    def __init__(self, *args, **kwargs):
-        super().__init__(str, *args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(str, **kwargs)
 
 
 class BooleanField(Field):
-    def __init__(self, *args, **kwargs):
-        super().__init__(bool, *args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(bool, **kwargs)
 
 
 class DecimalField(Field):
-    def __init__(self, max_digits, decimal_places, *args, **kwargs):
-        assert int(max_digits) >= 0 and int(decimal_places) >= 0
-        super().__init__(decimal.Decimal, *args, **kwargs)
+    def __init__(self, max_digits, decimal_places, **kwargs):
+        if int(max_digits) < 0:
+            raise ConfigurationError('max_digits must be >= 0')
+        if int(decimal_places) < 0:
+            raise ConfigurationError('decimal_places must be >= 0')
+        super().__init__(decimal.Decimal, **kwargs)
         self.max_digits = max_digits
         self.decimal_places = decimal_places
 
 
 class DatetimeField(Field):
-    def __init__(self, auto_now=False, auto_now_add=False, *args, **kwargs):
-        assert not (auto_now_add and auto_now), 'You can choose only auto_now or auto_now_add'
+    def __init__(self, auto_now=False, auto_now_add=False, **kwargs):
+        if auto_now_add and auto_now:
+            raise ConfigurationError('You can choose only auto_now or auto_now_add')
         auto_now_add = auto_now_add | auto_now
         kwargs['generated'] = bool(kwargs.get('generated')) | auto_now_add
-        super().__init__(datetime.datetime, *args, **kwargs)
+        super().__init__(datetime.datetime, **kwargs)
         self.auto_now = auto_now
         self.auto_now_add = auto_now_add
 
+    def to_db_value(self, value):
+        if value is None or isinstance(value, self.type):
+            return value
+        if isinstance(value, str):
+            return ciso8601.parse_datetime(value)
+        return self.type(value)
+
+    def to_python_value(self, value):
+        if value is None or isinstance(value, self.type):
+            return value
+        if isinstance(value, str):
+            return ciso8601.parse_datetime(value)
+        return self.type(value)
+
 
 class DateField(Field):
-    def __init__(self, *args, **kwargs):
-        super().__init__(datetime.date, *args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(datetime.date, **kwargs)
+
+    def to_db_value(self, value):
+        if value is None or isinstance(value, self.type):
+            return value
+        if isinstance(value, str):
+            return ciso8601.parse_datetime(value).date()
+        return self.type(value)
+
+    def to_python_value(self, value):
+        if value is None or isinstance(value, self.type):
+            return value
+        if isinstance(value, str):
+            return ciso8601.parse_datetime(value).date()
+        return self.type(value)
 
 
 class FloatField(Field):
-    def __init__(self, *args, **kwargs):
-        super().__init__(float, *args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(float, **kwargs)
 
 
 class ForeignKeyField(Field):
-    def __init__(self, model_name, related_name=None, on_delete=CASCADE, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, model_name, related_name=None, on_delete=CASCADE, **kwargs):
+        super().__init__(**kwargs)
         assert isinstance(model_name, str) and len(model_name.split(".")) == 2, \
             'Foreign key accepts model name in format "app.Model"'
         self.model_name = model_name
@@ -122,10 +154,9 @@ class ManyToManyField(Field):
         forward_key=None,
         backward_key=None,
         related_name=None,
-        *args,
         **kwargs
     ):
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
         assert len(model_name.split(".")
                    ) == 2, 'Foreign key accepts model name in format "app.Model"'
         self.model_name = model_name
@@ -139,7 +170,7 @@ class ManyToManyField(Field):
 
 
 class BackwardFKRelation:
-    def __init__(self, type, relation_field, *args, **kwargs):
+    def __init__(self, type, relation_field, **kwargs):
         self.type = type
         self.relation_field = relation_field
 
@@ -286,6 +317,3 @@ class ManyToManyRelationManager(RelationQueryContainer):
             )
         query = db.query_class.from_(through_table).where(condition).delete()
         await db.execute_query(str(query))
-
-
-StringField = TextField

@@ -7,6 +7,7 @@ from tortoise.backends.asyncpg.executor import AsyncpgExecutor
 from tortoise.backends.asyncpg.schema_generator import AsyncpgSchemaGenerator
 from tortoise.backends.base.client import (BaseDBAsyncClient, ConnectionWrapper,
                                            SingleConnectionWrapper)
+from tortoise.exceptions import OperationalError
 
 
 class AsyncpgDBClient(BaseDBAsyncClient):
@@ -56,6 +57,39 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         else:
             await self._connection.close()
 
+    async def db_create(self):
+        single_connection = self.single_connection
+        self.single_connection = True
+        self._connection = await asyncpg.connect(self.DSN_TEMPLATE.format(
+            user=self.user,
+            password=self.password,
+            host=self.host,
+            port=self.port,
+            database=''
+        ))
+        await self.execute_script(
+            'CREATE DATABASE {} OWNER {}'.format(self.database, self.user)
+        )
+        await self._connection.close()
+        self.single_connection = single_connection
+
+    async def db_delete(self):
+        single_connection = self.single_connection
+        self.single_connection = True
+        self._connection = await asyncpg.connect(self.DSN_TEMPLATE.format(
+            user=self.user,
+            password=self.password,
+            host=self.host,
+            port=self.port,
+            database=''
+        ))
+        try:
+            await self.execute_script('DROP DATABASE {}'.format(self.database))
+        except asyncpg.InvalidCatalogNameError:
+            pass
+        await self._connection.close()
+        self.single_connection = single_connection
+
     def acquire_connection(self):
         if not self.single_connection:
             return self._db_pool.acquire()
@@ -69,10 +103,15 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             return self._transaction_class(pool=self._db_pool)
 
     async def execute_query(self, query):
-        async with self.acquire_connection() as connection:
-            self.log.debug(query)
-            rows = await connection.fetch(query)
-            return rows
+        try:
+            async with self.acquire_connection() as connection:
+                self.log.debug(query)
+                return await connection.fetch(query)
+        except asyncpg.exceptions.SyntaxOrAccessError as exc:
+            raise OperationalError(exc)
+
+    async def execute_query_dict(self, query):
+        return [dict(row.items()) for row in await self.execute_query(query)]
 
     async def get_single_connection(self):
         if self.single_connection:

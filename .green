@@ -1,0 +1,4 @@
+verbose       = 2
+omit-patterns = tortoise/contrib/pylint/*,tortoise/tests/*
+clear-omit    = true
+run-coverage  = true

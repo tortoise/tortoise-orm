@@ -23,7 +23,7 @@ Define your models like so:
 
     class Tournament(Model):
         id = fields.IntField(pk=True)
-        name = fields.StringField()
+        name = fields.TextField()
 
 Initialise your models and database like so:
 

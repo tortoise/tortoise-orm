@@ -44,7 +44,7 @@ You can start writing models like this:
 
     class Tournament(Model):
         id = fields.IntField(pk=True)
-        name = fields.StringField()
+        name = fields.TextField()
 
         def __str__(self):
             return self.name
@@ -52,7 +52,7 @@ You can start writing models like this:
 
     class Event(Model):
         id = fields.IntField(pk=True)
-        name = fields.StringField()
+        name = fields.TextField()
         tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
         participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
 
@@ -62,7 +62,7 @@ You can start writing models like this:
 
     class Team(Model):
         id = fields.IntField(pk=True)
-        name = fields.StringField()
+        name = fields.TextField()
 
         def __str__(self):
             return self.name
