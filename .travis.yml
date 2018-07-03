@@ -14,3 +14,5 @@ install:
   - pip install -r requirements-dev.txt
 script:
   - make ci
+after_success:
+  - coveralls

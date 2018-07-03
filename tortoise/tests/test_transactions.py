@@ -1,13 +1,12 @@
-import sqlite3
-
 from tortoise.contrib.test import TestCase
+from tortoise.exceptions import OperationalError
 from tortoise.tests.testmodels import Tournament
 
 
 class TestTransactions(TestCase):
 
     async def test_transactions(self):
-        try:
+        with self.assertRaises(OperationalError):
             async with self.db.in_transaction() as connection:
                 event = Tournament(name='Test')
                 await event.save(using_db=connection)
@@ -17,7 +16,6 @@ class TestTransactions(TestCase):
                     name='Updated name').using_db(connection).first()
                 self.assertEquals(saved_event.id, event.id)
                 await connection.execute_query('SELECT * FROM non_existent_table')
-        except sqlite3.OperationalError:
-            pass
+
         saved_event = await Tournament.filter(name='Updated name').first()
         self.assertIsNone(saved_event)

@@ -43,8 +43,7 @@ class TestRelations(TestCase):
 
         await Event.filter(tournament=tournament)
 
-        await Tournament.filter(events__name__in=['Test', 'Prod']
-                                ).order_by('-events__participants__name').distinct()
+        await Tournament.filter(events__name__in=['Test', 'Prod']).distinct()
 
         result = await Event.filter(id=event.id).values('id', 'name', tournament='tournament__name')
         self.assertEquals(result[0]['tournament'], tournament.name)

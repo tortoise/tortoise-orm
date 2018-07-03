@@ -8,6 +8,7 @@ from tortoise import BaseDBAsyncClient
 from tortoise.backends.base.client import ConnectionWrapper, SingleConnectionWrapper
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
+from tortoise.exceptions import OperationalError
 
 
 class SqliteClient(BaseDBAsyncClient):
@@ -43,16 +44,22 @@ class SqliteClient(BaseDBAsyncClient):
 
     async def execute_query(self, query, get_inserted_id=False):
         self.log.debug(query)
-        async with self.acquire_connection() as connection:
-            connection._conn.row_factory = sqlite3.Row
-            cursor = await connection.execute(query)
-            await self._commit(connection)
-            results = await cursor.fetchall()
-            if get_inserted_id:
-                await cursor.execute('SELECT last_insert_rowid()')
-                inserted_id = await cursor.fetchone()
-                return inserted_id
-            return [dict(row) for row in results]
+        try:
+            async with self.acquire_connection() as connection:
+                connection._conn.row_factory = sqlite3.Row
+                cursor = await connection.execute(query)
+                await self._commit(connection)
+                results = await cursor.fetchall()
+                if get_inserted_id:
+                    await cursor.execute('SELECT last_insert_rowid()')
+                    inserted_id = await cursor.fetchone()
+                    return inserted_id
+                return [dict(row) for row in results]
+        except sqlite3.OperationalError as exc:
+            raise OperationalError(exc)
+
+    async def execute_query_dict(self, query, get_inserted_id=False):
+        return await self.execute_query(query, get_inserted_id=get_inserted_id)
 
     async def execute_script(self, script):
         async with self.acquire_connection() as connection:

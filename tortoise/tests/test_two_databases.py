@@ -1,7 +1,6 @@
-from sqlite3 import OperationalError
-
 from tortoise import Tortoise
 from tortoise.contrib.test import TestCase
+from tortoise.exceptions import OperationalError
 from tortoise.tests.testmodels import EventTwo, TeamTwo, Tournament
 from tortoise.utils import generate_schema
 
@@ -28,7 +27,7 @@ class TestTwoDatabases(TestCase):
         with self.assertRaises(OperationalError):
             await self.db.execute_query('SELECT * FROM "eventtwo"')
 
-        results = await self.second_db.execute_query('SELECT * FROM "eventtwo"')
+        results = await self.second_db.execute_query_dict('SELECT * FROM "eventtwo"')
         self.assertEquals(results, [{'id': 1, 'name': 'Event', 'tournament_id': 1}])
 
     async def test_two_databases_relation(self):
@@ -38,7 +37,7 @@ class TestTwoDatabases(TestCase):
         with self.assertRaises(OperationalError):
             await self.db.execute_query('SELECT * FROM "eventtwo"')
 
-        results = await self.second_db.execute_query('SELECT * FROM "eventtwo"')
+        results = await self.second_db.execute_query_dict('SELECT * FROM "eventtwo"')
         self.assertEquals(results, [{'id': 1, 'name': 'Event', 'tournament_id': 1}])
 
         teams = []

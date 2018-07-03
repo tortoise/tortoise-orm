@@ -19,5 +19,9 @@ class NoValuesFetched(BaseORMException):
     pass
 
 
+class OperationalError(BaseORMException):
+    pass
+
+
 class ConfigurationError(Exception):
     pass
