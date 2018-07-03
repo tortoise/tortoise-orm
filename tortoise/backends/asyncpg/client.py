@@ -50,10 +50,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
                 port=self.port,
                 database=''
             ))
-            try:
-                await self.execute_script('DROP DATABASE {}'.format(self.database))
-            except asyncpg.InvalidCatalogNameError:
-                pass
             await self.execute_script(
                 'CREATE DATABASE {} OWNER {}'.format(self.database, self.user)
             )
@@ -77,7 +73,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         else:
             await self._connection.close()
 
-        if self.delete_db:
+        if self.delete_db and self.create_db:
             single_connection = self.single_connection
             self.single_connection = True
             self._connection = await asyncpg.connect(self.DSN_TEMPLATE.format(
