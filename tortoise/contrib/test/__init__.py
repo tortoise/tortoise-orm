@@ -37,8 +37,8 @@ class TestCase(asynctest.TestCase):
         await generate_schema(self.db)
 
     async def _tearDownDB(self) -> None:
-        await self.db.db_delete()
         await self.db.close()
+        await self.db.db_delete()
 
     def _setUp(self) -> None:
         self._init_loop()
