@@ -11,20 +11,23 @@ class BaseDBAsyncClient:
     executor_class = BaseExecutor
     schema_generator = BaseSchemaGenerator
 
-    def __init__(self, single_connection=False, create_db=False, delete_db=False, **kwargs):
+    def __init__(self, single_connection=False, **kwargs):
         self.log = logging.getLogger('db_client')
         self.single_connection = single_connection
-        self.create_db = create_db
-        self.delete_db = delete_db
         self._single_connection_class = type(
             'SingleConnectionWrapper', (SingleConnectionWrapper, self.__class__), {}
         )
-        self.testing = False
 
     async def create_connection(self):
         raise NotImplementedError()
 
     async def close(self):
+        raise NotImplementedError()
+
+    async def db_create(self):
+        raise NotImplementedError()
+
+    async def db_delete(self):
         raise NotImplementedError()
 
     def acquire_connection(self):

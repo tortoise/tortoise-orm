@@ -49,8 +49,6 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
 
     if testing:
         params['single_connection'] = True
-        params['create_db'] = True
-        params['delete_db'] = True
         path = path.replace('\\{', '{').replace('\\}', '}')
         path = path.format(uuid.uuid4().hex)
 

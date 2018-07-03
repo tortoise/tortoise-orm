@@ -26,15 +26,20 @@ class SqliteClient(BaseDBAsyncClient):
         )
 
     async def create_connection(self):
-        if self.create_db and os.path.isfile(self.filename):
-            raise OperationalError('DB cannot be created, as it already exists.')
+        pass
 
     async def close(self):
-        if self.delete_db and self.create_db:
-            try:
-                os.remove(self.filename)
-            except FileNotFoundError:
-                pass
+        pass
+
+    async def db_create(self):
+        if os.path.isfile(self.filename):
+            raise OperationalError('DB cannot be created, as it already exists.')
+
+    async def db_delete(self):
+        try:
+            os.remove(self.filename)
+        except FileNotFoundError:
+            pass
 
     def acquire_connection(self):
         connection = aiosqlite.connect(self.filename)

@@ -23,6 +23,7 @@ class TestCase(asynctest.TestCase):
     async def getDB(self) -> BaseDBAsyncClient:
         dbconf = expand_db_url(TORTOISE_TEST_DB, testing=True)
         db = dbconf['client'](**dbconf['params'])
+        await db.db_create()
         await db.create_connection()
 
         return db
@@ -36,6 +37,7 @@ class TestCase(asynctest.TestCase):
         await generate_schema(self.db)
 
     async def _tearDownDB(self) -> None:
+        await self.db.db_delete()
         await self.db.close()
 
     def _setUp(self) -> None:

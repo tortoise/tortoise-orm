@@ -18,6 +18,7 @@ class TestTwoDatabases(TestCase):
         await generate_schema(self.second_db)
 
     async def tearDown(self):
+        await self.second_db.db_delete()
         await self.second_db.close()
 
     async def test_two_databases(self):
