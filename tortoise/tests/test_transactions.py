@@ -14,7 +14,7 @@ class TestTransactions(TestCase):
                     connection).update(name='Updated name')
                 saved_event = await Tournament.filter(
                     name='Updated name').using_db(connection).first()
-                self.assertEquals(saved_event.id, event.id)
+                self.assertEqual(saved_event.id, event.id)
                 await connection.execute_query('SELECT * FROM non_existent_table')
 
         saved_event = await Tournament.filter(name='Updated name').first()

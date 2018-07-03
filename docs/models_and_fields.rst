@@ -10,7 +10,7 @@ With that you can start describing your own models like that
 
     class Tournament(Model):
         id = fields.IntField(pk=True)
-        name = fields.StringField()
+        name = fields.TextField()
         created = fields.DatetimeField(auto_now_add=True)
 
         def __str__(self):
@@ -19,7 +19,7 @@ With that you can start describing your own models like that
 
     class Event(Model):
         id = fields.IntField(pk=True)
-        name = fields.StringField()
+        name = fields.TextField()
         tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
         participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
         modified = fields.DatetimeField(auto_now=True)
@@ -31,7 +31,7 @@ With that you can start describing your own models like that
 
     class Team(Model):
         id = fields.IntField(pk=True)
-        name = fields.StringField()
+        name = fields.TextField()
 
         def __str__(self):
             return self.name
@@ -48,7 +48,7 @@ Every model should be derived from base model. You also can derive from your own
 
     class AbstractTournament(Model):
         id = fields.IntField(pk=True)
-        name = fields.StringField()
+        name = fields.TextField()
         created = fields.DatetimeField(auto_now_add=True)
 
         class Meta:
@@ -116,10 +116,10 @@ You can do it like this:
             password='qwerty123',
             database='events',
        )
-        
+
         await db.create_connection()
         Tortoise.init(db)
-        
+
         await generate_schema(client)
 
 Here we create connection to database with default asyncpg client and then we init models. Be sure that you have your models imported in the app. Usually that's the case, because you use your models across you app, but if you have only local imports of it, tortoise won't be able to find them and init them with connection to db.
@@ -133,12 +133,14 @@ Here is list of fields available at the moment with custom options of this field
 
 - IntField (``pk``)
 - SmallIntField
-- StringField
+- CharField
+- TextField
 - BooleanField
 - DecimalField (``max_digits``, ``decimal_places``)
 - DatetimeField (``auto_now``, ``auto_now_add``)
 - DateField
-- ForeignKeyField (model_name, related_name, on_delete)
+- FloatField
+- ForeignKeyField (``model_name``, ``related_name``, ``on_delete``)
 - ManyToManyField (``model_name``, ``related_name``, ``through``, ``backward_key``, ``forward_key``)
 
 Also all fields fields have this options:

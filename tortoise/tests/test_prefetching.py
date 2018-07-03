@@ -12,5 +12,5 @@ class TestPrefetching(TestCase):
             Prefetch('events', queryset=Event.filter(name='First'))
         ).first()
         tournament = await Tournament.first().prefetch_related('events')
-        self.assertEquals(len(tournament_with_filtered.events), 1)
-        self.assertEquals(len(tournament.events), 2)
+        self.assertEqual(len(tournament_with_filtered.events), 1)
+        self.assertEqual(len(tournament.events), 2)

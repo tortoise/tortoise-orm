@@ -319,6 +319,3 @@ class ManyToManyRelationManager(RelationQueryContainer):
             )
         query = db.query_class.from_(through_table).where(condition).delete()
         await db.execute_query(str(query))
-
-
-StringField = TextField

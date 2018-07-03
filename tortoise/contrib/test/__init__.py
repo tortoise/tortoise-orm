@@ -18,6 +18,7 @@ class TestCase(asynctest.TestCase):
 
     Based on ``asynctest``.
     """
+    # pylint: disable=C0103,W0201
 
     async def getDB(self) -> BaseDBAsyncClient:
         dbconf = expand_db_url(TORTOISE_TEST_DB, testing=True)

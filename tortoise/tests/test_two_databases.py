@@ -28,7 +28,7 @@ class TestTwoDatabases(TestCase):
             await self.db.execute_query('SELECT * FROM "eventtwo"')
 
         results = await self.second_db.execute_query_dict('SELECT * FROM "eventtwo"')
-        self.assertEquals(results, [{'id': 1, 'name': 'Event', 'tournament_id': 1}])
+        self.assertEqual(results, [{'id': 1, 'name': 'Event', 'tournament_id': 1}])
 
     async def test_two_databases_relation(self):
         tournament = await Tournament.create(name='Tournament')
@@ -38,7 +38,7 @@ class TestTwoDatabases(TestCase):
             await self.db.execute_query('SELECT * FROM "eventtwo"')
 
         results = await self.second_db.execute_query_dict('SELECT * FROM "eventtwo"')
-        self.assertEquals(results, [{'id': 1, 'name': 'Event', 'tournament_id': 1}])
+        self.assertEqual(results, [{'id': 1, 'name': 'Event', 'tournament_id': 1}])
 
         teams = []
         for i in range(2):
@@ -46,14 +46,14 @@ class TestTwoDatabases(TestCase):
             teams.append(team)
             await event.participants.add(team)
 
-        self.assertEquals(await TeamTwo.all().order_by('name'), teams)
-        self.assertEquals(await event.participants.all().order_by('name'), teams)
+        self.assertEqual(await TeamTwo.all().order_by('name'), teams)
+        self.assertEqual(await event.participants.all().order_by('name'), teams)
 
-        self.assertEquals(
+        self.assertEqual(
             await TeamTwo.all().order_by('name').values('id', 'name'),
             [{'id': 1, 'name': 'Team 1'}, {'id': 2, 'name': 'Team 2'}]
         )
-        self.assertEquals(
+        self.assertEqual(
             await event.participants.all().order_by('name').values('id', 'name'),
             [{'id': 1, 'name': 'Team 1'}, {'id': 2, 'name': 'Team 2'}]
         )

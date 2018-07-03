@@ -8,14 +8,14 @@ class TestSchemaCreate(TestCase):
 
     async def test_schema_create(self):
         tournament = await Tournament.create(name='Test')
-        self.assertEquals(tournament.created and tournament.created.date(), datetime.date.today())
+        self.assertEqual(tournament.created and tournament.created.date(), datetime.date.today())
 
         event = await Event.create(name='Test 1', tournament=tournament, prize=100)
         old_time = event.modified
         event.name = 'Test 2'
         await event.save()
         self.assertGreater(event.modified, old_time)
-        self.assertEquals(len(event.token), 32)
+        self.assertEqual(len(event.token), 32)
         await Team.create(name='test')
         result = await Team.all().values('name')
-        self.assertEquals(result[0]['name'], 'test')
+        self.assertEqual(result[0]['name'], 'test')

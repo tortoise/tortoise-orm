@@ -17,25 +17,25 @@ class TestRelations(TestCase):
         await event.participants.add(participants[0], participants[1])
         await event.participants.add(participants[0], participants[1])
 
-        self.assertEquals([team.id for team in event.participants], [])
+        self.assertEqual([team.id for team in event.participants], [])
 
         teamids = []
         async for team in event.participants:
             teamids.append(team.id)
-        self.assertEquals(teamids, [1, 2])
+        self.assertEqual(teamids, [1, 2])
 
-        self.assertEquals([team.id for team in event.participants], [1, 2])
+        self.assertEqual([team.id for team in event.participants], [1, 2])
 
-        self.assertEquals(event.participants[0].id, participants[0].id)
+        self.assertEqual(event.participants[0].id, participants[0].id)
 
         selected_events = await Event.filter(
             participants=participants[0].id
         ).prefetch_related('participants', 'tournament')
-        self.assertEquals(len(selected_events), 1)
-        self.assertEquals(selected_events[0].tournament.id, tournament.id)
-        self.assertEquals(len(selected_events[0].participants), 2)
+        self.assertEqual(len(selected_events), 1)
+        self.assertEqual(selected_events[0].tournament.id, tournament.id)
+        self.assertEqual(len(selected_events[0].participants), 2)
         await participants[0].fetch_related('events')
-        self.assertEquals(participants[0].events[0], event)
+        self.assertEqual(participants[0].events[0], event)
 
         await Team.fetch_for_list(participants, 'events')
 
@@ -46,7 +46,7 @@ class TestRelations(TestCase):
         await Tournament.filter(events__name__in=['Test', 'Prod']).distinct()
 
         result = await Event.filter(id=event.id).values('id', 'name', tournament='tournament__name')
-        self.assertEquals(result[0]['tournament'], tournament.name)
+        self.assertEqual(result[0]['tournament'], tournament.name)
 
         result = await Event.filter(id=event.id).values_list('id', 'participants__name')
-        self.assertEquals(len(result), 2)
+        self.assertEqual(len(result), 2)

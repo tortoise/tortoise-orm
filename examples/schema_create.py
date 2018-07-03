@@ -40,7 +40,7 @@ class Event(Model):
 
 class Team(Model):
     id = fields.IntField(pk=True)
-    name = fields.StringField(source_field='title')
+    name = fields.TextField(source_field='title')
 
     def __str__(self):
         return self.name
