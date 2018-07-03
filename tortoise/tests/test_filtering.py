@@ -31,7 +31,7 @@ class TestFiltering(TestCase):
         found_events = await Event.filter(
             Q(id__in=[event_first.id, event_second.id])
             | Q(name='3')
-        ).filter(participants__not=team_second.id).order_by('tournament_id').distinct()
+        ).filter(participants__not=team_second.id).order_by('name', 'tournament_id').distinct()
         self.assertEquals(len(found_events), 2)
         self.assertEquals(found_events[0].id, event_first.id)
         self.assertEquals(found_events[1].id, event_third.id)
