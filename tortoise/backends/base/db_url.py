@@ -22,7 +22,7 @@ DB_LOOKUP = {
     },
     'sqlite': {
         'client': SqliteClient,
-        'skipfirstchar': False,
+        'skip_first_char': False,
         'vars': {
             'path': 'filename',
         },
@@ -30,10 +30,10 @@ DB_LOOKUP = {
 }
 
 
-def expand_db_url(dburl: str, testing: bool = False) -> dict:
-    url = urlparse.urlparse(dburl)
+def expand_db_url(db_url: str, testing: bool = False) -> dict:
+    url = urlparse.urlparse(db_url)
     db = DB_LOOKUP[url.scheme]
-    if db.get('skipfirstchar', True):
+    if db.get('skip_first_char', True):
         path = url.path[1:]
     else:
         path = url.path

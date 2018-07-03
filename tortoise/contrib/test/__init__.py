@@ -12,12 +12,12 @@ TORTOISE_TEST_DB = os.environ.get('TORTOISE_TEST_DB', 'sqlite:///tmp/test-{}.sql
 
 
 class TestCase(asynctest.TestCase):
-    '''
+    """
     An asyncio capable TestCase that will ensure that an isolated test db
       is available for each test.
 
     Based on ``asynctest``.
-    '''
+    """
 
     async def getDB(self) -> BaseDBAsyncClient:
         dbconf = expand_db_url(TORTOISE_TEST_DB, testing=True)
