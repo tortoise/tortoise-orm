@@ -3,7 +3,7 @@ Changelog
 
 0.9.0
 -----
-- Added support for nested queries for `values` and `values_list`:
+- Added support for nested queries for ``values`` and ``values_list``:
 
   .. code-block:: python3
 
@@ -12,24 +12,24 @@ Changelog
 
 0.8.0
 -----
-- Added postgres `JSONField`
+- Added postgres ``JSONField``
 
 0.7.0
 -----
-- Added `.annotate()` method and basic aggregation funcs
+- Added ``.annotate()`` method and basic aggregation funcs
 
 0.6.0
 -----
-- Added `Prefetch` object
+- Added ``Prefetch`` object
 
 0.5.0
 -----
-- Added `contains` and other filter modifiers.
-- Field kwarg `default` not accepts functions.
+- Added ``contains`` and other filter modifiers.
+- Field kwarg ``default`` not accepts functions.
 
 0.4.0
 -----
-- Immutable QuerySet. `unique` flag for fields
+- Immutable QuerySet. ``unique`` flag for fields
 
 0.3.0
 -----
