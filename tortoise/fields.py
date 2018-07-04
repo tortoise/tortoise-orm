@@ -86,16 +86,6 @@ class DecimalField(Field):
         self.max_digits = max_digits
         self.decimal_places = decimal_places
 
-    def to_db_value(self, value):
-        if value is None:
-            return None
-        # TODO: quantize step only needed for SQLite
-        if self.decimal_places == 0:
-            quant = '1'
-        else:
-            quant = '1.{}'.format('0' * self.decimal_places)
-        return Decimal(value).quantize(Decimal(quant)).normalize()
-
 
 class DatetimeField(Field):
     def __init__(self, auto_now=False, auto_now_add=False, **kwargs):
