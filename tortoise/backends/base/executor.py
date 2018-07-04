@@ -61,7 +61,7 @@ class BaseExecutor:
         # Insert should implement returning new id to saved object
         # Each db has it's own methods for it, so each implementation should
         # go to descendant executors
-        raise NotImplementedError()
+        raise NotImplementedError  # pragma: nocoverage
 
     async def execute_update(self, instance):
         self.connection = await self.db.get_single_connection()

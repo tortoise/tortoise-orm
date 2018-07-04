@@ -50,6 +50,11 @@ class TestIntFields(TestCase):
         obj2 = await testmodels.IntFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
 
+    async def test_cast(self):
+        obj0 = await testmodels.IntFields.create(intnum='3')
+        obj = await testmodels.IntFields.get(id=obj0.id)
+        self.assertEqual(obj.intnum, 3)
+
 
 class TestSmallIntFields(TestCase):
     async def test_empty(self):
@@ -133,7 +138,7 @@ class TestDatetimeFields(TestCase):
 
     async def test_create(self):
         now = datetime.utcnow()
-        obj0 = await testmodels.DatetimeFields.create(datetime=now,)
+        obj0 = await testmodels.DatetimeFields.create(datetime=now)
         obj = await testmodels.DatetimeFields.get(id=obj0.id)
         self.assertEqual(obj.datetime, now)
         self.assertEqual(obj.datetime_null, None)
@@ -145,6 +150,7 @@ class TestDatetimeFields(TestCase):
         obj2 = await testmodels.DatetimeFields.get(id=obj.id)
         self.assertEqual(obj2.datetime, now)
         self.assertEqual(obj2.datetime_null, None)
+        self.assertEqual(obj2.datetime_auto, obj.datetime_auto)
         self.assertNotEqual(obj2.datetime_auto, datetime_auto)
         self.assertGreater(obj2.datetime_auto - now, timedelta(seconds=1))
         self.assertLess(obj2.datetime_auto - now, timedelta(seconds=2))

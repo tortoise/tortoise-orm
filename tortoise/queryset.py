@@ -119,7 +119,7 @@ class AwaitableQuery:
         return self._execute().__await__()
 
     async def _execute(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: nocoverage
 
 
 class QuerySet(AwaitableQuery):

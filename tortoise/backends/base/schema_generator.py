@@ -30,10 +30,10 @@ class BaseSchemaGenerator:
     def _get_primary_key_create_string(self, field_name):
         # All databases have their unique way for autoincrement,
         # has to implement in children
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: nocoverage
 
     def _get_auto_now_add_default(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: nocoverage
 
     def _get_table_sql(self, model):
         fields_to_create = []
