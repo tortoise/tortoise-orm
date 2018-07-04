@@ -8,7 +8,7 @@ from tortoise import BaseDBAsyncClient
 from tortoise.backends.base.client import ConnectionWrapper, SingleConnectionWrapper
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
-from tortoise.exceptions import OperationalError
+from tortoise.exceptions import IntegrityError, OperationalError
 
 
 class SqliteClient(BaseDBAsyncClient):
@@ -63,6 +63,8 @@ class SqliteClient(BaseDBAsyncClient):
                 return [dict(row) for row in results]
         except sqlite3.OperationalError as exc:
             raise OperationalError(exc)
+        except sqlite3.IntegrityError as exc:
+            raise IntegrityError(exc)
 
     async def execute_query_dict(self, query, get_inserted_id=False):
         return await self.execute_query(query, get_inserted_id=get_inserted_id)

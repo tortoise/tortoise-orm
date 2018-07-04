@@ -1,5 +1,5 @@
-from tortoise.backends.asyncpg.fields import JSONField
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
+from tortoise.fields import JSONField
 
 
 class AsyncpgSchemaGenerator(BaseSchemaGenerator):

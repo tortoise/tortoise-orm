@@ -1,5 +1,6 @@
 import datetime
 import decimal
+import json
 
 from pypika import Table
 
@@ -58,9 +59,10 @@ class SmallIntField(Field):
 
 
 class CharField(Field):
-    def __init__(self, max_length, **kwargs):
+    def __init__(self, max_length=0, **kwargs):
+        if int(max_length) < 1:
+            raise ConfigurationError('max_digits must be >= 1')
         self.max_length = int(max_length)
-        assert self.max_length > 0
         super().__init__(str, **kwargs)
 
 
@@ -75,9 +77,9 @@ class BooleanField(Field):
 
 
 class DecimalField(Field):
-    def __init__(self, max_digits, decimal_places, **kwargs):
-        if int(max_digits) < 0:
-            raise ConfigurationError('max_digits must be >= 0')
+    def __init__(self, max_digits=0, decimal_places=-1, **kwargs):
+        if int(max_digits) < 1:
+            raise ConfigurationError('max_digits must be >= 1')
         if int(decimal_places) < 0:
             raise ConfigurationError('decimal_places must be >= 0')
         super().__init__(decimal.Decimal, **kwargs)
@@ -132,6 +134,23 @@ class DateField(Field):
 class FloatField(Field):
     def __init__(self, **kwargs):
         super().__init__(float, **kwargs)
+
+
+class JSONField(Field):
+    def __init__(self, encoder=json.dumps, decoder=json.loads, **kwargs):
+        super().__init__(dict, **kwargs)
+        self.encoder = encoder
+        self.decoder = decoder
+
+    def to_db_value(self, value):
+        if value is None:
+            return value
+        return self.encoder(value)
+
+    def to_python_value(self, value):
+        if value is None:
+            return value
+        return self.decoder(value)
 
 
 class ForeignKeyField(Field):

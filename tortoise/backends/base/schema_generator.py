@@ -20,6 +20,8 @@ class BaseSchemaGenerator:
         fields.DatetimeField: 'TIMESTAMP',
         fields.DecimalField: 'DECIMAL({},{})',
         fields.DateField: 'DATE',
+        fields.FloatField: 'DOUBLE',
+        fields.JSONField: 'TEXT'
     }
 
     def __init__(self, client):

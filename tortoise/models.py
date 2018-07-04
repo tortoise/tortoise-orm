@@ -420,6 +420,11 @@ class Model(metaclass=ModelMeta):
         return QuerySet(cls)
 
     @classmethod
+    def get(cls, *args, **kwargs):
+        # TODO: Raise exception if no result
+        return QuerySet(cls).filter(*args, **kwargs).first()
+
+    @classmethod
     async def fetch_for_list(cls, instance_list, *args, using_db=None):
         db = using_db if using_db else cls._meta.db
         await db.executor_class(
