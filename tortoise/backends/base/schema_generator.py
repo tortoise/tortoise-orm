@@ -20,7 +20,7 @@ class BaseSchemaGenerator:
         fields.DatetimeField: 'TIMESTAMP',
         fields.DecimalField: 'DECIMAL({},{})',
         fields.DateField: 'DATE',
-        fields.FloatField: 'DOUBLE',
+        fields.FloatField: 'DOUBLE PRECISION',
         fields.JSONField: 'TEXT'
     }
 

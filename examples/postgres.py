@@ -8,14 +8,13 @@ from asyncpg import InvalidCatalogNameError
 
 from tortoise import Tortoise, fields
 from tortoise.backends.asyncpg.client import AsyncpgDBClient
-from tortoise.backends.asyncpg.fields import JSONField
 from tortoise.models import Model
 from tortoise.utils import generate_schema
 
 
 class Report(Model):
     id = fields.IntField(pk=True)
-    content = JSONField()
+    content = fields.JSONField()
 
     def __str__(self):
         return str(self.id)
