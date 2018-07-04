@@ -1,6 +1,15 @@
 Changelog
 =========
 
+0.9.0
+-----
+- Added support for nested queries for `values` and `values_list`:
+
+  .. code-block:: python3
+
+    result = await Event.filter(id=event.id).values('id', 'name', tournament='tournament__name')
+    result = await Event.filter(id=event.id).values_list('id', 'participants__name')
+
 0.8.0
 -----
 - Added postgres `JSONField`
