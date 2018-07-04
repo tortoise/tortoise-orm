@@ -42,9 +42,11 @@ class BaseExecutor:
                 regular_columns.append(column)
         return regular_columns, python_generated_column_pairs
 
+    def _field_to_db(self, field_object, attr):
+        return field_object.to_db_value(attr)
+
     def _get_prepared_value(self, instance, column):
-        field_object = self.model._meta.fields_map[column]
-        return field_object.to_db_value(getattr(instance, column))
+        return self._field_to_db(self.model._meta.fields_map[column], getattr(instance, column))
 
     def _prepare_insert_values(self, instance, regular_columns, generated_column_pairs):
         values = [self._get_prepared_value(instance, column) for column in regular_columns]
@@ -74,7 +76,10 @@ class BaseExecutor:
             elif field_object.generated:
                 continue
             else:
-                query = query.set(db_field, field_object.to_db_value(getattr(instance, field)))
+                query = query.set(
+                    db_field,
+                    self._field_to_db(field_object, getattr(instance, field))
+                )
         query = query.where(table.id == instance.id)
         await self.connection.execute_query(str(query))
         await self.db.release_single_connection(self.connection)

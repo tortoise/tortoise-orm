@@ -51,8 +51,7 @@ class SqliteExecutor(BaseExecutor):
         self.connection = None
         return instance
 
-    def _get_prepared_value(self, instance, column):
-        field_object = self.model._meta.fields_map[column]
+    def _field_to_db(self, field_object, attr):
         if field_object.__class__ in TO_DB_OVERRIDE:
-            return TO_DB_OVERRIDE[field_object.__class__](field_object, getattr(instance, column))
-        return field_object.to_db_value(getattr(instance, column))
+            return TO_DB_OVERRIDE[field_object.__class__](field_object, attr)
+        return field_object.to_db_value(attr)
