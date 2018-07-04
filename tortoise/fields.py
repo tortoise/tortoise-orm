@@ -1,4 +1,5 @@
 import datetime
+import functools
 import json
 from decimal import Decimal
 
@@ -12,6 +13,13 @@ CASCADE = 'CASCADE'
 RESTRICT = 'RESTRICT'
 SET_NULL = 'SET NULL'
 SET_DEFAULT = 'SET DEFAULT'
+
+# Doing this we can replace json dumps/loads with different implementations
+JSON_DUMPS = functools.partial(
+    json.dumps,
+    separators=(',', ':')
+)
+JSON_LOADS = json.loads
 
 
 class Field:
@@ -125,7 +133,7 @@ class FloatField(Field):
 
 
 class JSONField(Field):
-    def __init__(self, encoder=json.dumps, decoder=json.loads, **kwargs):
+    def __init__(self, encoder=JSON_DUMPS, decoder=JSON_LOADS, **kwargs):
         super().__init__(dict, **kwargs)
         self.encoder = encoder
         self.decoder = decoder

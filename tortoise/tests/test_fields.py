@@ -194,13 +194,11 @@ class TestJSONFields(TestCase):
         with self.assertRaises(IntegrityError):
             await testmodels.JSONFields.create()
 
-    @unittest.expectedFailure
     async def test_create(self):
-        # TODO: Expect to work
         obj0 = await testmodels.JSONFields.create(data={'some': ['text', 3]})
         obj = await testmodels.JSONFields.get(id=obj0.id)
         self.assertEqual(obj.data, {'some': ['text', 3]})
-        self.assertEqual(obj.data, None)
+        self.assertEqual(obj.data_null, None)
         await obj.save()
         obj2 = await testmodels.JSONFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
