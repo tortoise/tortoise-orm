@@ -18,7 +18,6 @@ def to_db_bool(self, value):
 def to_db_decimal(self, value):
     if value is None:
         return None
-    # TODO: quantize step only needed for SQLite
     if self.decimal_places == 0:
         quant = '1'
     else:
