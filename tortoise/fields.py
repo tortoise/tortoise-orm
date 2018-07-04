@@ -1,6 +1,6 @@
 import datetime
-import decimal
 import json
+from decimal import Decimal
 
 from pypika import Table
 
@@ -82,9 +82,19 @@ class DecimalField(Field):
             raise ConfigurationError('max_digits must be >= 1')
         if int(decimal_places) < 0:
             raise ConfigurationError('decimal_places must be >= 0')
-        super().__init__(decimal.Decimal, **kwargs)
+        super().__init__(Decimal, **kwargs)
         self.max_digits = max_digits
         self.decimal_places = decimal_places
+
+    def to_db_value(self, value):
+        if value is None:
+            return None
+        # TODO: quantize step only needed for SQLite
+        if self.decimal_places == 0:
+            quant = '1'
+        else:
+            quant = '1.{}'.format('0' * self.decimal_places)
+        return Decimal(value).quantize(Decimal(quant)).normalize()
 
 
 class DatetimeField(Field):

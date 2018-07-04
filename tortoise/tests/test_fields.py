@@ -117,7 +117,6 @@ class TestDecimalFields(TestCase):
             await testmodels.DecimalFields.create()
 
     async def test_create(self):
-        # TODO: Fails on SQLite: Expects decimal to be .quantize(Decimal('1.0000')).normalize()
         obj0 = await testmodels.DecimalFields.create(decimal=Decimal('1.23456'))
         obj = await testmodels.DecimalFields.get(id=obj0.id)
         self.assertEqual(obj.decimal, Decimal('1.2346'))

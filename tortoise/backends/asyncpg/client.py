@@ -7,7 +7,7 @@ from tortoise.backends.asyncpg.executor import AsyncpgExecutor
 from tortoise.backends.asyncpg.schema_generator import AsyncpgSchemaGenerator
 from tortoise.backends.base.client import (BaseDBAsyncClient, ConnectionWrapper,
                                            SingleConnectionWrapper)
-from tortoise.exceptions import OperationalError
+from tortoise.exceptions import IntegrityError, OperationalError
 
 
 class AsyncpgDBClient(BaseDBAsyncClient):
@@ -109,6 +109,8 @@ class AsyncpgDBClient(BaseDBAsyncClient):
                 return await connection.fetch(query)
         except asyncpg.exceptions.SyntaxOrAccessError as exc:
             raise OperationalError(exc)
+        except asyncpg.exceptions.IntegrityConstraintViolationError as exc:
+            raise IntegrityError(exc)
 
     async def execute_query_dict(self, query):
         return [dict(row.items()) for row in await self.execute_query(query)]
