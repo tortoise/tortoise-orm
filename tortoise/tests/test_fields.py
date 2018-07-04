@@ -131,22 +131,21 @@ class TestDatetimeFields(TestCase):
         with self.assertRaises(IntegrityError):
             await testmodels.DatetimeFields.create()
 
-    @unittest.expectedFailure
     async def test_create(self):
-        # TODO: Expects the datetime_auto to be set on every save() operation
-        now = datetime.now()
+        now = datetime.utcnow()
         obj0 = await testmodels.DatetimeFields.create(datetime=now,)
         obj = await testmodels.DatetimeFields.get(id=obj0.id)
         self.assertEqual(obj.datetime, now)
         self.assertEqual(obj.datetime_null, None)
         self.assertLess(obj.datetime_auto - now, timedelta(seconds=1))
         self.assertLess(obj.datetime_add - now, timedelta(seconds=1))
-        sleep(1.1)
+        datetime_auto = obj.datetime_auto
+        sleep(1)
         await obj.save()
         obj2 = await testmodels.DatetimeFields.get(id=obj.id)
         self.assertEqual(obj2.datetime, now)
         self.assertEqual(obj2.datetime_null, None)
-        self.assertNotEqual(obj2.datetime_auto, obj.datetime_auto)
+        self.assertNotEqual(obj2.datetime_auto, datetime_auto)
         self.assertGreater(obj2.datetime_auto - now, timedelta(seconds=1))
         self.assertLess(obj2.datetime_auto - now, timedelta(seconds=2))
         self.assertEqual(obj2.datetime_add, obj.datetime_add)
