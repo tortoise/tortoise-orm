@@ -8,7 +8,10 @@ class TestSchemaCreate(TestCase):
 
     async def test_schema_create(self):
         tournament = await Tournament.create(name='Test')
-        self.assertEqual(tournament.created and tournament.created.date(), datetime.date.today())
+        self.assertEqual(
+            tournament.created and tournament.created.date(),
+            datetime.datetime.utcnow().date()
+        )
 
         event = await Event.create(name='Test 1', tournament=tournament, prize=100)
         old_time = event.modified

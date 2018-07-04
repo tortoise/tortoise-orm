@@ -43,13 +43,9 @@ class Field:
         self.unique = unique
 
     def to_db_value(self, value):
-        if value is None or isinstance(value, self.type):
-            return value
-        return self.type(value)
+        return value
 
     def to_python_value(self, value):
-        if value is None or isinstance(value, self.type):
-            return value
         return self.type(value)
 
 
@@ -106,12 +102,7 @@ class DatetimeField(Field):
         self.auto_now_add = auto_now_add
 
     def to_python_value(self, value):
-        if value is None or isinstance(value, self.type):
-            return value
-        # TODO: parse from string only needed for SQLite
-        if isinstance(value, str):
-            return ciso8601.parse_datetime(value)
-        return self.type(value)
+        return ciso8601.parse_datetime(value)
 
 
 class DateField(Field):
@@ -119,12 +110,7 @@ class DateField(Field):
         super().__init__(datetime.date, **kwargs)
 
     def to_python_value(self, value):
-        if value is None or isinstance(value, self.type):
-            return value
-        # TODO: parse from string only needed for SQLite
-        if isinstance(value, str):
-            return ciso8601.parse_datetime(value).date()
-        return self.type(value)
+        return ciso8601.parse_datetime(value).date()
 
 
 class FloatField(Field):
@@ -134,7 +120,7 @@ class FloatField(Field):
 
 class JSONField(Field):
     def __init__(self, encoder=JSON_DUMPS, decoder=JSON_LOADS, **kwargs):
-        super().__init__(dict, **kwargs)
+        super().__init__((dict, list), **kwargs)
         self.encoder = encoder
         self.decoder = decoder
 
@@ -144,8 +130,6 @@ class JSONField(Field):
         return self.encoder(value)
 
     def to_python_value(self, value):
-        if value is None:
-            return value
         return self.decoder(value)
 
 

@@ -103,6 +103,7 @@ class BooleanFields(Model):
 class DecimalFields(Model):
     id = fields.IntField(pk=True)
     decimal = fields.DecimalField(max_digits=18, decimal_places=4)
+    decimal_nodec = fields.DecimalField(max_digits=18, decimal_places=0)
     decimal_null = fields.DecimalField(max_digits=18, decimal_places=4, null=True)
 
 

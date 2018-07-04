@@ -85,6 +85,11 @@ class TestCharFields(TestCase):
         obj2 = await testmodels.CharFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
 
+    async def test_cast(self):
+        obj0 = await testmodels.CharFields.create(char=33)
+        obj = await testmodels.CharFields.get(id=obj0.id)
+        self.assertEqual(obj.char, '33')
+
 
 class TestTextFields(TestCase):
     async def test_empty(self):
@@ -122,9 +127,10 @@ class TestDecimalFields(TestCase):
             await testmodels.DecimalFields.create()
 
     async def test_create(self):
-        obj0 = await testmodels.DecimalFields.create(decimal=Decimal('1.23456'))
+        obj0 = await testmodels.DecimalFields.create(decimal=Decimal('1.23456'), decimal_nodec=18.7)
         obj = await testmodels.DecimalFields.get(id=obj0.id)
         self.assertEqual(obj.decimal, Decimal('1.2346'))
+        self.assertEqual(obj.decimal_nodec, 19)
         self.assertEqual(obj.decimal_null, None)
         await obj.save()
         obj2 = await testmodels.DecimalFields.get(id=obj.id)
@@ -156,6 +162,12 @@ class TestDatetimeFields(TestCase):
         self.assertLess(obj2.datetime_auto - now, timedelta(seconds=2))
         self.assertEqual(obj2.datetime_add, obj.datetime_add)
 
+    async def test_cast(self):
+        now = datetime.utcnow()
+        obj0 = await testmodels.DatetimeFields.create(datetime=now.isoformat())
+        obj = await testmodels.DatetimeFields.get(id=obj0.id)
+        self.assertEqual(obj.datetime, now)
+
 
 class TestDateFields(TestCase):
     async def test_empty(self):
@@ -171,6 +183,12 @@ class TestDateFields(TestCase):
         await obj.save()
         obj2 = await testmodels.DateFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
+
+    async def test_cast(self):
+        today = date.today()
+        obj0 = await testmodels.DateFields.create(date=today.isoformat())
+        obj = await testmodels.DateFields.get(id=obj0.id)
+        self.assertEqual(obj.date, today)
 
 
 class TestFloatFields(TestCase):
@@ -188,6 +206,16 @@ class TestFloatFields(TestCase):
         obj2 = await testmodels.FloatFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
 
+    async def test_cast_int(self):
+        obj0 = await testmodels.FloatFields.create(floatnum=123)
+        obj = await testmodels.FloatFields.get(id=obj0.id)
+        self.assertEqual(obj.floatnum, 123)
+
+    async def test_cast_decimal(self):
+        obj0 = await testmodels.FloatFields.create(floatnum=Decimal('1.23'))
+        obj = await testmodels.FloatFields.get(id=obj0.id)
+        self.assertEqual(obj.floatnum, 1.23)
+
 
 class TestJSONFields(TestCase):
     async def test_empty(self):
@@ -198,6 +226,15 @@ class TestJSONFields(TestCase):
         obj0 = await testmodels.JSONFields.create(data={'some': ['text', 3]})
         obj = await testmodels.JSONFields.get(id=obj0.id)
         self.assertEqual(obj.data, {'some': ['text', 3]})
+        self.assertEqual(obj.data_null, None)
+        await obj.save()
+        obj2 = await testmodels.JSONFields.get(id=obj.id)
+        self.assertEqual(obj, obj2)
+
+    async def test_list(self):
+        obj0 = await testmodels.JSONFields.create(data=['text', 3])
+        obj = await testmodels.JSONFields.get(id=obj0.id)
+        self.assertEqual(obj.data, ['text', 3])
         self.assertEqual(obj.data_null, None)
         await obj.save()
         obj2 = await testmodels.JSONFields.get(id=obj.id)

@@ -9,10 +9,7 @@ from tortoise.backends.base.executor import BaseExecutor
 def to_db_bool(self, value):
     if value is None:
         return None
-    if bool(value):
-        return 1
-    else:
-        return 0
+    return int(bool(value))
 
 
 def to_db_decimal(self, value):
