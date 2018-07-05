@@ -553,7 +553,7 @@ class ValuesListQuery(FieldSelectQuery):
         orderings, flat, annotations, having, custom_filters
     ):
         super().__init__()
-        if not (len(fields_for_select_list) == 1) == flat:
+        if flat and (len(fields_for_select_list) != 1):
             raise TypeError('You can flat value_list only if contains one field')
 
         self.model = model
