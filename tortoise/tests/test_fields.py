@@ -187,14 +187,12 @@ class TestDecimalFields(TestCase):
         obj2 = await testmodels.DecimalFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
 
-    @unittest.expectedFailure
     async def test_values(self):
         obj0 = await testmodels.DecimalFields.create(decimal=Decimal('1.23456'), decimal_nodec=18.7)
         values = await testmodels.DecimalFields.get(id=obj0.id).values('decimal', 'decimal_nodec')
         self.assertEqual(values[0]['decimal'], Decimal('1.2346'))
         self.assertEqual(values[0]['decimal_nodec'], 19)
 
-    @unittest.expectedFailure
     async def test_values_list(self):
         obj0 = await testmodels.DecimalFields.create(decimal=Decimal('1.23456'), decimal_nodec=18.7)
         values = await testmodels.DecimalFields.get(
@@ -233,14 +231,12 @@ class TestDatetimeFields(TestCase):
         obj = await testmodels.DatetimeFields.get(id=obj0.id)
         self.assertEqual(obj.datetime, now)
 
-    @unittest.expectedFailure
     async def test_values(self):
         now = datetime.utcnow()
         obj0 = await testmodels.DatetimeFields.create(datetime=now)
         values = await testmodels.DatetimeFields.get(id=obj0.id).values('datetime')
         self.assertEqual(values[0]['datetime'], now)
 
-    @unittest.expectedFailure
     async def test_values_list(self):
         now = datetime.utcnow()
         obj0 = await testmodels.DatetimeFields.create(datetime=now)
@@ -269,14 +265,12 @@ class TestDateFields(TestCase):
         obj = await testmodels.DateFields.get(id=obj0.id)
         self.assertEqual(obj.date, today)
 
-    @unittest.expectedFailure
     async def test_values(self):
         today = date.today()
         obj0 = await testmodels.DateFields.create(date=today)
         values = await testmodels.DateFields.get(id=obj0.id).values('date')
         self.assertEqual(values[0]['date'], today)
 
-    @unittest.expectedFailure
     async def test_values_list(self):
         today = date.today()
         obj0 = await testmodels.DateFields.create(date=today)
@@ -343,13 +337,11 @@ class TestJSONFields(TestCase):
         obj2 = await testmodels.JSONFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
 
-    @unittest.expectedFailure
     async def test_values(self):
         obj0 = await testmodels.JSONFields.create(data={'some': ['text', 3]})
         values = await testmodels.JSONFields.filter(id=obj0.id).values('data')
         self.assertEqual(values[0]['data'], {'some': ['text', 3]})
 
-    @unittest.expectedFailure
     async def test_values_list(self):
         obj0 = await testmodels.JSONFields.create(data={'some': ['text', 3]})
         values = await testmodels.JSONFields.filter(id=obj0.id).values_list('data', flat=True)

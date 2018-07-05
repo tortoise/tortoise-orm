@@ -46,6 +46,8 @@ class Field:
         return value
 
     def to_python_value(self, value):
+        if value is None or isinstance(value, self.type):
+            return value
         return self.type(value)
 
 
@@ -102,6 +104,8 @@ class DatetimeField(Field):
         self.auto_now_add = auto_now_add
 
     def to_python_value(self, value):
+        if value is None or isinstance(value, self.type):
+            return value
         return ciso8601.parse_datetime(value)
 
 
@@ -110,6 +114,8 @@ class DateField(Field):
         super().__init__(datetime.date, **kwargs)
 
     def to_python_value(self, value):
+        if value is None or isinstance(value, self.type):
+            return value
         return ciso8601.parse_datetime(value).date()
 
 
@@ -130,6 +136,8 @@ class JSONField(Field):
         return self.encoder(value)
 
     def to_python_value(self, value):
+        if value is None or isinstance(value, self.type):
+            return value
         return self.decoder(value)
 
 

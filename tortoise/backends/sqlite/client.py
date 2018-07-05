@@ -66,9 +66,6 @@ class SqliteClient(BaseDBAsyncClient):
         except sqlite3.IntegrityError as exc:
             raise IntegrityError(exc)
 
-    async def execute_query_dict(self, query, get_inserted_id=False):
-        return await self.execute_query(query, get_inserted_id=get_inserted_id)
-
     async def execute_script(self, script):
         async with self.acquire_connection() as connection:
             self.log.debug(script)

@@ -546,6 +546,24 @@ class FieldSelectQuery(AwaitableQuery):
             self.model.__name__,
         ))
 
+    def resolve_to_python_value(self, model, field):
+        if field in model._meta.fetch_fields:
+            # return as is to get whole model objects
+            return lambda x: x
+
+        if field in model._meta.fields_map:
+            return model._meta.fields_map[field].to_python_value
+
+        field_split = field.split('__')
+        if field_split[0] in model._meta.fetch_fields:
+            new_model = model._meta.fields_map[field_split[0]].type
+            return self.resolve_to_python_value(new_model, '__'.join(field_split[1:]))
+
+        raise FieldError('Unknown field "{}" for model "{}"'.format(
+            field,
+            model,
+        ))
+
 
 class ValuesListQuery(FieldSelectQuery):
     def __init__(
@@ -585,14 +603,14 @@ class ValuesListQuery(FieldSelectQuery):
 
     async def _execute(self):
         result = await self._db.execute_query(str(self.query))
+        columns = [
+            (key, self.resolve_to_python_value(self.model, name))
+            for key, name in sorted(list(self.fields.items()))
+        ]
         if self.flat:
-            return [entry['0'] for entry in result]
-        values_list = []
-        column_numbers = sorted(list(self.fields.keys()))
-        for entry in result:
-            values = (entry[column] for column in column_numbers)
-            values_list.append(values)
-        return values_list
+            func = columns[0][1]
+            return [func(entry['0']) for entry in result]
+        return [(func(entry[column]) for column, func in columns) for entry in result]
 
 
 class ValuesQuery(FieldSelectQuery):
@@ -628,4 +646,9 @@ class ValuesQuery(FieldSelectQuery):
         self.fields_for_select = fields_for_select
 
     async def _execute(self):
-        return await self._db.execute_query_dict(str(self.query))
+        result = await self._db.execute_query(str(self.query))
+        columns = [
+            (name, self.resolve_to_python_value(self.model, name))
+            for name in self.fields_for_select
+        ]
+        return [{key: func(entry[key]) for key, func in columns} for entry in result]

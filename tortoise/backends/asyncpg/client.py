@@ -112,9 +112,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         except asyncpg.exceptions.IntegrityConstraintViolationError as exc:
             raise IntegrityError(exc)
 
-    async def execute_query_dict(self, query):
-        return [dict(row.items()) for row in await self.execute_query(query)]
-
     async def get_single_connection(self):
         if self.single_connection:
             return self._single_connection_class(self._connection, self)
