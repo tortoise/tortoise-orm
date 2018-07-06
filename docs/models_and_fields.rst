@@ -140,6 +140,7 @@ Here is list of fields available at the moment with custom options of this field
 - DatetimeField (``auto_now``, ``auto_now_add``)
 - DateField
 - FloatField
+- JSONField (``encoder``, ``decoder``)
 - ForeignKeyField (``model_name``, ``related_name``, ``on_delete``)
 - ManyToManyField (``model_name``, ``related_name``, ``through``, ``backward_key``, ``forward_key``)
 

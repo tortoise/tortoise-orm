@@ -60,12 +60,9 @@ Pluggable Database backends
 ---------------------------
 Tortoise currently supports the following databases:
 
-* PostgreSQL (using ``asyncpg``)
+* PostgreSQL >= 9.4 (using ``asyncpg``)
 * SQLite (using ``aiosqlite``)
 
 
-Thanks
-=======
-Huge thanks to https://github.com/kayak/pypika for making this possible.
 
 If you want to contribute check out issues, or just straightforwardly create PR

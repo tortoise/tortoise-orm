@@ -1,5 +1,7 @@
 import datetime
-import decimal
+import functools
+import json
+from decimal import Decimal
 
 from pypika import Table
 
@@ -11,6 +13,13 @@ CASCADE = 'CASCADE'
 RESTRICT = 'RESTRICT'
 SET_NULL = 'SET NULL'
 SET_DEFAULT = 'SET DEFAULT'
+
+# Doing this we can replace json dumps/loads with different implementations
+JSON_DUMPS = functools.partial(
+    json.dumps,
+    separators=(',', ':')
+)
+JSON_LOADS = json.loads
 
 
 class Field:
@@ -34,9 +43,7 @@ class Field:
         self.unique = unique
 
     def to_db_value(self, value):
-        if value is None or isinstance(value, self.type):
-            return value
-        return self.type(value)
+        return value
 
     def to_python_value(self, value):
         if value is None or isinstance(value, self.type):
@@ -58,9 +65,10 @@ class SmallIntField(Field):
 
 
 class CharField(Field):
-    def __init__(self, max_length, **kwargs):
+    def __init__(self, max_length=0, **kwargs):
+        if int(max_length) < 1:
+            raise ConfigurationError('max_digits must be >= 1')
         self.max_length = int(max_length)
-        assert self.max_length > 0
         super().__init__(str, **kwargs)
 
 
@@ -75,12 +83,12 @@ class BooleanField(Field):
 
 
 class DecimalField(Field):
-    def __init__(self, max_digits, decimal_places, **kwargs):
-        if int(max_digits) < 0:
-            raise ConfigurationError('max_digits must be >= 0')
+    def __init__(self, max_digits=0, decimal_places=-1, **kwargs):
+        if int(max_digits) < 1:
+            raise ConfigurationError('max_digits must be >= 1')
         if int(decimal_places) < 0:
             raise ConfigurationError('decimal_places must be >= 0')
-        super().__init__(decimal.Decimal, **kwargs)
+        super().__init__(Decimal, **kwargs)
         self.max_digits = max_digits
         self.decimal_places = decimal_places
 
@@ -95,43 +103,42 @@ class DatetimeField(Field):
         self.auto_now = auto_now
         self.auto_now_add = auto_now_add
 
-    def to_db_value(self, value):
-        if value is None or isinstance(value, self.type):
-            return value
-        if isinstance(value, str):
-            return ciso8601.parse_datetime(value)
-        return self.type(value)
-
     def to_python_value(self, value):
         if value is None or isinstance(value, self.type):
             return value
-        if isinstance(value, str):
-            return ciso8601.parse_datetime(value)
-        return self.type(value)
+        return ciso8601.parse_datetime(value)
 
 
 class DateField(Field):
     def __init__(self, **kwargs):
         super().__init__(datetime.date, **kwargs)
 
-    def to_db_value(self, value):
-        if value is None or isinstance(value, self.type):
-            return value
-        if isinstance(value, str):
-            return ciso8601.parse_datetime(value).date()
-        return self.type(value)
-
     def to_python_value(self, value):
         if value is None or isinstance(value, self.type):
             return value
-        if isinstance(value, str):
-            return ciso8601.parse_datetime(value).date()
-        return self.type(value)
+        return ciso8601.parse_datetime(value).date()
 
 
 class FloatField(Field):
     def __init__(self, **kwargs):
         super().__init__(float, **kwargs)
+
+
+class JSONField(Field):
+    def __init__(self, encoder=JSON_DUMPS, decoder=JSON_LOADS, **kwargs):
+        super().__init__((dict, list), **kwargs)
+        self.encoder = encoder
+        self.decoder = decoder
+
+    def to_db_value(self, value):
+        if value is None:
+            return value
+        return self.encoder(value)
+
+    def to_python_value(self, value):
+        if value is None or isinstance(value, self.type):
+            return value
+        return self.decoder(value)
 
 
 class ForeignKeyField(Field):

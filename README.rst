@@ -138,9 +138,5 @@ After that you can start using your models:
     ).order_by('-events__participants__name').distinct()
 
 
-Thanks
-======
-
-Huge thanks to https://github.com/kayak/pypika for making this possible.
 
 If you want to contribute check out issues, or just straightforwardly create PR

@@ -10,3 +10,4 @@ Table Of Contents
    query
    contrib
    CHANGELOG
+   CONTRIBUTORS

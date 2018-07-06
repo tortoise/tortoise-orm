@@ -1,6 +1,15 @@
 Changelog
 =========
 
+0.9.1
+-----
+- ``JSONField`` is now promoted to a standard field.
+- Fixed ``DecimalField`` and ``BooleanField`` to work as expected on SQLite.
+- Added ``FloatField``.
+- Minimum supported version of PostgreSQL is 9.4
+- Added ``.get(...)`` shortcut on query set.
+- ``values()`` and ``values_list()`` now converts field values to python types
+
 0.9.0
 -----
 - Added support for nested queries for ``values`` and ``values_list``:
@@ -9,6 +18,10 @@ Changelog
 
     result = await Event.filter(id=event.id).values('id', 'name', tournament='tournament__name')
     result = await Event.filter(id=event.id).values_list('id', 'participants__name')
+
+- Fixed ``DatetimeField`` and ``DateField`` to work as expected on SQLite.
+- Added ``PyLint`` plugin.
+- Added test class to mange DB state for testing isolation.
 
 0.8.0
 -----

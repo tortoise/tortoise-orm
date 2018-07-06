@@ -68,3 +68,66 @@ class TeamTwo(Model):
 
     def __str__(self):
         return self.name
+
+
+class IntFields(Model):
+    id = fields.IntField(pk=True)
+    intnum = fields.IntField()
+    intnum_null = fields.IntField(null=True)
+
+
+class SmallIntFields(Model):
+    id = fields.IntField(pk=True)
+    smallintnum = fields.SmallIntField()
+    smallintnum_null = fields.SmallIntField(null=True)
+
+
+class CharFields(Model):
+    id = fields.IntField(pk=True)
+    char = fields.CharField(max_length=255)
+    char_null = fields.CharField(max_length=255, null=True)
+
+
+class TextFields(Model):
+    id = fields.IntField(pk=True)
+    text = fields.TextField()
+    text_null = fields.TextField(null=True)
+
+
+class BooleanFields(Model):
+    id = fields.IntField(pk=True)
+    boolean = fields.BooleanField()
+    boolean_null = fields.BooleanField(null=True)
+
+
+class DecimalFields(Model):
+    id = fields.IntField(pk=True)
+    decimal = fields.DecimalField(max_digits=18, decimal_places=4)
+    decimal_nodec = fields.DecimalField(max_digits=18, decimal_places=0)
+    decimal_null = fields.DecimalField(max_digits=18, decimal_places=4, null=True)
+
+
+class DatetimeFields(Model):
+    id = fields.IntField(pk=True)
+    datetime = fields.DatetimeField()
+    datetime_null = fields.DatetimeField(null=True)
+    datetime_auto = fields.DatetimeField(auto_now=True)
+    datetime_add = fields.DatetimeField(auto_now_add=True)
+
+
+class DateFields(Model):
+    id = fields.IntField(pk=True)
+    date = fields.DateField()
+    date_null = fields.DateField(null=True)
+
+
+class FloatFields(Model):
+    id = fields.IntField(pk=True)
+    floatnum = fields.FloatField()
+    floatnum_null = fields.FloatField(null=True)
+
+
+class JSONFields(Model):
+    id = fields.IntField(pk=True)
+    data = fields.JSONField()
+    data_null = fields.JSONField(null=True)

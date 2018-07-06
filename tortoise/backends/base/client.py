@@ -19,34 +19,34 @@ class BaseDBAsyncClient:
         )
 
     async def create_connection(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: nocoverage
 
     async def close(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: nocoverage
 
     async def db_create(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: nocoverage
 
     async def db_delete(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: nocoverage
 
     def acquire_connection(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: nocoverage
 
     def in_transaction(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_query(self, query):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_script(self, script):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: nocoverage
 
     async def get_single_connection(self):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: nocoverage
 
     async def release_single_connection(self, single_connection):
-        raise NotImplementedError()
+        raise NotImplementedError()  # pragma: nocoverage
 
 
 class ConnectionWrapper:

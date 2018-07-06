@@ -7,6 +7,8 @@ env:
   - TORTOISE_TEST_DB="postgres://postgres:@127.0.0.1:5432/test_{}"
 dist: trusty
 sudo: false
+addons:
+  postgresql: "9.4"
 services:
   - postgresql
 cache: pip

@@ -28,8 +28,8 @@ class TestTwoDatabases(TestCase):
         with self.assertRaises(OperationalError):
             await self.db.execute_query('SELECT * FROM "eventtwo"')
 
-        results = await self.second_db.execute_query_dict('SELECT * FROM "eventtwo"')
-        self.assertEqual(results, [{'id': 1, 'name': 'Event', 'tournament_id': 1}])
+        results = await self.second_db.execute_query('SELECT * FROM "eventtwo"')
+        self.assertEqual(dict(results[0].items()), {'id': 1, 'name': 'Event', 'tournament_id': 1})
 
     async def test_two_databases_relation(self):
         tournament = await Tournament.create(name='Tournament')
@@ -38,8 +38,8 @@ class TestTwoDatabases(TestCase):
         with self.assertRaises(OperationalError):
             await self.db.execute_query('SELECT * FROM "eventtwo"')
 
-        results = await self.second_db.execute_query_dict('SELECT * FROM "eventtwo"')
-        self.assertEqual(results, [{'id': 1, 'name': 'Event', 'tournament_id': 1}])
+        results = await self.second_db.execute_query('SELECT * FROM "eventtwo"')
+        self.assertEqual(dict(results[0].items()), {'id': 1, 'name': 'Event', 'tournament_id': 1})
 
         teams = []
         for i in range(2):

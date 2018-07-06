@@ -323,10 +323,7 @@ class Model(metaclass=ModelMeta):
                 field_object = self._meta.fields_map[key]
                 if value is None and not field_object.null:
                     raise ValueError('{} is non nullable field, but null was passed'.format(key))
-                if not isinstance(value, field_object.type) and value is not None:
-                    setattr(self, key, field_object.to_python_value(value))
-                else:
-                    setattr(self, key, value)
+                setattr(self, key, field_object.to_python_value(value))
             elif key in self._meta.db_fields:
                 setattr(self, self._meta.fields_db_projection_reverse.get(key), value)
 
@@ -418,6 +415,11 @@ class Model(metaclass=ModelMeta):
     @classmethod
     def all(cls):
         return QuerySet(cls)
+
+    @classmethod
+    def get(cls, *args, **kwargs):
+        # TODO: Raise exception if no result
+        return QuerySet(cls).filter(*args, **kwargs).first()
 
     @classmethod
     async def fetch_for_list(cls, instance_list, *args, using_db=None):
