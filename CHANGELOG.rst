@@ -7,7 +7,8 @@ Changelog
 - Fixed ``DecimalField`` and ``BooleanField`` to work as expected on SQLite.
 - Added ``FloatField``.
 - Minimum supported version of PostgreSQL is 9.4
-- added ``.get(...)`` shortcut on query set.
+- Added ``.get(...)`` shortcut on query set.
+- ``values()`` and ``values_list()`` now converts field values to python types
 
 0.9.0
 -----
