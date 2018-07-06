@@ -1,7 +1,7 @@
 Changelog
 =========
 
-0.9.1
+0.9.2
 -----
 - ``JSONField`` is now promoted to a standard field.
 - Fixed ``DecimalField`` and ``BooleanField`` to work as expected on SQLite.
@@ -9,6 +9,10 @@ Changelog
 - Minimum supported version of PostgreSQL is 9.4
 - Added ``.get(...)`` shortcut on query set.
 - ``values()`` and ``values_list()`` now converts field values to python types
+
+0.9.1
+-----
+- Fixed ``through`` parameter honouring for ``ManyToManyField``
 
 0.9.0
 -----
