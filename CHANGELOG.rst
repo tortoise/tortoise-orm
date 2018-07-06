@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.9.3
+-----
+- Fixed backward incompatibility for Python 3.7
+
 0.9.2
 -----
 - ``JSONField`` is now promoted to a standard field.

@@ -1,13 +1,24 @@
-class AsyncIteratorWrapper:
-    def __init__(self, sequence):
-        self.sequence_iterator = sequence.__iter__()
+class QueryAsyncIterator:
+    def __init__(self, query, callback=None):
+        self.query = query
+        self.sequence = None
+        self._sequence_iterator = None
+        self._callback = callback
 
-    async def __aiter__(self):
+    def __aiter__(self):
         return self
 
+    async def fetch_sequence(self):
+        self.sequence = await self.query
+        self._sequence_iterator = self.sequence.__iter__()
+        if self._callback:
+            await self._callback(self)
+
     async def __anext__(self):
+        if self.sequence is None:
+            await self.fetch_sequence()
         try:
-            return next(self.sequence_iterator)
+            return next(self._sequence_iterator)
         except StopIteration:
             raise StopAsyncIteration
 

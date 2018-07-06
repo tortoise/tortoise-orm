@@ -7,7 +7,7 @@ from pypika import Table
 
 import ciso8601
 from tortoise.exceptions import ConfigurationError, NoValuesFetched
-from tortoise.utils import AsyncIteratorWrapper
+from tortoise.utils import QueryAsyncIterator
 
 CASCADE = 'CASCADE'
 RESTRICT = 'RESTRICT'
@@ -233,10 +233,12 @@ class RelationQueryContainer:
             )
         return self.related_objects[item]
 
-    async def __aiter__(self):
-        self.related_objects = await self._query
-        self._fetched = True
-        return AsyncIteratorWrapper(self.related_objects)
+    def __aiter__(self):
+        async def fetched_callback(iterator_wrapper):
+            self._fetched = True
+            self.related_objects = iterator_wrapper.sequence
+
+        return QueryAsyncIterator(self._query, callback=fetched_callback)
 
     def filter(self, *args, **kwargs):
         return self._query.filter(*args, **kwargs)
