@@ -8,7 +8,7 @@ from tortoise.aggregation import Aggregate
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import FieldError
 from tortoise.query_utils import Prefetch, Q
-from tortoise.utils import AsyncIteratorWrapper
+from tortoise.utils import QueryAsyncIterator
 
 
 class AwaitableQuery:
@@ -403,9 +403,8 @@ class QuerySet(AwaitableQuery):
             return instance_list[0]
         return instance_list
 
-    async def __aiter__(self):
-        result = await self
-        return AsyncIteratorWrapper(result)
+    def __aiter__(self):
+        return QueryAsyncIterator(self)
 
 
 class UpdateQuery(AwaitableQuery):
