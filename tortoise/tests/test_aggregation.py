@@ -1,9 +1,9 @@
 from tortoise.aggregation import Count, Min, Sum
-from tortoise.contrib.test import TestCase
+from tortoise.contrib import test
 from tortoise.tests.testmodels import Event, Team, Tournament
 
 
-class TestAggregation(TestCase):
+class TestAggregation(test.TestCase):
     async def test_aggregation(self):
         tournament = Tournament(name='New Tournament')
         await tournament.save()

@@ -1,8 +1,8 @@
-from tortoise.contrib.test import TestCase
+from tortoise.contrib import test
 from tortoise.tests.testmodels import Event, Team, Tournament
 
 
-class TestRelations(TestCase):
+class TestRelations(test.TestCase):
     async def test_relations(self):
         tournament = Tournament(name='New Tournament')
         await tournament.save()

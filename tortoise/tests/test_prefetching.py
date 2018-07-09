@@ -1,9 +1,9 @@
-from tortoise.contrib.test import TestCase
+from tortoise.contrib import test
 from tortoise.query_utils import Prefetch
 from tortoise.tests.testmodels import Event, Tournament
 
 
-class TestPrefetching(TestCase):
+class TestPrefetching(test.TestCase):
     async def test_prefetching(self):
         tournament = await Tournament.create(name='tournament')
         await Event.create(name='First', tournament=tournament)

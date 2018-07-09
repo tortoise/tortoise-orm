@@ -1,15 +1,14 @@
-import unittest
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from time import sleep
 
 from tortoise import fields
-from tortoise.contrib.test import TestCase
+from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError, IntegrityError
 from tortoise.tests import testmodels
 
 
-class TestFieldErrors(unittest.TestCase):
+class TestFieldErrors(test.SimpleTestCase):
 
     def test_char_field_empty(self):
         with self.assertRaises(ConfigurationError):
@@ -36,7 +35,7 @@ class TestFieldErrors(unittest.TestCase):
             fields.DatetimeField(auto_now=True, auto_now_add=True)
 
 
-class TestIntFields(TestCase):
+class TestIntFields(test.TransactionTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.IntFields.create()
@@ -66,7 +65,7 @@ class TestIntFields(TestCase):
         self.assertEqual(values[0], 1)
 
 
-class TestSmallIntFields(TestCase):
+class TestSmallIntFields(test.TransactionTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.SmallIntFields.create()
@@ -92,7 +91,7 @@ class TestSmallIntFields(TestCase):
         self.assertEqual(values[0], 2)
 
 
-class TestCharFields(TestCase):
+class TestCharFields(test.TransactionTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.CharFields.create()
@@ -122,7 +121,7 @@ class TestCharFields(TestCase):
         self.assertEqual(values[0], 'moo')
 
 
-class TestTextFields(TestCase):
+class TestTextFields(test.TransactionTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.TextFields.create()
@@ -147,7 +146,7 @@ class TestTextFields(TestCase):
         self.assertEqual(values[0], 'baa')
 
 
-class TestBooleanFields(TestCase):
+class TestBooleanFields(test.TransactionTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.BooleanFields.create()
@@ -172,7 +171,7 @@ class TestBooleanFields(TestCase):
         self.assertEqual(values[0], True)
 
 
-class TestDecimalFields(TestCase):
+class TestDecimalFields(test.TransactionTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.DecimalFields.create()
@@ -200,7 +199,7 @@ class TestDecimalFields(TestCase):
         self.assertEqual(list(values[0]), [Decimal('1.2346'), 19])
 
 
-class TestDatetimeFields(TestCase):
+class TestDatetimeFields(test.TransactionTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.DatetimeFields.create()
@@ -244,7 +243,7 @@ class TestDatetimeFields(TestCase):
         self.assertEqual(values[0], now)
 
 
-class TestDateFields(TestCase):
+class TestDateFields(test.TransactionTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.DateFields.create()
@@ -278,7 +277,7 @@ class TestDateFields(TestCase):
         self.assertEqual(values[0], today)
 
 
-class TestFloatFields(TestCase):
+class TestFloatFields(test.TransactionTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.FloatFields.create()
@@ -314,7 +313,7 @@ class TestFloatFields(TestCase):
         self.assertEqual(list(values[0]), [1.23])
 
 
-class TestJSONFields(TestCase):
+class TestJSONFields(test.TransactionTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.JSONFields.create()

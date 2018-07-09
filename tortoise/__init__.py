@@ -52,6 +52,7 @@ class Tortoise:
 
     @classmethod
     def _init_relations(cls):
+        cls._inited = True
         for app_name, app in cls.apps.items():
             for model_name, model in app.items():
                 if not model._meta.table:
@@ -145,7 +146,6 @@ class Tortoise:
             raise ConfigurationError('Already initialised')
         cls._client_routing(global_client=global_client, db_routing=db_routing)
         cls._init_relations()
-        cls._inited = True
 
 
 __version__ = "0.9.3"

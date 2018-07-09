@@ -1,9 +1,9 @@
-from tortoise.contrib.test import TestCase
+from tortoise.contrib import test
 from tortoise.query_utils import Q
 from tortoise.tests.testmodels import Event, Team, Tournament
 
 
-class TestFiltering(TestCase):
+class TestFiltering(test.TestCase):
     async def test_filtering(self):
         tournament = Tournament(name='Tournament')
         await tournament.save()

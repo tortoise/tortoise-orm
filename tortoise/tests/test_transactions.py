@@ -1,9 +1,9 @@
-from tortoise.contrib.test import TestCase
+from tortoise.contrib import test
 from tortoise.exceptions import OperationalError
 from tortoise.tests.testmodels import Tournament
 
 
-class TestTransactions(TestCase):
+class TestTransactions(test.TransactionTestCase):
 
     async def test_transactions(self):
         with self.assertRaises(OperationalError):
