@@ -296,8 +296,8 @@ class ManyToManyRelationManager(RelationQueryContainer):
         select_query = select_query.where(criterion)
 
         already_existing_relations_raw = await db.execute_query(str(select_query))
-        already_existing_relations = set((r[self.field.backward_key], r[self.field.forward_key])
-                                         for r in already_existing_relations_raw)
+        already_existing_relations = {(r[self.field.backward_key], r[self.field.forward_key])
+                                      for r in already_existing_relations_raw}
 
         insert_is_required = False
         for instance_to_add in instances:
