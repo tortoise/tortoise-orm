@@ -1,9 +1,7 @@
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.exceptions import ConfigurationError, MultiplyObjectsReturned  # noqa
-from tortoise.fields import ManyToManyRelationManager  # noqa
+from tortoise.exceptions import ConfigurationError
 from tortoise.models import get_backward_fk_filters, get_m2m_filters
-from tortoise.queryset import QuerySet  # noqa
 
 
 class Tortoise:

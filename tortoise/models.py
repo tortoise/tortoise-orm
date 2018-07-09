@@ -419,8 +419,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def get(cls, *args, **kwargs):
-        # TODO: Raise exception if no result
-        return QuerySet(cls).filter(*args, **kwargs).first()
+        return QuerySet(cls).filter(*args, **kwargs).get()
 
     @classmethod
     async def fetch_for_list(cls, instance_list, *args, using_db=None):

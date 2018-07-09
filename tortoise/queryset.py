@@ -6,7 +6,7 @@ from pypika.functions import Count
 from tortoise import fields
 from tortoise.aggregation import Aggregate
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.exceptions import FieldError, OperationalError
+from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
 from tortoise.query_utils import Prefetch, Q
 from tortoise.utils import QueryAsyncIterator
 
@@ -131,6 +131,7 @@ class QuerySet(AwaitableQuery):
         self._prefetch_map = {}
         self._prefetch_queries = {}
         self._single = False
+        self._get = False
         self._count = False
         self._db = None
         self._limit = None
@@ -149,6 +150,7 @@ class QuerySet(AwaitableQuery):
         queryset._prefetch_map = self._prefetch_map
         queryset._prefetch_queries = self._prefetch_queries
         queryset._single = self._single
+        queryset._get = self._get
         queryset._count = self._count
         queryset._db = self._db
         queryset._limit = self._limit
@@ -320,6 +322,12 @@ class QuerySet(AwaitableQuery):
         queryset._single = True
         return queryset
 
+    def get(self):
+        queryset = self._clone()
+        queryset._limit = 1
+        queryset._get = True
+        return queryset
+
     def _resolve_prefetch_object(self, queryset, prefetch):
         pass
 
@@ -396,10 +404,16 @@ class QuerySet(AwaitableQuery):
             self.query, custom_fields=list(self._annotations.keys())
         )
         if not instance_list:
+            if self._get:
+                raise DoesNotExist('Object does not exist')
             if self._single:
                 return None
             return []
         elif self._single:
+            return instance_list[0]
+        elif self._get:
+            if len(instance_list) > 1:
+                raise MultipleObjectsReturned('Multiple objects returned, expected exactly one')
             return instance_list[0]
         return instance_list
 
@@ -430,7 +444,7 @@ class UpdateQuery(AwaitableQuery):
             if not field_object:
                 raise FieldError('Unknown keyword argument {} for model {}'.format(key, model))
             if field_object.generated:
-                raise OperationalError('Field {} is generated and can not be updated')
+                raise IntegrityError('Field {} is generated and can not be updated')
             if isinstance(field_object, fields.ForeignKeyField):
                 db_field = '{}_id'.format(key)
                 value = value.id

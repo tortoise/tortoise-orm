@@ -1,31 +1,59 @@
+__all__ = ('BaseORMException', 'FieldError', 'ConfigurationError', 'OperationalError',
+           'IntegrityError', 'NoValuesFetched', 'MultipleObjectsReturned', 'DoesNotExist')
+
+
 class BaseORMException(Exception):
+    """
+    Base ORM Exception.
+    """
     pass
-
-
-class MultiplyObjectsReturned(BaseORMException):
-    default_message = 'Multiply objects returned, expected exactly one'
-
-    def __init__(self, message=None, **kwargs):
-        if not message:
-            message = self.default_message
-        super().__init__(message, *kwargs)
 
 
 class FieldError(BaseORMException):
-    pass
-
-
-class NoValuesFetched(BaseORMException):
-    pass
-
-
-class OperationalError(BaseORMException):
+    """
+    The FieldError exception is raised when there is a problem with a model field.
+    """
     pass
 
 
 class ConfigurationError(BaseORMException):
+    """
+    The ConfigurationError exception is raised when the configuration of the ORM is invalid.
+    """
     pass
 
 
-class IntegrityError(BaseORMException):
+class OperationalError(BaseORMException):
+    """
+    The OperationalError exception is raised when an operational error occurs.
+    """
+    pass
+
+
+class IntegrityError(OperationalError):
+    """
+    The IntegrityError exception is raised when there is an integrity error.
+    """
+    pass
+
+
+class NoValuesFetched(OperationalError):
+    """
+    The NoValuesFetched exception is raised when the related model was never fetched.
+    """
+    pass
+
+
+class MultipleObjectsReturned(OperationalError):
+    """
+    The MultipleObjectsReturned exception is raised when doing a ``.get()`` operation,
+    and more than one object is returned.
+    """
+    pass
+
+
+class DoesNotExist(OperationalError):
+    """
+    The DoesNotExist exception is raised when expecting data, such as a ``.get()`` operation.
+    """
     pass

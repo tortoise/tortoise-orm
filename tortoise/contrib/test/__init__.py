@@ -117,4 +117,5 @@ class TestCase(TransactionTestCase):
     .. note::
         Currently does not run any faster than ``TransactionTestCase``, will be sped up later on.
     """
+    # TODO: Make this wrap everything in a rollback-transaction instead
     pass

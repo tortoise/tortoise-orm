@@ -8,6 +8,7 @@ Table Of Contents
    getting_started
    models_and_fields
    query
+   exceptions
    contrib
    CHANGELOG
    CONTRIBUTORS
