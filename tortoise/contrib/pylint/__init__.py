@@ -1,7 +1,6 @@
 """
 Tortoise PyLint plugin
 """
-import astroid
 from astroid import MANAGER, inference_tip, nodes, scoped_nodes
 from astroid.node_classes import Assign
 from astroid.nodes import ClassDef
@@ -86,7 +85,7 @@ def transform_model(cls):
         MANAGER.ast_from_module_name('tortoise.models').lookup('MetaInfo')[1][0].instantiate_class()
     ]
     if 'id' not in cls.locals:
-        cls.locals['id'] = [astroid.Class('id', None)]
+        cls.locals['id'] = [nodes.ClassDef('id', None)]
 
 
 def is_model_field(cls):
@@ -125,5 +124,5 @@ def apply_type_shim(cls, _context=None):
     return iter([cls] + base_nodes[1])
 
 
-MANAGER.register_transform(nodes.Class, inference_tip(apply_type_shim), is_model_field)
-MANAGER.register_transform(astroid.Class, transform_model, is_model)
+MANAGER.register_transform(nodes.ClassDef, inference_tip(apply_type_shim), is_model_field)
+MANAGER.register_transform(nodes.ClassDef, transform_model, is_model)
