@@ -5,6 +5,7 @@ Changelog
 -----
 - No more asserts, only Tortoise Exceptions
 - Fixed PyLint plugin to work with pylint>=2.0.0
+- Formalised unittest classes & documented them.
 
 0.9.3
 -----
@@ -27,7 +28,7 @@ Changelog
 -----
 - Added support for nested queries for ``values`` and ``values_list``:
 
-  .. code-block:: python3
+.. code-block:: python3
 
     result = await Event.filter(id=event.id).values('id', 'name', tournament='tournament__name')
     result = await Event.filter(id=event.id).values_list('id', 'participants__name')
@@ -61,7 +62,7 @@ Changelog
 -----
 - Added schema generation and more options for fields:
 
-  .. code-block:: python3
+.. code-block:: python3
 
     from tortoise import Tortoise
     from tortoise.backends.sqlite.client import SqliteClient
@@ -76,7 +77,7 @@ Changelog
 -----
 - Added filtering and ordering by related models fields:
 
-  .. code-block:: python3
+.. code-block:: python3
 
     await Tournament.filter(
         events__name__in=['1', '3']
