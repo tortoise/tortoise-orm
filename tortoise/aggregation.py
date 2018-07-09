@@ -6,6 +6,8 @@ from pypika.functions import Min as PypikaMin
 from pypika.functions import Sum as PypikaSum
 from pypika.terms import AggregateFunction
 
+from tortoise.exceptions import ConfigurationError
+
 
 class Aggregate:
     aggregation_func = AggregateFunction
@@ -33,7 +35,8 @@ class Aggregate:
                 )
             return aggregation
         else:
-            assert field_split[0] in model._meta.fetch_fields
+            if field_split[0] not in model._meta.fetch_fields:
+                raise ConfigurationError('{} not resolvable'.format(field))
             related_field = model._meta.fields_map[field_split[0]]
             join = (Table(model._meta.table), field_split[0], related_field)
             aggregation = self._resolve_field_for_model(

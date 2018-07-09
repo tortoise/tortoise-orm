@@ -73,25 +73,24 @@ async def run():
     for team in event.participants:
         print(team.id)
 
-
-    selected_events = await Event.filter(
+    print(await Event.filter(
         participants=participants[0].id,
-    ).prefetch_related('participants', 'tournament')
-    await participants[0].fetch_related('events')
+    ).prefetch_related('participants', 'tournament'))
+    print(await participants[0].fetch_related('events'))
 
-    await Team.fetch_for_list(participants, 'events')
+    print(await Team.fetch_for_list(participants, 'events'))
 
-    await Team.filter(events__tournament__id=tournament.id)
+    print(await Team.filter(events__tournament__id=tournament.id))
 
-    await Event.filter(tournament=tournament)
+    print(await Event.filter(tournament=tournament))
 
-    await Tournament.filter(
+    print(await Tournament.filter(
         events__name__in=['Test', 'Prod'],
-    ).order_by('-events__participants__name').distinct()
+    ).order_by('-events__participants__name').distinct())
 
-    result = await Event.filter(id=event.id).values('id', 'name', tournament='tournament__name')
+    print(await Event.filter(id=event.id).values('id', 'name', tournament='tournament__name'))
 
-    result = await Event.filter(id=event.id).values_list('id', 'participants__name')
+    print(await Event.filter(id=event.id).values_list('id', 'participants__name'))
 
 
 if __name__ == '__main__':

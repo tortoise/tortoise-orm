@@ -69,19 +69,20 @@ async def run():
     await team_first.events.add(event_first)
     await event_second.participants.add(team_second)
 
-    found_events = await Event.filter(Q(id__in=[event_first.id, event_second.id])
-                                      | Q(name='3')).filter(participants__not=team_second.id
-                                                            ).order_by('tournament__id').distinct()
+    print(await Event.filter(
+        Q(id__in=[event_first.id, event_second.id])
+        | Q(name='3')).filter(
+            participants__not=team_second.id).order_by('tournament__id').distinct())
 
-    await Team.filter(events__tournament_id=tournament.id).order_by('-events__name')
-    await Tournament.filter(
+    print(await Team.filter(events__tournament_id=tournament.id).order_by('-events__name'))
+    print(await Tournament.filter(
         events__name__in=['1', '3'],
-    ).order_by('-events__participants__name').distinct()
+    ).order_by('-events__participants__name').distinct())
 
-    teams = await Team.filter(name__icontains='CON')
+    print(await Team.filter(name__icontains='CON'))
 
-    tournaments = await Tournament.filter(events__participants__name__startswith='Fir')
-    await Tournament.filter(id__icontains=1).count()
+    print(await Tournament.filter(events__participants__name__startswith='Fir'))
+    print(await Tournament.filter(id__icontains=1).count())
 
 
 if __name__ == '__main__':

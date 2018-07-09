@@ -30,11 +30,12 @@ async def run():
 
     event = await Event.create(name='Test')
     await Event.filter(id=event.id).update(name='Updated name')
-    saved_event = await Event.filter(name='Updated name').first()
+
+    print(await Event.filter(name='Updated name').first())
 
     await Event(name='Test 2').save()
-    await Event.all().values_list('id', flat=True)
-    await Event.all().values('id', 'name')
+    print(await Event.all().values_list('id', flat=True))
+    print(await Event.all().values('id', 'name'))
 
 
 if __name__ == '__main__':

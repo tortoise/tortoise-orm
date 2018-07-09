@@ -47,7 +47,8 @@ async def run():
     tournament_with_filtered = await Tournament.all().prefetch_related(
         Prefetch('events', queryset=Event.filter(name='First'))
     ).first()
-    tournament = await Tournament.first().prefetch_related('events')
+    print(tournament_with_filtered)
+    print(await Tournament.first().prefetch_related('events'))
 
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ from decimal import Decimal
 from pypika import Table
 
 import ciso8601
-from tortoise.exceptions import ConfigurationError, NoValuesFetched
+from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
 from tortoise.utils import QueryAsyncIterator
 
 CASCADE = 'CASCADE'
@@ -144,12 +144,14 @@ class JSONField(Field):
 class ForeignKeyField(Field):
     def __init__(self, model_name, related_name=None, on_delete=CASCADE, **kwargs):
         super().__init__(**kwargs)
-        assert isinstance(model_name, str) and len(model_name.split(".")) == 2, \
-            'Foreign key accepts model name in format "app.Model"'
+        if isinstance(model_name, str) and len(model_name.split(".")) != 2:
+            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name = model_name
         self.related_name = related_name
-        assert on_delete in {CASCADE, RESTRICT, SET_NULL}
-        assert ((on_delete == SET_NULL) == bool(kwargs.get('null'))) or on_delete != SET_NULL
+        if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
+            raise ConfigurationError('on_delete can only be CASCADE, RESTRICT or SET_NULL')
+        if on_delete == SET_NULL and not bool(kwargs.get('null')):
+            raise ConfigurationError('If on_delete is SET_NULL, then field must have null=True set')
         self.on_delete = on_delete
 
 
@@ -164,8 +166,8 @@ class ManyToManyField(Field):
         **kwargs
     ):
         super().__init__(**kwargs)
-        assert len(model_name.split(".")
-                   ) == 2, 'Foreign key accepts model name in format "app.Model"'
+        if len(model_name.split(".")) != 2:
+            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name = model_name
         self.related_name = related_name
         self.forward_key = forward_key if forward_key else '{}_id'.format(
@@ -193,9 +195,9 @@ class RelationQueryContainer:
 
     @property
     def _query(self):
-        assert self.instance.id, (
-            "This objects hasn't been instanced, call .save() before calling related queries"
-        )
+        if not self.instance.id:
+            raise OperationalError("This objects hasn't been instanced, call .save() before"
+                                   " calling related queries")
         return self.model.filter(**{self.relation_field: self.instance.id})
 
     def __contains__(self, item):
@@ -259,8 +261,11 @@ class RelationQueryContainer:
         return self._query.distinct(*args, **kwargs)
 
     def _set_result_for_query(self, sequence):
+        # TODO: What does this do?
         for item in sequence:
-            assert isinstance(item, self.model)
+            if not isinstance(item, self.model):
+                OperationalError("{} is not of {}".format(item, self.model))
+
         self._fetched = True
         self.related_objects = sequence
 
@@ -313,7 +318,8 @@ class ManyToManyRelationManager(RelationQueryContainer):
 
     async def remove(self, *instances, using_db=None):
         db = using_db if using_db else self._db
-        assert instances
+        if not instances:
+            raise OperationalError('remove() called on no instances')
         through_table = Table(self.field.through)
         condition = (
             getattr(through_table, self.field.forward_key) == instances[0].id

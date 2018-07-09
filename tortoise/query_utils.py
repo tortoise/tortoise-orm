@@ -1,6 +1,7 @@
 from pypika import Table
 
 from tortoise import fields
+from tortoise.exceptions import OperationalError
 
 
 class Q:  # pylint: disable=C0103
@@ -8,20 +9,24 @@ class Q:  # pylint: disable=C0103
     OR = 'OR'
 
     def __init__(self, *args, join_type=AND, **kwargs):
-        assert not (bool(args)
-                    and bool(kwargs)), 'you can pass only Q nodes or filter kwargs in one Q node'
-        assert all(isinstance(node, Q) for node in args)
+        if args and kwargs:
+            raise OperationalError('You can pass only Q nodes or filter kwargs in one Q node')
+        if not all(isinstance(node, Q) for node in args):
+            raise OperationalError('All ordered arguments must be Q nodes')
         self.children = args
         self.filters = kwargs
-        assert join_type in {self.AND, self.OR}
+        if join_type not in {self.AND, self.OR}:
+            raise OperationalError('join_type must be AND or OR')
         self.join_type = join_type
 
     def __and__(self, other):
-        assert isinstance(other, Q)
+        if not isinstance(other, Q):
+            raise OperationalError('AND operation requires a Q node')
         return Q(self, other, join_type=self.AND)
 
     def __or__(self, other):
-        assert isinstance(other, Q)
+        if not isinstance(other, Q):
+            raise OperationalError('OR operation requires a Q node')
         return Q(self, other, join_type=self.OR)
 
     def _get_from_related_table(self, table, param, value):
@@ -123,9 +128,9 @@ class Prefetch:
     def resolve_for_queryset(self, queryset):
         relation_split = self.relation.split('__')
         first_level_field = relation_split[0]
-        assert (
-            first_level_field in queryset.model._meta.fetch_fields
-        ), 'relation {} for {} not found'.format(first_level_field, queryset.model._meta.table)
+        if first_level_field not in queryset.model._meta.fetch_fields:
+            raise OperationalError('relation {} for {} not found'.format(
+                first_level_field, queryset.model._meta.table))
         forwarded_prefetch = '__'.join(relation_split[1:])
         if forwarded_prefetch:
             if first_level_field not in queryset._prefetch_map.keys():

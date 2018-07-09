@@ -1,6 +1,5 @@
 import asyncio
 import binascii
-import datetime
 import os
 
 from tortoise import Tortoise, fields
@@ -54,11 +53,13 @@ async def run():
     tournament = await Tournament.create(name='Test')
 
     event = await Event.create(name='Test 1', tournament=tournament, prize=100)
-    old_time = event.modified
+    print(event.modified)
     event.name = 'Test 2'
     await event.save()
+    print(event.modified)
+
     await Team.create(name='test')
-    result = await Team.all().values('name')
+    print(await Team.all().values('name'))
 
 
 if __name__ == '__main__':
