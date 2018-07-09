@@ -25,27 +25,11 @@ class SimpleTestCase(_TestCase):
 
         return db
 
-
-class TransactionTestCase(SimpleTestCase):
-    """
-    An asyncio capable TestCase that will ensure that an isolated test db
-      is available for each test.
-
-    Based on ``asynctest``.
-    """
-    # pylint: disable=C0103,W0201
-
     async def _setUpDB(self):
-        self.db = await self.getDB()
-        if not _Tortoise._inited:
-            _Tortoise.init(self.db)
-        else:
-            _Tortoise._client_routing(self.db)
-        await _generate_schema(self.db)
+        pass
 
     async def _tearDownDB(self) -> None:
-        await self.db.close()
-        await self.db.db_delete()
+        pass
 
     def _setUp(self) -> None:
         self._init_loop()
@@ -74,6 +58,28 @@ class TransactionTestCase(SimpleTestCase):
 
         # post-test checks
         self._checker.check_test(self)
+
+
+class TransactionTestCase(SimpleTestCase):
+    """
+    An asyncio capable TestCase that will ensure that an isolated test db
+      is available for each test.
+
+    Based on ``asynctest``.
+    """
+    # pylint: disable=C0103,W0201
+
+    async def _setUpDB(self):
+        self.db = await self.getDB()
+        if not _Tortoise._inited:
+            _Tortoise.init(self.db)
+        else:
+            _Tortoise._client_routing(self.db)
+        await _generate_schema(self.db)
+
+    async def _tearDownDB(self) -> None:
+        await self.db.close()
+        await self.db.db_delete()
 
 
 class TestCase(TransactionTestCase):
