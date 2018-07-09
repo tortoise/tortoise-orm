@@ -4,6 +4,7 @@ from pypika import Table, functions
 from pypika.enums import SqlTypes
 
 from tortoise import fields
+from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields import ManyToManyRelationManager, RelationQueryContainer
 from tortoise.queryset import QuerySet
 
@@ -305,18 +306,18 @@ class Model(metaclass=ModelMeta):
         passed_fields = set(kwargs.keys())
         for key, value in kwargs.items():
             if key in self._meta.fk_fields:
-                assert hasattr(value, 'id') and value.id, (
-                    'You should first call .save() on {} before referring to it'.format(value)
-                )
+                if hasattr(value, 'id') and not value.id:
+                    raise OperationalError(
+                        'You should first call .save() on {} before referring to it'.format(value))
                 relation_field = '{}_id'.format(key)
                 setattr(self, relation_field, value.id)
                 passed_fields.add(relation_field)
             elif key in self._meta.backward_fk_fields:
-                raise AssertionError(
+                raise ConfigurationError(
                     'You can\'t set backward relations through init, change related model instead'
                 )
             elif key in self._meta.m2m_fields:
-                raise AssertionError(
+                raise ConfigurationError(
                     'You can\'t set m2m relations through init, use m2m_manager instead'
                 )
             elif key in self._meta.fields:

@@ -1,9 +1,7 @@
 import asyncio
 import binascii
-import datetime
 import os
 
-from examples import get_db_name
 from tortoise import Tortoise, fields
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.models import Model
@@ -47,24 +45,21 @@ class Team(Model):
 
 
 async def run():
-    db_name = get_db_name()
-    client = SqliteClient(db_name)
+    client = SqliteClient('example_schema.sqlite3')
     await client.create_connection()
     Tortoise.init(client)
     await generate_schema(client)
 
     tournament = await Tournament.create(name='Test')
-    assert tournament.created and tournament.created.date() == datetime.date.today()
 
     event = await Event.create(name='Test 1', tournament=tournament, prize=100)
-    old_time = event.modified
+    print(event.modified)
     event.name = 'Test 2'
     await event.save()
-    assert event.modified > old_time
-    assert len(event.token) == 32
+    print(event.modified)
+
     await Team.create(name='test')
-    result = await Team.all().values('name')
-    assert result[0]['name'] == 'test'
+    print(await Team.all().values('name'))
 
 
 if __name__ == '__main__':

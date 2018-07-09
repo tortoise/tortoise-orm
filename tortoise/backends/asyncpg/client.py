@@ -7,7 +7,7 @@ from tortoise.backends.asyncpg.executor import AsyncpgExecutor
 from tortoise.backends.asyncpg.schema_generator import AsyncpgSchemaGenerator
 from tortoise.backends.base.client import (BaseDBAsyncClient, ConnectionWrapper,
                                            SingleConnectionWrapper)
-from tortoise.exceptions import IntegrityError, OperationalError
+from tortoise.exceptions import ConfigurationError, IntegrityError, OperationalError
 
 
 class AsyncpgDBClient(BaseDBAsyncClient):
@@ -131,7 +131,8 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
 class TransactionWrapper(AsyncpgDBClient):
     def __init__(self, pool=None, connection=None):
-        assert bool(pool) != bool(connection), 'You must pass either connection or pool'
+        if pool and connection:
+            raise ConfigurationError('You must pass either connection or pool')
         self._connection = connection
         self.log = logging.getLogger('db_client')
         self._pool = pool

@@ -5,7 +5,6 @@ Key points are filtering by related names and using Q objects
 """
 import asyncio
 
-from examples import get_db_name
 from tortoise import Tortoise, fields
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.models import Model
@@ -42,8 +41,7 @@ class Team(Model):
 
 
 async def run():
-    db_name = get_db_name()
-    client = SqliteClient(db_name)
+    client = SqliteClient('example_filtering.sqlite3')
     await client.create_connection()
     Tortoise.init(client)
     await generate_schema(client)
@@ -71,22 +69,20 @@ async def run():
     await team_first.events.add(event_first)
     await event_second.participants.add(team_second)
 
-    found_events = await Event.filter(Q(id__in=[event_first.id, event_second.id])
-                                      | Q(name='3')).filter(participants__not=team_second.id
-                                                            ).order_by('tournament__id').distinct()
-    assert len(found_events) == 2
-    assert found_events[0].id == event_first.id and found_events[1].id == event_third.id
-    await Team.filter(events__tournament_id=tournament.id).order_by('-events__name')
-    await Tournament.filter(
+    print(await Event.filter(
+        Q(id__in=[event_first.id, event_second.id])
+        | Q(name='3')).filter(
+            participants__not=team_second.id).order_by('tournament__id').distinct())
+
+    print(await Team.filter(events__tournament_id=tournament.id).order_by('-events__name'))
+    print(await Tournament.filter(
         events__name__in=['1', '3'],
-    ).order_by('-events__participants__name').distinct()
+    ).order_by('-events__participants__name').distinct())
 
-    teams = await Team.filter(name__icontains='CON')
-    assert len(teams) == 1 and teams[0].name == 'Second'
+    print(await Team.filter(name__icontains='CON'))
 
-    tournaments = await Tournament.filter(events__participants__name__startswith='Fir')
-    assert len(tournaments) == 1 and tournaments[0] == tournament
-    assert await Tournament.filter(id__icontains=1).count() == 1
+    print(await Tournament.filter(events__participants__name__startswith='Fir'))
+    print(await Tournament.filter(id__icontains=1).count())
 
 
 if __name__ == '__main__':

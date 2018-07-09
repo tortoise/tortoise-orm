@@ -16,15 +16,15 @@ class Tortoise:
     def register_model(cls, app, name, model):
         if app not in cls.apps:
             cls.apps[app] = {}
-        assert name not in cls.apps[app], '{} duplicates in {}'.format(name, app)
+        if name in cls.apps[app]:
+            raise ConfigurationError('{} duplicates in {}'.format(name, app))
         cls.apps[app][name] = model
 
     @classmethod
     def _set_connection_routing(cls, db_routing):
-        assert set(db_routing.keys()) == set(cls.apps.keys()), (
-            'No db instanced for apps: {}'
-            .format(", ".join(set(db_routing.keys()) ^ set(cls.apps.keys())))
-        )
+        if set(db_routing.keys()) != set(cls.apps.keys()):
+            raise ConfigurationError('No db instanced for apps: {}'.format(
+                ", ".join(set(db_routing.keys()) ^ set(cls.apps.keys()))))
         for app, client in db_routing.items():
             for model in cls.apps[app].values():
                 model._meta.db = client
@@ -37,15 +37,18 @@ class Tortoise:
 
     @classmethod
     def _client_routing(cls, global_client=None, db_routing=None):
-        assert bool(global_client) != bool(db_routing), (
-            'You must pass either global connection or routing'
-        )
+        if global_client and db_routing:
+            raise ConfigurationError('You must pass either global_client or db_routing')
         if global_client:
-            assert isinstance(global_client, BaseDBAsyncClient)
+            if not isinstance(global_client, BaseDBAsyncClient):
+                raise ConfigurationError('global_client must inherit from BaseDBAsyncClient')
             cls._set_global_connection(global_client)
-        else:
-            assert all(isinstance(c, BaseDBAsyncClient) for c in db_routing.values())
+        elif db_routing:
+            if not all(isinstance(c, BaseDBAsyncClient) for c in db_routing.values()):
+                raise ConfigurationError('You must specify all apps when doing db_routing')
             cls._set_connection_routing(db_routing)
+        else:
+            raise ConfigurationError('You must pass either global_client or db_routing')
 
     @classmethod
     def _init_relations(cls):
@@ -63,11 +66,10 @@ class Tortoise:
                     backward_relation_name = field_object.related_name
                     if not backward_relation_name:
                         backward_relation_name = '{}s'.format(model._meta.table)
-                    assert backward_relation_name not in related_model._meta.fields, (
-                        'backward relation "{}" duplicates in model {}'.format(
-                            backward_relation_name, related_model_name
-                        )
-                    )
+                    if backward_relation_name in related_model._meta.fields:
+                        raise ConfigurationError(
+                            'backward relation "{}" duplicates in model {}'.format(
+                                backward_relation_name, related_model_name))
                     relation = fields.BackwardFKRelation(model, '{}_id'.format(field))
                     setattr(related_model, backward_relation_name, relation)
                     related_model._meta.filters.update(
@@ -98,11 +100,10 @@ class Tortoise:
                     backward_relation_name = field_object.related_name
                     if not backward_relation_name:
                         backward_relation_name = '{}s'.format(model._meta.table)
-                    assert backward_relation_name not in related_model._meta.fields, (
-                        'backward relation "{}" duplicates in model {}'.format(
-                            backward_relation_name, related_model_name
-                        )
-                    )
+                    if backward_relation_name in related_model._meta.fields:
+                        raise ConfigurationError(
+                            'backward relation "{}" duplicates in model {}'.format(
+                                backward_relation_name, related_model_name))
 
                     if not field_object.through:
                         related_model_table_name = (

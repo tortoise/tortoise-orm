@@ -6,7 +6,7 @@ from pypika.functions import Count
 from tortoise import fields
 from tortoise.aggregation import Aggregate
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.exceptions import FieldError
+from tortoise.exceptions import FieldError, OperationalError
 from tortoise.query_utils import Prefetch, Q
 from tortoise.utils import QueryAsyncIterator
 
@@ -429,7 +429,8 @@ class UpdateQuery(AwaitableQuery):
             field_object = model._meta.fields_map.get(key)
             if not field_object:
                 raise FieldError('Unknown keyword argument {} for model {}'.format(key, model))
-            assert not field_object.generated, 'Field {} is generated and can not be updated'
+            if field_object.generated:
+                raise OperationalError('Field {} is generated and can not be updated')
             if isinstance(field_object, fields.ForeignKeyField):
                 db_field = '{}_id'.format(key)
                 value = value.id

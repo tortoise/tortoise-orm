@@ -53,10 +53,8 @@ async def run():
     report_data = {
         'foo': 'bar',
     }
-    report = await Report.create(content=report_data)
-    result = await Report.filter(content=report_data).first()
-    assert result.id == report.id
-    assert result.content == report_data
+    print(await Report.create(content=report_data))
+    print(await Report.filter(content=report_data).first())
 
 
 if __name__ == '__main__':

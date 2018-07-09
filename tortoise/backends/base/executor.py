@@ -3,6 +3,7 @@ import datetime
 from pypika import Table
 
 from tortoise import fields
+from tortoise.exceptions import OperationalError
 
 
 class BaseExecutor:
@@ -205,9 +206,9 @@ class BaseExecutor:
         for relation in args:
             relation_split = relation.split('__')
             first_level_field = relation_split[0]
-            assert (
-                first_level_field in self.model._meta.fetch_fields
-            ), 'relation {} for {} not found'.format(first_level_field, self.model._meta.table)
+            if first_level_field not in self.model._meta.fetch_fields:
+                raise OperationalError('relation {} for {} not found'.format(
+                    first_level_field, self.model._meta.table))
             if first_level_field not in self.prefetch_map.keys():
                 self.prefetch_map[first_level_field] = set()
             forwarded_prefetch = '__'.join(relation_split[1:])

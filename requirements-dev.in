@@ -21,6 +21,7 @@ pylint
 docutils
 pygments
 yapf
+bandit
 
 ## Test tools
 tox

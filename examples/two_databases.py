@@ -11,7 +11,6 @@ and explicitly declaring model apps in class Meta
 import asyncio
 from sqlite3 import OperationalError
 
-from examples import get_db_name
 from tortoise import Tortoise, fields
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.models import Model
@@ -57,10 +56,8 @@ class Team(Model):
 
 
 async def run():
-    db_name = get_db_name()
-    second_db_name = get_db_name()
-    client = SqliteClient(db_name)
-    second_client = SqliteClient(second_db_name)
+    client = SqliteClient('example_2db_first.sqlite3')
+    second_client = SqliteClient('example_2db_second.sqlite3')
     await client.create_connection()
     await second_client.create_connection()
     Tortoise.init(db_routing={
@@ -75,11 +72,10 @@ async def run():
 
     try:
         await client.execute_query('SELECT * FROM "event"')
-        assert False
     except OperationalError:
-        pass
+        print('Expected it to fail')
     results = await second_client.execute_query('SELECT * FROM "event"')
-    assert results
+    print(results)
 
 
 if __name__ == '__main__':

@@ -23,9 +23,9 @@ class OperationalError(BaseORMException):
     pass
 
 
-class ConfigurationError(Exception):
+class ConfigurationError(BaseORMException):
     pass
 
 
-class IntegrityError(Exception):
+class IntegrityError(BaseORMException):
     pass
