@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.9.4
+-----
+- No more asserts, only Tortoise Exceptions
+- Fixed PyLint plugin to work with pylint>=2.0.0
+
 0.9.3
 -----
 - Fixed backward incompatibility for Python 3.7

@@ -10,14 +10,34 @@ from tortoise.backends.base.client import BaseDBAsyncClient as _BaseDBAsyncClien
 from tortoise.backends.base.db_url import expand_db_url as _expand_db_url
 from tortoise.utils import generate_schema as _generate_schema
 
-__all__ = ('SimpleTestCase', 'TestCase', 'TransactionTestCase', 'SkipTest', 'expectedFailure',
+__all__ = ('SimpleTestCase', 'TransactionTestCase', 'TestCase', 'SkipTest', 'expectedFailure',
            'skip', 'skipIf', 'skipUnless')
 _TORTOISE_TEST_DB = _os.environ.get('TORTOISE_TEST_DB', 'sqlite:///tmp/test-{}.sqlite')
 
+expectedFailure.__doc__ = """
+Mark test as expecting failiure.
+
+On success it will be marked as unexpected success.
+"""
+
 
 class SimpleTestCase(_TestCase):
+    """
+    An asyncio capable test class that provides some helper functions.
+
+    Will run any ``test_*()`` function either as sync or async, depending
+    on the signature of the function.
+    If you specify ``async test_*()`` then it will run it in an event loop.
+
+    Based on `asynctest <http://asynctest.readthedocs.io/>`_
+    """
 
     async def getDB(self) -> _BaseDBAsyncClient:
+        """
+        DB Client factory, for use in testing.
+
+        Please remember to call ``.close()`` and then ``.delete()`` on the returned object.
+        """
         dbconf = _expand_db_url(_TORTOISE_TEST_DB, testing=True)
         db = dbconf['client'](**dbconf['params'])
         await db.db_create()
@@ -62,10 +82,14 @@ class SimpleTestCase(_TestCase):
 
 class TransactionTestCase(SimpleTestCase):
     """
-    An asyncio capable TestCase that will ensure that an isolated test db
-      is available for each test.
+    An asyncio capable test class that will ensure that an isolated test db
+    is available for each test.
 
-    Based on ``asynctest``.
+    It will create and destroy a new DB instance for every test.
+    This is obviously slow, but guarantees a fresh DB.
+
+    It will define a ``self.db`` which is the fully initialised (with DB schema)
+    DB Client object.
     """
     # pylint: disable=C0103,W0201
 
@@ -83,4 +107,14 @@ class TransactionTestCase(SimpleTestCase):
 
 
 class TestCase(TransactionTestCase):
+    """
+    An asyncio capable test class that will ensure that an partially isolated test db
+    is available for each test.
+
+    It will wrap each test in a transaction and roll the DB back.
+    This is much faster, but requires that your test does not explicitly use transactions.
+
+    .. note::
+        Currently does not run any faster than ``TransactionTestCase``, will be sped up later on.
+    """
     pass
