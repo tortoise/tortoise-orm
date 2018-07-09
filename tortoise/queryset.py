@@ -1,3 +1,5 @@
+from typing import Dict  # noqa
+
 from pypika import JoinType, Order
 from pypika import PostgreSQLQuery as Query
 from pypika import Table
@@ -166,6 +168,15 @@ class QuerySet(AwaitableQuery):
         return queryset
 
     def filter(self, *args, **kwargs):
+        """
+        Filters QuerySet by given kwargs. You can filter by related objects like this:
+
+        .. code-block:: python3
+
+            Team.filter(events__tournament__name='Test')
+
+        You can also pass Q objects to filters as args.
+        """
         queryset = self._clone()
         for arg in args:
             if not isinstance(arg, Q):
@@ -185,7 +196,16 @@ class QuerySet(AwaitableQuery):
                 raise FieldError('unknown filter param {}'.format(key))
         return queryset
 
-    def order_by(self, *orderings):
+    def order_by(self, *orderings: str):
+        """
+        Accept args to filter by in format like this:
+
+        .. code-block:: python3
+
+            .order_by('name', '-tournament__name')
+
+        Supports ordering by related models too.
+        """
         queryset = self._clone()
         new_ordering = []
         for ordering in orderings:
@@ -210,22 +230,34 @@ class QuerySet(AwaitableQuery):
         queryset._orderings = new_ordering
         return queryset
 
-    def limit(self, limit):
+    def limit(self, limit: int):
+        """
+        Limits QuerySet to given length.
+        """
         queryset = self._clone()
         queryset._limit = limit
         return queryset
 
-    def offset(self, offset):
+    def offset(self, offset: int):
+        """
+        Query offset for QuerySet.
+        """
         queryset = self._clone()
         queryset._offset = offset
         return queryset
 
     def distinct(self):
+        """
+        Make QuerySet distinct.
+        """
         queryset = self._clone()
         queryset._distinct = True
         return queryset
 
     def annotate(self, **kwargs):
+        """
+        Annotate result with aggregation result.
+        """
         queryset = self._clone()
         for key, aggregation in kwargs.items():
             if not isinstance(aggregation, Aggregate):
@@ -235,7 +267,11 @@ class QuerySet(AwaitableQuery):
             queryset._available_custom_filters.update(get_filters_for_field(key, None, key))
         return queryset
 
-    def values_list(self, *fields, flat=False):
+    def values_list(self, *fields: str, flat: bool = False):
+        """
+        Make QuerySet returns list of tuples for given args instead of objects.
+        If ```flat=True`` and only one arg is passed can return flat list.
+        """
         return ValuesListQuery(
             db=self._db,
             model=self.model,
@@ -252,8 +288,11 @@ class QuerySet(AwaitableQuery):
             custom_filters=self._available_custom_filters,
         )
 
-    def values(self, *args, **kwargs):
-        fields_for_select = {}
+    def values(self, *args: str, **kwargs: str):
+        """
+        Make QuerySet return dicts instead of objects.
+        """
+        fields_for_select = {}  # type: Dict[str, str]
         for field in args:
             if field in fields_for_select:
                 raise FieldError('Duplicate key {}'.format(field))
@@ -280,6 +319,9 @@ class QuerySet(AwaitableQuery):
         )
 
     def delete(self):
+        """
+        Delete all objects in QuerySet.
+        """
         return DeleteQuery(
             db=self._db,
             model=self.model,
@@ -291,6 +333,9 @@ class QuerySet(AwaitableQuery):
         )
 
     def update(self, **kwargs):
+        """
+        Update all objects in QuerySet with given kwargs.
+        """
         return UpdateQuery(
             db=self._db,
             model=self.model,
@@ -303,6 +348,9 @@ class QuerySet(AwaitableQuery):
         )
 
     def count(self):
+        """
+        Return count of objects in queryset instead of objects.
+        """
         return CountQuery(
             db=self._db,
             model=self.model,
@@ -314,16 +362,26 @@ class QuerySet(AwaitableQuery):
         )
 
     def all(self):
+        """
+        Return the whole QuerySet.
+        Essentially a no-op except as the only operation.
+        """
         return self._clone()
 
     def first(self):
+        """
+        Limit queryset to one object and return one object instead of list.
+        """
         queryset = self._clone()
         queryset._limit = 1
         queryset._single = True
         return queryset
 
-    def get(self):
-        queryset = self._clone()
+    def get(self, *args, **kwargs):
+        """
+        Fetch exactly one object matching the parameters.
+        """
+        queryset = self.filter(*args, **kwargs)
         queryset._limit = 1
         queryset._get = True
         return queryset
@@ -331,7 +389,10 @@ class QuerySet(AwaitableQuery):
     def _resolve_prefetch_object(self, queryset, prefetch):
         pass
 
-    def prefetch_related(self, *args):
+    def prefetch_related(self, *args: str):
+        """
+        Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
+        """
         queryset = self._clone()
         queryset._prefetch_map = {}
 
@@ -355,6 +416,10 @@ class QuerySet(AwaitableQuery):
         return queryset
 
     def using_db(self, _db: BaseDBAsyncClient):
+        """
+        Executes query in provided db client.
+        Useful for transactions workaround.
+        """
         queryset = self._clone()
         queryset._db = _db
         return queryset

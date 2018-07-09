@@ -419,7 +419,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def get(cls, *args, **kwargs):
-        return QuerySet(cls).filter(*args, **kwargs).get()
+        return QuerySet(cls).get(*args, **kwargs)
 
     @classmethod
     async def fetch_for_list(cls, instance_list, *args, using_db=None):
