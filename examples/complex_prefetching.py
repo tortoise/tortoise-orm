@@ -1,6 +1,5 @@
 import asyncio
 
-from examples import get_db_name
 from tortoise import Tortoise, fields
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.models import Model
@@ -37,8 +36,7 @@ class Team(Model):
 
 
 async def run():
-    db_name = get_db_name()
-    client = SqliteClient(db_name)
+    client = SqliteClient('example_prefetching.sqlite3')
     await client.create_connection()
     Tortoise.init(client)
     await generate_schema(client)
@@ -50,8 +48,6 @@ async def run():
         Prefetch('events', queryset=Event.filter(name='First'))
     ).first()
     tournament = await Tournament.first().prefetch_related('events')
-    assert len(tournament_with_filtered.events) == 1
-    assert len(tournament.events) == 2
 
 
 if __name__ == '__main__':

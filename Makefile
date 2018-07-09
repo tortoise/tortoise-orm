@@ -25,12 +25,14 @@ check: deps
 	flake8 $(checkfiles)
 	mypy $(mypy_flags) $(checkfiles)
 	pylint -E $(checkfiles)
+	bandit -r $(checkfiles)
 	python setup.py check -mrs
 
 lint: deps
 	-flake8 $(checkfiles)
 	-mypy $(mypy_flags) $(checkfiles)
 	-pylint $(checkfiles)
+	-bandit -r $(checkfiles)
 	-python setup.py check -mrs
 
 test: deps

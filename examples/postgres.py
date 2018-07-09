@@ -55,8 +55,6 @@ async def run():
     }
     report = await Report.create(content=report_data)
     result = await Report.filter(content=report_data).first()
-    assert result.id == report.id
-    assert result.content == report_data
 
 
 if __name__ == '__main__':

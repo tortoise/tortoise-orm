@@ -7,7 +7,6 @@ to get this related objects
 """
 import asyncio
 
-from examples import get_db_name
 from tortoise import Tortoise, fields
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.exceptions import NoValuesFetched
@@ -44,8 +43,7 @@ class Team(Model):
 
 
 async def run():
-    db_name = get_db_name()
-    client = SqliteClient(db_name)
+    client = SqliteClient('example_relations.sqlite3')
     await client.create_connection()
     Tortoise.init(client)
     await generate_schema(client)
@@ -75,16 +73,11 @@ async def run():
     for team in event.participants:
         print(team.id)
 
-    assert event.participants[0].id == participants[0].id
 
     selected_events = await Event.filter(
         participants=participants[0].id,
     ).prefetch_related('participants', 'tournament')
-    assert len(selected_events) == 1
-    assert selected_events[0].tournament.id == tournament.id
-    assert len(selected_events[0].participants) == 2
     await participants[0].fetch_related('events')
-    assert participants[0].events[0] == event
 
     await Team.fetch_for_list(participants, 'events')
 
@@ -97,10 +90,8 @@ async def run():
     ).order_by('-events__participants__name').distinct()
 
     result = await Event.filter(id=event.id).values('id', 'name', tournament='tournament__name')
-    assert result[0]['tournament'] == tournament.name
 
     result = await Event.filter(id=event.id).values_list('id', 'participants__name')
-    assert len(result) == 2
 
 
 if __name__ == '__main__':
