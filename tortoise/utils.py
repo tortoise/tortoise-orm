@@ -8,7 +8,7 @@ class QueryAsyncIterator:
     def __aiter__(self):
         return self
 
-    async def fetch_sequence(self):
+    async def fetch_sequence(self) -> None:
         self.sequence = await self.query
         self._sequence_iterator = self.sequence.__iter__()
         if self._callback:
@@ -23,13 +23,12 @@ class QueryAsyncIterator:
             raise StopAsyncIteration
 
 
-async def generate_schema(client):
-    generator = client.schema_generator(client)
-    creation_string = generator.get_create_schema_sql()
-    await generator.generate_from_string(creation_string)
-
-
-async def get_schema_sql(client):
+def get_schema_sql(client) -> str:
     generator = client.schema_generator(client)
     creation_string = generator.get_create_schema_sql()
     return creation_string
+
+
+async def generate_schema(client) -> None:
+    generator = client.schema_generator(client)
+    await generator.generate_from_string(get_schema_sql(client))

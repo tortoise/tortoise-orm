@@ -43,7 +43,7 @@ class Tortoise:
             cls._set_global_connection(global_client)
         elif db_routing:
             if not all(isinstance(c, BaseDBAsyncClient) for c in db_routing.values()):
-                raise ConfigurationError('You must specify all apps when doing db_routing')
+                raise ConfigurationError('All app values must inherit from BaseDBAsyncClient')
             cls._set_connection_routing(db_routing)
         else:
             raise ConfigurationError('You must pass either global_client or db_routing')
