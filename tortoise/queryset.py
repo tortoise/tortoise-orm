@@ -1,4 +1,4 @@
-from typing import Dict  # noqa
+from typing import Any, Dict, List, Optional, Set  # noqa
 
 from pypika import JoinType, Order
 from pypika import PostgreSQLQuery as Query
@@ -14,6 +14,8 @@ from tortoise.utils import QueryAsyncIterator
 
 
 class AwaitableQuery:
+    __slots__ = ('_joined_tables', 'query', 'model')
+
     def __init__(self):
         self._joined_tables = []
         self.query = None
@@ -125,27 +127,31 @@ class AwaitableQuery:
 
 
 class QuerySet(AwaitableQuery):
+    __slots__ = ('_joined_tables', 'query', 'model', 'fields', '_prefetch_map', '_prefetch_queries',
+                 '_single', '_get', '_count', '_db', '_limit', '_offset', '_filter_kwargs',
+                 '_orderings', '_q_objects_for_resolve', '_distinct',
+                 '_annotations', '_having', '_available_custom_filters')
+
     def __init__(self, model):
         super().__init__()
         self.fields = model._meta.db_fields
         self.model = model
         self.query = Query.from_(model._meta.table)
-        self._prefetch_map = {}
-        self._prefetch_queries = {}
-        self._single = False
-        self._get = False
-        self._count = False
-        self._db = None
-        self._limit = None
-        self._offset = None
-        self._filter_kwargs = {}
-        self._orderings = []
-        self._joined_tables = []
-        self._q_objects_for_resolve = []
-        self._distinct = False
-        self._annotations = {}
-        self._having = {}
-        self._available_custom_filters = {}
+        self._prefetch_map = {}  # type: Dict[str, Set[str]]
+        self._prefetch_queries = {}  # type: Dict[str, QuerySet]
+        self._single = False  # type: bool
+        self._get = False  # type: bool
+        self._count = False  # type: bool
+        self._db = None  # type: Optional[BaseDBAsyncClient]
+        self._limit = None  # type: Optional[int]
+        self._offset = None  # type: Optional[int]
+        self._filter_kwargs = {}  # type: Dict[str, Any]
+        self._orderings = []  # type: List[str]
+        self._q_objects_for_resolve = []  # type: List[Q]
+        self._distinct = False  # type: bool
+        self._annotations = {}  # type: Dict[str, Aggregate]
+        self._having = {}  # type: Dict[str, Any]
+        self._available_custom_filters = {}  # type: Dict[str, dict]
 
     def _clone(self):
         queryset = self.__class__(self.model)
@@ -157,10 +163,10 @@ class QuerySet(AwaitableQuery):
         queryset._db = self._db
         queryset._limit = self._limit
         queryset._offset = self._offset
-        queryset._filter_kwargs = dict(self._filter_kwargs)
-        queryset._orderings = list(self._orderings)
-        queryset._joined_tables = list(self._joined_tables)
-        queryset._q_objects_for_resolve = list(self._q_objects_for_resolve)
+        queryset._filter_kwargs = self._filter_kwargs
+        queryset._orderings = self._orderings
+        queryset._joined_tables = self._joined_tables
+        queryset._q_objects_for_resolve = self._q_objects_for_resolve
         queryset._distinct = self._distinct
         queryset._annotations = self._annotations
         queryset._having = self._having

@@ -69,15 +69,15 @@ class Tortoise:
                         raise ConfigurationError(
                             'backward relation "{}" duplicates in model {}'.format(
                                 backward_relation_name, related_model_name))
-                    relation = fields.BackwardFKRelation(model, '{}_id'.format(field))
-                    setattr(related_model, backward_relation_name, relation)
+                    fkrelation = fields.BackwardFKRelation(model, '{}_id'.format(field))
+                    setattr(related_model, backward_relation_name, fkrelation)
                     related_model._meta.filters.update(
-                        get_backward_fk_filters(backward_relation_name, relation)
+                        get_backward_fk_filters(backward_relation_name, fkrelation)
                     )
 
                     related_model._meta.backward_fk_fields.add(backward_relation_name)
                     related_model._meta.fetch_fields.add(backward_relation_name)
-                    related_model._meta.fields_map[backward_relation_name] = relation
+                    related_model._meta.fields_map[backward_relation_name] = fkrelation
                     related_model._meta.fields.add(backward_relation_name)
 
                 for field in model._meta.m2m_fields:
@@ -115,7 +115,7 @@ class Tortoise:
                             related_model_table_name,
                         )
 
-                    relation = fields.ManyToManyField(
+                    m2mrelation = fields.ManyToManyField(
                         '{}.{}'.format(app_name, model_name),
                         field_object.through,
                         forward_key=field_object.backward_key,
@@ -123,19 +123,19 @@ class Tortoise:
                         related_name=field,
                         type=model
                     )
-                    relation._generated = True
+                    m2mrelation._generated = True
                     setattr(
                         related_model,
                         backward_relation_name,
-                        relation,
+                        m2mrelation,
                     )
                     model._meta.filters.update(get_m2m_filters(field, field_object))
                     related_model._meta.filters.update(
-                        get_m2m_filters(backward_relation_name, relation)
+                        get_m2m_filters(backward_relation_name, m2mrelation)
                     )
                     related_model._meta.m2m_fields.add(backward_relation_name)
                     related_model._meta.fetch_fields.add(backward_relation_name)
-                    related_model._meta.fields_map[backward_relation_name] = relation
+                    related_model._meta.fields_map[backward_relation_name] = m2mrelation
                     related_model._meta.fields.add(backward_relation_name)
 
     @classmethod

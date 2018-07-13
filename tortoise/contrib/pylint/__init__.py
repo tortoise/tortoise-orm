@@ -57,9 +57,10 @@ def transform_model(cls):
                     if attrname in ['ForeignKeyField', 'ManyToManyField']:
                         tomodel = attr.value.args[0].value
                         relname = ''
-                        for keyword in attr.value.keywords:
-                            if keyword.arg == 'related_name':
-                                relname = keyword.value.value
+                        if attr.value.keywords:
+                            for keyword in attr.value.keywords:
+                                if keyword.arg == 'related_name':
+                                    relname = keyword.value.value
 
                         if relname:
                             # Injected model attributes need to also have the relation manager

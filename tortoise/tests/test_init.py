@@ -55,3 +55,8 @@ class TestInitErrors(test.SimpleTestCase):
             Tortoise._client_routing(db_routing={
                 'models': 'moo',
             })
+
+    def test_dup_init(self):
+        with self.assertRaisesRegex(ConfigurationError, 'Already initialised'):
+            Tortoise.init(self.db)
+            Tortoise.init(self.db)

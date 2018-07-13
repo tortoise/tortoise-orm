@@ -5,6 +5,7 @@ from pypika import Table, functions
 from pypika.enums import SqlTypes
 
 from tortoise import fields
+from tortoise.backends.base.client import BaseDBAsyncClient  # noqa
 from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields import ManyToManyRelationManager, RelationQueryContainer
 from tortoise.queryset import QuerySet
@@ -130,7 +131,7 @@ def get_backward_fk_filters(field_name, field):
     return filters
 
 
-def get_filters_for_field(field_name: str, field: fields.Field, source_field: str):
+def get_filters_for_field(field_name: str, field: Optional[fields.Field], source_field: str):
     if isinstance(field, fields.ManyToManyField):
         return get_m2m_filters(field_name, field)
     filters = {
@@ -205,10 +206,14 @@ def get_filters_for_field(field_name: str, field: fields.Field, source_field: st
 
 
 class MetaInfo:
+    __slots__ = ('abstract', 'table', 'app', 'fields', 'db_fields', 'm2m_fields', 'fk_fields',
+                 'backward_fk_fields', 'fetch_fields', 'fields_db_projection',
+                 'fields_db_projection_reverse', 'filters', 'fields_map', 'db')
+
     def __init__(self, meta):
-        self.abstract = getattr(meta, 'abstract', False)
-        self.table = getattr(meta, 'table', None)
-        self.app = getattr(meta, 'app', 'models')
+        self.abstract = getattr(meta, 'abstract', False)  # type: bool
+        self.table = getattr(meta, 'table', None)  # type: Optional[Table]
+        self.app = getattr(meta, 'app', 'models')  # type: str
         self.fields = set()  # type: Set[str]
         self.db_fields = set()  # type: Set[str]
         self.m2m_fields = set()  # type: Set[str]
@@ -219,16 +224,16 @@ class MetaInfo:
         self.fields_db_projection_reverse = {}  # type: Dict[str,str]
         self.filters = {}  # type: Dict[str, Dict[str, dict]]
         self.fields_map = {}  # type: Dict[str, fields.Field]
-        self.db = None
+        self.db = None  # type: Optional[BaseDBAsyncClient]
 
 
 class ModelMeta(type):
     def __new__(mcs, name, bases, attrs, *args, **kwargs):
-        fields_db_projection = {}
-        fields_map = {}
+        fields_db_projection = {}  # type: Dict[str,str]
+        fields_map = {}  # type: Dict[str, fields.Field]
         filters = {}  # type: Dict[str, Dict[str, dict]]
-        fk_fields = set()
-        m2m_fields = set()
+        fk_fields = set()  # type: Set[str]
+        m2m_fields = set()  # type: Set[str]
 
         for key, value in attrs.items():
             if isinstance(value, fields.Field):

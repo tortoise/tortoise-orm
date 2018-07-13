@@ -1,3 +1,5 @@
+from typing import List, Set  # noqa
+
 from tortoise import fields
 
 TABLE_CREATE_TEMPLATE = 'CREATE TABLE "{}" ({});'
@@ -35,7 +37,7 @@ class BaseSchemaGenerator:
     def _get_auto_now_add_default(self):
         raise NotImplementedError()  # pragma: nocoverage
 
-    def _get_table_sql(self, model):
+    def _get_table_sql(self, model) -> dict:
         fields_to_create = []
         m2m_tables_for_create = []
         references = set()
@@ -107,9 +109,9 @@ class BaseSchemaGenerator:
 
         tables_to_create_count = len(tables_to_create)
 
-        created_tables = set()
+        created_tables = set()  # type: Set[dict]
         ordered_tables_for_create = []
-        m2m_tables_to_create = []
+        m2m_tables_to_create = []  # type: List[str]
         while True:
             if len(created_tables) == tables_to_create_count:
                 break

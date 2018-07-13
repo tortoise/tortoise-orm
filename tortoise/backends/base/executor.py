@@ -1,4 +1,5 @@
 import datetime
+from typing import Dict  # noqa
 
 from pypika import Table
 
@@ -104,7 +105,7 @@ class BaseExecutor:
             **{'{}__in'.format(relation_field): list(instance_id_set)}
         )
 
-        related_object_map = {}
+        related_object_map = {}  # type: Dict[str, list]
         for entry in related_object_list:
             object_id = getattr(entry, relation_field)
             if object_id in related_object_map.keys():
@@ -146,7 +147,7 @@ class BaseExecutor:
             prefetch_map=related_query._prefetch_map,
         ).fetch_for_list(related_object_list)
         related_object_map = {e.id: e for e in related_object_list}
-        relation_map = {}
+        relation_map = {}  # type: Dict[str, list]
 
         for object_id, related_object_id in relations:
             if object_id not in relation_map:

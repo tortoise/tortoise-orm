@@ -131,3 +131,15 @@ class JSONFields(Model):
     id = fields.IntField(pk=True)
     data = fields.JSONField()
     data_null = fields.JSONField(null=True)
+
+
+class MinRelation(Model):
+    id = fields.IntField(pk=True)
+    tournament = fields.ForeignKeyField('models.Tournament')
+    participants = fields.ManyToManyField(
+        'models.Team'
+    )
+
+
+class NoID(Model):
+    char = fields.CharField(max_length=255, null=True)
