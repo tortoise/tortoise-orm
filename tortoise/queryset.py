@@ -95,7 +95,7 @@ class AwaitableQuery:
         for ordering in orderings:
             field_name = ordering[0]
             if field_name in model._meta.fetch_fields:
-                raise ValueError(
+                raise FieldError(
                     "Filtering by relation is not possible filter by nested field of related model"
                 )
             elif field_name.split('__')[0] in model._meta.fetch_fields:
