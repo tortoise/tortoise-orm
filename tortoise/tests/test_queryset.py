@@ -5,10 +5,8 @@ from tortoise.tests.testmodels import IntFields
 
 class TestQueryset(test.TestCase):
     async def test_all_count(self):
-        self.ints = [
+        for val in range(10, 100, 3):
             await IntFields.create(intnum=val)
-            for val in range(10, 100, 3)
-        ]
 
         self.assertEqual(await IntFields.all().count(), 30)
 
