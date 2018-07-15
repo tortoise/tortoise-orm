@@ -3,6 +3,7 @@ from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned
 from tortoise.tests.testmodels import IntFields
 
 # TODO: Test the many exceptions in QuerySet
+# TODO: .filter(intnum_null=None) does not work as expected
 
 
 class TestQueryset(test.TestCase):
@@ -17,19 +18,22 @@ class TestQueryset(test.TestCase):
 
         # Modify dataset
         await IntFields.filter(intnum__gte=70).update(intnum_null=80)
-
         self.assertEqual(await IntFields.filter(intnum_null=80).count(), 10)
+        self.assertEqual(await IntFields.filter(intnum_null__isnull=True).count(), 20)
+        await IntFields.filter(intnum_null__isnull=True).update(intnum_null=-1)
+        self.assertEqual(await IntFields.filter(intnum_null=None).count(), 0)
+        self.assertEqual(await IntFields.filter(intnum_null=-1).count(), 20)
 
         # Test distinct
         self.assertEqual(
             await IntFields.all().order_by('intnum_null').distinct().values_list(
                 'intnum_null', flat=True),
-            [None, 80]
+            [-1, 80]
         )
 
         self.assertEqual(
             await IntFields.all().order_by('intnum_null').distinct().values('intnum_null'),
-            [{'intnum_null': None}, {'intnum_null': 80}]
+            [{'intnum_null': -1}, {'intnum_null': 80}]
         )
 
         # Test limit/offset/ordering values_list
