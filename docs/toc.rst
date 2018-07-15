@@ -6,7 +6,9 @@ Table Of Contents
 
    index
    getting_started
-   models_and_fields
+   setup
+   models
+   fields
    query
    exceptions
    contrib

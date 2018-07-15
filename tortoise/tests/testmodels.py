@@ -133,6 +133,7 @@ class JSONFields(Model):
     data_null = fields.JSONField(null=True)
 
 
+# TODO: Test that minimaly specified relations work as expected
 class MinRelation(Model):
     id = fields.IntField(pk=True)
     tournament = fields.ForeignKeyField('models.Tournament')
@@ -141,5 +142,6 @@ class MinRelation(Model):
     )
 
 
+# TODO: Test that no id models work as expected
 class NoID(Model):
     char = fields.CharField(max_length=255, null=True)

@@ -6,6 +6,7 @@ Changelog
 - No more asserts, only Tortoise Exceptions
 - Fixed PyLint plugin to work with pylint>=2.0.0
 - Formalised unittest classes & documented them.
+- ``__slots__`` where it was easy to do. (Changes class instances from dicts into tuples, memory savings)
 
 0.9.3
 -----
