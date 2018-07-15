@@ -388,12 +388,9 @@ class QuerySet(AwaitableQuery):
         Fetch exactly one object matching the parameters.
         """
         queryset = self.filter(*args, **kwargs)
-        queryset._limit = 1
+        queryset._limit = 2
         queryset._get = True
         return queryset
-
-    def _resolve_prefetch_object(self, queryset, prefetch):
-        pass
 
     def prefetch_related(self, *args: str):
         """
@@ -480,11 +477,11 @@ class QuerySet(AwaitableQuery):
             if self._single:
                 return None
             return []
-        elif self._single:
-            return instance_list[0]
         elif self._get:
             if len(instance_list) > 1:
                 raise MultipleObjectsReturned('Multiple objects returned, expected exactly one')
+            return instance_list[0]
+        elif self._single:
             return instance_list[0]
         return instance_list
 
