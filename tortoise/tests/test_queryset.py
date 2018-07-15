@@ -3,8 +3,6 @@ from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned
 from tortoise.tests.testmodels import IntFields
 
 # TODO: Test the many exceptions in QuerySet
-# TODO: Test limit/offset/ordering on values()
-# TODO: Test distinct
 
 
 class TestQueryset(test.TestCase):
@@ -22,7 +20,19 @@ class TestQueryset(test.TestCase):
 
         self.assertEqual(await IntFields.filter(intnum_null=80).count(), 10)
 
-        # Test limit/offset/ordering
+        # Test distinct
+        self.assertEqual(
+            await IntFields.all().order_by('intnum_null').distinct().values_list(
+                'intnum_null', flat=True),
+            [None, 80]
+        )
+
+        self.assertEqual(
+            await IntFields.all().order_by('intnum_null').distinct().values('intnum_null'),
+            [{'intnum_null': None}, {'intnum_null': 80}]
+        )
+
+        # Test limit/offset/ordering values_list
         self.assertEqual(
             await IntFields.all().order_by('intnum').limit(10).values_list('intnum', flat=True),
             [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
@@ -57,9 +67,42 @@ class TestQueryset(test.TestCase):
             [40, 43, 46, 49, 52, 55, 58, 61, 64, 67]
         )
 
+        # Test limit/offset/ordering values
+        self.assertEqual(
+            await IntFields.all().order_by('intnum').limit(5).values('intnum'),
+            [{'intnum': 10}, {'intnum': 13}, {'intnum': 16}, {'intnum': 19}, {'intnum': 22}]
+        )
+
+        self.assertEqual(
+            await IntFields.all().order_by('intnum').limit(5).offset(10).values('intnum'),
+            [{'intnum': 40}, {'intnum': 43}, {'intnum': 46}, {'intnum': 49}, {'intnum': 52}]
+        )
+
+        self.assertEqual(
+            await IntFields.all().order_by('intnum').limit(5).offset(30).values('intnum'),
+            []
+        )
+
+        self.assertEqual(
+            await IntFields.all().order_by('-intnum').limit(5).values('intnum'),
+            [{'intnum': 97}, {'intnum': 94}, {'intnum': 91}, {'intnum': 88}, {'intnum': 85}]
+        )
+
+        self.assertEqual(
+            await IntFields.all().order_by('intnum').limit(5).filter(intnum__gte=40).values(
+                'intnum'),
+            [{'intnum': 40}, {'intnum': 43}, {'intnum': 46}, {'intnum': 49}, {'intnum': 52}]
+        )
+
+        # Test first
         self.assertEqual(
             (await IntFields.all().order_by('intnum').filter(intnum__gte=40).first()).intnum,
             40
+        )
+
+        self.assertEqual(
+            await IntFields.all().order_by('intnum').filter(intnum__gte=400).first(),
+            None
         )
 
         # Test get
