@@ -6,11 +6,8 @@ Table Of Contents
 
    index
    getting_started
-   setup
-   models
-   fields
-   query
-   exceptions
-   contrib
+   reference
    CHANGELOG
+   roadmap
+   projstyle
    CONTRIBUTORS
