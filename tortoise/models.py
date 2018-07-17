@@ -6,6 +6,7 @@ from pypika.enums import SqlTypes
 
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient  # noqa
+from tortoise.transactions import current_connection
 from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields import ManyToManyRelationManager, RelationQueryContainer
 from tortoise.queryset import QuerySet
@@ -207,8 +208,8 @@ def get_filters_for_field(field_name: str, field: Optional[fields.Field], source
 
 class MetaInfo:
     __slots__ = ('abstract', 'table', 'app', 'fields', 'db_fields', 'm2m_fields', 'fk_fields',
-                 'backward_fk_fields', 'fetch_fields', 'fields_db_projection',
-                 'fields_db_projection_reverse', 'filters', 'fields_map', 'db')
+                 'backward_fk_fields', 'fetch_fields', 'fields_db_projection', '_inited',
+                 'fields_db_projection_reverse', 'filters', 'fields_map', 'default_db')
 
     def __init__(self, meta):
         self.abstract = getattr(meta, 'abstract', False)  # type: bool
@@ -224,7 +225,12 @@ class MetaInfo:
         self.fields_db_projection_reverse = {}  # type: Dict[str,str]
         self.filters = {}  # type: Dict[str, Dict[str, dict]]
         self.fields_map = {}  # type: Dict[str, fields.Field]
-        self.db = None  # type: Optional[BaseDBAsyncClient]
+        self._inited = False
+        self.default_db = None
+
+    @property
+    def db(self):
+        return current_connection.get() or self.default_db
 
 
 class ModelMeta(type):
@@ -272,7 +278,6 @@ class ModelMeta(type):
         if 'id' not in attrs:
             attrs['id'] = None
 
-        meta = meta
         meta.fields_map = fields_map
         meta.fields_db_projection = fields_db_projection
         meta.fields_db_projection_reverse = {
@@ -286,14 +291,12 @@ class ModelMeta(type):
         meta.backward_fk_fields = set()
         meta.m2m_fields = m2m_fields
         meta.fetch_fields = fk_fields | m2m_fields
-        meta.db = None
+        meta.default_db = None
+        meta._inited = False
         if not fields_map:
             meta.abstract = True
 
         new_class = super().__new__(mcs, name, bases, attrs)
-        if not meta.abstract:
-            from tortoise import Tortoise
-            Tortoise.register_model(meta.app, new_class.__name__, new_class)
         return new_class
 
 
@@ -391,7 +394,7 @@ class Model(metaclass=ModelMeta):
         return '<{}: {}>'.format(self.__class__.__name__, self.__str__())
 
     def __hash__(self):
-        if self.id:
+        if not self.id:
             raise TypeError('Model instances without id are unhashable')
         return hash(self.id)
 

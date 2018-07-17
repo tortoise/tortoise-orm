@@ -1,15 +1,14 @@
 import urllib.parse as urlparse
 import uuid
+from typing import Any, Dict, List  # noqa
 
-from tortoise.backends.asyncpg.client import AsyncpgDBClient
-from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.exceptions import ConfigurationError
 
 urlparse.uses_netloc.append('postgres')
 urlparse.uses_netloc.append('sqlite')
 DB_LOOKUP = {
     'postgres': {
-        'client': AsyncpgDBClient,
+        'engine': 'tortoise.backends.asyncpg',
         'vars': {
             'path': 'database',
             'hostname': 'host',
@@ -19,16 +18,23 @@ DB_LOOKUP = {
         },
     },
     'sqlite': {
-        'client': SqliteClient,
+        'engine': 'tortoise.backends.sqlite',
         'skip_first_char': False,
         'vars': {
-            'path': 'filename',
+            'path': 'file_path',
         },
     },
-}
+}  # type: Dict[str, Dict[str, Any]]
 
 
-def expand_db_url(db_url: str, testing: bool = False) -> dict:
+def generate_config(
+        db_url: str,
+        model_modules: List[str],
+        app_label: str,
+        testing: bool = False,
+) -> dict:
+    if not app_label:
+        app_label = 'models_{}'.format(uuid.uuid4().hex)
     url = urlparse.urlparse(db_url)
     if url.scheme not in DB_LOOKUP:
         raise ConfigurationError('Unknown DB scheme: {}'.format(url.scheme))
@@ -67,6 +73,16 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         params[vars['password']] = str(url.password or '')
 
     return {
-        'params': params,
-        'client': db['client'],
+        'connections': {
+            app_label: {
+                'engine': db['engine'],
+                'credentials': params,
+            }
+        },
+        'apps': {
+            app_label: {
+                'models': model_modules,
+                'default_connection': app_label,
+            },
+        }
     }

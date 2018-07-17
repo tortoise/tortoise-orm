@@ -4,10 +4,13 @@ import sqlite3
 
 import aiosqlite
 
-from tortoise import BaseDBAsyncClient
-from tortoise.backends.base.client import ConnectionWrapper, SingleConnectionWrapper
+from tortoise.backends.base.client import (
+    BaseDBAsyncClient, ConnectionWrapper,
+    SingleConnectionWrapper, BaseTransactionWrapper,
+)
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
+from tortoise.transactions import current_connection
 from tortoise.exceptions import IntegrityError, OperationalError
 
 
@@ -15,9 +18,9 @@ class SqliteClient(BaseDBAsyncClient):
     executor_class = SqliteExecutor
     schema_generator = SqliteSchemaGenerator
 
-    def __init__(self, filename, *args, **kwargs):
+    def __init__(self, file_path, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.filename = filename
+        self.filename = file_path
         self._transaction_class = type(
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
         )
@@ -75,7 +78,7 @@ class SqliteClient(BaseDBAsyncClient):
         connection = aiosqlite.connect(self.filename)
         connection.start()
         await connection._connect()
-        return self._single_connection_class(connection, self)
+        return self._single_connection_class(connection)
 
     async def release_single_connection(self, single_connection):
         await single_connection.connection.close()
@@ -84,7 +87,7 @@ class SqliteClient(BaseDBAsyncClient):
         await connection.commit()
 
 
-class TransactionWrapper(SqliteClient):
+class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
     def __init__(self, connection):
         self._connection = connection
         self.log = logging.getLogger('db_client')
@@ -93,6 +96,7 @@ class TransactionWrapper(SqliteClient):
             'SingleConnectionWrapper', (SingleConnectionWrapper, self.__class__), {}
         )
         self._transaction_class = self.__class__
+        self._old_context_value = None
 
     def acquire_connection(self):
         return ConnectionWrapper(self._connection)
@@ -106,21 +110,28 @@ class TransactionWrapper(SqliteClient):
     async def start(self):
         self._connection.start()
         await self._connection._connect()
+        self._old_context_value = current_connection.get()
+        current_connection.set(self)
 
     async def rollback(self):
         await self._connection.rollback()
         await self._connection.close()
+        current_connection.set(self._old_context_value)
 
     async def commit(self):
         await self._connection.commit()
         await self._connection.close()
+        current_connection.set(self._old_context_value)
 
     async def __aenter__(self):
         self._connection.start()
         await self._connection._connect()
+        self._old_context_value = current_connection.get()
+        current_connection.set(self)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        current_connection.set(self._old_context_value)
         if exc_type:
             await self._connection.rollback()
             await self._connection.close()

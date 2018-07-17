@@ -29,6 +29,6 @@ def get_schema_sql(client) -> str:
     return creation_string
 
 
-async def generate_schema(client) -> None:
+async def generate_schema_for_client(client) -> None:
     generator = client.schema_generator(client)
     await generator.generate_from_string(get_schema_sql(client))

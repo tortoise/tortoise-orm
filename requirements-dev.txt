@@ -5,6 +5,7 @@
 #    pip-compile --output-file requirements-dev.txt requirements-dev.in
 #
 aenum==2.0.8              # via pypika
+aiocontextvars==0.1.2 ; python_version < "3.7"
 aiosqlite==0.3.0
 alabaster==0.7.11         # via sphinx
 astroid==1.6.5            # via pylint

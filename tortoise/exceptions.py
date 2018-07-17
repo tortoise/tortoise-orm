@@ -16,6 +16,10 @@ class FieldError(BaseORMException):
     pass
 
 
+class ParamsError(BaseORMException):
+    pass
+
+
 class ConfigurationError(BaseORMException):
     """
     The ConfigurationError exception is raised when the configuration of the ORM is invalid.

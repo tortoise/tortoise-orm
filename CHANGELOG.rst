@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.10.0
+------
+- Refactored ``Tortoise.init()`` to init all connections and discover models from config passed
+as argument
+- New ``transactions`` module for implicit working with transactions
+
 0.9.4
 -----
 - No more asserts, only Tortoise Exceptions

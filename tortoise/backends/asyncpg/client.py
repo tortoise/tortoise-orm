@@ -5,8 +5,11 @@ from pypika import PostgreSQLQuery
 
 from tortoise.backends.asyncpg.executor import AsyncpgExecutor
 from tortoise.backends.asyncpg.schema_generator import AsyncpgSchemaGenerator
-from tortoise.backends.base.client import (BaseDBAsyncClient, ConnectionWrapper,
-                                           SingleConnectionWrapper)
+from tortoise.backends.base.client import (
+    BaseDBAsyncClient, ConnectionWrapper,
+    SingleConnectionWrapper, BaseTransactionWrapper,
+)
+from tortoise.transactions import current_connection
 from tortoise.exceptions import ConfigurationError, IntegrityError, OperationalError
 
 
@@ -96,7 +99,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         else:
             return ConnectionWrapper(self._connection)
 
-    def in_transaction(self):
+    def _in_transaction(self):
         if self.single_connection:
             return self._transaction_class(connection=self._connection)
         else:
@@ -114,10 +117,10 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
     async def get_single_connection(self):
         if self.single_connection:
-            return self._single_connection_class(self._connection, self)
+            return self._single_connection_class(self._connection)
         else:
             connection = await self._db_pool._acquire(None)
-            return self._single_connection_class(connection, self)
+            return self._single_connection_class(connection)
 
     async def release_single_connection(self, single_connection):
         if not self.single_connection:
@@ -129,7 +132,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             await connection.execute(script)
 
 
-class TransactionWrapper(AsyncpgDBClient):
+class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     def __init__(self, pool=None, connection=None):
         if pool and connection:
             raise ConfigurationError('You must pass either connection or pool')
@@ -141,6 +144,7 @@ class TransactionWrapper(AsyncpgDBClient):
             'SingleConnectionWrapper', (SingleConnectionWrapper, self.__class__), {}
         )
         self._transaction_class = self.__class__
+        self._old_context_value = None
 
     def acquire_connection(self):
         return ConnectionWrapper(self._connection)
@@ -153,20 +157,26 @@ class TransactionWrapper(AsyncpgDBClient):
             self._connection = await self._get_connection()
         self.transaction = self._connection.transaction()
         await self.transaction.start()
+        self._old_context_value = current_connection.get()
+        current_connection.set(self)
 
     async def commit(self):
         await self.transaction.commit()
         if self._pool:
             await self._pool.release(self._connection)
             self._connection = None
+        current_connection.set(self._old_context_value)
 
     async def rollback(self):
         await self.transaction.rollback()
         if self._pool:
             await self._pool.release(self._connection)
             self._connection = None
+        current_connection.set(self._old_context_value)
 
     async def __aenter__(self):
+        self._old_context_value = current_connection.get()
+        current_connection.set(self)
         if not self._connection:
             self._connection = await self._get_connection()
         self.transaction = self._connection.transaction()
@@ -174,6 +184,7 @@ class TransactionWrapper(AsyncpgDBClient):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        current_connection.set(self._old_context_value)
         if exc_type:
             await self.transaction.rollback()
             if self._pool:

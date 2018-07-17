@@ -35,7 +35,7 @@ class TestFieldErrors(test.SimpleTestCase):
             fields.DatetimeField(auto_now=True, auto_now_add=True)
 
 
-class TestIntFields(test.TransactionTestCase):
+class TestIntFields(test.IsolatedTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.IntFields.create()
@@ -65,7 +65,7 @@ class TestIntFields(test.TransactionTestCase):
         self.assertEqual(values[0], 1)
 
 
-class TestSmallIntFields(test.TransactionTestCase):
+class TestSmallIntFields(test.IsolatedTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.SmallIntFields.create()
@@ -91,7 +91,7 @@ class TestSmallIntFields(test.TransactionTestCase):
         self.assertEqual(values[0], 2)
 
 
-class TestCharFields(test.TransactionTestCase):
+class TestCharFields(test.IsolatedTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.CharFields.create()
@@ -121,7 +121,7 @@ class TestCharFields(test.TransactionTestCase):
         self.assertEqual(values[0], 'moo')
 
 
-class TestTextFields(test.TransactionTestCase):
+class TestTextFields(test.IsolatedTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.TextFields.create()
@@ -146,7 +146,7 @@ class TestTextFields(test.TransactionTestCase):
         self.assertEqual(values[0], 'baa')
 
 
-class TestBooleanFields(test.TransactionTestCase):
+class TestBooleanFields(test.IsolatedTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.BooleanFields.create()
@@ -171,7 +171,7 @@ class TestBooleanFields(test.TransactionTestCase):
         self.assertEqual(values[0], True)
 
 
-class TestDecimalFields(test.TransactionTestCase):
+class TestDecimalFields(test.IsolatedTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.DecimalFields.create()
@@ -199,7 +199,7 @@ class TestDecimalFields(test.TransactionTestCase):
         self.assertEqual(list(values[0]), [Decimal('1.2346'), 19])
 
 
-class TestDatetimeFields(test.TransactionTestCase):
+class TestDatetimeFields(test.IsolatedTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.DatetimeFields.create()
@@ -243,7 +243,7 @@ class TestDatetimeFields(test.TransactionTestCase):
         self.assertEqual(values[0], now)
 
 
-class TestDateFields(test.TransactionTestCase):
+class TestDateFields(test.IsolatedTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.DateFields.create()
@@ -277,7 +277,7 @@ class TestDateFields(test.TransactionTestCase):
         self.assertEqual(values[0], today)
 
 
-class TestFloatFields(test.TransactionTestCase):
+class TestFloatFields(test.IsolatedTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.FloatFields.create()
@@ -313,7 +313,7 @@ class TestFloatFields(test.TransactionTestCase):
         self.assertEqual(list(values[0]), [1.23])
 
 
-class TestJSONFields(test.TransactionTestCase):
+class TestJSONFields(test.IsolatedTestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.JSONFields.create()
