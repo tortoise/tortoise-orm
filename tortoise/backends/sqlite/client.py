@@ -46,7 +46,7 @@ class SqliteClient(BaseDBAsyncClient):
         connection = aiosqlite.connect(self.filename)
         return connection
 
-    def in_transaction(self):
+    def _in_transaction(self):
         return self._transaction_class(connection=aiosqlite.connect(self.filename))
 
     async def execute_query(self, query, get_inserted_id=False):

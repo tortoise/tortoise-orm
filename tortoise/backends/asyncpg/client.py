@@ -7,7 +7,10 @@ from tortoise.backends.asyncpg.executor import AsyncpgExecutor
 from tortoise.backends.asyncpg.schema_generator import AsyncpgSchemaGenerator
 from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWrapper,
                                            ConnectionWrapper, SingleConnectionWrapper)
-from tortoise.exceptions import ConfigurationError, IntegrityError, OperationalError
+from tortoise.exceptions import (
+    ConfigurationError, IntegrityError, OperationalError,
+    DBConnectionError,
+)
 from tortoise.transactions import current_connection
 
 
@@ -41,16 +44,21 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         )
 
     async def create_connection(self):
-        if not self.single_connection:
-            self._db_pool = await asyncpg.create_pool(self.dsn)
-        else:
-            self._connection = await asyncpg.connect(self.dsn)
-        self.log.debug(
-            'Created connection with params: '
-            'user={user} database={database} host={host} port={port}'.format(
-                user=self.user, database=self.database, host=self.host, port=self.port
+        try:
+            if not self.single_connection:
+                self._db_pool = await asyncpg.create_pool(self.dsn)
+            else:
+                self._connection = await asyncpg.connect(self.dsn)
+            self.log.debug(
+                'Created connection with params: '
+                'user={user} database={database} host={host} port={port}'.format(
+                    user=self.user, database=self.database, host=self.host, port=self.port
+                )
             )
-        )
+        except asyncpg.InvalidCatalogNameError:
+            raise DBConnectionError("Can't establish connection to database {}".format(
+                self.database
+            ))
 
     async def close(self):
         if not self.single_connection:
@@ -69,7 +77,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             database=''
         ))
         await self.execute_script(
-            'CREATE DATABASE {} OWNER {}'.format(self.database, self.user)
+            'CREATE DATABASE "{}" OWNER "{}"'.format(self.database, self.user)
         )
         await self._connection.close()
         self.single_connection = single_connection
@@ -85,7 +93,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             database=''
         ))
         try:
-            await self.execute_script('DROP DATABASE {}'.format(self.database))
+            await self.execute_script('DROP DATABASE "{}"'.format(self.database))
         except asyncpg.InvalidCatalogNameError:
             pass
         await self._connection.close()

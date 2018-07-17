@@ -9,7 +9,7 @@ try:
 except ImportError:
     from aiocontextvars import ContextVar
 
-current_connection: ContextVar = ContextVar('current_connection', default=None)
+current_connection = ContextVar('current_connection', default=None)  # type: ContextVar
 
 
 def _get_connection(connection_name: Optional[str]) -> BaseDBAsyncClient:
@@ -34,7 +34,7 @@ def in_transaction(connection_name: str = None) -> BaseTransactionWrapper:
     one db connection
     """
     connection = _get_connection(connection_name)
-    single_connection = connection.in_transaction()
+    single_connection = connection._in_transaction()
     return single_connection
 
 
@@ -51,7 +51,7 @@ def atomic(connection_name: str = None) -> Callable:
     def wrapper(func):
         @wraps(func)
         async def wrapped(*args, **kwargs):
-            async with connection.in_transaction():
+            async with connection._in_transaction():
                 return await func(*args, **kwargs)
 
         return wrapped
@@ -69,6 +69,6 @@ async def start_transaction(connection_name: str = None) -> BaseTransactionWrapp
         one db connection
         """
     connection = _get_connection(connection_name)
-    transaction = connection.in_transaction()
+    transaction = connection._in_transaction()
     await transaction.start()
     return transaction

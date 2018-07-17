@@ -8,6 +8,7 @@ from asynctest import _fail_on
 
 from tortoise import Tortoise
 from tortoise.backends.base.config_generator import generate_config as _generate_config
+from tortoise.exceptions import DBConnectionError
 from tortoise.transactions import start_transaction
 
 __all__ = ('SimpleTestCase', 'IsolatedTestCase', 'TestCase', 'SkipTest', 'expectedFailure',
@@ -119,8 +120,11 @@ class TestCase(SimpleTestCase):
 
     async def _setUpDB(self):
         if not self._base_created_for_test_case:
-            await Tortoise.init(self.config)
-            await Tortoise._drop_databases()
+            try:
+                await Tortoise.init(self.config)
+                await Tortoise._drop_databases()
+            except DBConnectionError:
+                pass
             await Tortoise.init(self.config, _create_db=True)
             await Tortoise.generate_schemas()
             self.__class__._base_created_for_test_case = True
@@ -131,3 +135,5 @@ class TestCase(SimpleTestCase):
 
     async def _tearDownDB(self) -> None:
         await self.transaction.rollback()
+        # Have to reset connections because tests are run in different loops
+        await Tortoise._reset_connections()

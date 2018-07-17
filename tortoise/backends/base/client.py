@@ -33,7 +33,7 @@ class BaseDBAsyncClient:
     def acquire_connection(self):
         raise NotImplementedError()  # pragma: nocoverage
 
-    def in_transaction(self):
+    def _in_transaction(self):
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_query(self, query):

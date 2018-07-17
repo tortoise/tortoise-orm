@@ -17,6 +17,9 @@ class FieldError(BaseORMException):
 
 
 class ParamsError(BaseORMException):
+    """
+    The ParamsError is raised when function can not be run with given parameters
+    """
     pass
 
 
@@ -59,5 +62,12 @@ class MultipleObjectsReturned(OperationalError):
 class DoesNotExist(OperationalError):
     """
     The DoesNotExist exception is raised when expecting data, such as a ``.get()`` operation.
+    """
+    pass
+
+
+class DBConnectionError(BaseORMException):
+    """
+    The DBConnectionError is raised when problems with connecting to db occurs
     """
     pass

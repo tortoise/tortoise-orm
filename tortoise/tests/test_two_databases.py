@@ -21,7 +21,7 @@ class TestTwoDatabases(test.SimpleTestCase):
             'connections': {**first_db_config['connections'], **second_db_config['connections']},
             'apps': {**first_db_config['apps'], **second_db_config['apps']},
         }
-        await Tortoise.init(merged_config)
+        await Tortoise.init(merged_config, _create_db=True)
         await Tortoise.generate_schemas()
         self.db = Tortoise.get_connection('models')
         self.second_db = Tortoise.get_connection('events')

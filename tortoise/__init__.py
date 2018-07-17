@@ -118,7 +118,7 @@ class Tortoise:
     def _discover_client_class(cls, engine):
         try:
             engine_module = importlib.import_module(engine)
-        except ModuleNotFoundError:
+        except ImportError:
             raise ConfigurationError('Backend for engine "{}" not found'.format(engine))
 
         try:
@@ -133,7 +133,7 @@ class Tortoise:
     def _discover_models(cls, models_path, app_label):
         try:
             module = importlib.import_module(models_path)
-        except ModuleNotFoundError:
+        except ImportError:
             raise ConfigurationError('Module "{}" not found'.format(models_path))
         discovered_models = []
         for attr_name in dir(module):
