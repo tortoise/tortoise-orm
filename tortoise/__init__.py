@@ -2,7 +2,7 @@ import importlib
 import json
 import os
 from inspect import isclass
-from typing import Dict, Any  # noqa
+from typing import Any, Dict  # noqa
 
 from tortoise import fields
 from tortoise.exceptions import ConfigurationError  # noqa
@@ -243,14 +243,14 @@ class Tortoise:
             config = cls._get_config_from_config_file(config_file)
 
         try:
-            connections_config = config['connections']
+            connections_config = config['connections']  # type: ignore
         except KeyError:
             raise ConfigurationError('Config must define "connections" section')
 
         await cls._init_connections(connections_config, _create_db)
 
         try:
-            apps_config = config['apps']
+            apps_config = config['apps']  # type: ignore
         except KeyError:
             raise ConfigurationError('Config must define "apps" section')
 

@@ -1,7 +1,7 @@
-from tortoise.transactions import in_transaction, atomic
 from tortoise.contrib import test
 from tortoise.exceptions import OperationalError
 from tortoise.tests.testmodels import Tournament
+from tortoise.transactions import atomic, in_transaction
 
 
 class TestTransactions(test.IsolatedTestCase):

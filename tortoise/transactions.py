@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import Callable
+from typing import Callable, Optional
 
 from tortoise.backends.base.client import BaseDBAsyncClient, BaseTransactionWrapper
 from tortoise.exceptions import ParamsError
@@ -12,7 +12,7 @@ except ImportError:
 current_connection: ContextVar = ContextVar('current_connection', default=None)
 
 
-def _get_connection(connection_name: str) -> BaseDBAsyncClient:
+def _get_connection(connection_name: Optional[str]) -> BaseDBAsyncClient:
     from tortoise import Tortoise
     if connection_name:
         connection = Tortoise.get_connection(connection_name)

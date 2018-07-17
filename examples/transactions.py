@@ -4,9 +4,9 @@ This example demonstrates how you can use transactions with tortoise
 import asyncio
 
 from tortoise import Tortoise, fields
-from tortoise.transactions import in_transaction, atomic
 from tortoise.exceptions import OperationalError
 from tortoise.models import Model
+from tortoise.transactions import atomic, in_transaction
 
 
 class Event(Model):

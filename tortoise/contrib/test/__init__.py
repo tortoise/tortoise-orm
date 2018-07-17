@@ -6,8 +6,8 @@ from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless  # noqa
 from asynctest import TestCase as _TestCase
 from asynctest import _fail_on
 
-from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise import Tortoise
+from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise.transactions import start_transaction
 
 __all__ = ('SimpleTestCase', 'IsolatedTestCase', 'TestCase', 'SkipTest', 'expectedFailure',

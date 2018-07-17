@@ -6,10 +6,10 @@ from pypika.enums import SqlTypes
 
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient  # noqa
-from tortoise.transactions import current_connection
 from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields import ManyToManyRelationManager, RelationQueryContainer
 from tortoise.queryset import QuerySet
+from tortoise.transactions import current_connection
 
 
 def is_in(field, value):

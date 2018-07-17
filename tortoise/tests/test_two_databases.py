@@ -1,8 +1,8 @@
 from tortoise import Tortoise
-from tortoise.transactions import in_transaction
 from tortoise.contrib import test
 from tortoise.exceptions import OperationalError
 from tortoise.tests.testmodels import Event, EventTwo, TeamTwo, Tournament
+from tortoise.transactions import in_transaction
 
 
 class TestTwoDatabases(test.SimpleTestCase):

@@ -4,14 +4,12 @@ import sqlite3
 
 import aiosqlite
 
-from tortoise.backends.base.client import (
-    BaseDBAsyncClient, ConnectionWrapper,
-    SingleConnectionWrapper, BaseTransactionWrapper,
-)
+from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWrapper,
+                                           ConnectionWrapper, SingleConnectionWrapper)
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
-from tortoise.transactions import current_connection
 from tortoise.exceptions import IntegrityError, OperationalError
+from tortoise.transactions import current_connection
 
 
 class SqliteClient(BaseDBAsyncClient):

@@ -24,7 +24,7 @@ class TestConfigGenerate(test.SimpleTestCase):
                 'models': {
                     'engine': 'tortoise.backends.sqlite',
                     'credentials': {
-                        'file_path': '/tmp/test.sqlite',
+                        'file_path': '/tmp/test.sqlite',  # nosec
                     }
                 },
             },
@@ -76,7 +76,7 @@ class TestConfigGenerate(test.SimpleTestCase):
                 'models': {
                     'engine': 'tortoise.backends.sqlite',
                     'credentials': {
-                        'file_path': '/tmp/test.sqlite',
+                        'file_path': '/tmp/test.sqlite',  # nosec
                         'AHA': '5',
                         'moo': 'yes',
                     }
