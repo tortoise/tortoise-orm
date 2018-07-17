@@ -2,7 +2,7 @@
 import re
 import sys
 
-from setuptools import setup
+from setuptools import find_packages, setup
 
 if sys.version_info < (3, 5, 3):
     raise RuntimeError("tortoise requires Python 3.5.3+")
@@ -36,7 +36,10 @@ setup(
     license='Apache License Version 2.0',
 
     # Packages
-    packages=["tortoise"],
+    packages=find_packages(
+        include=['tortoise*'],
+        exclude=['tortoise.tests']
+    ),
 
     # Include additional files into the package
     include_package_data=True,

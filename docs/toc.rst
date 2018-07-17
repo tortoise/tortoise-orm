@@ -6,8 +6,8 @@ Table Of Contents
 
    index
    getting_started
-   models_and_fields
-   query
-   contrib
+   reference
    CHANGELOG
+   roadmap
+   projstyle
    CONTRIBUTORS

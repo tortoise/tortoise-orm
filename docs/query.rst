@@ -47,20 +47,9 @@ QuerySet
 
 After you obtained queryset from object you can do following operations with it:
 
-- ``filter(*args, **kwargs)`` - filters QuerySet by given kwargs. You can filter by related objects like this: ``Team.filter(events__tournament__name='Test')``. You can also pass ``Q`` objects to ``filters`` as args.
-- ``order_by(*args)`` - accept args to filter by in format like ``.order_by('name', '-tournament__name')``. Supports ordering by related models too.
-- ``limit(limit)`` - limits QuerySet by given int
-- ``offset(offset)`` - offset for QuerySet
-- ``distinct()`` - make QuerySet distinct
-- ``values_list(*args, flat=False)`` - make QuerySet returns list of tuples for given args instead of objects. If ``flat`` is  ``True`` and only one arg is passed can return flat list
-- ``values(*args)`` - make QuerySet return dicts instead of objects
-- ``delete()`` - deletes all objects in QuerySet
-- ``update(**kwargs)`` - updates all objects in QuerySet with given kwargs
-- ``count()`` - returns count of objects in queryset instead of objects
-- ``first()`` - limit queryset to one object and return one object instead of list
-- ``prefetch_related(*args)`` - like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
-- ``using_db(client)`` - executes query in other db client. Useful for transactions workaround.
-- ``annotate(**kwargs)`` - annotates result with aggregation result
+.. autoclass:: tortoise.queryset.QuerySet
+    :members:
+    :undoc-members:
 
 After making your QuerySet you just have to ``await`` it to get the result
 
@@ -70,6 +59,7 @@ Many to Many
 ============
 
 Tortoise provides api for working with M2M relations
+
 - ``add(*args)`` - adds instances to relation
 - ``remove(*args)`` - removes instances from relation
 - ``clear()`` - removes all objects from relation

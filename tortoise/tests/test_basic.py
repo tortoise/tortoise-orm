@@ -1,8 +1,8 @@
-from tortoise.contrib.test import TestCase
+from tortoise.contrib import test
 from tortoise.tests.testmodels import Tournament
 
 
-class TestBasic(TestCase):
+class TestBasic(test.TestCase):
     async def test_basic(self):
         event = await Tournament.create(name='Test')
         await Tournament.filter(id=event.id).update(name='Updated name')

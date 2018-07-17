@@ -1,9 +1,7 @@
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.exceptions import ConfigurationError, MultiplyObjectsReturned  # noqa
-from tortoise.fields import ManyToManyRelationManager  # noqa
+from tortoise.exceptions import ConfigurationError
 from tortoise.models import get_backward_fk_filters, get_m2m_filters
-from tortoise.queryset import QuerySet  # noqa
 
 
 class Tortoise:
@@ -45,13 +43,14 @@ class Tortoise:
             cls._set_global_connection(global_client)
         elif db_routing:
             if not all(isinstance(c, BaseDBAsyncClient) for c in db_routing.values()):
-                raise ConfigurationError('You must specify all apps when doing db_routing')
+                raise ConfigurationError('All app values must inherit from BaseDBAsyncClient')
             cls._set_connection_routing(db_routing)
         else:
             raise ConfigurationError('You must pass either global_client or db_routing')
 
     @classmethod
     def _init_relations(cls):
+        cls._inited = True
         for app_name, app in cls.apps.items():
             for model_name, model in app.items():
                 if not model._meta.table:
@@ -70,15 +69,15 @@ class Tortoise:
                         raise ConfigurationError(
                             'backward relation "{}" duplicates in model {}'.format(
                                 backward_relation_name, related_model_name))
-                    relation = fields.BackwardFKRelation(model, '{}_id'.format(field))
-                    setattr(related_model, backward_relation_name, relation)
+                    fk_relation = fields.BackwardFKRelation(model, '{}_id'.format(field))
+                    setattr(related_model, backward_relation_name, fk_relation)
                     related_model._meta.filters.update(
-                        get_backward_fk_filters(backward_relation_name, relation)
+                        get_backward_fk_filters(backward_relation_name, fk_relation)
                     )
 
                     related_model._meta.backward_fk_fields.add(backward_relation_name)
                     related_model._meta.fetch_fields.add(backward_relation_name)
-                    related_model._meta.fields_map[backward_relation_name] = relation
+                    related_model._meta.fields_map[backward_relation_name] = fk_relation
                     related_model._meta.fields.add(backward_relation_name)
 
                 for field in model._meta.m2m_fields:
@@ -116,7 +115,7 @@ class Tortoise:
                             related_model_table_name,
                         )
 
-                    relation = fields.ManyToManyField(
+                    m2m_relation = fields.ManyToManyField(
                         '{}.{}'.format(app_name, model_name),
                         field_object.through,
                         forward_key=field_object.backward_key,
@@ -124,19 +123,19 @@ class Tortoise:
                         related_name=field,
                         type=model
                     )
-                    relation._generated = True
+                    m2m_relation._generated = True
                     setattr(
                         related_model,
                         backward_relation_name,
-                        relation,
+                        m2m_relation,
                     )
                     model._meta.filters.update(get_m2m_filters(field, field_object))
                     related_model._meta.filters.update(
-                        get_m2m_filters(backward_relation_name, relation)
+                        get_m2m_filters(backward_relation_name, m2m_relation)
                     )
                     related_model._meta.m2m_fields.add(backward_relation_name)
                     related_model._meta.fetch_fields.add(backward_relation_name)
-                    related_model._meta.fields_map[backward_relation_name] = relation
+                    related_model._meta.fields_map[backward_relation_name] = m2m_relation
                     related_model._meta.fields.add(backward_relation_name)
 
     @classmethod
@@ -145,7 +144,6 @@ class Tortoise:
             raise ConfigurationError('Already initialised')
         cls._client_routing(global_client=global_client, db_routing=db_routing)
         cls._init_relations()
-        cls._inited = True
 
 
 __version__ = "0.9.3"

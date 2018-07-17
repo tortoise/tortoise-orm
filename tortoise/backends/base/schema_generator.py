@@ -1,4 +1,7 @@
+from typing import List, Set  # noqa
+
 from tortoise import fields
+from tortoise.exceptions import ConfigurationError
 
 TABLE_CREATE_TEMPLATE = 'CREATE TABLE "{}" ({});'
 FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}'
@@ -35,7 +38,7 @@ class BaseSchemaGenerator:
     def _get_auto_now_add_default(self):
         raise NotImplementedError()  # pragma: nocoverage
 
-    def _get_table_sql(self, model):
+    def _get_table_sql(self, model) -> dict:
         fields_to_create = []
         m2m_tables_for_create = []
         references = set()
@@ -107,9 +110,9 @@ class BaseSchemaGenerator:
 
         tables_to_create_count = len(tables_to_create)
 
-        created_tables = set()
+        created_tables = set()  # type: Set[dict]
         ordered_tables_for_create = []
-        m2m_tables_to_create = []
+        m2m_tables_to_create = []  # type: List[str]
         while True:
             if len(created_tables) == tables_to_create_count:
                 break
@@ -118,7 +121,7 @@ class BaseSchemaGenerator:
                     t for t in tables_to_create if t['references'].issubset(created_tables)
                 )
             except StopIteration:
-                raise ValueError("Can't create schema due to cyclic fk references")
+                raise ConfigurationError("Can't create schema due to cyclic fk references")
             tables_to_create.remove(next_table_for_create)
             created_tables.add(next_table_for_create['table'])
             ordered_tables_for_create.append(next_table_for_create['table_creation_string'])

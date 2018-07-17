@@ -3,7 +3,7 @@ Contrib
 =======
 
 
-PyLint Plugin
+PyLint plugin
 =============
 
 Since Tortoise uses MetaClasses to build the Model objects, PyLint will often not understand how the Models behave. We provided a `tortoise.pylint` plugin that enhances PyLints understanding of Models and Fields.
@@ -18,17 +18,37 @@ In your projects ``.pylintrc`` file, ensure the following is set:
     load-plugins=tortoise.contrib.pylint
 
 
-TestCase
-========
+UnitTest support
+================
 
-Tortoise includes its own ``TestCase`` utility for use in testing. Currently it will create an isolated ``SQLite`` database for each and every test.
+Tortoise includes its own helper utilities to assist in unit tests.
 
-To use:
+Usage
+-----
 
 .. code-block:: python3
 
-    from tortoise.contrib.test import TestCase
+    from tortoise.contrib import test
 
-    class TestSomething(TestCase):
-        async def test_something(self):
+    class TestSomething(test.TestCase):
+        def test_something(self):
             ...
+
+        async def test_something_async(self):
+            ...
+
+        @test.skip('Skip this')
+        def test_skip(self):
+            ...
+
+        @test.expectedFailure
+        def test_something(self):
+            ...
+
+Reference
+---------
+
+.. automodule:: tortoise.contrib.test
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -1,10 +1,10 @@
 import datetime
 
-from tortoise.contrib.test import TestCase
+from tortoise.contrib import test
 from tortoise.tests.testmodels import Event, Team, Tournament
 
 
-class TestSchemaCreate(TestCase):
+class TestSchemaCreate(test.TestCase):
 
     async def test_schema_create(self):
         tournament = await Tournament.create(name='Test')

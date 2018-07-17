@@ -2,6 +2,7 @@ import datetime
 import functools
 import json
 from decimal import Decimal
+from typing import Any, Optional
 
 from pypika import Table
 
@@ -23,17 +24,20 @@ JSON_LOADS = json.loads
 
 
 class Field:
+    """
+    Base Field type.
+    """
     def __init__(
         self,
         type=None,
-        source_field=None,
-        generated=False,
-        pk=False,
-        null=False,
-        default=None,
-        unique=False,
+        source_field: Optional[str] = None,
+        generated: bool = False,
+        pk: bool = False,
+        null: bool = False,
+        default: Any = None,
+        unique: bool = False,
         **kwargs
-    ):
+    ) -> None:
         self.type = type
         self.source_field = source_field
         self.generated = generated
@@ -52,20 +56,37 @@ class Field:
 
 
 class IntField(Field):
-    def __init__(self, source_field=None, pk=False, **kwargs):
+    """
+    Integer field.
+
+    ``pk`` (bool):
+        True if field is Primary Key.
+    """
+    def __init__(self, pk: bool = False, **kwargs) -> None:
         kwargs['generated'] = bool(kwargs.get('generated')) | pk
-        super().__init__(int, source_field, **kwargs)
+        super().__init__(int, **kwargs)
         self.reference = kwargs.get('reference')
         self.pk = pk
 
 
 class SmallIntField(Field):
-    def __init__(self, **kwargs):
+    """
+    Small integer field.
+    """
+    def __init__(self, **kwargs) -> None:
         super().__init__(int, **kwargs)
 
 
 class CharField(Field):
-    def __init__(self, max_length=0, **kwargs):
+    """
+    Character field.
+
+    You must provide the following:
+
+    ``max_length`` (int):
+        Maximum length of the field in characters.
+    """
+    def __init__(self, max_length: int = 0, **kwargs) -> None:
         if int(max_length) < 1:
             raise ConfigurationError('max_digits must be >= 1')
         self.max_length = int(max_length)
@@ -73,17 +94,33 @@ class CharField(Field):
 
 
 class TextField(Field):
-    def __init__(self, **kwargs):
+    """
+    Large Text field.
+    """
+    def __init__(self, **kwargs) -> None:
         super().__init__(str, **kwargs)
 
 
 class BooleanField(Field):
-    def __init__(self, **kwargs):
+    """
+    Boolean field.
+    """
+    def __init__(self, **kwargs) -> None:
         super().__init__(bool, **kwargs)
 
 
 class DecimalField(Field):
-    def __init__(self, max_digits=0, decimal_places=-1, **kwargs):
+    """
+    Accurate decimal field.
+
+    You must provide the following:
+
+    ``max_digits`` (int):
+        Max digits of significance of the decimal field.
+    ``decimal_places`` (int):
+        How many of those signifigant digits is after the decimal point.
+    """
+    def __init__(self, max_digits: int = 0, decimal_places: int = -1, **kwargs) -> None:
         if int(max_digits) < 1:
             raise ConfigurationError('max_digits must be >= 1')
         if int(decimal_places) < 0:
@@ -94,7 +131,18 @@ class DecimalField(Field):
 
 
 class DatetimeField(Field):
-    def __init__(self, auto_now=False, auto_now_add=False, **kwargs):
+    """
+    Datetime field.
+
+    ``auto_now`` and ``auto_now_add`` is exclusive.
+    You can opt to set neither or only ONE of them.
+
+    ``auto_now`` (bool):
+        Always set to ``datetime.utcnow()`` on save.
+    ``auto_now_add`` (bool):
+        Set to ``datetime.utcnow()`` on first save only.
+    """
+    def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs) -> None:
         if auto_now_add and auto_now:
             raise ConfigurationError('You can choose only auto_now or auto_now_add')
         auto_now_add = auto_now_add | auto_now
@@ -110,7 +158,10 @@ class DatetimeField(Field):
 
 
 class DateField(Field):
-    def __init__(self, **kwargs):
+    """
+    Date field.
+    """
+    def __init__(self, **kwargs) -> None:
         super().__init__(datetime.date, **kwargs)
 
     def to_python_value(self, value):
@@ -120,12 +171,25 @@ class DateField(Field):
 
 
 class FloatField(Field):
-    def __init__(self, **kwargs):
+    """
+    Float (double) field.
+    """
+    def __init__(self, **kwargs) -> None:
         super().__init__(float, **kwargs)
 
 
 class JSONField(Field):
-    def __init__(self, encoder=JSON_DUMPS, decoder=JSON_LOADS, **kwargs):
+    """
+    JSON field.
+
+    This field can store dictionaries or lists of any JSON-compliant structure.
+
+    ``encoder``:
+        The JSON encoder. The default is recommemded.
+    ``decoder``:
+        The JSON decoder. The default is recommemded.
+    """
+    def __init__(self, encoder=JSON_DUMPS, decoder=JSON_LOADS, **kwargs) -> None:
         super().__init__((dict, list), **kwargs)
         self.encoder = encoder
         self.decoder = decoder
@@ -142,7 +206,41 @@ class JSONField(Field):
 
 
 class ForeignKeyField(Field):
-    def __init__(self, model_name, related_name=None, on_delete=CASCADE, **kwargs):
+    """
+    ForeignKey relation field.
+
+    This field represents a foreign key relation to another model.
+
+    You must provide the following:
+
+    ``model_name``:
+        The name of the related model in a :samp:`'{app}.{model}'` format.
+
+    The following is optional:
+
+    ``related_name``:
+        The attribute name on the related model to reverse resolve the foreign key.
+    ``on_delete``:
+        One of:
+            ``field.CASCADE``:
+                Indicate that the model should be cascade deleted if related model gets deleted.
+            ``field.RESTRICT``:
+                Indicate that the related model delete will be restricted as long as a
+                foreign key points to it.
+            ``field.SET_NULL``:
+                Resets the field to NULL in case the related model gets deleted.
+                Can only be set if field has ``null=True`` set.
+            ``field.SET_DEFAULT``:
+                Resets the field to ``default`` value in case the related model gets deleted.
+                Can only be set is field has a ``default`` set.
+    """
+    def __init__(
+        self,
+        model_name: str,
+        related_name: Optional[str] = None,
+        on_delete=CASCADE,
+        **kwargs
+    ) -> None:
         super().__init__(**kwargs)
         if isinstance(model_name, str) and len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
@@ -156,15 +254,39 @@ class ForeignKeyField(Field):
 
 
 class ManyToManyField(Field):
+    """
+    ManyToMany relation field.
+
+    This field represents a many-to-many between this model and another model.
+
+    You must provide the following:
+
+    ``model_name``:
+        The name of the related model in a :samp:`'{app}.{model}'` format.
+
+    The following is optional:
+
+    ``through``:
+        The DB table that represents the trough table.
+        The default is normally safe.
+    ``forward_key``:
+        The forward lookup key on the through table.
+        The default is normally safe.
+    ``backward_key``:
+        The backward lookup key on the through table.
+        The default is normally safe.
+    ``related_name``:
+        The attribute name on the related model to reverse resolve the many to many.
+    """
     def __init__(
         self,
-        model_name,
-        through=None,
-        forward_key=None,
-        backward_key=None,
-        related_name=None,
+        model_name: str,
+        through: Optional[str] = None,
+        forward_key: Optional[str] = None,
+        backward_key: Optional[str] = None,
+        related_name: Optional[str] = None,
         **kwargs
-    ):
+    ) -> None:
         super().__init__(**kwargs)
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
@@ -296,8 +418,8 @@ class ManyToManyRelationManager(RelationQueryContainer):
         select_query = select_query.where(criterion)
 
         already_existing_relations_raw = await db.execute_query(str(select_query))
-        already_existing_relations = set((r[self.field.backward_key], r[self.field.forward_key])
-                                         for r in already_existing_relations_raw)
+        already_existing_relations = {(r[self.field.backward_key], r[self.field.forward_key])
+                                      for r in already_existing_relations_raw}
 
         insert_is_required = False
         for instance_to_add in instances:

@@ -1,23 +1,28 @@
 from tortoise import Tortoise
-from tortoise.contrib.test import TestCase
+from tortoise.contrib import test
 from tortoise.exceptions import OperationalError
 from tortoise.tests.testmodels import EventTwo, TeamTwo, Tournament
 from tortoise.utils import generate_schema
 
 
-class TestTwoDatabases(TestCase):
+class TestTwoDatabases(test.SimpleTestCase):
     async def setUp(self):
-        await self._tearDownDB()
         self.db = await self.getDB()
         self.second_db = await self.getDB()
         Tortoise._client_routing(db_routing={
             'models': self.db,
             'events': self.second_db,
         })
+
+        if not Tortoise._inited:
+            Tortoise._init_relations()
+
         await generate_schema(self.db)
         await generate_schema(self.second_db)
 
     async def tearDown(self):
+        await self.db.close()
+        await self.db.db_delete()
         await self.second_db.close()
         await self.second_db.db_delete()
 
