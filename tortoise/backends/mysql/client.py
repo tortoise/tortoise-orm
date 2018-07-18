@@ -13,7 +13,7 @@ class MySQLClient(BaseDBAsyncClient):
     schema_generator = MySQLSchemaGenerator
 
     def __init__(self, database, host='127.0.0.1', port=3306, user='root', password='', single_connection=False, *args, **kwargs):
-        super().__init__(*argsm **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.host = host
         self.port = port
@@ -26,7 +26,6 @@ class MySQLClient(BaseDBAsyncClient):
             'port': self.port, 
             'user': self.user, 
             'password': self.password, 
-            'database': self.databse
         }
 
         self.log = logging.getLogger('db_client')
@@ -40,9 +39,9 @@ class MySQLClient(BaseDBAsyncClient):
 
     async def create_connection(self):
         if not self.single_connection:
-            self._db_pool = await aiomysql.create_pool(self.template)
+            self._db_pool = await aiomysql.create_pool(**self.template)
         else:
-            self._connection = await aiomysql.connect(self.template)
+            self._connection = await aiomysql.connect(db=self.database, **self.template)
         
         self.log.debug(
             'Created connection with params: '
@@ -78,9 +77,9 @@ class MySQLClient(BaseDBAsyncClient):
 
     def acquire_connection(self):
         if not self.single_connection:
-            return self._db_pool.acquire()
+            return self._db_pool.acquire().cursor() # acquire returns Connection, which needs to convert it to Cursor 
         else:
-            return ConnectionWrapper(self._connection)
+            return self._connection.cursor() 
 
     def in_transaction(self):
         raise NotImplementedError()  # pragma: nocoverage
