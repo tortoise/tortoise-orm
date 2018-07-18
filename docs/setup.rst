@@ -13,6 +13,7 @@ You can do it like this:
 
     from tortoise.backends.asyncpg.client import AsyncpgDBClient
     from tortoise import Tortoise
+    from tortoise.utils import generate_schema
     from app import models # without importing models Tortoise can't find and init them
 
 
@@ -24,10 +25,10 @@ You can do it like this:
             password='qwerty123',
             database='events',
        )
-
+    
         await db.create_connection()
         Tortoise.init(db)
-
+    
         await generate_schema(client)
 
 Here we create connection to database with default asyncpg client and then we init models. Be sure that you have your models imported in the app. Usually that's the case, because you use your models across you app, but if you have only local imports of it, tortoise won't be able to find them and init them with connection to db.

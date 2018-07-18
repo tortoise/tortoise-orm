@@ -46,11 +46,11 @@ You can start writing models like this:
 
     from tortoise.models import Model
     from tortoise import fields
-
+    
     class Tournament(Model):
         id = fields.IntField(pk=True)
         name = fields.TextField()
-
+    
         def __str__(self):
             return self.name
 
@@ -60,7 +60,7 @@ You can start writing models like this:
         name = fields.TextField()
         tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
         participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
-
+    
         def __str__(self):
             return self.name
 
@@ -68,7 +68,7 @@ You can start writing models like this:
     class Team(Model):
         id = fields.IntField(pk=True)
         name = fields.TextField()
-
+    
         def __str__(self):
             return self.name
 
@@ -80,6 +80,7 @@ Then in init part of your app you should init models like this
 
     from tortoise.backends.asyncpg.client import AsyncpgDBClient
     from tortoise import Tortoise
+    from tortoise.utils import generate_schema
     from app import models # without importing models Tortoise can't find and init them
 
 
@@ -91,7 +92,7 @@ Then in init part of your app you should init models like this
             password='qwerty123',
             database='events'
         )
-
+    
         await db.create_connection()
         Tortoise.init(db)
         # You can generate schema for your models like this, but don't do this if you have schema already:
@@ -104,7 +105,7 @@ After that you can start using your models:
     # Create instance by save
     tournament = Tournament(name='New Tournament')
     await tournament.save()
-
+    
     # Or by .create()
     await Event.create(name='Without participants', tournament=tournament)
     event = await Event.create(name='Test', tournament=tournament)
@@ -112,15 +113,15 @@ After that you can start using your models:
     for i in range(2):
         team = Team.create(name='Team {}'.format(i + 1))
         participants.append(team)
-
+    
     # M2M Relationship management is quite straightforward
     # (also look for methods .remove(...) and .clear())
     await event.participants.add(*participants)
-
+    
     # You can query related entity just with async for
     async for team in event.participants:
         pass
-
+    
     # After making related query you can iterate with regular for,
     # which can be extremely convenient for using with other packages,
     # for example some kind of serializers with nested support
@@ -132,11 +133,11 @@ After that you can start using your models:
     selected_events = await Event.filter(
         participants=participants[0].id
     ).prefetch_related('participants', 'tournament')
-
+    
     # Tortoise supports variable depth of prefetching related entities
     # This will fetch all events for team and in those events tournaments will be prefetched
     await Team.all().prefetch_related('events__tournament')
-
+    
     # You can filter and order by related models too
     await Tournament.filter(
         events__name__in=['Test', 'Prod']
