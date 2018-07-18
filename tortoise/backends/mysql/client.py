@@ -85,7 +85,13 @@ class MySQLClient(BaseDBAsyncClient):
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_query(self, query):
-        raise NotImplementedError()  # pragma: nocoverage
+#try:
+        async with self.acquire_connection() as connection:
+            self.log.debug(query)
+            return await connection.execute(query)
+
+#        except:
+            print('Problem!')
 
     async def execute_script(self, script):
         async with self.acquire_connection() as connection:
@@ -93,7 +99,12 @@ class MySQLClient(BaseDBAsyncClient):
             await connection.execute(script)
 
     async def get_single_connection(self):
-        raise NotImplementedError()  # pragma: nocoverage
+        if self.single_connection:
+            return self._single_connection_class(self._connection, self)
+        else:
+            connection = await self._db_pool._acquire(None)
+            return self._single_connection_class(connection, self)
 
     async def release_single_connection(self, single_connection):
-        raise NotImplementedError()  # pragma: nocoverage
+        if not self.single_connection:
+            await self._db_pool.release(single_connection.connection)
