@@ -13,7 +13,7 @@ M2M_TABLE_TEMPLATE = (
 )
 
 
-class BaseSchemaGenerator:
+class MySQLSchemaGenerator:
     FIELD_TYPE_MAP = {
         fields.BooleanField: 'BOOL',
         fields.IntField: 'INT',

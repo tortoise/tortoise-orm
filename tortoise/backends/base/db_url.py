@@ -3,10 +3,12 @@ import uuid
 
 from tortoise.backends.asyncpg.client import AsyncpgDBClient
 from tortoise.backends.sqlite.client import SqliteClient
+from tortoise.backends.mysql.client import MySQLClient
 from tortoise.exceptions import ConfigurationError
 
 urlparse.uses_netloc.append('postgres')
 urlparse.uses_netloc.append('sqlite')
+urlparse.uses_netloc.append('mysql')
 DB_LOOKUP = {
     'postgres': {
         'client': AsyncpgDBClient,
@@ -23,6 +25,16 @@ DB_LOOKUP = {
         'skip_first_char': False,
         'vars': {
             'path': 'filename',
+        },
+    },
+    'mysql': {
+        'client': MySQLClient,
+        'vars': {
+            'path': 'database',
+            'hostname': 'host',
+            'port': 'port',
+            'username': 'user',
+            'password': 'password',
         },
     },
 }

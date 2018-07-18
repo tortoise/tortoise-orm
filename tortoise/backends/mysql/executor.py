@@ -7,7 +7,7 @@ from tortoise import fields
 from tortoise.exceptions import OperationalError
 
 
-class BaseExecutor:
+class MySQLExecutor:
     def __init__(self, model, db=None, prefetch_map=None, prefetch_queries=None):
         self.model = model
         self.db = db
