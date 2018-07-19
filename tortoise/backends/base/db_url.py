@@ -2,8 +2,8 @@ import urllib.parse as urlparse
 import uuid
 
 from tortoise.backends.asyncpg.client import AsyncpgDBClient
-from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.backends.mysql.client import MySQLClient
+from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.exceptions import ConfigurationError
 
 urlparse.uses_netloc.append('postgres')

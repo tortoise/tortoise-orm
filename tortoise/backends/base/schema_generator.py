@@ -3,6 +3,7 @@ from typing import List, Set  # noqa
 from tortoise import fields
 from tortoise.exceptions import ConfigurationError
 
+
 class BaseSchemaGenerator:
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE "{}" ({});'
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}'
@@ -12,7 +13,6 @@ class BaseSchemaGenerator:
         '("{backward_key}" INT NOT NULL REFERENCES "{backward_table}" (id) ON DELETE CASCADE, '
         '"{forward_key}" INT NOT NULL REFERENCES "{forward_table}" (id) ON DELETE CASCADE);'
     )
-
 
     FIELD_TYPE_MAP = {
         fields.BooleanField: 'BOOL',
@@ -71,7 +71,9 @@ class BaseSchemaGenerator:
             fields_to_create.append(field_creation_string)
 
         table_fields_string = ', '.join(fields_to_create)
-        table_create_string = self.TABLE_CREATE_TEMPLATE.format(model._meta.table, table_fields_string)
+        table_create_string = self.TABLE_CREATE_TEMPLATE.format(model._meta.table, 
+                                                                table_fields_string,
+                                                                )
 
         for m2m_field in model._meta.m2m_fields:
             field_object = model._meta.fields_map[m2m_field]

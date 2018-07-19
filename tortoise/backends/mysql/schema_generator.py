@@ -7,9 +7,9 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         super().__init__(client, *args, **kwargs)
 
         self.FIELD_TYPE_MAP.update({
-                fields.FloatField: 'DOUBLE',
-                fields.JSONField: 'JSON',
-            })
+            fields.FloatField: 'DOUBLE',
+            fields.JSONField: 'JSON',
+        })
 
         self.TABLE_CREATE_TEMPLATE = 'CREATE TABLE {} ({});'
         self.FIELD_TEMPLATE = '{name} {type} {nullable} {unique}'
@@ -20,9 +20,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
             '{forward_key} INT NOT NULL REFERENCES {forward_table} (id) ON DELETE CASCADE);'
         )
 
-
         self.client = client
 
     def _get_primary_key_create_string(self, field_name):
         return "{} INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT".replace('{}', field_name)
-
