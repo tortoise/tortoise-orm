@@ -2,6 +2,7 @@ import datetime
 from typing import Dict  # noqa
 
 from pypika import Table
+from pypika import MySQLQuery
 
 from tortoise import fields
 from tortoise.backends.base.executor import BaseExecutor
@@ -19,12 +20,11 @@ class MySQLExecutor(BaseExecutor):
         )
 
         query = (
-            self.connection.query_class.into(Table(self.model._meta.table)).columns(*columns)
+            MySQLQuery.into(Table(self.model._meta.table)).columns(*columns)
             .insert(*values)
             )
 
-        result = await self.connection.execute_query(str(query))
-        instance.id = result[0][0]
+        instance.id  = await self.connection.execute_query(str(query))
         await self.db.release_single_connection(self.connection)
         self.connection = None
         return instance

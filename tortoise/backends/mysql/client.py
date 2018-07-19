@@ -7,6 +7,7 @@ from tortoise.backends.mysql.schema_generator import MySQLSchemaGenerator
 from tortoise.backends.base.client import (BaseDBAsyncClient, ConnectionWrapper,
                                            SingleConnectionWrapper)
 
+from tortoise.exceptions import IntegrityError, OperationalError
 
 class MySQLClient(BaseDBAsyncClient):
     executor_class = MySQLExecutor
@@ -39,7 +40,7 @@ class MySQLClient(BaseDBAsyncClient):
 
     async def create_connection(self):
         if not self.single_connection:
-            self._db_pool = await aiomysql.create_pool(**self.template)
+            self._db_pool = await aiomysql.create_pool(db=self.database, **self.template)
         else:
             self._connection = await aiomysql.connect(db=self.database, **self.template)
         
@@ -52,7 +53,7 @@ class MySQLClient(BaseDBAsyncClient):
         
     async def close(self):
         if not self.single_connection:
-            await self._db_pool.wait_closed()
+            self._db_pool.close()
         else:
             self._connection.close()
 
@@ -77,32 +78,40 @@ class MySQLClient(BaseDBAsyncClient):
 
     def acquire_connection(self):
         if not self.single_connection:
-            return self._db_pool.acquire().cursor() # acquire returns Connection, which needs to convert it to Cursor 
+            return self._db_pool.acquire()
         else:
-            return self._connection.cursor() 
+            return ConnectionWrapper(self._connection)
 
     def in_transaction(self):
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_query(self, query):
-#try:
-        async with self.acquire_connection() as connection:
-            self.log.debug(query)
-            return await connection.execute(query)
+        mysql_query = query.replace("\"", "`")
 
-#        except:
-            print('Problem!')
+        async with self.acquire_connection() as connection:
+            async with connection.cursor(aiomysql.DictCursor) as cursor:
+                self.log.debug(mysql_query)
+                
+                affected_row = await cursor.execute(mysql_query) 
+
+                if "SELECT"  in mysql_query or "select" in mysql_query:
+                    result = await cursor.fetchall()
+                    return result 
+
+                await connection.commit()
+                return affected_row
 
     async def execute_script(self, script):
         async with self.acquire_connection() as connection:
-            self.log.debug(script)
-            await connection.execute(script)
+            async with connection.cursor() as cursor: 
+                self.log.debug(script)
+                await cursor.execute(script)
 
     async def get_single_connection(self):
         if self.single_connection:
             return self._single_connection_class(self._connection, self)
         else:
-            connection = await self._db_pool._acquire(None)
+            connection = await self._db_pool._acquire()
             return self._single_connection_class(connection, self)
 
     async def release_single_connection(self, single_connection):

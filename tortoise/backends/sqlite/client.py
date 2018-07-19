@@ -60,6 +60,8 @@ class SqliteClient(BaseDBAsyncClient):
                     await cursor.execute('SELECT last_insert_rowid()')
                     inserted_id = await cursor.fetchone()
                     return inserted_id
+                print(results)
+                print([dict(row) for row in results])
                 return [dict(row) for row in results]
         except sqlite3.OperationalError as exc:
             raise OperationalError(exc)
@@ -67,6 +69,7 @@ class SqliteClient(BaseDBAsyncClient):
             raise IntegrityError(exc)
 
     async def execute_script(self, script):
+        print(self.acquire_connection)
         async with self.acquire_connection() as connection:
             self.log.debug(script)
             await connection.executescript(script)
