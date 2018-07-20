@@ -136,7 +136,7 @@ class MySQLClient(BaseDBAsyncClient):
         if self.single_connection:
             return self._single_connection_class(self._connection, self)
         else:
-            connection = await self._db_pool._acquire(None)
+            connection = await self._db_pool._acquire()
             return self._single_connection_class(connection, self)
 
     async def release_single_connection(self, single_connection):

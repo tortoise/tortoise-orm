@@ -98,7 +98,7 @@ class TestDBUrl(test.SimpleTestCase):
         })
 
     def test_mysql_basic(self):
-        res = expand_db_url('mysql://mysql:@127.0.0.1:3306/test')
+        res = expand_db_url('mysql://root:@127.0.0.1:3306/test')
         self.assertEqual(res, {
             'client': MySQLClient,
             'params': {
@@ -106,16 +106,16 @@ class TestDBUrl(test.SimpleTestCase):
                 'host': '127.0.0.1',
                 'password': '',
                 'port': '3306',
-                'user': 'mysql',
+                'user': 'root',
             }
         })
 
     def test_mysql_nonint_port(self):
         with self.assertRaises(ConfigurationError):
-            expand_db_url('mysql://mysql:@127.0.0.1:moo/test')
+            expand_db_url('mysql://root:@127.0.0.1:moo/test')
 
     def test_mysql_testing(self):
-        res = expand_db_url('mysql://mysql:@127.0.0.1:3306/test_\{\}', testing=True)
+        res = expand_db_url('mysql://root:@127.0.0.1:3306/test_\{\}', testing=True)
         self.assertIn('test_', res['params']['database'])
         self.assertNotEqual('test_{}', res['params']['database'])
         self.assertEqual(res, {
@@ -125,21 +125,21 @@ class TestDBUrl(test.SimpleTestCase):
                 'host': '127.0.0.1',
                 'password': '',
                 'port': '3306',
-                'user': 'mysql',
+                'user': 'root',
                 'single_connection': True,
             }
         })
 
     def test_mysql_params(self):
-        res = expand_db_url('mysql://mysql:@127.0.0.1:3306/test?AHA=5&moo=yes')
+        res = expand_db_url('mysql://root:@127.0.0.1:3306/test?AHA=5&moo=yes')
         self.assertEqual(res, {
-            'client': AsyncpgDBClient,
+            'client': MySQLClient,
             'params': {
                 'database': 'test',
                 'host': '127.0.0.1',
                 'password': '',
                 'port': '3306',
-                'user': 'postgres',
+                'user': 'root',
                 'AHA': '5',
                 'moo': 'yes',
             }
