@@ -6,11 +6,6 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     def __init__(self, client, *args, **kwargs):
         super().__init__(client, *args, **kwargs)
 
-        self.FIELD_TYPE_MAP.update({
-            fields.FloatField: 'DOUBLE',
-            fields.JSONField: 'JSON',
-        })
-
         self.TABLE_CREATE_TEMPLATE = 'CREATE TABLE `{}` ({});'
         self.FIELD_TEMPLATE = '`{name}` {type} {nullable} {unique}'
         self.FK_TEMPLATE = ' REFERENCES `{table}` (`id`) ON DELETE {on_delete}'
@@ -19,6 +14,12 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
             '(`{backward_key}` INT NOT NULL REFERENCES `{backward_table}` (`id`) ON DELETE CASCADE, '
             '`{forward_key}` INT NOT NULL REFERENCES `{forward_table}` (`id`) ON DELETE CASCADE);'
         )
+
+        self.FIELD_TYPE_MAP.update({
+            fields.FloatField: 'DOUBLE',
+            fields.JSONField: 'JSON',
+            fields.DatetimeField: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+        })
 
         self.client = client
 
