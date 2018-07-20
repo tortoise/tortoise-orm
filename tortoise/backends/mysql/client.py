@@ -7,7 +7,7 @@ from tortoise.backends.base.client import (BaseDBAsyncClient, ConnectionWrapper,
                                            SingleConnectionWrapper)
 from tortoise.backends.mysql.executor import MySQLExecutor
 from tortoise.backends.mysql.schema_generator import MySQLSchemaGenerator
-from tortoise.exceptions import IntegrityError, OperationalError
+from tortoise.exceptions import ConfigurationError, IntegrityError, OperationalError
 
 
 class MySQLClient(BaseDBAsyncClient):
@@ -40,8 +40,9 @@ class MySQLClient(BaseDBAsyncClient):
 
         self.log = logging.getLogger('db_client')
         self.single_connection = single_connection
-        self._single_connection_class = type(
-            'SingleConnectionWrapper', (SingleConnectionWrapper, self.__class__), {}
+
+        self._transaction_class = type(
+            'TransactionWrapper', (TransactionWrapper, self.__class__), {}
         )
 
         self._db_pool = None
@@ -73,7 +74,7 @@ class MySQLClient(BaseDBAsyncClient):
             **self.template
         )
         await self.execute_script(
-            'CREATE DATABASE {}'.format(self.database, self.user)
+            'CREATE DATABASE {}'.format(self.database)
         )
         self._connection.close()
         self.single_connection = single_connection
@@ -86,7 +87,7 @@ class MySQLClient(BaseDBAsyncClient):
         )
         try:
             await self.execute_script('DROP DATABASE {}'.format(self.database))
-        except :
+        except pymysql.err.DatabaseError:
             pass
         self._connection.close()
         self.single_connection = single_connection
@@ -98,7 +99,10 @@ class MySQLClient(BaseDBAsyncClient):
             return ConnectionWrapper(self._connection)
 
     def in_transaction(self):
-        raise NotImplementedError()  # pragma: nocoverage
+        if self.single_connection:
+            return self._transaction_class(connection=self._connection)
+        else:
+            return self._transaction_class(pool=self._db_pool)
 
     async def execute_query(self, query):
         mysql_query = query.replace("\"", "`")
@@ -124,7 +128,7 @@ class MySQLClient(BaseDBAsyncClient):
 
     async def execute_script(self, script):
         async with self.acquire_connection() as connection:
-            async with connection.cursor() as cursor: 
+            async with connection.cursor() as cursor:
                 self.log.debug(script)
                 await cursor.execute(script)
 
@@ -132,9 +136,66 @@ class MySQLClient(BaseDBAsyncClient):
         if self.single_connection:
             return self._single_connection_class(self._connection, self)
         else:
-            connection = await self._db_pool._acquire()
+            connection = await self._db_pool._acquire(None)
             return self._single_connection_class(connection, self)
 
     async def release_single_connection(self, single_connection):
         if not self.single_connection:
             await self._db_pool.release(single_connection.connection)
+
+
+class TransactionWrapper(MySQLClient):
+    def __init__(self, pool=None, connection=None):
+        if pool and connection:
+            raise ConfigurationError('You must pass either connection or pool')
+        self._connection = connection
+        self.log = logging.getLogger('db_client')
+        self._pool = pool
+        self.single_connection = True
+        self._single_connection_class = type(
+            'SingleConnectionWrapper', (SingleConnectionWrapper, self.__class__), {}
+        )
+        self._transaction_class = self.__class__
+
+    def acquire_connection(self):
+        return ConnectionWrapper(self._connection)
+
+    async def _get_connection(self):
+        return await self._pool._acquire()
+
+    async def start(self):
+        if not self._connection:
+            self._connection = await self._get_connection()
+        self.transaction = self._connection
+        await self.transaction.begin()
+
+    async def commit(self):
+        await self.transaction.commit()
+        if self._pool:
+            await self._pool.release(self._connection)
+            self._connection = None
+
+    async def rollback(self):
+        await self.transaction.rollback()
+        if self._pool:
+            await self._pool.release(self._connection)
+            self._connection = None
+
+    async def __aenter__(self):
+        if not self._connection:
+            self._connection = await self._get_connection()
+        self.transaction = self._connection
+        await self.transaction.begin()
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            await self.transaction.rollback()
+            if self._pool:
+                await self._pool.release(self._connection)
+                self._connection = None
+            return False
+        await self.transaction.commit()
+        if self._pool:
+            await self._pool.release(self._connection)
+            self._connection = None

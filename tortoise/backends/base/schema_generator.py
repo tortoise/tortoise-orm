@@ -71,7 +71,7 @@ class BaseSchemaGenerator:
             fields_to_create.append(field_creation_string)
 
         table_fields_string = ', '.join(fields_to_create)
-        table_create_string = self.TABLE_CREATE_TEMPLATE.format(model._meta.table, 
+        table_create_string = self.TABLE_CREATE_TEMPLATE.format(model._meta.table,
                                                                 table_fields_string,
                                                                 )
 
