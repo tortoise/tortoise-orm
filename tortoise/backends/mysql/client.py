@@ -26,7 +26,7 @@ class MySQLClient(BaseDBAsyncClient):
         super().__init__(*args, **kwargs)
 
         self.host = host
-        self.port = port
+        self.port = int(port) #make sure port is int type
         self.user = user
         self.password = password
         self.database = database
@@ -127,6 +127,7 @@ class MySQLClient(BaseDBAsyncClient):
             IntegrityError(exc)
 
     async def execute_script(self, script):
+        print(script)
         async with self.acquire_connection() as connection:
             async with connection.cursor() as cursor:
                 self.log.debug(script)
