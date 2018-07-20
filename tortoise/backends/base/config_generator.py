@@ -58,7 +58,7 @@ def generate_config(
         path = path.format(uuid.uuid4().hex)
 
     vars = {}  # type: dict
-    vars.update(db['vars'])  # type: ignore
+    vars.update(db['vars'])
     params[vars['path']] = path
     if vars.get('hostname'):
         params[vars['hostname']] = str(url.hostname or '')

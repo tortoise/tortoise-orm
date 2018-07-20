@@ -1,22 +1,22 @@
+from typing import Awaitable, Callable, Iterator, Optional
+
+
 class QueryAsyncIterator:
-    def __init__(self, query, callback=None):
+    def __init__(self, query: Awaitable[Iterator], callback: Optional[Callable] = None) -> None:
         self.query = query
-        self.sequence = None
+        self.sequence = None  # type: Optional[Iterator]
         self._sequence_iterator = None
         self._callback = callback
 
     def __aiter__(self):
         return self
 
-    async def fetch_sequence(self) -> None:
-        self.sequence = await self.query
-        self._sequence_iterator = self.sequence.__iter__()
-        if self._callback:
-            await self._callback(self)
-
     async def __anext__(self):
         if self.sequence is None:
-            await self.fetch_sequence()
+            self.sequence = await self.query
+            self._sequence_iterator = self.sequence.__iter__()
+            if self._callback:
+                await self._callback(self)
         try:
             return next(self._sequence_iterator)
         except StopIteration:

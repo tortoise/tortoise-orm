@@ -46,7 +46,7 @@ as argument
 
 0.8.0
 -----
-- Added postgres ``JSONField``
+- Added PostgreSQL ``JSONField``
 
 0.7.0
 -----

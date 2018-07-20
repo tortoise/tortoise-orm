@@ -7,7 +7,7 @@ from tortoise.exceptions import ParamsError
 try:
     from contextvars import ContextVar
 except ImportError:
-    from aiocontextvars import ContextVar
+    from aiocontextvars import ContextVar  # type: ignore
 
 current_connection = ContextVar('current_connection', default=None)  # type: ContextVar
 
@@ -25,7 +25,7 @@ def _get_connection(connection_name: Optional[str]) -> BaseDBAsyncClient:
     return connection
 
 
-def in_transaction(connection_name: str = None) -> BaseTransactionWrapper:
+def in_transaction(connection_name: Optional[str] = None) -> BaseTransactionWrapper:
     """
     Transaction context manager.
     You can run your code inside ``async with in_transaction():`` statement to run it
@@ -38,7 +38,7 @@ def in_transaction(connection_name: str = None) -> BaseTransactionWrapper:
     return single_connection
 
 
-def atomic(connection_name: str = None) -> Callable:
+def atomic(connection_name: Optional[str] = None) -> Callable:
     """
     Transaction decorator.
     You can wrap your function with this decorator to run it into one transaction.
@@ -59,7 +59,7 @@ def atomic(connection_name: str = None) -> Callable:
     return wrapper
 
 
-async def start_transaction(connection_name: str = None) -> BaseTransactionWrapper:
+async def start_transaction(connection_name: Optional[str] = None) -> BaseTransactionWrapper:
     """
         Function to manually control your transaction.
         Returns transaction object with ``.rollback()`` and ``.commit()`` methods.

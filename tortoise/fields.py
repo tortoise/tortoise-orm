@@ -283,7 +283,7 @@ class ManyToManyField(Field):
         model_name: str,
         through: Optional[str] = None,
         forward_key: Optional[str] = None,
-        backward_key: Optional[str] = None,
+        backward_key: str = '',
         related_name: Optional[str] = None,
         **kwargs
     ) -> None:
