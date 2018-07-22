@@ -11,17 +11,32 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         self.FK_TEMPLATE = ' REFERENCES `{table}` (`id`) ON DELETE {on_delete}'
         self.M2M_TABLE_TEMPLATE = (
             'CREATE TABLE `{table_name}` '
-            '(`{backward_key}` INT NOT NULL REFERENCES `{backward_table}` (`id`) ON DELETE CASCADE, '
+            '(`{backward_key}` INT NOT NULL REFERENCES \
+              `{backward_table}` (`id`) ON DELETE CASCADE, '
             '`{forward_key}` INT NOT NULL REFERENCES `{forward_table}` (`id`) ON DELETE CASCADE);'
         )
 
         self.FIELD_TYPE_MAP.update({
             fields.FloatField: 'DOUBLE',
             fields.JSONField: 'JSON',
-            fields.DatetimeField: 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP',
+            fields.DatetimeField: 'TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6)',
+            fields.TextField: 'TEXT'
         })
 
         self.client = client
+
+    def _create_string(self, db_field, field_type, nullable, unique):
+        if nullable == '':
+            nullable += 'NULL DEFAULT NULL'
+
+        field_creation_string = self.FIELD_TEMPLATE.format(
+            name=db_field,
+            type=field_type,
+            nullable=nullable,
+            unique=unique,
+        ).strip()
+
+        return field_creation_string
 
     def _get_primary_key_create_string(self, field_name):
         return "`{}` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT".format(field_name)

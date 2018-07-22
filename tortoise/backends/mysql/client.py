@@ -1,4 +1,5 @@
 import logging
+import re
 
 import aiomysql
 import pymysql
@@ -26,7 +27,7 @@ class MySQLClient(BaseDBAsyncClient):
         super().__init__(*args, **kwargs)
 
         self.host = host
-        self.port = int(port) #make sure port is int type
+        self.port = int(port)  # make sure port is int type
         self.user = user
         self.password = password
         self.database = database
@@ -105,8 +106,12 @@ class MySQLClient(BaseDBAsyncClient):
             return self._transaction_class(pool=self._db_pool)
 
     async def execute_query(self, query):
-        mysql_query = query.replace("\"", "`")
-
+        mysql_query = query.replace('\"', '`')
+        r = re.search(r'(.*)(\{.*\})(.*)', mysql_query)
+        if r:
+            mysql_query = r.group(1) \
+                        + r.group(2).replace('`', '"') \
+                        + r.group(3)
         try:
             async with self.acquire_connection() as connection:
                 async with connection.cursor(aiomysql.DictCursor) as cursor:
@@ -114,7 +119,7 @@ class MySQLClient(BaseDBAsyncClient):
 
                     affected_row = await cursor.execute(mysql_query)
 
-                    if "SELECT" in mysql_query or "select" in mysql_query:
+                    if "SELECT" in query or "select" in query:
                         result = await cursor.fetchall()
                         return result
 
@@ -123,15 +128,22 @@ class MySQLClient(BaseDBAsyncClient):
 
         except pymysql.err.OperationalError as exc:
             OperationalError(exc)
+        except pymysql.err.ProgrammingError as exc:
+            OperationalError(exc)
         except pymysql.err.IntegrityError as exc:
             IntegrityError(exc)
 
     async def execute_script(self, script):
-        print(script)
-        async with self.acquire_connection() as connection:
-            async with connection.cursor() as cursor:
-                self.log.debug(script)
-                await cursor.execute(script)
+        try:
+            async with self.acquire_connection() as connection:
+                async with connection.cursor() as cursor:
+                    self.log.debug(script)
+                    await cursor.execute(script)
+
+        except pymysql.err.OperationalError as exc:
+            OperationalError(exc)
+        except pymysql.err.IntegrityError as exc:
+            IntegrityError(exc)
 
     async def get_single_connection(self):
         if self.single_connection:
@@ -185,8 +197,7 @@ class TransactionWrapper(MySQLClient):
     async def __aenter__(self):
         if not self._connection:
             self._connection = await self._get_connection()
-        self.transaction = self._connection
-        await self.transaction.begin()
+        self.transaction = await self._connection.begin()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -196,7 +207,6 @@ class TransactionWrapper(MySQLClient):
                 await self._pool.release(self._connection)
                 self._connection = None
             return False
-        await self.transaction.commit()
         if self._pool:
             await self._pool.release(self._connection)
             self._connection = None

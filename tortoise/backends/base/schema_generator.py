@@ -30,6 +30,18 @@ class BaseSchemaGenerator:
     def __init__(self, client):
         self.client = client
 
+    def _create_string(self, db_field, field_type, nullable, unique):
+        # children can override this function to customize thier sql queries
+
+        field_creation_string = self.FIELD_TEMPLATE.format(
+            name=db_field,
+            type=field_type,
+            nullable=nullable,
+            unique=unique,
+        ).strip()
+
+        return field_creation_string
+
     def _get_primary_key_create_string(self, field_name):
         # All databases have their unique way for autoincrement,
         # has to implement in children
@@ -56,12 +68,8 @@ class BaseSchemaGenerator:
             elif isinstance(field_object, fields.CharField):
                 field_type = field_type.format(field_object.max_length)
 
-            field_creation_string = self.FIELD_TEMPLATE.format(
-                name=db_field,
-                type=field_type,
-                nullable=nullable,
-                unique=unique,
-            ).strip()
+            field_creation_string = self._create_string(db_field, field_type, nullable, unique)
+
             if hasattr(field_object, 'reference') and field_object.reference:
                 field_creation_string += self.FK_TEMPLATE.format(
                     table=field_object.reference.type._meta.table,
@@ -71,9 +79,10 @@ class BaseSchemaGenerator:
             fields_to_create.append(field_creation_string)
 
         table_fields_string = ', '.join(fields_to_create)
-        table_create_string = self.TABLE_CREATE_TEMPLATE.format(model._meta.table,
-                                                                table_fields_string,
-                                                                )
+        table_create_string = self.TABLE_CREATE_TEMPLATE.format(
+            model._meta.table,
+            table_fields_string,
+        )
 
         for m2m_field in model._meta.m2m_fields:
             field_object = model._meta.fields_map[m2m_field]
