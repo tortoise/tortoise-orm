@@ -95,7 +95,7 @@ class MySQLClient(BaseDBAsyncClient):
 
     def acquire_connection(self):
         if not self.single_connection:
-            return self._db_pool.acquire()
+            return self._db_pool.acquire() 
         else:
             return ConnectionWrapper(self._connection)
 
@@ -112,6 +112,7 @@ class MySQLClient(BaseDBAsyncClient):
             mysql_query = r.group(1) \
                         + r.group(2).replace('`', '"') \
                         + r.group(3)
+
         try:
             async with self.acquire_connection() as connection:
                 async with connection.cursor(aiomysql.DictCursor) as cursor:
@@ -122,28 +123,22 @@ class MySQLClient(BaseDBAsyncClient):
                     if "SELECT" in query or "select" in query:
                         result = await cursor.fetchall()
                         return result
-
-                    await connection.commit()
+                    
+                    await self._commit(connection)
                     return affected_row
 
         except pymysql.err.OperationalError as exc:
-            OperationalError(exc)
+            raise OperationalError(exc)
         except pymysql.err.ProgrammingError as exc:
-            OperationalError(exc)
+            raise OperationalError(exc)
         except pymysql.err.IntegrityError as exc:
-            IntegrityError(exc)
+            raise IntegrityError(exc)
 
     async def execute_script(self, script):
-        try:
-            async with self.acquire_connection() as connection:
-                async with connection.cursor() as cursor:
-                    self.log.debug(script)
-                    await cursor.execute(script)
-
-        except pymysql.err.OperationalError as exc:
-            OperationalError(exc)
-        except pymysql.err.IntegrityError as exc:
-            IntegrityError(exc)
+        async with self.acquire_connection() as connection:
+            async with connection.cursor() as cursor:
+                self.log.debug(script)
+                await cursor.execute(script)
 
     async def get_single_connection(self):
         if self.single_connection:
@@ -156,6 +151,8 @@ class MySQLClient(BaseDBAsyncClient):
         if not self.single_connection:
             await self._db_pool.release(single_connection.connection)
 
+    async def _commit(self, connection):
+        await connection.commit()
 
 class TransactionWrapper(MySQLClient):
     def __init__(self, pool=None, connection=None):
@@ -179,8 +176,7 @@ class TransactionWrapper(MySQLClient):
     async def start(self):
         if not self._connection:
             self._connection = await self._get_connection()
-        self.transaction = self._connection
-        await self.transaction.begin()
+        await self._connection.begin() 
 
     async def commit(self):
         await self.transaction.commit()
@@ -197,16 +193,20 @@ class TransactionWrapper(MySQLClient):
     async def __aenter__(self):
         if not self._connection:
             self._connection = await self._get_connection()
-        self.transaction = await self._connection.begin()
+        await self._connection.begin()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         if exc_type:
-            await self.transaction.rollback()
+            await self._connection.rollback()
             if self._pool:
                 await self._pool.release(self._connection)
                 self._connection = None
             return False
+        await self._connection.commit()
         if self._pool:
             await self._pool.release(self._connection)
             self._connection = None
+
+    async def _commit(self, connection):
+        pass
