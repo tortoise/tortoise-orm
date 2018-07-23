@@ -6,10 +6,6 @@ python:
 env:
   - TORTOISE_TEST_DB="sqlite:///tmp/test-{}.sqlite"
   - TORTOISE_TEST_DB="postgres://postgres:@127.0.0.1:5432/test_{}"
-matrix:
-  allow_failures:
-  - python: 3.7
-    env: TORTOISE_TEST_DB="sqlite:///tmp/test-{}.sqlite"
 dist: xenial
 sudo: required
 addons:

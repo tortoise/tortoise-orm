@@ -22,9 +22,12 @@ class TestRelations(test.TestCase):
         teamids = []
         async for team in event.participants:
             teamids.append(team.id)
-        self.assertEqual(teamids, [1, 2])
+        self.assertEqual(teamids, [participants[0].id, participants[1].id])
 
-        self.assertEqual([team.id for team in event.participants], [1, 2])
+        self.assertEqual(
+            [team.id for team in event.participants],
+            [participants[0].id, participants[1].id]
+        )
 
         self.assertEqual(event.participants[0].id, participants[0].id)
 

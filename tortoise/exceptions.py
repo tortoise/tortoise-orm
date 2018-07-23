@@ -1,5 +1,6 @@
-__all__ = ('BaseORMException', 'FieldError', 'ConfigurationError', 'OperationalError',
-           'IntegrityError', 'NoValuesFetched', 'MultipleObjectsReturned', 'DoesNotExist')
+__all__ = ('BaseORMException', 'FieldError', 'ConfigurationError', 'TransactionManagementError',
+           'OperationalError', 'IntegrityError', 'NoValuesFetched', 'MultipleObjectsReturned',
+           'DoesNotExist')
 
 
 class BaseORMException(Exception):
@@ -26,6 +27,13 @@ class ParamsError(BaseORMException):
 class ConfigurationError(BaseORMException):
     """
     The ConfigurationError exception is raised when the configuration of the ORM is invalid.
+    """
+    pass
+
+
+class TransactionManagementError(BaseORMException):
+    """
+    The TransactionManagementError is raised when any transaction error occurs.
     """
     pass
 

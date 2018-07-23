@@ -37,6 +37,8 @@ lint: deps
 
 test: deps
 	green
+	coverage run -a -m tortoise.tests.inittest
+	coverage report
 
 ci: check test
 
