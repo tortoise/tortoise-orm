@@ -69,7 +69,9 @@ Further, let's take a look at created fields for models
 
     id = fields.IntField(pk=True)
 
-This code defines integer primary key for table. Sadly, currently only simple integer pk is supported.
+This code defines integer primary key for table.
+If you don't define a primary key, we will create a Integer primary key with name of ``id`` for you.
+Sadly, currently only simple integer primary key is supported.
 
 .. code-block:: python3
 
