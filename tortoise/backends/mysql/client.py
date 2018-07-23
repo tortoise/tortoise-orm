@@ -95,7 +95,7 @@ class MySQLClient(BaseDBAsyncClient):
 
     def acquire_connection(self):
         if not self.single_connection:
-            return self._db_pool.acquire() 
+            return self._db_pool.acquire()
         else:
             return ConnectionWrapper(self._connection)
 
@@ -123,7 +123,7 @@ class MySQLClient(BaseDBAsyncClient):
                     if "SELECT" in query or "select" in query:
                         result = await cursor.fetchall()
                         return result
-                    
+
                     await self._commit(connection)
                     return affected_row
 
@@ -154,6 +154,7 @@ class MySQLClient(BaseDBAsyncClient):
     async def _commit(self, connection):
         await connection.commit()
 
+
 class TransactionWrapper(MySQLClient):
     def __init__(self, pool=None, connection=None):
         if pool and connection:
@@ -176,16 +177,16 @@ class TransactionWrapper(MySQLClient):
     async def start(self):
         if not self._connection:
             self._connection = await self._get_connection()
-        await self._connection.begin() 
+        await self._connection.begin()
 
     async def commit(self):
-        await self.transaction.commit()
+        await self._connection.commit()
         if self._pool:
             await self._pool.release(self._connection)
             self._connection = None
 
     async def rollback(self):
-        await self.transaction.rollback()
+        await self._connection.rollback()
         if self._pool:
             await self._pool.release(self._connection)
             self._connection = None
