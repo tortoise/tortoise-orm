@@ -9,13 +9,13 @@ class QueryAsyncIterator:
         self._callback = callback
 
     def __aiter__(self):
-        return self
+        return self  # pragma: nocoverage
 
     async def __anext__(self):
         if self.sequence is None:
             self.sequence = await self.query
             self._sequence_iterator = self.sequence.__iter__()
-            if self._callback:
+            if self._callback:  # pragma: no branch
                 await self._callback(self)
         try:
             return next(self._sequence_iterator)

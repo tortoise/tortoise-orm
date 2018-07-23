@@ -11,9 +11,9 @@ class TestBasic(test.TestCase):
         await Tournament(name='Test 2').save()
         self.assertEqual(
             await Tournament.all().values_list('id', flat=True),
-            [1, 2]
+            [event.id, event.id + 1]
         )
         self.assertEqual(
             await Tournament.all().values('id', 'name'),
-            [{'id': 1, 'name': 'Updated name'}, {'id': 2, 'name': 'Test 2'}]
+            [{'id': event.id, 'name': 'Updated name'}, {'id': event.id + 1, 'name': 'Test 2'}]
         )
