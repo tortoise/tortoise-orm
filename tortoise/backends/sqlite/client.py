@@ -4,7 +4,8 @@ import sqlite3
 
 import aiosqlite
 
-from tortoise.backends.base.client import BaseDBAsyncClient, BaseTransactionWrapper
+from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWrapper,
+                                           ConnectionWrapper)
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
 from tortoise.exceptions import IntegrityError, OperationalError, TransactionManagementError
@@ -24,7 +25,7 @@ class SqliteClient(BaseDBAsyncClient):
         self._connection = None
 
     async def create_connection(self):
-        if not self._connection:
+        if not self._connection:  # pragma: no branch
             self._connection = aiosqlite.connect(self.filename)
             self._connection.start()
             await self._connection._connect()
@@ -41,11 +42,11 @@ class SqliteClient(BaseDBAsyncClient):
         await self.close()
         try:
             os.remove(self.filename)
-        except FileNotFoundError:
+        except FileNotFoundError:  # pragma: nocoverage
             pass
 
     def acquire_connection(self):
-        return self._connection
+        return ConnectionWrapper(self._connection)
 
     def _in_transaction(self):
         return self._transaction_class(connection=self._connection)
@@ -53,15 +54,15 @@ class SqliteClient(BaseDBAsyncClient):
     async def execute_query(self, query, get_inserted_id=False):
         self.log.debug(query)
         try:
-            connection = self._connection
-            connection._conn.row_factory = sqlite3.Row
-            cursor = await connection.execute(query)
-            results = await cursor.fetchall()
-            if get_inserted_id:
-                await cursor.execute('SELECT last_insert_rowid()')
-                inserted_id = await cursor.fetchone()
-                return inserted_id
-            return [dict(row) for row in results]
+            async with self.acquire_connection() as connection:
+                connection._conn.row_factory = sqlite3.Row
+                cursor = await connection.execute(query)
+                results = await cursor.fetchall()
+                if get_inserted_id:
+                    await cursor.execute('SELECT last_insert_rowid()')
+                    inserted_id = await cursor.fetchone()
+                    return inserted_id
+                return [dict(row) for row in results]
         except sqlite3.OperationalError as exc:
             raise OperationalError(exc)
         except sqlite3.IntegrityError as exc:
@@ -91,7 +92,7 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         try:
             await self._connection.commit()
             await self._connection.execute('BEGIN')
-        except sqlite3.OperationalError as exc:
+        except sqlite3.OperationalError as exc:  # pragma: nocoverage
             raise TransactionManagementError(exc)
         self._old_context_value = current_connection.get()
         current_connection.set(self)
@@ -100,20 +101,14 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         if self._finalized:
             raise TransactionManagementError('Transaction already finalised')
         self._finalized = True
-        try:
-            await self._connection.rollback()
-        except sqlite3.OperationalError as exc:
-            raise TransactionManagementError(exc)
+        await self._connection.rollback()
         current_connection.set(self._old_context_value)
 
     async def commit(self):
         if self._finalized:
             raise TransactionManagementError('Transaction already finalised')
         self._finalized = True
-        try:
-            await self._connection.commit()
-        except sqlite3.OperationalError as exc:
-            raise TransactionManagementError(exc)
+        await self._connection.commit()
         current_connection.set(self._old_context_value)
 
     async def __aenter__(self):
