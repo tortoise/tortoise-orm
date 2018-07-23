@@ -21,9 +21,10 @@ Mark test as expecting failiure.
 On success it will be marked as unexpected success.
 """
 
-_CONFIG = {}
-_APPS = {}
-_CONNECTIONS = {}
+_CONFIG = {}  # type: dict
+_APPS = {}  # type: dict
+_CONNECTIONS = {}  # type: dict
+
 
 def getDBConfig(app_label: str, model_modules: List[str]) -> dict:
     """

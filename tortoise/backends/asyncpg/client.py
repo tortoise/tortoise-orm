@@ -8,7 +8,7 @@ from tortoise.backends.asyncpg.schema_generator import AsyncpgSchemaGenerator
 from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWrapper,
                                            ConnectionWrapper, SingleConnectionWrapper)
 from tortoise.exceptions import (ConfigurationError, DBConnectionError, IntegrityError,
-                                 OperationalError)
+                                 OperationalError, TransactionManagementError)
 from tortoise.transactions import current_connection
 
 
@@ -165,37 +165,31 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         current_connection.set(self)
 
     async def commit(self):
-        await self.transaction.commit()
+        try:
+            await self.transaction.commit()
+        except asyncpg.exceptions._base.InterfaceError as exc:
+            raise TransactionManagementError(exc)
         if self._pool:
             await self._pool.release(self._connection)
             self._connection = None
         current_connection.set(self._old_context_value)
 
     async def rollback(self):
-        await self.transaction.rollback()
+        try:
+            await self.transaction.rollback()
+        except asyncpg.exceptions._base.InterfaceError as exc:
+            raise TransactionManagementError(exc)
         if self._pool:
             await self._pool.release(self._connection)
             self._connection = None
         current_connection.set(self._old_context_value)
 
     async def __aenter__(self):
-        self._old_context_value = current_connection.get()
-        current_connection.set(self)
-        if not self._connection:
-            self._connection = await self._get_connection()
-        self.transaction = self._connection.transaction()
-        await self.transaction.start()
+        await self.start()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        current_connection.set(self._old_context_value)
         if exc_type:
-            await self.transaction.rollback()
-            if self._pool:
-                await self._pool.release(self._connection)
-                self._connection = None
-            return False
-        await self.transaction.commit()
-        if self._pool:
-            await self._pool.release(self._connection)
-            self._connection = None
+            await self.rollback()
+        else:
+            await self.commit()

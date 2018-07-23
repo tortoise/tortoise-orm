@@ -8,7 +8,7 @@ from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWra
                                            ConnectionWrapper, SingleConnectionWrapper)
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
-from tortoise.exceptions import IntegrityError, OperationalError
+from tortoise.exceptions import IntegrityError, OperationalError, TransactionManagementError
 from tortoise.transactions import current_connection
 
 
@@ -25,61 +25,63 @@ class SqliteClient(BaseDBAsyncClient):
         self._single_connection_class = type(
             'SingleConnectionWrapper', (SingleConnectionWrapper, self.__class__), {}
         )
+        self._connection = None
 
     async def create_connection(self):
-        pass
+        if not self._connection:
+            self._connection = aiosqlite.connect(self.filename)
+            self._connection.start()
+            await self._connection._connect()
 
     async def close(self):
-        pass
+        if self._connection:
+            await self._connection.close()
+            self._connection = None
 
     async def db_create(self):
-        if os.path.isfile(self.filename):
-            raise OperationalError('DB cannot be created, as it already exists.')
+        pass
 
     async def db_delete(self):
+        await self.close()
         try:
             os.remove(self.filename)
         except FileNotFoundError:
             pass
 
     def acquire_connection(self):
-        connection = aiosqlite.connect(self.filename)
-        return connection
+        return self._connection
 
     def _in_transaction(self):
-        return self._transaction_class(connection=aiosqlite.connect(self.filename))
+        return self._transaction_class(connection=self._connection)
 
     async def execute_query(self, query, get_inserted_id=False):
         self.log.debug(query)
         try:
-            async with self.acquire_connection() as connection:
-                connection._conn.row_factory = sqlite3.Row
-                cursor = await connection.execute(query)
-                await self._commit(connection)
-                results = await cursor.fetchall()
-                if get_inserted_id:
-                    await cursor.execute('SELECT last_insert_rowid()')
-                    inserted_id = await cursor.fetchone()
-                    return inserted_id
-                return [dict(row) for row in results]
+            connection = self._connection
+            connection._conn.row_factory = sqlite3.Row
+            cursor = await connection.execute(query)
+            await self._commit(connection)
+            results = await cursor.fetchall()
+            if get_inserted_id:
+                await cursor.execute('SELECT last_insert_rowid()')
+                inserted_id = await cursor.fetchone()
+                return inserted_id
+            return [dict(row) for row in results]
         except sqlite3.OperationalError as exc:
             raise OperationalError(exc)
         except sqlite3.IntegrityError as exc:
             raise IntegrityError(exc)
 
     async def execute_script(self, script):
-        async with self.acquire_connection() as connection:
-            self.log.debug(script)
-            await connection.executescript(script)
+        connection = self._connection
+        self.log.debug(script)
+        await connection.executescript(script)
 
     async def get_single_connection(self):
-        connection = aiosqlite.connect(self.filename)
-        connection.start()
-        await connection._connect()
-        return self._single_connection_class(connection)
+        return self
 
     async def release_single_connection(self, single_connection):
-        await single_connection.connection.close()
+        pass
 
     async def _commit(self, connection):
         await connection.commit()
@@ -95,47 +97,54 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         )
         self._transaction_class = self.__class__
         self._old_context_value = None
+        self._finalized = False
 
     def acquire_connection(self):
         return ConnectionWrapper(self._connection)
 
     async def get_single_connection(self):
-        return self._single_connection_class(self._connection, self)
+        return self
 
     async def release_single_connection(self, single_connection):
         pass
 
     async def start(self):
-        self._connection.start()
-        await self._connection._connect()
+        try:
+            await self._connection.execute('BEGIN')
+        except sqlite3.OperationalError as exc:
+            raise TransactionManagementError(exc)
         self._old_context_value = current_connection.get()
         current_connection.set(self)
 
     async def rollback(self):
-        await self._connection.rollback()
-        await self._connection.close()
+        if self._finalized:
+            raise TransactionManagementError('Transaction already finalised')
+        self._finalized = True
+        try:
+            await self._connection.rollback()
+        except sqlite3.OperationalError as exc:
+            raise TransactionManagementError(exc)
         current_connection.set(self._old_context_value)
 
     async def commit(self):
-        await self._connection.commit()
-        await self._connection.close()
+        if self._finalized:
+            raise TransactionManagementError('Transaction already finalised')
+        self._finalized = True
+        try:
+            await self._connection.commit()
+        except sqlite3.OperationalError as exc:
+            raise TransactionManagementError(exc)
         current_connection.set(self._old_context_value)
 
     async def __aenter__(self):
-        self._connection.start()
-        await self._connection._connect()
-        self._old_context_value = current_connection.get()
-        current_connection.set(self)
+        await self.start()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        current_connection.set(self._old_context_value)
         if exc_type:
-            await self._connection.rollback()
-            await self._connection.close()
-            return False
-        await self._connection.commit()
-        await self._connection.close()
+            await self.rollback()
+        else:
+            await self.commit()
 
     async def _commit(self, connection):
         pass
