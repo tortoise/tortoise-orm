@@ -42,7 +42,7 @@ async def _init_db(config):
     try:
         await Tortoise.init(config)
         await Tortoise._drop_databases()
-    except DBConnectionError as exc:
+    except DBConnectionError as exc:  # pragma: nocoverage
         pass
 
     await Tortoise.init(config, _create_db=True)
