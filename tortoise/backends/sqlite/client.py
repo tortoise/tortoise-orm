@@ -4,8 +4,7 @@ import sqlite3
 
 import aiosqlite
 
-from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWrapper,
-                                           ConnectionWrapper, SingleConnectionWrapper)
+from tortoise.backends.base.client import BaseDBAsyncClient, BaseTransactionWrapper
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
 from tortoise.exceptions import IntegrityError, OperationalError, TransactionManagementError
@@ -21,9 +20,6 @@ class SqliteClient(BaseDBAsyncClient):
         self.filename = file_path
         self._transaction_class = type(
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
-        )
-        self._single_connection_class = type(
-            'SingleConnectionWrapper', (SingleConnectionWrapper, self.__class__), {}
         )
         self._connection = None
 
@@ -60,7 +56,6 @@ class SqliteClient(BaseDBAsyncClient):
             connection = self._connection
             connection._conn.row_factory = sqlite3.Row
             cursor = await connection.execute(query)
-            await self._commit(connection)
             results = await cursor.fetchall()
             if get_inserted_id:
                 await cursor.execute('SELECT last_insert_rowid()')
@@ -83,33 +78,18 @@ class SqliteClient(BaseDBAsyncClient):
     async def release_single_connection(self, single_connection):
         pass
 
-    async def _commit(self, connection):
-        await connection.commit()
-
 
 class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
     def __init__(self, connection):
         self._connection = connection
         self.log = logging.getLogger('db_client')
-        self.single_connection = True
-        self._single_connection_class = type(
-            'SingleConnectionWrapper', (SingleConnectionWrapper, self.__class__), {}
-        )
         self._transaction_class = self.__class__
         self._old_context_value = None
         self._finalized = False
 
-    def acquire_connection(self):
-        return ConnectionWrapper(self._connection)
-
-    async def get_single_connection(self):
-        return self
-
-    async def release_single_connection(self, single_connection):
-        pass
-
     async def start(self):
         try:
+            await self._connection.commit()
             await self._connection.execute('BEGIN')
         except sqlite3.OperationalError as exc:
             raise TransactionManagementError(exc)
@@ -145,6 +125,3 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
             await self.rollback()
         else:
             await self.commit()
-
-    async def _commit(self, connection):
-        pass

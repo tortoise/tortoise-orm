@@ -34,14 +34,11 @@ class TestTransactions(test.IsolatedTestCase):
             saved_event = await Tournament.filter(name='Updated name').first()
             self.assertEqual(saved_event.id, tournament.id)
             with self.assertRaises(SomeException):
-                try:
-                    async with in_transaction():
-                        tournament = await Tournament.create(name='Nested')
-                        saved_tournament = await Tournament.filter(name='Nested').first()
-                        self.assertEqual(tournament.id, saved_tournament.id)
-                        raise SomeException('Some error')
-                except TransactionManagementError:
-                    raise test.SkipTest('Nested transactions not supported by SQLite build')
+                async with in_transaction():
+                    tournament = await Tournament.create(name='Nested')
+                    saved_tournament = await Tournament.filter(name='Nested').first()
+                    self.assertEqual(tournament.id, saved_tournament.id)
+                    raise SomeException('Some error')
 
         saved_event = await Tournament.filter(name='Updated name').first()
         self.assertIsNotNone(saved_event)
