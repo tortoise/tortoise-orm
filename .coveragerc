@@ -2,6 +2,9 @@
 branch = True
 source =
     tortoise
+omit =
+    tortoise/contrib/pylint/*
+    tortoise/tests/*
 [report]
 show_missing = True
 

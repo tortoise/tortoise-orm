@@ -9,11 +9,11 @@ class TestTwoDatabases(test.SimpleTestCase):
     async def setUp(self):
         if Tortoise._inited:
             await self._tearDownDB()
-        first_db_config = self.getDBConfig(
+        first_db_config = test.getDBConfig(
             app_label='models',
             model_modules=['tortoise.tests.testmodels'],
         )
-        second_db_config = self.getDBConfig(
+        second_db_config = test.getDBConfig(
             app_label='events',
             model_modules=['tortoise.tests.testmodels'],
         )
