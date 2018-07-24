@@ -8,17 +8,30 @@ from tortoise.exceptions import ConfigurationError
 
 
 class TestInitErrors(test.SimpleTestCase):
-    async def test_basic_init(self):
-        db_file_path = os.path.join(
+    async def setUp(self):
+        try:
+            await Tortoise._reset_connections()
+        except ConfigurationError:
+            pass
+        Tortoise._inited = False
+        self.db_file_path = os.path.join(
             tempfile.gettempdir(),
             "test_{}.sqlite3".format(uuid.uuid4().hex)
         )
+
+    async def tearDown(self):
+        try:
+            await Tortoise._reset_connections()
+        except ConfigurationError:
+            pass
+
+    async def test_basic_init(self):
         await Tortoise.init({
             "connections": {
                 "default": {
                     "engine": "tortoise.backends.sqlite",
                     "credentials": {
-                        "file_path": db_file_path,
+                        "file_path": self.db_file_path,
                     }
                 }
             },
@@ -31,14 +44,56 @@ class TestInitErrors(test.SimpleTestCase):
                 }
             }
         })
-        self.assertTrue('models' in Tortoise.apps)
+        self.assertIn('models', Tortoise.apps)
+        self.assertIsNotNone(Tortoise.get_connection('default'))
+
+    async def test_default_connection_init(self):
+        await Tortoise.init({
+            "connections": {
+                "default": {
+                    "engine": "tortoise.backends.sqlite",
+                    "credentials": {
+                        "file_path": self.db_file_path,
+                    }
+                }
+            },
+            "apps": {
+                "models": {
+                    "models": [
+                        "tortoise.tests.testmodels",
+                    ]
+                }
+            }
+        })
+        self.assertIn('models', Tortoise.apps)
+        self.assertIsNotNone(Tortoise.get_connection('default'))
+
+    async def test_db_url_init(self):
+        await Tortoise.init({
+            "connections": {
+                "default": "sqlite://{}".format(self.db_file_path)
+            },
+            "apps": {
+                "models": {
+                    "models": [
+                        "tortoise.tests.testmodels",
+                    ],
+                    "default_connection": "default"
+                }
+            }
+        })
+        self.assertIn('models', Tortoise.apps)
+        self.assertIsNotNone(Tortoise.get_connection('default'))
+
+    async def test_shorthand_init(self):
+        await Tortoise.init(
+            db_url="sqlite://{}".format(self.db_file_path),
+            modules={'models': ["tortoise.tests.testmodels"]}
+        )
+        self.assertIn('models', Tortoise.apps)
         self.assertIsNotNone(Tortoise.get_connection('default'))
 
     async def test_init_wrong_connection_engine(self):
-        db_file_path = os.path.join(
-            tempfile.gettempdir(),
-            "test_{}.sqlite3".format(uuid.uuid4().hex)
-        )
         with self.assertRaisesRegex(
                 ConfigurationError,
                 'Backend for engine "tortoise.backends.test" not found',
@@ -48,7 +103,29 @@ class TestInitErrors(test.SimpleTestCase):
                     "default": {
                         "engine": "tortoise.backends.test",
                         "credentials": {
-                            "file_path": db_file_path
+                            "file_path": self.db_file_path
+                        }
+                    }
+                },
+                "apps": {
+                    "models": {
+                        "models": ["tortoise.tests.testmodels"],
+                        "default_connection": "default"
+                    }
+                }
+            })
+
+    async def test_init_wrong_connection_engine_2(self):
+        with self.assertRaisesRegex(
+                ConfigurationError,
+                'Backend for engine "tortoise.backends" does not implement db client',
+        ):
+            await Tortoise.init({
+                "connections": {
+                    "default": {
+                        "engine": "tortoise.backends",
+                        "credentials": {
+                            "file_path": self.db_file_path
                         }
                     }
                 },
@@ -75,10 +152,6 @@ class TestInitErrors(test.SimpleTestCase):
             })
 
     async def test_init_no_apps(self):
-        db_file_path = os.path.join(
-            tempfile.gettempdir(),
-            "test_{}.sqlite3".format(uuid.uuid4().hex)
-        )
         with self.assertRaisesRegex(
                 ConfigurationError,
                 'Config must define "apps" section',
@@ -88,20 +161,16 @@ class TestInitErrors(test.SimpleTestCase):
                     "default": {
                         "engine": "tortoise.backends.sqlite",
                         "credentials": {
-                            "file_path": db_file_path,
+                            "file_path": self.db_file_path,
                         }
                     }
                 },
             })
 
     async def test_init_config_and_config_file(self):
-        db_file_path = os.path.join(
-            tempfile.gettempdir(),
-            "test_{}.sqlite3".format(uuid.uuid4().hex)
-        )
         with self.assertRaisesRegex(
                 ConfigurationError,
-                'You should init either from "config" or "config_file"',
+                'You should init either from "config", "config_file" or "db_url"',
         ):
             await Tortoise.init(
                 {
@@ -109,7 +178,7 @@ class TestInitErrors(test.SimpleTestCase):
                         "default": {
                             "engine": "tortoise.backends.sqlite",
                             "credentials": {
-                                "file_path": db_file_path
+                                "file_path": self.db_file_path
                             }
                         }
                     },
@@ -129,3 +198,51 @@ class TestInitErrors(test.SimpleTestCase):
                 'Unknown config extension .ini, only .yml and .json are supported',
         ):
             await Tortoise.init(config_file='config.ini')
+
+    async def test_init_json_file(self):
+        await Tortoise.init(config_file=os.path.dirname(__file__) + '/init.json')
+        self.assertIn('models', Tortoise.apps)
+        self.assertIsNotNone(Tortoise.get_connection('default'))
+
+    async def test_init_yaml_file(self):
+        await Tortoise.init(config_file=os.path.dirname(__file__) + '/init.yaml')
+        self.assertIn('models', Tortoise.apps)
+        self.assertIsNotNone(Tortoise.get_connection('default'))
+
+    async def test_generate_schema_without_init(self):
+        with self.assertRaisesRegex(
+            ConfigurationError,
+            'You have to call \.init\(\) first before generating schemas'
+        ):
+            await Tortoise.generate_schemas()
+
+    async def test_drop_databases_without_init(self):
+        with self.assertRaisesRegex(
+            ConfigurationError,
+            'You have to call \.init\(\) first before deleting schemas'
+        ):
+            await Tortoise._drop_databases()
+
+    async def test_bad_models(self):
+        with self.assertRaisesRegex(
+            ConfigurationError,
+            'Module "tortoise.tests.testmodels2" not found'
+        ):
+            await Tortoise.init({
+                "connections": {
+                    "default": {
+                        "engine": "tortoise.backends.sqlite",
+                        "credentials": {
+                            "file_path": self.db_file_path,
+                        }
+                    }
+                },
+                "apps": {
+                    "models": {
+                        "models": [
+                            "tortoise.tests.testmodels2",
+                        ],
+                        "default_connection": "default"
+                    }
+                }
+            })

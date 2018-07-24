@@ -1,6 +1,6 @@
 import urllib.parse as urlparse
 import uuid
-from typing import Any, Dict, List  # noqa
+from typing import Any, Dict, List, Optional  # noqa
 
 from tortoise.exceptions import ConfigurationError
 
@@ -27,12 +27,7 @@ DB_LOOKUP = {
 }  # type: Dict[str, Dict[str, Any]]
 
 
-def generate_config(
-        db_url: str,
-        model_modules: List[str],
-        app_label: str,
-        testing: bool = False,
-) -> dict:
+def expand_db_url(db_url: str, testing: bool = False) -> dict:
     url = urlparse.urlparse(db_url)
     if url.scheme not in DB_LOOKUP:
         raise ConfigurationError('Unknown DB scheme: {}'.format(url.scheme))
@@ -71,16 +66,27 @@ def generate_config(
         params[vars['password']] = str(url.password or '')
 
     return {
+        'engine': db['engine'],
+        'credentials': params,
+    }
+
+
+def generate_config(
+        db_url: str,
+        app_modules: Dict[str, List[str]],
+        connection_label: Optional[str] = None,
+        testing: bool = False,
+) -> dict:
+    _connection_label = connection_label or 'default'
+    return {
         'connections': {
-            app_label: {
-                'engine': db['engine'],
-                'credentials': params,
-            }
+            _connection_label: expand_db_url(db_url, testing)
         },
         'apps': {
             app_label: {
-                'models': model_modules,
-                'default_connection': app_label,
-            },
+                'models': modules,
+                'default_connection': _connection_label,
+            }
+            for app_label, modules in app_modules.items()
         }
     }

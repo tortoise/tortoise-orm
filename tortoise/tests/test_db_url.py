@@ -1,195 +1,205 @@
-from tortoise.backends.base.config_generator import generate_config
+from tortoise.backends.base.config_generator import expand_db_url, generate_config
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 
 
-class TestConfigGenerate(test.SimpleTestCase):
+class TestConfigGenerator(test.SimpleTestCase):
 
     def test_unknown_scheme(self):
         with self.assertRaises(ConfigurationError):
-            generate_config(
-                db_url='moo://baa',
-                model_modules=['tortoise.tests.testmodels'],
-                app_label='models',
-            )
+            expand_db_url('moo://baa')
 
     def test_sqlite_basic(self):
-        res = generate_config(
-            db_url='sqlite:///tmp/test.sqlite',
-            model_modules=['tortoise.tests.testmodels'],
-            app_label='models',
-        )
+        res = expand_db_url('sqlite:///some/test.sqlite')
         self.assertDictEqual(res, {
-            'connections': {
-                'models': {
-                    'engine': 'tortoise.backends.sqlite',
-                    'credentials': {
-                        'file_path': '/tmp/test.sqlite',  # nosec
-                    }
-                },
-            },
-            'apps': {
-                'models': {
-                    'models': ['tortoise.tests.testmodels'],
-                    'default_connection': 'models',
-                }
-            },
+            'engine': 'tortoise.backends.sqlite',
+            'credentials': {
+                'file_path': '/some/test.sqlite',
+            }
         })
 
     def test_sqlite_testing(self):
-        res = generate_config(
-            db_url='sqlite:///tmp/test-{}.sqlite',
+        res = expand_db_url(
+            db_url='sqlite:///some/test-{}.sqlite',
             testing=True,
-            model_modules=['tortoise.tests.testmodels'],
-            app_label='models',
         )
-        file_path = res['connections']['models']['credentials']['file_path']
-        self.assertIn('/tmp/test-', file_path)  # nosec
+        file_path = res['credentials']['file_path']
+        self.assertIn('/some/test-', file_path)
         self.assertIn('.sqlite', file_path)
-        self.assertNotEqual('sqlite:///tmp/test-{}.sqlite', file_path)
+        self.assertNotEqual('sqlite:///some/test-{}.sqlite', file_path)
         self.assertDictEqual(res, {
-            'connections': {
-                'models': {
-                    'engine': 'tortoise.backends.sqlite',
-                    'credentials': {
-                        'file_path': file_path,
-                        'single_connection': True,
-                    }
-                },
-            },
-            'apps': {
-                'models': {
-                    'models': ['tortoise.tests.testmodels'],
-                    'default_connection': 'models',
-                }
-            },
+            'engine': 'tortoise.backends.sqlite',
+            'credentials': {
+                'file_path': file_path,
+                'single_connection': True,
+            }
         })
 
     def test_sqlite_params(self):
-        res = generate_config(
-            db_url='sqlite:///tmp/test.sqlite?AHA=5&moo=yes',
-            model_modules=['tortoise.tests.testmodels'],
-            app_label='models',
-        )
+        res = expand_db_url('sqlite:///some/test.sqlite?AHA=5&moo=yes')
         self.assertDictEqual(res, {
-            'connections': {
-                'models': {
-                    'engine': 'tortoise.backends.sqlite',
-                    'credentials': {
-                        'file_path': '/tmp/test.sqlite',  # nosec
-                        'AHA': '5',
-                        'moo': 'yes',
-                    }
-                },
-            },
-            'apps': {
-                'models': {
-                    'models': ['tortoise.tests.testmodels'],
-                    'default_connection': 'models',
-                }
-            },
+            'engine': 'tortoise.backends.sqlite',
+            'credentials': {
+                'file_path': '/some/test.sqlite',
+                'AHA': '5',
+                'moo': 'yes',
+            }
         })
 
     def test_sqlite_invalid(self):
         with self.assertRaises(ConfigurationError):
-            generate_config(
-                db_url='sqlite://',
-                model_modules=['tortoise.tests.testmodels'],
-                app_label='models',
-            )
+            expand_db_url('sqlite://')
 
     def test_postgres_basic(self):
-        res = generate_config(
-            db_url='postgres://postgres:@127.0.0.1:5432/test',
-            model_modules=['tortoise.tests.testmodels'],
-            app_label='models',
-        )
+        res = expand_db_url('postgres://postgres:@127.0.0.1:5432/test')
         self.assertDictEqual(res, {
-            'connections': {
-                'models': {
-                    'engine': 'tortoise.backends.asyncpg',
-                    'credentials': {
-                        'database': 'test',
-                        'host': '127.0.0.1',
-                        'password': '',
-                        'port': '5432',
-                        'user': 'postgres',
-                    }
-                },
-            },
-            'apps': {
-                'models': {
-                    'models': ['tortoise.tests.testmodels'],
-                    'default_connection': 'models',
-                }
-            },
+            'engine': 'tortoise.backends.asyncpg',
+            'credentials': {
+                'database': 'test',
+                'host': '127.0.0.1',
+                'password': '',
+                'port': '5432',
+                'user': 'postgres',
+            }
         })
 
     def test_postgres_nonint_port(self):
         with self.assertRaises(ConfigurationError):
-            generate_config(
-                db_url='postgres://postgres:@127.0.0.1:moo/test',
-                model_modules=['tortoise.tests.testmodels'],
-                app_label='models',
-            )
+            expand_db_url('postgres://postgres:@127.0.0.1:moo/test')
 
     def test_postgres_testing(self):
-        res = generate_config(
+        res = expand_db_url(
             db_url='postgres://postgres:@127.0.0.1:5432/test_\{\}',
             testing=True,
-            model_modules=['tortoise.tests.testmodels'],
-            app_label='models',
         )
-        database = res['connections']['models']['credentials']['database']
+        database = res['credentials']['database']
         self.assertIn('test_', database)
         self.assertNotEqual('test_{}', database)
         self.assertDictEqual(res, {
+            'engine': 'tortoise.backends.asyncpg',
+            'credentials': {
+                'database': database,
+                'host': '127.0.0.1',
+                'password': '',
+                'port': '5432',
+                'user': 'postgres',
+                'single_connection': True,
+            }
+        })
+
+    def test_postgres_params(self):
+        res = expand_db_url('postgres://postgres:@127.0.0.1:5432/test?AHA=5&moo=yes')
+        self.assertDictEqual(res, {
+            'engine': 'tortoise.backends.asyncpg',
+            'credentials': {
+                'database': 'test',
+                'host': '127.0.0.1',
+                'password': '',
+                'port': '5432',
+                'user': 'postgres',
+                'AHA': '5',
+                'moo': 'yes',
+            }
+        })
+
+    def test_generate_config_basic(self):
+        res = generate_config(
+            db_url='sqlite:///some/test.sqlite',
+            app_modules={
+                'models': [
+                    'one.models',
+                    'two.models'
+                ]
+            }
+        )
+        self.assertEqual(res, {
             'connections': {
-                'models': {
-                    'engine': 'tortoise.backends.asyncpg',
+                'default': {
                     'credentials': {
-                        'database': database,
-                        'host': '127.0.0.1',
-                        'password': '',
-                        'port': '5432',
-                        'user': 'postgres',
-                        'single_connection': True,
-                    }
-                },
+                        'file_path': '/some/test.sqlite'
+                    },
+                    'engine': 'tortoise.backends.sqlite'
+                }
             },
             'apps': {
                 'models': {
-                    'models': ['tortoise.tests.testmodels'],
-                    'default_connection': 'models',
+                    'models': [
+                        'one.models',
+                        'two.models'
+                    ],
+                    'default_connection': 'default'
                 }
             },
         })
 
-    def test_postgres_params(self):
+    def test_generate_config_explicit(self):
         res = generate_config(
-            db_url='postgres://postgres:@127.0.0.1:5432/test?AHA=5&moo=yes',
-            model_modules=['tortoise.tests.testmodels'],
-            app_label='models',
+            db_url='sqlite:///some/test.sqlite',
+            app_modules={
+                'models': [
+                    'one.models',
+                    'two.models'
+                ]
+            },
+            connection_label='models',
+            testing=True
         )
-        self.assertDictEqual(res, {
+        self.assertEqual(res, {
             'connections': {
                 'models': {
-                    'engine': 'tortoise.backends.asyncpg',
                     'credentials': {
-                        'database': 'test',
-                        'host': '127.0.0.1',
-                        'password': '',
-                        'port': '5432',
-                        'user': 'postgres',
-                        'AHA': '5',
-                        'moo': 'yes',
-                    }
-                },
+                        'file_path': '/some/test.sqlite',
+                        'single_connection': True
+                    },
+                    'engine': 'tortoise.backends.sqlite'
+                }
             },
             'apps': {
                 'models': {
-                    'models': ['tortoise.tests.testmodels'],
-                    'default_connection': 'models',
+                    'models': [
+                        'one.models',
+                        'two.models'
+                    ],
+                    'default_connection': 'models'
                 }
             },
+        })
+
+    def test_generate_config_many_apps(self):
+        res = generate_config(
+            db_url='sqlite:///some/test.sqlite',
+            app_modules={
+                'models': [
+                    'one.models',
+                    'two.models'
+                ],
+                'peanuts': [
+                    'peanut.models'
+                ]
+            }
+        )
+        self.assertEqual(res, {
+            'connections': {
+                'default': {
+                    'credentials': {
+                        'file_path': '/some/test.sqlite'
+                    },
+                    'engine': 'tortoise.backends.sqlite'
+                }
+            },
+            'apps': {
+                'models': {
+                    'models': [
+                        'one.models',
+                        'two.models'
+                    ],
+                    'default_connection': 'default'
+                },
+                'peanuts': {
+                    'models': [
+                        'peanut.models'
+                    ],
+                    'default_connection': 'default'
+                }
+            }
         })

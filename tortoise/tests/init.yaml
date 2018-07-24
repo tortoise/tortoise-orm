@@ -1,0 +1,10 @@
+apps:
+  models:
+    default_connection: default
+    models:
+      - tortoise.tests.testmodels
+connections:
+  default:
+    credentials:
+      file_path: /tmp/tester.sqlite
+    engine: tortoise.backends.sqlite
