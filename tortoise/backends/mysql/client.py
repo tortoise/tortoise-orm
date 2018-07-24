@@ -1,8 +1,8 @@
 import logging
-import re
 
 import aiomysql
 import pymysql
+from pypika import MySQLQuery
 
 from tortoise.backends.base.client import (BaseDBAsyncClient, ConnectionWrapper,
                                            SingleConnectionWrapper)
@@ -12,6 +12,7 @@ from tortoise.exceptions import ConfigurationError, IntegrityError, OperationalE
 
 
 class MySQLClient(BaseDBAsyncClient):
+    query_class = MySQLQuery
     executor_class = MySQLExecutor
     schema_generator = MySQLSchemaGenerator
 
@@ -106,19 +107,12 @@ class MySQLClient(BaseDBAsyncClient):
             return self._transaction_class(pool=self._db_pool)
 
     async def execute_query(self, query):
-        mysql_query = query.replace('\"', '`')
-        r = re.search(r'(.*)(\{.*\})(.*)', mysql_query)
-        if r:
-            mysql_query = r.group(1) \
-                        + r.group(2).replace('`', '"') \
-                        + r.group(3)
-
         try:
             async with self.acquire_connection() as connection:
                 async with connection.cursor(aiomysql.DictCursor) as cursor:
-                    self.log.debug(mysql_query)
+                    self.log.debug(query)
 
-                    affected_row = await cursor.execute(mysql_query)
+                    affected_row = await cursor.execute(query)
 
                     if "SELECT" in query or "select" in query:
                         result = await cursor.fetchall()
