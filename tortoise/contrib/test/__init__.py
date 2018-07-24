@@ -1,5 +1,6 @@
 import asyncio as _asyncio
 import os as _os
+from copy import deepcopy
 from typing import List
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless  # noqa
 
@@ -60,13 +61,13 @@ def initializer():
 
     loop = _asyncio.get_event_loop()
     loop.run_until_complete(_init_db(_CONFIG))
-    _APPS = Tortoise.apps.copy()
+    _APPS = deepcopy(Tortoise.apps)
     _CONNECTIONS = Tortoise._connections.copy()
     loop.run_until_complete(Tortoise._reset_connections())
 
 
 def finalizer():
-    Tortoise.apps = _APPS.copy()
+    Tortoise.apps = deepcopy(_APPS)
     Tortoise._connections = _CONNECTIONS.copy()
     loop = _asyncio.get_event_loop()
     loop.run_until_complete(Tortoise._drop_databases())
@@ -150,7 +151,7 @@ class TestCase(SimpleTestCase):
     """
 
     async def _setUpDB(self):
-        Tortoise.apps = _APPS.copy()
+        Tortoise.apps = deepcopy(_APPS)
         Tortoise._connections = _CONNECTIONS.copy()
         await Tortoise.init(_CONFIG)
 
