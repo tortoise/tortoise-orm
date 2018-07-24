@@ -18,7 +18,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
 
         self.FIELD_TYPE_MAP.update({
             fields.FloatField: 'DOUBLE',
-            fields.DatetimeField: 'TIMESTAMP(6) DEFAULT CURRENT_TIMESTAMP(6)',
+            fields.DatetimeField: 'DATETIME(6)',
             fields.TextField: 'TEXT'
         })
 
