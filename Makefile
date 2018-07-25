@@ -1,5 +1,5 @@
 checkfiles = tortoise/ examples/ setup.py
-mypy_flags = --ignore-missing-imports --allow-untyped-decorators
+mypy_flags = --warn-unused-configs --warn-redundant-casts --ignore-missing-imports --allow-untyped-decorators
 
 help:
 	@echo  "Tortoise-ORM development makefile"

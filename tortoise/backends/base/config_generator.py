@@ -33,8 +33,6 @@ def generate_config(
         app_label: str,
         testing: bool = False,
 ) -> dict:
-    if not app_label:
-        app_label = 'models_{}'.format(uuid.uuid4().hex)
     url = urlparse.urlparse(db_url)
     if url.scheme not in DB_LOOKUP:
         raise ConfigurationError('Unknown DB scheme: {}'.format(url.scheme))
@@ -58,7 +56,7 @@ def generate_config(
         path = path.format(uuid.uuid4().hex)
 
     vars = {}  # type: dict
-    vars.update(db['vars'])  # type: ignore
+    vars.update(db['vars'])
     params[vars['path']] = path
     if vars.get('hostname'):
         params[vars['hostname']] = str(url.hostname or '')

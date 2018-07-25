@@ -2,7 +2,7 @@ import importlib
 import json
 import os
 from inspect import isclass
-from typing import Any, Dict  # noqa
+from typing import Any, Dict, Optional  # noqa
 
 from tortoise import fields
 from tortoise.exceptions import ConfigurationError  # noqa
@@ -197,8 +197,8 @@ class Tortoise:
     @classmethod
     async def init(
             cls,
-            config: dict = None,
-            config_file: str = None,
+            config: Optional[dict] = None,
+            config_file: Optional[str] = None,
             _create_db: bool = False
     ) -> None:
         """
