@@ -1,5 +1,6 @@
 from tortoise.backends.asyncpg.client import AsyncpgDBClient
 from tortoise.backends.base.db_url import expand_db_url
+from tortoise.backends.mysql.client import MySQLClient
 from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
@@ -91,6 +92,54 @@ class TestDBUrl(test.SimpleTestCase):
                 'password': '',
                 'port': '5432',
                 'user': 'postgres',
+                'AHA': '5',
+                'moo': 'yes',
+            }
+        })
+
+    def test_mysql_basic(self):
+        res = expand_db_url('mysql://root:@127.0.0.1:3306/test')
+        self.assertEqual(res, {
+            'client': MySQLClient,
+            'params': {
+                'database': 'test',
+                'host': '127.0.0.1',
+                'password': '',
+                'port': '3306',
+                'user': 'root',
+            }
+        })
+
+    def test_mysql_nonint_port(self):
+        with self.assertRaises(ConfigurationError):
+            expand_db_url('mysql://root:@127.0.0.1:moo/test')
+
+    def test_mysql_testing(self):
+        res = expand_db_url('mysql://root:@127.0.0.1:3306/test_\{\}', testing=True)
+        self.assertIn('test_', res['params']['database'])
+        self.assertNotEqual('test_{}', res['params']['database'])
+        self.assertEqual(res, {
+            'client': MySQLClient,
+            'params': {
+                'database': res['params']['database'],
+                'host': '127.0.0.1',
+                'password': '',
+                'port': '3306',
+                'user': 'root',
+                'single_connection': True,
+            }
+        })
+
+    def test_mysql_params(self):
+        res = expand_db_url('mysql://root:@127.0.0.1:3306/test?AHA=5&moo=yes')
+        self.assertEqual(res, {
+            'client': MySQLClient,
+            'params': {
+                'database': 'test',
+                'host': '127.0.0.1',
+                'password': '',
+                'port': '3306',
+                'user': 'root',
                 'AHA': '5',
                 'moo': 'yes',
             }
