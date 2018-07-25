@@ -70,19 +70,25 @@ Further, let's take a look at created fields for models
     id = fields.IntField(pk=True)
 
 This code defines integer primary key for table.
-If you don't define a primary key, we will create a Integer primary key with name of ``id`` for you.
-Sadly, currently only simple integer primary key is supported.
+
+Currently we **only** support the primary key to be called ``id``, and to be an ``IntField``.
+If you don't define a primary key, we will create a primary key of type ``IntField`` with name of ``id`` for you.
+
+Sadly, currently only simple integer primary key is supported, there is plans to enhance this in the not too distant future.
 
 .. code-block:: python3
 
     tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
-    participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
+    participants = fields.ManyToManyField('models.Team', related_name='events')
     modified = fields.DatetimeField(auto_now=True)
     prize = fields.DecimalField(max_digits=10, decimal_places=2, null=True)
 
-In event model we got some more fields, that could be interesting for us. 
-``fields.ForeignKeyField('models.Tournament', related_name='events')`` - here we create foreign key reference to tournament. We create it by referring to model by it's literal, consisting of app name and model name. `models` is default app name, but you can change it in `class Meta` with `app = 'other'`.
-``related_name`` is keyword argument, that defines field for related query on referenced models, so with that you could fetch all tournaments's events with like this:
+In event model we got some more fields, that could be interesting for us.
+
+``fields.ForeignKeyField('models.Tournament', related_name='events')``
+    Here we create foreign key reference to tournament. We create it by referring to model by it's literal, consisting of app name and model name. `models` is default app name, but you can change it in `class Meta` with `app = 'other'`.
+``related_name``
+    Is keyword argument, that defines field for related query on referenced models, so with that you could fetch all tournaments's events with like this:
 
 .. code-block:: python3
 
@@ -95,8 +101,7 @@ or like this:
     await tournament.fetch_related('events')
 
 
-Next field is ``fields.ManyToManyField('models.Team', related_name='events', through='event_team')``. It describes many to many relation to model Team.
-Here we have additional kwarg ``through`` that defines name of intermediate table.
+Next field is ``fields.ManyToManyField('models.Team', related_name='events')``. It describes many to many relation to model Team.
 
 Further we have field ``fields.DatetimeField(auto_now=True)``. Options ``auto_now`` and ``auto_now_add`` work like Django's options.
 

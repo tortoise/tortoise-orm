@@ -11,13 +11,8 @@ For ``v1.0`` that involves:
 
 * Comprehensive test suite
 * Clear and concise examples
-* Refactored ``init`` framework
 * Refactored Fields Schema generation
 * Add MySQL support
-* Transaction framework
-    * Simpler ``with atomic`` blocks to manage isolation
-* Performance work:
-    * Speed up test runner
 
 Mid-term
 ========
@@ -35,6 +30,8 @@ Here we have all the features that is slightly further our:
 * Convenience/Ease-Of-Use work:
     * Make ``DELETE`` honour ``limit`` and ``offset``
     * ``.filter(field=None)`` to work as expected
+    * Enable the use of a primary key that is not ``IntField``
+    * Enable to call the primary key something that isn't ``id``
 
 * Expand in the ``init`` framework:
     * Ability to have Management Commands
@@ -67,8 +64,6 @@ Here we have all the features that is slightly further our:
     * Define strategy to work with ``ManyToMany`` relationships
 
 * Enhanced test support
-    * Better performance for test runner
-      (use transactions/snapshots instead of always rebuilding database)
     * ``hypothesis`` strategy builder
 
 * Fields

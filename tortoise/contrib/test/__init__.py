@@ -51,6 +51,9 @@ async def _init_db(config):
 
 
 def initializer():
+    """
+    Sets up the DB for testing. Must be called as part of test environment setup.
+    """
     global _CONFIG
     global _APPS
     global _CONNECTIONS
@@ -67,6 +70,9 @@ def initializer():
 
 
 def finalizer():
+    """
+    Cleans up the DB after testing. Must be called as part of the test environment teardown.
+    """
     Tortoise.apps = deepcopy(_APPS)
     Tortoise._connections = _CONNECTIONS.copy()
     loop = _asyncio.get_event_loop()
