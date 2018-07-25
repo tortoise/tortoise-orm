@@ -1,4 +1,5 @@
 import logging
+import re
 
 import aiomysql
 import pymysql
@@ -107,19 +108,22 @@ class MySQLClient(BaseDBAsyncClient):
             return self._transaction_class(pool=self._db_pool)
 
     async def execute_query(self, query):
+        # temporarily use this method to make mysql work
+        # replcae VARCHAR to CHAR
+        query = re.sub(r'CAST\((.*?) AS VARCHAR\)', r'CAST(\1 AS CHAR)', query)
+
         try:
             async with self.acquire_connection() as connection:
                 async with connection.cursor(aiomysql.DictCursor) as cursor:
                     self.log.debug(query)
 
-                    affected_row = await cursor.execute(query)
-
+                    await cursor.execute(query)
                     if "SELECT" in query or "select" in query:
                         result = await cursor.fetchall()
                         return result
 
                     await self._commit(connection)
-                    return affected_row
+                    return cursor.lastrowid  # return auto-generated id
 
         except pymysql.err.OperationalError as exc:
             raise OperationalError(exc)
