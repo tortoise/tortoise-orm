@@ -45,6 +45,30 @@ Usage
         def test_something(self):
             ...
 
+
+To get ``test.TestCase`` to work as expected, you need to configure your test environment setup and teardown to call the following:
+
+..code-block:: python3
+
+    from tortoise.contrib.test import initializer, finalizer
+
+    # In setup
+    initializer()
+
+    # In teardown
+    finalizer()
+
+
+Furthermore, you need to set the database configuration parameter as an environment variable:
+
+    TORTOISE_TEST_DB=sqlite:///tmp/test-{}.sqlite
+    TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:54325/test_{}
+
+
+The ``{}`` is a string-replacement parameter, that will create a randomised database name.
+This is currently required for ``test.IsolatedTestCase`` to function.
+
+
 Reference
 ---------
 

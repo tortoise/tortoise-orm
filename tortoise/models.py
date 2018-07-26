@@ -241,6 +241,9 @@ class ModelMeta(type):
         fk_fields = set()  # type: Set[str]
         m2m_fields = set()  # type: Set[str]
 
+        if 'id' not in attrs:
+            attrs['id'] = fields.IntField(pk=True)
+
         for key, value in attrs.items():
             if isinstance(value, fields.Field):
                 fields_map[key] = value
@@ -274,9 +277,6 @@ class ModelMeta(type):
                     )
 
         attrs['_meta'] = meta = MetaInfo(attrs.get('Meta'))
-
-        if 'id' not in attrs:
-            attrs['id'] = None
 
         meta.fields_map = fields_map
         meta.fields_db_projection = fields_db_projection
@@ -374,7 +374,7 @@ class Model(metaclass=ModelMeta):
     async def delete(self, using_db=None):
         db = using_db if using_db else self._meta.db
         if not self.id:
-            return
+            raise OperationalError("Can't delete unpersisted record")
         await db.executor_class(
             model=self.__class__,
             db=db,
@@ -388,10 +388,12 @@ class Model(metaclass=ModelMeta):
         ).fetch_for_list([self], *args)
 
     def __str__(self):
-        return self.__class__.__name__
+        return '<{}>'.format(self.__class__.__name__)
 
     def __repr__(self):
-        return '<{}: {}>'.format(self.__class__.__name__, self.__str__())
+        if self.id:
+            return '<{}: {}>'.format(self.__class__.__name__, self.id)
+        return '<{}>'.format(self.__class__.__name__)
 
     def __hash__(self):
         if not self.id:
