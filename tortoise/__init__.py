@@ -204,41 +204,65 @@ class Tortoise:
             config_file: Optional[str] = None,
             _create_db: bool = False,
             db_url: Optional[str] = None,
-            modules: Optional[Dict[str, List[str]]] = None,
-            app_label: Optional[str] = None
+            modules: Optional[Dict[str, List[str]]] = None
     ) -> None:
         """
-        Main entry point for starting tortoise
-        Accepts config in following format:
+        Sets up Tortoise-ORM.
 
-        .. code-block:: python3
-            {
-                'connections': {
-                    'default': {
-                        'engine': 'tortoise.backends.asyncpg',
-                        'credentials': {
-                            'host': 'localhost',
-                            'port': '54325',
-                            'user': 'tortoise',
-                            'password': 'qwerty123',
-                            'database': 'test',
+        You can configure using only one of ``config``, ``config_file``
+        and ``(db_url, modules)``.
+
+        Parameters
+        ----------
+        config:
+            Dict containing config:
+
+            Example
+            -------
+
+            .. code-block:: python3
+
+                {
+                    'connections': {
+                        # Dict format for connection
+                        'default': {
+                            'engine': 'tortoise.backends.asyncpg',
+                            'credentials': {
+                                'host': 'localhost',
+                                'port': '54325',
+                                'user': 'tortoise',
+                                'password': 'qwerty123',
+                                'database': 'test',
+                            }
+                        },
+                        # Using a DB_URL string
+                        'default': 'postgres://postgres:@qwerty123localhost:5432/events'
+                    },
+                    'apps': {
+                        'models': {
+                            'models': ['__main__'],
+                            # If no default_connection specified, defaults to 'default'
+                            'default_connection': 'default',
                         }
                     }
-                },
-                'apps': {
-                    'models': {
-                        'models': ['__main__'],
-                        'default_connection': 'default',
-                    }
                 }
-            }
 
-        :param config: dict containing config
-        :param config_file: path to .json or .yml (if PyYAML installed) file containing config
-        with same format as above
-        :param _create_db: if ``True`` tries to create database for specified connections,
-        could be used for testing purposes
-        :return:
+        config_file:
+            Path to .json or .yml (if PyYAML installed) file containing config with
+            same format as above.
+        db_url:
+            Use a DB_URL string. See :ref:`db_url`
+        modules:
+            Dictionary of ``key``: [``list_of_modules``] that defined "apps" and modules that
+            should be discovered for models.
+        _create_db:
+            If ``True`` tries to create database for specified connections,
+            could be used for testing purposes.
+
+        Raises
+        ------
+        ConfigurationError
+            For any configuration error
         """
         if cls._inited:
             await cls._reset_connections()

@@ -2,6 +2,7 @@
 Contrib
 =======
 
+.. _pylint:
 
 PyLint plugin
 =============
@@ -17,6 +18,8 @@ In your projects ``.pylintrc`` file, ensure the following is set:
 
     load-plugins=tortoise.contrib.pylint
 
+
+.. _unittest:
 
 UnitTest support
 ================
