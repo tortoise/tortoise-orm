@@ -1,4 +1,5 @@
 import operator
+from copy import deepcopy
 from typing import Awaitable, Dict, Hashable, Optional, Set, Tuple, Type, TypeVar  # noqa
 
 from pypika import Table, functions
@@ -9,7 +10,7 @@ from tortoise.backends.base.client import BaseDBAsyncClient  # noqa
 from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields import ManyToManyRelationManager, RelationQueryContainer
 from tortoise.queryset import QuerySet
-from tortoise.transactions import current_connection
+from tortoise.transactions import current_transaction
 
 MODEL_TYPE = TypeVar('MODEL_TYPE', bound='Model')
 
@@ -234,7 +235,17 @@ class MetaInfo:
 
     @property
     def db(self):
-        return current_connection.get() or self.default_db
+        return current_transaction.get() or self.default_db
+
+    def get_filter(self, key):
+        filter_info = self.filters[key]
+        overridden_operator = self.db.executor_class.get_overridden_filter_func(
+            filter_func=filter_info['operator'],
+        )
+        if overridden_operator:
+            filter_info = deepcopy(filter_info)
+            filter_info['operator'] = overridden_operator
+        return filter_info
 
 
 class ModelMeta(type):

@@ -9,7 +9,7 @@ from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWra
                                            ConnectionWrapper, SingleConnectionWrapper)
 from tortoise.exceptions import (ConfigurationError, DBConnectionError, IntegrityError,
                                  OperationalError, TransactionManagementError)
-from tortoise.transactions import current_connection
+from tortoise.transactions import current_transaction
 
 
 class AsyncpgDBClient(BaseDBAsyncClient):
@@ -161,8 +161,8 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
             self._connection = await self._get_connection()
         self.transaction = self._connection.transaction()
         await self.transaction.start()
-        self._old_context_value = current_connection.get()
-        current_connection.set(self)
+        self._old_context_value = current_transaction.get()
+        current_transaction.set(self)
 
     async def commit(self):
         try:
@@ -172,7 +172,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         if self._pool:
             await self._pool.release(self._connection)
             self._connection = None
-        current_connection.set(self._old_context_value)
+        current_transaction.set(self._old_context_value)
 
     async def rollback(self):
         try:
@@ -182,7 +182,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         if self._pool:
             await self._pool.release(self._connection)
             self._connection = None
-        current_connection.set(self._old_context_value)
+        current_transaction.set(self._old_context_value)
 
     async def __aenter__(self):
         await self.start()
