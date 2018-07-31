@@ -1,6 +1,17 @@
 Changelog
 =========
 
+0.10.0
+------
+- Refactored ``Tortoise.init()`` to init all connections and discover models from config passed
+  as argument
+- New ``transactions`` module for implicit working with transactions
+- Test frameworks overhauled:
+  - Better performance for test runner, using transactions to keep tests isolated.
+  - Now depends on an ``initializer()`` and ``finalizer()`` to set up and tear down DB state.
+- Exceptions have been further clarified
+- Support for CPython 3.7
+
 0.9.4
 -----
 - No more asserts, only Tortoise Exceptions
@@ -40,7 +51,7 @@ Changelog
 
 0.8.0
 -----
-- Added postgres ``JSONField``
+- Added PostgreSQL ``JSONField``
 
 0.7.0
 -----

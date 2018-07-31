@@ -7,15 +7,17 @@ from tortoise.tests.testmodels import IntFields
 
 
 class TestQueryset(test.TestCase):
-    async def test_all_count(self):
+    async def setUp(self):
         # Build large dataset
         for val in range(10, 100, 3):
             await IntFields.create(intnum=val)
 
+    async def test_all_count(self):
         self.assertEqual(await IntFields.all().count(), 30)
 
         self.assertEqual(await IntFields.filter(intnum_null=80).count(), 0)
 
+    async def test_modify_dataset(self):
         # Modify dataset
         await IntFields.filter(intnum__gte=70).update(intnum_null=80)
         self.assertEqual(await IntFields.filter(intnum_null=80).count(), 10)
@@ -24,7 +26,11 @@ class TestQueryset(test.TestCase):
         self.assertEqual(await IntFields.filter(intnum_null=None).count(), 0)
         self.assertEqual(await IntFields.filter(intnum_null=-1).count(), 20)
 
+    async def test_distinct(self):
         # Test distinct
+        await IntFields.filter(intnum__gte=70).update(intnum_null=80)
+        await IntFields.filter(intnum_null__isnull=True).update(intnum_null=-1)
+
         self.assertEqual(
             await IntFields.all().order_by('intnum_null').distinct().values_list(
                 'intnum_null', flat=True),
@@ -36,6 +42,7 @@ class TestQueryset(test.TestCase):
             [{'intnum_null': -1}, {'intnum_null': 80}]
         )
 
+    async def test_limit_offset_values_list(self):
         # Test limit/offset/ordering values_list
         self.assertEqual(
             await IntFields.all().order_by('intnum').limit(10).values_list('intnum', flat=True),
@@ -71,6 +78,7 @@ class TestQueryset(test.TestCase):
             [40, 43, 46, 49, 52, 55, 58, 61, 64, 67]
         )
 
+    async def test_limit_offset_values(self):
         # Test limit/offset/ordering values
         self.assertEqual(
             await IntFields.all().order_by('intnum').limit(5).values('intnum'),
@@ -98,6 +106,7 @@ class TestQueryset(test.TestCase):
             [{'intnum': 40}, {'intnum': 43}, {'intnum': 46}, {'intnum': 49}, {'intnum': 52}]
         )
 
+    async def test_first(self):
         # Test first
         self.assertEqual(
             (await IntFields.all().order_by('intnum').filter(intnum__gte=40).first()).intnum,
@@ -108,6 +117,9 @@ class TestQueryset(test.TestCase):
             await IntFields.all().order_by('intnum').filter(intnum__gte=400).first(),
             None
         )
+
+    async def test_get(self):
+        await IntFields.filter(intnum__gte=70).update(intnum_null=80)
 
         # Test get
         self.assertEqual(
@@ -137,6 +149,7 @@ class TestQueryset(test.TestCase):
         with self.assertRaises(MultipleObjectsReturned):
             await IntFields.get(intnum_null=80)
 
+    async def test_delete(self):
         # Test delete
         await (await IntFields.get(intnum=40)).delete()
 

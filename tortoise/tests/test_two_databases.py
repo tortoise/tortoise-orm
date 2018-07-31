@@ -1,30 +1,33 @@
 from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import OperationalError
-from tortoise.tests.testmodels import EventTwo, TeamTwo, Tournament
-from tortoise.utils import generate_schema
+from tortoise.tests.testmodels import Event, EventTwo, TeamTwo, Tournament
+from tortoise.transactions import in_transaction
 
 
 class TestTwoDatabases(test.SimpleTestCase):
     async def setUp(self):
-        self.db = await self.getDB()
-        self.second_db = await self.getDB()
-        Tortoise._client_routing(db_routing={
-            'models': self.db,
-            'events': self.second_db,
-        })
-
-        if not Tortoise._inited:
-            Tortoise._init_relations()
-
-        await generate_schema(self.db)
-        await generate_schema(self.second_db)
+        if Tortoise._inited:
+            await self._tearDownDB()
+        first_db_config = test.getDBConfig(
+            app_label='models',
+            modules=['tortoise.tests.testmodels'],
+        )
+        second_db_config = test.getDBConfig(
+            app_label='events',
+            modules=['tortoise.tests.testmodels'],
+        )
+        merged_config = {
+            'connections': {**first_db_config['connections'], **second_db_config['connections']},
+            'apps': {**first_db_config['apps'], **second_db_config['apps']},
+        }
+        await Tortoise.init(merged_config, _create_db=True)
+        await Tortoise.generate_schemas()
+        self.db = Tortoise.get_connection('models')
+        self.second_db = Tortoise.get_connection('events')
 
     async def tearDown(self):
-        await self.db.close()
-        await self.db.db_delete()
-        await self.second_db.close()
-        await self.second_db.db_delete()
+        await Tortoise._drop_databases()
 
     async def test_two_databases(self):
         tournament = await Tournament.create(name='Tournament')
@@ -63,3 +66,17 @@ class TestTwoDatabases(test.SimpleTestCase):
             await event.participants.all().order_by('name').values('id', 'name'),
             [{'id': 1, 'name': 'Team 1'}, {'id': 2, 'name': 'Team 2'}]
         )
+
+    async def test_two_databases_transactions_switch_db(self):
+        async with in_transaction('models'):
+            tournament = await Tournament.create(name='Tournament')
+            await Event.create(name='Event1', tournament=tournament)
+            async with in_transaction('events'):
+                event = await EventTwo.create(name='Event2', tournament_id=tournament.id)
+                team = await TeamTwo.create(name='Team 1')
+                await event.participants.add(team)
+
+        saved_tournament = await Tournament.filter(name='Tournament').first()
+        self.assertEqual(tournament.id, saved_tournament.id)
+        saved_event = await EventTwo.filter(tournament_id=tournament.id).first()
+        self.assertEqual(event.id, saved_event.id)

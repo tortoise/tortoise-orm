@@ -1,5 +1,6 @@
-__all__ = ('BaseORMException', 'FieldError', 'ConfigurationError', 'OperationalError',
-           'IntegrityError', 'NoValuesFetched', 'MultipleObjectsReturned', 'DoesNotExist')
+__all__ = ('BaseORMException', 'FieldError', 'ConfigurationError', 'TransactionManagementError',
+           'OperationalError', 'IntegrityError', 'NoValuesFetched', 'MultipleObjectsReturned',
+           'DoesNotExist')
 
 
 class BaseORMException(Exception):
@@ -16,9 +17,23 @@ class FieldError(BaseORMException):
     pass
 
 
+class ParamsError(BaseORMException):
+    """
+    The ParamsError is raised when function can not be run with given parameters
+    """
+    pass
+
+
 class ConfigurationError(BaseORMException):
     """
     The ConfigurationError exception is raised when the configuration of the ORM is invalid.
+    """
+    pass
+
+
+class TransactionManagementError(BaseORMException):
+    """
+    The TransactionManagementError is raised when any transaction error occurs.
     """
     pass
 
@@ -55,5 +70,12 @@ class MultipleObjectsReturned(OperationalError):
 class DoesNotExist(OperationalError):
     """
     The DoesNotExist exception is raised when expecting data, such as a ``.get()`` operation.
+    """
+    pass
+
+
+class DBConnectionError(BaseORMException):
+    """
+    The DBConnectionError is raised when problems with connecting to db occurs
     """
     pass

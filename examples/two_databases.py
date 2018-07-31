@@ -12,9 +12,7 @@ import asyncio
 from sqlite3 import OperationalError
 
 from tortoise import Tortoise, fields
-from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.models import Model
-from tortoise.utils import generate_schema
 
 
 class Tournament(Model):
@@ -56,16 +54,35 @@ class Team(Model):
 
 
 async def run():
-    client = SqliteClient('example_2db_first.sqlite3')
-    second_client = SqliteClient('example_2db_second.sqlite3')
-    await client.create_connection()
-    await second_client.create_connection()
-    Tortoise.init(db_routing={
-        'tournaments': client,
-        'events': second_client,
+    await Tortoise.init({
+        'connections': {
+            'first': {
+                'engine': 'tortoise.backends.sqlite',
+                'credentials': {
+                    'file_path': 'example.sqlite3',
+                }
+            },
+            'second': {
+                'engine': 'tortoise.backends.sqlite',
+                'credentials': {
+                    'file_path': 'example1.sqlite3',
+                }
+            }
+        },
+        'apps': {
+            'tournaments': {
+                'models': ['__main__'],
+                'default_connection': 'first',
+            },
+            'events': {
+                'models': ['__main__'],
+                'default_connection': 'second',
+            },
+        }
     })
-    await generate_schema(client)
-    await generate_schema(second_client)
+    await Tortoise.generate_schemas()
+    client = Tortoise.get_connection('first')
+    second_client = Tortoise.get_connection('second')
 
     tournament = await Tournament.create(name='Tournament')
     await Event(name='Event', tournament_id=tournament.id).save()

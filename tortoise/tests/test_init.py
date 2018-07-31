@@ -1,62 +1,248 @@
+import os
+import tempfile
+import uuid
+
 from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
-from tortoise.tests.testmodels import Tournament
 
 
 class TestInitErrors(test.SimpleTestCase):
     async def setUp(self):
-        self.apps = Tortoise.apps
-        self.inited = Tortoise._inited
-        Tortoise.apps = {}
+        try:
+            await Tortoise._reset_connections()
+        except ConfigurationError:
+            pass
         Tortoise._inited = False
-        Tortoise._db_routing = None
-        Tortoise._global_connection = None
-        self.db = await self.getDB()
+        self.db_file_path = os.path.join(
+            tempfile.gettempdir(),
+            "test_{}.sqlite3".format(uuid.uuid4().hex)
+        )
 
     async def tearDown(self):
-        await self.db.close()
-        await self.db.db_delete()
-        Tortoise.apps = self.apps
-        Tortoise._inited = self.inited
+        try:
+            await Tortoise._reset_connections()
+        except ConfigurationError:
+            pass
 
-    def test_dup_model(self):
-        with self.assertRaisesRegex(ConfigurationError, 'duplicates in'):
-            Tortoise.register_model('models', 'Tournament', Tournament)
-            Tortoise.register_model('models', 'Tournament', Tournament)
+    async def test_basic_init(self):
+        await Tortoise.init({
+            "connections": {
+                "default": {
+                    "engine": "tortoise.backends.sqlite",
+                    "credentials": {
+                        "file_path": self.db_file_path,
+                    }
+                }
+            },
+            "apps": {
+                "models": {
+                    "models": [
+                        "tortoise.tests.testmodels",
+                    ],
+                    "default_connection": "default"
+                }
+            }
+        })
+        self.assertIn('models', Tortoise.apps)
+        self.assertIsNotNone(Tortoise.get_connection('default'))
 
-    def test_missing_app_route(self):
-        Tortoise.apps = self.apps
-        with self.assertRaisesRegex(ConfigurationError, 'No db instanced for apps'):
-            Tortoise._client_routing(db_routing={
-                'models': self.db,
+    async def test_default_connection_init(self):
+        await Tortoise.init({
+            "connections": {
+                "default": {
+                    "engine": "tortoise.backends.sqlite",
+                    "credentials": {
+                        "file_path": self.db_file_path,
+                    }
+                }
+            },
+            "apps": {
+                "models": {
+                    "models": [
+                        "tortoise.tests.testmodels",
+                    ]
+                }
+            }
+        })
+        self.assertIn('models', Tortoise.apps)
+        self.assertIsNotNone(Tortoise.get_connection('default'))
+
+    async def test_db_url_init(self):
+        await Tortoise.init({
+            "connections": {
+                "default": "sqlite://{}".format(self.db_file_path)
+            },
+            "apps": {
+                "models": {
+                    "models": [
+                        "tortoise.tests.testmodels",
+                    ],
+                    "default_connection": "default"
+                }
+            }
+        })
+        self.assertIn('models', Tortoise.apps)
+        self.assertIsNotNone(Tortoise.get_connection('default'))
+
+    async def test_shorthand_init(self):
+        await Tortoise.init(
+            db_url="sqlite://{}".format(self.db_file_path),
+            modules={'models': ["tortoise.tests.testmodels"]}
+        )
+        self.assertIn('models', Tortoise.apps)
+        self.assertIsNotNone(Tortoise.get_connection('default'))
+
+    async def test_init_wrong_connection_engine(self):
+        with self.assertRaisesRegex(
+                ConfigurationError,
+                'Backend for engine "tortoise.backends.test" not found',
+        ):
+            await Tortoise.init({
+                "connections": {
+                    "default": {
+                        "engine": "tortoise.backends.test",
+                        "credentials": {
+                            "file_path": self.db_file_path
+                        }
+                    }
+                },
+                "apps": {
+                    "models": {
+                        "models": ["tortoise.tests.testmodels"],
+                        "default_connection": "default"
+                    }
+                }
             })
 
-    def test_exclusive_route_param(self):
-        with self.assertRaisesRegex(ConfigurationError, 'You must pass either'):
-            Tortoise._client_routing(db_routing={
-                'models': self.db,
-            }, global_client=self.db)
-
-    def test_not_db(self):
-        with self.assertRaisesRegex(ConfigurationError,
-                                    'global_client must inherit from BaseDBAsyncClient'):
-            Tortoise._client_routing(global_client='moo')
-
-    def test_missing_param(self):
-        with self.assertRaisesRegex(ConfigurationError,
-                                    'You must pass either global_client or db_routing'):
-            Tortoise._client_routing()
-
-    def test_missing_app_route2(self):
-        Tortoise.apps = self.apps
-        with self.assertRaisesRegex(ConfigurationError,
-                                    'All app values must inherit from BaseDBAsyncClient'):
-            Tortoise._client_routing(db_routing={
-                'models': 'moo',
+    async def test_init_wrong_connection_engine_2(self):
+        with self.assertRaisesRegex(
+                ConfigurationError,
+                'Backend for engine "tortoise.backends" does not implement db client',
+        ):
+            await Tortoise.init({
+                "connections": {
+                    "default": {
+                        "engine": "tortoise.backends",
+                        "credentials": {
+                            "file_path": self.db_file_path
+                        }
+                    }
+                },
+                "apps": {
+                    "models": {
+                        "models": ["tortoise.tests.testmodels"],
+                        "default_connection": "default"
+                    }
+                }
             })
 
-    def test_dup_init(self):
-        with self.assertRaisesRegex(ConfigurationError, 'Already initialised'):
-            Tortoise.init(self.db)
-            Tortoise.init(self.db)
+    async def test_init_no_connections(self):
+        with self.assertRaisesRegex(
+                ConfigurationError,
+                'Config must define "connections" section',
+        ):
+            await Tortoise.init({
+                "apps": {
+                    "models": {
+                        "models": ["tortoise.tests.testmodels"],
+                        "default_connection": "default"
+                    }
+                }
+            })
+
+    async def test_init_no_apps(self):
+        with self.assertRaisesRegex(
+                ConfigurationError,
+                'Config must define "apps" section',
+        ):
+            await Tortoise.init({
+                "connections": {
+                    "default": {
+                        "engine": "tortoise.backends.sqlite",
+                        "credentials": {
+                            "file_path": self.db_file_path,
+                        }
+                    }
+                },
+            })
+
+    async def test_init_config_and_config_file(self):
+        with self.assertRaisesRegex(
+                ConfigurationError,
+                'You should init either from "config", "config_file" or "db_url"',
+        ):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "credentials": {
+                                "file_path": self.db_file_path
+                            }
+                        }
+                    },
+                    "apps": {
+                        "models": {
+                            "models": ["tortoise.tests.testmodels"],
+                            "default_connection": "default"
+                        }
+                    }
+                },
+                config_file='file.json',
+            )
+
+    async def test_init_config_file_wrong_extension(self):
+        with self.assertRaisesRegex(
+                ConfigurationError,
+                'Unknown config extension .ini, only .yml and .json are supported',
+        ):
+            await Tortoise.init(config_file='config.ini')
+
+    async def test_init_json_file(self):
+        await Tortoise.init(config_file=os.path.dirname(__file__) + '/init.json')
+        self.assertIn('models', Tortoise.apps)
+        self.assertIsNotNone(Tortoise.get_connection('default'))
+
+    async def test_init_yaml_file(self):
+        await Tortoise.init(config_file=os.path.dirname(__file__) + '/init.yaml')
+        self.assertIn('models', Tortoise.apps)
+        self.assertIsNotNone(Tortoise.get_connection('default'))
+
+    async def test_generate_schema_without_init(self):
+        with self.assertRaisesRegex(
+            ConfigurationError,
+            'You have to call \.init\(\) first before generating schemas'
+        ):
+            await Tortoise.generate_schemas()
+
+    async def test_drop_databases_without_init(self):
+        with self.assertRaisesRegex(
+            ConfigurationError,
+            'You have to call \.init\(\) first before deleting schemas'
+        ):
+            await Tortoise._drop_databases()
+
+    async def test_bad_models(self):
+        with self.assertRaisesRegex(
+            ConfigurationError,
+            'Module "tortoise.tests.testmodels2" not found'
+        ):
+            await Tortoise.init({
+                "connections": {
+                    "default": {
+                        "engine": "tortoise.backends.sqlite",
+                        "credentials": {
+                            "file_path": self.db_file_path,
+                        }
+                    }
+                },
+                "apps": {
+                    "models": {
+                        "models": [
+                            "tortoise.tests.testmodels2",
+                        ],
+                        "default_connection": "default"
+                    }
+                }
+            })

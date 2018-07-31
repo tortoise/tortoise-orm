@@ -1,9 +1,7 @@
 import urllib.parse as urlparse
 import uuid
+from typing import Any, Dict, List, Optional  # noqa
 
-from tortoise.backends.asyncpg.client import AsyncpgDBClient
-from tortoise.backends.mysql.client import MySQLClient
-from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.exceptions import ConfigurationError
 
 urlparse.uses_netloc.append('postgres')
@@ -11,7 +9,7 @@ urlparse.uses_netloc.append('sqlite')
 urlparse.uses_netloc.append('mysql')
 DB_LOOKUP = {
     'postgres': {
-        'client': AsyncpgDBClient,
+        'engine': 'tortoise.backends.asyncpg',
         'vars': {
             'path': 'database',
             'hostname': 'host',
@@ -21,14 +19,14 @@ DB_LOOKUP = {
         },
     },
     'sqlite': {
-        'client': SqliteClient,
+        'engine': 'tortoise.backends.sqlite',
         'skip_first_char': False,
         'vars': {
-            'path': 'filename',
+            'path': 'file_path',
         },
     },
     'mysql': {
-        'client': MySQLClient,
+        'engine': 'tortoise.backends.mysql',
         'vars': {
             'path': 'database',
             'hostname': 'host',
@@ -37,7 +35,7 @@ DB_LOOKUP = {
             'password': 'password',
         },
     },
-}
+}  # type: Dict[str, Dict[str, Any]]
 
 
 def expand_db_url(db_url: str, testing: bool = False) -> dict:
@@ -64,7 +62,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         path = path.format(uuid.uuid4().hex)
 
     vars = {}  # type: dict
-    vars.update(db['vars'])  # type: ignore
+    vars.update(db['vars'])
     params[vars['path']] = path
     if vars.get('hostname'):
         params[vars['hostname']] = str(url.hostname or '')
@@ -79,6 +77,27 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         params[vars['password']] = str(url.password or '')
 
     return {
-        'params': params,
-        'client': db['client'],
+        'engine': db['engine'],
+        'credentials': params,
+    }
+
+
+def generate_config(
+        db_url: str,
+        app_modules: Dict[str, List[str]],
+        connection_label: Optional[str] = None,
+        testing: bool = False,
+) -> dict:
+    _connection_label = connection_label or 'default'
+    return {
+        'connections': {
+            _connection_label: expand_db_url(db_url, testing)
+        },
+        'apps': {
+            app_label: {
+                'models': modules,
+                'default_connection': _connection_label,
+            }
+            for app_label, modules in app_modules.items()
+        }
     }

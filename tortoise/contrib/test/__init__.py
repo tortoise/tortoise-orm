@@ -1,17 +1,19 @@
 import asyncio as _asyncio
 import os as _os
+from copy import deepcopy
+from typing import List
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless  # noqa
 
 from asynctest import TestCase as _TestCase
 from asynctest import _fail_on
 
-from tortoise import Tortoise as _Tortoise
-from tortoise.backends.base.client import BaseDBAsyncClient as _BaseDBAsyncClient
-from tortoise.backends.base.db_url import expand_db_url as _expand_db_url
-from tortoise.utils import generate_schema as _generate_schema
+from tortoise import Tortoise
+from tortoise.backends.base.config_generator import generate_config as _generate_config
+from tortoise.exceptions import DBConnectionError
+from tortoise.transactions import start_transaction
 
-__all__ = ('SimpleTestCase', 'TransactionTestCase', 'TestCase', 'SkipTest', 'expectedFailure',
-           'skip', 'skipIf', 'skipUnless')
+__all__ = ('SimpleTestCase', 'IsolatedTestCase', 'TestCase', 'SkipTest', 'expectedFailure',
+           'skip', 'skipIf', 'skipUnless', 'initializer', 'finalizer')
 _TORTOISE_TEST_DB = _os.environ.get('TORTOISE_TEST_DB', 'sqlite:///tmp/test-{}.sqlite')
 
 expectedFailure.__doc__ = """
@@ -19,6 +21,64 @@ Mark test as expecting failiure.
 
 On success it will be marked as unexpected success.
 """
+
+_CONFIG = {}  # type: dict
+_APPS = {}  # type: dict
+_CONNECTIONS = {}  # type: dict
+
+
+def getDBConfig(app_label: str, modules: List[str]) -> dict:
+    """
+    DB Config factory, for use in testing.
+    """
+    return _generate_config(
+        _TORTOISE_TEST_DB,
+        app_modules={
+            app_label: modules
+        },
+        testing=True,
+        connection_label=app_label
+    )
+
+
+async def _init_db(config):
+    try:
+        await Tortoise.init(config)
+        await Tortoise._drop_databases()
+    except DBConnectionError as exc:
+        pass
+
+    await Tortoise.init(config, _create_db=True)
+    await Tortoise.generate_schemas()
+
+
+def initializer():
+    """
+    Sets up the DB for testing. Must be called as part of test environment setup.
+    """
+    global _CONFIG
+    global _APPS
+    global _CONNECTIONS
+    _CONFIG = getDBConfig(
+        app_label='models',
+        modules=['tortoise.tests.testmodels'],
+    )
+
+    loop = _asyncio.get_event_loop()
+    loop.run_until_complete(_init_db(_CONFIG))
+    _APPS = deepcopy(Tortoise.apps)
+    _CONNECTIONS = Tortoise._connections.copy()
+    loop.run_until_complete(Tortoise._reset_connections())
+
+
+def finalizer():
+    """
+    Cleans up the DB after testing. Must be called as part of the test environment teardown.
+    """
+    Tortoise.apps = deepcopy(_APPS)
+    Tortoise._connections = _CONNECTIONS.copy()
+    loop = _asyncio.get_event_loop()
+    loop.run_until_complete(Tortoise._drop_databases())
 
 
 class SimpleTestCase(_TestCase):
@@ -31,19 +91,6 @@ class SimpleTestCase(_TestCase):
 
     Based on `asynctest <http://asynctest.readthedocs.io/>`_
     """
-
-    async def getDB(self) -> _BaseDBAsyncClient:
-        """
-        DB Client factory, for use in testing.
-
-        Please remember to call ``.close()`` and then ``.delete()`` on the returned object.
-        """
-        dbconf = _expand_db_url(_TORTOISE_TEST_DB, testing=True)
-        db = dbconf['client'](**dbconf['params'])
-        await db.db_create()
-        await db.create_connection()
-
-        return db
 
     async def _setUpDB(self):
         pass
@@ -80,7 +127,7 @@ class SimpleTestCase(_TestCase):
         self._checker.check_test(self)
 
 
-class TransactionTestCase(SimpleTestCase):
+class IsolatedTestCase(SimpleTestCase):
     """
     An asyncio capable test class that will ensure that an isolated test db
     is available for each test.
@@ -94,28 +141,31 @@ class TransactionTestCase(SimpleTestCase):
     # pylint: disable=C0103,W0201
 
     async def _setUpDB(self):
-        self.db = await self.getDB()
-        if not _Tortoise._inited:
-            _Tortoise.init(self.db)
-        else:
-            _Tortoise._client_routing(self.db)
-        await _generate_schema(self.db)
+        config = getDBConfig(
+            app_label='models',
+            modules=['tortoise.tests.testmodels'],
+        )
+        await Tortoise.init(config, _create_db=True)
+        await Tortoise.generate_schemas()
 
     async def _tearDownDB(self) -> None:
-        await self.db.close()
-        await self.db.db_delete()
+        await Tortoise._drop_databases()
 
 
-class TestCase(TransactionTestCase):
+class TestCase(SimpleTestCase):
     """
-    An asyncio capable test class that will ensure that an partially isolated test db
-    is available for each test.
-
-    It will wrap each test in a transaction and roll the DB back.
-    This is much faster, but requires that your test does not explicitly use transactions.
-
-    .. note::
-        Currently does not run any faster than ``TransactionTestCase``, will be sped up later on.
+    An asyncio capable test class that will ensure that each test will be run at
+    separate transaction that will rollback on finish.
     """
-    # TODO: Make this wrap everything in a rollback-transaction instead
-    pass
+
+    async def _setUpDB(self):
+        Tortoise.apps = deepcopy(_APPS)
+        Tortoise._connections = _CONNECTIONS.copy()
+        await Tortoise.init(_CONFIG)
+
+        self.transaction = await start_transaction()
+
+    async def _tearDownDB(self) -> None:
+        await self.transaction.rollback()
+        # Have to reset connections because tests are run in different loops
+        await Tortoise._reset_connections()

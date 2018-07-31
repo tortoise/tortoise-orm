@@ -2,12 +2,13 @@ language: python
 python:
   - 3.6
   - 3.5
+  - 3.7
 env:
   - TORTOISE_TEST_DB="sqlite:///tmp/test-{}.sqlite"
   - TORTOISE_TEST_DB="postgres://postgres:@127.0.0.1:5432/test_{}"
   - TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_{}"
-dist: trusty
-sudo: false
+dist: xenial
+sudo: required
 addons:
   postgresql: "9.4"
 services:

@@ -11,27 +11,27 @@ For ``v1.0`` that involves:
 
 * Comprehensive test suite
 * Clear and concise examples
-* Refactored ``init`` framework
 * Refactored Fields Schema generation
 * Add MySQL support
-
 
 Mid-term
 ========
 
-Here we have all the features that is sligtly further our:
+Here we have all the features that is slightly further our:
 
 * Performance work:
-    * Subqueries
+    * Sub queries
     * Benchmark suite
     * Bulk operations
-    * Minimising overhead of building query set
-    * Minimising overhead of creating objects
+    * Minimizing overhead of building query set
+    * Minimizing overhead of creating objects
     * ...
 
 * Convenience/Ease-Of-Use work:
     * Make ``DELETE`` honour ``limit`` and ``offset``
     * ``.filter(field=None)`` to work as expected
+    * Enable the use of a primary key that is not ``IntField``
+    * Enable to call the primary key something that isn't ``id``
 
 * Expand in the ``init`` framework:
     * Ability to have Management Commands
@@ -43,8 +43,7 @@ Here we have all the features that is sligtly further our:
     * Make it easier to do simple aggregations
     * Expand annotation framework to add statistical functions
 
-* Atomicity framework
-    * Simpler ``with atomic`` blocks to manage isolation
+* Transaction framework
     * Ability to set ACID conformance expectations
 
 * Migrations
@@ -54,20 +53,18 @@ Here we have all the features that is sligtly further our:
     * Ability to get a the Models for that exact time of the migration, to ensure safe & consistent data migrations
     * Cross-DB support
 
-* Serialisation support
+* Serialization support
     * Take inspiration from ``attrs`` and ``marshmallow``
-    * Provide sane default serialisers that will work as-is for CRUD
+    * Provide sane default serializers that will work as-is for CRUD
     * Provide sane default schema generators
-    * Make default serialisers support some validation
-    * Make default serialisers support data conversion
-    * Make default serialisers somewhat customiseable
-    * Provide clean way to replace serialisers with custom solution
+    * Make default serializers support some validation
+    * Make default serializers support data conversion
+    * Make default serializers somewhat customizable
+    * Provide clean way to replace serializers with custom solution
     * Define strategy to work with ``ManyToMany`` relationships
 
 * Enhanced test support
-    * Better performance for test runner
-      (use atomicity/snapshots instead of always rebuilding database)
-    * ``hypothesis`` strategy builer
+    * ``hypothesis`` strategy builder
 
 * Fields
     * Expand on standard provided fields
@@ -81,4 +78,4 @@ Here we have all the features that is sligtly further our:
 Long-term
 =========
 
-Become the de-facto Python asyncio ORM.
+Become the de facto Python AsyncIO ORM.

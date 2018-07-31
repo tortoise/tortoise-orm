@@ -1,10 +1,8 @@
 import asyncio
 
 from tortoise import Tortoise, fields
-from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.models import Model
 from tortoise.query_utils import Prefetch
-from tortoise.utils import generate_schema
 
 
 class Tournament(Model):
@@ -36,10 +34,8 @@ class Team(Model):
 
 
 async def run():
-    client = SqliteClient('example_prefetching.sqlite3')
-    await client.create_connection()
-    Tortoise.init(client)
-    await generate_schema(client)
+    await Tortoise.init(config_file='config.json')
+    await Tortoise.generate_schemas()
 
     tournament = await Tournament.create(name='tournament')
     await Event.create(name='First', tournament=tournament)
