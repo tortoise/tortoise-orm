@@ -11,6 +11,7 @@ Changelog
   - Now depends on an ``initializer()`` and ``finalizer()`` to set up and tear down DB state.
 - Exceptions have been further clarified
 - Support for CPython 3.7
+- Added support for MySQL/MariaDB
 
 0.9.4
 -----
