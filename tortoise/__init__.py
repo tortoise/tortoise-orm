@@ -2,9 +2,10 @@ import importlib
 import json
 import os
 from inspect import isclass
-from typing import Any, Dict, Optional  # noqa
+from typing import Any, Dict, List, Optional, Type  # noqa
 
 from tortoise import fields
+from tortoise.backends.base.config_generator import expand_db_url, generate_config
 from tortoise.exceptions import ConfigurationError  # noqa
 from tortoise.fields import ManyToManyRelationManager  # noqa
 from tortoise.models import Model, get_backward_fk_filters, get_m2m_filters
@@ -45,15 +46,15 @@ class Tortoise:
                         raise ConfigurationError(
                             'backward relation "{}" duplicates in model {}'.format(
                                 backward_relation_name, related_model_name))
-                    relation = fields.BackwardFKRelation(model, '{}_id'.format(field))
-                    setattr(related_model, backward_relation_name, relation)
+                    fk_relation = fields.BackwardFKRelation(model, '{}_id'.format(field))
+                    setattr(related_model, backward_relation_name, fk_relation)
                     related_model._meta.filters.update(
-                        get_backward_fk_filters(backward_relation_name, relation)
+                        get_backward_fk_filters(backward_relation_name, fk_relation)
                     )
 
                     related_model._meta.backward_fk_fields.add(backward_relation_name)
                     related_model._meta.fetch_fields.add(backward_relation_name)
-                    related_model._meta.fields_map[backward_relation_name] = relation
+                    related_model._meta.fields_map[backward_relation_name] = fk_relation
                     related_model._meta.fields.add(backward_relation_name)
 
                 for field in model._meta.m2m_fields:
@@ -91,7 +92,7 @@ class Tortoise:
                             related_model_table_name,
                         )
 
-                    relation = fields.ManyToManyField(
+                    m2m_relation = fields.ManyToManyField(
                         '{}.{}'.format(app_name, model_name),
                         field_object.through,
                         forward_key=field_object.backward_key,
@@ -99,19 +100,19 @@ class Tortoise:
                         related_name=field,
                         type=model
                     )
-                    relation._generated = True
+                    m2m_relation._generated = True
                     setattr(
                         related_model,
                         backward_relation_name,
-                        relation,
+                        m2m_relation,
                     )
                     model._meta.filters.update(get_m2m_filters(field, field_object))
                     related_model._meta.filters.update(
-                        get_m2m_filters(backward_relation_name, relation)
+                        get_m2m_filters(backward_relation_name, m2m_relation)
                     )
                     related_model._meta.m2m_fields.add(backward_relation_name)
                     related_model._meta.fetch_fields.add(backward_relation_name)
-                    related_model._meta.fields_map[backward_relation_name] = relation
+                    related_model._meta.fields_map[backward_relation_name] = m2m_relation
                     related_model._meta.fields.add(backward_relation_name)
 
     @classmethod
@@ -122,7 +123,7 @@ class Tortoise:
             raise ConfigurationError('Backend for engine "{}" not found'.format(engine))
 
         try:
-            client_class = engine_module.client_class
+            client_class = engine_module.client_class  # type: ignore
         except AttributeError:
             raise ConfigurationError(
                 'Backend for engine "{}" does not implement db client'.format(engine)
@@ -130,7 +131,7 @@ class Tortoise:
         return client_class
 
     @classmethod
-    def _discover_models(cls, models_path, app_label):
+    def _discover_models(cls, models_path, app_label) -> List[Type[Model]]:
         try:
             module = importlib.import_module(models_path)
         except ImportError:
@@ -148,6 +149,8 @@ class Tortoise:
     @classmethod
     async def _init_connections(cls, connections_config, create_db):
         for name, info in connections_config.items():
+            if isinstance(info, str):
+                info = expand_db_url(info)
             client_class = cls._discover_client_class(info.get('engine'))
             connection = client_class(**info['credentials'])
             if create_db:
@@ -159,13 +162,13 @@ class Tortoise:
     def _init_apps(cls, apps_config):
         for name, info in apps_config.items():
             try:
-                connection = cls.get_connection(info.get('default_connection'))
+                connection = cls.get_connection(info.get('default_connection', 'default'))
             except KeyError:
                 raise ConfigurationError('Unknown connection "{}" for app "{}"'.format(
-                    apps_config.get('default_connection'),
+                    apps_config.get('default_connection', 'default'),
                     name,
                 ))
-            app_models = []
+            app_models = []  # type: List[Type[Model]]
             for module in info['models']:
                 app_models += cls._discover_models(module, name)
 
@@ -199,48 +202,81 @@ class Tortoise:
             cls,
             config: Optional[dict] = None,
             config_file: Optional[str] = None,
-            _create_db: bool = False
+            _create_db: bool = False,
+            db_url: Optional[str] = None,
+            modules: Optional[Dict[str, List[str]]] = None
     ) -> None:
         """
-        Main entry point for starting tortoise
-        Accepts config in following format:
+        Sets up Tortoise-ORM.
 
-        .. code-block:: python3
-            {
-                'connections': {
-                    'default': {
-                        'engine': 'tortoise.backends.asyncpg',
-                        'credentials': {
-                            'host': 'localhost',
-                            'port': '54325',
-                            'user': 'tortoise',
-                            'password': 'qwerty123',
-                            'database': 'test',
+        You can configure using only one of ``config``, ``config_file``
+        and ``(db_url, modules)``.
+
+        Parameters
+        ----------
+        config:
+            Dict containing config:
+
+            Example
+            -------
+
+            .. code-block:: python3
+
+                {
+                    'connections': {
+                        # Dict format for connection
+                        'default': {
+                            'engine': 'tortoise.backends.asyncpg',
+                            'credentials': {
+                                'host': 'localhost',
+                                'port': '54325',
+                                'user': 'tortoise',
+                                'password': 'qwerty123',
+                                'database': 'test',
+                            }
+                        },
+                        # Using a DB_URL string
+                        'default': 'postgres://postgres:@qwerty123localhost:5432/events'
+                    },
+                    'apps': {
+                        'models': {
+                            'models': ['__main__'],
+                            # If no default_connection specified, defaults to 'default'
+                            'default_connection': 'default',
                         }
                     }
-                },
-                'apps': {
-                    'models': {
-                        'models': ['__main__'],
-                        'default_connection': 'default',
-                    }
                 }
-            }
 
-        :param config: dict containing config
-        :param config_file: path to .json or .yml (if PyYAML installed) file containing config
-        with same format as above
-        :param _create_db: if ``True`` tries to create database for specified connections,
-        could be used for testing purposes
-        :return:
+        config_file:
+            Path to .json or .yml (if PyYAML installed) file containing config with
+            same format as above.
+        db_url:
+            Use a DB_URL string. See :ref:`db_url`
+        modules:
+            Dictionary of ``key``: [``list_of_modules``] that defined "apps" and modules that
+            should be discovered for models.
+        _create_db:
+            If ``True`` tries to create database for specified connections,
+            could be used for testing purposes.
+
+        Raises
+        ------
+        ConfigurationError
+            For any configuration error
         """
         if cls._inited:
             await cls._reset_connections()
-        if config and config_file:
-            raise ConfigurationError('You should init either from "config" or "config_file"')
+        if int(bool(config) + bool(config_file) + bool(db_url)) != 1:
+            raise ConfigurationError(
+                'You should init either from "config", "config_file" or "db_url"')
 
         if config_file:
             config = cls._get_config_from_config_file(config_file)
+
+        if db_url:
+            if not modules:
+                raise ConfigurationError('You must specify "db_url" and "modules" together')
+            config = generate_config(db_url, modules)
 
         try:
             connections_config = config['connections']  # type: ignore
@@ -294,6 +330,8 @@ class Tortoise:
         for connection in cls._connections.values():
             await connection.close()
             await connection.db_delete()
+        cls._connections = {}
+        await cls._reset_connections()
 
 
 __version__ = "0.9.4"

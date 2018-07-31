@@ -11,11 +11,11 @@ class TestTwoDatabases(test.SimpleTestCase):
             await self._tearDownDB()
         first_db_config = test.getDBConfig(
             app_label='models',
-            model_modules=['tortoise.tests.testmodels'],
+            modules=['tortoise.tests.testmodels'],
         )
         second_db_config = test.getDBConfig(
             app_label='events',
-            model_modules=['tortoise.tests.testmodels'],
+            modules=['tortoise.tests.testmodels'],
         )
         merged_config = {
             'connections': {**first_db_config['connections'], **second_db_config['connections']},

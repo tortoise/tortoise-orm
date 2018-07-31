@@ -1,4 +1,4 @@
-checkfiles = tortoise/ examples/ setup.py
+checkfiles = tortoise/ examples/
 mypy_flags = --warn-unused-configs --warn-redundant-casts --ignore-missing-imports --allow-untyped-decorators
 
 help:

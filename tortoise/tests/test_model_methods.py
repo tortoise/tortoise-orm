@@ -56,7 +56,7 @@ class TestModelMethods(test.TestCase):
         self.assertTrue(created)
         self.assertNotEqual(self.mdl, mdl)
         mdl2 = await self.cls.get(name='Test2')
-        self.assertNotEqual(mdl, mdl2)
+        self.assertEqual(mdl, mdl2)
 
     async def test_first(self):
         mdl = await self.cls.first()

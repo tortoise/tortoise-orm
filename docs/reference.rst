@@ -5,6 +5,7 @@ Reference
    :maxdepth: 4
 
    setup
+   databases
    models
    fields
    query

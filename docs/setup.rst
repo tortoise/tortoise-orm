@@ -2,6 +2,8 @@
 Set up
 ======
 
+.. _init_app:
+
 Init app
 ========
 
@@ -11,25 +13,28 @@ You can do it like this:
 
 .. code-block:: python3
 
-    from tortoise.backends.asyncpg.client import AsyncpgDBClient
     from tortoise import Tortoise
-    from app import models # without importing models Tortoise can't find and init them
-
 
     async def init():
-        db = AsyncpgDBClient(
-            host='localhost',
-            port=5432,
-            user='postgres',
-            password='qwerty123',
-            database='events',
-       )
+        # Here we connect to a PostgresQL DB
+        #  also specify the app name of "models"
+        #  which contain models from "app.models"
+        await Tortoise.init(
+            db_url='postgres://postgres:@qwerty123localhost:5432/events',
+            modules={'models': ['app.models']}
+        )
+        # Generate the schema
+        await Tortoise.generate_schemas()
 
-        await db.create_connection()
-        Tortoise.init(db)
 
-        await generate_schema(client)
+Here we create connection to PostgresQL database with default ``asyncpg`` client and then we discover & initialise models.
 
-Here we create connection to database with default ``asyncpg`` client and then we ``init()`` models. Be sure that you have your models imported in the app. Usually that's the case, because you use your models across you app, but if you have only local imports of it, tortoise won't be able to find them and init them with connection to db.
 ``generate_schema`` generates schema on empty database, you shouldn't run it on every app init, run it just once, maybe out of your main code.
+
+Reference
+=========
+
+.. autoclass:: tortoise.Tortoise
+    :members:
+    :undoc-members:
 

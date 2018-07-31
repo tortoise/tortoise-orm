@@ -27,15 +27,17 @@ _APPS = {}  # type: dict
 _CONNECTIONS = {}  # type: dict
 
 
-def getDBConfig(app_label: str, model_modules: List[str]) -> dict:
+def getDBConfig(app_label: str, modules: List[str]) -> dict:
     """
     DB Config factory, for use in testing.
     """
     return _generate_config(
         _TORTOISE_TEST_DB,
-        model_modules=model_modules,
+        app_modules={
+            app_label: modules
+        },
         testing=True,
-        app_label=app_label,
+        connection_label=app_label
     )
 
 
@@ -59,7 +61,7 @@ def initializer():
     global _CONNECTIONS
     _CONFIG = getDBConfig(
         app_label='models',
-        model_modules=['tortoise.tests.testmodels'],
+        modules=['tortoise.tests.testmodels'],
     )
 
     loop = _asyncio.get_event_loop()
@@ -141,7 +143,7 @@ class IsolatedTestCase(SimpleTestCase):
     async def _setUpDB(self):
         config = getDBConfig(
             app_label='models',
-            model_modules=['tortoise.tests.testmodels'],
+            modules=['tortoise.tests.testmodels'],
         )
         await Tortoise.init(config, _create_db=True)
         await Tortoise.generate_schemas()

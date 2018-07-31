@@ -1,3 +1,3 @@
 sphinx
 cloud_sptheme
-
+sphinx-autodoc-typehints
