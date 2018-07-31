@@ -20,7 +20,7 @@ class MySQLExecutor(BaseExecutor):
             .insert(*values)
         )
 
-        instance.id = await self.connection.execute_query(str(query))
+        instance.id = await self.connection.execute_query(str(query), get_inserted_id=True)
         await self.db.release_single_connection(self.connection)
         self.connection = None
         return instance

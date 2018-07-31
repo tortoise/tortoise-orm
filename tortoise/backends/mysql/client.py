@@ -105,7 +105,7 @@ class MySQLClient(BaseDBAsyncClient):
         else:
             return self._transaction_class(pool=self._db_pool)
 
-    async def execute_query(self, query):
+    async def execute_query(self, query, get_inserted_id=False):
         # Temporarily use this method to make mysql work:
         #  replace VARCHAR to CHAR
         query = re.sub(r'CAST\((.*?) AS VARCHAR\)', r'CAST(\1 AS CHAR)', query)
@@ -116,10 +116,10 @@ class MySQLClient(BaseDBAsyncClient):
                     self.log.debug(query)
 
                     await cursor.execute(query)
-                    if "SELECT" in query or "select" in query:
-                        result = await cursor.fetchall()
-                        return result
-                    return cursor.lastrowid  # return auto-generated id
+                    if get_inserted_id:
+                        return cursor.lastrowid  # return auto-generated id
+                    result = await cursor.fetchall()
+                    return result
 
         except (pymysql.err.OperationalError, pymysql.err.ProgrammingError,
                 pymysql.err.DataError, pymysql.err.InternalError,

@@ -64,7 +64,6 @@ class SqliteClient(BaseDBAsyncClient):
                     return inserted_id
                 return [dict(row) for row in results]
         except sqlite3.OperationalError as exc:
-            print("pass")
             raise OperationalError(exc)
         except sqlite3.IntegrityError as exc:
             raise IntegrityError(exc)
