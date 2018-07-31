@@ -1,8 +1,49 @@
-from typing import Dict  # noqa
-
-from pypika import MySQLQuery, Table
+from pypika import MySQLQuery, Table, functions
+from pypika.enums import SqlTypes
 
 from tortoise.backends.base.executor import BaseExecutor
+from tortoise.models import (contains, ends_with, insensitive_contains, insensitive_ends_with,
+                             insensitive_starts_with, starts_with)
+
+
+def mysql_contains(field, value):
+    return functions.Cast(field, SqlTypes.CHAR).like('%{}%'.format(value))
+
+
+def mysql_starts_with(field, value):
+    return functions.Cast(field, SqlTypes.CHAR).like('{}%'.format(value))
+
+
+def mysql_ends_with(field, value):
+    return functions.Cast(field, SqlTypes.CHAR).like('%{}'.format(value))
+
+
+def mysql_insensitive_contains(field, value):
+    return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).like(
+        functions.Upper('%{}%'.format(value))
+    )
+
+
+def mysql_insensitive_starts_with(field, value):
+    return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).like(
+        functions.Upper('{}%'.format(value))
+    )
+
+
+def mysql_insensitive_ends_with(field, value):
+    return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).like(
+        functions.Upper('%{}'.format(value))
+    )
+
+
+FILTER_FUNC_OVERRIDE = {
+    contains: mysql_contains,
+    starts_with: mysql_starts_with,
+    ends_with: mysql_ends_with,
+    insensitive_contains: mysql_insensitive_contains,
+    insensitive_starts_with: mysql_insensitive_starts_with,
+    insensitive_ends_with: mysql_insensitive_ends_with
+}
 
 
 class MySQLExecutor(BaseExecutor):
@@ -24,3 +65,7 @@ class MySQLExecutor(BaseExecutor):
         await self.db.release_single_connection(self.connection)
         self.connection = None
         return instance
+
+    @staticmethod
+    def get_overridden_filter_func(filter_func):
+        return FILTER_FUNC_OVERRIDE.get(filter_func)

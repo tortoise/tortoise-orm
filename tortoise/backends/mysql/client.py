@@ -1,5 +1,4 @@
 import logging
-import re
 
 import aiomysql
 import pymysql
@@ -11,7 +10,7 @@ from tortoise.backends.mysql.executor import MySQLExecutor
 from tortoise.backends.mysql.schema_generator import MySQLSchemaGenerator
 from tortoise.exceptions import (ConfigurationError, DBConnectionError, IntegrityError,
                                  OperationalError, TransactionManagementError)
-from tortoise.transactions import current_connection
+from tortoise.transactions import current_transaction
 
 
 class MySQLClient(BaseDBAsyncClient):
@@ -106,10 +105,6 @@ class MySQLClient(BaseDBAsyncClient):
             return self._transaction_class(pool=self._db_pool)
 
     async def execute_query(self, query, get_inserted_id=False):
-        # Temporarily use this method to make mysql work:
-        #  replace VARCHAR to CHAR
-        query = re.sub(r'CAST\((.*?) AS VARCHAR\)', r'CAST(\1 AS CHAR)', query)
-
         try:
             async with self.acquire_connection() as connection:
                 async with connection.cursor(aiomysql.DictCursor) as cursor:
@@ -120,7 +115,6 @@ class MySQLClient(BaseDBAsyncClient):
                         return cursor.lastrowid  # return auto-generated id
                     result = await cursor.fetchall()
                     return result
-
         except (pymysql.err.OperationalError, pymysql.err.ProgrammingError,
                 pymysql.err.DataError, pymysql.err.InternalError,
                 pymysql.err.NotSupportedError) as exc:
@@ -171,8 +165,8 @@ class TransactionWrapper(MySQLClient):
         if not self._connection:
             self._connection = await self._get_connection()
         await self._connection.begin()
-        self._old_context_value = current_connection.get()
-        current_connection.set(self)
+        self._old_context_value = current_transaction.get()
+        current_transaction.set(self)
 
     async def commit(self):
         if self._finalized:
@@ -182,7 +176,7 @@ class TransactionWrapper(MySQLClient):
         if self._pool:
             await self._pool.release(self._connection)
             self._connection = None
-        current_connection.set(self._old_context_value)
+        current_transaction.set(self._old_context_value)
 
     async def rollback(self):
         if self._finalized:
@@ -192,7 +186,7 @@ class TransactionWrapper(MySQLClient):
         if self._pool:
             await self._pool.release(self._connection)
             self._connection = None
-        current_connection.set(self._old_context_value)
+        current_transaction.set(self._old_context_value)
 
     async def __aenter__(self):
         await self.start()
