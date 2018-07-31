@@ -4,7 +4,29 @@ Changelog
 0.10.0
 ------
 - Refactored ``Tortoise.init()`` to init all connections and discover models from config passed
-  as argument
+  as argument.
+
+  .. caution::
+     This is a breaking change.
+
+  You no longer need to import the models module for discovery,
+  instead you need to provide an app ⇒ modules map with the init call:
+
+  .. code-block:: python3
+
+      async def init():
+          # Here we create a SQLite DB using file "db.sqlite3"
+          #  also specify the app name of "models"
+          #  which contain models from "app.models"
+          await Tortoise.init(
+              db_url='sqlite://db.sqlite3',
+              modules={'models': ['app.models']}
+          )
+          # Generate the schema
+          await Tortoise.generate_schemas()
+
+  For more info, please have a look at :ref:`init_app`
+
 - New ``transactions`` module for implicit working with transactions
 - Test frameworks overhauled:
   - Better performance for test runner, using transactions to keep tests isolated.
