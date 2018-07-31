@@ -40,7 +40,7 @@ class AwaitableQuery:
                     self._joined_tables.append(join[0])
             self.query = self.query.where(criterion)
         for key, value in filter_kwargs.items():
-            param = model._meta.filters[key]
+            param = model._meta.get_filter(key)
             if param.get('table'):
                 self._filter_from_related_table(table, param, value)
             else:
@@ -56,8 +56,14 @@ class AwaitableQuery:
             having_info = custom_filters[key]
             aggregation = annotations[having_info['field']]
             aggregation_info = aggregation.resolve_for_model(self.model)
+            operator = having_info['operator']
+            overridden_operator = self.model._meta.db.executor_class.get_overridden_filter_func(
+                filter_func=operator,
+            )
+            if overridden_operator:
+                operator = overridden_operator
             self.query = self.query.having(
-                having_info['operator'](aggregation_info['field'], value)
+                operator(aggregation_info['field'], value)
             )
 
     def _join_table_by_field(self, table, related_field_name, related_field):

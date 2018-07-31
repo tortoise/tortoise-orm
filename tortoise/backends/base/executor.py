@@ -219,3 +219,8 @@ class BaseExecutor:
         await self.db.release_single_connection(self.connection)
         self.connection = None
         return instance_list
+
+    @staticmethod
+    def get_overridden_filter_func(filter_func):
+        # Returns None if no filters was overridden
+        return

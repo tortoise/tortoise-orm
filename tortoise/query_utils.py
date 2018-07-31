@@ -76,7 +76,7 @@ class Q:  # pylint: disable=C0103
                 new_criterion, new_joins = self._resolve_nested_filter(model, key, value)
                 required_joins += new_joins
             else:
-                param = model._meta.filters[key]
+                param = model._meta.get_filter(key)
                 if param.get('table'):
                     new_criterion, join = self._get_from_related_table(param['table'], param, value)
                     required_joins.append(join)

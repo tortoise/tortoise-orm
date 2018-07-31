@@ -9,7 +9,7 @@ from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWra
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
 from tortoise.exceptions import IntegrityError, OperationalError, TransactionManagementError
-from tortoise.transactions import current_connection
+from tortoise.transactions import current_transaction
 
 
 class SqliteClient(BaseDBAsyncClient):
@@ -94,22 +94,22 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
             await self._connection.execute('BEGIN')
         except sqlite3.OperationalError as exc:  # pragma: nocoverage
             raise TransactionManagementError(exc)
-        self._old_context_value = current_connection.get()
-        current_connection.set(self)
+        self._old_context_value = current_transaction.get()
+        current_transaction.set(self)
 
     async def rollback(self):
         if self._finalized:
             raise TransactionManagementError('Transaction already finalised')
         self._finalized = True
         await self._connection.rollback()
-        current_connection.set(self._old_context_value)
+        current_transaction.set(self._old_context_value)
 
     async def commit(self):
         if self._finalized:
             raise TransactionManagementError('Transaction already finalised')
         self._finalized = True
         await self._connection.commit()
-        current_connection.set(self._old_context_value)
+        current_transaction.set(self._old_context_value)
 
     async def __aenter__(self):
         await self.start()

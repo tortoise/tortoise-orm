@@ -9,7 +9,7 @@ try:
 except ImportError:
     from aiocontextvars import ContextVar  # type: ignore
 
-current_connection = ContextVar('current_connection', default=None)  # type: ContextVar
+current_transaction = ContextVar('current_transaction', default=None)  # type: ContextVar
 
 
 def _get_connection(connection_name: Optional[str]) -> BaseDBAsyncClient:
