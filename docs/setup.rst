@@ -14,6 +14,7 @@ You can do it like this:
 .. code-block:: python3
 
     from tortoise import Tortoise
+    from tortoise.utils import generate_schema
 
     async def init():
         # Here we connect to a PostgresQL DB
@@ -25,8 +26,8 @@ You can do it like this:
         )
         # Generate the schema
         await Tortoise.generate_schemas()
-
-
+    
+    
 Here we create connection to PostgresQL database with default ``asyncpg`` client and then we discover & initialise models.
 
 ``generate_schema`` generates schema on empty database, you shouldn't run it on every app init, run it just once, maybe out of your main code.

@@ -8,8 +8,9 @@ Tortoise currently supports the following databases:
 
 * PostgreSQL >= 9.4 (using ``asyncpg``)
 * SQLite (using ``aiosqlite``)
+* MySQL/MariaDB (using ``aiomysql``)
 
-To use, please ensure that ``asyncpg`` and/or ``aiosqlite`` is installed.
+To use, please ensure that ``asyncpg``, ``aiosqlite`` and/or ``aiomysql`` is installed.
 
 .. _db_url:
 
@@ -29,6 +30,8 @@ The supported ``DB_TYPE``:
     So if the ``DB_FILE`` is "/data/db.sqlite3" then the string will be ``sqlite:///data/db.sqlite`` (note the three /'s)
 ``postgres``:
     Typically in the form of :samp:`postgres://postgres:pass@db.host:5432/somedb`
+``mysql``:
+    Typically in the form of :samp:`mysql://myuser:mypass:pass@db.host:3306/somedb`
 
 SQLite
 ======
@@ -39,6 +42,13 @@ SQLite
 
 PostgreSQL
 ==========
+
+.. todo::
+    Document PostgreSQL options and behaviour
+
+
+MySQL/MariaDB
+=============
 
 .. todo::
     Document PostgreSQL options and behaviour

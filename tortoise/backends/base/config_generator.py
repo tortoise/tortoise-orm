@@ -6,6 +6,7 @@ from tortoise.exceptions import ConfigurationError
 
 urlparse.uses_netloc.append('postgres')
 urlparse.uses_netloc.append('sqlite')
+urlparse.uses_netloc.append('mysql')
 DB_LOOKUP = {
     'postgres': {
         'engine': 'tortoise.backends.asyncpg',
@@ -22,6 +23,16 @@ DB_LOOKUP = {
         'skip_first_char': False,
         'vars': {
             'path': 'file_path',
+        },
+    },
+    'mysql': {
+        'engine': 'tortoise.backends.mysql',
+        'vars': {
+            'path': 'database',
+            'hostname': 'host',
+            'port': 'port',
+            'username': 'user',
+            'password': 'password',
         },
     },
 }  # type: Dict[str, Dict[str, Any]]

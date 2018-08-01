@@ -142,7 +142,13 @@ class QuerySet(AwaitableQuery):
         super().__init__()
         self.fields = model._meta.db_fields
         self.model = model
-        self.query = Query.from_(model._meta.table)
+
+        if not hasattr(model._meta.db, 'query_class'):
+            # use PostgreSQLQuery if model doesn't have query_class
+            self.query = Query.from_(model._meta.table)
+        else:
+            self.query = model._meta.db.query_class.from_(model._meta.table)
+
         self._prefetch_map = {}  # type: Dict[str, Set[str]]
         self._prefetch_queries = {}  # type: Dict[str, QuerySet]
         self._single = False  # type: bool

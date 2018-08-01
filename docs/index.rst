@@ -64,10 +64,11 @@ Tortoise currently supports the following :ref:`databases`:
 
 * PostgreSQL >= 9.4 (using ``asyncpg``)
 * SQLite (using ``aiosqlite``)
+* MySQL/MariaDB (using ``aiomysql``)
 
 
-Other
------
+And more
+--------
 
 Tortoise-ORM supports the following features:
 
