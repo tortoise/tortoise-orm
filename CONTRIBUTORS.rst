@@ -7,6 +7,7 @@ Contributors
 
 * Andrey Bondar ``@Zeliboba5``
 * Nickolas Grigoriadis ``@grigi``
+* ``@etzelwu``
 
 Special Thanks
 ==============

@@ -46,11 +46,11 @@ You can start writing models like this:
 
     from tortoise.models import Model
     from tortoise import fields
-
+    
     class Tournament(Model):
         id = fields.IntField(pk=True)
         name = fields.TextField()
-
+    
         def __str__(self):
             return self.name
 
@@ -60,7 +60,7 @@ You can start writing models like this:
         name = fields.TextField()
         tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
         participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
-
+    
         def __str__(self):
             return self.name
 
@@ -68,34 +68,35 @@ You can start writing models like this:
     class Team(Model):
         id = fields.IntField(pk=True)
         name = fields.TextField()
-
+    
         def __str__(self):
             return self.name
 
-Then in init part of your app you should init models like this
-(make sure that you **import your models** before calling init, tortoise must see them to init normally):
 
+After you defined all your models, tortoise needs you to init them, in order to create backward relations between models and match your db client with appropriate models.
+
+You can do it like this:
 
 .. code-block:: python3
 
-    from tortoise.backends.asyncpg.client import AsyncpgDBClient
     from tortoise import Tortoise
-    from app import models # without importing models Tortoise can't find and init them
-
+    from tortoise.utils import generate_schema
 
     async def init():
-        db = AsyncpgDBClient(
-            host='localhost',
-            port=5432,
-            user='postgres',
-            password='qwerty123',
-            database='events'
+        # Here we connect to a PostgresQL DB
+        # also specify the app name of "models"
+        # which contain models from "app.models"
+        await Tortoise.init(
+            db_url='postgres://postgres:qwerty123@localhost:5432/events',
+            modules={'models': ['app.models']}
         )
+        # Generate the schema
+        await Tortoise.generate_schemas()
 
-        await db.create_connection()
-        Tortoise.init(db)
-        # You can generate schema for your models like this, but don't do this if you have schema already:
-        await generate_schema(db)
+
+Here we create connection to PostgresQL database with default ``asyncpg`` client and then we discover & initialise models.
+
+``generate_schema`` generates schema on empty database, you shouldn't run it on every app init, run it just once, maybe out of your main code.
 
 After that you can start using your models:
 
@@ -104,7 +105,7 @@ After that you can start using your models:
     # Create instance by save
     tournament = Tournament(name='New Tournament')
     await tournament.save()
-
+    
     # Or by .create()
     await Event.create(name='Without participants', tournament=tournament)
     event = await Event.create(name='Test', tournament=tournament)
@@ -112,15 +113,15 @@ After that you can start using your models:
     for i in range(2):
         team = Team.create(name='Team {}'.format(i + 1))
         participants.append(team)
-
+    
     # M2M Relationship management is quite straightforward
     # (also look for methods .remove(...) and .clear())
     await event.participants.add(*participants)
-
+    
     # You can query related entity just with async for
     async for team in event.participants:
         pass
-
+    
     # After making related query you can iterate with regular for,
     # which can be extremely convenient for using with other packages,
     # for example some kind of serializers with nested support
@@ -132,11 +133,11 @@ After that you can start using your models:
     selected_events = await Event.filter(
         participants=participants[0].id
     ).prefetch_related('participants', 'tournament')
-
+    
     # Tortoise supports variable depth of prefetching related entities
     # This will fetch all events for team and in those events tournaments will be prefetched
     await Team.all().prefetch_related('events__tournament')
-
+    
     # You can filter and order by related models too
     await Tournament.filter(
         events__name__in=['Test', 'Prod']

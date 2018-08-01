@@ -33,7 +33,7 @@ class BaseDBAsyncClient:
     def acquire_connection(self):
         raise NotImplementedError()  # pragma: nocoverage
 
-    def in_transaction(self):
+    def _in_transaction(self):
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_query(self, query):
@@ -61,11 +61,11 @@ class ConnectionWrapper:
 
 
 class SingleConnectionWrapper(BaseDBAsyncClient):
-    def __init__(self, connection, parent):
+    def __init__(self, connection, closing_callback=None):
         self.connection = connection
-        self.parent = parent
         self.log = logging.getLogger('db_client')
         self.single_connection = True
+        self.closing_callback = closing_callback
 
     def acquire_connection(self):
         return ConnectionWrapper(self.connection)
@@ -82,4 +82,22 @@ class SingleConnectionWrapper(BaseDBAsyncClient):
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        pass
+        if self.closing_callback:
+            await self.closing_callback(self)
+
+
+class BaseTransactionWrapper:
+    async def start(self):
+        raise NotImplementedError()  # pragma: nocoverage
+
+    async def rollback(self):
+        raise NotImplementedError()  # pragma: nocoverage
+
+    async def commit(self):
+        raise NotImplementedError()  # pragma: nocoverage
+
+    async def __aenter__(self):
+        raise NotImplementedError()  # pragma: nocoverage
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        raise NotImplementedError()  # pragma: nocoverage

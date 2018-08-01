@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Set  # noqa
+from typing import Any, Dict, List, Optional, Set, Tuple  # noqa
 
 from pypika import JoinType, Order
 from pypika import PostgreSQLQuery as Query
@@ -40,7 +40,7 @@ class AwaitableQuery:
                     self._joined_tables.append(join[0])
             self.query = self.query.where(criterion)
         for key, value in filter_kwargs.items():
-            param = model._meta.filters[key]
+            param = model._meta.get_filter(key)
             if param.get('table'):
                 self._filter_from_related_table(table, param, value)
             else:
@@ -56,8 +56,14 @@ class AwaitableQuery:
             having_info = custom_filters[key]
             aggregation = annotations[having_info['field']]
             aggregation_info = aggregation.resolve_for_model(self.model)
+            operator = having_info['operator']
+            overridden_operator = self.model._meta.db.executor_class.get_overridden_filter_func(
+                filter_func=operator,
+            )
+            if overridden_operator:
+                operator = overridden_operator
             self.query = self.query.having(
-                having_info['operator'](aggregation_info['field'], value)
+                operator(aggregation_info['field'], value)
             )
 
     def _join_table_by_field(self, table, related_field_name, related_field):
@@ -132,11 +138,17 @@ class QuerySet(AwaitableQuery):
                  '_orderings', '_q_objects_for_resolve', '_distinct',
                  '_annotations', '_having', '_available_custom_filters')
 
-    def __init__(self, model):
+    def __init__(self, model) -> None:
         super().__init__()
         self.fields = model._meta.db_fields
         self.model = model
-        self.query = Query.from_(model._meta.table)
+
+        if not hasattr(model._meta.db, 'query_class'):
+            # use PostgreSQLQuery if model doesn't have query_class
+            self.query = Query.from_(model._meta.table)
+        else:
+            self.query = model._meta.db.query_class.from_(model._meta.table)
+
         self._prefetch_map = {}  # type: Dict[str, Set[str]]
         self._prefetch_queries = {}  # type: Dict[str, QuerySet]
         self._single = False  # type: bool
@@ -146,14 +158,14 @@ class QuerySet(AwaitableQuery):
         self._limit = None  # type: Optional[int]
         self._offset = None  # type: Optional[int]
         self._filter_kwargs = {}  # type: Dict[str, Any]
-        self._orderings = []  # type: List[str]
+        self._orderings = []  # type: List[Tuple[str, Any]]
         self._q_objects_for_resolve = []  # type: List[Q]
         self._distinct = False  # type: bool
         self._annotations = {}  # type: Dict[str, Aggregate]
         self._having = {}  # type: Dict[str, Any]
         self._available_custom_filters = {}  # type: Dict[str, dict]
 
-    def _clone(self):
+    def _clone(self) -> 'QuerySet':
         queryset = self.__class__(self.model)
         queryset._prefetch_map = self._prefetch_map
         queryset._prefetch_queries = self._prefetch_queries
@@ -173,7 +185,7 @@ class QuerySet(AwaitableQuery):
         queryset._available_custom_filters = self._available_custom_filters
         return queryset
 
-    def filter(self, *args, **kwargs):
+    def filter(self, *args, **kwargs) -> 'QuerySet':
         """
         Filters QuerySet by given kwargs. You can filter by related objects like this:
 
@@ -202,7 +214,7 @@ class QuerySet(AwaitableQuery):
                 raise FieldError('unknown filter param {}'.format(key))
         return queryset
 
-    def order_by(self, *orderings: str):
+    def order_by(self, *orderings: str) -> 'QuerySet':
         """
         Accept args to filter by in format like this:
 
@@ -236,7 +248,7 @@ class QuerySet(AwaitableQuery):
         queryset._orderings = new_ordering
         return queryset
 
-    def limit(self, limit: int):
+    def limit(self, limit: int) -> 'QuerySet':
         """
         Limits QuerySet to given length.
         """
@@ -244,7 +256,7 @@ class QuerySet(AwaitableQuery):
         queryset._limit = limit
         return queryset
 
-    def offset(self, offset: int):
+    def offset(self, offset: int) -> 'QuerySet':
         """
         Query offset for QuerySet.
         """
@@ -252,7 +264,7 @@ class QuerySet(AwaitableQuery):
         queryset._offset = offset
         return queryset
 
-    def distinct(self):
+    def distinct(self) -> 'QuerySet':
         """
         Make QuerySet distinct.
         """
@@ -260,7 +272,7 @@ class QuerySet(AwaitableQuery):
         queryset._distinct = True
         return queryset
 
-    def annotate(self, **kwargs):
+    def annotate(self, **kwargs) -> 'QuerySet':
         """
         Annotate result with aggregation result.
         """
@@ -367,14 +379,14 @@ class QuerySet(AwaitableQuery):
             custom_filters=self._available_custom_filters,
         )
 
-    def all(self):
+    def all(self) -> 'QuerySet':
         """
         Return the whole QuerySet.
         Essentially a no-op except as the only operation.
         """
         return self._clone()
 
-    def first(self):
+    def first(self) -> 'QuerySet':
         """
         Limit queryset to one object and return one object instead of list.
         """
@@ -383,7 +395,7 @@ class QuerySet(AwaitableQuery):
         queryset._single = True
         return queryset
 
-    def get(self, *args, **kwargs):
+    def get(self, *args, **kwargs) -> 'QuerySet':
         """
         Fetch exactly one object matching the parameters.
         """
@@ -392,7 +404,7 @@ class QuerySet(AwaitableQuery):
         queryset._get = True
         return queryset
 
-    def prefetch_related(self, *args: str):
+    def prefetch_related(self, *args: str) -> 'QuerySet':
         """
         Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
         """
@@ -418,7 +430,7 @@ class QuerySet(AwaitableQuery):
                 queryset._prefetch_map[first_level_field].add(forwarded_prefetch)
         return queryset
 
-    def using_db(self, _db: BaseDBAsyncClient):
+    def using_db(self, _db: BaseDBAsyncClient) -> 'QuerySet':
         """
         Executes query in provided db client.
         Useful for transactions workaround.

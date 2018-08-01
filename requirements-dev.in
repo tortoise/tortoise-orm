@@ -4,6 +4,7 @@
 
 ## Database Drivers
 asyncpg
+aiomysql
 aiosqlite
 
 # Dev Tools

@@ -4,9 +4,7 @@ This example demonstrates most basic operations with single model
 import asyncio
 
 from tortoise import Tortoise, fields
-from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.models import Model
-from tortoise.utils import generate_schema
 
 
 class Event(Model):
@@ -22,11 +20,8 @@ class Event(Model):
 
 
 async def run():
-    client = SqliteClient('example_basic.sqlite3')
-    await client.create_connection()
-    Tortoise.init(client)
-
-    await generate_schema(client)
+    await Tortoise.init(config_file='config.json')
+    await Tortoise.generate_schemas()
 
     event = await Event.create(name='Test')
     await Event.filter(id=event.id).update(name='Updated name')

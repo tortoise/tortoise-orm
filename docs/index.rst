@@ -29,16 +29,18 @@ Initialise your models and database like so:
 
 .. code-block:: python3
 
-    from tortoise.backends.sqlite.client import SqliteClient
     from tortoise import Tortoise
-    # You must import the models so that Tortoise can discover them
-    from app import models 
 
     async def init():
-        db = SqliteClient(db_name)
-        await db.create_connection()
-        Tortoise.init(db)
-        await generate_schema(db)
+        # Here we create a SQLite DB using file "db.sqlite3"
+        #  also specify the app name of "models"
+        #  which contain models from "app.models"
+        await Tortoise.init(
+            db_url='sqlite://db.sqlite3',
+            modules={'models': ['app.models']}
+        )
+        # Generate the schema
+        await Tortoise.generate_schemas()
 
 And use it like so:
 
@@ -58,11 +60,27 @@ And use it like so:
 
 Pluggable Database backends
 ---------------------------
-Tortoise currently supports the following databases:
+Tortoise currently supports the following :ref:`databases`:
 
 * PostgreSQL >= 9.4 (using ``asyncpg``)
 * SQLite (using ``aiosqlite``)
+* MySQL/MariaDB (using ``aiomysql``)
 
 
+And more
+--------
+
+Tortoise-ORM supports the following features:
+
+* Designed to be used in an existing project:
+    * Testing framework uses existing Python Unittest framework, just requires
+      that ``initializer()`` and ``finalizer()`` gets called to set up and tear
+      down the test databases. (See :ref:`unittest`)
+    * ORM :ref:`init_app` configures entierly from provided parameters
+* Composable, Django-inspired :ref:`models`
+* Supports relations, such as ``ForeignKeyField`` and ``ManyToManyField``
+* Supports many standard :ref:`fields`
+* Comprehensive :ref:`query_api`
+* :ref:`pylint`
 
 If you want to contribute check out issues, or just straightforwardly create PR

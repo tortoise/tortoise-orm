@@ -1,5 +1,6 @@
 import operator
-from typing import Dict, Optional, Set  # noqa
+from copy import deepcopy
+from typing import Awaitable, Dict, Hashable, Optional, Set, Tuple, Type, TypeVar  # noqa
 
 from pypika import Table, functions
 from pypika.enums import SqlTypes
@@ -9,6 +10,9 @@ from tortoise.backends.base.client import BaseDBAsyncClient  # noqa
 from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields import ManyToManyRelationManager, RelationQueryContainer
 from tortoise.queryset import QuerySet
+from tortoise.transactions import current_transaction
+
+MODEL_TYPE = TypeVar('MODEL_TYPE', bound='Model')
 
 
 def is_in(field, value):
@@ -67,7 +71,7 @@ def insensitive_ends_with(field, value):
     )
 
 
-def get_m2m_filters(field_name, field):
+def get_m2m_filters(field_name: str, field: fields.ManyToManyField) -> dict:
     filters = {
         field_name: {
             'field': field.forward_key,
@@ -99,7 +103,7 @@ def get_m2m_filters(field_name, field):
     return filters
 
 
-def get_backward_fk_filters(field_name, field):
+def get_backward_fk_filters(field_name: str, field: fields.BackwardFKRelation) -> dict:
     filters = {
         field_name: {
             'field': 'id',
@@ -134,6 +138,8 @@ def get_backward_fk_filters(field_name, field):
 def get_filters_for_field(field_name: str, field: Optional[fields.Field], source_field: str):
     if isinstance(field, fields.ManyToManyField):
         return get_m2m_filters(field_name, field)
+    if isinstance(field, fields.BackwardFKRelation):
+        return get_backward_fk_filters(field_name, field)
     filters = {
         field_name: {
             'field': source_field,
@@ -207,8 +213,8 @@ def get_filters_for_field(field_name: str, field: Optional[fields.Field], source
 
 class MetaInfo:
     __slots__ = ('abstract', 'table', 'app', 'fields', 'db_fields', 'm2m_fields', 'fk_fields',
-                 'backward_fk_fields', 'fetch_fields', 'fields_db_projection',
-                 'fields_db_projection_reverse', 'filters', 'fields_map', 'db')
+                 'backward_fk_fields', 'fetch_fields', 'fields_db_projection', '_inited',
+                 'fields_db_projection_reverse', 'filters', 'fields_map', 'default_db')
 
     def __init__(self, meta):
         self.abstract = getattr(meta, 'abstract', False)  # type: bool
@@ -224,7 +230,22 @@ class MetaInfo:
         self.fields_db_projection_reverse = {}  # type: Dict[str,str]
         self.filters = {}  # type: Dict[str, Dict[str, dict]]
         self.fields_map = {}  # type: Dict[str, fields.Field]
-        self.db = None  # type: Optional[BaseDBAsyncClient]
+        self._inited = False
+        self.default_db = None
+
+    @property
+    def db(self):
+        return current_transaction.get() or self.default_db
+
+    def get_filter(self, key):
+        filter_info = self.filters[key]
+        overridden_operator = self.db.executor_class.get_overridden_filter_func(
+            filter_func=filter_info['operator'],
+        )
+        if overridden_operator:
+            filter_info = deepcopy(filter_info)
+            filter_info['operator'] = overridden_operator
+        return filter_info
 
 
 class ModelMeta(type):
@@ -234,6 +255,9 @@ class ModelMeta(type):
         filters = {}  # type: Dict[str, Dict[str, dict]]
         fk_fields = set()  # type: Set[str]
         m2m_fields = set()  # type: Set[str]
+
+        if 'id' not in attrs:
+            attrs['id'] = fields.IntField(pk=True)
 
         for key, value in attrs.items():
             if isinstance(value, fields.Field):
@@ -269,10 +293,6 @@ class ModelMeta(type):
 
         attrs['_meta'] = meta = MetaInfo(attrs.get('Meta'))
 
-        if 'id' not in attrs:
-            attrs['id'] = None
-
-        meta = meta
         meta.fields_map = fields_map
         meta.fields_db_projection = fields_db_projection
         meta.fields_db_projection_reverse = {
@@ -286,19 +306,21 @@ class ModelMeta(type):
         meta.backward_fk_fields = set()
         meta.m2m_fields = m2m_fields
         meta.fetch_fields = fk_fields | m2m_fields
-        meta.db = None
+        meta.default_db = None
+        meta._inited = False
         if not fields_map:
             meta.abstract = True
 
         new_class = super().__new__(mcs, name, bases, attrs)
-        if not meta.abstract:
-            from tortoise import Tortoise
-            Tortoise.register_model(meta.app, new_class.__name__, new_class)
         return new_class
 
 
 class Model(metaclass=ModelMeta):
-    def __init__(self, *args, **kwargs):
+    # TODO: I don' like this here, but it makes autocompletion and static analysis much happier
+    _meta = MetaInfo(None)
+    id = None  # type: Optional[Hashable]
+
+    def __init__(self, *args, **kwargs) -> None:
         is_new = not bool(kwargs.get('id'))
 
         for key, field in self._meta.fields_map.items():
@@ -337,7 +359,7 @@ class Model(metaclass=ModelMeta):
                     raise ValueError('{} is non nullable field, but null was passed'.format(key))
                 setattr(self, key, field_object.to_python_value(value))
             elif key in self._meta.db_fields:
-                setattr(self, self._meta.fields_db_projection_reverse.get(key), value)
+                setattr(self, self._meta.fields_db_projection_reverse[key], value)
 
         for key, field_object in self._meta.fields_map.items():
             if key in passed_fields or key in self._meta.fetch_fields:
@@ -348,30 +370,30 @@ class Model(metaclass=ModelMeta):
                 else:
                     setattr(self, key, field_object.default)
 
-    async def _insert_instance(self, using_db=None):
+    async def _insert_instance(self, using_db=None) -> None:
         db = using_db if using_db else self._meta.db
         await db.executor_class(
             model=self.__class__,
             db=db,
         ).execute_insert(self)
 
-    async def _update_instance(self, using_db=None):
+    async def _update_instance(self, using_db=None) -> None:
         db = using_db if using_db else self._meta.db
         await db.executor_class(
             model=self.__class__,
             db=db,
         ).execute_update(self)
 
-    async def save(self, *args, **kwargs):
+    async def save(self, *args, **kwargs) -> None:
         if not self.id:
             await self._insert_instance(*args, **kwargs)
         else:
             await self._update_instance(*args, **kwargs)
 
-    async def delete(self, using_db=None):
+    async def delete(self, using_db=None) -> None:
         db = using_db if using_db else self._meta.db
         if not self.id:
-            return
+            raise OperationalError("Can't delete unpersisted record")
         await db.executor_class(
             model=self.__class__,
             db=db,
@@ -384,52 +406,59 @@ class Model(metaclass=ModelMeta):
             db=db,
         ).fetch_for_list([self], *args)
 
-    def __str__(self):
-        return self.__class__.__name__
+    def __str__(self) -> str:
+        return '<{}>'.format(self.__class__.__name__)
 
-    def __repr__(self):
-        return '<{}: {}>'.format(self.__class__.__name__, self.__str__())
+    def __repr__(self) -> str:
+        if self.id:
+            return '<{}: {}>'.format(self.__class__.__name__, self.id)
+        return '<{}>'.format(self.__class__.__name__)
 
     def __hash__(self):
-        if self.id:
+        if not self.id:
             raise TypeError('Model instances without id are unhashable')
         return hash(self.id)
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         # pylint: disable=C0123
         if type(self) == type(other) and self.id == other.id:
             return True
         return False
 
     @classmethod
-    async def get_or_create(cls, using_db=None, defaults=None, **kwargs):
+    async def get_or_create(
+        cls: Type[MODEL_TYPE],
+        using_db=None,
+        defaults=None,
+        **kwargs
+    ) -> Tuple[MODEL_TYPE, bool]:
         if not defaults:
             defaults = {}
         instance = await cls.filter(**kwargs).first()
         if instance:
             return instance, False
-        return await cls(**defaults, **kwargs).save(using_db=using_db), True
+        return await cls.create(**defaults, **kwargs, using_db=using_db), True
 
     @classmethod
-    async def create(cls, **kwargs):
+    async def create(cls: Type[MODEL_TYPE], **kwargs) -> MODEL_TYPE:
         instance = cls(**kwargs)
-        await instance.save(kwargs.get('using_db'))
+        await instance.save(using_db=kwargs.get('using_db'))
         return instance
 
     @classmethod
-    def first(cls):
+    def first(cls) -> QuerySet:
         return QuerySet(cls).first()
 
     @classmethod
-    def filter(cls, *args, **kwargs):
+    def filter(cls, *args, **kwargs) -> QuerySet:
         return QuerySet(cls).filter(*args, **kwargs)
 
     @classmethod
-    def all(cls):
+    def all(cls) -> QuerySet:
         return QuerySet(cls)
 
     @classmethod
-    def get(cls, *args, **kwargs):
+    def get(cls, *args, **kwargs) -> QuerySet:
         return QuerySet(cls).get(*args, **kwargs)
 
     @classmethod

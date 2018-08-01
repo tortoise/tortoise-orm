@@ -2,9 +2,7 @@ import asyncio
 
 from tortoise import Tortoise, fields
 from tortoise.aggregation import Count, Min, Sum
-from tortoise.backends.sqlite.client import SqliteClient
 from tortoise.models import Model
-from tortoise.utils import generate_schema
 
 
 class Tournament(Model):
@@ -38,12 +36,9 @@ class Team(Model):
 
 
 async def run():
-    client = SqliteClient('example_aggregation.sqlite3')
-    await client.create_connection()
-    Tortoise.init(client)
-    await generate_schema(client)
-
-    tournament = Tournament(name='New Tournament')
+    await Tortoise.init(config_file='config.json')
+    await Tortoise.generate_schemas()
+    tournament = await Tournament.create(name='New Tournament')
     await tournament.save()
     await Tournament.create(name='Second tournament')
     await Event(name='Without participants', tournament_id=tournament.id).save()

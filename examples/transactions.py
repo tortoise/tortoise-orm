@@ -1,17 +1,12 @@
 """
 This example demonstrates how you can use transactions with tortoise
-
-Currently tortoise doesn't have some kind of magic transaction wrapper
-like django's transaction.atomic, but if you have to make something in transaction
-you could still do it like this
 """
 import asyncio
-import sqlite3
 
 from tortoise import Tortoise, fields
-from tortoise.backends.sqlite.client import SqliteClient
+from tortoise.exceptions import OperationalError
 from tortoise.models import Model
-from tortoise.utils import generate_schema
+from tortoise.transactions import atomic, in_transaction
 
 
 class Event(Model):
@@ -26,19 +21,32 @@ class Event(Model):
 
 
 async def run():
-    client = SqliteClient('example_transaction.sqlite3')
-    await client.create_connection()
-    Tortoise.init(client)
-    await generate_schema(client)
+    await Tortoise.init(config_file='config.json')
+    await Tortoise.generate_schemas()
 
     try:
-        async with client.in_transaction() as connection:
+        async with in_transaction() as connection:
             event = Event(name='Test')
             await event.save(using_db=connection)
             await Event.filter(id=event.id).using_db(connection).update(name='Updated name')
             saved_event = await Event.filter(name='Updated name').using_db(connection).first()
             await connection.execute_query('SELECT * FROM non_existent_table')
-    except sqlite3.OperationalError:
+    except OperationalError:
+        pass
+    saved_event = await Event.filter(name='Updated name').first()
+    print(saved_event)
+
+    @atomic()
+    async def bound_to_fall():
+        event = await Event.create(name='Test')
+        await Event.filter(id=event.id).update(name='Updated name')
+        saved_event = await Event.filter(name='Updated name').first()
+        print(saved_event.name)
+        raise OperationalError()
+
+    try:
+        await bound_to_fall()
+    except OperationalError:
         pass
     saved_event = await Event.filter(name='Updated name').first()
     print(saved_event)
