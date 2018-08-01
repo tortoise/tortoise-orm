@@ -87,7 +87,7 @@ You can do it like this:
         # also specify the app name of "models"
         # which contain models from "app.models"
         await Tortoise.init(
-            db_url='postgres://postgres:@qwerty123localhost:5432/events',
+            db_url='postgres://postgres:qwerty123@localhost:5432/events',
             modules={'models': ['app.models']}
         )
         # Generate the schema
