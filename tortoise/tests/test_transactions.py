@@ -1,6 +1,6 @@
 from tortoise.contrib import test
 from tortoise.exceptions import OperationalError, TransactionManagementError
-from tortoise.tests.testmodels import Tournament
+from tortoise.tests.testmodels import Tournament, Event, Team
 from tortoise.transactions import atomic, in_transaction, start_transaction
 
 
@@ -101,6 +101,13 @@ class TestTransactions(test.IsolatedTestCase):
         self.assertEqual(saved_event.id, tournament.id)
         saved_event = await Tournament.filter(name='Updated name').first()
         self.assertIsNone(saved_event)
+
+    async def test_transaction_with_m2m_relations(self):
+        async with in_transaction():
+            tournament = await Tournament.create(name='Test')
+            event = await Event.create(name='Test event', tournament=tournament)
+            team = await Team.create(name='Test team')
+            await event.participants.add(team)
 
     async def test_transaction_exception_1(self):
         connection = await start_transaction()

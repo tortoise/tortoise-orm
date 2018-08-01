@@ -22,7 +22,7 @@ async def run():
                 'engine': 'tortoise.backends.asyncpg',
                 'credentials': {
                     'host': 'localhost',
-                    'port': '54325',
+                    'port': '5432',
                     'user': 'tortoise',
                     'password': 'qwerty123',
                     'database': 'test',

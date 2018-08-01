@@ -229,7 +229,7 @@ class Tortoise:
                             'engine': 'tortoise.backends.asyncpg',
                             'credentials': {
                                 'host': 'localhost',
-                                'port': '54325',
+                                'port': '5432',
                                 'user': 'tortoise',
                                 'password': 'qwerty123',
                                 'database': 'test',
@@ -334,4 +334,4 @@ class Tortoise:
         await cls._reset_connections()
 
 
-__version__ = "0.10.0"
+__version__ = "0.10.1"

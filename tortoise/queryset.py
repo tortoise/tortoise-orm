@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Any, Dict, List, Optional, Set, Tuple  # noqa
 
 from pypika import JoinType, Order
@@ -167,22 +168,22 @@ class QuerySet(AwaitableQuery):
 
     def _clone(self) -> 'QuerySet':
         queryset = self.__class__(self.model)
-        queryset._prefetch_map = self._prefetch_map
-        queryset._prefetch_queries = self._prefetch_queries
+        queryset._prefetch_map = deepcopy(self._prefetch_map)
+        queryset._prefetch_queries = deepcopy(self._prefetch_queries)
         queryset._single = self._single
         queryset._get = self._get
         queryset._count = self._count
         queryset._db = self._db
         queryset._limit = self._limit
         queryset._offset = self._offset
-        queryset._filter_kwargs = self._filter_kwargs
-        queryset._orderings = self._orderings
-        queryset._joined_tables = self._joined_tables
-        queryset._q_objects_for_resolve = self._q_objects_for_resolve
+        queryset._filter_kwargs = deepcopy(self._filter_kwargs)
+        queryset._orderings = deepcopy(self._orderings)
+        queryset._joined_tables = deepcopy(self._joined_tables)
+        queryset._q_objects_for_resolve = deepcopy(self._q_objects_for_resolve)
         queryset._distinct = self._distinct
-        queryset._annotations = self._annotations
-        queryset._having = self._having
-        queryset._available_custom_filters = self._available_custom_filters
+        queryset._annotations = deepcopy(self._annotations)
+        queryset._having = deepcopy(self._having)
+        queryset._available_custom_filters = deepcopy(self._available_custom_filters)
         return queryset
 
     def filter(self, *args, **kwargs) -> 'QuerySet':
@@ -496,6 +497,10 @@ class QuerySet(AwaitableQuery):
         elif self._single:
             return instance_list[0]
         return instance_list
+
+    def __await__(self):
+        clone = self._clone()
+        return clone._execute().__await__()
 
     def __aiter__(self):
         return QueryAsyncIterator(self)

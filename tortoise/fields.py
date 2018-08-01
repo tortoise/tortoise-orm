@@ -398,12 +398,11 @@ class ManyToManyRelationManager(RelationQueryContainer):
         self.field = m2m_field
         self.model = m2m_field.type
         self.instance = instance
-        self._db = self.model._meta.db
 
     async def add(self, *instances, using_db=None):
         if not instances:
             return
-        db = using_db if using_db else self._db
+        db = using_db if using_db else self.model._meta.db
         through_table = Table(self.field.through)
         select_query = db.query_class.from_(through_table).where(
             getattr(through_table, self.field.backward_key) == self.instance.id
@@ -431,7 +430,7 @@ class ManyToManyRelationManager(RelationQueryContainer):
             await db.execute_query(str(query))
 
     async def clear(self, using_db=None):
-        db = using_db if using_db else self._db
+        db = using_db if using_db else self.model._meta.db
         through_table = Table(self.field.through)
         query = db.query_class.from_(through_table).where(
             getattr(through_table, self.field.backward_key) == self.instance.id
@@ -439,7 +438,7 @@ class ManyToManyRelationManager(RelationQueryContainer):
         await db.execute_query(str(query))
 
     async def remove(self, *instances, using_db=None):
-        db = using_db if using_db else self._db
+        db = using_db if using_db else self.model._meta.db
         if not instances:
             raise OperationalError('remove() called on no instances')
         through_table = Table(self.field.through)

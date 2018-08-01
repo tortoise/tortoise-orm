@@ -65,7 +65,7 @@ To get ``test.TestCase`` to work as expected, you need to configure your test en
 Furthermore, you need to set the database configuration parameter as an environment variable:
 
     TORTOISE_TEST_DB=sqlite:///tmp/test-{}.sqlite
-    TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:54325/test_{}
+    TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_{}
 
 
 The ``{}`` is a string-replacement parameter, that will create a randomised database name.

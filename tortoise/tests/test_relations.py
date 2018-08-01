@@ -1,3 +1,4 @@
+from tortoise.aggregation import Count
 from tortoise.contrib import test
 from tortoise.tests.testmodels import Event, Team, Tournament
 
@@ -53,3 +54,15 @@ class TestRelations(test.TestCase):
 
         result = await Event.filter(id=event.id).values_list('id', 'participants__name')
         self.assertEqual(len(result), 2)
+
+    async def test_reset_queryset_on_query(self):
+        tournament = await Tournament.create(name='New Tournament')
+        event = await Event.create(name='Test', tournament_id=tournament.id)
+        participants = []
+        for i in range(2):
+            team = await Team.create(name='Team {}'.format(i + 1))
+            participants.append(team)
+        await event.participants.add(*participants)
+        queryset = Event.all().annotate(count=Count('participants'))
+        await queryset.first()
+        await queryset.filter(name='Test').first()

@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.10.1
+------
+- Fixed M2M manager methods to correctly work with transactions
+- Fixed mutating of queryset on select queries
+
 0.10.0
 ------
 - Refactored ``Tortoise.init()`` to init all connections and discover models from config passed
