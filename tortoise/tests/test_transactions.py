@@ -1,6 +1,6 @@
 from tortoise.contrib import test
 from tortoise.exceptions import OperationalError, TransactionManagementError
-from tortoise.tests.testmodels import Tournament, Event, Team
+from tortoise.tests.testmodels import Event, Team, Tournament
 from tortoise.transactions import atomic, in_transaction, start_transaction
 
 
