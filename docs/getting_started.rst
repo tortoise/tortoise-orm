@@ -61,31 +61,31 @@ You can start writing models like this:
         def __str__(self):
             return self.name
 
-Then in init part of your app you should init models like this
-(make sure that you **import your models** before calling init, tortoise must see them to init normally):
 
+After you defined all your models, tortoise needs you to init them, in order to create backward relations between models and match your db client with appropriate models.
+
+You can do it like this:
 
 .. code-block:: python3
 
-    from tortoise.backends.asyncpg.client import AsyncpgDBClient
     from tortoise import Tortoise
     from tortoise.utils import generate_schema
-    from app import models # without importing models Tortoise can't find and init them
-
 
     async def init():
-        db = AsyncpgDBClient(
-            host='localhost',
-            port=5432,
-            user='postgres',
-            password='qwerty123',
-            database='events'
+        # Here we connect to a PostgresQL DB
+        # also specify the app name of "models"
+        # which contain models from "app.models"
+        await Tortoise.init(
+            db_url='postgres://postgres:qwerty123@localhost:5432/events',
+            modules={'models': ['app.models']}
         )
-    
-        await db.create_connection()
-        Tortoise.init(db)
-        # You can generate schema for your models like this, but don't do this if you have schema already:
-        await generate_schema(db)
+        # Generate the schema
+        await Tortoise.generate_schemas()
+
+
+Here we create connection to PostgresQL database with default ``asyncpg`` client and then we discover & initialise models.
+
+``generate_schema`` generates schema on empty database, you shouldn't run it on every app init, run it just once, maybe out of your main code.
 
 After that you can start using your models:
 
