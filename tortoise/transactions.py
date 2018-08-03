@@ -61,12 +61,12 @@ def atomic(connection_name: Optional[str] = None) -> Callable:
 
 async def start_transaction(connection_name: Optional[str] = None) -> BaseTransactionWrapper:
     """
-        Function to manually control your transaction.
-        Returns transaction object with ``.rollback()`` and ``.commit()`` methods.
-        All db calls in same coroutine context will run into transaction
-        before ending transaction with above methods.
-        :param connection_name: name of connection to run with, optional if you have only
-        one db connection
+    Function to manually control your transaction.
+    Returns transaction object with ``.rollback()`` and ``.commit()`` methods.
+    All db calls in same coroutine context will run into transaction
+    before ending transaction with above methods.
+    :param connection_name: name of connection to run with, optional if you have only
+    one db connection
         """
     connection = _get_connection(connection_name)
     transaction = connection._in_transaction()
