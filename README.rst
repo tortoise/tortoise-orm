@@ -150,10 +150,10 @@ After that you can start using your models:
 Contributing
 ============
 
-Please have a look at the `Contribution Guide <CONTRIBUTING.rst>`_
+Please have a look at the `Contribution Guide <docs/CONTRIBUTING.rst>`_
 
 
 License
 =======
 
-This project is licensed under the Apache License - see the `LICENSE.txt <LICENSE.txt`_ file for details
+This project is licensed under the Apache License - see the `LICENSE.txt <LICENSE.txt>`_ file for details
