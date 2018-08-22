@@ -15,13 +15,16 @@ It is built with relations between models in mind and provides simple api for it
 
 You can find docs at `readthedocs <http://tortoise-orm.readthedocs.io/en/latest/>`_
 
-Disclaimer
-----------
-Tortoise is young project and breaking changes without following semantic versioning are to be expected
+.. note::
 
+    Tortoise is young project and breaking changes without following semantic versioning are to be expected
+
+
+Getting Started
+===============
 
 Installation
-===============
+------------
 First you have to install tortoise like this:
 
 .. code-block:: bash
@@ -35,8 +38,8 @@ Then you should install your db driver
     pip install asyncpg aiosqlite
 
 
-Tutorial
-========
+Quick Tutorial
+--------------
 
 Primary entity of tortoise is ``tortoise.models.Model``.
 You can start writing models like this:
@@ -144,5 +147,13 @@ After that you can start using your models:
     ).order_by('-events__participants__name').distinct()
 
 
+Contributing
+============
 
-If you want to contribute check out issues, or just straightforwardly create PR
+Please have a look at the `Contribution Guide <CONTRIBUTING.rst>`_
+
+
+License
+=======
+
+This project is licensed under the Apache License - see the `LICENSE.txt <LICENSE.txt`_ file for details

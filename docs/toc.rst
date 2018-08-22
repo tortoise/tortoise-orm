@@ -9,5 +9,5 @@ Table Of Contents
    reference
    CHANGELOG
    roadmap
-   projstyle
+   CONTRIBUTING
    CONTRIBUTORS
