@@ -13,7 +13,7 @@ Tortoise is easy-to-use asyncio ORM inspired by Django.
 
 It is built with relations between models in mind and provides simple api for it, that gives you potential for building web services with easy abstractions.
 
-You can find docs at `readthedocs <http://tortoise-orm.readthedocs.io/en/latest/>`_
+You can find docs at `ReadTheDocs <http://tortoise-orm.readthedocs.io/en/latest/>`_
 
 .. note::
 
