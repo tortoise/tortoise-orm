@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.10.2
+------
+- Set single_connection to True by default, as there is known issues with conection pooling
+- Updated documentation
+
 0.10.1
 ------
 - Fixed M2M manager methods to correctly work with transactions

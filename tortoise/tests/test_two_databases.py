@@ -1,8 +1,8 @@
 from tortoise import Tortoise
 from tortoise.contrib import test
-from tortoise.exceptions import OperationalError
+from tortoise.exceptions import OperationalError, ParamsError
 from tortoise.tests.testmodels import Event, EventTwo, TeamTwo, Tournament
-from tortoise.transactions import in_transaction
+from tortoise.transactions import in_transaction, start_transaction
 
 
 class TestTwoDatabases(test.SimpleTestCase):
@@ -80,3 +80,10 @@ class TestTwoDatabases(test.SimpleTestCase):
         self.assertEqual(tournament.id, saved_tournament.id)
         saved_event = await EventTwo.filter(tournament_id=tournament.id).first()
         self.assertEqual(event.id, saved_event.id)
+
+    async def test_two_databases_transaction_paramerror(self):
+        with self.assertRaisesRegex(
+            ParamsError,
+            'You are running with multiple databases, so you should specify connection_name'
+        ):
+            await start_transaction()

@@ -9,6 +9,8 @@ It is built with relations between models in mind and provides simple api for it
 .. caution::
    Tortoise is young project and breaking changes without following semantic versioning are to be expected
 
+Source & issue trackers are available at `<https://github.com/tortoise/tortoise-orm/>`_
+
 Features
 ========
 
