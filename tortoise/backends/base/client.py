@@ -11,7 +11,7 @@ class BaseDBAsyncClient:
     executor_class = BaseExecutor
     schema_generator = BaseSchemaGenerator
 
-    def __init__(self, single_connection=False, **kwargs):
+    def __init__(self, single_connection=True, **kwargs):
         self.log = logging.getLogger('db_client')
         self.single_connection = single_connection
         self._single_connection_class = type(
