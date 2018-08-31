@@ -2,10 +2,10 @@
 Tortoise
 ========
 
-.. image:: https://travis-ci.com/Zeliboba5/tortoise-orm.svg?branch=master
-    :target: https://travis-ci.com/Zeliboba5/tortoise-orm
-.. image:: https://coveralls.io/repos/github/Zeliboba5/tortoise-orm/badge.svg?branch=master
-    :target: https://coveralls.io/github/Zeliboba5/tortoise-orm?branch=master
+.. image:: https://travis-ci.com/tortoise/tortoise-orm.svg?branch=master
+    :target: https://travis-ci.com/tortoise/tortoise-orm
+.. image:: https://coveralls.io/repos/github/tortoise/tortoise-orm/badge.svg
+    :target: https://coveralls.io/github/tortoise/tortoise-orm
 
 Introduction
 ============
