@@ -60,7 +60,7 @@ Check `examples <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples>
 Many to Many
 ============
 
-Tortoise provides api for working with M2M relations
+Tortoise ORM provides api for working with M2M relations
 
 - ``add(*args)`` - adds instances to relation
 - ``remove(*args)`` - removes instances from relation

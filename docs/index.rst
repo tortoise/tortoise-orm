@@ -1,15 +1,42 @@
-========
-Tortoise
-========
+============
+Tortoise ORM
+============
 
-Tortoise is easy-to-use asyncio ORM inspired by Django.
+Tortoise ORM is an easy-to-use ``asyncio`` ORM *(Object Relational Mapper)* inspired by Django.
 
-It is built with relations between models in mind and provides simple api for it, that gives you potential for easily building web services with easy abstractions.
+Tortoise ORM was build with relations in mind and admiration for the excellent and popular Django ORM.
+It's engraved in it's design that you are working not with just tables, you work with relational data.
 
 .. caution::
-   Tortoise is young project and breaking changes without following semantic versioning are to be expected
+   Tortoise ORM is young project and breaking changes without following semantic versioning are to be expected
 
 Source & issue trackers are available at `<https://github.com/tortoise/tortoise-orm/>`_
+
+Introduction
+============
+
+Why was Tortoise ORM built?
+---------------------------
+
+Python has many existing and mature ORMs, unfortunately they are designed with an opposing paradigm of how I/O gets processed.
+``asyncio`` is relatively new technology that has a very different concurrency model, and the largest change is regarding how I/O is handled.
+
+However, Tortoise ORM is not first attempt of building ``asyncio`` ORM, there are many cases of developers attempting to map synchronous python ORMs to the async world, having to compromise heavily as those ORMs were not designed for an asynchronous event loop.
+Those few ORMs, which tried new approaches stabilized at point, where they lost word "relational" from ORM and mostly were limited to fetching rows from single table mapped to objects.
+
+Hence we started Tortoise ORM.
+
+Tortoise ORM was designed to be functional, yet familiar, to ease the migration of developers wishing to switch to ``asyncio``.
+
+How is an ORM useful?
+---------------------
+
+When you build an application or service that uses a relational database, there is a point when you can't just get away with just using parameterized queries or even query builder, you just keep repeating yourself, writing slightly different code for each entity.
+Code has no idea about relations between data, so you end up concatenating your data almost manually.
+It is also easy to make a mistake in how you access your database, making it easy for SQL-injection attacks to occur.
+Your data rules are also distributed, increasing the complexity of managing your data, and even worse, is applied inconsistently.
+
+An ORM (Object Relational Mapper) is desgined to address these issues, by centralising your data model and data rules, ensuring that your data is managed safely (providing immunity to SQL-injection) and keeps track of relationships so you don't have to.
 
 Features
 ========
@@ -62,7 +89,7 @@ And use it like so:
 
 Pluggable Database backends
 ---------------------------
-Tortoise currently supports the following :ref:`databases`:
+Tortoise ORM currently supports the following :ref:`databases`:
 
 * PostgreSQL >= 9.4 (using ``asyncpg``)
 * SQLite (using ``aiosqlite``)
@@ -72,7 +99,7 @@ Tortoise currently supports the following :ref:`databases`:
 And more
 --------
 
-Tortoise-ORM supports the following features:
+Tortoise ORM supports the following features:
 
 * Designed to be used in an existing project:
     * Testing framework uses existing Python Unittest framework, just requires

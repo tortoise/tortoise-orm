@@ -2,7 +2,7 @@ checkfiles = tortoise/ examples/
 mypy_flags = --warn-unused-configs --warn-redundant-casts --ignore-missing-imports --allow-untyped-decorators
 
 help:
-	@echo  "Tortoise-ORM development makefile"
+	@echo  "Tortoise ORM development makefile"
 	@echo
 	@echo  "usage: make <target>"
 	@echo  "Targets:"

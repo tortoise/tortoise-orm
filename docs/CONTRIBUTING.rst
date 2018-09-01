@@ -29,7 +29,7 @@ Project structure
 
 We have a ``Makefile`` that has the common operations listed, to get started just type ``make``::
 
-    Tortoise-ORM development makefile
+    Tortoise ORM development makefile
 
     usage: make <target>
     Targets:
@@ -69,7 +69,7 @@ We believe to keep the code simple, so it is easier to test and there is less pl
 Priorities
 ----------
 
-An important part of Tortoise is that we want a simple interface, that only does what is expected.
+An important part of Tortoise ORM is that we want a simple interface, that only does what is expected.
 As this is a value that is different for different people, we have settled on:
 
 * Model/QuerySet usage should be explicit and concise.
@@ -84,7 +84,7 @@ Style
 
 We try and automate as much as we can, so a simple ``make check`` will do automated style checking and linting, but these don't pick up on the non-obvious style preferences.
 
-Tortoise follows a the following agreed upon style:
+Tortoise ORM follows a the following agreed upon style:
 
 * Keep to PEP8 where you can
 * Max line-length is changed to 100

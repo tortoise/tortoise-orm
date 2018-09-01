@@ -2,7 +2,6 @@
 Getting started
 ===============
 
-
 Installation
 ===============
 First you have to install tortoise like this:
@@ -22,7 +21,7 @@ Then you should install your db driver
 ..
 
 Apart from ``asyncpg`` there is also support for ``sqlite`` through ``aiosqlite``.
-It is quite easy to implement more backends if there is appropriate asyncio driver for this db.
+It is quite easy to implement more backends if there is appropriate ``asyncio`` driver for this db.
 
 Tutorial
 ========
@@ -123,7 +122,7 @@ After that you can start using your models:
         participants=participants[0].id
     ).prefetch_related('participants', 'tournament')
     
-    # Tortoise supports variable depth of prefetching related entities
+    # Tortoise ORM supports variable depth of prefetching related entities
     # This will fetch all events for team and in those team tournament will be prefetched
     await Team.all().prefetch_related('events__tournament')
     
