@@ -165,7 +165,7 @@ class Tortoise:
                 connection = cls.get_connection(info.get('default_connection', 'default'))
             except KeyError:
                 raise ConfigurationError('Unknown connection "{}" for app "{}"'.format(
-                    apps_config.get('default_connection', 'default'),
+                    info.get('default_connection', 'default'),
                     name,
                 ))
             app_models = []  # type: List[Type[Model]]
@@ -334,4 +334,4 @@ class Tortoise:
         await cls._reset_connections()
 
 
-__version__ = "0.10.2"
+__version__ = "0.10.3"

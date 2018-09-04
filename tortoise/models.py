@@ -219,7 +219,7 @@ class MetaInfo:
     def __init__(self, meta):
         self.abstract = getattr(meta, 'abstract', False)  # type: bool
         self.table = getattr(meta, 'table', None)  # type: Optional[Table]
-        self.app = getattr(meta, 'app', 'models')  # type: str
+        self.app = getattr(meta, 'app', None)  # type: Optional[str]
         self.fields = set()  # type: Set[str]
         self.db_fields = set()  # type: Set[str]
         self.m2m_fields = set()  # type: Set[str]

@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.10.3
+------
+- Changed default app label from 'models' to None
+- Fixed ConfigurationError message for wrong connection name
+
 0.10.2
 ------
 - Set single_connection to True by default, as there is known issues with conection pooling
