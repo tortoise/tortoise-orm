@@ -45,9 +45,12 @@ setup(
     include_package_data=True,
 
     # Details
-    url="https://github.com/Zeliboba5/tortoise-orm",
+    url="https://github.com/tortoise/tortoise-orm",
     description="Easy async ORM for python, built with relations in mind",
     long_description=open('README.rst', 'r').read(),
+    project_urls={
+        'Documentation': 'https://tortoise-orm.readthedocs.io/',
+    },    
     classifiers=[
         'License :: OSI Approved :: Apache Software License',
         'Development Status :: 3 - Alpha',
