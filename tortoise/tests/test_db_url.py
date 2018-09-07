@@ -18,23 +18,6 @@ class TestConfigGenerator(test.SimpleTestCase):
             }
         })
 
-    def test_sqlite_testing(self):
-        res = expand_db_url(
-            db_url='sqlite:///some/test-{}.sqlite',
-            testing=True,
-        )
-        file_path = res['credentials']['file_path']
-        self.assertIn('/some/test-', file_path)
-        self.assertIn('.sqlite', file_path)
-        self.assertNotEqual('sqlite:///some/test-{}.sqlite', file_path)
-        self.assertDictEqual(res, {
-            'engine': 'tortoise.backends.sqlite',
-            'credentials': {
-                'file_path': file_path,
-                'single_connection': True,
-            }
-        })
-
     def test_sqlite_params(self):
         res = expand_db_url('sqlite:///some/test.sqlite?AHA=5&moo=yes')
         self.assertDictEqual(res, {
@@ -67,26 +50,6 @@ class TestConfigGenerator(test.SimpleTestCase):
         with self.assertRaises(ConfigurationError):
             expand_db_url('postgres://postgres:@127.0.0.1:moo/test')
 
-    def test_postgres_testing(self):
-        res = expand_db_url(
-            db_url='postgres://postgres:@127.0.0.1:5432/test_\{\}',
-            testing=True,
-        )
-        database = res['credentials']['database']
-        self.assertIn('test_', database)
-        self.assertNotEqual('test_{}', database)
-        self.assertDictEqual(res, {
-            'engine': 'tortoise.backends.asyncpg',
-            'credentials': {
-                'database': database,
-                'host': '127.0.0.1',
-                'password': '',
-                'port': '5432',
-                'user': 'postgres',
-                'single_connection': True,
-            }
-        })
-
     def test_postgres_params(self):
         res = expand_db_url('postgres://postgres:@127.0.0.1:5432/test?AHA=5&moo=yes')
         self.assertDictEqual(res, {
@@ -118,22 +81,6 @@ class TestConfigGenerator(test.SimpleTestCase):
     def test_mysql_nonint_port(self):
         with self.assertRaises(ConfigurationError):
             expand_db_url('mysql://root:@127.0.0.1:moo/test')
-
-    def test_mysql_testing(self):
-        res = expand_db_url('mysql://root:@127.0.0.1:3306/test_\{\}', testing=True)
-        self.assertIn('test_', res['credentials']['database'])
-        self.assertNotEqual('test_{}', res['credentials']['database'])
-        self.assertEqual(res, {
-            'engine': 'tortoise.backends.mysql',
-            'credentials': {
-                'database': res['credentials']['database'],
-                'host': '127.0.0.1',
-                'password': '',
-                'port': '3306',
-                'user': 'root',
-                'single_connection': True,
-            }
-        })
 
     def test_mysql_params(self):
         res = expand_db_url('mysql://root:@127.0.0.1:3306/test?AHA=5&moo=yes')
@@ -190,14 +137,12 @@ class TestConfigGenerator(test.SimpleTestCase):
                 ]
             },
             connection_label='models',
-            testing=True
         )
         self.assertEqual(res, {
             'connections': {
                 'models': {
                     'credentials': {
                         'file_path': '/some/test.sqlite',
-                        'single_connection': True
                     },
                     'engine': 'tortoise.backends.sqlite'
                 }

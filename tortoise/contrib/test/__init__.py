@@ -1,5 +1,6 @@
 import asyncio as _asyncio
 import os as _os
+import uuid as _uuid
 from copy import deepcopy
 from typing import List
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless  # noqa
@@ -31,14 +32,17 @@ def getDBConfig(app_label: str, modules: List[str]) -> dict:
     """
     DB Config factory, for use in testing.
     """
-    return _generate_config(
-        _TORTOISE_TEST_DB,
+    path = _TORTOISE_TEST_DB.replace('\\{', '{').replace('\\}', '}').format(_uuid.uuid4().hex)
+    config = _generate_config(
+        path,
         app_modules={
             app_label: modules
         },
-        testing=True,
         connection_label=app_label
     )
+    if _os.environ.get('TORTOISE_TEST_POOL', '0') == '0':
+        config['connections'][app_label]['credentials']['single_connection'] = True
+    return config
 
 
 async def _init_db(config):

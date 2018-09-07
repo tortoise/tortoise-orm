@@ -1,7 +1,4 @@
 verbose       = 2
-omit-patterns = tortoise/contrib/pylint/*,tortoise/tests/*
-clear-omit    = true
-run-coverage  = true
-quiet-coverage= true
+no-skip-report= true
 initializer   = tortoise.contrib.test.initializer
 finalizer     = tortoise.contrib.test.finalizer
