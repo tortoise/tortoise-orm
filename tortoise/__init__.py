@@ -1,8 +1,9 @@
 import importlib
 import json
 import os
+from copy import deepcopy
 from inspect import isclass
-from typing import Any, Dict, List, Optional, Type  # noqa
+from typing import Dict, List, Optional, Type  # noqa
 
 from tortoise import fields
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
@@ -10,7 +11,13 @@ from tortoise.exceptions import ConfigurationError  # noqa
 from tortoise.fields import ManyToManyRelationManager  # noqa
 from tortoise.models import Model, get_backward_fk_filters, get_m2m_filters
 from tortoise.queryset import QuerySet  # noqa
+from tortoise.transactions import current_transaction_map
 from tortoise.utils import generate_schema_for_client
+
+try:
+    from contextvars import ContextVar
+except ImportError:
+    from aiocontextvars import ContextVar  # type: ignore
 
 
 class Tortoise:
@@ -152,17 +159,20 @@ class Tortoise:
             if isinstance(info, str):
                 info = expand_db_url(info)
             client_class = cls._discover_client_class(info.get('engine'))
-            connection = client_class(**info['credentials'])
+            db_params = deepcopy(info['credentials'])
+            db_params.update({'connection_name': name})
+            connection = client_class(**db_params)
             if create_db:
                 await connection.db_create()
             await connection.create_connection()
             cls._connections[name] = connection
+            current_transaction_map[name] = ContextVar(name, default=None)
 
     @classmethod
     def _init_apps(cls, apps_config):
         for name, info in apps_config.items():
             try:
-                connection = cls.get_connection(info.get('default_connection', 'default'))
+                cls.get_connection(info.get('default_connection', 'default'))
             except KeyError:
                 raise ConfigurationError('Unknown connection "{}" for app "{}"'.format(
                     info.get('default_connection', 'default'),
@@ -174,7 +184,7 @@ class Tortoise:
 
             models_map = {}
             for model in app_models:
-                model._meta.default_db = connection
+                model._meta.default_connection = info.get('default_connection', 'default')
                 models_map[model.__name__] = model
 
             cls.apps[name] = models_map
@@ -304,8 +314,9 @@ class Tortoise:
 
         for app in cls.apps.values():
             for model in app.values():
-                model._meta.default_db = None
+                model._meta.default_connection = None
         cls.apps = {}
+        current_transaction_map.clear()
 
     @classmethod
     async def generate_schemas(cls) -> None:
