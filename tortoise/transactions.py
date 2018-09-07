@@ -1,15 +1,10 @@
 from functools import wraps
-from typing import Callable, Optional
+from typing import Callable, Optional, Dict  # noqa
 
 from tortoise.backends.base.client import BaseDBAsyncClient, BaseTransactionWrapper
 from tortoise.exceptions import ParamsError
 
-try:
-    from contextvars import ContextVar
-except ImportError:
-    from aiocontextvars import ContextVar  # type: ignore
-
-current_transaction = ContextVar('current_transaction', default=None)  # type: ContextVar
+current_transaction_map = {}  # type: Dict
 
 
 def _get_connection(connection_name: Optional[str]) -> BaseDBAsyncClient:

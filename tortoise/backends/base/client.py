@@ -11,9 +11,10 @@ class BaseDBAsyncClient:
     executor_class = BaseExecutor
     schema_generator = BaseSchemaGenerator
 
-    def __init__(self, single_connection=True, **kwargs):
+    def __init__(self, connection_name, single_connection=True, **kwargs):
         self.log = logging.getLogger('db_client')
         self.single_connection = single_connection
+        self.connection_name = connection_name
         self._single_connection_class = type(
             'SingleConnectionWrapper', (SingleConnectionWrapper, self.__class__), {}
         )
@@ -61,7 +62,8 @@ class ConnectionWrapper:
 
 
 class SingleConnectionWrapper(BaseDBAsyncClient):
-    def __init__(self, connection, closing_callback=None):
+    def __init__(self, connection_name, connection, closing_callback=None):
+        self.connection_name = connection_name
         self.connection = connection
         self.log = logging.getLogger('db_client')
         self.single_connection = True
@@ -73,7 +75,7 @@ class SingleConnectionWrapper(BaseDBAsyncClient):
     async def get_single_connection(self):
         # Real class object is generated in runtime, so we use __class__ reference
         # instead of using SingleConnectionWrapper directly
-        return self.__class__(self.connection, self)
+        return self.__class__(self.connection_name, self.connection, self)
 
     async def release_single_connection(self, single_connection):
         return

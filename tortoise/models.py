@@ -10,7 +10,7 @@ from tortoise.backends.base.client import BaseDBAsyncClient  # noqa
 from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields import ManyToManyRelationManager, RelationQueryContainer
 from tortoise.queryset import QuerySet
-from tortoise.transactions import current_transaction
+from tortoise.transactions import current_transaction_map
 
 MODEL_TYPE = TypeVar('MODEL_TYPE', bound='Model')
 
@@ -214,7 +214,7 @@ def get_filters_for_field(field_name: str, field: Optional[fields.Field], source
 class MetaInfo:
     __slots__ = ('abstract', 'table', 'app', 'fields', 'db_fields', 'm2m_fields', 'fk_fields',
                  'backward_fk_fields', 'fetch_fields', 'fields_db_projection', '_inited',
-                 'fields_db_projection_reverse', 'filters', 'fields_map', 'default_db')
+                 'fields_db_projection_reverse', 'filters', 'fields_map', 'default_connection')
 
     def __init__(self, meta):
         self.abstract = getattr(meta, 'abstract', False)  # type: bool
@@ -231,11 +231,15 @@ class MetaInfo:
         self.filters = {}  # type: Dict[str, Dict[str, dict]]
         self.fields_map = {}  # type: Dict[str, fields.Field]
         self._inited = False
-        self.default_db = None
+        self.default_connection = None
 
     @property
     def db(self):
-        return current_transaction.get() or self.default_db
+        from tortoise import Tortoise
+        return (
+            current_transaction_map[self.default_connection].get()
+            or Tortoise.get_connection(self.default_connection)
+        )
 
     def get_filter(self, key):
         filter_info = self.filters[key]
@@ -306,7 +310,7 @@ class ModelMeta(type):
         meta.backward_fk_fields = set()
         meta.m2m_fields = m2m_fields
         meta.fetch_fields = fk_fields | m2m_fields
-        meta.default_db = None
+        meta.default_connection = None
         meta._inited = False
         if not fields_map:
             meta.abstract = True

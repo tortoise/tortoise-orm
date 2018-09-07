@@ -10,7 +10,7 @@ from tortoise.backends.mysql.executor import MySQLExecutor
 from tortoise.backends.mysql.schema_generator import MySQLSchemaGenerator
 from tortoise.exceptions import (ConfigurationError, DBConnectionError, IntegrityError,
                                  OperationalError, TransactionManagementError)
-from tortoise.transactions import current_transaction
+from tortoise.transactions import current_transaction_map
 
 
 class MySQLClient(BaseDBAsyncClient):
@@ -100,9 +100,9 @@ class MySQLClient(BaseDBAsyncClient):
 
     def _in_transaction(self):
         if self.single_connection:
-            return self._transaction_class(connection=self._connection)
+            return self._transaction_class(self.connection_name, connection=self._connection)
         else:
-            return self._transaction_class(pool=self._db_pool)
+            return self._transaction_class(self.connection_name, pool=self._db_pool)
 
     async def execute_query(self, query, get_inserted_id=False):
         try:
@@ -130,10 +130,10 @@ class MySQLClient(BaseDBAsyncClient):
 
     async def get_single_connection(self):
         if self.single_connection:
-            return self._single_connection_class(self._connection, self)
+            return self._single_connection_class(self.connection_name, self._connection, self)
         else:
             connection = await self._db_pool._acquire()
-            return self._single_connection_class(connection, self)
+            return self._single_connection_class(self.connection_name, connection, self)
 
     async def release_single_connection(self, single_connection):
         if not self.single_connection:
@@ -141,9 +141,10 @@ class MySQLClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(MySQLClient):
-    def __init__(self, pool=None, connection=None):
+    def __init__(self, connection_name, pool=None, connection=None):
         if pool and connection:
             raise ConfigurationError('You must pass either connection or pool')
+        self.connection_name = connection_name
         self._connection = connection
         self.log = logging.getLogger('db_client')
         self._pool = pool
@@ -165,6 +166,7 @@ class TransactionWrapper(MySQLClient):
         if not self._connection:
             self._connection = await self._get_connection()
         await self._connection.begin()
+        current_transaction = current_transaction_map[self.connection_name]
         self._old_context_value = current_transaction.get()
         current_transaction.set(self)
 
@@ -176,7 +178,7 @@ class TransactionWrapper(MySQLClient):
         if self._pool:
             await self._pool.release(self._connection)
             self._connection = None
-        current_transaction.set(self._old_context_value)
+        current_transaction_map[self.connection_name].set(self._old_context_value)
 
     async def rollback(self):
         if self._finalized:
@@ -186,7 +188,7 @@ class TransactionWrapper(MySQLClient):
         if self._pool:
             await self._pool.release(self._connection)
             self._connection = None
-        current_transaction.set(self._old_context_value)
+        current_transaction_map[self.connection_name].set(self._old_context_value)
 
     async def __aenter__(self):
         await self.start()
