@@ -345,4 +345,4 @@ class Tortoise:
         await cls._reset_connections()
 
 
-__version__ = "0.10.3"
+__version__ = "0.10.4"

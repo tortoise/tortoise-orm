@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.10.4
+------
+- Added support for running separate transactions in multidb config
+
 0.10.3
 ------
 - Changed default app label from 'models' to None
