@@ -1,9 +1,7 @@
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, Set, Tuple  # noqa
 
-from pypika import JoinType, Order
-from pypika import PostgreSQLQuery as Query
-from pypika import Table
+from pypika import JoinType, Order, Table
 from pypika.functions import Count
 
 from tortoise import fields
