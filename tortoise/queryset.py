@@ -145,8 +145,8 @@ class QuerySet(AwaitableQuery):
         self.model = model
 
         if not hasattr(model._meta.db, 'query_class'):
-            # use PostgreSQLQuery if model doesn't have query_class
-            self.query = Query.from_(model._meta.table)
+            # do not build Query if Tortoise wasn't inited
+            self.query = None
         else:
             self.query = model._meta.db.query_class.from_(model._meta.table)
 

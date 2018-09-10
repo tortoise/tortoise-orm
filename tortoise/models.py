@@ -236,6 +236,8 @@ class MetaInfo:
     @property
     def db(self):
         from tortoise import Tortoise
+        if self.default_connection not in current_transaction_map:
+            return None
         return (
             current_transaction_map[self.default_connection].get()
             or Tortoise.get_connection(self.default_connection)

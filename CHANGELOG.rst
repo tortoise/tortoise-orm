@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.10.5
+------
+- Fixed pre-init queryset objects creation
+
 0.10.4
 ------
 - Added support for running separate transactions in multidb config
