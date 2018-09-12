@@ -11,6 +11,13 @@ class SomeException(Exception):
     pass
 
 
+@atomic()
+async def atomic_decorated_func():
+    tournament = Tournament(name='Test')
+    await tournament.save()
+    return tournament
+
+
 class TestTransactions(test.IsolatedTestCase):
 
     async def test_transactions(self):
@@ -57,6 +64,11 @@ class TestTransactions(test.IsolatedTestCase):
 
         tournament = await bound_to_succeed()
         saved_event = await Tournament.filter(name='Updated name').first()
+        self.assertEqual(saved_event.id, tournament.id)
+
+    async def test_transaction_decorator_defined_before_init(self):
+        tournament = await atomic_decorated_func()
+        saved_event = await Tournament.filter(name='Test').first()
         self.assertEqual(saved_event.id, tournament.id)
 
     async def test_transaction_decorator_fail(self):

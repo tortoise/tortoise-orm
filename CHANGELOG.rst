@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.10.6
+------
+- Fixed atomic decorator to get connection only on function call
+
 0.10.5
 ------
 - Fixed pre-init queryset objects creation
