@@ -16,6 +16,8 @@ matrix:
           organization: "tortoise"
           token:
             secure: ""
+      env: TORTOISE_TEST_DB=
+      install:
       script:
         - sonar-scanner
 dist: xenial
