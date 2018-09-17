@@ -1,5 +1,4 @@
 import urllib.parse as urlparse
-import uuid
 from typing import Any, Dict, List, Optional  # noqa
 
 from tortoise.exceptions import ConfigurationError
@@ -38,7 +37,7 @@ DB_LOOKUP = {
 }  # type: Dict[str, Dict[str, Any]]
 
 
-def expand_db_url(db_url: str, testing: bool = False) -> dict:
+def expand_db_url(db_url: str) -> dict:
     url = urlparse.urlparse(db_url)
     if url.scheme not in DB_LOOKUP:
         raise ConfigurationError('Unknown DB scheme: {}'.format(url.scheme))
@@ -55,11 +54,6 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     params = {}  # type: dict
     for key, val in urlparse.parse_qs(url.query).items():
         params[key] = val[-1]
-
-    if testing:
-        params['single_connection'] = True
-        path = path.replace('\\{', '{').replace('\\}', '}')
-        path = path.format(uuid.uuid4().hex)
 
     vars = {}  # type: dict
     vars.update(db['vars'])
@@ -86,12 +80,11 @@ def generate_config(
         db_url: str,
         app_modules: Dict[str, List[str]],
         connection_label: Optional[str] = None,
-        testing: bool = False,
 ) -> dict:
     _connection_label = connection_label or 'default'
     return {
         'connections': {
-            _connection_label: expand_db_url(db_url, testing)
+            _connection_label: expand_db_url(db_url)
         },
         'apps': {
             app_label: {
