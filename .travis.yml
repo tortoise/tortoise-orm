@@ -11,6 +11,9 @@ matrix:
   include:
     - language: java
       dist: trusty
+      addons:
+        sonarcloud:
+          organization: "tortoise"
       env: TORTOISE_TEST_DB=
       install:
       script:
@@ -19,8 +22,6 @@ dist: xenial
 sudo: required
 addons:
   postgresql: "9.4"
-  sonarCloud:
-    organization: "tortoise"
 services:
   - postgresql
   - mysql
