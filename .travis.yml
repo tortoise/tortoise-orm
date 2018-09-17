@@ -7,6 +7,17 @@ env:
   - TORTOISE_TEST_DB="sqlite:///tmp/test-{}.sqlite"
   - TORTOISE_TEST_DB="postgres://postgres:@127.0.0.1:5432/test_{}"
   - TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_{}"
+matrix:
+  include:
+    - language: java
+      dist: trusty
+      addons:
+        sonarCloud:
+          organization: "tortoise"
+          token:
+            secure: ""
+      script:
+        - sonar-scanner
 dist: xenial
 sudo: required
 addons:

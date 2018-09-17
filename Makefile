@@ -16,6 +16,8 @@ help:
 
 up:
 	pip-compile -o requirements-dev.txt requirements-dev.in -U
+	cat requirements-dev.txt | fgrep -v extra-index-url > requirements-dev.txt.tmp
+	mv requirements-dev.txt.tmp requirements-dev.txt
 
 deps:
 	@pip install -q pip-tools
@@ -36,8 +38,17 @@ lint: deps
 	-python setup.py check -mrs
 
 test: deps
-	green
-	coverage run -a -m tortoise.tests.inittest
+	coverage erase
+	coverage run -p --concurrency=multiprocessing `which green`
+	coverage combine
+	coverage report
+
+testall: deps
+	coverage erase
+	TORTOISE_TEST_DB=sqlite:///tmp/test-\{\}.sqlite coverage run -p --concurrency=multiprocessing `which green`
+	TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_\{\} coverage run -p --concurrency=multiprocessing `which green`
+	TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_\{\}" coverage run -p --concurrency=multiprocessing `which green`
+	coverage combine
 	coverage report
 
 ci: check test
