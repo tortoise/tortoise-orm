@@ -18,6 +18,15 @@ class TestConfigGenerator(test.SimpleTestCase):
             }
         })
 
+    def test_sqlite_relative(self):
+        res = expand_db_url('sqlite://test.sqlite')
+        self.assertDictEqual(res, {
+            'engine': 'tortoise.backends.sqlite',
+            'credentials': {
+                'file_path': 'test.sqlite',
+            }
+        })
+
     def test_sqlite_testing(self):
         res = expand_db_url(
             db_url='sqlite:///some/test-{}.sqlite',

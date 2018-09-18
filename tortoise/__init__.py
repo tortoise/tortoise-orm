@@ -124,10 +124,8 @@ class Tortoise:
 
     @classmethod
     def _discover_client_class(cls, engine):
-        try:
-            engine_module = importlib.import_module(engine)
-        except ImportError:
-            raise ConfigurationError('Backend for engine "{}" not found'.format(engine))
+        # Let exception bubble up for transparency
+        engine_module = importlib.import_module(engine)
 
         try:
             client_class = engine_module.client_class  # type: ignore
