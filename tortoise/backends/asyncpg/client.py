@@ -131,9 +131,14 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             await self._db_pool.release(single_connection.connection)
 
     async def execute_script(self, script):
-        async with self.acquire_connection() as connection:
-            self.log.debug(script)
-            await connection.execute(script)
+        try:
+            async with self.acquire_connection() as connection:
+                self.log.debug(script)
+                await connection.execute(script)
+        except asyncpg.exceptions.SyntaxOrAccessError as exc:
+            raise OperationalError(exc)
+        except asyncpg.exceptions.IntegrityConstraintViolationError as exc:
+            raise IntegrityError(exc)
 
 
 class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
