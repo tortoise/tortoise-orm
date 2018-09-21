@@ -7,7 +7,7 @@
 aenum==2.0.8              # via pypika
 aiocontextvars==0.1.2 ; python_version < "3.7"
 aiomysql==0.0.19
-aiosqlite==0.5.0
+aiosqlite==0.6.0
 alabaster==0.7.11         # via sphinx
 asn1crypto==0.24.0        # via cryptography
 astroid==2.0.4            # via pylint
@@ -48,7 +48,7 @@ pip-tools==2.0.2
 pluggy==0.7.1             # via tox
 py==1.6.0                 # via tox
 pycodestyle==2.3.1        # via flake8
-pycparser==2.18           # via cffi
+pycparser==2.19           # via cffi
 pyflakes==1.6.0           # via flake8
 pygments==2.2.0
 pylint==2.1.1
@@ -68,7 +68,7 @@ stevedore==1.29.0         # via bandit
 termstyle==0.1.11         # via green
 testfixtures==6.3.0       # via flake8-isort
 toml==0.9.6               # via tox
-tox==3.3.0
+tox==3.4.0
 typed-ast==1.1.0          # via astroid, mypy
 unidecode==1.0.22         # via green
 urllib3==1.23             # via requests

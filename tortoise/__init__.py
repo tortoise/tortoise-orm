@@ -1,3 +1,4 @@
+import asyncio
 import importlib
 import json
 import os
@@ -341,6 +342,34 @@ class Tortoise:
             await connection.db_delete()
         cls._connections = {}
         await cls._reset_connections()
+
+
+def run_async(coro):
+    """
+    Simple async runner that cleans up DB connections on exit.
+    This is meant for simple scripts.
+
+    Usage::
+
+        from tortoise import Tortoise, run_async
+
+        async def do_stuff():
+            await Tortoise.init(
+                db_url='sqlite://db.sqlite3',
+                models={'models': ['app.models']}
+            )
+
+            ...
+
+        run_async(do_stuff())
+    """
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(coro)
+    except Exception as exc:
+        raise
+    finally:
+        loop.run_until_complete(Tortoise._reset_connections())
 
 
 __version__ = "0.10.6"
