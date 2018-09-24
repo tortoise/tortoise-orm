@@ -86,6 +86,14 @@ Here we create connection to PostgresQL database with default ``asyncpg`` client
 
 ``generate_schema`` generates schema on empty database, you shouldn't run it on every app init, run it just once, maybe out of your main code.
 
+If you are running this in a simple script, you can do:
+
+.. code-block:: python3
+
+    run_async(init())
+
+``run_async`` is a helper function to run simple async Tortoise scripts. If you are running Tortoise ORM as part of a service, please have a look at :ref:`cleaningup`
+
 After that you can start using your models:
 
 .. code-block:: python3
@@ -133,5 +141,3 @@ After that you can start using your models:
 
 You can read more examples (including transactions, several databases and a little more complex querying) in
 `examples <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples>`_ directory of this repository
-
-

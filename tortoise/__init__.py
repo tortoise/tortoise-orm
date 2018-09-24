@@ -306,9 +306,13 @@ class Tortoise:
         cls._inited = True
 
     @classmethod
-    async def _reset_connections(cls):
+    async def close_connections(cls):
         for connection in cls._connections.values():
             await connection.close()
+
+    @classmethod
+    async def _reset_connections(cls):
+        await cls.close_connections()
         cls._connections = {}
 
         for app in cls.apps.values():
@@ -369,7 +373,7 @@ def run_async(coro):
     except Exception as exc:
         raise
     finally:
-        loop.run_until_complete(Tortoise._reset_connections())
+        loop.run_until_complete(Tortoise.close_connections())
 
 
 __version__ = "0.10.6"
