@@ -1,0 +1,36 @@
+strictness: veryhigh
+doc-warnings: false
+test-warnings: true
+autodetect: false
+member-warnings: false
+
+pylint:
+  run: false
+
+pep8:
+  options:
+    max-line-length: 100
+  disable:
+    - E126
+    - N804
+    - N802
+
+pyroma:
+  run: true
+  enable:
+    - PYR04
+    - PYR15
+    - PYR16
+    - PYR17
+    - PYR18
+    - PYR19
+
+pep257:
+  run: true
+  disable:
+    - D100
+    - D101
+    - D102
+    - D103
+    - D400
+    - D401
