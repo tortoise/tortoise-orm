@@ -370,10 +370,8 @@ def run_async(coro):
     loop = asyncio.get_event_loop()
     try:
         loop.run_until_complete(coro)
-    except Exception as exc:
-        raise
     finally:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.10.6"
+__version__ = "0.10.7"
