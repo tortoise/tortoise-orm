@@ -26,7 +26,7 @@ class SqliteClient(BaseDBAsyncClient):
 
     async def create_connection(self):
         if not self._connection:  # pragma: no branch
-            self._connection = aiosqlite.connect(self.filename)
+            self._connection = aiosqlite.connect(self.filename, isolation_level=None)
             self._connection.start()
             await self._connection._connect()
 
