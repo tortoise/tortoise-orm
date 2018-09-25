@@ -95,8 +95,8 @@ class TestInitErrors(test.SimpleTestCase):
 
     async def test_init_wrong_connection_engine(self):
         with self.assertRaisesRegex(
-                ConfigurationError,
-                'Backend for engine "tortoise.backends.test" not found',
+                ImportError,
+                'tortoise.backends.test',
         ):
             await Tortoise.init({
                 "connections": {

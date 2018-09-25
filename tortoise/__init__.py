@@ -1,3 +1,4 @@
+import asyncio
 import importlib
 import json
 import os
@@ -124,10 +125,8 @@ class Tortoise:
 
     @classmethod
     def _discover_client_class(cls, engine):
-        try:
-            engine_module = importlib.import_module(engine)
-        except ImportError:
-            raise ConfigurationError('Backend for engine "{}" not found'.format(engine))
+        # Let exception bubble up for transparency
+        engine_module = importlib.import_module(engine)
 
         try:
             client_class = engine_module.client_class  # type: ignore
@@ -307,10 +306,14 @@ class Tortoise:
         cls._inited = True
 
     @classmethod
-    async def _reset_connections(cls):
+    async def close_connections(cls):
         for connection in cls._connections.values():
             await connection.close()
         cls._connections = {}
+
+    @classmethod
+    async def _reset_connections(cls):
+        await cls.close_connections()
 
         for app in cls.apps.values():
             for model in app.values():
@@ -345,4 +348,30 @@ class Tortoise:
         await cls._reset_connections()
 
 
-__version__ = "0.10.6"
+def run_async(coro):
+    """
+    Simple async runner that cleans up DB connections on exit.
+    This is meant for simple scripts.
+
+    Usage::
+
+        from tortoise import Tortoise, run_async
+
+        async def do_stuff():
+            await Tortoise.init(
+                db_url='sqlite://db.sqlite3',
+                models={'models': ['app.models']}
+            )
+
+            ...
+
+        run_async(do_stuff())
+    """
+    loop = asyncio.get_event_loop()
+    try:
+        loop.run_until_complete(coro)
+    finally:
+        loop.run_until_complete(Tortoise.close_connections())
+
+
+__version__ = "0.10.7"

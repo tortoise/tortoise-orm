@@ -58,7 +58,7 @@ Initialise your models and database like so:
 
 .. code-block:: python3
 
-    from tortoise import Tortoise
+    from tortoise import Tortoise, run_async
 
     async def init():
         # Here we create a SQLite DB using file "db.sqlite3"
@@ -70,6 +70,9 @@ Initialise your models and database like so:
         )
         # Generate the schema
         await Tortoise.generate_schemas()
+
+    # run_async is a helper function to run simple async Tortoise scripts.
+    run_async(init())
 
 And use it like so:
 
@@ -110,6 +113,7 @@ Tortoise ORM supports the following features:
 * Supports relations, such as ``ForeignKeyField`` and ``ManyToManyField``
 * Supports many standard :ref:`fields`
 * Comprehensive :ref:`query_api`
+* Transactions :ref:`transactions`
 * :ref:`pylint`
 
 If you want to contribute check out issues, or just straightforwardly create PR

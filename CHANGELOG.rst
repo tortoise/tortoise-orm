@@ -1,5 +1,14 @@
 Changelog
 =========
+0.10.7
+------
+- Fixed SQLite relative db path and :memory: now also works
+- Removed confusing error message for missing db driver dependency
+- Added ``aiosqlite`` as a required dependency
+- ``execute_script()`` now annotates errors just like ``execute_query()``, to reduce confusion
+- Bumped ``aiosqlite>=0.6.0`` for performance fix
+- Added ``tortoise.run_async()`` helper function to make smaller scripts easier to run. It cleans up connections automatically.
+- SQLite does autocommit by default.
 
 0.10.6
 ------

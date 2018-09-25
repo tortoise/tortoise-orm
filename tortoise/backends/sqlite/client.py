@@ -26,7 +26,7 @@ class SqliteClient(BaseDBAsyncClient):
 
     async def create_connection(self):
         if not self._connection:  # pragma: no branch
-            self._connection = aiosqlite.connect(self.filename)
+            self._connection = aiosqlite.connect(self.filename, isolation_level=None)
             self._connection.start()
             await self._connection._connect()
 
@@ -71,7 +71,12 @@ class SqliteClient(BaseDBAsyncClient):
     async def execute_script(self, script):
         connection = self._connection
         self.log.debug(script)
-        await connection.executescript(script)
+        try:
+            await connection.executescript(script)
+        except sqlite3.OperationalError as exc:
+            raise OperationalError(exc)
+        except sqlite3.IntegrityError as exc:
+            raise IntegrityError(exc)
 
     async def get_single_connection(self):
         return self

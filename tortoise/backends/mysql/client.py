@@ -123,10 +123,17 @@ class MySQLClient(BaseDBAsyncClient):
             raise IntegrityError(exc)
 
     async def execute_script(self, script):
-        async with self.acquire_connection() as connection:
-            async with connection.cursor() as cursor:
-                self.log.debug(script)
-                await cursor.execute(script)
+        try:
+            async with self.acquire_connection() as connection:
+                async with connection.cursor() as cursor:
+                    self.log.debug(script)
+                    await cursor.execute(script)
+        except (pymysql.err.OperationalError, pymysql.err.ProgrammingError,
+                pymysql.err.DataError, pymysql.err.InternalError,
+                pymysql.err.NotSupportedError) as exc:
+            raise OperationalError(exc)
+        except pymysql.err.IntegrityError as exc:
+            raise IntegrityError(exc)
 
     async def get_single_connection(self):
         if self.single_connection:
