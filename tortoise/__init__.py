@@ -309,11 +309,11 @@ class Tortoise:
     async def close_connections(cls):
         for connection in cls._connections.values():
             await connection.close()
+        cls._connections = {}
 
     @classmethod
     async def _reset_connections(cls):
         await cls.close_connections()
-        cls._connections = {}
 
         for app in cls.apps.values():
             for model in app.values():
