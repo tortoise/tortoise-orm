@@ -48,10 +48,8 @@ class MySQLClient(BaseDBAsyncClient):
             else:
                 self._connection = await aiomysql.connect(db=self.database, **self.template)
             self.log.debug(
-                'Created connection with params: '
-                'user={user} database={database} host={host} port={port}'.format(
-                    user=self.user, database=self.database, host=self.host, port=self.port
-                )
+                'Created connection with params: user=%s database=%s host=%s port=%s',
+                self.user, self.database, self.host, self.port
             )
         except pymysql.err.OperationalError:
             raise DBConnectionError(

@@ -45,7 +45,7 @@ async def _init_db(config):
     try:
         await Tortoise.init(config)
         await Tortoise._drop_databases()
-    except DBConnectionError as exc:  # pragma: nocoverage
+    except DBConnectionError:  # pragma: nocoverage
         pass
 
     await Tortoise.init(config, _create_db=True)
@@ -56,6 +56,7 @@ def initializer():
     """
     Sets up the DB for testing. Must be called as part of test environment setup.
     """
+    # pylint: disable=W0603
     global _CONFIG
     global _APPS
     global _CONNECTIONS
@@ -104,7 +105,7 @@ class SimpleTestCase(_TestCase):
         # initialize post-test checks
         test = getattr(self, self._testMethodName)
         checker = getattr(test, _fail_on._FAIL_ON_ATTR, None)
-        self._checker = checker or _fail_on._fail_on()
+        self._checker = checker or _fail_on._fail_on()  # pylint: disable=W0201
         self._checker.before_test(self)
 
         self.loop.run_until_complete(self._setUpDB())
@@ -163,7 +164,7 @@ class TestCase(SimpleTestCase):
         Tortoise._connections = _CONNECTIONS.copy()
         await Tortoise.init(_CONFIG)
 
-        self.transaction = await start_transaction()
+        self.transaction = await start_transaction()  # pylint: disable=W0201
 
     async def _tearDownDB(self) -> None:
         await self.transaction.rollback()

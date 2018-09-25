@@ -48,10 +48,8 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             else:
                 self._connection = await asyncpg.connect(self.dsn)
             self.log.debug(
-                'Created connection with params: '
-                'user={user} database={database} host={host} port={port}'.format(
-                    user=self.user, database=self.database, host=self.host, port=self.port
-                )
+                'Created connection with params: user=%s database=%s host=%s port=%s',
+                self.user, self.database, self.host, self.port
             )
         except asyncpg.InvalidCatalogNameError:
             raise DBConnectionError("Can't establish connection to database {}".format(

@@ -212,14 +212,14 @@ class TestInitErrors(test.SimpleTestCase):
     async def test_generate_schema_without_init(self):
         with self.assertRaisesRegex(
             ConfigurationError,
-            'You have to call \.init\(\) first before generating schemas'
+            r'You have to call \.init\(\) first before generating schemas'
         ):
             await Tortoise.generate_schemas()
 
     async def test_drop_databases_without_init(self):
         with self.assertRaisesRegex(
             ConfigurationError,
-            'You have to call \.init\(\) first before deleting schemas'
+            r'You have to call \.init\(\) first before deleting schemas'
         ):
             await Tortoise._drop_databases()
 

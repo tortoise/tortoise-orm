@@ -78,7 +78,7 @@ class TestConfigGenerator(test.SimpleTestCase):
 
     def test_postgres_testing(self):
         res = expand_db_url(
-            db_url='postgres://postgres:@127.0.0.1:5432/test_\{\}',
+            db_url=r'postgres://postgres:@127.0.0.1:5432/test_\{\}',
             testing=True,
         )
         database = res['credentials']['database']
@@ -129,7 +129,7 @@ class TestConfigGenerator(test.SimpleTestCase):
             expand_db_url('mysql://root:@127.0.0.1:moo/test')
 
     def test_mysql_testing(self):
-        res = expand_db_url('mysql://root:@127.0.0.1:3306/test_\{\}', testing=True)
+        res = expand_db_url(r'mysql://root:@127.0.0.1:3306/test_\{\}', testing=True)
         self.assertIn('test_', res['credentials']['database'])
         self.assertNotEqual('test_{}', res['credentials']['database'])
         self.assertEqual(res, {

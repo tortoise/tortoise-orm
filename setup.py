@@ -40,6 +40,7 @@ setup(
         include=['tortoise*'],
         exclude=['tortoise.tests']
     ),
+    zip_safe=True,
 
     # Include additional files into the package
     include_package_data=True,
@@ -50,7 +51,7 @@ setup(
     long_description=open('README.rst', 'r').read(),
     project_urls={
         'Documentation': 'https://tortoise-orm.readthedocs.io/',
-    },    
+    },
     classifiers=[
         'License :: OSI Approved :: Apache Software License',
         'Development Status :: 3 - Alpha',
