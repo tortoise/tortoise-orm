@@ -6,6 +6,13 @@ Tortoise ORM
    :target: https://travis-ci.com/tortoise/tortoise-orm
 .. image:: https://coveralls.io/repos/github/tortoise/tortoise-orm/badge.svg
    :target: https://coveralls.io/github/tortoise/tortoise-orm
+.. image:: https://api.codacy.com/project/badge/Grade/b5b77021ba284e4a9e0c033a4611b046
+   :target: https://app.codacy.com/app/Tortoise/tortoise-orm?utm_source=github.com&utm_medium=referral&utm_content=tortoise/tortoise-orm&utm_campaign=Badge_Grade_Dashboard
+.. image:: https://readthedocs.org/projects/tortoise-orm/badge/?version=latest
+   :target: http://tortoise-orm.readthedocs.io/en/latest/
+.. image:: https://img.shields.io/pypi/v/tortoise-orm.svg?style=flat
+   :target: https://pypi.python.org/pypi/tortoise-orm
+
 
 Introduction
 ============
@@ -180,8 +187,3 @@ License
 =======
 
 This project is licensed under the Apache License - see the `LICENSE.txt <LICENSE.txt>`_ file for details
-
-
-.. image:: https://api.codacy.com/project/badge/Grade/b5b77021ba284e4a9e0c033a4611b046
-   :alt: Codacy Badge
-   :target: https://app.codacy.com/app/Tortoise/tortoise-orm?utm_source=github.com&utm_medium=referral&utm_content=tortoise/tortoise-orm&utm_campaign=Badge_Grade_Dashboard
