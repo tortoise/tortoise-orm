@@ -173,7 +173,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     async def commit(self):
         try:
             await self.transaction.commit()
-        except (AttributeError, asyncpg.exceptions._base.InterfaceError) as exc:
+        except asyncpg.exceptions._base.InterfaceError as exc:
             raise TransactionManagementError(exc)
         if self._pool:
             await self._pool.release(self._connection)
@@ -183,7 +183,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     async def rollback(self):
         try:
             await self.transaction.rollback()
-        except (AttributeError, asyncpg.exceptions._base.InterfaceError) as exc:
+        except asyncpg.exceptions._base.InterfaceError as exc:
             raise TransactionManagementError(exc)
         if self._pool:
             await self._pool.release(self._connection)
