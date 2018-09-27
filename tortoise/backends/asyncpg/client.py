@@ -18,8 +18,8 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     executor_class = AsyncpgExecutor
     schema_generator = AsyncpgSchemaGenerator
 
-    def __init__(self, user, password, database, host, port, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, user, password, database, host, port, **kwargs):
+        super().__init__(**kwargs)
 
         self.user = user
         self.password = password

@@ -16,8 +16,8 @@ class SqliteClient(BaseDBAsyncClient):
     executor_class = SqliteExecutor
     schema_generator = SqliteSchemaGenerator
 
-    def __init__(self, file_path, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, file_path, **kwargs):
+        super().__init__(**kwargs)
         self.filename = file_path
         self._transaction_class = type(
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}

@@ -62,11 +62,13 @@ class ConnectionWrapper:
 
 
 class SingleConnectionWrapper(BaseDBAsyncClient):
-    # pylint: disable=W0223
+    # pylint: disable=W0223,W0231
 
     def __init__(self, connection_name, connection, closing_callback=None):
-        super().__init__(connection_name, single_connection=True)
+        self.log = logging.getLogger('db_client')
+        self.connection_name = connection_name
         self.connection = connection
+        self.single_connection = True
         self.closing_callback = closing_callback
 
     def acquire_connection(self):
