@@ -1,5 +1,10 @@
 Changelog
 =========
+
+0.10.8
+------
+- Performance fixes from ``pypika`` and object retrieval
+
 0.10.7
 ------
 - Fixed SQLite relative db path and :memory: now also works
