@@ -328,21 +328,19 @@ class Model(metaclass=ModelMeta):
 
     def __init__(self, *args, **kwargs) -> None:
         is_new = not bool(kwargs.get('id'))
-
-        for key, field in self._meta.fields_map.items():
-            if isinstance(field, fields.BackwardFKRelation):
-                setattr(
-                    self, key,
-                    RelationQueryContainer(field.type, field.relation_field, self, is_new)
-                )
-            elif isinstance(field, fields.ManyToManyField):
-                setattr(self, key, ManyToManyRelationManager(field.type, self, field, is_new))
-            elif isinstance(field, fields.Field):
-                setattr(self, key, field.default)
-            else:
-                setattr(self, key, None)
-
         passed_fields = set(kwargs.keys())
+
+        for key in self._meta.backward_fk_fields:
+            field = self._meta.fields_map[key]
+            setattr(
+                self, key,
+                RelationQueryContainer(field.type, field.relation_field, self, is_new)
+            )
+
+        for key in self._meta.m2m_fields:
+            field = self._meta.fields_map[key]
+            setattr(self, key, ManyToManyRelationManager(field.type, self, field, is_new))
+
         for key, value in kwargs.items():
             if key in self._meta.fk_fields:
                 if hasattr(value, 'id') and not value.id:
@@ -351,6 +349,13 @@ class Model(metaclass=ModelMeta):
                 relation_field = '{}_id'.format(key)
                 setattr(self, relation_field, value.id)
                 passed_fields.add(relation_field)
+            elif key in self._meta.fields:
+                field_object = self._meta.fields_map[key]
+                if value is None and not field_object.null:
+                    raise ValueError('{} is non nullable field, but null was passed'.format(key))
+                setattr(self, key, field_object.to_python_value(value))
+            elif key in self._meta.db_fields:
+                setattr(self, self._meta.fields_db_projection_reverse[key], value)
             elif key in self._meta.backward_fk_fields:
                 raise ConfigurationError(
                     'You can\'t set backward relations through init, change related model instead'
@@ -359,18 +364,11 @@ class Model(metaclass=ModelMeta):
                 raise ConfigurationError(
                     'You can\'t set m2m relations through init, use m2m_manager instead'
                 )
-            elif key in self._meta.fields:
-                field_object = self._meta.fields_map[key]
-                if value is None and not field_object.null:
-                    raise ValueError('{} is non nullable field, but null was passed'.format(key))
-                setattr(self, key, field_object.to_python_value(value))
-            elif key in self._meta.db_fields:
-                setattr(self, self._meta.fields_db_projection_reverse[key], value)
+
+        passed_fields.update(self._meta.fetch_fields)
 
         for key, field_object in self._meta.fields_map.items():
-            if key in passed_fields or key in self._meta.fetch_fields:
-                continue
-            else:
+            if key not in passed_fields:
                 if callable(field_object.default):
                     setattr(self, key, field_object.default())
                 else:

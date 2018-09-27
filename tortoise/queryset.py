@@ -284,7 +284,7 @@ class QuerySet(AwaitableQuery):
             queryset._available_custom_filters.update(get_filters_for_field(key, None, key))
         return queryset
 
-    def values_list(self, *fields: str, flat: bool = False):
+    def values_list(self, *fields: str, flat: bool = False):  # pylint: disable=W0621
         """
         Make QuerySet returns list of tuples for given args instead of objects.
         If ```flat=True`` and only one arg is passed can return flat list.
@@ -581,6 +581,8 @@ class CountQuery(AwaitableQuery):
 
 
 class FieldSelectQuery(AwaitableQuery):
+    # pylint: disable=W0223
+
     def _join_table_with_forwarded_fields(self, model, field, forwarded_fields):
         table = Table(model._meta.table)
         if field in model._meta.fields_db_projection and not forwarded_fields:

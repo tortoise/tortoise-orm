@@ -29,7 +29,7 @@ class Field:
     """
     def __init__(
         self,
-        type=None,
+        type=None,  # pylint: disable=W0622
         source_field: Optional[str] = None,
         generated: bool = False,
         pk: bool = False,
@@ -301,7 +301,7 @@ class ManyToManyField(Field):
 
 
 class BackwardFKRelation:
-    def __init__(self, type, relation_field, **kwargs):
+    def __init__(self, type, relation_field, **kwargs):  # pylint: disable=W0622
         self.type = type
         self.relation_field = relation_field
 

@@ -107,7 +107,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         else:
             return self._transaction_class(self.connection_name, pool=self._db_pool)
 
-    async def execute_query(self, query):
+    async def execute_query(self, query, get_inserted_id=False):
         try:
             async with self.acquire_connection() as connection:
                 self.log.debug(query)
@@ -153,6 +153,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         self._transaction_class = self.__class__
         self._old_context_value = None
         self.connection_name = connection_name
+        self.transaction = None
 
     def acquire_connection(self):
         return ConnectionWrapper(self._connection)
@@ -172,7 +173,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     async def commit(self):
         try:
             await self.transaction.commit()
-        except asyncpg.exceptions._base.InterfaceError as exc:
+        except (AttributeError, asyncpg.exceptions._base.InterfaceError) as exc:
             raise TransactionManagementError(exc)
         if self._pool:
             await self._pool.release(self._connection)
@@ -182,7 +183,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     async def rollback(self):
         try:
             await self.transaction.rollback()
-        except asyncpg.exceptions._base.InterfaceError as exc:
+        except (AttributeError, asyncpg.exceptions._base.InterfaceError) as exc:
             raise TransactionManagementError(exc)
         if self._pool:
             await self._pool.release(self._connection)
