@@ -332,10 +332,8 @@ class Model(metaclass=ModelMeta):
 
         for key in self._meta.backward_fk_fields:
             field = self._meta.fields_map[key]
-            setattr(
-                self, key,
-                RelationQueryContainer(field.type, field.relation_field, self, is_new)
-            )
+            setattr(self, key, RelationQueryContainer(
+                field.type, field.relation_field, self, is_new))  # type: ignore
 
         for key in self._meta.m2m_fields:
             field = self._meta.fields_map[key]
