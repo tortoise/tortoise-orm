@@ -327,50 +327,57 @@ class Model(metaclass=ModelMeta):
     id = None  # type: Optional[Hashable]
 
     def __init__(self, *args, **kwargs) -> None:
-        is_new = not bool(kwargs.get('id'))
-        passed_fields = set(kwargs.keys())
+        # self._meta is a very common attribute lookup, lets cache it.
+        meta = self._meta
 
-        for key in self._meta.backward_fk_fields:
-            field = self._meta.fields_map[key]
+        # Create basic fk/m2m objects
+        is_new = 'id' not in kwargs
+
+        for key in meta.backward_fk_fields:
+            field_object = meta.fields_map[key]
             setattr(self, key, RelationQueryContainer(
-                field.type, field.relation_field, self, is_new))  # type: ignore
+                field_object.type, field_object.relation_field, self, is_new))  # type: ignore
 
-        for key in self._meta.m2m_fields:
-            field = self._meta.fields_map[key]
-            setattr(self, key, ManyToManyRelationManager(field.type, self, field, is_new))
+        for key in meta.m2m_fields:
+            field_object = meta.fields_map[key]
+            setattr(self, key, ManyToManyRelationManager(
+                field_object.type, self, field_object, is_new))
+
+        # Assign values and do type conversions
+        passed_fields = set(kwargs.keys())
+        passed_fields.update(meta.fetch_fields)
 
         for key, value in kwargs.items():
-            if key in self._meta.fk_fields:
+            if key in meta.fk_fields:
                 if hasattr(value, 'id') and not value.id:
                     raise OperationalError(
                         'You should first call .save() on {} before referring to it'.format(value))
                 relation_field = '{}_id'.format(key)
                 setattr(self, relation_field, value.id)
                 passed_fields.add(relation_field)
-            elif key in self._meta.fields:
-                field_object = self._meta.fields_map[key]
+            elif key in meta.fields:
+                field_object = meta.fields_map[key]
                 if value is None and not field_object.null:
                     raise ValueError('{} is non nullable field, but null was passed'.format(key))
                 setattr(self, key, field_object.to_python_value(value))
-            elif key in self._meta.db_fields:
-                setattr(self, self._meta.fields_db_projection_reverse[key], value)
-            elif key in self._meta.backward_fk_fields:
+            elif key in meta.db_fields:
+                setattr(self, meta.fields_db_projection_reverse[key], value)
+            elif key in meta.backward_fk_fields:
                 raise ConfigurationError(
                     'You can\'t set backward relations through init, change related model instead'
                 )
-            elif key in self._meta.m2m_fields:
+            elif key in meta.m2m_fields:
                 raise ConfigurationError(
                     'You can\'t set m2m relations through init, use m2m_manager instead'
                 )
 
-        passed_fields.update(self._meta.fetch_fields)
-
-        for key, field_object in self._meta.fields_map.items():
-            if key not in passed_fields:
-                if callable(field_object.default):
-                    setattr(self, key, field_object.default())
-                else:
-                    setattr(self, key, field_object.default)
+        # Assign defaults for missing fields
+        for key in meta.fields.difference(passed_fields):
+            field_object = meta.fields_map[key]
+            if callable(field_object.default):
+                setattr(self, key, field_object.default())
+            else:
+                setattr(self, key, field_object.default)
 
     async def _insert_instance(self, using_db=None) -> None:
         db = using_db if using_db else self._meta.db
