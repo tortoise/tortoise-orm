@@ -10,7 +10,7 @@ urlparse.uses_netloc.append('mysql')
 DB_LOOKUP = {
     'postgres': {
         'engine': 'tortoise.backends.asyncpg',
-        'vars': {
+        'vmap': {
             'path': 'database',
             'hostname': 'host',
             'port': 'port',
@@ -21,13 +21,13 @@ DB_LOOKUP = {
     'sqlite': {
         'engine': 'tortoise.backends.sqlite',
         'skip_first_char': False,
-        'vars': {
+        'vmap': {
             'path': 'file_path',
         },
     },
     'mysql': {
         'engine': 'tortoise.backends.mysql',
-        'vars': {
+        'vmap': {
             'path': 'database',
             'hostname': 'host',
             'port': 'port',
@@ -61,20 +61,20 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         path = path.replace('\\{', '{').replace('\\}', '}')
         path = path.format(uuid.uuid4().hex)
 
-    vars = {}  # type: dict
-    vars.update(db['vars'])
-    params[vars['path']] = path
-    if vars.get('hostname'):
-        params[vars['hostname']] = str(url.hostname or '')
+    vmap = {}  # type: dict
+    vmap.update(db['vmap'])
+    params[vmap['path']] = path
+    if vmap.get('hostname'):
+        params[vmap['hostname']] = str(url.hostname or '')
     try:
-        if vars.get('port'):
-            params[vars['port']] = str(url.port or '')
+        if vmap.get('port'):
+            params[vmap['port']] = str(url.port or '')
     except ValueError:
         raise ConfigurationError('Port is not an integer')
-    if vars.get('username'):
-        params[vars['username']] = str(url.username or '')
-    if vars.get('password'):
-        params[vars['password']] = str(url.password or '')
+    if vmap.get('username'):
+        params[vmap['username']] = str(url.username or '')
+    if vmap.get('password'):
+        params[vmap['password']] = str(url.password or '')
 
     return {
         'engine': db['engine'],

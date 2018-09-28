@@ -37,7 +37,7 @@ class BaseDBAsyncClient:
     def _in_transaction(self):
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def execute_query(self, query):
+    async def execute_query(self, query, get_inserted_id=False):
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_script(self, script):
@@ -62,10 +62,12 @@ class ConnectionWrapper:
 
 
 class SingleConnectionWrapper(BaseDBAsyncClient):
+    # pylint: disable=W0223,W0231
+
     def __init__(self, connection_name, connection, closing_callback=None):
+        self.log = logging.getLogger('db_client')
         self.connection_name = connection_name
         self.connection = connection
-        self.log = logging.getLogger('db_client')
         self.single_connection = True
         self.closing_callback = closing_callback
 

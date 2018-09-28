@@ -18,8 +18,8 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     executor_class = AsyncpgExecutor
     schema_generator = AsyncpgSchemaGenerator
 
-    def __init__(self, user, password, database, host, port, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, user, password, database, host, port, **kwargs):
+        super().__init__(**kwargs)
 
         self.user = user
         self.password = password
@@ -107,7 +107,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         else:
             return self._transaction_class(self.connection_name, pool=self._db_pool)
 
-    async def execute_query(self, query):
+    async def execute_query(self, query, get_inserted_id=False):
         try:
             async with self.acquire_connection() as connection:
                 self.log.debug(query)
@@ -153,6 +153,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         self._transaction_class = self.__class__
         self._old_context_value = None
         self.connection_name = connection_name
+        self.transaction = None
 
     def acquire_connection(self):
         return ConnectionWrapper(self._connection)

@@ -374,4 +374,4 @@ def run_async(coro):
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.10.7"
+__version__ = "0.10.8"
