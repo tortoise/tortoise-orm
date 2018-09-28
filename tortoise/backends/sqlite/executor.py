@@ -31,11 +31,10 @@ TO_DB_OVERRIDE = {
 class SqliteExecutor(BaseExecutor):
     async def execute_insert(self, instance):
         self.connection = await self.db.get_single_connection()
-        regular_columns, generated_column_pairs = self._prepare_insert_columns()
+        regular_columns = self._prepare_insert_columns()
         columns, values = self._prepare_insert_values(
             instance=instance,
             regular_columns=regular_columns,
-            generated_column_pairs=generated_column_pairs,
         )
 
         query = (

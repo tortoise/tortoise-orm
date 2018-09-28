@@ -32,17 +32,11 @@ class BaseExecutor:
 
     def _prepare_insert_columns(self):
         regular_columns = []
-        python_generated_column_pairs = []
-        now = datetime.datetime.utcnow()
         for column in self.model._meta.fields_db_projection.keys():
             field_object = self.model._meta.fields_map[column]
-            if isinstance(field_object, fields.DatetimeField) and field_object.auto_now_add:
-                python_generated_column_pairs.append((column, now))
-            elif field_object.generated:
-                continue
-            else:
+            if not field_object.generated:
                 regular_columns.append(column)
-        return regular_columns, python_generated_column_pairs
+        return regular_columns
 
     def _field_to_db(self, field_object, attr):
         return field_object.to_db_value(attr)
@@ -50,13 +44,9 @@ class BaseExecutor:
     def _get_prepared_value(self, instance, column):
         return self._field_to_db(self.model._meta.fields_map[column], getattr(instance, column))
 
-    def _prepare_insert_values(self, instance, regular_columns, generated_column_pairs):
+    def _prepare_insert_values(self, instance, regular_columns):
         values = [self._get_prepared_value(instance, column) for column in regular_columns]
         result_columns = [self.model._meta.fields_db_projection[c] for c in regular_columns]
-        for column, value in generated_column_pairs:
-            result_columns.append(self.model._meta.fields_db_projection[column])
-            values.append(value)
-            setattr(instance, column, value)
         return result_columns, values
 
     async def execute_insert(self, instance):

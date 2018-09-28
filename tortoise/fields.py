@@ -145,11 +145,10 @@ class DatetimeField(Field):
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs) -> None:
         if auto_now_add and auto_now:
             raise ConfigurationError('You can choose only auto_now or auto_now_add')
-        auto_now_add = auto_now_add | auto_now
-        kwargs['generated'] = bool(kwargs.get('generated')) | auto_now_add
+        if auto_now_add or auto_now:
+            kwargs['default'] = datetime.datetime.utcnow
         super().__init__(datetime.datetime, **kwargs)
         self.auto_now = auto_now
-        self.auto_now_add = auto_now_add
 
     def to_python_value(self, value):
         if value is None or isinstance(value, self.type):
