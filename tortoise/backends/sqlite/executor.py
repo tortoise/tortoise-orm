@@ -22,13 +22,12 @@ def to_db_decimal(self, value):
     return Decimal(value).quantize(Decimal(quant)).normalize()
 
 
-TO_DB_OVERRIDE = {
-    fields.BooleanField: to_db_bool,
-    fields.DecimalField: to_db_decimal,
-}
-
-
 class SqliteExecutor(BaseExecutor):
+    TO_DB_OVERRIDE = {
+        fields.BooleanField: to_db_bool,
+        fields.DecimalField: to_db_decimal,
+    }
+
     async def execute_insert(self, instance):
         self.connection = await self.db.get_single_connection()
         regular_columns = self._prepare_insert_columns()
@@ -46,8 +45,3 @@ class SqliteExecutor(BaseExecutor):
         await self.db.release_single_connection(self.connection)
         self.connection = None
         return instance
-
-    def _field_to_db(self, field_object, attr):
-        if field_object.__class__ in TO_DB_OVERRIDE:
-            return TO_DB_OVERRIDE[field_object.__class__](field_object, attr)
-        return field_object.to_db_value(attr)

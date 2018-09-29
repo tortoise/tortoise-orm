@@ -1,5 +1,5 @@
 import datetime
-from typing import Dict  # noqa
+from typing import Callable, Dict, Type  # noqa
 
 from pypika import Table
 
@@ -8,6 +8,8 @@ from tortoise.exceptions import OperationalError
 
 
 class BaseExecutor:
+    TO_DB_OVERRIDE = {}  # type: Dict[Type[fields.Field], Callable]
+
     def __init__(self, model, db=None, prefetch_map=None, prefetch_queries=None):
         self.model = model
         self.db = db
@@ -39,6 +41,8 @@ class BaseExecutor:
         return regular_columns
 
     def _field_to_db(self, field_object, attr):
+        if field_object.__class__ in self.TO_DB_OVERRIDE:
+            return self.TO_DB_OVERRIDE[field_object.__class__](field_object, attr)
         return field_object.to_db_value(attr)
 
     def _get_prepared_value(self, instance, column):
