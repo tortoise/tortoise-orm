@@ -87,7 +87,7 @@ class Q:  # pylint: disable=C0103
                         if param.get('value_encoder') else field_object.to_db_value
                     )
                     new_criterion = param['operator'](
-                        getattr(table, param['field']), value_encoder(value)
+                        getattr(table, param['field']), value_encoder(value, model)
                     )
             if not criterion:
                 criterion = new_criterion

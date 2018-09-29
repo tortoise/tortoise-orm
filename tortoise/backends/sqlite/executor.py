@@ -6,20 +6,20 @@ from tortoise import fields
 from tortoise.backends.base.executor import BaseExecutor
 
 
-def to_db_bool(self, value):
+def to_db_bool(self, value, instance):
     if value is None:
         return None
     return int(bool(value))
 
 
-def to_db_decimal(self, value):
+def to_db_decimal(self, value, instance):
     if value is None:
         return None
     if self.decimal_places == 0:
         quant = '1'
     else:
         quant = '1.{}'.format('0' * self.decimal_places)
-    return Decimal(value).quantize(Decimal(quant)).normalize()
+    return str(Decimal(value).quantize(Decimal(quant)).normalize())
 
 
 class SqliteExecutor(BaseExecutor):
