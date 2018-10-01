@@ -3,7 +3,8 @@ Changelog
 
 0.10.8
 ------
-- Performance fixes from ``pypika`` and object retrieval
+- Performance fixes from ``pypika>=0.15.6``
+- Significant reduction in object creation time
 
 0.10.7
 ------
