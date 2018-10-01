@@ -45,8 +45,9 @@ class Field:
         self.default = default
         self.null = null
         self.unique = unique
+        self.model_field_name = None  # Type: Optional[str]
 
-    def to_db_value(self, value):
+    def to_db_value(self, value, instance):
         return value
 
     def to_python_value(self, value):
@@ -145,16 +146,25 @@ class DatetimeField(Field):
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs) -> None:
         if auto_now_add and auto_now:
             raise ConfigurationError('You can choose only auto_now or auto_now_add')
-        auto_now_add = auto_now_add | auto_now
-        kwargs['generated'] = bool(kwargs.get('generated')) | auto_now_add
         super().__init__(datetime.datetime, **kwargs)
         self.auto_now = auto_now
-        self.auto_now_add = auto_now_add
+        self.auto_now_add = auto_now | auto_now_add
 
     def to_python_value(self, value):
         if value is None or isinstance(value, self.type):
             return value
         return ciso8601.parse_datetime(value)
+
+    def to_db_value(self, value, instance):
+        if self.auto_now:
+            value = datetime.datetime.utcnow()
+            setattr(instance, self.model_field_name, value)
+            return value
+        if self.auto_now_add and getattr(instance, self.model_field_name) is None:
+            value = datetime.datetime.utcnow()
+            setattr(instance, self.model_field_name, value)
+            return value
+        return value
 
 
 class DateField(Field):
@@ -194,7 +204,7 @@ class JSONField(Field):
         self.encoder = encoder
         self.decoder = decoder
 
-    def to_db_value(self, value):
+    def to_db_value(self, value, instance):
         if value is None:
             return value
         return self.encoder(value)

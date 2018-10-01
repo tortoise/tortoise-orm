@@ -15,6 +15,10 @@ from tortoise.transactions import current_transaction_map
 MODEL_TYPE = TypeVar('MODEL_TYPE', bound='Model')
 
 
+def list_encoder(value, instance):
+    return list(value)
+
+
 def is_in(field, value):
     return field.isin(value)
 
@@ -90,14 +94,14 @@ def get_m2m_filters(field_name: str, field: fields.ManyToManyField) -> dict:
             'backward_key': field.backward_key,
             'operator': is_in,
             'table': Table(field.through),
-            'value_encoder': list,
+            'value_encoder': list_encoder,
         },
         '{}__not_in'.format(field_name): {
             'field': field.forward_key,
             'backward_key': field.backward_key,
             'operator': not_in,
             'table': Table(field.through),
-            'value_encoder': list,
+            'value_encoder': list_encoder,
         },
     }
     return filters
@@ -122,14 +126,14 @@ def get_backward_fk_filters(field_name: str, field: fields.BackwardFKRelation) -
             'backward_key': field.relation_field,
             'operator': is_in,
             'table': Table(field.type._meta.table),
-            'value_encoder': list,
+            'value_encoder': list_encoder,
         },
         '{}__not_in'.format(field_name): {
             'field': 'id',
             'backward_key': field.relation_field,
             'operator': not_in,
             'table': Table(field.type._meta.table),
-            'value_encoder': list,
+            'value_encoder': list_encoder,
         },
     }
     return filters
@@ -152,12 +156,12 @@ def get_filters_for_field(field_name: str, field: Optional[fields.Field], source
         '{}__in'.format(field_name): {
             'field': source_field,
             'operator': is_in,
-            'value_encoder': list,
+            'value_encoder': list_encoder,
         },
         '{}__not_in'.format(field_name): {
             'field': source_field,
             'operator': not_in,
-            'value_encoder': list,
+            'value_encoder': list_encoder,
         },
         '{}__isnull'.format(field_name): {
             'field': source_field,
@@ -268,6 +272,7 @@ class ModelMeta(type):
         for key, value in attrs.items():
             if isinstance(value, fields.Field):
                 fields_map[key] = value
+                value.model_field_name = key
                 if isinstance(value, fields.ForeignKeyField):
                     key_field = '{}_id'.format(key)
                     value.source_field = key_field

@@ -49,7 +49,7 @@ class AwaitableQuery:
                     if param.get('value_encoder') else field_object.to_db_value
                 )
                 self.query = self.query.where(
-                    param['operator'](getattr(table, param['field']), value_encoder(value))
+                    param['operator'](getattr(table, param['field']), value_encoder(value, model))
                 )
         for key, value in having.items():
             having_info = custom_filters[key]
