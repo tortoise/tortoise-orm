@@ -40,8 +40,7 @@ class SqliteExecutor(BaseExecutor):
             .insert(*values)
         )
 
-        result = await self.connection.execute_query(query, get_inserted_id=True)
-        instance.id = result[0]
+        instance.id = await self.connection.execute_insert(query)
         await self.db.release_single_connection(self.connection)
         self.connection = None
         return instance

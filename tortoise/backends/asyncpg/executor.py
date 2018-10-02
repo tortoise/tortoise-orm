@@ -16,8 +16,7 @@ class AsyncpgExecutor(BaseExecutor):
             self.connection.query_class.into(Table(self.model._meta.table)).columns(*columns)
             .insert(*values).returning('id')
         )
-        result = await self.connection.execute_query(query)
-        instance.id = result[0][0]
+        instance.id = await self.connection.execute_insert(query)
         await self.db.release_single_connection(self.connection)
         self.connection = None
         return instance

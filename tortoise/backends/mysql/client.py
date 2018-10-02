@@ -1,4 +1,6 @@
 import logging
+from functools import wraps
+from typing import List, SupportsInt, Optional  # noqa
 
 import aiomysql
 import pymysql
@@ -13,12 +15,28 @@ from tortoise.exceptions import (ConfigurationError, DBConnectionError, Integrit
 from tortoise.transactions import current_transaction_map
 
 
+def translate_exceptions(func):
+    @wraps(func)
+    async def wrapped(self, query):
+        self.log.debug(query)
+        try:
+            return await func(self, query)
+        except (pymysql.err.OperationalError, pymysql.err.ProgrammingError,
+                pymysql.err.DataError, pymysql.err.InternalError,
+                pymysql.err.NotSupportedError) as exc:
+            raise OperationalError(exc)
+        except pymysql.err.IntegrityError as exc:
+            raise IntegrityError(exc)
+    return wrapped
+
+
 class MySQLClient(BaseDBAsyncClient):
     query_class = MySQLQuery
     executor_class = MySQLExecutor
     schema_generator = MySQLSchemaGenerator
 
-    def __init__(self, user, password, database, host, port, **kwargs):
+    def __init__(self, user: str, password: str, database: str, host: str, port: SupportsInt,
+                 **kwargs) -> None:
         super().__init__(**kwargs)
 
         self.user = user
@@ -34,14 +52,14 @@ class MySQLClient(BaseDBAsyncClient):
             'password': self.password,
         }
 
-        self._db_pool = None
-        self._connection = None
+        self._db_pool = None  # Type: Optional[aiomysql.Pool]
+        self._connection = None  # Type: Optional[aiomysql.Connection]
 
         self._transaction_class = type(
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
         )
 
-    async def create_connection(self):
+    async def create_connection(self) -> None:
         try:
             if not self.single_connection:
                 self._db_pool = await aiomysql.create_pool(db=self.database, **self.template)
@@ -59,13 +77,13 @@ class MySQLClient(BaseDBAsyncClient):
                 )
             )
 
-    async def close(self):
-        if not self.single_connection:
+    async def close(self) -> None:
+        if self._db_pool:
             self._db_pool.close()
-        else:
+        if self._connection:
             self._connection.close()
 
-    async def db_create(self):
+    async def db_create(self) -> None:
         single_connection = self.single_connection
         self.single_connection = True
         self._connection = await aiomysql.connect(
@@ -74,10 +92,10 @@ class MySQLClient(BaseDBAsyncClient):
         await self.execute_script(
             'CREATE DATABASE {}'.format(self.database)
         )
-        self._connection.close()
+        self._connection.close()  # type: ignore
         self.single_connection = single_connection
 
-    async def db_delete(self):
+    async def db_delete(self) -> None:
         single_connection = self.single_connection
         self.single_connection = True
         self._connection = await aiomysql.connect(
@@ -87,7 +105,7 @@ class MySQLClient(BaseDBAsyncClient):
             await self.execute_script('DROP DATABASE {}'.format(self.database))
         except pymysql.err.DatabaseError:
             pass
-        self._connection.close()
+        self._connection.close()  # type: ignore
         self.single_connection = single_connection
 
     def acquire_connection(self):
@@ -102,36 +120,25 @@ class MySQLClient(BaseDBAsyncClient):
         else:
             return self._transaction_class(self.connection_name, pool=self._db_pool)
 
-    async def execute_query(self, query, get_inserted_id=False):
-        try:
-            async with self.acquire_connection() as connection:
-                async with connection.cursor(aiomysql.DictCursor) as cursor:
-                    self.log.debug(query)
+    @translate_exceptions
+    async def execute_insert(self, query: str) -> int:
+        async with self.acquire_connection() as connection:
+            async with connection.cursor() as cursor:
+                await cursor.execute(query)
+                return cursor.lastrowid  # return auto-generated id
 
-                    await cursor.execute(query)
-                    if get_inserted_id:
-                        return cursor.lastrowid  # return auto-generated id
-                    result = await cursor.fetchall()
-                    return result
-        except (pymysql.err.OperationalError, pymysql.err.ProgrammingError,
-                pymysql.err.DataError, pymysql.err.InternalError,
-                pymysql.err.NotSupportedError) as exc:
-            raise OperationalError(exc)
-        except pymysql.err.IntegrityError as exc:
-            raise IntegrityError(exc)
+    @translate_exceptions
+    async def execute_query(self, query: str) -> List[aiomysql.DictCursor]:
+        async with self.acquire_connection() as connection:
+            async with connection.cursor(aiomysql.DictCursor) as cursor:
+                await cursor.execute(query)
+                return await cursor.fetchall()
 
-    async def execute_script(self, script):
-        try:
-            async with self.acquire_connection() as connection:
-                async with connection.cursor() as cursor:
-                    self.log.debug(script)
-                    await cursor.execute(script)
-        except (pymysql.err.OperationalError, pymysql.err.ProgrammingError,
-                pymysql.err.DataError, pymysql.err.InternalError,
-                pymysql.err.NotSupportedError) as exc:
-            raise OperationalError(exc)
-        except pymysql.err.IntegrityError as exc:
-            raise IntegrityError(exc)
+    @translate_exceptions
+    async def execute_script(self, query: str) -> None:
+        async with self.acquire_connection() as connection:
+            async with connection.cursor() as cursor:
+                await cursor.execute(query)
 
     async def get_single_connection(self):
         if self.single_connection:
