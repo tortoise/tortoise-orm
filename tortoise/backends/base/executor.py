@@ -37,21 +37,17 @@ class BaseExecutor:
             field_object = self.model._meta.fields_map[column]
             if not field_object.generated:
                 regular_columns.append(column)
-        return regular_columns
+        result_columns = [self.model._meta.fields_db_projection[c] for c in regular_columns]
+        return regular_columns, result_columns
 
     def _field_to_db(self, field_object, attr, instance):
         if field_object.__class__ in self.TO_DB_OVERRIDE:
             return self.TO_DB_OVERRIDE[field_object.__class__](field_object, attr, instance)
         return field_object.to_db_value(attr, instance)
 
-    def _get_prepared_value(self, instance, column):
-        return self._field_to_db(self.model._meta.fields_map[column], getattr(instance, column),
-                                 instance)
-
     def _prepare_insert_values(self, instance, regular_columns):
-        values = [self._get_prepared_value(instance, column) for column in regular_columns]
-        result_columns = [self.model._meta.fields_db_projection[c] for c in regular_columns]
-        return result_columns, values
+        return [self._field_to_db(self.model._meta.fields_map[column], getattr(instance, column),
+                                  instance) for column in regular_columns]
 
     async def execute_insert(self, instance):
         # Insert should implement returning new id to saved object

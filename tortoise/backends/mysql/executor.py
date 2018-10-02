@@ -49,18 +49,18 @@ FILTER_FUNC_OVERRIDE = {
 class MySQLExecutor(BaseExecutor):
     async def execute_insert(self, instance):
         self.connection = await self.db.get_single_connection()
-        regular_columns = self._prepare_insert_columns()
-        columns, values = self._prepare_insert_values(
+        regular_columns, columns = self._prepare_insert_columns()
+        values = self._prepare_insert_values(
             instance=instance,
             regular_columns=regular_columns,
         )
 
-        query = (
+        query = str(
             MySQLQuery.into(Table(self.model._meta.table)).columns(*columns)
             .insert(*values)
         )
 
-        instance.id = await self.connection.execute_query(str(query), get_inserted_id=True)
+        instance.id = await self.connection.execute_query(query, get_inserted_id=True)
         await self.db.release_single_connection(self.connection)
         self.connection = None
         return instance
