@@ -1,9 +1,11 @@
-from typing import Callable, Dict, List, Type  # noqa
+from typing import Callable, Dict, List, Tuple, Type  # noqa
 
 from pypika import Table
 
 from tortoise import fields
 from tortoise.exceptions import OperationalError
+
+INSERT_CACHE = {}  # type: Dict[str, Tuple[list, list, str]]
 
 
 class BaseExecutor:
@@ -58,9 +60,13 @@ class BaseExecutor:
 
     async def execute_insert(self, instance):
         self.connection = await self.db.get_single_connection()
-
-        regular_columns, columns = self._prepare_insert_columns()
-        query = self._prepare_insert_statement(columns)
+        key = '%s:%s' % (self.db.connection_name, self.model._meta.table)
+        if key not in INSERT_CACHE:
+            regular_columns, columns = self._prepare_insert_columns()
+            query = self._prepare_insert_statement(columns)
+            INSERT_CACHE[key] = regular_columns, columns, query
+        else:
+            regular_columns, columns, query = INSERT_CACHE[key]
 
         values = self._prepare_insert_values(
             instance=instance,
