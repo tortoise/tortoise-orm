@@ -16,10 +16,9 @@ from tortoise.transactions import current_transaction_map
 
 def translate_exceptions(func):
     @wraps(func)
-    async def wrapped(self, query):
-        self.log.debug(query)
+    async def wrapped(self, query, *args):
         try:
-            return await func(self, query)
+            return await func(self, query, *args)
         except sqlite3.OperationalError as exc:
             raise OperationalError(exc)
         except sqlite3.IntegrityError as exc:
@@ -68,20 +67,23 @@ class SqliteClient(BaseDBAsyncClient):
         return self._transaction_class(self.connection_name, connection=self._connection)
 
     @translate_exceptions
-    async def execute_insert(self, query: str) -> int:
+    async def execute_insert(self, query: str, values: list) -> int:
+        self.log.debug('%s: %s', query, values)
         async with self.acquire_connection() as connection:
-            cursor = await connection.execute(query)
+            cursor = await connection.execute(query, values)
             await cursor.execute('SELECT last_insert_rowid()')
             return (await cursor.fetchone())[0]
 
     @translate_exceptions
     async def execute_query(self, query: str) -> List[dict]:
+        self.log.debug(query)
         async with self.acquire_connection() as connection:
             cursor = await connection.execute(query)
             return [dict(row) for row in await cursor.fetchall()]
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:
+        self.log.debug(query)
         async with self.acquire_connection() as connection:
             await connection.executescript(query)
 

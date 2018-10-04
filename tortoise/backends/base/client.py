@@ -12,7 +12,7 @@ class BaseDBAsyncClient:
     executor_class = BaseExecutor
     schema_generator = BaseSchemaGenerator
 
-    def __init__(self, connection_name: str, single_connection: bool=True, **kwargs) -> None:
+    def __init__(self, connection_name: str, single_connection: bool = True, **kwargs) -> None:
         self.log = logging.getLogger('db_client')
         self.single_connection = single_connection
         self.connection_name = connection_name
@@ -38,7 +38,7 @@ class BaseDBAsyncClient:
     def _in_transaction(self) -> 'BaseTransactionWrapper':
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def execute_insert(self, query: str) -> int:
+    async def execute_insert(self, query: str, values: list) -> int:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_query(self, query: str) -> Sequence[dict]:

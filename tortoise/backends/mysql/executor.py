@@ -1,3 +1,5 @@
+from typing import List
+
 from pypika import MySQLQuery, Table, functions
 from pypika.enums import SqlTypes
 
@@ -36,35 +38,18 @@ def mysql_insensitive_ends_with(field, value):
     )
 
 
-FILTER_FUNC_OVERRIDE = {
-    contains: mysql_contains,
-    starts_with: mysql_starts_with,
-    ends_with: mysql_ends_with,
-    insensitive_contains: mysql_insensitive_contains,
-    insensitive_starts_with: mysql_insensitive_starts_with,
-    insensitive_ends_with: mysql_insensitive_ends_with
-}
-
-
 class MySQLExecutor(BaseExecutor):
-    async def execute_insert(self, instance):
-        self.connection = await self.db.get_single_connection()
-        regular_columns, columns = self._prepare_insert_columns()
-        values = self._prepare_insert_values(
-            instance=instance,
-            regular_columns=regular_columns,
-        )
+    FILTER_FUNC_OVERRIDE = {
+        contains: mysql_contains,
+        starts_with: mysql_starts_with,
+        ends_with: mysql_ends_with,
+        insensitive_contains: mysql_insensitive_contains,
+        insensitive_starts_with: mysql_insensitive_starts_with,
+        insensitive_ends_with: mysql_insensitive_ends_with
+    }
 
-        query = str(
+    def _prepare_insert_statement(self, columns: List[str]) -> str:
+        return str(
             MySQLQuery.into(Table(self.model._meta.table)).columns(*columns)
-            .insert(*values)
-        )
-
-        instance.id = await self.connection.execute_insert(query)
-        await self.db.release_single_connection(self.connection)
-        self.connection = None
-        return instance
-
-    @staticmethod
-    def get_overridden_filter_func(filter_func):
-        return FILTER_FUNC_OVERRIDE.get(filter_func)
+            .insert('???')
+        ).replace("'???'", ','.join(['%s' for _ in range(len(columns))]))

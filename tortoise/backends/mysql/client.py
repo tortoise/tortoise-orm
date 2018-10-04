@@ -17,10 +17,9 @@ from tortoise.transactions import current_transaction_map
 
 def translate_exceptions(func):
     @wraps(func)
-    async def wrapped(self, query):
-        self.log.debug(query)
+    async def wrapped(self, query, *args):
         try:
-            return await func(self, query)
+            return await func(self, query, *args)
         except (pymysql.err.OperationalError, pymysql.err.ProgrammingError,
                 pymysql.err.DataError, pymysql.err.InternalError,
                 pymysql.err.NotSupportedError) as exc:
@@ -121,14 +120,17 @@ class MySQLClient(BaseDBAsyncClient):
             return self._transaction_class(self.connection_name, pool=self._db_pool)
 
     @translate_exceptions
-    async def execute_insert(self, query: str) -> int:
+    async def execute_insert(self, query: str, values: list) -> int:
+        self.log.debug('%s: %s', query, values)
         async with self.acquire_connection() as connection:
             async with connection.cursor() as cursor:
-                await cursor.execute(query)
+                # TODO: Use prepared statement, and cache it
+                await cursor.execute(query, values)
                 return cursor.lastrowid  # return auto-generated id
 
     @translate_exceptions
     async def execute_query(self, query: str) -> List[aiomysql.DictCursor]:
+        self.log.debug(query)
         async with self.acquire_connection() as connection:
             async with connection.cursor(aiomysql.DictCursor) as cursor:
                 await cursor.execute(query)
@@ -136,6 +138,7 @@ class MySQLClient(BaseDBAsyncClient):
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:
+        self.log.debug(query)
         async with self.acquire_connection() as connection:
             async with connection.cursor() as cursor:
                 await cursor.execute(query)
