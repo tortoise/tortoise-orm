@@ -70,16 +70,13 @@ class SqliteClient(BaseDBAsyncClient):
     async def execute_insert(self, query: str, values: list) -> int:
         self.log.debug('%s: %s', query, values)
         async with self.acquire_connection() as connection:
-            cursor = await connection.execute(query, values)
-            await cursor.execute('SELECT last_insert_rowid()')
-            return (await cursor.fetchone())[0]
+            return (await connection.execute_insert(query, values))[0]
 
     @translate_exceptions
     async def execute_query(self, query: str) -> List[dict]:
         self.log.debug(query)
         async with self.acquire_connection() as connection:
-            cursor = await connection.execute(query)
-            return [dict(row) for row in await cursor.fetchall()]
+            return [dict(row) for row in await connection.execute_fetchall(query)]
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:
