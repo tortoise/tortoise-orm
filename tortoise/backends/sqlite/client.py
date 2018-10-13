@@ -84,12 +84,6 @@ class SqliteClient(BaseDBAsyncClient):
         async with self.acquire_connection() as connection:
             await connection.executescript(query)
 
-    async def get_single_connection(self) -> 'SqliteClient':
-        return self
-
-    async def release_single_connection(self, single_connection: BaseDBAsyncClient) -> None:
-        pass
-
 
 class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
     def __init__(self, connection_name: str, connection: aiosqlite.Connection) -> None:
