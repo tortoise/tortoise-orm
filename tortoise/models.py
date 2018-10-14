@@ -218,7 +218,8 @@ def get_filters_for_field(field_name: str, field: Optional[fields.Field], source
 class MetaInfo:
     __slots__ = ('abstract', 'table', 'app', 'fields', 'db_fields', 'm2m_fields', 'fk_fields',
                  'backward_fk_fields', 'fetch_fields', 'fields_db_projection', '_inited',
-                 'fields_db_projection_reverse', 'filters', 'fields_map', 'default_connection')
+                 'fields_db_projection_reverse', 'filters', 'fields_map', 'default_connection',
+                 'basequery')
 
     def __init__(self, meta):
         self.abstract = getattr(meta, 'abstract', False)  # type: bool
@@ -236,6 +237,7 @@ class MetaInfo:
         self.fields_map = {}  # type: Dict[str, fields.Field]
         self._inited = False
         self.default_connection = None
+        self.basequery = None
 
     @property
     def db(self):
