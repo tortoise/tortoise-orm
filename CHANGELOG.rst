@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.10.9
+------
+- Uses macros on SQLite driver to minimise syncronisation. ``aiosqlite>=0.7.0``
+- Uses prepared statements for insert, large insert performance increase.
+- Pre-generate base pypika query object per model, providing general purpose speedup.
+
 0.10.8
 ------
 - Performance fixes from ``pypika>=0.15.6``
