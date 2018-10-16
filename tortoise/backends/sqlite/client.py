@@ -38,16 +38,24 @@ class SqliteClient(BaseDBAsyncClient):
         )
         self._connection = None  # type: Optional[aiosqlite.Connection]
 
-    async def create_connection(self) -> None:
+    async def create_connection(self, with_db: bool) -> None:
         if not self._connection:  # pragma: no branch
             self._connection = aiosqlite.connect(self.filename, isolation_level=None)
             self._connection.start()
             await self._connection._connect()
             self._connection._conn.row_factory = sqlite3.Row
+            self.log.debug(
+                'Created connection %s with params: filename=%s',
+                self._connection, self.filename
+            )
 
     async def close(self) -> None:
         if self._connection:
             await self._connection.close()
+            self.log.debug(
+                'Closed connection %s with params: filename=%s',
+                self._connection, self.filename
+            )
             self._connection = None
 
     async def db_create(self) -> None:

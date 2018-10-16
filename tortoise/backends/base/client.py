@@ -16,7 +16,7 @@ class BaseDBAsyncClient:
         self.log = logging.getLogger('db_client')
         self.connection_name = connection_name
 
-    async def create_connection(self) -> None:
+    async def create_connection(self, with_db: bool) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def close(self) -> None:

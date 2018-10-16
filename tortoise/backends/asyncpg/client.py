@@ -42,13 +42,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self.host = host
         self.port = int(port)  # make sure port is int type
 
-        self.dsn = self.DSN_TEMPLATE.format(
-            user=self.user,
-            password=self.password,
-            host=self.host,
-            port=self.port,
-            database=self.database
-        )
         # self._db_pool = None  # Type: Optional[asyncpg.pool.Pool]
         self._connection = None  # Type: Optional[asyncpg.Connection]
 
@@ -56,12 +49,19 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
         )
 
-    async def create_connection(self) -> None:
+    async def create_connection(self, with_db: bool) -> None:
+        dsn = self.DSN_TEMPLATE.format(
+            user=self.user,
+            password=self.password,
+            host=self.host,
+            port=self.port,
+            database=self.database if with_db else ''
+        )
         try:
-            self._connection = await asyncpg.connect(self.dsn)
+            self._connection = await asyncpg.connect(dsn)
             self.log.debug(
-                'Created connection with params: user=%s database=%s host=%s port=%s',
-                self.user, self.database, self.host, self.port
+                'Created connection %s with params: user=%s database=%s host=%s port=%s',
+                self._connection, self.user, self.database, self.host, self.port
             )
         except asyncpg.InvalidCatalogNameError:
             raise DBConnectionError("Can't establish connection to database {}".format(
@@ -71,34 +71,26 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     async def close(self) -> None:
         if self._connection:
             await self._connection.close()
+            self.log.debug(
+                'Closed connection %s with params: user=%s database=%s host=%s port=%s',
+                self._connection, self.user, self.database, self.host, self.port
+            )
             self._connection = None
 
     async def db_create(self) -> None:
-        self._connection = await asyncpg.connect(self.DSN_TEMPLATE.format(
-            user=self.user,
-            password=self.password,
-            host=self.host,
-            port=self.port,
-            database=''
-        ))
+        await self.create_connection(False)
         await self.execute_script(
             'CREATE DATABASE "{}" OWNER "{}"'.format(self.database, self.user)
         )
-        await self._connection.close()  # type: ignore
+        await self.close()
 
     async def db_delete(self) -> None:
-        self._connection = await asyncpg.connect(self.DSN_TEMPLATE.format(
-            user=self.user,
-            password=self.password,
-            host=self.host,
-            port=self.port,
-            database=''
-        ))
+        await self.create_connection(False)
         try:
             await self.execute_script('DROP DATABASE "{}"'.format(self.database))
         except asyncpg.InvalidCatalogNameError:  # pragma: nocoverage
             pass
-        await self._connection.close()  # type: ignore
+        await self.close()
 
     def acquire_connection(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._connection)

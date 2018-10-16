@@ -44,13 +44,6 @@ class MySQLClient(BaseDBAsyncClient):
         self.host = host
         self.port = int(port)  # make sure port is int type
 
-        self.template = {
-            'host': self.host,
-            'port': self.port,
-            'user': self.user,
-            'password': self.password,
-        }
-
         # self._db_pool = None  # Type: Optional[aiomysql.Pool]
         self._connection = None  # Type: Optional[aiomysql.Connection]
 
@@ -58,12 +51,20 @@ class MySQLClient(BaseDBAsyncClient):
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
         )
 
-    async def create_connection(self) -> None:
+    async def create_connection(self, with_db: bool) -> None:
+        template = {
+            'host': self.host,
+            'port': self.port,
+            'user': self.user,
+            'password': self.password,
+            'db': self.database if with_db else None
+        }
+
         try:
-            self._connection = await aiomysql.connect(db=self.database, **self.template)
+            self._connection = await aiomysql.connect(**template)
             self.log.debug(
-                'Created connection with params: user=%s database=%s host=%s port=%s',
-                self.user, self.database, self.host, self.port
+                'Created connection %s with params: user=%s database=%s host=%s port=%s',
+                self._connection, self.user, self.database, self.host, self.port
             )
         except pymysql.err.OperationalError:
             raise DBConnectionError(
@@ -76,26 +77,26 @@ class MySQLClient(BaseDBAsyncClient):
     async def close(self) -> None:
         if self._connection:
             self._connection.close()
+            self.log.debug(
+                'Closed connection %s with params: user=%s database=%s host=%s port=%s',
+                self._connection, self.user, self.database, self.host, self.port
+            )
             self._connection = None
 
     async def db_create(self) -> None:
-        self._connection = await aiomysql.connect(
-            **self.template
-        )
+        await self.create_connection(False)
         await self.execute_script(
             'CREATE DATABASE {}'.format(self.database)
         )
-        self._connection.close()  # type: ignore
+        await self.close()
 
     async def db_delete(self) -> None:
-        self._connection = await aiomysql.connect(
-            **self.template
-        )
+        await self.create_connection(False)
         try:
             await self.execute_script('DROP DATABASE {}'.format(self.database))
         except pymysql.err.DatabaseError:  # pragma: nocoverage
             pass
-        self._connection.close()  # type: ignore
+        await self.close()
 
     def acquire_connection(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._connection)
