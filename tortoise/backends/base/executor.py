@@ -60,7 +60,7 @@ class BaseExecutor:
 
     async def execute_insert(self, instance):
         self.connection = await self.db.get_single_connection()
-        key = '%s:%s' % (self.db.connection_name, self.model._meta.table)
+        key = '{}:{}'.format(self.db.connection_name, self.model._meta.table)
         if key not in INSERT_CACHE:
             regular_columns, columns = self._prepare_insert_columns()
             query = self._prepare_insert_statement(columns)
