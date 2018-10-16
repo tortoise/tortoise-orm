@@ -1,4 +1,6 @@
 import logging
+from functools import wraps
+from typing import List, SupportsInt, Optional  # noqa
 
 import asyncpg
 from pypika import PostgreSQLQuery
@@ -12,13 +14,26 @@ from tortoise.exceptions import (ConfigurationError, DBConnectionError, Integrit
 from tortoise.transactions import current_transaction_map
 
 
+def translate_exceptions(func):
+    @wraps(func)
+    async def wrapped(self, query, *args):
+        try:
+            return await func(self, query, *args)
+        except asyncpg.exceptions.SyntaxOrAccessError as exc:
+            raise OperationalError(exc)
+        except asyncpg.exceptions.IntegrityConstraintViolationError as exc:
+            raise IntegrityError(exc)
+    return wrapped
+
+
 class AsyncpgDBClient(BaseDBAsyncClient):
     DSN_TEMPLATE = 'postgres://{user}:{password}@{host}:{port}/{database}'
     query_class = PostgreSQLQuery
     executor_class = AsyncpgExecutor
     schema_generator = AsyncpgSchemaGenerator
 
-    def __init__(self, user, password, database, host, port, **kwargs):
+    def __init__(self, user: str, password: str, database: str, host: str, port: SupportsInt,
+                 **kwargs) -> None:
         super().__init__(**kwargs)
 
         self.user = user
@@ -34,14 +49,14 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             port=self.port,
             database=self.database
         )
-        self._db_pool = None
-        self._connection = None
+        self._db_pool = None  # Type: Optional[asyncpg.pool.Pool]
+        self._connection = None  # Type: Optional[asyncpg.Connection]
 
         self._transaction_class = type(
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
         )
 
-    async def create_connection(self):
+    async def create_connection(self) -> None:
         try:
             if not self.single_connection:
                 self._db_pool = await asyncpg.create_pool(self.dsn)
@@ -56,13 +71,13 @@ class AsyncpgDBClient(BaseDBAsyncClient):
                 self.database
             ))
 
-    async def close(self):
-        if not self.single_connection:
+    async def close(self) -> None:
+        if self._db_pool:
             await self._db_pool.close()
-        else:
+        if self._connection:
             await self._connection.close()
 
-    async def db_create(self):
+    async def db_create(self) -> None:
         single_connection = self.single_connection
         self.single_connection = True
         self._connection = await asyncpg.connect(self.DSN_TEMPLATE.format(
@@ -75,10 +90,10 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         await self.execute_script(
             'CREATE DATABASE "{}" OWNER "{}"'.format(self.database, self.user)
         )
-        await self._connection.close()
+        await self._connection.close()  # type: ignore
         self.single_connection = single_connection
 
-    async def db_delete(self):
+    async def db_delete(self) -> None:
         single_connection = self.single_connection
         self.single_connection = True
         self._connection = await asyncpg.connect(self.DSN_TEMPLATE.format(
@@ -92,30 +107,40 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             await self.execute_script('DROP DATABASE "{}"'.format(self.database))
         except asyncpg.InvalidCatalogNameError:
             pass
-        await self._connection.close()
+        await self._connection.close()  # type: ignore
         self.single_connection = single_connection
 
-    def acquire_connection(self):
+    def acquire_connection(self) -> ConnectionWrapper:
         if not self.single_connection:
-            return self._db_pool.acquire()
+            return self._db_pool.acquire()  # type: ignore
         else:
             return ConnectionWrapper(self._connection)
 
-    def _in_transaction(self):
+    def _in_transaction(self) -> 'TransactionWrapper':
         if self.single_connection:
             return self._transaction_class(self.connection_name, connection=self._connection)
         else:
             return self._transaction_class(self.connection_name, pool=self._db_pool)
 
-    async def execute_query(self, query, get_inserted_id=False):
-        try:
-            async with self.acquire_connection() as connection:
-                self.log.debug(query)
-                return await connection.fetch(query)
-        except asyncpg.exceptions.SyntaxOrAccessError as exc:
-            raise OperationalError(exc)
-        except asyncpg.exceptions.IntegrityConstraintViolationError as exc:
-            raise IntegrityError(exc)
+    @translate_exceptions
+    async def execute_insert(self, query: str, values: list) -> int:
+        self.log.debug('%s: %s', query, values)
+        async with self.acquire_connection() as connection:
+            # TODO: Cache prepared statement
+            stmt = await connection.prepare(query)
+            return await stmt.fetchval(*values)
+
+    @translate_exceptions
+    async def execute_query(self, query: str) -> List[dict]:
+        self.log.debug(query)
+        async with self.acquire_connection() as connection:
+            return await connection.fetch(query)
+
+    @translate_exceptions
+    async def execute_script(self, query: str) -> None:
+        self.log.debug(query)
+        async with self.acquire_connection() as connection:
+            await connection.execute(query)
 
     async def get_single_connection(self):
         if self.single_connection:
@@ -128,19 +153,9 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         if not self.single_connection:
             await self._db_pool.release(single_connection.connection)
 
-    async def execute_script(self, script):
-        try:
-            async with self.acquire_connection() as connection:
-                self.log.debug(script)
-                await connection.execute(script)
-        except asyncpg.exceptions.SyntaxOrAccessError as exc:
-            raise OperationalError(exc)
-        except asyncpg.exceptions.IntegrityConstraintViolationError as exc:
-            raise IntegrityError(exc)
-
 
 class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
-    def __init__(self, connection_name, pool=None, connection=None):
+    def __init__(self, connection_name: str, pool=None, connection=None) -> None:
         if pool and connection:
             raise ConfigurationError('You must pass either connection or pool')
         self._connection = connection
@@ -155,7 +170,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         self.connection_name = connection_name
         self.transaction = None
 
-    def acquire_connection(self):
+    def acquire_connection(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._connection)
 
     async def _get_connection(self):

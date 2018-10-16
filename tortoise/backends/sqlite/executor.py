@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import List
 
 from pypika import Table
 
@@ -28,20 +29,8 @@ class SqliteExecutor(BaseExecutor):
         fields.DecimalField: to_db_decimal,
     }
 
-    async def execute_insert(self, instance):
-        self.connection = await self.db.get_single_connection()
-        regular_columns = self._prepare_insert_columns()
-        columns, values = self._prepare_insert_values(
-            instance=instance,
-            regular_columns=regular_columns,
-        )
-
-        query = (
+    def _prepare_insert_statement(self, columns: List[str]) -> str:
+        return str(
             self.connection.query_class.into(Table(self.model._meta.table)).columns(*columns)
-            .insert(*values)
-        )
-        result = await self.connection.execute_query(str(query), get_inserted_id=True)
-        instance.id = result[0]
-        await self.db.release_single_connection(self.connection)
-        self.connection = None
-        return instance
+            .insert('???')
+        ).replace("'???'", ','.join(['?' for _ in range(len(columns))]))

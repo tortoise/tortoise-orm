@@ -142,11 +142,7 @@ class QuerySet(AwaitableQuery):
         self.fields = model._meta.db_fields
         self.model = model
 
-        if not hasattr(model._meta.db, 'query_class'):
-            # do not build Query if Tortoise wasn't inited
-            self.query = None
-        else:
-            self.query = model._meta.db.query_class.from_(model._meta.table)
+        self.query = model._meta.basequery
 
         self._prefetch_map = {}  # type: Dict[str, Set[str]]
         self._prefetch_queries = {}  # type: Dict[str, QuerySet]

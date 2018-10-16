@@ -1,13 +1,16 @@
-from typing import Callable, Dict, Type  # noqa
+from typing import Callable, Dict, List, Tuple, Type  # noqa
 
 from pypika import Table
 
 from tortoise import fields
 from tortoise.exceptions import OperationalError
 
+INSERT_CACHE = {}  # type: Dict[str, Tuple[list, list, str]]
+
 
 class BaseExecutor:
     TO_DB_OVERRIDE = {}  # type: Dict[Type[fields.Field], Callable]
+    FILTER_FUNC_OVERRIDE = {}  # type: Dict[Callable, Callable]
 
     def __init__(self, model, db=None, prefetch_map=None, prefetch_queries=None):
         self.model = model
@@ -37,27 +40,42 @@ class BaseExecutor:
             field_object = self.model._meta.fields_map[column]
             if not field_object.generated:
                 regular_columns.append(column)
-        return regular_columns
+        result_columns = [self.model._meta.fields_db_projection[c] for c in regular_columns]
+        return regular_columns, result_columns
 
     def _field_to_db(self, field_object, attr, instance):
         if field_object.__class__ in self.TO_DB_OVERRIDE:
             return self.TO_DB_OVERRIDE[field_object.__class__](field_object, attr, instance)
         return field_object.to_db_value(attr, instance)
 
-    def _get_prepared_value(self, instance, column):
-        return self._field_to_db(self.model._meta.fields_map[column], getattr(instance, column),
-                                 instance)
-
     def _prepare_insert_values(self, instance, regular_columns):
-        values = [self._get_prepared_value(instance, column) for column in regular_columns]
-        result_columns = [self.model._meta.fields_db_projection[c] for c in regular_columns]
-        return result_columns, values
+        return [self._field_to_db(self.model._meta.fields_map[column], getattr(instance, column),
+                                  instance) for column in regular_columns]
 
-    async def execute_insert(self, instance):
+    def _prepare_insert_statement(self, columns: List[str]) -> str:
         # Insert should implement returning new id to saved object
         # Each db has it's own methods for it, so each implementation should
         # go to descendant executors
         raise NotImplementedError()  # pragma: nocoverage
+
+    async def execute_insert(self, instance):
+        self.connection = await self.db.get_single_connection()
+        key = '{}:{}'.format(self.db.connection_name, self.model._meta.table)
+        if key not in INSERT_CACHE:
+            regular_columns, columns = self._prepare_insert_columns()
+            query = self._prepare_insert_statement(columns)
+            INSERT_CACHE[key] = regular_columns, columns, query
+        else:
+            regular_columns, columns, query = INSERT_CACHE[key]
+
+        values = self._prepare_insert_values(
+            instance=instance,
+            regular_columns=regular_columns,
+        )
+        instance.id = await self.connection.execute_insert(query, values)
+        await self.db.release_single_connection(self.connection)
+        self.connection = None
+        return instance
 
     async def execute_update(self, instance):
         self.connection = await self.db.get_single_connection()
@@ -208,7 +226,6 @@ class BaseExecutor:
         self.connection = None
         return instance_list
 
-    @staticmethod
-    def get_overridden_filter_func(filter_func):
-        # Returns None if no filters was overridden
-        return
+    @classmethod
+    def get_overridden_filter_func(cls, filter_func):
+        return cls.FILTER_FUNC_OVERRIDE.get(filter_func)

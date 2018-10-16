@@ -207,6 +207,12 @@ class Tortoise:
         return config
 
     @classmethod
+    def _build_initial_querysets(cls):
+        for app in cls.apps.values():
+            for model in app.values():
+                model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
+
+    @classmethod
     async def init(
             cls,
             config: Optional[dict] = None,
@@ -303,6 +309,8 @@ class Tortoise:
 
         cls._init_relations()
 
+        cls._build_initial_querysets()
+
         cls._inited = True
 
     @classmethod
@@ -374,4 +382,4 @@ def run_async(coro):
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.10.8"
+__version__ = "0.10.9"
