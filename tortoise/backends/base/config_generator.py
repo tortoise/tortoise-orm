@@ -47,7 +47,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     if db.get('skip_first_char', True):
         path = url.path[1:]
     else:
-        path = url.path + url.netloc
+        path = url.netloc + url.path
 
     if not path:
         raise ConfigurationError('No path specified for DB_URL')

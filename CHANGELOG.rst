@@ -5,6 +5,7 @@ Changelog
 -------
 - Refactor ``Tortoise.init()`` and test runner to not re-create connections per test, so now tests pass when using an SQLite in-memory database
 - Can pass event loop to test initializer function: ``initializer(loop=loop)``
+- Fix relative URI for SQLite
 
 0.10.9
 ------
