@@ -1,6 +1,6 @@
 import logging
 from functools import wraps
-from typing import List, SupportsInt, Optional  # noqa
+from typing import List, Optional, SupportsInt  # noqa
 
 import aiomysql
 import pymysql

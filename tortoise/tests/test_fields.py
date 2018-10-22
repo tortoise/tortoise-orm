@@ -210,18 +210,18 @@ class TestDatetimeFields(test.TestCase):
         obj = await testmodels.DatetimeFields.get(id=obj0.id)
         self.assertEqual(obj.datetime, now)
         self.assertEqual(obj.datetime_null, None)
-        self.assertLess(obj.datetime_auto - now, timedelta(seconds=1))
-        self.assertLess(obj.datetime_add - now, timedelta(seconds=1))
+        self.assertLess(obj.datetime_auto - now, timedelta(microseconds=10000))
+        self.assertLess(obj.datetime_add - now, timedelta(microseconds=10000))
         datetime_auto = obj.datetime_auto
-        sleep(1)
+        sleep(0.011)
         await obj.save()
         obj2 = await testmodels.DatetimeFields.get(id=obj.id)
         self.assertEqual(obj2.datetime, now)
         self.assertEqual(obj2.datetime_null, None)
         self.assertEqual(obj2.datetime_auto, obj.datetime_auto)
         self.assertNotEqual(obj2.datetime_auto, datetime_auto)
-        self.assertGreater(obj2.datetime_auto - now, timedelta(seconds=1))
-        self.assertLess(obj2.datetime_auto - now, timedelta(seconds=2))
+        self.assertGreater(obj2.datetime_auto - now, timedelta(microseconds=10000))
+        self.assertLess(obj2.datetime_auto - now, timedelta(microseconds=20000))
         self.assertEqual(obj2.datetime_add, obj.datetime_add)
 
     async def test_cast(self):

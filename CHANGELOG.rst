@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.10.10
+-------
+- Refactor ``Tortoise.init()`` and test runner to not re-create connections per test, so now tests pass when using an SQLite in-memory database
+- Can pass event loop to test initializer function: ``initializer(loop=loop)``
+
 0.10.9
 ------
 - Uses macros on SQLite driver to minimise syncronisation. ``aiosqlite>=0.7.0``

@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import Callable, Optional, Dict  # noqa
+from typing import Callable, Dict, Optional  # noqa
 
 from tortoise.backends.base.client import BaseDBAsyncClient, BaseTransactionWrapper
 from tortoise.exceptions import ParamsError
@@ -15,7 +15,8 @@ def _get_connection(connection_name: Optional[str]) -> BaseDBAsyncClient:
         connection = list(Tortoise._connections.values())[0]
     else:
         raise ParamsError(
-            'You are running with multiple databases, so you should specify connection_name'
+            'You are running with multiple databases, so you should specify connection_name: {}'
+            .format(list(Tortoise._connections.keys()))
         )
     return connection
 
@@ -31,8 +32,7 @@ def in_transaction(connection_name: Optional[str] = None) -> BaseTransactionWrap
                             one db connection
     """
     connection = _get_connection(connection_name)
-    single_connection = connection._in_transaction()
-    return single_connection
+    return connection._in_transaction()
 
 
 def atomic(connection_name: Optional[str] = None) -> Callable:

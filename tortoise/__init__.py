@@ -188,6 +188,10 @@ class Tortoise:
 
             cls.apps[name] = models_map
 
+        cls._init_relations()
+
+        cls._build_initial_querysets()
+
     @classmethod
     def _get_config_from_config_file(cls, config_file):
         _, extension = os.path.splitext(config_file)
@@ -280,7 +284,8 @@ class Tortoise:
             For any configuration error
         """
         if cls._inited:
-            await cls._reset_connections()
+            await cls.close_connections()
+            await cls._reset_apps()
         if int(bool(config) + bool(config_file) + bool(db_url)) != 1:
             raise ConfigurationError(
                 'You should init either from "config", "config_file" or "db_url"')
@@ -307,10 +312,6 @@ class Tortoise:
 
         cls._init_apps(apps_config)
 
-        cls._init_relations()
-
-        cls._build_initial_querysets()
-
         cls._inited = True
 
     @classmethod
@@ -320,9 +321,7 @@ class Tortoise:
         cls._connections = {}
 
     @classmethod
-    async def _reset_connections(cls):
-        await cls.close_connections()
-
+    async def _reset_apps(cls):
         for app in cls.apps.values():
             for model in app.values():
                 model._meta.default_connection = None
@@ -353,7 +352,7 @@ class Tortoise:
             await connection.close()
             await connection.db_delete()
         cls._connections = {}
-        await cls._reset_connections()
+        await cls._reset_apps()
 
 
 def run_async(coro):
