@@ -113,7 +113,6 @@ You can do it like this:
 .. code-block:: python3
 
     from tortoise import Tortoise
-    from tortoise.utils import generate_schema
 
     async def init():
         # Here we connect to a PostgresQL DB
