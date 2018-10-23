@@ -21,6 +21,8 @@ In your projects ``.pylintrc`` file, ensure the following is set:
 
 .. _unittest:
 
+.. rst-class:: emphasize-children
+
 UnitTest support
 ================
 
@@ -51,18 +53,22 @@ Usage
 
 To get ``test.TestCase`` to work as expected, you need to configure your test environment setup and teardown to call the following:
 
-..code-block:: python3
+.. code-block:: python3
 
     from tortoise.contrib.test import initializer, finalizer
 
     # In setup
-    initializer()
+    initializer(['module.a', 'module.b.c'])
+    # With optional db_url and loop parameters
+    initializer(['module.a', 'module.b.c'], db_url='...', loop=loop)
+    # Or env-var driven → See Green test runner section below.
+    env_initializer()
 
     # In teardown
     finalizer()
 
 
-Furthermore, you need to set the database configuration parameter as an environment variable:
+On the DB_URL it should follow the following standard:
 
     TORTOISE_TEST_DB=sqlite:///tmp/test-{}.sqlite
     TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_{}
@@ -70,6 +76,53 @@ Furthermore, you need to set the database configuration parameter as an environm
 
 The ``{}`` is a string-replacement parameter, that will create a randomised database name.
 This is currently required for ``test.IsolatedTestCase`` to function.
+If you don't use ``test.IsolatedTestCase`` then you can give an absolute address.
+The SQLite in-memory ``:memory:`` database will always work, and is the default.
+
+Test Runners
+------------
+
+Green
+^^^^^
+
+In your ``.green`` file:
+
+.. code-block:: ini
+
+    initializer = tortoise.contrib.test.env_initializer
+    finalizer = tortoise.contrib.test.finalizer
+
+And then define the ``TORTOISE_TEST_MODULES`` environment variable with a comma separated list of module paths.
+
+Furthermore, you mayset the database configuration parameter as an environment variable (defaults to ``sqlite://:memory:``):
+
+    TORTOISE_TEST_DB=sqlite:///tmp/test-{}.sqlite
+    TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_{}
+
+
+Py.test
+^^^^^^^^^^^
+
+*Nose2*
+^^^^^^^^^
+
+Load the plugin ``tortoise.contrib.test.nose2`` either via command line::
+
+    nose2 --plugin tortoise.contrib.test.nose2 --db-module tortoise.tests.testmodels
+
+Or via the config file:
+
+.. code-block:: ini
+
+    [unittest]
+    plugins = tortoise.contrib.test.nose2
+
+    [tortoise]
+    # Must specify at least one module path
+    db-module =
+        tortoise.tests.testmodels
+    # You can optionally override the db_url here
+    db-url = sqlite://testdb-{}.sqlite
 
 
 Reference

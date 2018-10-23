@@ -29,3 +29,5 @@ tox
 asynctest
 green
 coveralls
+pytest
+nose2

@@ -14,8 +14,9 @@ from tortoise.exceptions import DBConnectionError
 from tortoise.transactions import current_transaction_map, start_transaction
 
 __all__ = ('SimpleTestCase', 'IsolatedTestCase', 'TestCase', 'SkipTest', 'expectedFailure',
-           'skip', 'skipIf', 'skipUnless', 'initializer', 'finalizer')
-_TORTOISE_TEST_DB = _os.environ.get('TORTOISE_TEST_DB', 'sqlite://:memory:')
+           'skip', 'skipIf', 'skipUnless', 'env_initializer', 'initializer', 'finalizer',
+           'getDBConfig')
+_TORTOISE_TEST_DB = 'sqlite://:memory:'
 
 expectedFailure.__doc__ = """
 Mark test as expecting failiure.
@@ -27,11 +28,15 @@ _CONFIG = {}  # type: dict
 _CONNECTIONS = {}  # type: dict
 _SELECTOR = None  # type: ignore
 _LOOP = None  # type: BaseSelectorEventLoop
+_MODULES = []  # type: List[str]
 
 
 def getDBConfig(app_label: str, modules: List[str]) -> dict:
     """
     DB Config factory, for use in testing.
+
+    :param app_label: Label of the app (must be distinct for multiple apps).
+    :param modules: List of modules to look for models in.
     """
     return _generate_config(
         _TORTOISE_TEST_DB,
@@ -54,7 +59,7 @@ async def _init_db(config):
     await Tortoise.generate_schemas()
 
 
-def restore_default():
+def _restore_default():
     Tortoise.apps = {}
     Tortoise._connections = _CONNECTIONS.copy()
     for name in Tortoise._connections.keys():
@@ -63,18 +68,28 @@ def restore_default():
     Tortoise._inited = True
 
 
-def initializer(loop: Optional[BaseSelectorEventLoop] = None) -> None:
+def initializer(modules: List[str], db_url: Optional[str] = None,
+                loop: Optional[BaseSelectorEventLoop] = None) -> None:
     """
     Sets up the DB for testing. Must be called as part of test environment setup.
+
+    :param modules: List of modules to look for models in.
+    :param db_url: The db_url, defaults to ``sqlite://:memory``.
+    :param loop: Optional event loop.
     """
     # pylint: disable=W0603
     global _CONFIG
     global _CONNECTIONS
     global _SELECTOR
     global _LOOP
+    global _TORTOISE_TEST_DB
+    global _MODULES
+    _MODULES = modules
+    if db_url is not None:
+        _TORTOISE_TEST_DB = db_url
     _CONFIG = getDBConfig(
         app_label='models',
-        modules=['tortoise.tests.testmodels'],
+        modules=_MODULES,
     )
 
     loop = loop or asyncio.get_event_loop()
@@ -91,14 +106,34 @@ def finalizer() -> None:
     """
     Cleans up the DB after testing. Must be called as part of the test environment teardown.
     """
-    restore_default()
+    _restore_default()
     loop = _LOOP
     loop._selector = _SELECTOR
     loop.run_until_complete(Tortoise._drop_databases())
 
 
+def env_initializer() -> None:
+    """
+    Calls ``initializer()`` with parameters mapped from environment variables.
+
+    ``TORTOISE_TEST_MODULES``:
+        A comma-separated list of modules to include *(required)*
+    ``TORTOISE_TEST_DB``:
+        The db_url of the test db. *(optional*)
+    """
+    modules = str(_os.environ.get('TORTOISE_TEST_MODULES', 'tortoise.tests.testmodels')).split(',')
+    db_url = _os.environ.get('TORTOISE_TEST_DB', 'sqlite://:memory:')
+    if not modules:
+        raise Exception('TORTOISE_TEST_MODULES envvar not defined')
+    initializer(modules, db_url=db_url)
+
+
 class SimpleTestCase(_TestCase):
     """
+    The Tortoise base test class.
+
+    This will ensure that your DB environment has a test double set up for use.
+
     An asyncio capable test class that provides some helper functions.
 
     Will run any ``test_*()`` function either as sync or async, depending
@@ -178,7 +213,7 @@ class IsolatedTestCase(SimpleTestCase):
     async def _setUpDB(self):
         config = getDBConfig(
             app_label='models',
-            modules=['tortoise.tests.testmodels'],
+            modules=_MODULES,
         )
         await Tortoise.init(config, _create_db=True)
         await Tortoise.generate_schemas()
@@ -198,9 +233,9 @@ class TestCase(SimpleTestCase):
     """
 
     async def _setUpDB(self):
-        restore_default()
+        _restore_default()
         self.transaction = await start_transaction()  # pylint: disable=W0201
 
     async def _tearDownDB(self) -> None:
-        restore_default()
+        _restore_default()
         await self.transaction.rollback()
