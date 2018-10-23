@@ -144,7 +144,7 @@ class SimpleTestCase(_TestCase):
     """
     use_default_loop = True
 
-    def __init_loop(self):
+    def _init_loop(self):
         if self.use_default_loop:
             self.loop = _LOOP
             loop = None

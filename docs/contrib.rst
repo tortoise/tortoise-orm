@@ -101,10 +101,10 @@ Furthermore, you mayset the database configuration parameter as an environment v
 
 
 Py.test
-^^^^^^^^^^^
+^^^^^^^
 
-*Nose2*
-^^^^^^^^^
+Nose2
+^^^^^
 
 Load the plugin ``tortoise.contrib.test.nose2`` either via command line::
 
