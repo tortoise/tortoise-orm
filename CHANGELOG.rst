@@ -8,6 +8,8 @@ Changelog
 - Fix relative URI for SQLite
 - Better error message for invalid filter param.
 - Better error messages for missing/bad field params.
+- ``nose2`` plugin
+- Test utilities compatible with ``py.test``
 
 0.10.9
 ------

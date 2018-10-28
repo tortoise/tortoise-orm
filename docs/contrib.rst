@@ -103,6 +103,19 @@ Furthermore, you mayset the database configuration parameter as an environment v
 Py.test
 ^^^^^^^
 
+Run the initializer and finalizer in your ``conftest.py`` file:
+
+.. code-block:: python3
+
+    from tortoise.contrib.test import finalizer, initializer
+
+    def pytest_runtest_setup(item):
+        initializer(['tortoise.tests.testmodels'], db_url='sqlite://:memory:')
+
+    def pytest_runtest_teardown(item, nextitem):
+        finalizer()
+
+
 Nose2
 ^^^^^
 

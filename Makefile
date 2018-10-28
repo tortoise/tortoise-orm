@@ -1,4 +1,4 @@
-checkfiles = tortoise/ examples/
+checkfiles = tortoise/ examples/ setup.py conftest.py
 mypy_flags = --warn-unused-configs --warn-redundant-casts --ignore-missing-imports --allow-untyped-decorators
 
 help:
