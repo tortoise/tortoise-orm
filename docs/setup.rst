@@ -17,18 +17,18 @@ You can do it like this:
     from tortoise.utils import generate_schema
 
     async def init():
-        # Here we connect to a PostgresQL DB
+        # Here we create a SQLite DB using file "db.sqlite3"
         #  also specify the app name of "models"
         #  which contain models from "app.models"
         await Tortoise.init(
-            db_url='postgres://postgres:qwerty123@localhost:5432/events',
+            db_url='sqlite://db.sqlite3',
             modules={'models': ['app.models']}
         )
         # Generate the schema
         await Tortoise.generate_schemas()
     
     
-Here we create connection to PostgresQL database with default ``asyncpg`` client and then we discover & initialise models.
+Here we create connection to SQLite database client and then we discover & initialise models.
 
 ``generate_schema`` generates schema on empty database, you shouldn't run it on every app init, run it just once, maybe out of your main code.
 
