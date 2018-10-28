@@ -8,33 +8,6 @@ from tortoise.exceptions import ConfigurationError, IntegrityError
 from tortoise.tests import testmodels
 
 
-class TestFieldErrors(test.SimpleTestCase):
-
-    def test_char_field_empty(self):
-        with self.assertRaises(ConfigurationError):
-            fields.CharField()
-
-    def test_char_field_zero(self):
-        with self.assertRaises(ConfigurationError):
-            fields.CharField(max_length=0)
-
-    def test_decimal_field_empty(self):
-        with self.assertRaises(ConfigurationError):
-            fields.DecimalField()
-
-    def test_decimal_field_neg_digits(self):
-        with self.assertRaises(ConfigurationError):
-            fields.DecimalField(max_digits=0, decimal_places=2)
-
-    def test_decimal_field_neg_decimal(self):
-        with self.assertRaises(ConfigurationError):
-            fields.DecimalField(max_digits=2, decimal_places=-1)
-
-    def test_datetime_field_auto_bad(self):
-        with self.assertRaises(ConfigurationError):
-            fields.DatetimeField(auto_now=True, auto_now_add=True)
-
-
 class TestIntFields(test.TestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
@@ -92,6 +65,14 @@ class TestSmallIntFields(test.TestCase):
 
 
 class TestCharFields(test.TestCase):
+    def test_max_length_missing(self):
+        with self.assertRaisesRegex(ConfigurationError, "missing 'max_length' parameter"):
+            fields.CharField()
+
+    def test_max_length_bad(self):
+        with self.assertRaisesRegex(ConfigurationError, "'max_length' must be >= 1"):
+            fields.CharField(max_length=0)
+
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.CharFields.create()
@@ -172,6 +153,22 @@ class TestBooleanFields(test.TestCase):
 
 
 class TestDecimalFields(test.TestCase):
+    def test_max_digits_empty(self):
+        with self.assertRaisesRegex(ConfigurationError, "missing 'max_digits' parameter"):
+            fields.DecimalField()
+
+    def test_decimal_places_empty(self):
+        with self.assertRaisesRegex(ConfigurationError, "missing 'decimal_places' parameter"):
+            fields.DecimalField(max_digits=1)
+
+    def test_max_fields_bad(self):
+        with self.assertRaisesRegex(ConfigurationError, "'max_digits' must be >= 1"):
+            fields.DecimalField(max_digits=0, decimal_places=2)
+
+    def test_decimal_places_bad(self):
+        with self.assertRaisesRegex(ConfigurationError, "'decimal_places' must be >= 0"):
+            fields.DecimalField(max_digits=2, decimal_places=-1)
+
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.DecimalFields.create()
@@ -200,6 +197,11 @@ class TestDecimalFields(test.TestCase):
 
 
 class TestDatetimeFields(test.TestCase):
+    def test_both_auto_bad(self):
+        with self.assertRaisesRegex(ConfigurationError,
+                                    "You can choose only 'auto_now' or 'auto_now_add'"):
+            fields.DatetimeField(auto_now=True, auto_now_add=True)
+
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.DatetimeFields.create()

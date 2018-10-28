@@ -7,6 +7,7 @@ Changelog
 - Can pass event loop to test initializer function: ``initializer(loop=loop)``
 - Fix relative URI for SQLite
 - Better error message for invalid filter param.
+- Better error messages for missing/bad field params.
 
 0.10.9
 ------
