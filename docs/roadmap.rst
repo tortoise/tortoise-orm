@@ -12,7 +12,6 @@ For ``v1.0`` that involves:
 * Comprehensive test suite
 * Clear and concise examples
 * Refactored Fields Schema generation
-* Add MySQL support
 
 Mid-term
 ========
@@ -21,10 +20,7 @@ Here we have all the features that is slightly further our:
 
 * Performance work:
     * Sub queries
-    * Benchmark suite
     * Bulk operations
-    * Minimizing overhead of building query set
-    * Minimizing overhead of creating objects
     * ...
 
 * Convenience/Ease-Of-Use work:
@@ -52,6 +48,7 @@ Here we have all the features that is slightly further our:
     * Ability to easily run arb code in a migration
     * Ability to get a the Models for that exact time of the migration, to ensure safe & consistent data migrations
     * Cross-DB support
+    * Fixtures as a property of a migration
 
 * Serialization support
     * Take inspiration from ``attrs`` and ``marshmallow``

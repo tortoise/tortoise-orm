@@ -1,6 +1,16 @@
 Changelog
 =========
 
+0.10.10
+-------
+- Refactor ``Tortoise.init()`` and test runner to not re-create connections per test, so now tests pass when using an SQLite in-memory database
+- Can pass event loop to test initializer function: ``initializer(loop=loop)``
+- Fix relative URI for SQLite
+- Better error message for invalid filter param.
+- Better error messages for missing/bad field params.
+- ``nose2`` plugin
+- Test utilities compatible with ``py.test``
+
 0.10.9
 ------
 - Uses macros on SQLite driver to minimise syncronisation. ``aiosqlite>=0.7.0``

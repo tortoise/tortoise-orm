@@ -87,9 +87,11 @@ class CharField(Field):
     ``max_length`` (int):
         Maximum length of the field in characters.
     """
-    def __init__(self, max_length: int = 0, **kwargs) -> None:
+    def __init__(self, max_length: int = -24816, **kwargs) -> None:
+        if int(max_length) == -24816:
+            raise ConfigurationError("missing 'max_length' parameter")
         if int(max_length) < 1:
-            raise ConfigurationError('max_digits must be >= 1')
+            raise ConfigurationError("'max_length' must be >= 1")
         self.max_length = int(max_length)
         super().__init__(str, **kwargs)
 
@@ -121,11 +123,15 @@ class DecimalField(Field):
     ``decimal_places`` (int):
         How many of those signifigant digits is after the decimal point.
     """
-    def __init__(self, max_digits: int = 0, decimal_places: int = -1, **kwargs) -> None:
+    def __init__(self, max_digits: int = -24816, decimal_places: int = -24816, **kwargs) -> None:
+        if int(max_digits) == -24816:
+            raise ConfigurationError("missing 'max_digits' parameter")
         if int(max_digits) < 1:
-            raise ConfigurationError('max_digits must be >= 1')
+            raise ConfigurationError("'max_digits' must be >= 1")
+        if int(decimal_places) == -24816:
+            raise ConfigurationError("missing 'decimal_places' parameter")
         if int(decimal_places) < 0:
-            raise ConfigurationError('decimal_places must be >= 0')
+            raise ConfigurationError("'decimal_places' must be >= 0")
         super().__init__(Decimal, **kwargs)
         self.max_digits = max_digits
         self.decimal_places = decimal_places
@@ -145,7 +151,7 @@ class DatetimeField(Field):
     """
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs) -> None:
         if auto_now_add and auto_now:
-            raise ConfigurationError('You can choose only auto_now or auto_now_add')
+            raise ConfigurationError("You can choose only 'auto_now' or 'auto_now_add'")
         super().__init__(datetime.datetime, **kwargs)
         self.auto_now = auto_now
         self.auto_now_add = auto_now | auto_now_add

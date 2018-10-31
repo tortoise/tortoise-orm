@@ -6,11 +6,11 @@ Databases
 
 Tortoise currently supports the following databases:
 
+* SQLite
 * PostgreSQL >= 9.4 (using ``asyncpg``)
-* SQLite (using ``aiosqlite``)
 * MySQL/MariaDB (using ``aiomysql``)
 
-To use, please ensure that ``asyncpg``, ``aiosqlite`` and/or ``aiomysql`` is installed.
+To use, please ensure that ``asyncpg`` and/or ``aiomysql`` is installed.
 
 .. _db_url:
 

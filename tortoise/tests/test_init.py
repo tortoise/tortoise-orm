@@ -10,7 +10,9 @@ from tortoise.exceptions import ConfigurationError
 class TestInitErrors(test.SimpleTestCase):
     async def setUp(self):
         try:
-            await Tortoise._reset_connections()
+            Tortoise.apps = {}
+            Tortoise._connections = {}
+            Tortoise._inited = False
         except ConfigurationError:
             pass
         Tortoise._inited = False
@@ -20,10 +22,8 @@ class TestInitErrors(test.SimpleTestCase):
         )
 
     async def tearDown(self):
-        try:
-            await Tortoise._reset_connections()
-        except ConfigurationError:
-            pass
+        await Tortoise.close_connections()
+        await Tortoise._reset_apps()
 
     async def test_basic_init(self):
         await Tortoise.init({

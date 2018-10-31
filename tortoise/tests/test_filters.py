@@ -1,4 +1,5 @@
 from tortoise.contrib import test
+from tortoise.exceptions import FieldError
 from tortoise.tests.testmodels import CharFields
 
 
@@ -7,6 +8,11 @@ class TestFieldFilters(test.TestCase):
         await CharFields.create(char='moo')
         await CharFields.create(char='baa', char_null='baa')
         await CharFields.create(char='oink')
+
+    async def test_bad_param(self):
+        with self.assertRaisesRegex(FieldError,
+                                    "Unknown filter param 'charup'. Allowed base values are"):
+            await CharFields.filter(charup='moo')
 
     async def test_equal(self):
         self.assertEqual(

@@ -206,7 +206,10 @@ class QuerySet(AwaitableQuery):
             elif key in self._available_custom_filters:
                 queryset._having[key] = value
             else:
-                raise FieldError('unknown filter param {}'.format(key))
+                allowed = sorted(list(self.model._meta.fields | self.model._meta.fetch_fields
+                                      | set(self._available_custom_filters)))
+                raise FieldError("Unknown filter param '{}'. Allowed base values are {}".format(
+                    key, allowed))
         return queryset
 
     def order_by(self, *orderings: str) -> 'QuerySet':

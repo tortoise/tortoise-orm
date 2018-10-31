@@ -25,7 +25,7 @@ class Mock(MagicMock):
     def __getattr__(cls, name):
         return MagicMock()
 
-MOCK_MODULES = ['aiosqlite', 'astroid', 'asyncpg', 'asynctest', 'aiomysql']
+MOCK_MODULES = ['aiosqlite', 'astroid', 'asyncpg', 'aiomysql']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 

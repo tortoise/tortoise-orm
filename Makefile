@@ -1,4 +1,4 @@
-checkfiles = tortoise/ examples/
+checkfiles = tortoise/ examples/ setup.py conftest.py
 mypy_flags = --warn-unused-configs --warn-redundant-casts --ignore-missing-imports --allow-untyped-decorators
 
 help:
@@ -43,7 +43,7 @@ test: deps
 
 testall: deps
 	coverage erase
-	TORTOISE_TEST_DB=sqlite:///tmp/test-\{\}.sqlite coverage run -p --concurrency=multiprocessing `which green`
+	TORTOISE_TEST_DB=sqlite://:memory: coverage run -p --concurrency=multiprocessing `which green`
 	TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_\{\} coverage run -p --concurrency=multiprocessing `which green`
 	TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_\{\}" coverage run -p --concurrency=multiprocessing `which green`
 	coverage combine

@@ -8,6 +8,16 @@ Fields
 Usage
 =====
 
+Fields are defined as properties of a ``Model`` class object:
+
+.. code-block:: python3
+
+    from tortoise.models import Model
+    from tortoise import fields
+
+    class Tournament(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=255)
 
 
 Reference
