@@ -96,7 +96,7 @@ class BaseExecutor:
 
     async def execute_delete(self, instance):
         table = Table(self.model._meta.table)
-        query = self.db.query_class.from_(table).where(table.id == instance.id).delete()
+        query = self.model._meta.basequery.where(table.id == instance.id).delete()
         await self.db.execute_query(str(query))
         return instance
 

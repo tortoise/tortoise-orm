@@ -449,9 +449,7 @@ class QuerySet(AwaitableQuery):
             self.query = self.query.select(aggregation_info['field'].as_(key))
 
     def _make_query(self):
-        db = self._db if self._db else self.model._meta.db
-        table = Table(self.model._meta.table)
-        self.query = db.query_class.from_(table).select(*self.fields)
+        self.query = self.model._meta.basequery.select(*self.fields)
         self._resolve_annotate()
         self.resolve_filters(
             model=self.model,
@@ -542,8 +540,7 @@ class DeleteQuery(AwaitableQuery):
     def __init__(self, model, filter_kwargs, db, q_objects, annotations, having, custom_filters):
         super().__init__()
         self._db = db if db else model._meta.db
-        table = Table(model._meta.table)
-        self.query = self._db.query_class.from_(table)
+        self.query = model._meta.basequery
         self.resolve_filters(
             model=model,
             filter_kwargs=filter_kwargs,
@@ -563,7 +560,7 @@ class CountQuery(AwaitableQuery):
         super().__init__()
         self._db = db if db else model._meta.db
         table = Table(model._meta.table)
-        self.query = self._db.query_class.from_(table)
+        self.query = model._meta.basequery
         self.resolve_filters(
             model=model,
             filter_kwargs=filter_kwargs,
@@ -673,9 +670,8 @@ class ValuesListQuery(FieldSelectQuery):
             raise TypeError('You can flat value_list only if contains one field')
 
         self.model = model
-        table = Table(model._meta.table)
         self._db = db if db else model._meta.db
-        self.query = self._db.query_class.from_(table)
+        self.query = model._meta.basequery
         fields_for_select = {str(i): field for i, field in enumerate(fields_for_select_list)}
 
         for positional_number, field in fields_for_select.items():
@@ -718,9 +714,8 @@ class ValuesQuery(FieldSelectQuery):
     ):
         super().__init__()
         self.model = model
-        table = Table(model._meta.table)
         self._db = db if db else model._meta.db
-        self.query = self._db.query_class.from_(table)
+        self.query = model._meta.basequery
         for returns_as, field in fields_for_select.items():
             self.add_field_to_select_query(field, returns_as)
 
