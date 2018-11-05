@@ -449,7 +449,7 @@ class QuerySet(AwaitableQuery):
             self.query = self.query.select(aggregation_info['field'].as_(key))
 
     def _make_query(self):
-        self.query = self.model._meta.basequery.select(*self.fields)
+        self.query = self.model._meta.basequery_all_fields
         self._resolve_annotate()
         self.resolve_filters(
             model=self.model,

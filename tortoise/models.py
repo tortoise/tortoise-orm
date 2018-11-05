@@ -219,7 +219,7 @@ class MetaInfo:
     __slots__ = ('abstract', 'table', 'app', 'fields', 'db_fields', 'm2m_fields', 'fk_fields',
                  'backward_fk_fields', 'fetch_fields', 'fields_db_projection', '_inited',
                  'fields_db_projection_reverse', 'filters', 'fields_map', 'default_connection',
-                 'basequery')
+                 'basequery', 'basequery_all_fields', '_filters')
 
     def __init__(self, meta):
         self.abstract = getattr(meta, 'abstract', False)  # type: bool
@@ -233,11 +233,13 @@ class MetaInfo:
         self.fetch_fields = set()  # type: Set[str]
         self.fields_db_projection = {}  # type: Dict[str,str]
         self.fields_db_projection_reverse = {}  # type: Dict[str,str]
+        self._filters = {}  # type: Dict[str, Dict[str, dict]]
         self.filters = {}  # type: Dict[str, Dict[str, dict]]
         self.fields_map = {}  # type: Dict[str, fields.Field]
         self._inited = False
         self.default_connection = None
         self.basequery = None
+        self.basequery_all_fields = None
 
     @property
     def db(self):
@@ -250,14 +252,18 @@ class MetaInfo:
         )
 
     def get_filter(self, key):
-        filter_info = self.filters[key]
-        overridden_operator = self.db.executor_class.get_overridden_filter_func(
-            filter_func=filter_info['operator'],
-        )
-        if overridden_operator:
-            filter_info = deepcopy(filter_info)
-            filter_info['operator'] = overridden_operator
-        return filter_info
+        return self.filters[key]
+
+    def override_filters(self):
+        get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
+        for key, filter_info in self._filters.items():
+            overridden_operator = get_overridden_filter_func(
+                filter_func=filter_info['operator'],
+            )
+            if overridden_operator:
+                filter_info = deepcopy(filter_info)
+                filter_info['operator'] = overridden_operator
+            self.filters[key] = filter_info
 
 
 class ModelMeta(type):
@@ -314,7 +320,7 @@ class ModelMeta(type):
         }
         meta.fields = set(fields_map.keys())
         meta.db_fields = set(fields_db_projection.values())
-        meta.filters = filters
+        meta._filters = filters
         meta.fk_fields = fk_fields
         meta.backward_fk_fields = set()
         meta.m2m_fields = m2m_fields
@@ -325,6 +331,7 @@ class ModelMeta(type):
             meta.abstract = True
 
         new_class = super().__new__(mcs, name, bases, attrs)
+
         return new_class
 
 

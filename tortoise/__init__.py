@@ -214,7 +214,10 @@ class Tortoise:
     def _build_initial_querysets(cls):
         for app in cls.apps.values():
             for model in app.values():
+                model._meta.override_filters()
                 model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
+                model._meta.basequery_all_fields = model._meta.basequery.select(
+                    *model._meta.db_fields)
 
     @classmethod
     async def init(
