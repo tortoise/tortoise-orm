@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.10.11
+-------
+- Pre-build some query & filters statically, 15-30% speed up for smaller queries.
+
 0.10.10
 -------
 - Refactor ``Tortoise.init()`` and test runner to not re-create connections per test, so now tests pass when using an SQLite in-memory database
