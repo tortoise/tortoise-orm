@@ -4,6 +4,7 @@ Changelog
 0.10.11
 -------
 - Pre-build some query & filters statically, 15-30% speed up for smaller queries.
+- Required field params are now positional, so Python and IDE linters will pick up on it easier.
 
 0.10.10
 -------

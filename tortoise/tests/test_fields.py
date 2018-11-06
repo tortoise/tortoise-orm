@@ -66,7 +66,8 @@ class TestSmallIntFields(test.TestCase):
 
 class TestCharFields(test.TestCase):
     def test_max_length_missing(self):
-        with self.assertRaisesRegex(ConfigurationError, "missing 'max_length' parameter"):
+        with self.assertRaisesRegex(TypeError,
+                                    "missing 1 required positional argument: 'max_length'"):
             fields.CharField()
 
     def test_max_length_bad(self):
@@ -154,11 +155,14 @@ class TestBooleanFields(test.TestCase):
 
 class TestDecimalFields(test.TestCase):
     def test_max_digits_empty(self):
-        with self.assertRaisesRegex(ConfigurationError, "missing 'max_digits' parameter"):
+        with self.assertRaisesRegex(TypeError,
+                                    "missing 2 required positional arguments: 'max_digits' and"
+                                    " 'decimal_places'"):
             fields.DecimalField()
 
     def test_decimal_places_empty(self):
-        with self.assertRaisesRegex(ConfigurationError, "missing 'decimal_places' parameter"):
+        with self.assertRaisesRegex(TypeError,
+                                    "missing 1 required positional argument: 'decimal_places'"):
             fields.DecimalField(max_digits=1)
 
     def test_max_fields_bad(self):

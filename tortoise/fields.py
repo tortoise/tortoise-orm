@@ -87,9 +87,7 @@ class CharField(Field):
     ``max_length`` (int):
         Maximum length of the field in characters.
     """
-    def __init__(self, max_length: int = -24816, **kwargs) -> None:
-        if int(max_length) == -24816:
-            raise ConfigurationError("missing 'max_length' parameter")
+    def __init__(self, max_length: int, **kwargs) -> None:
         if int(max_length) < 1:
             raise ConfigurationError("'max_length' must be >= 1")
         self.max_length = int(max_length)
@@ -123,13 +121,9 @@ class DecimalField(Field):
     ``decimal_places`` (int):
         How many of those signifigant digits is after the decimal point.
     """
-    def __init__(self, max_digits: int = -24816, decimal_places: int = -24816, **kwargs) -> None:
-        if int(max_digits) == -24816:
-            raise ConfigurationError("missing 'max_digits' parameter")
+    def __init__(self, max_digits: int, decimal_places: int, **kwargs) -> None:
         if int(max_digits) < 1:
             raise ConfigurationError("'max_digits' must be >= 1")
-        if int(decimal_places) == -24816:
-            raise ConfigurationError("missing 'decimal_places' parameter")
         if int(decimal_places) < 0:
             raise ConfigurationError("'decimal_places' must be >= 0")
         super().__init__(Decimal, **kwargs)
