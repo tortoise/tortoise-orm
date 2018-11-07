@@ -128,6 +128,12 @@ You can do it like this:
 
 Here we create connection to SQLite database in the local directory called ``db.sqlite3``, and then we discover & initialise models.
 
+Tortoise ORM currently supports the following databases:
+
+* SQLite
+* PostgreSQL (requires ``asyncpg``)
+* MySQL (requires ``aiomysql``)
+
 ``generate_schema`` generates schema on empty database, you shouldn't run it on every app init, run it just once, maybe out of your main code.
 
 After that you can start using your models:
