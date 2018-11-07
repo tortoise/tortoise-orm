@@ -254,7 +254,7 @@ class MetaInfo:
     def get_filter(self, key):
         return self.filters[key]
 
-    def override_filters(self):
+    def generate_filters(self):
         get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
         for key, filter_info in self._filters.items():
             overridden_operator = get_overridden_filter_func(
@@ -267,6 +267,8 @@ class MetaInfo:
 
 
 class ModelMeta(type):
+    __slots__ = ()
+
     def __new__(mcs, name, bases, attrs, *args, **kwargs):
         fields_db_projection = {}  # type: Dict[str,str]
         fields_map = {}  # type: Dict[str, fields.Field]

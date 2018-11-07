@@ -5,6 +5,8 @@ from tortoise.exceptions import OperationalError
 
 
 class Q:  # pylint: disable=C0103
+    __slots__ = ('children', 'filters', 'join_type')
+
     AND = 'AND'
     OR = 'OR'
 
@@ -121,6 +123,8 @@ class Q:  # pylint: disable=C0103
 
 
 class Prefetch:
+    __slots__ = ('relation', 'queryset')
+
     def __init__(self, relation, queryset):
         self.relation = relation
         self.queryset = queryset

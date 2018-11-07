@@ -132,7 +132,7 @@ class AwaitableQuery:
 
 
 class QuerySet(AwaitableQuery):
-    __slots__ = ('_joined_tables', 'query', 'model', 'fields', '_prefetch_map', '_prefetch_queries',
+    __slots__ = ('fields', '_prefetch_map', '_prefetch_queries',
                  '_single', '_get', '_count', '_db', '_limit', '_offset', '_filter_kwargs',
                  '_orderings', '_q_objects_for_resolve', '_distinct',
                  '_annotations', '_having', '_available_custom_filters')
@@ -505,6 +505,8 @@ class QuerySet(AwaitableQuery):
 
 
 class UpdateQuery(AwaitableQuery):
+    __slots__ = ('_db', )
+
     def __init__(
         self, model, filter_kwargs, update_kwargs, db, q_objects, annotations, having,
         custom_filters
@@ -540,6 +542,8 @@ class UpdateQuery(AwaitableQuery):
 
 
 class DeleteQuery(AwaitableQuery):
+    __slots__ = ('_db', )
+
     def __init__(self, model, filter_kwargs, db, q_objects, annotations, having, custom_filters):
         super().__init__()
         self._db = db if db else model._meta.db
@@ -559,6 +563,8 @@ class DeleteQuery(AwaitableQuery):
 
 
 class CountQuery(AwaitableQuery):
+    __slots__ = ('_db', )
+
     def __init__(self, model, filter_kwargs, db, q_objects, annotations, having, custom_filters):
         super().__init__()
         self._db = db if db else model._meta.db
@@ -581,6 +587,7 @@ class CountQuery(AwaitableQuery):
 
 class FieldSelectQuery(AwaitableQuery):
     # pylint: disable=W0223
+    __slots__ = ()
 
     def _join_table_with_forwarded_fields(self, model, field, forwarded_fields):
         table = Table(model._meta.table)
@@ -664,6 +671,8 @@ class FieldSelectQuery(AwaitableQuery):
 
 
 class ValuesListQuery(FieldSelectQuery):
+    __slots__ = ('_db', 'flat', 'fields')
+
     def __init__(
         self, model, filter_kwargs, db, q_objects, fields_for_select_list, limit, offset, distinct,
         orderings, flat, annotations, having, custom_filters
@@ -711,6 +720,8 @@ class ValuesListQuery(FieldSelectQuery):
 
 
 class ValuesQuery(FieldSelectQuery):
+    __slots__ = ('_db', 'fields_for_select')
+
     def __init__(
         self, model, filter_kwargs, db, q_objects, fields_for_select, limit, offset, distinct,
         orderings, annotations, having, custom_filters

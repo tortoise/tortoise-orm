@@ -123,13 +123,3 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         self._finalized = True
         await self._connection.commit()
         current_transaction_map[self.connection_name].set(self._old_context_value)
-
-    async def __aenter__(self):
-        await self.start()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if exc_type:
-            await self.rollback()
-        else:
-            await self.commit()

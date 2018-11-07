@@ -10,6 +10,8 @@ from tortoise.exceptions import ConfigurationError
 
 
 class Aggregate:
+    __slots__ = ('field', )
+
     aggregation_func = AggregateFunction
 
     def __init__(self, field) -> None:

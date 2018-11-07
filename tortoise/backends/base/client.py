@@ -55,6 +55,8 @@ class BaseDBAsyncClient:
 
 
 class ConnectionWrapper:
+    __slots__ = ('connection', )
+
     def __init__(self, connection):
         self.connection = connection
 
@@ -105,7 +107,11 @@ class BaseTransactionWrapper:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def __aenter__(self):
-        raise NotImplementedError()  # pragma: nocoverage
+        await self.start()
+        return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        raise NotImplementedError()  # pragma: nocoverage
+        if exc_type:
+            await self.rollback()
+        else:
+            await self.commit()
