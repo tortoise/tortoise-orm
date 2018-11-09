@@ -716,7 +716,7 @@ class ValuesListQuery(FieldSelectQuery):
         if self.flat:
             func = columns[0][1]
             return [func(entry['0']) for entry in result]
-        return [(func(entry[column]) for column, func in columns) for entry in result]
+        return [tuple(func(entry[column]) for column, func in columns) for entry in result]
 
 
 class ValuesQuery(FieldSelectQuery):
