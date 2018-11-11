@@ -1,0 +1,13 @@
+-r requirements.txt
+
+# Optional dependencies
+pyyaml
+
+## Database Drivers
+aiomysql
+
+# Dev Tools
+
+## Test tools
+asynctest
+green

@@ -15,6 +15,7 @@ help:
 	@echo  "    style       Auto-formats the code"
 
 up:
+	pip-compile -o requirements-pypy.txt requirements-pypy.in -U
 	pip-compile -o requirements-dev.txt requirements-dev.in -U
 
 deps:
