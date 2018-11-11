@@ -209,7 +209,7 @@ class TestDecimalFieldFilters(test.TestCase):
 
     async def test_gt(self):
         self.assertEqual(
-            await DecimalFields.filter(decimal__gt='1.2345').order_by('decimal')
+            await DecimalFields.filter(decimal__gt=Decimal('1.2345')).order_by('decimal')
             .values_list('decimal', flat=True),
             [Decimal('2.3'), Decimal('2.3457'), Decimal('23')]
         )

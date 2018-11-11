@@ -1,7 +1,7 @@
 from copy import copy
 from typing import Any, Dict, List, Optional, Set, Tuple  # noqa
 
-from pypika import JoinType, Order, Table
+from pypika import JoinType, Order, Query, Table  # noqa
 from pypika.functions import Count
 
 from tortoise import fields
@@ -13,14 +13,15 @@ from tortoise.utils import QueryAsyncIterator
 
 
 class AwaitableQuery:
-    __slots__ = ('_joined_tables', 'query', 'model')
+    __slots__ = ('_joined_tables', 'query', 'model', '_db')
 
-    def __init__(self):
-        self._joined_tables = []
-        self.query = None
-        self.model = None
+    def __init__(self, model, db: Optional[BaseDBAsyncClient]) -> None:
+        self._joined_tables = []  # type: List[Table]
+        self.model = model
+        self.query = model._meta.basequery  # type: Query
+        self._db = db if db else model._meta.db  # type: BaseDBAsyncClient
 
-    def _filter_from_related_table(self, table, param, value):
+    def _filter_from_related_table(self, table: Table, param: dict, value: Any) -> None:
         if param['table'] not in self._joined_tables:
             self.query = self.query.join(
                 param['table'], how=JoinType.left_outer
@@ -44,12 +45,13 @@ class AwaitableQuery:
                 self._filter_from_related_table(table, param, value)
             else:
                 field_object = model._meta.fields_map[param['field']]
-                value_encoder = (
-                    param['value_encoder']
-                    if param.get('value_encoder') else field_object.to_db_value
+                encoded_value = (
+                    param['value_encoder'](value, model)
+                    if param.get('value_encoder')
+                    else self._db.executor_class._field_to_db(field_object, value, model)
                 )
                 self.query = self.query.where(
-                    param['operator'](getattr(table, param['field']), value_encoder(value, model))
+                    param['operator'](getattr(table, param['field']), encoded_value)
                 )
         for key, value in having.items():
             having_info = custom_filters[key]
@@ -138,18 +140,14 @@ class QuerySet(AwaitableQuery):
                  '_annotations', '_having', '_available_custom_filters')
 
     def __init__(self, model) -> None:
-        super().__init__()
+        super().__init__(model, None)
         self.fields = model._meta.db_fields
-        self.model = model
-
-        self.query = model._meta.basequery
 
         self._prefetch_map = {}  # type: Dict[str, Set[str]]
         self._prefetch_queries = {}  # type: Dict[str, QuerySet]
         self._single = False  # type: bool
         self._get = False  # type: bool
         self._count = False  # type: bool
-        self._db = None  # type: Optional[BaseDBAsyncClient]
         self._limit = None  # type: Optional[int]
         self._offset = None  # type: Optional[int]
         self._filter_kwargs = {}  # type: Dict[str, Any]
@@ -473,10 +471,9 @@ class QuerySet(AwaitableQuery):
 
     async def _execute(self):
         self.query = self._make_query()
-        db = self._db if self._db else self.model._meta.db
-        instance_list = await db.executor_class(
+        instance_list = await self._db.executor_class(
             model=self.model,
-            db=db,
+            db=self._db,
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
         ).execute_select(
@@ -505,14 +502,13 @@ class QuerySet(AwaitableQuery):
 
 
 class UpdateQuery(AwaitableQuery):
-    __slots__ = ('_db', )
+    __slots__ = ()
 
     def __init__(
         self, model, filter_kwargs, update_kwargs, db, q_objects, annotations, having,
         custom_filters
     ):
-        super().__init__()
-        self._db = db if db else model._meta.db
+        super().__init__(model, db)
         table = Table(model._meta.table)
         self.query = self._db.query_class.update(table)
         self.resolve_filters(
@@ -542,11 +538,10 @@ class UpdateQuery(AwaitableQuery):
 
 
 class DeleteQuery(AwaitableQuery):
-    __slots__ = ('_db', )
+    __slots__ = ()
 
     def __init__(self, model, filter_kwargs, db, q_objects, annotations, having, custom_filters):
-        super().__init__()
-        self._db = db if db else model._meta.db
+        super().__init__(model, db)
         self.query = model._meta.basequery
         self.resolve_filters(
             model=model,
@@ -563,11 +558,10 @@ class DeleteQuery(AwaitableQuery):
 
 
 class CountQuery(AwaitableQuery):
-    __slots__ = ('_db', )
+    __slots__ = ()
 
     def __init__(self, model, filter_kwargs, db, q_objects, annotations, having, custom_filters):
-        super().__init__()
-        self._db = db if db else model._meta.db
+        super().__init__(model, db)
         table = Table(model._meta.table)
         self.query = model._meta.basequery
         self.resolve_filters(
@@ -671,18 +665,16 @@ class FieldSelectQuery(AwaitableQuery):
 
 
 class ValuesListQuery(FieldSelectQuery):
-    __slots__ = ('_db', 'flat', 'fields')
+    __slots__ = ('flat', 'fields')
 
     def __init__(
         self, model, filter_kwargs, db, q_objects, fields_for_select_list, limit, offset, distinct,
         orderings, flat, annotations, having, custom_filters
     ):
-        super().__init__()
+        super().__init__(model, db)
         if flat and (len(fields_for_select_list) != 1):
             raise TypeError('You can flat value_list only if contains one field')
 
-        self.model = model
-        self._db = db if db else model._meta.db
         self.query = model._meta.basequery
         fields_for_select = {str(i): field for i, field in enumerate(fields_for_select_list)}
 
@@ -720,15 +712,13 @@ class ValuesListQuery(FieldSelectQuery):
 
 
 class ValuesQuery(FieldSelectQuery):
-    __slots__ = ('_db', 'fields_for_select')
+    __slots__ = ('fields_for_select')
 
     def __init__(
         self, model, filter_kwargs, db, q_objects, fields_for_select, limit, offset, distinct,
         orderings, annotations, having, custom_filters
     ):
-        super().__init__()
-        self.model = model
-        self._db = db if db else model._meta.db
+        super().__init__(model, db)
         self.query = model._meta.basequery
         for returns_as, field in fields_for_select.items():
             self.add_field_to_select_query(field, returns_as)
