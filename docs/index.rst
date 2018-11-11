@@ -12,6 +12,8 @@ It's engraved in it's design that you are working not with just tables, you work
 
 Source & issue trackers are available at `<https://github.com/tortoise/tortoise-orm/>`_
 
+Tortoise ORM is supported on CPython >= 3.5.3 for SQLite, MySQL and PostgreSQL, and PyPy3.5 >= 5.10 for SQLite and MySQL only.
+
 Introduction
 ============
 

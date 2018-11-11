@@ -1,6 +1,7 @@
 -r requirements.txt
 
 # Optional dependencies
+pyyaml
 
 ## Database Drivers
 asyncpg

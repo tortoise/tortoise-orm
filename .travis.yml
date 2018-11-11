@@ -10,6 +10,16 @@ env:
   - TORTOISE_TEST_DB="sqlite:///tmp/test-{}.sqlite"
   - TORTOISE_TEST_DB="postgres://postgres:@127.0.0.1:5432/test_{}"
   - TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_{}"
+matrix:
+  include:
+  - python: pypy3.5
+    env: TORTOISE_TEST_DB="sqlite:///tmp/test-{}.sqlite"
+    install: pip install -r requirements-pypy.txt
+    script: green
+  - python: pypy3.5
+    env: TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_{}"
+    install: pip install -r requirements-pypy.txt
+    script: green
 dist: xenial
 sudo: required
 addons:
