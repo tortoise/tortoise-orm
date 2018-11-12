@@ -1,6 +1,6 @@
 import logging
 
-from nose2.events import Plugin
+from nose2.events import Event, Plugin
 
 from tortoise.contrib.test import finalizer, initializer
 
@@ -12,7 +12,7 @@ class TortoisePlugin(Plugin):
     configSection = 'tortoise'
     alwaysOn = True
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.db_url = (self.config.as_str('db-url', '').strip() or 'sqlite://:memory:')
         self.db_modules = self.config.as_list('db-module', [])
         if not self.db_modules:
@@ -30,13 +30,13 @@ class TortoisePlugin(Plugin):
             help='Tortoise ORM test DB-URL'
         )
 
-    def handleArgs(self, event):
+    def handleArgs(self, event: Event) -> None:
         """Get our options in order command line, config file, hard coded."""
         self.db_url = event.args.db_url or self.db_url
         self.db_modules = event.args.db_modules or self.db_modules
 
-    def startTestRun(self, event):
+    def startTestRun(self, event: Event) -> None:
         initializer(self.db_modules, db_url=self.db_url)
 
-    def stopTestRun(self, event):
+    def stopTestRun(self, event: Event) -> None:
         finalizer()

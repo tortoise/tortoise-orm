@@ -1,6 +1,8 @@
 """
 Tortoise PyLint plugin
 """
+from typing import Iterator
+
 from astroid import MANAGER, inference_tip, nodes, scoped_nodes
 from astroid.node_classes import Assign
 from astroid.nodes import ClassDef
@@ -9,7 +11,7 @@ MODELS = {}  # type: dict
 FUTURE_RELATIONS = {}  # type: dict
 
 
-def register(linter):
+def register(linter) -> None:
     """
     Reset state every time this is called, since we now get new AST to transform.
     """
@@ -20,14 +22,14 @@ def register(linter):
     FUTURE_RELATIONS = {}
 
 
-def is_model(cls):
+def is_model(cls) -> bool:
     """
     Guard to apply this transform to Models only
     """
     return cls.metaclass() and cls.metaclass().qname() == 'tortoise.models.ModelMeta'
 
 
-def transform_model(cls):
+def transform_model(cls) -> None:
     """
     Anything that uses the ModelMeta needs _meta and id.
     Also keep track of relationships and make them in the related model class.
@@ -89,14 +91,14 @@ def transform_model(cls):
         cls.locals['id'] = [nodes.ClassDef('id', None)]
 
 
-def is_model_field(cls):
+def is_model_field(cls) -> bool:
     """
     Guard to apply this transform to Model Fields only
     """
     return cls.qname().startswith('tortoise.fields')
 
 
-def apply_type_shim(cls, _context=None):
+def apply_type_shim(cls, _context=None) -> Iterator:
     """
     Morphs model fields to representative type
     """

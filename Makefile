@@ -1,5 +1,5 @@
 checkfiles = tortoise/ examples/ setup.py conftest.py
-mypy_flags = --warn-unused-configs --warn-redundant-casts --ignore-missing-imports --allow-untyped-decorators
+mypy_flags = --warn-unused-configs --warn-redundant-casts --ignore-missing-imports --allow-untyped-decorators --no-implicit-optional
 
 help:
 	@echo  "Tortoise ORM development makefile"

@@ -1,8 +1,8 @@
 import operator
 from copy import deepcopy
-from typing import Awaitable, Dict, Hashable, Optional, Set, Tuple, Type, TypeVar  # noqa
+from typing import Awaitable, Dict, Hashable, Optional, Set, Tuple, Type, TypeVar, Union  # noqa
 
-from pypika import Table, functions
+from pypika import Query, Table, functions
 from pypika.enums import SqlTypes
 
 from tortoise import fields
@@ -236,10 +236,10 @@ class MetaInfo:
         self._filters = {}  # type: Dict[str, Dict[str, dict]]
         self.filters = {}  # type: Dict[str, Dict[str, dict]]
         self.fields_map = {}  # type: Dict[str, fields.Field]
-        self._inited = False
+        self._inited = False  # type: bool
         self.default_connection = None
-        self.basequery = None
-        self.basequery_all_fields = None
+        self.basequery = Query()  # type: Query
+        self.basequery_all_fields = Query()  # type: Query
 
     @property
     def db(self):
@@ -356,7 +356,7 @@ class Model(metaclass=ModelMeta):
 
         for key in meta.m2m_fields:
             field_object = meta.fields_map[key]
-            setattr(self, key, ManyToManyRelationManager(
+            setattr(self, key, ManyToManyRelationManager(  # type: ignore
                 field_object.type, self, field_object, is_new))
 
         # Assign values and do type conversions

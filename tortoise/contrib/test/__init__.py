@@ -48,7 +48,7 @@ def getDBConfig(app_label: str, modules: List[str]) -> dict:
     )
 
 
-async def _init_db(config):
+async def _init_db(config: dict) -> None:
     try:
         await Tortoise.init(config)
         await Tortoise._drop_databases()
@@ -59,7 +59,7 @@ async def _init_db(config):
     await Tortoise.generate_schemas()
 
 
-def _restore_default():
+def _restore_default() -> None:
     Tortoise.apps = {}
     Tortoise._connections = _CONNECTIONS.copy()
     for name in Tortoise._connections.keys():
@@ -144,7 +144,7 @@ class SimpleTestCase(_TestCase):
     """
     use_default_loop = True
 
-    def _init_loop(self):
+    def _init_loop(self) -> None:
         if self.use_default_loop:
             self.loop = _LOOP
             loop = None
@@ -158,7 +158,7 @@ class SimpleTestCase(_TestCase):
 
         self.loop = self._patch_loop(self.loop)
 
-    async def _setUpDB(self):
+    async def _setUpDB(self) -> None:
         pass
 
     async def _tearDownDB(self) -> None:
@@ -210,7 +210,7 @@ class IsolatedTestCase(SimpleTestCase):
     """
     # pylint: disable=C0103,W0201
 
-    async def _setUpDB(self):
+    async def _setUpDB(self) -> None:
         config = getDBConfig(
             app_label='models',
             modules=_MODULES,
@@ -232,7 +232,7 @@ class TestCase(SimpleTestCase):
     separate transaction that will rollback on finish.
     """
 
-    async def _setUpDB(self):
+    async def _setUpDB(self) -> None:
         _restore_default()
         self.transaction = await start_transaction()  # pylint: disable=W0201
 
