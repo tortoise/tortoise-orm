@@ -21,10 +21,19 @@ class Tournament(Model):
         return self.name
 
 
+class Reporter(Model):
+    id = fields.IntField(pk=True)
+    name = fields.TextField()
+
+    def __str__(self):
+        return self.name
+
+
 class Event(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
     tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
+    reporter = fields.ForeignKeyField('models.Reporter', null=True)
     participants = fields.ManyToManyField(
         'models.Team', related_name='events', through='event_team'
     )
@@ -48,9 +57,7 @@ class EventTwo(Model):
     name = fields.TextField()
     tournament_id = fields.IntField()
     # Here we make link to events.Team, not models.Team
-    participants = fields.ManyToManyField(
-        'events.TeamTwo', related_name='events', through='eventtwo_teamtwo'
-    )
+    participants = fields.ManyToManyField('events.TeamTwo')
 
     class Meta:
         app = 'events'

@@ -47,6 +47,34 @@ class TestInitErrors(test.SimpleTestCase):
         self.assertIn('models', Tortoise.apps)
         self.assertIsNotNone(Tortoise.get_connection('default'))
 
+    async def test_unknown_connection(self):
+        with self.assertRaisesRegexp(ConfigurationError, 'Unknown connection "fioop"'):
+            await Tortoise.init({
+                "connections": {
+                    "default": {
+                        "engine": "tortoise.backends.sqlite",
+                        "credentials": {
+                            "file_path": self.db_file_path,
+                        }
+                    }
+                },
+                "apps": {
+                    "models": {
+                        "models": [
+                            "tortoise.tests.testmodels",
+                        ],
+                        "default_connection": "fioop"
+                    }
+                }
+            })
+
+    async def test_url_without_modules(self):
+        with self.assertRaisesRegexp(ConfigurationError,
+                                     'You must specify "db_url" and "modules" together'):
+            await Tortoise.init(
+                db_url="sqlite://{}".format(self.db_file_path),
+            )
+
     async def test_default_connection_init(self):
         await Tortoise.init({
             "connections": {

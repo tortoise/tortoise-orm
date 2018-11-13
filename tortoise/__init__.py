@@ -84,7 +84,8 @@ class Tortoise:
 
                     backward_relation_name = field_mobject.related_name
                     if not backward_relation_name:
-                        backward_relation_name = '{}s'.format(model._meta.table)
+                        backward_relation_name = field_mobject.related_name = \
+                            '{}_through'.format(model._meta.table)
                     if backward_relation_name in related_model._meta.fields:
                         raise ConfigurationError(
                             'backward relation "{}" duplicates in model {}'.format(

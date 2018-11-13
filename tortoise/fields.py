@@ -323,17 +323,15 @@ class ManyToManyField(Field):
         through: Optional[str] = None,
         forward_key: Optional[str] = None,
         backward_key: str = '',
-        related_name: Optional[str] = None,
+        related_name: str = '',
         **kwargs
     ) -> None:
         super().__init__(**kwargs)
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name = model_name
-        self.related_name = related_name or '{}_through'.format(model_name)
-        self.forward_key = forward_key if forward_key else '{}_id'.format(
-            model_name.split(".")[1].lower()
-        )
+        self.related_name = related_name
+        self.forward_key = forward_key or '{}_id'.format(model_name.split(".")[1].lower())
         self.backward_key = backward_key
         self.through = through
         self._generated = False
@@ -342,7 +340,7 @@ class ManyToManyField(Field):
 class BackwardFKRelation(Field):
     __slots__ = ('type', 'relation_field')
 
-    def __init__(self, type, relation_field: str) -> None:
+    def __init__(self, type, relation_field: str) -> None:  # pylint: disable=W0622
         super().__init__(type=type)
         self.relation_field = relation_field
 
