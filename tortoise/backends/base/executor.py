@@ -43,9 +43,10 @@ class BaseExecutor:
         result_columns = [self.model._meta.fields_db_projection[c] for c in regular_columns]
         return regular_columns, result_columns
 
-    def _field_to_db(self, field_object, attr, instance):
-        if field_object.__class__ in self.TO_DB_OVERRIDE:
-            return self.TO_DB_OVERRIDE[field_object.__class__](field_object, attr, instance)
+    @classmethod
+    def _field_to_db(cls, field_object, attr, instance):
+        if field_object.__class__ in cls.TO_DB_OVERRIDE:
+            return cls.TO_DB_OVERRIDE[field_object.__class__](field_object, attr, instance)
         return field_object.to_db_value(attr, instance)
 
     def _prepare_insert_values(self, instance, regular_columns):
@@ -96,7 +97,7 @@ class BaseExecutor:
 
     async def execute_delete(self, instance):
         table = Table(self.model._meta.table)
-        query = self.db.query_class.from_(table).where(table.id == instance.id).delete()
+        query = self.model._meta.basequery.where(table.id == instance.id).delete()
         await self.db.execute_query(str(query))
         return instance
 

@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.10.11
+-------
+- Pre-build some query & filters statically, 15-30% speed up for smaller queries.
+- Required field params are now positional, so Python and IDE linters will pick up on it easier.
+- Filtering also applies DB-specific transforms, Fixes #62
+
 0.10.10
 -------
 - Refactor ``Tortoise.init()`` and test runner to not re-create connections per test, so now tests pass when using an SQLite in-memory database

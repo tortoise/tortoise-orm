@@ -27,6 +27,9 @@ class Field:
     """
     Base Field type.
     """
+    __slots__ = ('type', 'source_field', 'generated', 'pk', 'default', 'null', 'unique',
+                 'model_field_name')
+
     def __init__(
         self,
         type=None,  # pylint: disable=W0622
@@ -63,6 +66,8 @@ class IntField(Field):
     ``pk`` (bool):
         True if field is Primary Key.
     """
+    __slots__ = ('reference', )
+
     def __init__(self, pk: bool = False, **kwargs) -> None:
         kwargs['generated'] = bool(kwargs.get('generated')) | pk
         super().__init__(int, **kwargs)
@@ -74,6 +79,8 @@ class SmallIntField(Field):
     """
     Small integer field.
     """
+    __slots__ = ()
+
     def __init__(self, **kwargs) -> None:
         super().__init__(int, **kwargs)
 
@@ -87,9 +94,9 @@ class CharField(Field):
     ``max_length`` (int):
         Maximum length of the field in characters.
     """
-    def __init__(self, max_length: int = -24816, **kwargs) -> None:
-        if int(max_length) == -24816:
-            raise ConfigurationError("missing 'max_length' parameter")
+    __slots__ = ('max_length', )
+
+    def __init__(self, max_length: int, **kwargs) -> None:
         if int(max_length) < 1:
             raise ConfigurationError("'max_length' must be >= 1")
         self.max_length = int(max_length)
@@ -100,6 +107,8 @@ class TextField(Field):
     """
     Large Text field.
     """
+    __slots__ = ()
+
     def __init__(self, **kwargs) -> None:
         super().__init__(str, **kwargs)
 
@@ -108,6 +117,8 @@ class BooleanField(Field):
     """
     Boolean field.
     """
+    __slots__ = ()
+
     def __init__(self, **kwargs) -> None:
         super().__init__(bool, **kwargs)
 
@@ -123,13 +134,11 @@ class DecimalField(Field):
     ``decimal_places`` (int):
         How many of those signifigant digits is after the decimal point.
     """
-    def __init__(self, max_digits: int = -24816, decimal_places: int = -24816, **kwargs) -> None:
-        if int(max_digits) == -24816:
-            raise ConfigurationError("missing 'max_digits' parameter")
+    __slots__ = ('max_digits', 'decimal_places')
+
+    def __init__(self, max_digits: int, decimal_places: int, **kwargs) -> None:
         if int(max_digits) < 1:
             raise ConfigurationError("'max_digits' must be >= 1")
-        if int(decimal_places) == -24816:
-            raise ConfigurationError("missing 'decimal_places' parameter")
         if int(decimal_places) < 0:
             raise ConfigurationError("'decimal_places' must be >= 0")
         super().__init__(Decimal, **kwargs)
@@ -149,6 +158,8 @@ class DatetimeField(Field):
     ``auto_now_add`` (bool):
         Set to ``datetime.utcnow()`` on first save only.
     """
+    __slots__ = ('auto_now', 'auto_now_add')
+
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs) -> None:
         if auto_now_add and auto_now:
             raise ConfigurationError("You can choose only 'auto_now' or 'auto_now_add'")
@@ -177,6 +188,8 @@ class DateField(Field):
     """
     Date field.
     """
+    __slots__ = ()
+
     def __init__(self, **kwargs) -> None:
         super().__init__(datetime.date, **kwargs)
 
@@ -190,6 +203,8 @@ class FloatField(Field):
     """
     Float (double) field.
     """
+    __slots__ = ()
+
     def __init__(self, **kwargs) -> None:
         super().__init__(float, **kwargs)
 
@@ -205,6 +220,8 @@ class JSONField(Field):
     ``decoder``:
         The JSON decoder. The default is recommemded.
     """
+    __slots__ = ('encoder', 'decoder')
+
     def __init__(self, encoder=JSON_DUMPS, decoder=JSON_LOADS, **kwargs) -> None:
         super().__init__((dict, list), **kwargs)
         self.encoder = encoder
@@ -250,6 +267,8 @@ class ForeignKeyField(Field):
                 Resets the field to ``default`` value in case the related model gets deleted.
                 Can only be set is field has a ``default`` set.
     """
+    __slots__ = ('model_name', 'related_name', 'on_delete')
+
     def __init__(
         self,
         model_name: str,
@@ -294,6 +313,9 @@ class ManyToManyField(Field):
     ``related_name``:
         The attribute name on the related model to reverse resolve the many to many.
     """
+    __slots__ = ('model_name', 'related_name', 'forward_key', 'backward_key', 'through',
+                 '_generated')
+
     def __init__(
         self,
         model_name: str,
@@ -317,12 +339,17 @@ class ManyToManyField(Field):
 
 
 class BackwardFKRelation:
+    __slots__ = ('type', 'relation_field')
+
     def __init__(self, type, relation_field, **kwargs):  # pylint: disable=W0622
         self.type = type
         self.relation_field = relation_field
 
 
 class RelationQueryContainer:
+    __slots__ = ('model', 'relation_field', 'instance', '_fetched', '_custom_query',
+                 'related_objects')
+
     def __init__(self, model, relation_field, instance, is_new):
         self.model = model
         self.relation_field = relation_field
@@ -409,6 +436,8 @@ class RelationQueryContainer:
 
 
 class ManyToManyRelationManager(RelationQueryContainer):
+    __slots__ = ('field', 'model', 'instance')
+
     def __init__(self, model, instance, m2m_field, is_new):
         super().__init__(model, m2m_field.related_name, instance, is_new)
         self.field = m2m_field

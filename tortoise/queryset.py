@@ -1,7 +1,7 @@
-from copy import deepcopy
+from copy import copy
 from typing import Any, Dict, List, Optional, Set, Tuple  # noqa
 
-from pypika import JoinType, Order, Table
+from pypika import JoinType, Order, Query, Table  # noqa
 from pypika.functions import Count
 
 from tortoise import fields
@@ -13,14 +13,15 @@ from tortoise.utils import QueryAsyncIterator
 
 
 class AwaitableQuery:
-    __slots__ = ('_joined_tables', 'query', 'model')
+    __slots__ = ('_joined_tables', 'query', 'model', '_db')
 
-    def __init__(self):
-        self._joined_tables = []
-        self.query = None
-        self.model = None
+    def __init__(self, model, db: Optional[BaseDBAsyncClient]) -> None:
+        self._joined_tables = []  # type: List[Table]
+        self.model = model
+        self.query = model._meta.basequery  # type: Query
+        self._db = db if db else model._meta.db  # type: BaseDBAsyncClient
 
-    def _filter_from_related_table(self, table, param, value):
+    def _filter_from_related_table(self, table: Table, param: dict, value: Any) -> None:
         if param['table'] not in self._joined_tables:
             self.query = self.query.join(
                 param['table'], how=JoinType.left_outer
@@ -44,12 +45,13 @@ class AwaitableQuery:
                 self._filter_from_related_table(table, param, value)
             else:
                 field_object = model._meta.fields_map[param['field']]
-                value_encoder = (
-                    param['value_encoder']
-                    if param.get('value_encoder') else field_object.to_db_value
+                encoded_value = (
+                    param['value_encoder'](value, model)
+                    if param.get('value_encoder')
+                    else self._db.executor_class._field_to_db(field_object, value, model)
                 )
                 self.query = self.query.where(
-                    param['operator'](getattr(table, param['field']), value_encoder(value, model))
+                    param['operator'](getattr(table, param['field']), encoded_value)
                 )
         for key, value in having.items():
             having_info = custom_filters[key]
@@ -132,24 +134,20 @@ class AwaitableQuery:
 
 
 class QuerySet(AwaitableQuery):
-    __slots__ = ('_joined_tables', 'query', 'model', 'fields', '_prefetch_map', '_prefetch_queries',
+    __slots__ = ('fields', '_prefetch_map', '_prefetch_queries',
                  '_single', '_get', '_count', '_db', '_limit', '_offset', '_filter_kwargs',
                  '_orderings', '_q_objects_for_resolve', '_distinct',
                  '_annotations', '_having', '_available_custom_filters')
 
     def __init__(self, model) -> None:
-        super().__init__()
+        super().__init__(model, None)
         self.fields = model._meta.db_fields
-        self.model = model
-
-        self.query = model._meta.basequery
 
         self._prefetch_map = {}  # type: Dict[str, Set[str]]
         self._prefetch_queries = {}  # type: Dict[str, QuerySet]
         self._single = False  # type: bool
         self._get = False  # type: bool
         self._count = False  # type: bool
-        self._db = None  # type: Optional[BaseDBAsyncClient]
         self._limit = None  # type: Optional[int]
         self._offset = None  # type: Optional[int]
         self._filter_kwargs = {}  # type: Dict[str, Any]
@@ -161,23 +159,26 @@ class QuerySet(AwaitableQuery):
         self._available_custom_filters = {}  # type: Dict[str, dict]
 
     def _clone(self) -> 'QuerySet':
-        queryset = self.__class__(self.model)
-        queryset._prefetch_map = deepcopy(self._prefetch_map)
-        queryset._prefetch_queries = deepcopy(self._prefetch_queries)
+        queryset = QuerySet.__new__(QuerySet)
+        queryset.fields = self.fields
+        queryset.model = self.model
+        queryset.query = self.query
+        queryset._prefetch_map = copy(self._prefetch_map)
+        queryset._prefetch_queries = copy(self._prefetch_queries)
         queryset._single = self._single
         queryset._get = self._get
         queryset._count = self._count
         queryset._db = self._db
         queryset._limit = self._limit
         queryset._offset = self._offset
-        queryset._filter_kwargs = deepcopy(self._filter_kwargs)
-        queryset._orderings = deepcopy(self._orderings)
-        queryset._joined_tables = deepcopy(self._joined_tables)
-        queryset._q_objects_for_resolve = deepcopy(self._q_objects_for_resolve)
+        queryset._filter_kwargs = copy(self._filter_kwargs)
+        queryset._orderings = copy(self._orderings)
+        queryset._joined_tables = copy(self._joined_tables)
+        queryset._q_objects_for_resolve = copy(self._q_objects_for_resolve)
         queryset._distinct = self._distinct
-        queryset._annotations = deepcopy(self._annotations)
-        queryset._having = deepcopy(self._having)
-        queryset._available_custom_filters = deepcopy(self._available_custom_filters)
+        queryset._annotations = copy(self._annotations)
+        queryset._having = copy(self._having)
+        queryset._available_custom_filters = copy(self._available_custom_filters)
         return queryset
 
     def filter(self, *args, **kwargs) -> 'QuerySet':
@@ -449,9 +450,7 @@ class QuerySet(AwaitableQuery):
             self.query = self.query.select(aggregation_info['field'].as_(key))
 
     def _make_query(self):
-        db = self._db if self._db else self.model._meta.db
-        table = Table(self.model._meta.table)
-        self.query = db.query_class.from_(table).select(*self.fields)
+        self.query = self.model._meta.basequery_all_fields
         self._resolve_annotate()
         self.resolve_filters(
             model=self.model,
@@ -472,10 +471,9 @@ class QuerySet(AwaitableQuery):
 
     async def _execute(self):
         self.query = self._make_query()
-        db = self._db if self._db else self.model._meta.db
-        instance_list = await db.executor_class(
+        instance_list = await self._db.executor_class(
             model=self.model,
-            db=db,
+            db=self._db,
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
         ).execute_select(
@@ -504,12 +502,13 @@ class QuerySet(AwaitableQuery):
 
 
 class UpdateQuery(AwaitableQuery):
+    __slots__ = ()
+
     def __init__(
         self, model, filter_kwargs, update_kwargs, db, q_objects, annotations, having,
         custom_filters
     ):
-        super().__init__()
-        self._db = db if db else model._meta.db
+        super().__init__(model, db)
         table = Table(model._meta.table)
         self.query = self._db.query_class.update(table)
         self.resolve_filters(
@@ -539,11 +538,11 @@ class UpdateQuery(AwaitableQuery):
 
 
 class DeleteQuery(AwaitableQuery):
+    __slots__ = ()
+
     def __init__(self, model, filter_kwargs, db, q_objects, annotations, having, custom_filters):
-        super().__init__()
-        self._db = db if db else model._meta.db
-        table = Table(model._meta.table)
-        self.query = self._db.query_class.from_(table)
+        super().__init__(model, db)
+        self.query = model._meta.basequery
         self.resolve_filters(
             model=model,
             filter_kwargs=filter_kwargs,
@@ -559,11 +558,12 @@ class DeleteQuery(AwaitableQuery):
 
 
 class CountQuery(AwaitableQuery):
+    __slots__ = ()
+
     def __init__(self, model, filter_kwargs, db, q_objects, annotations, having, custom_filters):
-        super().__init__()
-        self._db = db if db else model._meta.db
+        super().__init__(model, db)
         table = Table(model._meta.table)
-        self.query = self._db.query_class.from_(table)
+        self.query = model._meta.basequery
         self.resolve_filters(
             model=model,
             filter_kwargs=filter_kwargs,
@@ -581,6 +581,7 @@ class CountQuery(AwaitableQuery):
 
 class FieldSelectQuery(AwaitableQuery):
     # pylint: disable=W0223
+    __slots__ = ()
 
     def _join_table_with_forwarded_fields(self, model, field, forwarded_fields):
         table = Table(model._meta.table)
@@ -664,18 +665,17 @@ class FieldSelectQuery(AwaitableQuery):
 
 
 class ValuesListQuery(FieldSelectQuery):
+    __slots__ = ('flat', 'fields')
+
     def __init__(
         self, model, filter_kwargs, db, q_objects, fields_for_select_list, limit, offset, distinct,
         orderings, flat, annotations, having, custom_filters
     ):
-        super().__init__()
+        super().__init__(model, db)
         if flat and (len(fields_for_select_list) != 1):
             raise TypeError('You can flat value_list only if contains one field')
 
-        self.model = model
-        table = Table(model._meta.table)
-        self._db = db if db else model._meta.db
-        self.query = self._db.query_class.from_(table)
+        self.query = model._meta.basequery
         fields_for_select = {str(i): field for i, field in enumerate(fields_for_select_list)}
 
         for positional_number, field in fields_for_select.items():
@@ -708,19 +708,18 @@ class ValuesListQuery(FieldSelectQuery):
         if self.flat:
             func = columns[0][1]
             return [func(entry['0']) for entry in result]
-        return [(func(entry[column]) for column, func in columns) for entry in result]
+        return [tuple(func(entry[column]) for column, func in columns) for entry in result]
 
 
 class ValuesQuery(FieldSelectQuery):
+    __slots__ = ('fields_for_select')
+
     def __init__(
         self, model, filter_kwargs, db, q_objects, fields_for_select, limit, offset, distinct,
         orderings, annotations, having, custom_filters
     ):
-        super().__init__()
-        self.model = model
-        table = Table(model._meta.table)
-        self._db = db if db else model._meta.db
-        self.query = self._db.query_class.from_(table)
+        super().__init__(model, db)
+        self.query = model._meta.basequery
         for returns_as, field in fields_for_select.items():
             self.add_field_to_select_query(field, returns_as)
 

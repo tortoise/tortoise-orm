@@ -142,3 +142,91 @@ class TestTransactions(test.IsolatedTestCase):
         with self.assertRaises(TransactionManagementError):
             async with in_transaction() as connection:
                 await connection.commit()
+
+    async def test_insert_await_across_transaction_fail(self):
+        tournament = Tournament(name='Test')
+        query = tournament.save()  # pylint: disable=E1111
+
+        try:
+            async with in_transaction():
+                await query
+                raise KeyError('moo')
+        except KeyError:
+            pass
+
+        self.assertEqual(await Tournament.all(), [])
+
+    async def test_insert_await_across_transaction_success(self):
+        tournament = Tournament(name='Test')
+        query = tournament.save()  # pylint: disable=E1111
+
+        async with in_transaction():
+            await query
+
+        self.assertEqual(await Tournament.all(), [tournament])
+
+    async def test_update_await_across_transaction_fail(self):
+        await Tournament.create(name='Test1')
+
+        query = Tournament.filter(id=1).update(name='Test2')
+        try:
+            async with in_transaction():
+                await query
+                raise KeyError('moo')
+        except KeyError:
+            pass
+
+        self.assertEqual(await Tournament.all().values('id', 'name'), [{'id': 1, 'name': 'Test1'}])
+
+    async def test_update_await_across_transaction_success(self):
+        await Tournament.create(name='Test1')
+
+        query = Tournament.filter(id=1).update(name='Test2')
+        async with in_transaction():
+            await query
+
+        self.assertEqual(await Tournament.all().values('id', 'name'), [{'id': 1, 'name': 'Test2'}])
+
+    async def test_delete_await_across_transaction_fail(self):
+        await Tournament.create(name='Test1')
+
+        query = Tournament.filter(id=1).delete()
+        try:
+            async with in_transaction():
+                await query
+                raise KeyError('moo')
+        except KeyError:
+            pass
+
+        self.assertEqual(await Tournament.all().values('id', 'name'), [{'id': 1, 'name': 'Test1'}])
+
+    async def test_delete_await_across_transaction_success(self):
+        await Tournament.create(name='Test1')
+
+        query = Tournament.filter(id=1).delete()
+        async with in_transaction():
+            await query
+
+        self.assertEqual(await Tournament.all(), [])
+
+    async def test_select_await_across_transaction_fail(self):
+        query = Tournament.all().values('id', 'name')
+        try:
+            async with in_transaction():
+                await Tournament.create(name='Test1')
+                result = await query
+                raise KeyError('moo')
+        except KeyError:
+            pass
+
+        self.assertEqual(result, [{'id': 1, 'name': 'Test1'}])
+        self.assertEqual(await Tournament.all(), [])
+
+    async def test_select_await_across_transaction_success(self):
+        query = Tournament.all().values('id', 'name')
+        async with in_transaction():
+            await Tournament.create(name='Test1')
+            result = await query
+
+        self.assertEqual(result, [{'id': 1, 'name': 'Test1'}])
+        self.assertEqual(await Tournament.all().values('id', 'name'), [{'id': 1, 'name': 'Test1'}])
