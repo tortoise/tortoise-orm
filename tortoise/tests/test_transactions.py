@@ -142,3 +142,26 @@ class TestTransactions(test.IsolatedTestCase):
         with self.assertRaises(TransactionManagementError):
             async with in_transaction() as connection:
                 await connection.commit()
+
+    async def test_await_across_transaction_fail(self):
+        tournament = Tournament(name='Test')
+        query = tournament.save()
+
+        try:
+            async with in_transaction() as connection:
+                result = await query
+                raise Exception('moo')
+        except Exception:
+            pass
+
+        self.assertEqual(await Tournament.all(), [])
+
+    async def test_await_across_transaction_success(self):
+        tournament = Tournament(name='Test')
+        query = tournament.save()
+
+        async with in_transaction() as connection:
+            result = await query
+
+        self.assertEqual(await Tournament.all(), [tournament])
+
