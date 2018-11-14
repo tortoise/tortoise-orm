@@ -10,7 +10,7 @@ class Q:  # pylint: disable=C0103
     AND = 'AND'
     OR = 'OR'
 
-    def __init__(self, *args, join_type=AND, **kwargs):
+    def __init__(self, *args, join_type=AND, **kwargs) -> None:
         if args and kwargs:
             raise OperationalError('You can pass only Q nodes or filter kwargs in one Q node')
         if not all(isinstance(node, Q) for node in args):
@@ -21,12 +21,12 @@ class Q:  # pylint: disable=C0103
             raise OperationalError('join_type must be AND or OR')
         self.join_type = join_type
 
-    def __and__(self, other):
+    def __and__(self, other) -> 'Q':
         if not isinstance(other, Q):
             raise OperationalError('AND operation requires a Q node')
         return Q(self, other, join_type=self.AND)
 
-    def __or__(self, other):
+    def __or__(self, other) -> 'Q':
         if not isinstance(other, Q):
             raise OperationalError('OR operation requires a Q node')
         return Q(self, other, join_type=self.OR)
@@ -125,11 +125,11 @@ class Q:  # pylint: disable=C0103
 class Prefetch:
     __slots__ = ('relation', 'queryset')
 
-    def __init__(self, relation, queryset):
+    def __init__(self, relation, queryset) -> None:
         self.relation = relation
         self.queryset = queryset
 
-    def resolve_for_queryset(self, queryset):
+    def resolve_for_queryset(self, queryset) -> None:
         relation_split = self.relation.split('__')
         first_level_field = relation_split[0]
         if first_level_field not in queryset.model._meta.fetch_fields:

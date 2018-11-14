@@ -1,6 +1,7 @@
 import operator
-from copy import deepcopy
-from typing import Awaitable, Dict, Hashable, Optional, Set, Tuple, Type, TypeVar, Union  # noqa
+from copy import copy
+from typing import (Awaitable, Callable, Dict, Hashable, Optional, Set, Tuple, Type,  # noqa
+                    TypeVar, Union)
 
 from pypika import Query, Table, functions
 from pypika.enums import SqlTypes
@@ -13,6 +14,7 @@ from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
 
 MODEL_TYPE = TypeVar('MODEL_TYPE', bound='Model')
+# TODO: Define Filter type object. Possibly tuple?
 
 
 def list_encoder(value, instance):
@@ -75,8 +77,8 @@ def insensitive_ends_with(field, value):
     )
 
 
-def get_m2m_filters(field_name: str, field: fields.ManyToManyField) -> dict:
-    filters = {
+def get_m2m_filters(field_name: str, field: fields.ManyToManyField) -> Dict[str, dict]:
+    return {
         field_name: {
             'field': field.forward_key,
             'backward_key': field.backward_key,
@@ -104,11 +106,10 @@ def get_m2m_filters(field_name: str, field: fields.ManyToManyField) -> dict:
             'value_encoder': list_encoder,
         },
     }
-    return filters
 
 
-def get_backward_fk_filters(field_name: str, field: fields.BackwardFKRelation) -> dict:
-    filters = {
+def get_backward_fk_filters(field_name: str, field: fields.BackwardFKRelation) -> Dict[str, dict]:
+    return {
         field_name: {
             'field': 'id',
             'backward_key': field.relation_field,
@@ -136,15 +137,15 @@ def get_backward_fk_filters(field_name: str, field: fields.BackwardFKRelation) -
             'value_encoder': list_encoder,
         },
     }
-    return filters
 
 
-def get_filters_for_field(field_name: str, field: Optional[fields.Field], source_field: str):
+def get_filters_for_field(field_name: str, field: Optional[fields.Field], source_field: str
+                          ) -> Dict[str, dict]:
     if isinstance(field, fields.ManyToManyField):
         return get_m2m_filters(field_name, field)
     if isinstance(field, fields.BackwardFKRelation):
         return get_backward_fk_filters(field_name, field)
-    filters = {
+    return {
         field_name: {
             'field': source_field,
             'operator': operator.eq,
@@ -212,7 +213,6 @@ def get_filters_for_field(field_name: str, field: Optional[fields.Field], source
             'operator': insensitive_ends_with,
         },
     }
-    return filters
 
 
 class MetaInfo:
@@ -221,7 +221,7 @@ class MetaInfo:
                  'fields_db_projection_reverse', 'filters', 'fields_map', 'default_connection',
                  'basequery', 'basequery_all_fields', '_filters')
 
-    def __init__(self, meta):
+    def __init__(self, meta) -> None:
         self.abstract = getattr(meta, 'abstract', False)  # type: bool
         self.table = getattr(meta, 'table', None)  # type: Optional[Table]
         self.app = getattr(meta, 'app', None)  # type: Optional[str]
@@ -234,42 +234,42 @@ class MetaInfo:
         self.fields_db_projection = {}  # type: Dict[str,str]
         self.fields_db_projection_reverse = {}  # type: Dict[str,str]
         self._filters = {}  # type: Dict[str, Dict[str, dict]]
-        self.filters = {}  # type: Dict[str, Dict[str, dict]]
+        self.filters = {}  # type: Dict[str, dict]
         self.fields_map = {}  # type: Dict[str, fields.Field]
         self._inited = False  # type: bool
-        self.default_connection = None
+        self.default_connection = None  # type: Optional[str]
         self.basequery = Query()  # type: Query
         self.basequery_all_fields = Query()  # type: Query
 
     @property
-    def db(self):
+    def db(self) -> BaseDBAsyncClient:
         from tortoise import Tortoise
         if self.default_connection not in current_transaction_map:
-            return None
+            raise ConfigurationError('No DB associated to model')
         return (
             current_transaction_map[self.default_connection].get()
-            or Tortoise.get_connection(self.default_connection)
+            or Tortoise.get_connection(self.default_connection)  # type: ignore
         )
 
-    def get_filter(self, key):
+    def get_filter(self, key: str) -> dict:
         return self.filters[key]
 
-    def generate_filters(self):
+    def generate_filters(self) -> None:
         get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
         for key, filter_info in self._filters.items():
-            overridden_operator = get_overridden_filter_func(
+            overridden_operator = get_overridden_filter_func(  # type: ignore
                 filter_func=filter_info['operator'],
             )
             if overridden_operator:
-                filter_info = deepcopy(filter_info)
-                filter_info['operator'] = overridden_operator
+                filter_info = copy(filter_info)
+                filter_info['operator'] = overridden_operator  # type: ignore
             self.filters[key] = filter_info
 
 
 class ModelMeta(type):
     __slots__ = ()
 
-    def __new__(mcs, name, bases, attrs, *args, **kwargs):
+    def __new__(mcs, name: str, bases, attrs: dict, *args, **kwargs):
         fields_db_projection = {}  # type: Dict[str,str]
         fields_map = {}  # type: Dict[str, fields.Field]
         filters = {}  # type: Dict[str, Dict[str, dict]]
@@ -338,7 +338,7 @@ class ModelMeta(type):
 
 
 class Model(metaclass=ModelMeta):
-    # TODO: I don' like this here, but it makes autocompletion and static analysis much happier
+    # I don' like this here, but it makes autocompletion and static analysis much happier
     _meta = MetaInfo(None)
     id = None  # type: Optional[Hashable]
 
@@ -439,7 +439,7 @@ class Model(metaclass=ModelMeta):
             return '<{}: {}>'.format(self.__class__.__name__, self.id)
         return '<{}>'.format(self.__class__.__name__)
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         if not self.id:
             raise TypeError('Model instances without id are unhashable')
         return hash(self.id)
