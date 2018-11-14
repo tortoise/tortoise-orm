@@ -47,6 +47,50 @@ class TestInitErrors(test.SimpleTestCase):
         self.assertIn('models', Tortoise.apps)
         self.assertIsNotNone(Tortoise.get_connection('default'))
 
+    async def test_dup1_init(self):
+        with self.assertRaisesRegex(ConfigurationError,
+                                    'backward relation "events" duplicates in model Tournament'):
+            await Tortoise.init({
+                "connections": {
+                    "default": {
+                        "engine": "tortoise.backends.sqlite",
+                        "credentials": {
+                            "file_path": self.db_file_path,
+                        }
+                    }
+                },
+                "apps": {
+                    "models": {
+                        "models": [
+                            "tortoise.tests.testmodels_dup1",
+                        ],
+                        "default_connection": "default"
+                    }
+                }
+            })
+
+    async def test_dup2_init(self):
+        with self.assertRaisesRegex(ConfigurationError,
+                                    'backward relation "events" duplicates in model Team'):
+            await Tortoise.init({
+                "connections": {
+                    "default": {
+                        "engine": "tortoise.backends.sqlite",
+                        "credentials": {
+                            "file_path": self.db_file_path,
+                        }
+                    }
+                },
+                "apps": {
+                    "models": {
+                        "models": [
+                            "tortoise.tests.testmodels_dup2",
+                        ],
+                        "default_connection": "default"
+                    }
+                }
+            })
+
     async def test_unknown_connection(self):
         with self.assertRaisesRegexp(ConfigurationError, 'Unknown connection "fioop"'):
             await Tortoise.init({
