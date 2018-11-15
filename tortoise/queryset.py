@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Any, Dict, List, Optional, Set, Tuple, Generator  # noqa
+from typing import Any, Dict, Generator, List, Optional, Set, Tuple  # noqa
 
 from pypika import JoinType, Order, Query, Table  # noqa
 from pypika.functions import Count

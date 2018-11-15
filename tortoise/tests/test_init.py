@@ -1,6 +1,4 @@
 import os
-import tempfile
-import uuid
 
 from tortoise import Tortoise
 from tortoise.contrib import test
@@ -16,10 +14,6 @@ class TestInitErrors(test.SimpleTestCase):
         except ConfigurationError:
             pass
         Tortoise._inited = False
-        self.db_file_path = os.path.join(
-            tempfile.gettempdir(),
-            "test_{}.sqlite3".format(uuid.uuid4().hex)
-        )
 
     async def tearDown(self):
         await Tortoise.close_connections()
@@ -31,7 +25,7 @@ class TestInitErrors(test.SimpleTestCase):
                 "default": {
                     "engine": "tortoise.backends.sqlite",
                     "credentials": {
-                        "file_path": self.db_file_path,
+                        "file_path": ":memory:",
                     }
                 }
             },
@@ -55,7 +49,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "default": {
                         "engine": "tortoise.backends.sqlite",
                         "credentials": {
-                            "file_path": self.db_file_path,
+                            "file_path": ":memory:",
                         }
                     }
                 },
@@ -77,7 +71,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "default": {
                         "engine": "tortoise.backends.sqlite",
                         "credentials": {
-                            "file_path": self.db_file_path,
+                            "file_path": ":memory:",
                         }
                     }
                 },
@@ -98,7 +92,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "default": {
                         "engine": "tortoise.backends.sqlite",
                         "credentials": {
-                            "file_path": self.db_file_path,
+                            "file_path": ":memory:",
                         }
                     }
                 },
@@ -116,7 +110,7 @@ class TestInitErrors(test.SimpleTestCase):
         with self.assertRaisesRegexp(ConfigurationError,
                                      'You must specify "db_url" and "modules" together'):
             await Tortoise.init(
-                db_url="sqlite://{}".format(self.db_file_path),
+                db_url="sqlite://{}".format(":memory:"),
             )
 
     async def test_default_connection_init(self):
@@ -125,7 +119,7 @@ class TestInitErrors(test.SimpleTestCase):
                 "default": {
                     "engine": "tortoise.backends.sqlite",
                     "credentials": {
-                        "file_path": self.db_file_path,
+                        "file_path": ":memory:",
                     }
                 }
             },
@@ -143,7 +137,7 @@ class TestInitErrors(test.SimpleTestCase):
     async def test_db_url_init(self):
         await Tortoise.init({
             "connections": {
-                "default": "sqlite://{}".format(self.db_file_path)
+                "default": "sqlite://{}".format(":memory:")
             },
             "apps": {
                 "models": {
@@ -159,7 +153,7 @@ class TestInitErrors(test.SimpleTestCase):
 
     async def test_shorthand_init(self):
         await Tortoise.init(
-            db_url="sqlite://{}".format(self.db_file_path),
+            db_url="sqlite://{}".format(":memory:"),
             modules={'models': ["tortoise.tests.testmodels"]}
         )
         self.assertIn('models', Tortoise.apps)
@@ -175,7 +169,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "default": {
                         "engine": "tortoise.backends.test",
                         "credentials": {
-                            "file_path": self.db_file_path
+                            "file_path": ":memory:"
                         }
                     }
                 },
@@ -197,7 +191,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "default": {
                         "engine": "tortoise.backends",
                         "credentials": {
-                            "file_path": self.db_file_path
+                            "file_path": ":memory:"
                         }
                     }
                 },
@@ -233,7 +227,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "default": {
                         "engine": "tortoise.backends.sqlite",
                         "credentials": {
-                            "file_path": self.db_file_path,
+                            "file_path": ":memory:",
                         }
                     }
                 },
@@ -250,7 +244,7 @@ class TestInitErrors(test.SimpleTestCase):
                         "default": {
                             "engine": "tortoise.backends.sqlite",
                             "credentials": {
-                                "file_path": self.db_file_path
+                                "file_path": ":memory:"
                             }
                         }
                     },
@@ -305,7 +299,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "default": {
                         "engine": "tortoise.backends.sqlite",
                         "credentials": {
-                            "file_path": self.db_file_path,
+                            "file_path": ":memory:",
                         }
                     }
                 },

@@ -16,12 +16,12 @@ For ``v1.0`` that involves:
 Mid-term
 ========
 
-Here we have all the features that is slightly further our:
+Here we have all the features that is slightly further out, in no particular order:
 
 * Performance work:
     * Sub queries
     * Bulk operations
-    * ...
+    * Consider using Cython to accelerate critical loops
 
 * Convenience/Ease-Of-Use work:
     * Make ``DELETE`` honour ``limit`` and ``offset``
@@ -38,9 +38,6 @@ Here we have all the features that is slightly further our:
 * Better Aggregate functions
     * Make it easier to do simple aggregations
     * Expand annotation framework to add statistical functions
-
-* Transaction framework
-    * Ability to set ACID conformance expectations
 
 * Migrations
     * Comprehensive schema in Migrations
