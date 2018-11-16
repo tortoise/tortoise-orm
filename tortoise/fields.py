@@ -456,9 +456,14 @@ class ManyToManyRelationManager(RelationQueryContainer):
             getattr(through_table, self.field.forward_key),
             getattr(through_table, self.field.backward_key),
         )
-        criterion = getattr(through_table, self.field.forward_key) == instances[0].id
-        for instance_to_add in instances[1:]:
-            criterion |= getattr(through_table, self.field.forward_key) == instance_to_add.id
+
+        if len(instances) == 1:
+            criterion = getattr(through_table, self.field.forward_key) == instances[0].id
+        else:
+            criterion = getattr(through_table, self.field.forward_key).isin([
+                i.id for i in instances
+            ])
+
         select_query = select_query.where(criterion)
 
         already_existing_relations_raw = await db.execute_query(str(select_query))
@@ -487,14 +492,18 @@ class ManyToManyRelationManager(RelationQueryContainer):
         if not instances:
             raise OperationalError('remove() called on no instances')
         through_table = Table(self.field.through)
-        condition = (
-            getattr(through_table, self.field.forward_key) == instances[0].id
-            & getattr(through_table, self.field.backward_key) == self.instance.id
-        )
-        for instance_to_remove in instances[1:]:
-            condition |= (
-                getattr(through_table, self.field.forward_key) == instance_to_remove.id
+
+        if len(instances) == 1:
+            condition = (
+                getattr(through_table, self.field.forward_key) == instances[0].id
                 & getattr(through_table, self.field.backward_key) == self.instance.id
+            )
+        else:
+            condition = (
+                getattr(through_table, self.field.backward_key) == self.instance.id
+                & getattr(through_table, self.field.forward_key).isin([
+                    i.id for i in instances
+                ])
             )
         query = db.query_class.from_(through_table).where(condition).delete()
         await db.execute_query(str(query))

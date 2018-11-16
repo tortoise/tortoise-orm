@@ -6,6 +6,7 @@ Changelog
 - Pre-build some query & filters statically, 15-30% speed up for smaller queries.
 - Required field params are now positional, so Python and IDE linters will pick up on it easier.
 - Filtering also applies DB-specific transforms, Fixes #62
+- Fixed recursion error on m2m management with big lists
 
 0.10.10
 -------
