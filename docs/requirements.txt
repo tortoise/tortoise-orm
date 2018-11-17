@@ -2,5 +2,5 @@
 
 sphinx
 cloud_sptheme
-sphinx-autodoc-typehints
+sphinx-autodoc-typehints<1.5
 asynctest
