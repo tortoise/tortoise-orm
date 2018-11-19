@@ -44,7 +44,6 @@ class MySQLClient(BaseDBAsyncClient):
         self.host = host
         self.port = int(port)  # make sure port is int type
 
-        # self._db_pool = None  # Type: Optional[aiomysql.Pool]
         self._connection = None  # Type: Optional[aiomysql.Connection]
 
         self._transaction_class = type(
@@ -84,14 +83,14 @@ class MySQLClient(BaseDBAsyncClient):
             self._connection = None
 
     async def db_create(self) -> None:
-        await self.create_connection(False)
+        await self.create_connection(with_db=False)
         await self.execute_script(
             'CREATE DATABASE {}'.format(self.database)
         )
         await self.close()
 
     async def db_delete(self) -> None:
-        await self.create_connection(False)
+        await self.create_connection(with_db=False)
         try:
             await self.execute_script('DROP DATABASE {}'.format(self.database))
         except pymysql.err.DatabaseError:  # pragma: nocoverage
