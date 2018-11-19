@@ -7,11 +7,11 @@ import pymysql
 from pypika import MySQLQuery
 
 from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWrapper,
-                                           ConnectionWrapper, SingleConnectionWrapper)
+                                           ConnectionWrapper)
 from tortoise.backends.mysql.executor import MySQLExecutor
 from tortoise.backends.mysql.schema_generator import MySQLSchemaGenerator
-from tortoise.exceptions import (ConfigurationError, DBConnectionError, IntegrityError,
-                                 OperationalError, TransactionManagementError)
+from tortoise.exceptions import (DBConnectionError, IntegrityError, OperationalError,
+                                 TransactionManagementError)
 from tortoise.transactions import current_transaction_map
 
 
@@ -44,29 +44,26 @@ class MySQLClient(BaseDBAsyncClient):
         self.host = host
         self.port = int(port)  # make sure port is int type
 
-        self.template = {
-            'host': self.host,
-            'port': self.port,
-            'user': self.user,
-            'password': self.password,
-        }
-
-        self._db_pool = None  # Type: Optional[aiomysql.Pool]
         self._connection = None  # Type: Optional[aiomysql.Connection]
 
         self._transaction_class = type(
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
         )
 
-    async def create_connection(self) -> None:
+    async def create_connection(self, with_db: bool) -> None:
+        template = {
+            'host': self.host,
+            'port': self.port,
+            'user': self.user,
+            'password': self.password,
+            'db': self.database if with_db else None
+        }
+
         try:
-            if not self.single_connection:
-                self._db_pool = await aiomysql.create_pool(db=self.database, **self.template)
-            else:
-                self._connection = await aiomysql.connect(db=self.database, **self.template)
+            self._connection = await aiomysql.connect(**template)
             self.log.debug(
-                'Created connection with params: user=%s database=%s host=%s port=%s',
-                self.user, self.database, self.host, self.port
+                'Created connection %s with params: user=%s database=%s host=%s port=%s',
+                self._connection, self.user, self.database, self.host, self.port
             )
         except pymysql.err.OperationalError:
             raise DBConnectionError(
@@ -77,47 +74,34 @@ class MySQLClient(BaseDBAsyncClient):
             )
 
     async def close(self) -> None:
-        if self._db_pool:
-            self._db_pool.close()
         if self._connection:
             self._connection.close()
+            self.log.debug(
+                'Closed connection %s with params: user=%s database=%s host=%s port=%s',
+                self._connection, self.user, self.database, self.host, self.port
+            )
+            self._connection = None
 
     async def db_create(self) -> None:
-        single_connection = self.single_connection
-        self.single_connection = True
-        self._connection = await aiomysql.connect(
-            **self.template
-        )
+        await self.create_connection(with_db=False)
         await self.execute_script(
             'CREATE DATABASE {}'.format(self.database)
         )
-        self._connection.close()  # type: ignore
-        self.single_connection = single_connection
+        await self.close()
 
     async def db_delete(self) -> None:
-        single_connection = self.single_connection
-        self.single_connection = True
-        self._connection = await aiomysql.connect(
-            **self.template
-        )
+        await self.create_connection(with_db=False)
         try:
             await self.execute_script('DROP DATABASE {}'.format(self.database))
-        except pymysql.err.DatabaseError:
+        except pymysql.err.DatabaseError:  # pragma: nocoverage
             pass
-        self._connection.close()  # type: ignore
-        self.single_connection = single_connection
+        await self.close()
 
-    def acquire_connection(self):
-        if not self.single_connection:
-            return self._db_pool.acquire()
-        else:
-            return ConnectionWrapper(self._connection)
+    def acquire_connection(self) -> ConnectionWrapper:
+        return ConnectionWrapper(self._connection)
 
     def _in_transaction(self):
-        if self.single_connection:
-            return self._transaction_class(self.connection_name, connection=self._connection)
-        else:
-            return self._transaction_class(self.connection_name, pool=self._db_pool)
+        return self._transaction_class(self.connection_name, self._connection)
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
@@ -143,43 +127,17 @@ class MySQLClient(BaseDBAsyncClient):
             async with connection.cursor() as cursor:
                 await cursor.execute(query)
 
-    async def get_single_connection(self):
-        if self.single_connection:
-            return self._single_connection_class(self.connection_name, self._connection, self)
-        else:
-            connection = await self._db_pool._acquire()
-            return self._single_connection_class(self.connection_name, connection, self)
-
-    async def release_single_connection(self, single_connection):
-        if not self.single_connection:
-            await self._db_pool.release(single_connection.connection)
-
 
 class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
-    def __init__(self, connection_name, pool=None, connection=None):
-        if pool and connection:
-            raise ConfigurationError('You must pass either connection or pool')
+    def __init__(self, connection_name, connection):
         self.connection_name = connection_name
         self._connection = connection
         self.log = logging.getLogger('db_client')
-        self._pool = pool
-        self.single_connection = True
-        self._single_connection_class = type(
-            'SingleConnectionWrapper', (SingleConnectionWrapper, self.__class__), {}
-        )
         self._transaction_class = self.__class__
         self._finalized = False
         self._old_context_value = None
 
-    def acquire_connection(self):
-        return ConnectionWrapper(self._connection)
-
-    async def _get_connection(self):
-        return await self._pool._acquire()
-
     async def start(self):
-        if not self._connection:
-            self._connection = await self._get_connection()
         await self._connection.begin()
         current_transaction = current_transaction_map[self.connection_name]
         self._old_context_value = current_transaction.get()
@@ -190,9 +148,6 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
             raise TransactionManagementError('Transaction already finalised')
         self._finalized = True
         await self._connection.commit()
-        if self._pool:
-            await self._pool.release(self._connection)
-            self._connection = None
         current_transaction_map[self.connection_name].set(self._old_context_value)
 
     async def rollback(self):
@@ -200,7 +155,4 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
             raise TransactionManagementError('Transaction already finalised')
         self._finalized = True
         await self._connection.rollback()
-        if self._pool:
-            await self._pool.release(self._connection)
-            self._connection = None
         current_transaction_map[self.connection_name].set(self._old_context_value)

@@ -49,7 +49,6 @@ class TestConfigGenerator(test.SimpleTestCase):
             'engine': 'tortoise.backends.sqlite',
             'credentials': {
                 'file_path': file_path,
-                'single_connection': True,
             }
         })
 
@@ -101,7 +100,6 @@ class TestConfigGenerator(test.SimpleTestCase):
                 'password': '',
                 'port': '5432',
                 'user': 'postgres',
-                'single_connection': True,
             }
         })
 
@@ -149,7 +147,6 @@ class TestConfigGenerator(test.SimpleTestCase):
                 'password': '',
                 'port': '3306',
                 'user': 'root',
-                'single_connection': True,
             }
         })
 
@@ -215,7 +212,6 @@ class TestConfigGenerator(test.SimpleTestCase):
                 'models': {
                     'credentials': {
                         'file_path': '/some/test.sqlite',
-                        'single_connection': True
                     },
                     'engine': 'tortoise.backends.sqlite'
                 }

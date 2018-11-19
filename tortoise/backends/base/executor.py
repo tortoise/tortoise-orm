@@ -15,13 +15,11 @@ class BaseExecutor:
     def __init__(self, model, db=None, prefetch_map=None, prefetch_queries=None):
         self.model = model
         self.db = db
-        self.connection = None
         self.prefetch_map = prefetch_map if prefetch_map else {}
         self._prefetch_queries = prefetch_queries if prefetch_queries else {}
 
     async def execute_select(self, query, custom_fields=None):
-        self.connection = await self.db.get_single_connection()
-        raw_results = await self.connection.execute_query(str(query))
+        raw_results = await self.db.execute_query(str(query))
         instance_list = []
         for row in raw_results:
             instance = self.model(**row)
@@ -30,8 +28,6 @@ class BaseExecutor:
                     setattr(instance, field, row[field])
             instance_list.append(instance)
         await self._execute_prefetch_queries(instance_list)
-        await self.db.release_single_connection(self.connection)
-        self.connection = None
         return instance_list
 
     def _prepare_insert_columns(self):
@@ -60,7 +56,6 @@ class BaseExecutor:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, instance):
-        self.connection = await self.db.get_single_connection()
         key = '{}:{}'.format(self.db.connection_name, self.model._meta.table)
         if key not in INSERT_CACHE:
             regular_columns, columns = self._prepare_insert_columns()
@@ -73,15 +68,12 @@ class BaseExecutor:
             instance=instance,
             regular_columns=regular_columns,
         )
-        instance.id = await self.connection.execute_insert(query, values)
-        await self.db.release_single_connection(self.connection)
-        self.connection = None
+        instance.id = await self.db.execute_insert(query, values)
         return instance
 
     async def execute_update(self, instance):
-        self.connection = await self.db.get_single_connection()
         table = Table(self.model._meta.table)
-        query = self.connection.query_class.update(table)
+        query = self.db.query_class.update(table)
         for field, db_field in self.model._meta.fields_db_projection.items():
             field_object = self.model._meta.fields_map[field]
             if not field_object.generated:
@@ -90,9 +82,7 @@ class BaseExecutor:
                     self._field_to_db(field_object, getattr(instance, field), instance)
                 )
         query = query.where(table.id == instance.id)
-        await self.connection.execute_query(str(query))
-        await self.db.release_single_connection(self.connection)
-        self.connection = None
+        await self.db.execute_query(str(query))
         return instance
 
     async def execute_delete(self, instance):
@@ -133,7 +123,7 @@ class BaseExecutor:
 
         through_table = Table(field_object.through)
 
-        subquery = self.connection.query_class.from_(through_table).select(
+        subquery = self.db.query_class.from_(through_table).select(
             getattr(through_table, field_object.backward_key).as_('_backward_relation_key'),
             getattr(through_table, field_object.forward_key).as_('_forward_relation_key')
         ).where(getattr(through_table, field_object.backward_key).isin(instance_id_set))
@@ -145,12 +135,12 @@ class BaseExecutor:
             subquery._backward_relation_key.as_('_backward_relation_key'),
             *[getattr(related_query_table, field).as_(field) for field in related_query.fields]
         )
-        raw_results = await self.connection.execute_query(str(query))
+        raw_results = await self.db.execute_query(str(query))
         relations = {(e['_backward_relation_key'], e['id']) for e in raw_results}
         related_object_list = [related_query.model(**e) for e in raw_results]
         await self.__class__(
             model=related_query.model,
-            db=self.connection,
+            db=self.db,
             prefetch_map=related_query._prefetch_map,
         ).fetch_for_list(related_object_list)
         related_object_map = {e.id: e for e in related_object_list}
@@ -188,7 +178,7 @@ class BaseExecutor:
             else:
                 related_model_field = self.model._meta.fields_map.get(field)
                 related_model = related_model_field.type
-                related_query = related_model.all().using_db(self.connection)
+                related_query = related_model.all().using_db(self.db)
             if forwarded_prefetches:
                 related_query = related_query.prefetch_related(*forwarded_prefetches)
             self._prefetch_queries[field] = related_query
@@ -209,7 +199,6 @@ class BaseExecutor:
         return instance_list
 
     async def fetch_for_list(self, instance_list, *args):
-        self.connection = await self.db.get_single_connection()
         self.prefetch_map = {}
         for relation in args:
             relation_split = relation.split('__')
@@ -223,8 +212,6 @@ class BaseExecutor:
             if forwarded_prefetch:
                 self.prefetch_map[first_level_field].add(forwarded_prefetch)
         await self._execute_prefetch_queries(instance_list)
-        await self.db.release_single_connection(self.connection)
-        self.connection = None
         return instance_list
 
     @classmethod

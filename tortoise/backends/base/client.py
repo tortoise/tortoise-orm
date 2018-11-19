@@ -12,15 +12,11 @@ class BaseDBAsyncClient:
     executor_class = BaseExecutor
     schema_generator = BaseSchemaGenerator
 
-    def __init__(self, connection_name: str, single_connection: bool = True, **kwargs) -> None:
+    def __init__(self, connection_name: str, **kwargs) -> None:
         self.log = logging.getLogger('db_client')
-        self.single_connection = single_connection
         self.connection_name = connection_name
-        self._single_connection_class = type(
-            'SingleConnectionWrapper', (SingleConnectionWrapper, self.__class__), {}
-        )
 
-    async def create_connection(self) -> None:
+    async def create_connection(self, with_db: bool) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def close(self) -> None:
@@ -47,12 +43,6 @@ class BaseDBAsyncClient:
     async def execute_script(self, query: str) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def get_single_connection(self) -> 'BaseDBAsyncClient':
-        raise NotImplementedError()  # pragma: nocoverage
-
-    async def release_single_connection(self, single_connection: 'BaseDBAsyncClient') -> None:
-        raise NotImplementedError()  # pragma: nocoverage
-
 
 class ConnectionWrapper:
     __slots__ = ('connection', )
@@ -65,35 +55,6 @@ class ConnectionWrapper:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
-
-
-class SingleConnectionWrapper(BaseDBAsyncClient):
-    # pylint: disable=W0223,W0231
-
-    def __init__(self, connection_name: str, connection, closing_callback=None) -> None:
-        self.log = logging.getLogger('db_client')
-        self.connection_name = connection_name
-        self.connection = connection
-        self.single_connection = True
-        self.closing_callback = closing_callback
-
-    def acquire_connection(self) -> ConnectionWrapper:
-        return ConnectionWrapper(self.connection)
-
-    async def get_single_connection(self) -> 'SingleConnectionWrapper':
-        # Real class object is generated in runtime, so we use __class__ reference
-        # instead of using SingleConnectionWrapper directly
-        return self.__class__(self.connection_name, self.connection, self)
-
-    async def release_single_connection(self, single_connection: 'BaseDBAsyncClient') -> None:
-        return
-
-    async def __aenter__(self):
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self.closing_callback:
-            await self.closing_callback(self)
 
 
 class BaseTransactionWrapper:
