@@ -85,7 +85,7 @@ def initializer(modules: List[str], db_url: Optional[str] = None,
     global _TORTOISE_TEST_DB
     global _MODULES
     _MODULES = modules
-    if db_url is not None:
+    if db_url is not None:  # pragma: nobranch
         _TORTOISE_TEST_DB = db_url
     _CONFIG = getDBConfig(
         app_label='models',
@@ -123,7 +123,7 @@ def env_initializer() -> None:
     """
     modules = str(_os.environ.get('TORTOISE_TEST_MODULES', 'tortoise.tests.testmodels')).split(',')
     db_url = _os.environ.get('TORTOISE_TEST_DB', 'sqlite://:memory:')
-    if not modules:
+    if not modules:  # pragma: nocoverage
         raise Exception('TORTOISE_TEST_MODULES envvar not defined')
     initializer(modules, db_url=db_url)
 
@@ -148,7 +148,7 @@ class SimpleTestCase(_TestCase):
         if self.use_default_loop:
             self.loop = _LOOP
             loop = None
-        else:
+        else:  # pragma: nocoverage
             loop = self.loop = asyncio.new_event_loop()
 
         policy = _Policy(asyncio.get_event_loop_policy(),
