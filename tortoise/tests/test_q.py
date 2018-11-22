@@ -64,11 +64,11 @@ class TestQ(test.TestCase):
 
     def test_q_compound_or_notq(self):
         with self.assertRaisesRegex(OperationalError, 'OR operation requires a Q node'):
-            Q() | 2
+            Q() | 2  # pylint: disable=W0106
 
     def test_q_compound_and_notq(self):
         with self.assertRaisesRegex(OperationalError, 'AND operation requires a Q node'):
-            Q() & 2
+            Q() & 2  # pylint: disable=W0106
 
     def test_q_both(self):
         with self.assertRaisesRegex(OperationalError,
