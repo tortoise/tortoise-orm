@@ -48,7 +48,7 @@ def getDBConfig(app_label: str, modules: List[str]) -> dict:
     )
 
 
-async def _init_db(config):
+async def _init_db(config: dict) -> None:
     try:
         await Tortoise.init(config)
         await Tortoise._drop_databases()
@@ -59,7 +59,7 @@ async def _init_db(config):
     await Tortoise.generate_schemas()
 
 
-def _restore_default():
+def _restore_default() -> None:
     Tortoise.apps = {}
     Tortoise._connections = _CONNECTIONS.copy()
     for name in Tortoise._connections.keys():
@@ -85,7 +85,7 @@ def initializer(modules: List[str], db_url: Optional[str] = None,
     global _TORTOISE_TEST_DB
     global _MODULES
     _MODULES = modules
-    if db_url is not None:
+    if db_url is not None:  # pragma: nobranch
         _TORTOISE_TEST_DB = db_url
     _CONFIG = getDBConfig(
         app_label='models',
@@ -123,7 +123,7 @@ def env_initializer() -> None:
     """
     modules = str(_os.environ.get('TORTOISE_TEST_MODULES', 'tortoise.tests.testmodels')).split(',')
     db_url = _os.environ.get('TORTOISE_TEST_DB', 'sqlite://:memory:')
-    if not modules:
+    if not modules:  # pragma: nocoverage
         raise Exception('TORTOISE_TEST_MODULES envvar not defined')
     initializer(modules, db_url=db_url)
 
@@ -144,11 +144,11 @@ class SimpleTestCase(_TestCase):
     """
     use_default_loop = True
 
-    def _init_loop(self):
+    def _init_loop(self) -> None:
         if self.use_default_loop:
             self.loop = _LOOP
             loop = None
-        else:
+        else:  # pragma: nocoverage
             loop = self.loop = asyncio.new_event_loop()
 
         policy = _Policy(asyncio.get_event_loop_policy(),
@@ -158,7 +158,7 @@ class SimpleTestCase(_TestCase):
 
         self.loop = self._patch_loop(self.loop)
 
-    async def _setUpDB(self):
+    async def _setUpDB(self) -> None:
         pass
 
     async def _tearDownDB(self) -> None:
@@ -210,7 +210,7 @@ class IsolatedTestCase(SimpleTestCase):
     """
     # pylint: disable=C0103,W0201
 
-    async def _setUpDB(self):
+    async def _setUpDB(self) -> None:
         config = getDBConfig(
             app_label='models',
             modules=_MODULES,
@@ -232,7 +232,7 @@ class TestCase(SimpleTestCase):
     separate transaction that will rollback on finish.
     """
 
-    async def _setUpDB(self):
+    async def _setUpDB(self) -> None:
         _restore_default()
         self.transaction = await start_transaction()  # pylint: disable=W0201
 

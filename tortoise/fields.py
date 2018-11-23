@@ -2,7 +2,7 @@ import datetime
 import functools
 import json
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import ciso8601
 from pypika import Table
@@ -48,12 +48,12 @@ class Field:
         self.default = default
         self.null = null
         self.unique = unique
-        self.model_field_name = None  # Type: Optional[str]
+        self.model_field_name = ''  # Type: str
 
-    def to_db_value(self, value, instance):
+    def to_db_value(self, value: Any, instance) -> Any:
         return value
 
-    def to_python_value(self, value):
+    def to_python_value(self, value: Any) -> Any:
         if value is None or isinstance(value, self.type):
             return value
         return self.type(value)
@@ -167,12 +167,12 @@ class DatetimeField(Field):
         self.auto_now = auto_now
         self.auto_now_add = auto_now | auto_now_add
 
-    def to_python_value(self, value):
+    def to_python_value(self, value: Any) -> datetime.datetime:
         if value is None or isinstance(value, self.type):
             return value
         return ciso8601.parse_datetime(value)
 
-    def to_db_value(self, value, instance):
+    def to_db_value(self, value: datetime.datetime, instance) -> datetime.datetime:
         if self.auto_now:
             value = datetime.datetime.utcnow()
             setattr(instance, self.model_field_name, value)
@@ -193,7 +193,7 @@ class DateField(Field):
     def __init__(self, **kwargs) -> None:
         super().__init__(datetime.date, **kwargs)
 
-    def to_python_value(self, value):
+    def to_python_value(self, value: Any) -> datetime.date:
         if value is None or isinstance(value, self.type):
             return value
         return ciso8601.parse_datetime(value).date()
@@ -227,12 +227,13 @@ class JSONField(Field):
         self.encoder = encoder
         self.decoder = decoder
 
-    def to_db_value(self, value, instance):
+    def to_db_value(self, value: Optional[Union[dict, list]], instance) -> Optional[str]:
         if value is None:
             return value
         return self.encoder(value)
 
-    def to_python_value(self, value):
+    def to_python_value(self, value: Optional[Union[str, dict, list]]
+                        ) -> Optional[Union[dict, list]]:
         if value is None or isinstance(value, self.type):
             return value
         return self.decoder(value)
@@ -322,7 +323,7 @@ class ManyToManyField(Field):
         through: Optional[str] = None,
         forward_key: Optional[str] = None,
         backward_key: str = '',
-        related_name: Optional[str] = None,
+        related_name: str = '',
         **kwargs
     ) -> None:
         super().__init__(**kwargs)
@@ -330,19 +331,17 @@ class ManyToManyField(Field):
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name = model_name
         self.related_name = related_name
-        self.forward_key = forward_key if forward_key else '{}_id'.format(
-            model_name.split(".")[1].lower()
-        )
+        self.forward_key = forward_key or '{}_id'.format(model_name.split(".")[1].lower())
         self.backward_key = backward_key
         self.through = through
         self._generated = False
 
 
-class BackwardFKRelation:
+class BackwardFKRelation(Field):
     __slots__ = ('type', 'relation_field')
 
-    def __init__(self, type, relation_field, **kwargs):  # pylint: disable=W0622
-        self.type = type
+    def __init__(self, type, relation_field: str) -> None:  # pylint: disable=W0622
+        super().__init__(type=type)
         self.relation_field = relation_field
 
 
@@ -350,13 +349,13 @@ class RelationQueryContainer:
     __slots__ = ('model', 'relation_field', 'instance', '_fetched', '_custom_query',
                  'related_objects')
 
-    def __init__(self, model, relation_field, instance, is_new):
+    def __init__(self, model, relation_field: str, instance, is_new: bool) -> None:
         self.model = model
         self.relation_field = relation_field
         self.instance = instance
         self._fetched = is_new
         self._custom_query = False
-        self.related_objects = []
+        self.related_objects = []  # type: list
 
     @property
     def _query(self):
@@ -365,7 +364,7 @@ class RelationQueryContainer:
                                    " calling related queries")
         return self.model.filter(**{self.relation_field: self.instance.id})
 
-    def __contains__(self, item):
+    def __contains__(self, item) -> bool:
         if not self._fetched:
             raise NoValuesFetched(
                 'No values were fetched for this relation, first use .fetch_related()'
@@ -379,14 +378,14 @@ class RelationQueryContainer:
             )
         return self.related_objects.__iter__()
 
-    def __len__(self):
+    def __len__(self) -> int:
         if not self._fetched:
             raise NoValuesFetched(
                 'No values were fetched for this relation, first use .fetch_related()'
             )
         return len(self.related_objects)
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         if not self._fetched:
             raise NoValuesFetched(
                 'No values were fetched for this relation, first use .fetch_related()'
@@ -400,7 +399,7 @@ class RelationQueryContainer:
             )
         return self.related_objects[item]
 
-    def __aiter__(self):
+    def __aiter__(self) -> QueryAsyncIterator:
         async def fetched_callback(iterator_wrapper):
             self._fetched = True
             self.related_objects = iterator_wrapper.sequence
@@ -425,7 +424,7 @@ class RelationQueryContainer:
     def distinct(self, *args, **kwargs):
         return self._query.distinct(*args, **kwargs)
 
-    def _set_result_for_query(self, sequence):
+    def _set_result_for_query(self, sequence) -> None:
         # TODO: What does this do?
         for item in sequence:
             if not isinstance(item, self.model):
@@ -438,13 +437,13 @@ class RelationQueryContainer:
 class ManyToManyRelationManager(RelationQueryContainer):
     __slots__ = ('field', 'model', 'instance')
 
-    def __init__(self, model, instance, m2m_field, is_new):
+    def __init__(self, model, instance, m2m_field: ManyToManyField, is_new: bool) -> None:
         super().__init__(model, m2m_field.related_name, instance, is_new)
         self.field = m2m_field
         self.model = m2m_field.type
         self.instance = instance
 
-    async def add(self, *instances, using_db=None):
+    async def add(self, *instances, using_db=None) -> None:
         if not instances:
             return
         db = using_db if using_db else self.model._meta.db
@@ -479,7 +478,7 @@ class ManyToManyRelationManager(RelationQueryContainer):
         if insert_is_required:
             await db.execute_query(str(query))
 
-    async def clear(self, using_db=None):
+    async def clear(self, using_db=None) -> None:
         db = using_db if using_db else self.model._meta.db
         through_table = Table(self.field.through)
         query = db.query_class.from_(through_table).where(
@@ -487,7 +486,7 @@ class ManyToManyRelationManager(RelationQueryContainer):
         ).delete()
         await db.execute_query(str(query))
 
-    async def remove(self, *instances, using_db=None):
+    async def remove(self, *instances, using_db=None) -> None:
         db = using_db if using_db else self.model._meta.db
         if not instances:
             raise OperationalError('remove() called on no instances')

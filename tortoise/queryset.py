@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Any, Dict, List, Optional, Set, Tuple  # noqa
+from typing import Any, Dict, Generator, List, Optional, Set, Tuple  # noqa
 
 from pypika import JoinType, Order, Query, Table  # noqa
 from pypika.functions import Count
@@ -30,7 +30,8 @@ class AwaitableQuery:
             param['operator'](getattr(param['table'], param['field']), value)
         )
 
-    def resolve_filters(self, model, filter_kwargs, q_objects, having, annotations, custom_filters):
+    def resolve_filters(self, model, filter_kwargs, q_objects, having, annotations, custom_filters
+                        ) -> None:
         table = Table(model._meta.table)
         for node in q_objects:
             criterion, required_joins = node.resolve_for_model(model)
@@ -67,7 +68,7 @@ class AwaitableQuery:
                 operator(aggregation_info['field'], value)
             )
 
-    def _join_table_by_field(self, table, related_field_name, related_field):
+    def _join_table_by_field(self, table, related_field_name, related_field) -> None:
         if isinstance(related_field, fields.ManyToManyField):
             related_table = Table(related_field.type._meta.table)
             through_table = Table(related_field.through)
@@ -97,7 +98,7 @@ class AwaitableQuery:
                 ).on(related_table.id == getattr(table, related_id_field_name))
                 self._joined_tables.append(related_table)
 
-    def resolve_ordering(self, model, orderings, annotations):
+    def resolve_ordering(self, model, orderings, annotations) -> None:
         table = Table(model._meta.table)
         for ordering in orderings:
             field_name = ordering[0]
@@ -284,7 +285,8 @@ class QuerySet(AwaitableQuery):
             queryset._available_custom_filters.update(get_filters_for_field(key, None, key))
         return queryset
 
-    def values_list(self, *fields: str, flat: bool = False):  # pylint: disable=W0621
+    def values_list(self, *fields: str, flat: bool = False
+                    ) -> 'ValuesListQuery':  # pylint: disable=W0621
         """
         Make QuerySet returns list of tuples for given args instead of objects.
         If ```flat=True`` and only one arg is passed can return flat list.
@@ -305,7 +307,7 @@ class QuerySet(AwaitableQuery):
             custom_filters=self._available_custom_filters,
         )
 
-    def values(self, *args: str, **kwargs: str):
+    def values(self, *args: str, **kwargs: str) -> 'ValuesQuery':
         """
         Make QuerySet return dicts instead of objects.
         """
@@ -335,7 +337,7 @@ class QuerySet(AwaitableQuery):
             custom_filters=self._available_custom_filters,
         )
 
-    def delete(self):
+    def delete(self) -> 'DeleteQuery':
         """
         Delete all objects in QuerySet.
         """
@@ -349,7 +351,7 @@ class QuerySet(AwaitableQuery):
             custom_filters=self._available_custom_filters,
         )
 
-    def update(self, **kwargs):
+    def update(self, **kwargs) -> 'UpdateQuery':
         """
         Update all objects in QuerySet with given kwargs.
         """
@@ -364,7 +366,7 @@ class QuerySet(AwaitableQuery):
             custom_filters=self._available_custom_filters,
         )
 
-    def count(self):
+    def count(self) -> 'CountQuery':
         """
         Return count of objects in queryset instead of objects.
         """
@@ -438,7 +440,7 @@ class QuerySet(AwaitableQuery):
         queryset._db = _db
         return queryset
 
-    def _resolve_annotate(self):
+    def _resolve_annotate(self) -> None:
         if not self._annotations:
             return
         table = Table(self.model._meta.table)
@@ -449,7 +451,7 @@ class QuerySet(AwaitableQuery):
                 self._join_table_by_field(*join)
             self.query = self.query.select(aggregation_info['field'].as_(key))
 
-    def _make_query(self):
+    def _make_query(self) -> Query:
         self.query = self.model._meta.basequery_all_fields
         self._resolve_annotate()
         self.resolve_filters(
@@ -497,17 +499,15 @@ class QuerySet(AwaitableQuery):
         clone = self._clone()
         return clone._execute().__await__()
 
-    def __aiter__(self):
+    def __aiter__(self) -> QueryAsyncIterator:
         return QueryAsyncIterator(self)
 
 
 class UpdateQuery(AwaitableQuery):
     __slots__ = ()
 
-    def __init__(
-        self, model, filter_kwargs, update_kwargs, db, q_objects, annotations, having,
-        custom_filters
-    ):
+    def __init__(self, model, filter_kwargs, update_kwargs, db, q_objects, annotations, having,
+                 custom_filters) -> None:
         super().__init__(model, db)
         table = Table(model._meta.table)
         self.query = self._db.query_class.update(table)
@@ -540,7 +540,8 @@ class UpdateQuery(AwaitableQuery):
 class DeleteQuery(AwaitableQuery):
     __slots__ = ()
 
-    def __init__(self, model, filter_kwargs, db, q_objects, annotations, having, custom_filters):
+    def __init__(self, model, filter_kwargs, db, q_objects, annotations, having, custom_filters
+                 ) -> None:
         super().__init__(model, db)
         self.query = model._meta.basequery
         self.resolve_filters(
@@ -560,7 +561,8 @@ class DeleteQuery(AwaitableQuery):
 class CountQuery(AwaitableQuery):
     __slots__ = ()
 
-    def __init__(self, model, filter_kwargs, db, q_objects, annotations, having, custom_filters):
+    def __init__(self, model, filter_kwargs, db, q_objects, annotations, having, custom_filters
+                 ) -> None:
         super().__init__(model, db)
         table = Table(model._meta.table)
         self.query = model._meta.basequery
@@ -617,7 +619,7 @@ class FieldSelectQuery(AwaitableQuery):
             forwarded_fields='__'.join(forwarded_fields_split[1:]),
         )
 
-    def add_field_to_select_query(self, field, return_as):
+    def add_field_to_select_query(self, field, return_as) -> None:
         table = Table(self.model._meta.table)
         if field in self.model._meta.fields_db_projection:
             db_field = self.model._meta.fields_db_projection[field]
@@ -667,10 +669,8 @@ class FieldSelectQuery(AwaitableQuery):
 class ValuesListQuery(FieldSelectQuery):
     __slots__ = ('flat', 'fields')
 
-    def __init__(
-        self, model, filter_kwargs, db, q_objects, fields_for_select_list, limit, offset, distinct,
-        orderings, flat, annotations, having, custom_filters
-    ):
+    def __init__(self, model, filter_kwargs, db, q_objects, fields_for_select_list, limit, offset,
+                 distinct, orderings, flat, annotations, having, custom_filters) -> None:
         super().__init__(model, db)
         if flat and (len(fields_for_select_list) != 1):
             raise TypeError('You can flat value_list only if contains one field')
@@ -714,10 +714,8 @@ class ValuesListQuery(FieldSelectQuery):
 class ValuesQuery(FieldSelectQuery):
     __slots__ = ('fields_for_select')
 
-    def __init__(
-        self, model, filter_kwargs, db, q_objects, fields_for_select, limit, offset, distinct,
-        orderings, annotations, having, custom_filters
-    ):
+    def __init__(self, model, filter_kwargs, db, q_objects, fields_for_select, limit, offset,
+                 distinct, orderings, annotations, having, custom_filters) -> None:
         super().__init__(model, db)
         self.query = model._meta.basequery
         for returns_as, field in fields_for_select.items():

@@ -27,8 +27,7 @@ class QueryAsyncIterator:
 
 def get_schema_sql(client) -> str:
     generator = client.schema_generator(client)
-    creation_string = generator.get_create_schema_sql()
-    return creation_string
+    return generator.get_create_schema_sql()
 
 
 async def generate_schema_for_client(client) -> None:

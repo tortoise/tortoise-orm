@@ -4,9 +4,10 @@ import json
 import os
 from copy import deepcopy
 from inspect import isclass
-from typing import Dict, List, Optional, Type  # noqa
+from typing import Coroutine, Dict, List, Optional, Type, Union, cast  # noqa
 
 from tortoise import fields
+from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
 from tortoise.exceptions import ConfigurationError  # noqa
 from tortoise.fields import ManyToManyRelationManager  # noqa
@@ -22,16 +23,16 @@ except ImportError:
 
 
 class Tortoise:
-    apps = {}  # type: dict
-    _connections = {}  # type: dict
-    _inited = False
+    apps = {}  # type: Dict[str, Dict[str, Type[Model]]]
+    _connections = {}  # type: Dict[str, BaseDBAsyncClient]
+    _inited = False  # type: bool
 
     @classmethod
-    def get_connection(cls, connection_name):
+    def get_connection(cls, connection_name: str) -> BaseDBAsyncClient:
         return cls._connections[connection_name]
 
     @classmethod
-    def _init_relations(cls):
+    def _init_relations(cls) -> None:
         for app_name, app in cls.apps.items():
             for model_name, model in app.items():
                 if model._meta._inited:
@@ -42,7 +43,7 @@ class Tortoise:
                     model._meta.table = model.__name__.lower()
 
                 for field in model._meta.fk_fields:
-                    field_object = model._meta.fields_map[field]
+                    field_object = cast(fields.ForeignKeyField, model._meta.fields_map[field])
                     reference = field_object.model_name
                     related_app_name, related_model_name = reference.split('.')
                     related_model = cls.apps[related_app_name][related_model_name]
@@ -66,45 +67,46 @@ class Tortoise:
                     related_model._meta.fields.add(backward_relation_name)
 
                 for field in model._meta.m2m_fields:
-                    field_object = model._meta.fields_map[field]
-                    if field_object._generated:
+                    field_mobject = cast(fields.ManyToManyField, model._meta.fields_map[field])
+                    if field_mobject._generated:
                         continue
 
-                    backward_key = field_object.backward_key
+                    backward_key = field_mobject.backward_key
                     if not backward_key:
                         backward_key = '{}_id'.format(model._meta.table)
-                        field_object.backward_key = backward_key
+                        field_mobject.backward_key = backward_key
 
-                    reference = field_object.model_name
+                    reference = field_mobject.model_name
                     related_app_name, related_model_name = reference.split('.')
                     related_model = cls.apps[related_app_name][related_model_name]
 
-                    field_object.type = related_model
+                    field_mobject.type = related_model
 
-                    backward_relation_name = field_object.related_name
+                    backward_relation_name = field_mobject.related_name
                     if not backward_relation_name:
-                        backward_relation_name = '{}s'.format(model._meta.table)
+                        backward_relation_name = field_mobject.related_name = \
+                            '{}_through'.format(model._meta.table)
                     if backward_relation_name in related_model._meta.fields:
                         raise ConfigurationError(
                             'backward relation "{}" duplicates in model {}'.format(
                                 backward_relation_name, related_model_name))
 
-                    if not field_object.through:
+                    if not field_mobject.through:
                         related_model_table_name = (
                             related_model._meta.table
                             if related_model._meta.table else related_model.__name__.lower()
                         )
 
-                        field_object.through = '{}_{}'.format(
+                        field_mobject.through = '{}_{}'.format(
                             model._meta.table,
                             related_model_table_name,
                         )
 
                     m2m_relation = fields.ManyToManyField(
                         '{}.{}'.format(app_name, model_name),
-                        field_object.through,
-                        forward_key=field_object.backward_key,
-                        backward_key=field_object.forward_key,
+                        field_mobject.through,
+                        forward_key=field_mobject.backward_key,
+                        backward_key=field_mobject.forward_key,
                         related_name=field,
                         type=model
                     )
@@ -114,7 +116,7 @@ class Tortoise:
                         backward_relation_name,
                         m2m_relation,
                     )
-                    model._meta.filters.update(get_m2m_filters(field, field_object))
+                    model._meta.filters.update(get_m2m_filters(field, field_mobject))
                     related_model._meta.filters.update(
                         get_m2m_filters(backward_relation_name, m2m_relation)
                     )
@@ -124,7 +126,7 @@ class Tortoise:
                     related_model._meta.fields.add(backward_relation_name)
 
     @classmethod
-    def _discover_client_class(cls, engine):
+    def _discover_client_class(cls, engine: str) -> BaseDBAsyncClient:
         # Let exception bubble up for transparency
         engine_module = importlib.import_module(engine)
 
@@ -153,14 +155,14 @@ class Tortoise:
         return discovered_models
 
     @classmethod
-    async def _init_connections(cls, connections_config, create_db):
+    async def _init_connections(cls, connections_config: dict, create_db: bool) -> None:
         for name, info in connections_config.items():
             if isinstance(info, str):
                 info = expand_db_url(info)
             client_class = cls._discover_client_class(info.get('engine'))
             db_params = deepcopy(info['credentials'])
             db_params.update({'connection_name': name})
-            connection = client_class(**db_params)
+            connection = client_class(**db_params)  # type: ignore
             if create_db:
                 await connection.db_create()
             await connection.create_connection(with_db=True)
@@ -168,7 +170,7 @@ class Tortoise:
             current_transaction_map[name] = ContextVar(name, default=None)
 
     @classmethod
-    def _init_apps(cls, apps_config):
+    def _init_apps(cls, apps_config: dict) -> None:
         for name, info in apps_config.items():
             try:
                 cls.get_connection(info.get('default_connection', 'default'))
@@ -193,7 +195,7 @@ class Tortoise:
         cls._build_initial_querysets()
 
     @classmethod
-    def _get_config_from_config_file(cls, config_file):
+    def _get_config_from_config_file(cls, config_file: str) -> dict:
         _, extension = os.path.splitext(config_file)
         if extension in ('.yml', '.yaml'):
             import yaml
@@ -211,7 +213,7 @@ class Tortoise:
         return config
 
     @classmethod
-    def _build_initial_querysets(cls):
+    def _build_initial_querysets(cls) -> None:
         for app in cls.apps.values():
             for model in app.values():
                 model._meta.generate_filters()
@@ -318,13 +320,13 @@ class Tortoise:
         cls._inited = True
 
     @classmethod
-    async def close_connections(cls):
+    async def close_connections(cls) -> None:
         for connection in cls._connections.values():
             await connection.close()
         cls._connections = {}
 
     @classmethod
-    async def _reset_apps(cls):
+    async def _reset_apps(cls) -> None:
         for app in cls.apps.values():
             for model in app.values():
                 model._meta.default_connection = None
@@ -358,7 +360,7 @@ class Tortoise:
         await cls._reset_apps()
 
 
-def run_async(coro):
+def run_async(coro: Coroutine) -> None:
     """
     Simple async runner that cleans up DB connections on exit.
     This is meant for simple scripts.

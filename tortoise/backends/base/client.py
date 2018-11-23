@@ -47,13 +47,13 @@ class BaseDBAsyncClient:
 class ConnectionWrapper:
     __slots__ = ('connection', )
 
-    def __init__(self, connection):
+    def __init__(self, connection) -> None:
         self.connection = connection
 
     async def __aenter__(self):
         return self.connection
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         pass
 
 
@@ -71,7 +71,7 @@ class BaseTransactionWrapper:
         await self.start()
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         if exc_type:
             await self.rollback()
         else:

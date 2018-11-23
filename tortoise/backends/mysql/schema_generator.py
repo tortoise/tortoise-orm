@@ -3,8 +3,8 @@ from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
 class MySQLSchemaGenerator(BaseSchemaGenerator):
-    def __init__(self, client, *args, **kwargs):
-        super().__init__(client, *args, **kwargs)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
 
         self.TABLE_CREATE_TEMPLATE = 'CREATE TABLE `{}` ({});'
         self.FIELD_TEMPLATE = '`{name}` {type} {nullable} {unique}'
@@ -22,7 +22,5 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
             fields.TextField: 'TEXT'
         })
 
-        self.client = client
-
-    def _get_primary_key_create_string(self, field_name):
+    def _get_primary_key_create_string(self, field_name: str) -> str:
         return "`{}` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT".format(field_name)

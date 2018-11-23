@@ -27,10 +27,10 @@ class BaseSchemaGenerator:
         fields.JSONField: 'TEXT'
     }
 
-    def __init__(self, client):
+    def __init__(self, client) -> None:
         self.client = client
 
-    def _create_string(self, db_field, field_type, nullable, unique):
+    def _create_string(self, db_field: str, field_type: str, nullable: str, unique: str) -> str:
         # children can override this function to customize thier sql queries
 
         field_creation_string = self.FIELD_TEMPLATE.format(
@@ -42,7 +42,7 @@ class BaseSchemaGenerator:
 
         return field_creation_string
 
-    def _get_primary_key_create_string(self, field_name):
+    def _get_primary_key_create_string(self, field_name: str) -> str:
         # All databases have their unique way for autoincrement,
         # has to implement in children
         raise NotImplementedError()  # pragma: nocoverage
@@ -103,7 +103,7 @@ class BaseSchemaGenerator:
             'm2m_tables': m2m_tables_for_create,
         }
 
-    def get_create_schema_sql(self):
+    def get_create_schema_sql(self) -> str:
         from tortoise import Tortoise
         models_to_create = []
 
@@ -138,5 +138,5 @@ class BaseSchemaGenerator:
         schema_creation_string = ' '.join(ordered_tables_for_create + m2m_tables_to_create)
         return schema_creation_string
 
-    async def generate_from_string(self, creation_string):
+    async def generate_from_string(self, creation_string: str) -> None:
         await self.client.execute_script(creation_string)
