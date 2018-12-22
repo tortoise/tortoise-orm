@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import TypeVar
+from typing import TypeVar, Type
 
 from tortoise import ConfigurationError
 from tortoise.fields import CharField
@@ -13,7 +13,7 @@ class EnumField(CharField):
     to and from a Text representation in the DB.
     """
 
-    def __init__(self, enum_type: T, *args, **kwargs):
+    def __init__(self, enum_type: Type[T], *args, **kwargs):
         super().__init__(128, *args, **kwargs)
         if not issubclass(enum_type, Enum):
             raise ConfigurationError("{} is not a subclass of Enum!".format(enum_type))
