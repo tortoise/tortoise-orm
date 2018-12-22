@@ -9,7 +9,8 @@ T = TypeVar("T")
 
 class EnumField(CharField):
     """
-    An example extension to CharField that serializes Enums to and from a Text representation in the DB.
+    An example extension to CharField that serializes Enums
+    to and from a Text representation in the DB.
     """
 
     def __init__(self, enum_type: T, *args, **kwargs):
@@ -25,4 +26,6 @@ class EnumField(CharField):
         try:
             return self._enum_type(value)
         except Exception:
-            raise ValueError("Database value {} does not exist on Enum {}.".format(value, self._enum_type))
+            raise ValueError(
+                "Database value {} does not exist on Enum {}.".format(value, self._enum_type)
+            )
