@@ -3,9 +3,11 @@ This is the testing Models
 """
 import binascii
 import os
+from enum import Enum
 
 from tortoise import fields
 from tortoise.models import Model
+from tortoise.tests.testfields import EnumField
 
 
 def generate_token():
@@ -154,3 +156,15 @@ class MinRelation(Model):
 
 class NoID(Model):
     name = fields.CharField(max_length=255, null=True)
+
+
+class RacePlacingEnum(Enum):
+    FIRST = "first"
+    SECOND = "second"
+    THIRD = "third"
+
+
+class RaceParticipant(Model):
+    id = fields.IntField(pk=True)
+    first_name = fields.CharField(max_length=64)
+    place = EnumField(RacePlacingEnum, default=RacePlacingEnum.SECOND)
