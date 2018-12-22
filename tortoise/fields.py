@@ -494,15 +494,15 @@ class ManyToManyRelationManager(RelationQueryContainer):
 
         if len(instances) == 1:
             condition = (
-                getattr(through_table, self.field.forward_key) == instances[0].id
-                & getattr(through_table, self.field.backward_key) == self.instance.id
+                (getattr(through_table, self.field.forward_key) == instances[0].id)
+                & (getattr(through_table, self.field.backward_key) == self.instance.id)
             )
         else:
             condition = (
-                getattr(through_table, self.field.backward_key) == self.instance.id
-                & getattr(through_table, self.field.forward_key).isin([
+                (getattr(through_table, self.field.backward_key) == self.instance.id)
+                & (getattr(through_table, self.field.forward_key).isin([
                     i.id for i in instances
-                ])
+                ]))
             )
         query = db.query_class.from_(through_table).where(condition).delete()
         await db.execute_query(str(query))

@@ -169,3 +169,10 @@ class TestQueryset(test.TestCase):
         #     await IntFields.all().order_by('intnum').values_list('intnum', flat=True),
         #     [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
         # )
+
+    async def test_async_iter(self):
+        counter = 0
+        async for _ in IntFields.all():  # noqa
+            counter += 1
+
+        self.assertEqual(await IntFields.all().count(), counter)

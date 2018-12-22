@@ -4,7 +4,7 @@
 Query API
 =========
 
-Be sure to check `examples <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples>`_ for better understanding
+Be sure to check `examples <https://github.com/tortoise/tortoise-orm/tree/master/examples>`_ for better understanding
 
 You start your query from your model class:
 
@@ -14,7 +14,8 @@ You start your query from your model class:
 
 There are several method on model itself to start query:
 
-- ``first(*args, **kwargs)`` - create QuerySet with given filters
+- ``filter(*args, **kwargs)`` - create QuerySet with given filters
+- ``exclude(*args, **kwargs)`` - create QuerySet with given excluding filters
 - ``all()`` - create QuerySet without filters
 - ``first()`` - create QuerySet limited to one object and returning instance instead of list
 
@@ -85,6 +86,12 @@ When you need to make ``OR`` query or something a little more challenging you co
         Q(id__in=[event_first.id, event_second.id]) | Q(name='3')
     )
 
+Also, Q objects support negated to generate `NOT` clause in your query
+
+.. code-block:: python3
+
+    not_third_events = await Event.filter(~Q(name='3'))
+
 
 .. _filtering-queries:
 Filtering
@@ -104,7 +111,7 @@ When using ``.filter()`` method you can use number of modifiers to field names t
 - ``lte`` - lower or equals than passed value
 - ``lt`` - lower than passed value
 - ``isnull`` - field is null
-- ``not_isnull``
+- ``not_isnull`` - field is not null
 - ``contains`` - field contains specified substring
 - ``icontains`` - case insensitive ``contains``
 - ``startswith`` - if field starts with value
@@ -124,4 +131,4 @@ Sometimes it is required to fetch only certain related records. You can achieve 
         Prefetch('events', queryset=Event.filter(name='First'))
     ).first()
 
-You can view full example here: `complex_prefetching <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples/complex_prefetching.py>`_
+You can view full example here: `complex_prefetching <https://github.com/tortoise/tortoise-orm/tree/master/examples/complex_prefetching.py>`_

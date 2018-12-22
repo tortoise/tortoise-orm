@@ -479,6 +479,14 @@ class Model(metaclass=ModelMeta):
         return QuerySet(cls).filter(*args, **kwargs)
 
     @classmethod
+    def exclude(cls, *args, **kwargs) -> QuerySet:
+        return QuerySet(cls).exclude(*args, **kwargs)
+
+    @classmethod
+    def annotate(cls, **kwargs) -> QuerySet:
+        return QuerySet(cls).annotate(**kwargs)
+
+    @classmethod
     def all(cls) -> QuerySet:
         return QuerySet(cls)
 

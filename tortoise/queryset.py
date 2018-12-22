@@ -8,7 +8,7 @@ from tortoise import fields
 from tortoise.aggregation import Aggregate
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
-from tortoise.query_utils import Prefetch, Q
+from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
 from tortoise.utils import QueryAsyncIterator
 
 
@@ -21,82 +21,29 @@ class AwaitableQuery:
         self.query = model._meta.basequery  # type: Query
         self._db = db if db else model._meta.db  # type: BaseDBAsyncClient
 
-    def _filter_from_related_table(self, table: Table, param: dict, value: Any) -> None:
-        if param['table'] not in self._joined_tables:
-            self.query = self.query.join(
-                param['table'], how=JoinType.left_outer
-            ).on(table.id == getattr(param['table'], param['backward_key']))
-        self.query = self.query.where(
-            param['operator'](getattr(param['table'], param['field']), value)
-        )
-
-    def resolve_filters(self, model, filter_kwargs, q_objects, having, annotations, custom_filters
-                        ) -> None:
-        table = Table(model._meta.table)
+    def resolve_filters(self, model, q_objects, annotations, custom_filters) -> None:
+        modifier = QueryModifier()
         for node in q_objects:
-            criterion, required_joins = node.resolve_for_model(model)
-            for join in required_joins:
-                if join[0] not in self._joined_tables:
-                    self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
-                    self._joined_tables.append(join[0])
-            self.query = self.query.where(criterion)
-        for key, value in filter_kwargs.items():
-            param = model._meta.get_filter(key)
-            if param.get('table'):
-                self._filter_from_related_table(table, param, value)
-            else:
-                field_object = model._meta.fields_map[param['field']]
-                encoded_value = (
-                    param['value_encoder'](value, model)
-                    if param.get('value_encoder')
-                    else self._db.executor_class._field_to_db(field_object, value, model)
-                )
-                self.query = self.query.where(
-                    param['operator'](getattr(table, param['field']), encoded_value)
-                )
-        for key, value in having.items():
-            having_info = custom_filters[key]
-            aggregation = annotations[having_info['field']]
-            aggregation_info = aggregation.resolve_for_model(self.model)
-            operator = having_info['operator']
-            overridden_operator = self.model._meta.db.executor_class.get_overridden_filter_func(
-                filter_func=operator,
-            )
-            if overridden_operator:
-                operator = overridden_operator
-            self.query = self.query.having(
-                operator(aggregation_info['field'], value)
-            )
+            modifier &= node.resolve(model, annotations, custom_filters)
+
+        where_criterion, joins, having_criterion = modifier.get_query_modifiers()
+        for join in joins:
+            if join[0] not in self._joined_tables:
+                self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
+                self._joined_tables.append(join[0])
+
+        if where_criterion:
+            self.query = self.query.where(where_criterion)
+
+        if having_criterion:
+            self.query = self.query.having(having_criterion)
 
     def _join_table_by_field(self, table, related_field_name, related_field) -> None:
-        if isinstance(related_field, fields.ManyToManyField):
-            related_table = Table(related_field.type._meta.table)
-            through_table = Table(related_field.through)
-            if through_table not in self._joined_tables:
-                self.query = self.query.join(
-                    through_table, how=JoinType.left_outer
-                ).on(table.id == getattr(through_table, related_field.backward_key))
-                self._joined_tables.append(through_table)
-            if related_table not in self._joined_tables:
-                self.query = self.query.join(
-                    related_table, how=JoinType.left_outer
-                ).on(getattr(through_table, related_field.forward_key) == related_table.id)
-                self._joined_tables.append(related_table)
-        elif isinstance(related_field, fields.BackwardFKRelation):
-            related_table = Table(related_field.type._meta.table)
-            if related_table not in self._joined_tables:
-                self.query = self.query.join(
-                    related_table, how=JoinType.left_outer
-                ).on(table.id == getattr(related_table, related_field.relation_field))
-                self._joined_tables.append(related_table)
-        else:
-            related_table = Table(related_field.type._meta.table)
-            if related_table not in self._joined_tables:
-                related_id_field_name = '{}_id'.format(related_field_name)
-                self.query = self.query.join(
-                    related_table, how=JoinType.left_outer
-                ).on(related_table.id == getattr(table, related_id_field_name))
-                self._joined_tables.append(related_table)
+        joins = _get_joins_for_related_field(table, related_field, related_field_name)
+        for join in joins:
+            if join[0] not in self._joined_tables:
+                self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
+                self._joined_tables.append(join[0])
 
     def resolve_ordering(self, model, orderings, annotations) -> None:
         table = Table(model._meta.table)
@@ -104,7 +51,7 @@ class AwaitableQuery:
             field_name = ordering[0]
             if field_name in model._meta.fetch_fields:
                 raise FieldError(
-                    "Filtering by relation is not possible filter by nested field of related model"
+                    "Filtering by relation is not possible. Filter by nested field of related model"
                 )
             elif field_name.split('__')[0] in model._meta.fetch_fields:
                 related_field_name = field_name.split('__')[0]
@@ -115,7 +62,7 @@ class AwaitableQuery:
                 )
             elif field_name in annotations:
                 aggregation = annotations[field_name]
-                aggregation_info = aggregation.resolve_for_model(self.model)
+                aggregation_info = aggregation.resolve(self.model)
                 self.query = self.query.orderby(aggregation_info['field'], order=ordering[1])
             else:
                 if field_name not in model._meta.fields:
@@ -137,8 +84,8 @@ class AwaitableQuery:
 class QuerySet(AwaitableQuery):
     __slots__ = ('fields', '_prefetch_map', '_prefetch_queries',
                  '_single', '_get', '_count', '_db', '_limit', '_offset', '_filter_kwargs',
-                 '_orderings', '_q_objects_for_resolve', '_distinct',
-                 '_annotations', '_having', '_available_custom_filters')
+                 '_orderings', '_q_objects', '_distinct',
+                 '_annotations', '_having', '_custom_filters')
 
     def __init__(self, model) -> None:
         super().__init__(model, None)
@@ -153,11 +100,11 @@ class QuerySet(AwaitableQuery):
         self._offset = None  # type: Optional[int]
         self._filter_kwargs = {}  # type: Dict[str, Any]
         self._orderings = []  # type: List[Tuple[str, Any]]
-        self._q_objects_for_resolve = []  # type: List[Q]
+        self._q_objects = []  # type: List[Q]
         self._distinct = False  # type: bool
         self._annotations = {}  # type: Dict[str, Aggregate]
         self._having = {}  # type: Dict[str, Any]
-        self._available_custom_filters = {}  # type: Dict[str, dict]
+        self._custom_filters = {}  # type: Dict[str, dict]
 
     def _clone(self) -> 'QuerySet':
         queryset = QuerySet.__new__(QuerySet)
@@ -175,11 +122,29 @@ class QuerySet(AwaitableQuery):
         queryset._filter_kwargs = copy(self._filter_kwargs)
         queryset._orderings = copy(self._orderings)
         queryset._joined_tables = copy(self._joined_tables)
-        queryset._q_objects_for_resolve = copy(self._q_objects_for_resolve)
+        queryset._q_objects = copy(self._q_objects)
         queryset._distinct = self._distinct
         queryset._annotations = copy(self._annotations)
         queryset._having = copy(self._having)
-        queryset._available_custom_filters = copy(self._available_custom_filters)
+        queryset._custom_filters = copy(self._custom_filters)
+        return queryset
+
+    def _filter_or_exclude(self, *args, negate: bool, **kwargs):
+        queryset = self._clone()
+        for arg in args:
+            if not isinstance(arg, Q):
+                raise TypeError('expected Q objects as args')
+            if negate:
+                queryset._q_objects.append(~arg)
+            else:
+                queryset._q_objects.append(arg)
+
+        for key, value in kwargs.items():
+            if negate:
+                queryset._q_objects.append(~Q(**{key: value}))
+            else:
+                queryset._q_objects.append(Q(**{key: value}))
+
         return queryset
 
     def filter(self, *args, **kwargs) -> 'QuerySet':
@@ -192,27 +157,13 @@ class QuerySet(AwaitableQuery):
 
         You can also pass Q objects to filters as args.
         """
-        queryset = self._clone()
-        for arg in args:
-            if not isinstance(arg, Q):
-                raise TypeError('expected Q objects as args')
-            queryset._q_objects_for_resolve.append(arg)
-        for key, value in kwargs.items():
-            if key in queryset.model._meta.filters:
-                queryset._filter_kwargs[key] = value
-            elif key in self.model._meta.fk_fields:
-                field_object = self.model._meta.fields_map[key]
-                queryset._filter_kwargs[field_object.source_field] = value.id
-            elif key.split('__')[0] in self.model._meta.fetch_fields:
-                queryset._q_objects_for_resolve.append(Q(**{key: value}))
-            elif key in self._available_custom_filters:
-                queryset._having[key] = value
-            else:
-                allowed = sorted(list(self.model._meta.fields | self.model._meta.fetch_fields
-                                      | set(self._available_custom_filters)))
-                raise FieldError("Unknown filter param '{}'. Allowed base values are {}".format(
-                    key, allowed))
-        return queryset
+        return self._filter_or_exclude(negate=False, *args, **kwargs)
+
+    def exclude(self, *args, **kwargs) -> 'QuerySet':
+        """
+        Same as .filter(), but with appends all args with NOT
+        """
+        return self._filter_or_exclude(negate=True, *args, **kwargs)
 
     def order_by(self, *orderings: str) -> 'QuerySet':
         """
@@ -282,7 +233,7 @@ class QuerySet(AwaitableQuery):
                 raise TypeError('value is expected to be Aggregate instance')
             queryset._annotations[key] = aggregation
             from tortoise.models import get_filters_for_field
-            queryset._available_custom_filters.update(get_filters_for_field(key, None, key))
+            queryset._custom_filters.update(get_filters_for_field(key, None, key))
         return queryset
 
     def values_list(self, *fields: str, flat: bool = False
@@ -294,8 +245,7 @@ class QuerySet(AwaitableQuery):
         return ValuesListQuery(
             db=self._db,
             model=self.model,
-            filter_kwargs=self._filter_kwargs,
-            q_objects=self._q_objects_for_resolve,
+            q_objects=self._q_objects,
             flat=flat,
             fields_for_select_list=fields,
             distinct=self._distinct,
@@ -303,8 +253,7 @@ class QuerySet(AwaitableQuery):
             offset=self._offset,
             orderings=self._orderings,
             annotations=self._annotations,
-            having=self._having,
-            custom_filters=self._available_custom_filters,
+            custom_filters=self._custom_filters,
         )
 
     def values(self, *args: str, **kwargs: str) -> 'ValuesQuery':
@@ -325,16 +274,14 @@ class QuerySet(AwaitableQuery):
         return ValuesQuery(
             db=self._db,
             model=self.model,
-            filter_kwargs=self._filter_kwargs,
-            q_objects=self._q_objects_for_resolve,
+            q_objects=self._q_objects,
             fields_for_select=fields_for_select,
             distinct=self._distinct,
             limit=self._limit,
             offset=self._offset,
             orderings=self._orderings,
             annotations=self._annotations,
-            having=self._having,
-            custom_filters=self._available_custom_filters,
+            custom_filters=self._custom_filters,
         )
 
     def delete(self) -> 'DeleteQuery':
@@ -344,11 +291,9 @@ class QuerySet(AwaitableQuery):
         return DeleteQuery(
             db=self._db,
             model=self.model,
-            filter_kwargs=self._filter_kwargs,
-            q_objects=self._q_objects_for_resolve,
+            q_objects=self._q_objects,
             annotations=self._annotations,
-            having=self._having,
-            custom_filters=self._available_custom_filters,
+            custom_filters=self._custom_filters,
         )
 
     def update(self, **kwargs) -> 'UpdateQuery':
@@ -358,12 +303,10 @@ class QuerySet(AwaitableQuery):
         return UpdateQuery(
             db=self._db,
             model=self.model,
-            filter_kwargs=self._filter_kwargs,
             update_kwargs=kwargs,
-            q_objects=self._q_objects_for_resolve,
+            q_objects=self._q_objects,
             annotations=self._annotations,
-            having=self._having,
-            custom_filters=self._available_custom_filters,
+            custom_filters=self._custom_filters,
         )
 
     def count(self) -> 'CountQuery':
@@ -373,11 +316,9 @@ class QuerySet(AwaitableQuery):
         return CountQuery(
             db=self._db,
             model=self.model,
-            filter_kwargs=self._filter_kwargs,
-            q_objects=self._q_objects_for_resolve,
+            q_objects=self._q_objects,
             annotations=self._annotations,
-            having=self._having,
-            custom_filters=self._available_custom_filters,
+            custom_filters=self._custom_filters,
         )
 
     def all(self) -> 'QuerySet':
@@ -446,7 +387,7 @@ class QuerySet(AwaitableQuery):
         table = Table(self.model._meta.table)
         self.query = self.query.groupby(table.id)
         for key, aggregate in self._annotations.items():
-            aggregation_info = aggregate.resolve_for_model(self.model)
+            aggregation_info = aggregate.resolve(self.model)
             for join in aggregation_info['joins']:
                 self._join_table_by_field(*join)
             self.query = self.query.select(aggregation_info['field'].as_(key))
@@ -456,11 +397,9 @@ class QuerySet(AwaitableQuery):
         self._resolve_annotate()
         self.resolve_filters(
             model=self.model,
-            filter_kwargs=self._filter_kwargs,
-            q_objects=self._q_objects_for_resolve,
+            q_objects=self._q_objects,
             annotations=self._annotations,
-            having=self._having,
-            custom_filters=self._available_custom_filters,
+            custom_filters=self._custom_filters,
         )
         if self._limit:
             self.query = self.query.limit(self._limit)
@@ -506,17 +445,14 @@ class QuerySet(AwaitableQuery):
 class UpdateQuery(AwaitableQuery):
     __slots__ = ()
 
-    def __init__(self, model, filter_kwargs, update_kwargs, db, q_objects, annotations, having,
-                 custom_filters) -> None:
+    def __init__(self, model, update_kwargs, db, q_objects, annotations, custom_filters) -> None:
         super().__init__(model, db)
         table = Table(model._meta.table)
         self.query = self._db.query_class.update(table)
         self.resolve_filters(
             model=model,
-            filter_kwargs=filter_kwargs,
             q_objects=q_objects,
             annotations=annotations,
-            having=having,
             custom_filters=custom_filters
         )
 
@@ -540,16 +476,13 @@ class UpdateQuery(AwaitableQuery):
 class DeleteQuery(AwaitableQuery):
     __slots__ = ()
 
-    def __init__(self, model, filter_kwargs, db, q_objects, annotations, having, custom_filters
-                 ) -> None:
+    def __init__(self, model, db, q_objects, annotations, custom_filters) -> None:
         super().__init__(model, db)
         self.query = model._meta.basequery
         self.resolve_filters(
             model=model,
-            filter_kwargs=filter_kwargs,
             q_objects=q_objects,
             annotations=annotations,
-            having=having,
             custom_filters=custom_filters
         )
         self.query = self.query.delete()
@@ -561,17 +494,15 @@ class DeleteQuery(AwaitableQuery):
 class CountQuery(AwaitableQuery):
     __slots__ = ()
 
-    def __init__(self, model, filter_kwargs, db, q_objects, annotations, having, custom_filters
+    def __init__(self, model, db, q_objects, annotations, custom_filters
                  ) -> None:
         super().__init__(model, db)
         table = Table(model._meta.table)
         self.query = model._meta.basequery
         self.resolve_filters(
             model=model,
-            filter_kwargs=filter_kwargs,
             q_objects=q_objects,
             annotations=annotations,
-            having=having,
             custom_filters=custom_filters,
         )
         self.query = self.query.select(Count(table.star))
@@ -669,8 +600,8 @@ class FieldSelectQuery(AwaitableQuery):
 class ValuesListQuery(FieldSelectQuery):
     __slots__ = ('flat', 'fields')
 
-    def __init__(self, model, filter_kwargs, db, q_objects, fields_for_select_list, limit, offset,
-                 distinct, orderings, flat, annotations, having, custom_filters) -> None:
+    def __init__(self, model, db, q_objects, fields_for_select_list, limit, offset,
+                 distinct, orderings, flat, annotations, custom_filters) -> None:
         super().__init__(model, db)
         if flat and (len(fields_for_select_list) != 1):
             raise TypeError('You can flat value_list only if contains one field')
@@ -683,10 +614,8 @@ class ValuesListQuery(FieldSelectQuery):
 
         self.resolve_filters(
             model=model,
-            filter_kwargs=filter_kwargs,
             q_objects=q_objects,
             annotations=annotations,
-            having=having,
             custom_filters=custom_filters,
         )
         if limit:
@@ -712,21 +641,19 @@ class ValuesListQuery(FieldSelectQuery):
 
 
 class ValuesQuery(FieldSelectQuery):
-    __slots__ = ('fields_for_select')
+    __slots__ = ('fields_for_select',)
 
-    def __init__(self, model, filter_kwargs, db, q_objects, fields_for_select, limit, offset,
-                 distinct, orderings, annotations, having, custom_filters) -> None:
+    def __init__(self, model, db, q_objects, fields_for_select, limit, offset, distinct, orderings,
+                 annotations, custom_filters) -> None:
         super().__init__(model, db)
         self.query = model._meta.basequery
-        for returns_as, field in fields_for_select.items():
-            self.add_field_to_select_query(field, returns_as)
+        for return_as, field in fields_for_select.items():
+            self.add_field_to_select_query(field, return_as)
 
         self.resolve_filters(
             model=model,
-            filter_kwargs=filter_kwargs,
             q_objects=q_objects,
             annotations=annotations,
-            having=having,
             custom_filters=custom_filters,
         )
         if limit:
@@ -743,7 +670,7 @@ class ValuesQuery(FieldSelectQuery):
     async def _execute(self):
         result = await self._db.execute_query(str(self.query))
         columns = [
-            (name, self.resolve_to_python_value(self.model, name))
-            for name in self.fields_for_select
+            (alias, self.resolve_to_python_value(self.model, field_name))
+            for alias, field_name in self.fields_for_select.items()
         ]
         return [{key: func(entry[key]) for key, func in columns} for entry in result]

@@ -50,12 +50,11 @@ async def run():
 
     event_first = Event(name='1', tournament=tournament)
     await event_first.save()
-    event_second = Event(name='2', tournament=second_tournament)
-    await event_second.save()
-    event_third = Event(name='3', tournament=tournament)
-    await event_third.save()
-    event_forth = Event(name='4', tournament=second_tournament)
-    await event_forth.save()
+    event_second = await Event.create(name='2', tournament=second_tournament)
+    await Event.create(name='3', tournament=tournament)
+    await Event.create(name='4', tournament=second_tournament)
+
+    await Event.filter(tournament=tournament)
 
     team_first = Team(name='First')
     await team_first.save()

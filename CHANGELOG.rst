@@ -1,9 +1,12 @@
 Changelog
 =========
 
-0.10.12
--------
+0.11.0
+------
+- Added `.exclude()` method for QuerySet
+- Q objects can now be negated for `NOT` query (`~Q(...)`)
 - Support subclassing on existing fields
+- Numerous bug fixes
 
 0.10.11
 -------
@@ -156,7 +159,7 @@ Changelog
 0.5.0
 -----
 - Added ``contains`` and other filter modifiers.
-- Field kwarg ``default`` not accepts functions.
+- Field kwarg ``default`` now accepts functions.
 
 0.4.0
 -----
