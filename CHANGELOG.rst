@@ -7,6 +7,7 @@ Changelog
 - Q objects can now be negated for `NOT` query (`~Q(...)`)
 - Support subclassing on existing fields
 - Numerous bug fixes
+- Removed known broken connection pooling
 
 0.10.11
 -------
