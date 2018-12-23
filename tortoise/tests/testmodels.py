@@ -162,9 +162,11 @@ class RacePlacingEnum(Enum):
     FIRST = "first"
     SECOND = "second"
     THIRD = "third"
+    DNF = "dnf"
 
 
 class RaceParticipant(Model):
     id = fields.IntField(pk=True)
     first_name = fields.CharField(max_length=64)
-    place = EnumField(RacePlacingEnum, default=RacePlacingEnum.SECOND)
+    place = EnumField(RacePlacingEnum, default=RacePlacingEnum.DNF)
+    predicted_place = EnumField(RacePlacingEnum, null=True)
