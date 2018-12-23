@@ -86,7 +86,7 @@ When you need to make ``OR`` query or something a little more challenging you co
     )
 
 
-
+.. _filtering-queries:
 Filtering
 =========
 
