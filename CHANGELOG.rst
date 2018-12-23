@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.10.12
+-------
+- Support subclassing on existing fields
+
 0.10.11
 -------
 - Pre-build some query & filters statically, 15-30% speed up for smaller queries.
