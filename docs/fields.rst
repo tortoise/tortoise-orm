@@ -62,9 +62,6 @@ to store and query Enum types.
 When subclassing, make sure that the ``to_db_value`` returns the same type as the superclass (in the case of CharField,
 that is a ``str``) and that, naturally, ``to_python_value`` accepts the same type in the value parameter (also ``str``).
 
-.. note:: Make sure to keep filtering in mind when subclassing. To support the filter ``field__isnull=True``,
-    for example, you must make sure that the function also accepts boolean values.
-
 
 Reference
 =========

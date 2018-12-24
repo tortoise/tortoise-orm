@@ -11,7 +11,8 @@ from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
 from tortoise.exceptions import ConfigurationError  # noqa
 from tortoise.fields import ManyToManyRelationManager  # noqa
-from tortoise.models import Model, get_backward_fk_filters, get_m2m_filters
+from tortoise.filters import get_backward_fk_filters, get_m2m_filters
+from tortoise.models import Model
 from tortoise.queryset import QuerySet  # noqa
 from tortoise.transactions import current_transaction_map
 from tortoise.utils import generate_schema_for_client
