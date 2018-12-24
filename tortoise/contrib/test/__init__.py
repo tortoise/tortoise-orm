@@ -8,7 +8,7 @@ from asynctest import TestCase as _TestCase
 from asynctest import _fail_on
 from asynctest.case import _Policy
 
-from tortoise import ContextVar, Tortoise
+from tortoise import Tortoise
 from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise.exceptions import DBConnectionError
 from tortoise.transactions import current_transaction_map, start_transaction
@@ -29,6 +29,7 @@ _CONNECTIONS = {}  # type: dict
 _SELECTOR = None  # type: ignore
 _LOOP = None  # type: BaseSelectorEventLoop
 _MODULES = []  # type: List[str]
+_CONN_MAP = {}  # type: dict
 
 
 def getDBConfig(app_label: str, modules: List[str]) -> dict:
@@ -62,8 +63,7 @@ async def _init_db(config: dict) -> None:
 def _restore_default() -> None:
     Tortoise.apps = {}
     Tortoise._connections = _CONNECTIONS.copy()
-    for name in Tortoise._connections.keys():
-        current_transaction_map[name] = ContextVar(name, default=None)
+    current_transaction_map.update(_CONN_MAP)
     Tortoise._init_apps(_CONFIG['apps'])
     Tortoise._inited = True
 
@@ -84,6 +84,7 @@ def initializer(modules: List[str], db_url: Optional[str] = None,
     global _LOOP
     global _TORTOISE_TEST_DB
     global _MODULES
+    global _CONN_MAP
     _MODULES = modules
     if db_url is not None:  # pragma: nobranch
         _TORTOISE_TEST_DB = db_url
@@ -97,6 +98,7 @@ def initializer(modules: List[str], db_url: Optional[str] = None,
     _SELECTOR = loop._selector  # type: ignore
     loop.run_until_complete(_init_db(_CONFIG))
     _CONNECTIONS = Tortoise._connections.copy()
+    _CONN_MAP = current_transaction_map.copy()
     Tortoise.apps = {}
     Tortoise._connections = {}
     Tortoise._inited = False
@@ -191,7 +193,6 @@ class SimpleTestCase(_TestCase):
         Tortoise.apps = {}
         Tortoise._connections = {}
         Tortoise._inited = False
-        current_transaction_map.clear()
 
         # post-test checks
         self._checker.check_test(self)
@@ -221,8 +222,6 @@ class IsolatedTestCase(SimpleTestCase):
 
     async def _tearDownDB(self) -> None:
         Tortoise._connections = self._connections.copy()
-        for name in Tortoise._connections.keys():
-            current_transaction_map[name] = ContextVar(name, default=None)
         await Tortoise._drop_databases()
 
 

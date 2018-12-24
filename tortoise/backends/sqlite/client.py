@@ -76,20 +76,20 @@ class SqliteClient(BaseDBAsyncClient):
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
-        self.log.debug('%s: %s', query, values)
         async with self.acquire_connection() as connection:
+            self.log.debug('%s: %s', query, values)
             return (await connection.execute_insert(query, values))[0]
 
     @translate_exceptions
     async def execute_query(self, query: str) -> List[dict]:
-        self.log.debug(query)
         async with self.acquire_connection() as connection:
+            self.log.debug(query)
             return [dict(row) for row in await connection.execute_fetchall(query)]
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:
-        self.log.debug(query)
         async with self.acquire_connection() as connection:
+            self.log.debug(query)
             await connection.executescript(query)
 
 

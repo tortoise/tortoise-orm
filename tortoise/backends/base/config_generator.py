@@ -17,6 +17,15 @@ DB_LOOKUP = {
             'username': 'user',
             'password': 'password',
         },
+        'defaults': {
+            'port': 5432,
+        },
+        'cast': {
+            'min_size': int,
+            'max_size': int,
+            'max_queries': int,
+            'max_inactive_connection_lifetime': float,
+        },
     },
     'sqlite': {
         'engine': 'tortoise.backends.sqlite',
@@ -24,6 +33,8 @@ DB_LOOKUP = {
         'vmap': {
             'path': 'file_path',
         },
+        'defaults': {},
+        'cast': {},
     },
     'mysql': {
         'engine': 'tortoise.backends.mysql',
@@ -33,6 +44,16 @@ DB_LOOKUP = {
             'port': 'port',
             'username': 'user',
             'password': 'password',
+        },
+        'defaults': {
+            'port': 3306,
+        },
+        'cast': {
+            'minsize': int,
+            'maxsize': int,
+            'connect_timeout': float,
+            'echo': bool,
+            'no_delay': bool,
         },
     },
 }  # type: Dict[str, Dict[str, Any]]
@@ -53,8 +74,11 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         raise ConfigurationError('No path specified for DB_URL')
 
     params = {}  # type: dict
+    for key, val in db['defaults'].items():
+        params[key] = val
     for key, val in urlparse.parse_qs(url.query).items():
-        params[key] = val[-1]
+        cast = db['cast'].get(key, str)
+        params[key] = cast(val[-1])
 
     if testing:
         path = path.replace('\\{', '{').replace('\\}', '}')
@@ -67,7 +91,8 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         params[vmap['hostname']] = str(url.hostname or '')
     try:
         if vmap.get('port'):
-            params[vmap['port']] = str(url.port or '')
+            if url.port:
+                params[vmap['port']] = int(url.port)
     except ValueError:
         raise ConfigurationError('Port is not an integer')
     if vmap.get('username'):

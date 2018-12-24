@@ -76,6 +76,8 @@ class TestTransactions(test.IsolatedTestCase):
 
         @atomic()
         async def bound_to_fall():
+            saved_event = await Tournament.filter(name='Test').first()
+            self.assertEqual(saved_event.id, tournament.id)
             await Tournament.filter(id=tournament.id).update(name='Updated name')
             saved_event = await Tournament.filter(name='Updated name').first()
             self.assertEqual(saved_event.id, tournament.id)

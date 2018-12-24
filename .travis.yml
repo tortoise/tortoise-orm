@@ -20,10 +20,15 @@ matrix:
     env: TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_{}"
     install: pip install -r requirements-pypy.txt
     script: green
+  - python: 3.6
+    env: TEST_RUNNER=py.test
+    install: pip install -r requirements-dev.txt
+    script: py.test
+  - python: 3.6
+    env: TEST_RUNNER=nose2
+    install: pip install -r requirements-dev.txt
+    script: "nose2 --plugin tortoise.contrib.test.nose2 --db-module tortoise.tests.testmodels --db-url sqlite://:memory:"
 dist: xenial
-sudo: required
-addons:
-  postgresql: "9.4"
 services:
   - postgresql
   - mysql
