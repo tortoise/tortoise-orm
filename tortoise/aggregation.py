@@ -47,7 +47,7 @@ class Aggregate:
             aggregation['joins'].append(join)
             return aggregation
 
-    def resolve_for_model(self, model) -> dict:
+    def resolve(self, model) -> dict:
         aggregation = self._resolve_field_for_model(self.field, model)
         aggregation['joins'] = reversed(aggregation['joins'])
         return aggregation

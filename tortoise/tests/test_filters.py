@@ -184,7 +184,6 @@ class TestBooleanFieldFilters(test.TestCase):
             {(False, False), (True, False)}
         )
 
-    @test.expectedFailure
     async def test_equal_null(self):
         self.assertEqual(
             set(await BooleanFields.filter(boolean_null=None)

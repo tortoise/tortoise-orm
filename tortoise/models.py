@@ -1,218 +1,18 @@
-import operator
 from copy import copy
-from typing import (Awaitable, Callable, Dict, Hashable, Optional, Set, Tuple, Type,  # noqa
-                    TypeVar, Union)
+from typing import Dict, Hashable, Optional, Set, Tuple, Type, TypeVar  # noqa
 
-from pypika import Query, Table, functions
-from pypika.enums import SqlTypes
+from pypika import Query
 
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient  # noqa
 from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields import ManyToManyRelationManager, RelationQueryContainer
+from tortoise.filters import get_filters_for_field
 from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
 
 MODEL_TYPE = TypeVar('MODEL_TYPE', bound='Model')
 # TODO: Define Filter type object. Possibly tuple?
-
-
-def list_encoder(value, instance):
-    return list(value)
-
-
-def is_in(field, value):
-    return field.isin(value)
-
-
-def not_in(field, value):
-    return field.notin(value) | field.isnull()
-
-
-def not_equal(field, value):
-    return field.ne(value) | field.isnull()
-
-
-def is_null(field, value):
-    if value:
-        return field.isnull()
-    else:
-        return field.notnull()
-
-
-def not_null(field, value):
-    if value:
-        return field.notnull()
-    else:
-        return field.isnull()
-
-
-def contains(field, value):
-    return functions.Cast(field, SqlTypes.VARCHAR).like('%{}%'.format(value))
-
-
-def starts_with(field, value):
-    return functions.Cast(field, SqlTypes.VARCHAR).like('{}%'.format(value))
-
-
-def ends_with(field, value):
-    return functions.Cast(field, SqlTypes.VARCHAR).like('%{}'.format(value))
-
-
-def insensitive_contains(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
-        functions.Upper('%{}%'.format(value))
-    )
-
-
-def insensitive_starts_with(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
-        functions.Upper('{}%'.format(value))
-    )
-
-
-def insensitive_ends_with(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
-        functions.Upper('%{}'.format(value))
-    )
-
-
-def get_m2m_filters(field_name: str, field: fields.ManyToManyField) -> Dict[str, dict]:
-    return {
-        field_name: {
-            'field': field.forward_key,
-            'backward_key': field.backward_key,
-            'operator': operator.eq,
-            'table': Table(field.through),
-        },
-        '{}__not'.format(field_name): {
-            'field': field.forward_key,
-            'backward_key': field.backward_key,
-            'operator': not_equal,
-            'table': Table(field.through),
-        },
-        '{}__in'.format(field_name): {
-            'field': field.forward_key,
-            'backward_key': field.backward_key,
-            'operator': is_in,
-            'table': Table(field.through),
-            'value_encoder': list_encoder,
-        },
-        '{}__not_in'.format(field_name): {
-            'field': field.forward_key,
-            'backward_key': field.backward_key,
-            'operator': not_in,
-            'table': Table(field.through),
-            'value_encoder': list_encoder,
-        },
-    }
-
-
-def get_backward_fk_filters(field_name: str, field: fields.BackwardFKRelation) -> Dict[str, dict]:
-    return {
-        field_name: {
-            'field': 'id',
-            'backward_key': field.relation_field,
-            'operator': operator.eq,
-            'table': Table(field.type._meta.table),
-        },
-        '{}__not'.format(field_name): {
-            'field': 'id',
-            'backward_key': field.relation_field,
-            'operator': not_equal,
-            'table': Table(field.type._meta.table),
-        },
-        '{}__in'.format(field_name): {
-            'field': 'id',
-            'backward_key': field.relation_field,
-            'operator': is_in,
-            'table': Table(field.type._meta.table),
-            'value_encoder': list_encoder,
-        },
-        '{}__not_in'.format(field_name): {
-            'field': 'id',
-            'backward_key': field.relation_field,
-            'operator': not_in,
-            'table': Table(field.type._meta.table),
-            'value_encoder': list_encoder,
-        },
-    }
-
-
-def get_filters_for_field(field_name: str, field: Optional[fields.Field], source_field: str
-                          ) -> Dict[str, dict]:
-    if isinstance(field, fields.ManyToManyField):
-        return get_m2m_filters(field_name, field)
-    if isinstance(field, fields.BackwardFKRelation):
-        return get_backward_fk_filters(field_name, field)
-    return {
-        field_name: {
-            'field': source_field,
-            'operator': operator.eq,
-        },
-        '{}__not'.format(field_name): {
-            'field': source_field,
-            'operator': not_equal,
-        },
-        '{}__in'.format(field_name): {
-            'field': source_field,
-            'operator': is_in,
-            'value_encoder': list_encoder,
-        },
-        '{}__not_in'.format(field_name): {
-            'field': source_field,
-            'operator': not_in,
-            'value_encoder': list_encoder,
-        },
-        '{}__isnull'.format(field_name): {
-            'field': source_field,
-            'operator': is_null,
-        },
-        '{}__not_isnull'.format(field_name): {
-            'field': source_field,
-            'operator': not_null,
-        },
-        '{}__gte'.format(field_name): {
-            'field': source_field,
-            'operator': operator.ge,
-        },
-        '{}__lte'.format(field_name): {
-            'field': source_field,
-            'operator': operator.le,
-        },
-        '{}__gt'.format(field_name): {
-            'field': source_field,
-            'operator': operator.gt,
-        },
-        '{}__lt'.format(field_name): {
-            'field': source_field,
-            'operator': operator.lt,
-        },
-        '{}__contains'.format(field_name): {
-            'field': source_field,
-            'operator': contains,
-        },
-        '{}__startswith'.format(field_name): {
-            'field': source_field,
-            'operator': starts_with,
-        },
-        '{}__endswith'.format(field_name): {
-            'field': source_field,
-            'operator': ends_with,
-        },
-        '{}__icontains'.format(field_name): {
-            'field': source_field,
-            'operator': insensitive_contains,
-        },
-        '{}__istartswith'.format(field_name): {
-            'field': source_field,
-            'operator': insensitive_starts_with,
-        },
-        '{}__iendswith'.format(field_name): {
-            'field': source_field,
-            'operator': insensitive_ends_with,
-        },
-    }
 
 
 class MetaInfo:
@@ -477,6 +277,14 @@ class Model(metaclass=ModelMeta):
     @classmethod
     def filter(cls, *args, **kwargs) -> QuerySet:
         return QuerySet(cls).filter(*args, **kwargs)
+
+    @classmethod
+    def exclude(cls, *args, **kwargs) -> QuerySet:
+        return QuerySet(cls).exclude(*args, **kwargs)
+
+    @classmethod
+    def annotate(cls, **kwargs) -> QuerySet:
+        return QuerySet(cls).annotate(**kwargs)
 
     @classmethod
     def all(cls) -> QuerySet:

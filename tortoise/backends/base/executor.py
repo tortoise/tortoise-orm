@@ -1,9 +1,10 @@
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type  # noqa
 
-from pypika import Table
+from pypika import JoinType, Table
 
 from tortoise import fields
 from tortoise.exceptions import OperationalError
+from tortoise.query_utils import QueryModifier
 
 INSERT_CACHE = {}  # type: Dict[str, Tuple[list, list, str]]
 
@@ -136,6 +137,29 @@ class BaseExecutor:
             subquery._backward_relation_key.as_('_backward_relation_key'),
             *[getattr(related_query_table, field).as_(field) for field in related_query.fields]
         )
+
+        if related_query._q_objects:
+            joined_tables = []  # type: List[Table]
+            modifier = QueryModifier()
+            for node in related_query._q_objects:
+                modifier &= node.resolve(
+                    model=related_query.model,
+                    annotations=related_query._annotations,
+                    custom_filters=related_query._custom_filters,
+                )
+
+            where_criterion, joins, having_criterion = modifier.get_query_modifiers()
+            for join in joins:
+                if join[0] not in joined_tables:
+                    query = query.join(join[0], how=JoinType.left_outer).on(join[1])
+                    joined_tables.append(join[0])
+
+            if where_criterion:
+                query = query.where(where_criterion)
+
+            if having_criterion:
+                query = query.having(having_criterion)
+
         raw_results = await self.db.execute_query(str(query))
         relations = {(e['_backward_relation_key'], e['id']) for e in raw_results}
         related_object_list = [related_query.model(**e) for e in raw_results]

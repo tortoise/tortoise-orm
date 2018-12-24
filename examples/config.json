@@ -1,11 +1,6 @@
 {
   "connections": {
-    "default": {
-      "engine": "tortoise.backends.sqlite",
-      "credentials": {
-        "file_path": "example.sqlite3"
-      }
-    }
+    "default": "sqlite://:memory:"
   },
   "apps": {
     "models": {

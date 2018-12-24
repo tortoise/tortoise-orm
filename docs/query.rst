@@ -4,7 +4,9 @@
 Query API
 =========
 
-Be sure to check `examples <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples>`_ for better understanding
+This document describes how to use QuerySet to build your queries
+
+Be sure to check `examples <https://github.com/tortoise/tortoise-orm/tree/master/examples>`_ for better understanding
 
 You start your query from your model class:
 
@@ -14,9 +16,11 @@ You start your query from your model class:
 
 There are several method on model itself to start query:
 
-- ``first(*args, **kwargs)`` - create QuerySet with given filters
+- ``filter(*args, **kwargs)`` - create QuerySet with given filters
+- ``exclude(*args, **kwargs)`` - create QuerySet with given excluding filters
 - ``all()`` - create QuerySet without filters
 - ``first()`` - create QuerySet limited to one object and returning instance instead of list
+- ``annotate()`` - create QuerySet with given annotation
 
 This method returns ``QuerySet`` object, that allows further filtering and some more complex operations
 
@@ -53,9 +57,85 @@ After you obtained queryset from object you can do following operations with it:
     :members:
     :undoc-members:
 
-After making your QuerySet you just have to ``await`` it to get the result
+QuerySet could be constructed, filtered and passed around without actually hitting database.
+Only after you ``await`` QuerySet, it will generate query and run it against database.
 
-Check `examples <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples>`_ to see it all in work
+Here are some common usage scenarios with QuerySet (we are using models defined in :ref:`getting_started`):
+
+Regular select into model instances:
+
+.. code-block:: python3
+
+    await Event.filter(name__startswith='FIFA')
+
+This query will get you all events with ``name`` starting with ``FIFA``, where ``name`` is fields
+defined on model, and ``startswith`` is filter modifier. Take note, that modifiers should
+be separated by double underscore. You can read more on filter modifiers in ``Filtering``
+section of this document.
+
+It's also possible to filter your queries with ``.exclude()``:
+
+.. code-block:: python3
+
+    await Team.exclude(name__icontains='junior')
+
+As more interesting case, when you are working with related data, you could also build your
+query around related entities:
+
+.. code-block:: python3
+
+    # getting all events, which tournament name is "World Cup"
+    await Event.filter(tournament__name='World Cup')
+
+    # Gets all teams participating in events with ids 1, 2, 3
+    await Team.filter(events__id__in=[1,2,3])
+
+    # Gets all tournaments where teams with "junior" in their name are participating
+    await Tournament.filter(event__participants__name__icontains='junior').distinct()
+
+
+Usually you not only want to filter by related data, but also get that related data as well.
+You could do it using ``.prefetch_related()``:
+
+.. code-block:: python3
+
+    # This will fetch events, and for each of events ``.tournament`` field will be populated with
+    # corresponding ``Tournament`` instance
+    await Event.all().prefetch_related('tournament')
+
+    # This will fetch tournament with their events and teams for each event
+    tournament_list = await Tournament.all().prefetch_related('events__participants')
+
+    # Fetched result for m2m and backward fk relations are stored in list-like container
+    for tournament in tournament_list:
+        print([e.name for e in tournament.events])
+
+
+General rule about how ``prefetch_related()`` works is that each level of depth of related models
+produces 1 additional query, so ``.prefetch_related('events__participants')`` will produce two
+additional queries to fetch your data.
+
+Sometimes, when performance is crucial, you don't want to make additional queries like this.
+In cases like this you could use `values()` or `values_list()` to produce more efficient query
+
+.. code-block:: python3
+
+    # This will return list of dicts with keys 'id', 'name', 'tournament_name' and
+    # 'tournament_name' will be populated by name of related tournament.
+    # And it will be done in one query
+    events = await Event.filter(id__in=[1,2,3]).values('id', 'name', tournament_name='tournament__name')
+
+QuerySet also supports aggregation through ``.annotate()`` method
+
+.. code-block:: python3
+
+    from tortoise.aggregation import Count
+
+    # This query will fetch all tournaments with 10 or more events, and will
+    # populate filed `.events_count` on instances with corresponding value
+    await Tournament.annotate(events_count=Count('events')).filter(events_count__gte=10)
+
+Check `examples <https://github.com/tortoise/tortoise-orm/tree/master/examples>`_ to see it all in work
 
 Many to Many
 ============
@@ -85,6 +165,12 @@ When you need to make ``OR`` query or something a little more challenging you co
         Q(id__in=[event_first.id, event_second.id]) | Q(name='3')
     )
 
+Also, Q objects support negated to generate `NOT` clause in your query
+
+.. code-block:: python3
+
+    not_third_events = await Event.filter(~Q(name='3'))
+
 
 .. _filtering-queries:
 Filtering
@@ -104,7 +190,7 @@ When using ``.filter()`` method you can use number of modifiers to field names t
 - ``lte`` - lower or equals than passed value
 - ``lt`` - lower than passed value
 - ``isnull`` - field is null
-- ``not_isnull``
+- ``not_isnull`` - field is not null
 - ``contains`` - field contains specified substring
 - ``icontains`` - case insensitive ``contains``
 - ``startswith`` - if field starts with value
@@ -124,4 +210,4 @@ Sometimes it is required to fetch only certain related records. You can achieve 
         Prefetch('events', queryset=Event.filter(name='First'))
     ).first()
 
-You can view full example here: `complex_prefetching <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples/complex_prefetching.py>`_
+You can view full example here: `complex_prefetching <https://github.com/tortoise/tortoise-orm/tree/master/examples/complex_prefetching.py>`_

@@ -1,5 +1,6 @@
 from tortoise.aggregation import Count
 from tortoise.contrib import test
+from tortoise.exceptions import NoValuesFetched
 from tortoise.tests.testmodels import Event, Team, Tournament
 
 
@@ -66,3 +67,77 @@ class TestRelations(test.TestCase):
         queryset = Event.all().annotate(count=Count('participants'))
         await queryset.first()
         await queryset.filter(name='Test').first()
+
+    async def test_bool_for_relation_new_object(self):
+        tournament = await Tournament.create(name='New Tournament')
+
+        self.assertFalse(bool(tournament.events))
+
+    async def test_bool_for_relation_old_object(self):
+        await Tournament.create(name='New Tournament')
+        tournament = await Tournament.first()
+
+        with self.assertRaises(NoValuesFetched):
+            bool(tournament.events)
+
+    async def test_bool_for_relation_fetched_false(self):
+        tournament = await Tournament.create(name='New Tournament')
+        await tournament.fetch_related('events')
+
+        self.assertFalse(bool(tournament.events))
+
+    async def test_bool_for_relation_fetched_true(self):
+        tournament = await Tournament.create(name='New Tournament')
+        await Event.create(name='Test', tournament_id=tournament.id)
+        await tournament.fetch_related('events')
+
+        self.assertTrue(bool(tournament.events))
+
+    async def test_m2m_add(self):
+        tournament = await Tournament.create(name='tournament')
+        event = await Event.create(name='First', tournament=tournament)
+        team = await Team.create(name='1')
+        team_second = await Team.create(name='2')
+        await event.participants.add(team, team_second)
+        fetched_event = await Event.first().prefetch_related('participants')
+        self.assertEqual(len(fetched_event.participants), 2)
+
+    async def test_m2m_add_already_added(self):
+        tournament = await Tournament.create(name='tournament')
+        event = await Event.create(name='First', tournament=tournament)
+        team = await Team.create(name='1')
+        team_second = await Team.create(name='2')
+        await event.participants.add(team, team_second)
+        await event.participants.add(team, team_second)
+        fetched_event = await Event.first().prefetch_related('participants')
+        self.assertEqual(len(fetched_event.participants), 2)
+
+    async def test_m2m_clear(self):
+        tournament = await Tournament.create(name='tournament')
+        event = await Event.create(name='First', tournament=tournament)
+        team = await Team.create(name='1')
+        team_second = await Team.create(name='2')
+        await event.participants.add(team, team_second)
+        await event.participants.clear()
+        fetched_event = await Event.first().prefetch_related('participants')
+        self.assertEqual(len(fetched_event.participants), 0)
+
+    async def test_m2m_remove(self):
+        tournament = await Tournament.create(name='tournament')
+        event = await Event.create(name='First', tournament=tournament)
+        team = await Team.create(name='1')
+        team_second = await Team.create(name='2')
+        await event.participants.add(team, team_second)
+        await event.participants.remove(team)
+        fetched_event = await Event.first().prefetch_related('participants')
+        self.assertEqual(len(fetched_event.participants), 1)
+
+    async def test_m2m_remove_two(self):
+        tournament = await Tournament.create(name='tournament')
+        event = await Event.create(name='First', tournament=tournament)
+        team = await Team.create(name='1')
+        team_second = await Team.create(name='2')
+        await event.participants.add(team, team_second)
+        await event.participants.remove(team, team_second)
+        fetched_event = await Event.first().prefetch_related('participants')
+        self.assertEqual(len(fetched_event.participants), 0)
