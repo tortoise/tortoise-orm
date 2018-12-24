@@ -21,8 +21,9 @@ Then you should install your db driver
 
 ..
 
-Apart from ``asyncpg`` there is also support for ``sqlite`` through ``aiosqlite``.
-It is quite easy to implement more backends if there is appropriate ``asyncio`` driver for this db.
+Apart from ``asyncpg`` there is also support for ``sqlite`` through ``aiosqlite`` and
+``mysql`` through ``aiomysql``.
+You can easily implement more backends if there is appropriate ``asyncio`` driver for this db.
 
 Tutorial
 ========
@@ -37,9 +38,13 @@ You can start writing models like this:
     from tortoise import fields
 
     class Tournament(Model):
+        # Defining `id` field is optional, it will be defined automatically
+        # if you haven't done it yourself
         id = fields.IntField(pk=True)
         name = fields.CharField(max_length=255)
 
+        # Defining ``__str__`` is also optional, but gives you pretty
+        # represent of model in debugger and interpreter
         def __str__(self):
             return self.name
 
@@ -47,6 +52,8 @@ You can start writing models like this:
     class Event(Model):
         id = fields.IntField(pk=True)
         name = fields.CharField(max_length=255)
+        # References to other models are defined in format
+        # "{app_name}.{model_name}" - where {app_name} is defined in tortoise config
         tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
         participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
 
@@ -61,6 +68,8 @@ You can start writing models like this:
         def __str__(self):
             return self.name
 
+.. note::
+   You can read more on defining models in :ref:`models`
 
 After you defined all your models, tortoise needs you to init them, in order to create backward relations between models and match your db client with appropriate models.
 
@@ -125,10 +134,14 @@ After that you can start using your models:
         pass
 
 
-    # Or you can make preemptive call to fetch related objects
+    # Or you can make preemptive call to fetch related objects,
+    # so you can work with related objects immediately
     selected_events = await Event.filter(
         participants=participants[0].id
     ).prefetch_related('participants', 'tournament')
+    for event in selected_events:
+        print(event.tournament.name)
+        print([t.name for t in event.participants])
 
     # Tortoise ORM supports variable depth of prefetching related entities
     # This will fetch all events for team and in those team tournament will be prefetched
@@ -139,5 +152,6 @@ After that you can start using your models:
         events__name__in=['Test', 'Prod']
     ).order_by('-events__participants__name').distinct()
 
-You can read more examples (including transactions, several databases and a little more complex querying) in
-`examples <https://github.com/Zeliboba5/tortoise-orm/tree/master/examples>`_ directory of this repository
+.. note::
+    You can read more examples (including transactions, several databases and a little more complex querying) in
+    `examples <https://github.com/tortoise/tortoise-orm/tree/master/examples>`_ directory of project

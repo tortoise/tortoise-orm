@@ -5,7 +5,7 @@ Thanks
 Contributors
 ============
 
-* Andrey Bondar ``@Zeliboba5``
+* Andrey Bondar ``@abondar``
 * Nickolas Grigoriadis ``@grigi``
 * ``@etzelwu``
 * Alexander Lyon ``@arlyon``
@@ -13,5 +13,5 @@ Contributors
 Special Thanks
 ==============
 
-Huge thanks to https://github.com/kayak/pypika for making this possible.
+Huge thanks to https://github.com/kayak/pypika for all heavy lifting.
 
