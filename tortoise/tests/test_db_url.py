@@ -141,6 +141,8 @@ class TestConfigGenerator(test.SimpleTestCase):
                 'password': '',
                 'port': 33060,
                 'user': 'root',
+                'minsize': 1,
+                'maxsize': 5,
             }
         })
 
@@ -154,6 +156,8 @@ class TestConfigGenerator(test.SimpleTestCase):
                 'password': '',
                 'port': 3306,
                 'user': 'root',
+                'minsize': 1,
+                'maxsize': 5,
             }
         })
 
@@ -173,6 +177,8 @@ class TestConfigGenerator(test.SimpleTestCase):
                 'password': '',
                 'port': 3306,
                 'user': 'root',
+                'minsize': 1,
+                'maxsize': 5,
             }
         })
 

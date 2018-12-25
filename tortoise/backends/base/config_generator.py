@@ -47,6 +47,8 @@ DB_LOOKUP = {
         },
         'defaults': {
             'port': 3306,
+            'minsize': 1,
+            'maxsize': 5,
         },
         'cast': {
             'minsize': int,

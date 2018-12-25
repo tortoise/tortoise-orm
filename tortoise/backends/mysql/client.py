@@ -14,6 +14,8 @@ from tortoise.exceptions import (DBConnectionError, IntegrityError, OperationalE
                                  TransactionManagementError)
 from tortoise.transactions import current_transaction_map
 
+logger = logging.getLogger(__name__)
+
 
 def translate_exceptions(func):
     @wraps(func)
@@ -29,6 +31,23 @@ def translate_exceptions(func):
     return wrapped
 
 
+class MysQLConnectionWrapper(ConnectionWrapper):
+    __slots__ = ('pool', )
+
+    def __init__(self, pool) -> None:
+        super().__init__(None)
+        self.pool = pool  # type: aiomysql.Pool
+
+    async def __aenter__(self):
+        self.connection = await self.pool.acquire()
+        logger.debug('Acquired connection %s', self.connection)
+        return self.connection
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        logger.debug('Released connection %s', self.connection)
+        self.pool.release(self.connection)
+
+
 class MySQLClient(BaseDBAsyncClient):
     query_class = MySQLQuery
     executor_class = MySQLExecutor
@@ -36,7 +55,7 @@ class MySQLClient(BaseDBAsyncClient):
     capabilities = Capabilities('mysql', safe_indexes=False, requires_limit=True)
 
     def __init__(self, user: str, password: str, database: str, host: str, port: SupportsInt,
-                 **kwargs) -> None:
+                 minsize: SupportsInt, maxsize: SupportsInt, **kwargs) -> None:
         super().__init__(**kwargs)
 
         self.user = user
@@ -44,8 +63,10 @@ class MySQLClient(BaseDBAsyncClient):
         self.database = database
         self.host = host
         self.port = int(port)  # make sure port is int type
+        self.minsize = int(minsize)
+        self.maxsize = int(maxsize)
 
-        self._connection = None  # Type: Optional[aiomysql.Connection]
+        self._connection = None  # Type: Optional[aiomysql.Pool]
 
         self._transaction_class = type(
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
@@ -58,29 +79,35 @@ class MySQLClient(BaseDBAsyncClient):
             'user': self.user,
             'password': self.password,
             'db': self.database if with_db else None,
+            'minsize': self.minsize,
+            'maxsize': self.maxsize,
             'autocommit': True,
         }
 
         try:
-            self._connection = await aiomysql.connect(**template)
+            self._connection = await aiomysql.create_pool(**template)
             self.log.debug(
-                'Created connection %s with params: user=%s database=%s host=%s port=%s',
-                self._connection, self.user, self.database, self.host, self.port
+                'Created pool %s with params: user=%s database=%s host=%s port=%s minsize=%s'
+                ' maxsize=%s', self._connection, self.user, self.database, self.host, self.port,
+                self.minsize, self.maxsize
             )
         except pymysql.err.OperationalError:
             raise DBConnectionError(
-                "Can't connect to MySQL server: "
-                'user={user} database={database} host={host} port={port}'.format(
-                    user=self.user, database=self.database, host=self.host, port=self.port
+                'user={user} database={database} host={host} port={port} minsize={minsize}'
+                ' maxsize={maxsize}'.format(
+                    user=self.user, database=self.database, host=self.host, port=self.port,
+                    minsize=self.minsize, maxsize=self.maxsize
                 )
             )
 
     async def close(self) -> None:
         if self._connection:  # pragma: nobranch
             self._connection.close()
+            await self._connection.wait_closed()
             self.log.debug(
-                'Closed connection %s with params: user=%s database=%s host=%s port=%s',
-                self._connection, self.user, self.database, self.host, self.port
+                'Closed pool %s with params: user=%s database=%s host=%s port=%s minsize=%s'
+                ' maxsize=%s', self._connection, self.user, self.database, self.host, self.port,
+                self.minsize, self.maxsize
             )
             self._connection = None
 
@@ -100,7 +127,7 @@ class MySQLClient(BaseDBAsyncClient):
         await self.close()
 
     def acquire_connection(self) -> ConnectionWrapper:
-        return ConnectionWrapper(self._connection)
+        return MysQLConnectionWrapper(self._connection)
 
     def _in_transaction(self):
         return self._transaction_class(self.connection_name, self._connection)
@@ -131,15 +158,20 @@ class MySQLClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
-    def __init__(self, connection_name, connection):
+    def __init__(self, connection_name, pool):
         self.connection_name = connection_name
-        self._connection = connection
+        self._pool = pool
         self.log = logging.getLogger('db_client')
         self._transaction_class = self.__class__
         self._finalized = False
         self._old_context_value = None
 
+    def acquire_connection(self) -> ConnectionWrapper:
+        return ConnectionWrapper(self._connection)
+
     async def start(self):
+        self._connection = await self._pool.acquire()
+        self.log.debug('Acquired connection for transaction %s', self._connection)
         await self._connection.begin()
         current_transaction = current_transaction_map[self.connection_name]
         self._old_context_value = current_transaction.get()
@@ -150,6 +182,8 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
             raise TransactionManagementError('Transaction already finalised')
         self._finalized = True
         await self._connection.commit()
+        self.log.debug('Released connection for committed transaction %s', self._connection)
+        self._pool.release(self._connection)
         current_transaction_map[self.connection_name].set(self._old_context_value)
 
     async def rollback(self):
@@ -157,4 +191,6 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
             raise TransactionManagementError('Transaction already finalised')
         self._finalized = True
         await self._connection.rollback()
+        self.log.debug('Released connection for rolled back transaction %s', self._connection)
+        self._pool.release(self._connection)
         current_transaction_map[self.connection_name].set(self._old_context_value)
