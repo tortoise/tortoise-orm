@@ -335,16 +335,21 @@ class Tortoise:
         current_transaction_map.clear()
 
     @classmethod
-    async def generate_schemas(cls) -> None:
+    async def generate_schemas(cls, safe=True) -> None:
         """
         Generate schemas according to models provided to ``.init()`` method.
         Will fail if schemas already exists, so it's not recommended to be used as part
         of application workflow
+
+        Parameters
+        ----------
+        safe:
+            When set to true, creates the table only when it does not already exist.
         """
         if not cls._inited:
             raise ConfigurationError('You have to call .init() first before generating schemas')
         for connection in cls._connections.values():
-            await generate_schema_for_client(connection)
+            await generate_schema_for_client(connection, safe)
 
     @classmethod
     async def _drop_databases(cls) -> None:

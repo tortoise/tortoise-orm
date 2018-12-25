@@ -25,11 +25,11 @@ class QueryAsyncIterator:
             raise StopAsyncIteration
 
 
-def get_schema_sql(client) -> str:
+def get_schema_sql(client, safe=True) -> str:
     generator = client.schema_generator(client)
-    return generator.get_create_schema_sql()
+    return generator.get_create_schema_sql(safe)
 
 
-async def generate_schema_for_client(client) -> None:
+async def generate_schema_for_client(client, safe=True) -> None:
     generator = client.schema_generator(client)
-    await generator.generate_from_string(get_schema_sql(client))
+    await generator.generate_from_string(get_schema_sql(client, safe))

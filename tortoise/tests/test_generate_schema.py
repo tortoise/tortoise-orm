@@ -18,7 +18,7 @@ class TestGenerateSchema(test.SimpleTestCase):
         await Tortoise.close_connections()
         await Tortoise._reset_apps()
 
-    async def init_for(self, module: str) -> None:
+    async def init_for(self, module: str, safe=False) -> None:
         await Tortoise.init({
             "connections": {
                 "default": {
@@ -37,7 +37,7 @@ class TestGenerateSchema(test.SimpleTestCase):
                 }
             }
         })
-        self.sqls = get_schema_sql(Tortoise._connections['default']).split('; ')
+        self.sqls = get_schema_sql(Tortoise._connections['default'], safe).split('; ')
 
     def get_sql(self, text: str) -> str:
         return [sql for sql in self.sqls if text in sql][0]
@@ -59,6 +59,18 @@ class TestGenerateSchema(test.SimpleTestCase):
         self.assertIn(
             '"minrelation_id" INT NOT NULL REFERENCES "minrelation" (id) ON DELETE CASCADE', sql)
         self.assertIn('"team_id" INT NOT NULL REFERENCES "team" (id) ON DELETE CASCADE', sql)
+
+    async def test_safe_generation(self):
+        """Assert that the IF NOT EXISTS clause in included when safely generating schema."""
+        await self.init_for("tortoise.tests.testmodels", True)
+        sql = self.get_sql("")
+        self.assertIn("IF NOT EXISTS", sql)
+
+    async def test_unsafe_generation(self):
+        """Assert that the IF NOT EXISTS clause in not included when generating schema."""
+        await self.init_for("tortoise.tests.testmodels", False)
+        sql = self.get_sql("")
+        self.assertNotIn("IF NOT EXISTS", sql)
 
     async def test_cyclic(self):
         with self.assertRaisesRegex(ConfigurationError,
