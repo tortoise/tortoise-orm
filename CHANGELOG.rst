@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.11.2
+------
+- Added "safe" schema generation
+
 0.11.1
 ------
 - Test class isolation fixes & contextvars update
