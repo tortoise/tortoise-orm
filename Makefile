@@ -1,5 +1,6 @@
 checkfiles = tortoise/ examples/ setup.py conftest.py
 mypy_flags = --warn-unused-configs --warn-redundant-casts --ignore-missing-imports --allow-untyped-decorators --no-implicit-optional
+py_warn = PYTHONWARNINGS=default PYTHONASYNCIODEBUG=1 PYTHONDEBUG=x PYTHONDEVMODE=dev
 
 help:
 	@echo  "Tortoise ORM development makefile"
@@ -38,15 +39,15 @@ lint: deps
 
 test: deps
 	coverage erase
-	coverage run -p --concurrency=multiprocessing `which green`
+	$(py_warn) coverage run -p --concurrency=multiprocessing `which green`
 	coverage combine
 	coverage report
 
 testall: deps
 	coverage erase
-	TORTOISE_TEST_DB=sqlite://:memory: coverage run -p --concurrency=multiprocessing `which green`
-	TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_\{\} coverage run -p --concurrency=multiprocessing `which green`
-	TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_\{\}" coverage run -p --concurrency=multiprocessing `which green`
+	-$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: coverage run -p --concurrency=multiprocessing `which green`
+	-$(py_warn) TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_\{\} coverage run -p --concurrency=multiprocessing `which green`
+	-$(py_warn) TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_\{\}" coverage run -p --concurrency=multiprocessing `which green`
 	coverage combine
 	coverage report
 

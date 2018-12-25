@@ -86,7 +86,7 @@ class TestInitErrors(test.SimpleTestCase):
             })
 
     async def test_unknown_connection(self):
-        with self.assertRaisesRegexp(ConfigurationError, 'Unknown connection "fioop"'):
+        with self.assertRaisesRegex(ConfigurationError, 'Unknown connection "fioop"'):
             await Tortoise.init({
                 "connections": {
                     "default": {
@@ -107,8 +107,8 @@ class TestInitErrors(test.SimpleTestCase):
             })
 
     async def test_url_without_modules(self):
-        with self.assertRaisesRegexp(ConfigurationError,
-                                     'You must specify "db_url" and "modules" together'):
+        with self.assertRaisesRegex(ConfigurationError,
+                                    'You must specify "db_url" and "modules" together'):
             await Tortoise.init(
                 db_url="sqlite://{}".format(":memory:"),
             )

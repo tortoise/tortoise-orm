@@ -99,22 +99,22 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
-        self.log.debug('%s: %s', query, values)
         async with self.acquire_connection() as connection:
+            self.log.debug('%s: %s', query, values)
             # TODO: Cache prepared statement
             stmt = await connection.prepare(query)
             return await stmt.fetchval(*values)
 
     @translate_exceptions
     async def execute_query(self, query: str) -> List[dict]:
-        self.log.debug(query)
         async with self.acquire_connection() as connection:
+            self.log.debug(query)
             return await connection.fetch(query)
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:
-        self.log.debug(query)
         async with self.acquire_connection() as connection:
+            self.log.debug(query)
             await connection.execute(query)
 
 

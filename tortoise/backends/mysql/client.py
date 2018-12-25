@@ -56,7 +56,8 @@ class MySQLClient(BaseDBAsyncClient):
             'port': self.port,
             'user': self.user,
             'password': self.password,
-            'db': self.database if with_db else None
+            'db': self.database if with_db else None,
+            'autocommit': True,
         }
 
         try:
@@ -105,8 +106,8 @@ class MySQLClient(BaseDBAsyncClient):
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
-        self.log.debug('%s: %s', query, values)
         async with self.acquire_connection() as connection:
+            self.log.debug('%s: %s', query, values)
             async with connection.cursor() as cursor:
                 # TODO: Use prepared statement, and cache it
                 await cursor.execute(query, values)
@@ -114,16 +115,16 @@ class MySQLClient(BaseDBAsyncClient):
 
     @translate_exceptions
     async def execute_query(self, query: str) -> List[aiomysql.DictCursor]:
-        self.log.debug(query)
         async with self.acquire_connection() as connection:
+            self.log.debug(query)
             async with connection.cursor(aiomysql.DictCursor) as cursor:
                 await cursor.execute(query)
                 return await cursor.fetchall()
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:
-        self.log.debug(query)
         async with self.acquire_connection() as connection:
+            self.log.debug(query)
             async with connection.cursor() as cursor:
                 await cursor.execute(query)
 

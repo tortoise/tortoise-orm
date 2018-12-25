@@ -1,9 +1,10 @@
-from tortoise.contrib import test
+from unittest import TestCase
+
 from tortoise.exceptions import OperationalError
 from tortoise.query_utils import Q
 
 
-class TestQ(test.TestCase):
+class TestQ(TestCase):
 
     def test_q_basic(self):
         q = Q(moo='cow')

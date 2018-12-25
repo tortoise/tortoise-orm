@@ -43,13 +43,10 @@ class MetaInfo:
 
     @property
     def db(self) -> BaseDBAsyncClient:
-        from tortoise import Tortoise
-        if self.default_connection not in current_transaction_map:
+        try:
+            return current_transaction_map[self.default_connection].get()
+        except KeyError:
             raise ConfigurationError('No DB associated to model')
-        return (
-            current_transaction_map[self.default_connection].get()
-            or Tortoise.get_connection(self.default_connection)  # type: ignore
-        )
 
     def get_filter(self, key: str) -> dict:
         return self.filters[key]

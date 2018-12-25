@@ -227,7 +227,7 @@ class TestDatetimeFields(test.TestCase):
         self.assertEqual(obj2.datetime_auto, obj.datetime_auto)
         self.assertNotEqual(obj2.datetime_auto, datetime_auto)
         self.assertGreater(obj2.datetime_auto - now, timedelta(microseconds=10000))
-        self.assertLess(obj2.datetime_auto - now, timedelta(microseconds=30000))
+        self.assertLess(obj2.datetime_auto - now, timedelta(seconds=1))
         self.assertEqual(obj2.datetime_add, obj.datetime_add)
 
     async def test_cast(self):

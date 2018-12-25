@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.11.1
+------
+- Test class isolation fixes & contextvars update
+- Turned on autocommit for MySQL
+- db_url now supports defaults and casting parameters to the right types
+
 0.11.0
 ------
 - Added `.exclude()` method for QuerySet
