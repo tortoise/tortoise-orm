@@ -162,6 +162,7 @@ class RacePlacingEnum(Enum):
     FIRST = "first"
     SECOND = "second"
     THIRD = "third"
+    RUNNER_UP = "runner_up"
     DNF = "dnf"
 
 
