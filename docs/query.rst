@@ -182,7 +182,7 @@ When using ``.filter()`` method you can use number of modifiers to field names t
 
     teams = await Team.filter(name__icontains='CON')
 
-
+- ``not``
 - ``in`` - checks if value of field is in passed list
 - ``not_in``
 - ``gte`` - greater or equals than passed value
