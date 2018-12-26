@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.11.2
+------
+- Correctly convert values to their db representation when using the "in" filter
+
 0.11.1
 ------
 - Test class isolation fixes & contextvars update
