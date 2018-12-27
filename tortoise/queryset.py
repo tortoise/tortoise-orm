@@ -13,13 +13,14 @@ from tortoise.utils import QueryAsyncIterator
 
 
 class AwaitableQuery:
-    __slots__ = ("_joined_tables", "query", "model", "_db")
+    __slots__ = ("_joined_tables", "query", "model", "_db", "capabilities")
 
-    def __init__(self, model, db: Optional[BaseDBAsyncClient]) -> None:
+    def __init__(self, model) -> None:
         self._joined_tables = []  # type: List[Table]
         self.model = model
         self.query = model._meta.basequery  # type: Query
-        self._db = db if db else model._meta.db  # type: BaseDBAsyncClient
+        self._db = None  # type: Optional[BaseDBAsyncClient]
+        self.capabilities = model._meta.db.capabilities
 
     def resolve_filters(self, model, q_objects, annotations, custom_filters) -> None:
         modifier = QueryModifier()
@@ -71,7 +72,13 @@ class AwaitableQuery:
                     )
                 self.query = self.query.orderby(getattr(table, ordering[0]), order=ordering[1])
 
+    def _make_query(self):
+        raise NotImplementedError()  # pragma: nocoverage
+
     def __await__(self):
+        if self._db is None:
+            self._db = self.model._meta.db
+        self._make_query()
         return self._execute().__await__()
 
     async def _execute(self):
@@ -99,7 +106,7 @@ class QuerySet(AwaitableQuery):
     )
 
     def __init__(self, model) -> None:
-        super().__init__(model, None)
+        super().__init__(model)
         self.fields = model._meta.db_fields
 
         self._prefetch_map = {}  # type: Dict[str, Set[str]]
@@ -122,6 +129,7 @@ class QuerySet(AwaitableQuery):
         queryset.fields = self.fields
         queryset.model = self.model
         queryset.query = self.query
+        queryset.capabilities = self.capabilities
         queryset._prefetch_map = copy(self._prefetch_map)
         queryset._prefetch_queries = copy(self._prefetch_queries)
         queryset._single = self._single
@@ -221,7 +229,7 @@ class QuerySet(AwaitableQuery):
         """
         queryset = self._clone()
         queryset._offset = offset
-        if self._db.capabilities.requires_limit and queryset._limit is None:
+        if self.capabilities.requires_limit and queryset._limit is None:
             queryset._limit = 1000000
         return queryset
 
@@ -397,9 +405,12 @@ class QuerySet(AwaitableQuery):
             and query optimization.
             **The output format may (and will) vary greatly depending on the database backend.**
         """
-        query = self._make_query()
-        executor = self._db.executor_class(model=self.model, db=self._db)
-        return await executor.execute_explain(query)
+        if self._db is None:
+            self._db = self.model._meta.db
+
+        return await self._db.executor_class(model=self.model, db=self._db).execute_explain(
+            self._make_query()
+        )
 
     def using_db(self, _db: BaseDBAsyncClient) -> "QuerySet":
         """
@@ -440,7 +451,6 @@ class QuerySet(AwaitableQuery):
         return self.query
 
     async def _execute(self):
-        self.query = self._make_query()
         instance_list = await self._db.executor_class(
             model=self.model,
             db=self._db,
@@ -463,6 +473,9 @@ class QuerySet(AwaitableQuery):
 
     def __await__(self):
         clone = self._clone()
+        if clone._db is None:
+            clone._db = self.model._meta.db
+        clone._make_query()
         return clone._execute().__await__()
 
     def __aiter__(self) -> QueryAsyncIterator:
@@ -470,27 +483,37 @@ class QuerySet(AwaitableQuery):
 
 
 class UpdateQuery(AwaitableQuery):
-    __slots__ = ()
+    __slots__ = ("update_kwargs", "q_objects", "annotations", "custom_filters")
 
     def __init__(self, model, update_kwargs, db, q_objects, annotations, custom_filters) -> None:
-        super().__init__(model, db)
-        table = Table(model._meta.table)
+        super().__init__(model)
+        self.update_kwargs = update_kwargs
+        self.q_objects = q_objects
+        self.annotations = annotations
+        self.custom_filters = custom_filters
+        self._db = db
+
+    def _make_query(self):
+        table = Table(self.model._meta.table)
         self.query = self._db.query_class.update(table)
         self.resolve_filters(
-            model=model, q_objects=q_objects, annotations=annotations, custom_filters=custom_filters
+            model=self.model,
+            q_objects=self.q_objects,
+            annotations=self.annotations,
+            custom_filters=self.custom_filters,
         )
 
-        for key, value in update_kwargs.items():
-            field_object = model._meta.fields_map.get(key)
+        for key, value in self.update_kwargs.items():
+            field_object = self.model._meta.fields_map.get(key)
             if not field_object:
-                raise FieldError("Unknown keyword argument {} for model {}".format(key, model))
+                raise FieldError("Unknown keyword argument {} for model {}".format(key, self.model))
             if field_object.generated:
                 raise IntegrityError("Field {} is generated and can not be updated")
             if isinstance(field_object, fields.ForeignKeyField):
                 db_field = "{}_id".format(key)
                 value = value.id
             else:
-                db_field = model._meta.fields_db_projection[key]
+                db_field = self.model._meta.fields_db_projection[key]
             self.query = self.query.set(db_field, value)
 
     async def _execute(self):
@@ -498,13 +521,22 @@ class UpdateQuery(AwaitableQuery):
 
 
 class DeleteQuery(AwaitableQuery):
-    __slots__ = ()
+    __slots__ = ("q_objects", "annotations", "custom_filters")
 
     def __init__(self, model, db, q_objects, annotations, custom_filters) -> None:
-        super().__init__(model, db)
-        self.query = model._meta.basequery
+        super().__init__(model)
+        self.q_objects = q_objects
+        self.annotations = annotations
+        self.custom_filters = custom_filters
+        self._db = db
+
+    def _make_query(self):
+        self.query = self.model._meta.basequery
         self.resolve_filters(
-            model=model, q_objects=q_objects, annotations=annotations, custom_filters=custom_filters
+            model=self.model,
+            q_objects=self.q_objects,
+            annotations=self.annotations,
+            custom_filters=self.custom_filters,
         )
         self.query = self.query.delete()
 
@@ -513,13 +545,22 @@ class DeleteQuery(AwaitableQuery):
 
 
 class CountQuery(AwaitableQuery):
-    __slots__ = ()
+    __slots__ = ("q_objects", "annotations", "custom_filters")
 
     def __init__(self, model, db, q_objects, annotations, custom_filters) -> None:
-        super().__init__(model, db)
-        self.query = model._meta.basequery
+        super().__init__(model)
+        self.q_objects = q_objects
+        self.annotations = annotations
+        self.custom_filters = custom_filters
+        self._db = db
+
+    def _make_query(self):
+        self.query = self.model._meta.basequery
         self.resolve_filters(
-            model=model, q_objects=q_objects, annotations=annotations, custom_filters=custom_filters
+            model=self.model,
+            q_objects=self.q_objects,
+            annotations=self.annotations,
+            custom_filters=self.custom_filters,
         )
         self.query = self.query.select(Count("*"))
 
@@ -600,7 +641,18 @@ class FieldSelectQuery(AwaitableQuery):
 
 
 class ValuesListQuery(FieldSelectQuery):
-    __slots__ = ("flat", "fields")
+    __slots__ = (
+        "flat",
+        "fields",
+        "limit",
+        "offset",
+        "distinct",
+        "orderings",
+        "annotations",
+        "custom_filters",
+        "q_objects",
+        "fields_for_select_list",
+    )
 
     def __init__(
         self,
@@ -616,28 +668,42 @@ class ValuesListQuery(FieldSelectQuery):
         annotations,
         custom_filters,
     ) -> None:
-        super().__init__(model, db)
+        super().__init__(model)
         if flat and (len(fields_for_select_list) != 1):
             raise TypeError("You can flat value_list only if contains one field")
 
-        self.query = model._meta.basequery
         fields_for_select = {str(i): field for i, field in enumerate(fields_for_select_list)}
+        self.fields = fields_for_select
+        self.limit = limit
+        self.offset = offset
+        self.distinct = distinct
+        self.orderings = orderings
+        self.annotations = annotations
+        self.custom_filters = custom_filters
+        self.q_objects = q_objects
+        self.fields_for_select_list = fields_for_select_list
+        self.flat = flat
+        self._db = db
 
-        for positional_number, field in fields_for_select.items():
+    def _make_query(self):
+        self.query = self.model._meta.basequery
+
+        for positional_number, field in self.fields.items():
             self.add_field_to_select_query(field, positional_number)
 
         self.resolve_filters(
-            model=model, q_objects=q_objects, annotations=annotations, custom_filters=custom_filters
+            model=self.model,
+            q_objects=self.q_objects,
+            annotations=self.annotations,
+            custom_filters=self.custom_filters,
         )
-        if limit:
-            self.query = self.query.limit(limit)
-        if offset:
-            self.query = self.query.offset(offset)
-        if distinct:
+        if self.limit:
+            self.query = self.query.limit(self.limit)
+        if self.offset:
+            self.query = self.query.offset(self.offset)
+        if self.distinct:
             self.query = self.query.distinct()
-        self.resolve_ordering(model, orderings, annotations)
-        self.flat = flat
-        self.fields = fields_for_select
+        self.resolve_ordering(self.model, self.orderings, self.annotations)
 
     async def _execute(self):
         result = await self._db.execute_query(str(self.query))
@@ -652,7 +718,16 @@ class ValuesListQuery(FieldSelectQuery):
 
 
 class ValuesQuery(FieldSelectQuery):
-    __slots__ = ("fields_for_select",)
+    __slots__ = (
+        "fields_for_select",
+        "limit",
+        "offset",
+        "distinct",
+        "orderings",
+        "annotations",
+        "custom_filters",
+        "q_objects",
+    )
 
     def __init__(
         self,
@@ -667,24 +742,37 @@ class ValuesQuery(FieldSelectQuery):
         annotations,
         custom_filters,
     ) -> None:
-        super().__init__(model, db)
-        self.query = model._meta.basequery
-        for return_as, field in fields_for_select.items():
+        super().__init__(model)
+        self.fields_for_select = fields_for_select
+        self.limit = limit
+        self.offset = offset
+        self.distinct = distinct
+        self.orderings = orderings
+        self.annotations = annotations
+        self.custom_filters = custom_filters
+        self.q_objects = q_objects
+        self._db = db
+
+    def _make_query(self):
+        self.query = self.model._meta.basequery
+        for return_as, field in self.fields_for_select.items():
             self.add_field_to_select_query(field, return_as)
 
         self.resolve_filters(
-            model=model, q_objects=q_objects, annotations=annotations, custom_filters=custom_filters
+            model=self.model,
+            q_objects=self.q_objects,
+            annotations=self.annotations,
+            custom_filters=self.custom_filters,
         )
-        if limit:
-            self.query = self.query.limit(limit)
-        if offset:
-            self.query = self.query.offset(offset)
-        if distinct:
+        if self.limit:
+            self.query = self.query.limit(self.limit)
+        if self.offset:
+            self.query = self.query.offset(self.offset)
+        if self.distinct:
             self.query = self.query.distinct()
-        for ordering in orderings:
+        for ordering in self.orderings:
             self.query = self.query.orderby(ordering[0], order=ordering[1])
-        self.resolve_ordering(model, orderings, annotations)
-        self.fields_for_select = fields_for_select
+        self.resolve_ordering(self.model, self.orderings, self.annotations)
 
     async def _execute(self):
         result = await self._db.execute_query(str(self.query))

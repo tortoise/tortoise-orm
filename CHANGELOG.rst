@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.11.9
+------
+- Code has been reformatted using ``black``, and minor code cleanups (#120 #123)
+- Sample Quart integration (#121)
+- Better isolation of connection handling — Allows more dynamic connections so we can do pooling & reconnections.
+
 0.11.8
 ------
 - Fixed ``.count()`` when a join happens (#109)
@@ -9,7 +15,7 @@ Changelog
 0.11.7
 ------
 - Fixed 'unique_together' for foreign keys (#114)
-- Fixed Field.to_db_value method to handle Enum (#113) (#115) (#116)
+- Fixed Field.to_db_value method to handle Enum (#113 #115 #116)
 
 
 0.11.6
