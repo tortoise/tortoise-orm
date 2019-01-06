@@ -1,4 +1,4 @@
-from typing import Tuple, Optional, List, Mapping, Any  # noqa
+from typing import Any, List, Mapping, Optional, Tuple  # noqa
 
 from pypika import Table
 from pypika.terms import Criterion

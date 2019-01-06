@@ -86,6 +86,9 @@ Here is list of fields available at the moment with custom options of these fiel
 .. autoclass:: tortoise.fields.IntField
     :exclude-members: to_db_value, to_python_value
 
+.. autoclass:: tortoise.fields.BigIntField
+    :exclude-members: to_db_value, to_python_value
+
 .. autoclass:: tortoise.fields.SmallIntField
     :exclude-members: to_db_value, to_python_value
 
@@ -105,6 +108,9 @@ Here is list of fields available at the moment with custom options of these fiel
     :exclude-members: to_db_value, to_python_value
 
 .. autoclass:: tortoise.fields.DateField
+    :exclude-members: to_db_value, to_python_value
+
+.. autoclass:: tortoise.fields.TimeDeltaField
     :exclude-members: to_db_value, to_python_value
 
 .. autoclass:: tortoise.fields.FloatField

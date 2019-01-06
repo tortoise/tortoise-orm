@@ -173,6 +173,7 @@ Also, Q objects support negated to generate `NOT` clause in your query
 
 
 .. _filtering-queries:
+
 Filtering
 =========
 

@@ -51,4 +51,4 @@ MySQL/MariaDB
 =============
 
 .. todo::
-    Document PostgreSQL options and behaviour
+    Document MySQL/MariaDB options and behaviour
