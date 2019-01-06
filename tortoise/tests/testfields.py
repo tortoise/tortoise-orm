@@ -18,10 +18,13 @@ class EnumField(CharField):
         self._enum_type = enum_type
 
     def to_db_value(self, value, instance):
-        if isinstance(value, self._enum_type):
-            return value.value
+        if value is None:
+            return None
 
-        return value
+        if not isinstance(value, self._enum_type):
+            raise TypeError("Expected type {}, got {}".format(self._enum_type, value))
+
+        return value.value
 
     def to_python_value(self, value):
         try:

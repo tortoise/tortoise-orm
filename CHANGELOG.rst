@@ -4,6 +4,7 @@ Changelog
 0.11.2
 ------
 - Added "safe" schema generation
+- Correctly convert values to their db representation when using the "in" filter
 
 0.11.1
 ------

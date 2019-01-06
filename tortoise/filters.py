@@ -1,21 +1,23 @@
 import operator
-from typing import Dict, Optional  # noqa
+from typing import Dict, Iterable, Optional  # noqa
 
 from pypika import Table, functions
 from pypika.enums import SqlTypes
 
 from tortoise import fields
+from tortoise.fields import Field
 
 
-def list_encoder(value, instance):
-    return list(value)
+def list_encoder(values, instance, field: Field):
+    """Encodes an iterable of a given field into a database-compatible format."""
+    return [field.to_db_value(element, instance) for element in values]
 
 
-def bool_encoder(value, instance):
+def bool_encoder(value, *args):
     return bool(value)
 
 
-def string_encoder(value, instance):
+def string_encoder(value, *args):
     return str(value)
 
 

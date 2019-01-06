@@ -23,7 +23,7 @@ def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[
     else:
         field_object = model._meta.fields_map[param['field']]
         encoded_value = (
-            param['value_encoder'](value, model)
+            param['value_encoder'](value, model, field_object)
             if param.get('value_encoder')
             else model._meta.db.executor_class._field_to_db(field_object, value, model)
         )
