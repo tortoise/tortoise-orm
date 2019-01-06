@@ -88,6 +88,12 @@ class IntFields(Model):
     intnum_null = fields.IntField(null=True)
 
 
+class BigIntFields(Model):
+    id = fields.BigIntField(pk=True)
+    intnum = fields.BigIntField()
+    intnum_null = fields.BigIntField(null=True)
+
+
 class SmallIntFields(Model):
     id = fields.IntField(pk=True)
     smallintnum = fields.SmallIntField()
@@ -125,6 +131,12 @@ class DatetimeFields(Model):
     datetime_null = fields.DatetimeField(null=True)
     datetime_auto = fields.DatetimeField(auto_now=True)
     datetime_add = fields.DatetimeField(auto_now_add=True)
+
+
+class TimeDeltaFields(Model):
+    id = fields.IntField(pk=True)
+    timedelta = fields.TimeDeltaField()
+    timedelta_null = fields.TimeDeltaField(null=True)
 
 
 class DateFields(Model):

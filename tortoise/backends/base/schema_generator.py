@@ -18,13 +18,15 @@ class BaseSchemaGenerator:
         fields.BooleanField: 'BOOL',
         fields.IntField: 'INT',
         fields.SmallIntField: 'SMALLINT',
+        fields.BigIntField: 'BIGINT',
         fields.TextField: 'TEXT',
         fields.CharField: 'VARCHAR({})',
         fields.DatetimeField: 'TIMESTAMP',
         fields.DecimalField: 'DECIMAL({},{})',
+        fields.TimeDeltaField: 'BIGINT',
         fields.DateField: 'DATE',
         fields.FloatField: 'DOUBLE PRECISION',
-        fields.JSONField: 'TEXT'
+        fields.JSONField: 'TEXT',
     }
 
     def __init__(self, client) -> None:
@@ -54,7 +56,7 @@ class BaseSchemaGenerator:
         references = set()
         for field_name, db_field in model._meta.fields_db_projection.items():
             field_object = model._meta.fields_map[field_name]
-            if isinstance(field_object, fields.IntField) and field_object.pk:
+            if isinstance(field_object, (fields.IntField, fields.BigIntField)) and field_object.pk:
                 fields_to_create.append(self._get_primary_key_create_string(field_name))
                 continue
             nullable = 'NOT NULL' if not field_object.null else ''

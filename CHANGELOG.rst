@@ -5,6 +5,12 @@ Changelog
 ------
 - Added "safe" schema generation
 - Correctly convert values to their db representation when using the "in" filter
+- Added some common missing field types:
+
+  - ``BigIntField``
+  - ``TimeDeltaField``
+
+- ``BigIntField`` can also be used as a primary key field.
 
 0.11.1
 ------

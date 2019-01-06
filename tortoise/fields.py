@@ -61,7 +61,23 @@ class Field:
 
 class IntField(Field):
     """
-    Integer field.
+    Integer field. (32-bit signed)
+
+    ``pk`` (bool):
+        True if field is Primary Key.
+    """
+    __slots__ = ('reference', )
+
+    def __init__(self, pk: bool = False, **kwargs) -> None:
+        kwargs['generated'] = bool(kwargs.get('generated')) | pk
+        super().__init__(int, **kwargs)
+        self.reference = kwargs.get('reference')
+        self.pk = pk
+
+
+class BigIntField(Field):
+    """
+    Big integer field. (64-bit signed)
 
     ``pk`` (bool):
         True if field is Primary Key.
@@ -77,7 +93,7 @@ class IntField(Field):
 
 class SmallIntField(Field):
     """
-    Small integer field.
+    Small integer field. (16-bit signed)
     """
     __slots__ = ()
 
@@ -199,6 +215,26 @@ class DateField(Field):
         return ciso8601.parse_datetime(value).date()
 
 
+class TimeDeltaField(Field):
+    """
+    A field for storing time differences.
+    """
+    __slots__ = ()
+
+    def __init__(self, **kwargs) -> None:
+        super().__init__(datetime.timedelta, **kwargs)
+
+    def to_python_value(self, value: Any) -> datetime.timedelta:
+        if value is None or isinstance(value, self.type):
+            return value
+        return datetime.timedelta(microseconds=value)
+
+    def to_db_value(self, value: Optional[datetime.timedelta], instance) -> Optional[int]:
+        if value is None:
+            return None
+        return (value.days * 86400000000) + (value.seconds * 1000000) + value.microseconds
+
+
 class FloatField(Field):
     """
     Float (double) field.
@@ -229,7 +265,7 @@ class JSONField(Field):
 
     def to_db_value(self, value: Optional[Union[dict, list]], instance) -> Optional[str]:
         if value is None:
-            return value
+            return None
         return self.encoder(value)
 
     def to_python_value(self, value: Optional[Union[str, dict, list]]
