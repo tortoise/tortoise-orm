@@ -59,3 +59,8 @@ docs: deps
 style: deps
 	@#yapf -i -r $(checkfiles)
 	isort -rc $(checkfiles)
+
+publish: deps
+	rm -fR dist/
+	python setup.py sdist
+	twine upload dist/*

@@ -31,3 +31,6 @@ green
 coveralls
 pytest
 nose2
+
+# Pypi
+twine
