@@ -136,7 +136,9 @@ Tortoise ORM currently supports the following databases:
 * PostgreSQL (requires ``asyncpg``)
 * MySQL (requires ``aiomysql``)
 
-``generate_schema`` generates schema on empty database, you shouldn't run it on every app init, run it just once, maybe out of your main code.
+``generate_schema`` generates the schema on an empty database. Tortoise generates schemas in safe mode by default which
+includes the `IF NOT EXISTS` clause, so you may include it in your main code.
+
 
 After that you can start using your models:
 
