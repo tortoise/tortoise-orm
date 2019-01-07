@@ -5,6 +5,9 @@ from pypika import Query
 
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
+from tortoise.events import ConnectionEvents, AsyncEmitter
+
+emitter = AsyncEmitter(ConnectionEvents)
 
 
 class BaseDBAsyncClient:

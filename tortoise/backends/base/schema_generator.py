@@ -1,7 +1,10 @@
 from typing import List, Set  # noqa
 
 from tortoise import fields
+from tortoise.events import Emitter, TableGenerationEvents
 from tortoise.exceptions import ConfigurationError
+
+emitter = Emitter(TableGenerationEvents)
 
 
 class BaseSchemaGenerator:
@@ -54,6 +57,7 @@ class BaseSchemaGenerator:
         fields_to_create = []
         m2m_tables_for_create = []
         references = set()
+        emitter.before_generate_sql(model)
         for field_name, db_field in model._meta.fields_db_projection.items():
             field_object = model._meta.fields_map[field_name]
             if isinstance(field_object, (fields.IntField, fields.BigIntField)) and field_object.pk:
@@ -105,13 +109,15 @@ class BaseSchemaGenerator:
                 )
             )
 
-        return {
+        table_data = {
             'table': model._meta.table,
             'model': model,
             'table_creation_string': table_create_string,
             'references': references,
             'm2m_tables': m2m_tables_for_create,
         }
+        emitter.after_generate_sql(table_data)
+        return table_data
 
     def get_create_schema_sql(self, safe=True) -> str:
         from tortoise import Tortoise

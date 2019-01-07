@@ -3,10 +3,13 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type  # noqa
 from pypika import JoinType, Table
 
 from tortoise import fields
+from tortoise.events import Emitter, ExecutorEvents
 from tortoise.exceptions import OperationalError
 from tortoise.query_utils import QueryModifier
 
 INSERT_CACHE = {}  # type: Dict[str, Tuple[list, list, str]]
+
+emitter = Emitter(ExecutorEvents)
 
 
 class BaseExecutor:
@@ -29,6 +32,7 @@ class BaseExecutor:
                     setattr(instance, field, row[field])
             instance_list.append(instance)
         await self._execute_prefetch_queries(instance_list)
+        emitter.select()
         return instance_list
 
     def _prepare_insert_columns(self) -> Tuple[List[str], List[str]]:
@@ -69,6 +73,7 @@ class BaseExecutor:
             instance=instance,
             regular_columns=regular_columns,
         )
+        emitter.before_insert(query, values)
         instance.id = await self.db.execute_insert(query, values)
         return instance
 
@@ -84,12 +89,14 @@ class BaseExecutor:
                 )
         query = query.where(table.id == instance.id)
         await self.db.execute_query(str(query))
+        emitter.update()
         return instance
 
     async def execute_delete(self, instance):
         table = Table(self.model._meta.table)
         query = self.model._meta.basequery.where(table.id == instance.id).delete()
         await self.db.execute_query(str(query))
+        emitter.delete()
         return instance
 
     async def _prefetch_reverse_relation(self, instance_list: list, field: str,

@@ -7,7 +7,7 @@ from typing import List, Optional  # noqa
 import aiosqlite
 
 from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWrapper,
-                                           ConnectionWrapper)
+                                           ConnectionWrapper, emitter)
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
 from tortoise.exceptions import IntegrityError, OperationalError, TransactionManagementError
@@ -39,11 +39,13 @@ class SqliteClient(BaseDBAsyncClient):
         self._connection = None  # type: Optional[aiosqlite.Connection]
 
     async def create_connection(self, with_db: bool) -> None:
+        await emitter.connecting(None, None, None, None, self.filename)
         if not self._connection:  # pragma: no branch
             self._connection = aiosqlite.connect(self.filename, isolation_level=None)
             self._connection.start()
             await self._connection._connect()
             self._connection._conn.row_factory = sqlite3.Row
+            await emitter.connected(self._connection)
             self.log.debug(
                 'Created connection %s with params: filename=%s',
                 self._connection, self.filename
