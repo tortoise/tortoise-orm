@@ -23,6 +23,7 @@ class BaseExecutor:
         self._prefetch_queries = prefetch_queries if prefetch_queries else {}
 
     async def execute_select(self, query, custom_fields: Optional[list] = None) -> list:
+        emitter.before_select(query, custom_fields)
         raw_results = await self.db.execute_query(str(query))
         instance_list = []
         for row in raw_results:
@@ -32,7 +33,6 @@ class BaseExecutor:
                     setattr(instance, field, row[field])
             instance_list.append(instance)
         await self._execute_prefetch_queries(instance_list)
-        emitter.select()
         return instance_list
 
     def _prepare_insert_columns(self) -> Tuple[List[str], List[str]]:
@@ -54,27 +54,23 @@ class BaseExecutor:
         return [self._field_to_db(self.model._meta.fields_map[column], getattr(instance, column),
                                   instance) for column in regular_columns]
 
-    def _prepare_insert_statement(self, columns: List[str]) -> str:
+    def _prepare_insert_statement(self, columns: List[str], values) -> str:
         # Insert should implement returning new id to saved object
         # Each db has it's own methods for it, so each implementation should
         # go to descendant executors
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, instance):
-        key = '{}:{}'.format(self.db.connection_name, self.model._meta.table)
-        if key not in INSERT_CACHE:
-            regular_columns, columns = self._prepare_insert_columns()
-            query = self._prepare_insert_statement(columns)
-            INSERT_CACHE[key] = regular_columns, columns, query
-        else:
-            regular_columns, columns, query = INSERT_CACHE[key]
-
+        # todo find out way to cache with functions
+        regular_columns, columns = self._prepare_insert_columns()
         values = self._prepare_insert_values(
             instance=instance,
             regular_columns=regular_columns,
         )
+
+        query = self._prepare_insert_statement(columns, values)
         emitter.before_insert(query, values)
-        instance.id = await self.db.execute_insert(query, values)
+        instance.id = await self.db.execute_insert(query, None)
         return instance
 
     async def execute_update(self, instance):

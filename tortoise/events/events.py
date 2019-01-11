@@ -35,10 +35,12 @@ class AsyncEventList(EventList):
 
 class ExecutorEvents(AsyncEventList):
 
-    async def select(self):
+    @staticmethod
+    async def before_select(query, custom_fields):
         pass
 
-    async def before_insert(self, query, values):
+    @staticmethod
+    async def before_insert(query, values):
         pass
 
     async def update(self):

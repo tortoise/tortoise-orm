@@ -6,6 +6,8 @@ from copy import deepcopy
 from inspect import isclass
 from typing import Coroutine, Dict, List, Optional, Type, Union, cast  # noqa
 
+from pypika import Table
+
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
@@ -217,10 +219,10 @@ class Tortoise:
     def _build_initial_querysets(cls) -> None:
         for app in cls.apps.values():
             for model in app.values():
+                table = Table(model._meta.table)
                 model._meta.generate_filters()
-                model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
-                model._meta.basequery_all_fields = model._meta.basequery.select(
-                    *model._meta.db_fields)
+                model._meta.basequery = model._meta.db.query_class.from_(table)
+                model._meta.basequery_all_fields = model._meta.basequery.select(*(field.get_select(table) for key, field in model._meta.fields_map.items() if key in model._meta.db_fields))
 
     @classmethod
     async def init(

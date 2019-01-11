@@ -148,7 +148,7 @@ class Q:  # pylint: disable=C0103
         if not all(isinstance(node, Q) for node in args):
             raise OperationalError('All ordered arguments must be Q nodes')
         self.children = args  # type: Tuple[Q, ...]
-        self.filters = kwargs  # type: Mapping[str, Any]
+        self.filters = kwargs or {}  # type: Mapping[str, Any]
         if join_type not in {self.AND, self.OR}:
             raise OperationalError('join_type must be AND or OR')
         self.join_type = join_type

@@ -58,6 +58,11 @@ class Field:
             return value
         return self.type(value)
 
+    def get_select(self, table):
+        if hasattr(self, "reference") and self.reference is not None:
+            return getattr(table, self.reference.model_field_name+"_id")
+        return getattr(table, self.model_field_name)
+
 
 class IntField(Field):
     """
