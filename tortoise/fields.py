@@ -252,9 +252,9 @@ class JSONField(Field):
     This field can store dictionaries or lists of any JSON-compliant structure.
 
     ``encoder``:
-        The JSON encoder. The default is recommemded.
+        The JSON encoder. The default is recommended.
     ``decoder``:
-        The JSON decoder. The default is recommemded.
+        The JSON decoder. The default is recommended.
     """
     __slots__ = ('encoder', 'decoder')
 
