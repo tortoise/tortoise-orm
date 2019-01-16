@@ -1,4 +1,4 @@
-pypika>=0.18.0
+pypika>=0.21.0
 ciso8601>=2.1
 aiocontextvars>=0.2;python_version<"3.7"
 aiosqlite>=0.8.0
