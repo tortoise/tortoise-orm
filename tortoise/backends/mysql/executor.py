@@ -1,6 +1,6 @@
 from typing import List
 
-from pypika import MySQLQuery, Table, functions
+from pypika import MySQLQuery, Parameter, Table, functions
 from pypika.enums import SqlTypes
 
 from tortoise.backends.base.executor import BaseExecutor
@@ -51,5 +51,5 @@ class MySQLExecutor(BaseExecutor):
     def _prepare_insert_statement(self, columns: List[str]) -> str:
         return str(
             MySQLQuery.into(Table(self.model._meta.table)).columns(*columns)
-            .insert('???')
-        ).replace("'???'", ','.join(['%s' for _ in range(len(columns))]))
+            .insert(*[Parameter('%s') for _ in range(len(columns))])
+        )

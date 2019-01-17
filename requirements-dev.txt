@@ -17,7 +17,7 @@ atomicwrites==1.2.1       # via pytest
 attrs==18.2.0             # via pytest
 babel==2.6.0              # via sphinx
 bandit==1.5.1
-bleach==3.0.2             # via readme-renderer
+bleach==3.1.0             # via readme-renderer
 certifi==2018.11.29       # via requests
 cffi==1.11.5              # via cryptography
 chardet==3.0.4            # via requests
@@ -52,8 +52,8 @@ nose2==0.8.0
 packaging==18.0           # via sphinx
 pbr==5.1.1                # via stevedore
 pip-tools==3.2.0
-pkginfo==1.4.2            # via twine
-pluggy==0.8.0             # via pytest, tox
+pkginfo==1.5.0.1          # via twine
+pluggy==0.8.1             # via pytest, tox
 py==1.7.0                 # via pytest, tox
 pycodestyle==2.4.0        # via flake8
 pycparser==2.19           # via cffi
@@ -61,10 +61,10 @@ pyflakes==2.0.0           # via flake8
 pygments==2.3.1
 pylint==2.2.2
 pymysql==0.9.2            # via aiomysql
-pyparsing==2.3.0          # via packaging
-pypika==0.19.0
-pytest==4.1.0
-pytz==2018.7              # via babel
+pyparsing==2.3.1          # via packaging
+pypika==0.21.0
+pytest==4.1.1
+pytz==2018.9              # via babel
 pyyaml==3.13
 readme-renderer==24.0     # via twine
 requests-toolbelt==0.8.0  # via twine
@@ -77,15 +77,15 @@ sphinx==1.8.3
 sphinxcontrib-websupport==1.1.0  # via sphinx
 stevedore==1.30.0         # via bandit
 termstyle==0.1.11         # via green
-testfixtures==6.4.1       # via flake8-isort
+testfixtures==6.4.3       # via flake8-isort
 toml==0.10.0              # via tox
-tox==3.6.1
-tqdm==4.28.1              # via twine
+tox==3.7.0
+tqdm==4.29.1              # via twine
 twine==1.12.1
-typed-ast==1.1.1          # via astroid, mypy
+typed-ast==1.1.2          # via astroid, mypy
 unidecode==1.0.23         # via green
 urllib3==1.24.1           # via requests
 virtualenv==16.2.0        # via tox
 webencodings==0.5.1       # via bleach
-wrapt==1.10.11            # via astroid
+wrapt==1.11.0             # via astroid
 yapf==0.25.0

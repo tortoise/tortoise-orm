@@ -20,7 +20,7 @@ class BaseExecutor:
         self._prefetch_queries = prefetch_queries if prefetch_queries else {}
 
     async def execute_select(self, query, custom_fields: Optional[list] = None) -> list:
-        raw_results = await self.db.execute_query(str(query))
+        raw_results = await self.db.execute_query(query.get_sql())
         instance_list = []
         for row in raw_results:
             instance = self.model(**row)
@@ -83,13 +83,13 @@ class BaseExecutor:
                     self._field_to_db(field_object, getattr(instance, field), instance)
                 )
         query = query.where(table.id == instance.id)
-        await self.db.execute_query(str(query))
+        await self.db.execute_query(query.get_sql())
         return instance
 
     async def execute_delete(self, instance):
         table = Table(self.model._meta.table)
         query = self.model._meta.basequery.where(table.id == instance.id).delete()
-        await self.db.execute_query(str(query))
+        await self.db.execute_query(query.get_sql())
         return instance
 
     async def _prefetch_reverse_relation(self, instance_list: list, field: str,
@@ -160,7 +160,7 @@ class BaseExecutor:
             if having_criterion:
                 query = query.having(having_criterion)
 
-        raw_results = await self.db.execute_query(str(query))
+        raw_results = await self.db.execute_query(query.get_sql())
         relations = {(e['_backward_relation_key'], e['id']) for e in raw_results}
         related_object_list = [related_query.model(**e) for e in raw_results]
         await self.__class__(
