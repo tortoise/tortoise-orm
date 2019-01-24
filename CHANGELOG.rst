@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.11.3
+------
+- Performance fix with PyPika for small fetch queries.
+- Remove parameter hack now that PyPika support Parametrized queries
+- Fix typos in JSONField docstring
+
 0.11.2
 ------
 - Added "safe" schema generation

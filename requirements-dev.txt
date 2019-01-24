@@ -28,7 +28,7 @@ colorama==0.4.1           # via green
 contextvars==2.3          # via aiocontextvars
 coverage==4.5.2           # via coveralls, green, nose2
 coveralls==1.5.1
-cryptography==2.4.2       # via pymysql
+cryptography==2.5         # via pymysql
 docopt==0.6.2             # via coveralls
 docutils==0.14
 filelock==3.0.10          # via tox
@@ -37,7 +37,7 @@ flake8==3.6.0             # via flake8-isort
 gitdb2==2.0.5             # via gitpython
 gitpython==2.1.11         # via bandit
 green==2.13.0
-idna==2.8                 # via cryptography, requests
+idna==2.8                 # via requests
 imagesize==1.1.0          # via sphinx
 immutables==0.6           # via contextvars
 isort==4.3.4              # via flake8-isort, pylint
@@ -47,9 +47,9 @@ markupsafe==1.1.0         # via jinja2
 mccabe==0.6.1             # via flake8, pylint
 more-itertools==5.0.0     # via pytest
 mypy-extensions==0.4.1    # via mypy
-mypy==0.650
+mypy==0.660
 nose2==0.8.0
-packaging==18.0           # via sphinx
+packaging==19.0           # via sphinx
 pbr==5.1.1                # via stevedore
 pip-tools==3.2.0
 pkginfo==1.5.0.1          # via twine
@@ -62,7 +62,7 @@ pygments==2.3.1
 pylint==2.2.2
 pymysql==0.9.2            # via aiomysql
 pyparsing==2.3.1          # via packaging
-pypika==0.21.0
+pypika==0.22.3
 pytest==4.1.1
 pytz==2018.9              # via babel
 pyyaml==3.13
@@ -82,10 +82,10 @@ toml==0.10.0              # via tox
 tox==3.7.0
 tqdm==4.29.1              # via twine
 twine==1.12.1
-typed-ast==1.1.2          # via astroid, mypy
+typed-ast==1.2.0          # via astroid, mypy
 unidecode==1.0.23         # via green
 urllib3==1.24.1           # via requests
 virtualenv==16.2.0        # via tox
 webencodings==0.5.1       # via bleach
-wrapt==1.11.0             # via astroid
+wrapt==1.11.1             # via astroid
 yapf==0.25.0
