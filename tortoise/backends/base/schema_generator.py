@@ -1,5 +1,4 @@
 from typing import List, Set  # noqa
-import hashlib
 
 from tortoise import fields
 from tortoise.exceptions import ConfigurationError
@@ -54,10 +53,10 @@ class BaseSchemaGenerator:
     @staticmethod
     def _make_hash(*args: str, length: int) -> str:
         # Hash a set of string values and get a digest of the given length.
-        h = hashlib.md5()
-        for arg in args:
-            h.update(arg.encode())
-        return h.hexdigest()[:length]
+        letters: List[str] = []
+        for i_th_letters in zip(*args):
+            letters.extend(i_th_letters)
+        return ''.join([str(ord(letter)) for letter in letters])[:length]
 
     def _generate_index_name(self, model, field_names: List[str]) -> str:
         # NOTE: for compatibility, index name should not be longer than 30
@@ -69,7 +68,6 @@ class BaseSchemaGenerator:
             f=field_names[0][:7],
             h=self._make_hash(table_name, *field_names, length=6),
         )
-        assert len(index_name) <= 30
         return index_name
 
     def _get_table_sql(self, model, safe=True) -> dict:

@@ -2,14 +2,13 @@ import re
 
 from tortoise import Tortoise
 from tortoise.contrib import test
-from tortoise.tests import testmodels
 
 
 class TestFieldIndex(test.TestCase):
 
     async def setUp(self):
         self.db = Tortoise.get_connection('models')
-    
+
     async def test_index_created(self):
         # NOTE: this is only valid because the test database is an SQLite one.
         plan: dict = (await self.db.execute_query(
