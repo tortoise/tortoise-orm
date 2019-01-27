@@ -75,7 +75,7 @@ class BaseSchemaGenerator:
     def _get_table_sql(self, model, safe=True) -> dict:
 
         fields_to_create = []
-        fields_to_index = []
+        fields_with_index = []
         m2m_tables_for_create = []
         references = set()
         for field_name, db_field in model._meta.fields_db_projection.items():
@@ -108,7 +108,7 @@ class BaseSchemaGenerator:
             fields_to_create.append(field_creation_string)
 
             if field_object.index:
-                fields_to_index.append(field_name)
+                fields_with_index.append(field_name)
 
         table_fields_string = ', '.join(fields_to_create)
         table_create_string = self.TABLE_CREATE_TEMPLATE.format(
@@ -117,12 +117,11 @@ class BaseSchemaGenerator:
             fields=table_fields_string,
         )
 
-        if fields_to_index:
-            index_fields_string = ', '.join(fields_to_index)
+        for field_name in fields_with_index:
             table_create_string += self.INDEX_TEMPLATE.format(
-                index_name=self._generate_index_name(model, fields_to_index),
+                index_name=self._generate_index_name(model, [field_name]),
                 table_name=model._meta.table,
-                fields=', '.join(fields_to_index),
+                fields=field_name,
             )
 
         for m2m_field in model._meta.m2m_fields:
