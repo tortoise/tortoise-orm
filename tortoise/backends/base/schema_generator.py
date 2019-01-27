@@ -8,7 +8,7 @@ from tortoise.exceptions import ConfigurationError
 class BaseSchemaGenerator:
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields});'
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}'
-    INDEX_TEMPLATE = 'CREATE INDEX "{index_name}" ON "{table_name}" ({fields});'
+    INDEX_CREATE_TEMPLATE = 'CREATE INDEX "{index_name}" ON "{table_name}" ({fields});'
     FK_TEMPLATE = ' REFERENCES "{table}" (id) ON DELETE {on_delete}'
     M2M_TABLE_TEMPLATE = (
         'CREATE TABLE {exists}"{table_name}" '
@@ -118,7 +118,7 @@ class BaseSchemaGenerator:
         )
 
         for field_name in fields_with_index:
-            table_create_string += self.INDEX_TEMPLATE.format(
+            table_create_string += self.INDEX_CREATE_TEMPLATE.format(
                 index_name=self._generate_index_name(model, [field_name]),
                 table_name=model._meta.table,
                 fields=field_name,
