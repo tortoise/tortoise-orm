@@ -17,7 +17,7 @@ def generate_token():
 class Tournament(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
-    created = fields.DatetimeField(auto_now_add=True)
+    created = fields.DatetimeField(auto_now_add=True, index=True)
 
     def __str__(self):
         return self.name

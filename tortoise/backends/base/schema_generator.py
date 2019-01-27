@@ -1,4 +1,5 @@
 from typing import List, Set  # noqa
+import hashlib
 
 from tortoise import fields
 from tortoise.exceptions import ConfigurationError
@@ -7,6 +8,7 @@ from tortoise.exceptions import ConfigurationError
 class BaseSchemaGenerator:
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields});'
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}'
+    INDEX_TEMPLATE = 'CREATE INDEX "{index_name}" ON "{table_name}" ({fields});'
     FK_TEMPLATE = ' REFERENCES "{table}" (id) ON DELETE {on_delete}'
     M2M_TABLE_TEMPLATE = (
         'CREATE TABLE {exists}"{table_name}" '
@@ -49,9 +51,31 @@ class BaseSchemaGenerator:
         # has to implement in children
         raise NotImplementedError()  # pragma: nocoverage
 
+    @staticmethod
+    def _make_hash(*args: str, length: int) -> str:
+        # Hash a set of string values and get a digest of the given length.
+        h = hashlib.md5()
+        for arg in args:
+            h.update(arg.encode())
+        return h.hexdigest()[:length]
+
+    def _generate_index_name(self, model, field_names: List[str]) -> str:
+        # NOTE: for compatibility, index name should not be longer than 30
+        # characters (Oracle limit).
+        # That's why we slice some of the strings here.
+        table_name = model._meta.table
+        index_name = '{t}_{f}_{h}_idx'.format(
+            t=table_name[:11],
+            f=field_names[0][:7],
+            h=self._make_hash(table_name, *field_names, length=6),
+        )
+        assert len(index_name) <= 30
+        return index_name
+
     def _get_table_sql(self, model, safe=True) -> dict:
 
         fields_to_create = []
+        fields_to_index = []
         m2m_tables_for_create = []
         references = set()
         for field_name, db_field in model._meta.fields_db_projection.items():
@@ -83,12 +107,23 @@ class BaseSchemaGenerator:
                 references.add(field_object.reference.type._meta.table)
             fields_to_create.append(field_creation_string)
 
+            if field_object.index:
+                fields_to_index.append(field_name)
+
         table_fields_string = ', '.join(fields_to_create)
         table_create_string = self.TABLE_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
             table_name=model._meta.table,
             fields=table_fields_string,
         )
+
+        if fields_to_index:
+            index_fields_string = ', '.join(fields_to_index)
+            table_create_string += self.INDEX_TEMPLATE.format(
+                index_name=self._generate_index_name(model, fields_to_index),
+                table_name=model._meta.table,
+                fields=', '.join(fields_to_index),
+            )
 
         for m2m_field in model._meta.m2m_fields:
             field_object = model._meta.fields_map[m2m_field]

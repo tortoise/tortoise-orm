@@ -27,8 +27,10 @@ class Field:
     """
     Base Field type.
     """
-    __slots__ = ('type', 'source_field', 'generated', 'pk', 'default', 'null', 'unique',
-                 'model_field_name')
+    __slots__ = (
+        'type', 'source_field', 'generated', 'pk', 'default', 'null', 'unique',
+        'index', 'model_field_name',
+    )
 
     def __init__(
         self,
@@ -39,6 +41,7 @@ class Field:
         null: bool = False,
         default: Any = None,
         unique: bool = False,
+        index: bool = False,
         **kwargs
     ) -> None:
         self.type = type
@@ -48,6 +51,7 @@ class Field:
         self.default = default
         self.null = null
         self.unique = unique
+        self.index = index
         self.model_field_name = ''  # Type: str
 
     def to_db_value(self, value: Any, instance) -> Any:
