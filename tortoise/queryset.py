@@ -85,7 +85,7 @@ class QuerySet(AwaitableQuery):
     __slots__ = ('fields', '_prefetch_map', '_prefetch_queries',
                  '_single', '_get', '_count', '_db', '_limit', '_offset', '_filter_kwargs',
                  '_orderings', '_q_objects', '_distinct',
-                 '_annotations', '_having', '_custom_filters')
+                 '_annotations', '_having', '_custom_filters', '_explain')
 
     def __init__(self, model) -> None:
         super().__init__(model, None)
