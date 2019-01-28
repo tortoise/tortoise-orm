@@ -53,7 +53,7 @@ class BaseSchemaGenerator:
     @staticmethod
     def _make_hash(*args: str, length: int) -> str:
         # Hash a set of string values and get a digest of the given length.
-        letters: List[str] = []
+        letters = []  # type: List[str]
         for i_th_letters in zip(*args):
             letters.extend(i_th_letters)
         return ''.join([str(ord(letter)) for letter in letters])[:length]
