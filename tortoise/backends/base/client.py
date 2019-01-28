@@ -43,6 +43,9 @@ class BaseDBAsyncClient:
     async def execute_script(self, query: str) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
+    async def execute_explain(self, query: str) -> Sequence[dict]:
+        raise NotImplementedError()
+
 
 class ConnectionWrapper:
     __slots__ = ('connection', )

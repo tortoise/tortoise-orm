@@ -19,6 +19,9 @@ class BaseExecutor:
         self.prefetch_map = prefetch_map if prefetch_map else {}
         self._prefetch_queries = prefetch_queries if prefetch_queries else {}
 
+    async def execute_explain(self, query, format: Optional[str] = None, **options) -> str:
+        return await self.db.execute_explain(query.get_sql())
+
     async def execute_select(self, query, custom_fields: Optional[list] = None) -> list:
         raw_results = await self.db.execute_query(query.get_sql())
         instance_list = []
