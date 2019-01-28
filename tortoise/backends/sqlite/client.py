@@ -6,7 +6,7 @@ from typing import List, Optional  # noqa
 
 import aiosqlite
 
-from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWrapper,
+from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWrapper, Capabilities,
                                            ConnectionWrapper)
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
@@ -37,6 +37,7 @@ class SqliteClient(BaseDBAsyncClient):
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
         )
         self._connection = None  # type: Optional[aiosqlite.Connection]
+        self.capabilities = Capabilities('sqlite', connection={'file': file_path})
 
     async def create_connection(self, with_db: bool) -> None:
         if not self._connection:  # pragma: no branch

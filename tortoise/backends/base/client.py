@@ -7,6 +7,18 @@ from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
+class Capabilities:
+    def __init__(self, dialect: str, *, connection: dict = {}, **kwargs) -> None:
+        self.dialect = dialect
+        self.connection = connection
+
+        for key, val in kwargs.items():
+            setattr(self, key, val)
+
+    def __str__(self) -> str:
+        return str(self.__dict__)
+
+
 class BaseDBAsyncClient:
     query_class = Query
     executor_class = BaseExecutor
@@ -15,6 +27,7 @@ class BaseDBAsyncClient:
     def __init__(self, connection_name: str, **kwargs) -> None:
         self.log = logging.getLogger('db_client')
         self.connection_name = connection_name
+        self.capabilities = Capabilities(dialect='', connection={})
 
     async def create_connection(self, with_db: bool) -> None:
         raise NotImplementedError()  # pragma: nocoverage

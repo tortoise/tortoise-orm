@@ -6,7 +6,7 @@ import aiomysql
 import pymysql
 from pypika import MySQLQuery
 
-from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWrapper,
+from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWrapper, Capabilities,
                                            ConnectionWrapper)
 from tortoise.backends.mysql.executor import MySQLExecutor
 from tortoise.backends.mysql.schema_generator import MySQLSchemaGenerator
@@ -48,6 +48,15 @@ class MySQLClient(BaseDBAsyncClient):
 
         self._transaction_class = type(
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
+        )
+        self.capabilities = Capabilities(
+            'mysql',
+            connection={
+                'user': user,
+                'database': database,
+                'host': host,
+                'port': port,
+            }
         )
 
     async def create_connection(self, with_db: bool) -> None:

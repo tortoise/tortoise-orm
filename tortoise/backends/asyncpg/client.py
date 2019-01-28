@@ -7,7 +7,7 @@ from pypika import PostgreSQLQuery
 
 from tortoise.backends.asyncpg.executor import AsyncpgExecutor
 from tortoise.backends.asyncpg.schema_generator import AsyncpgSchemaGenerator
-from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWrapper,
+from tortoise.backends.base.client import (BaseDBAsyncClient, BaseTransactionWrapper, Capabilities,
                                            ConnectionWrapper)
 from tortoise.exceptions import (DBConnectionError, IntegrityError, OperationalError,
                                  TransactionManagementError)
@@ -46,6 +46,15 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
         self._transaction_class = type(
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
+        )
+        self.capabilities = Capabilities(
+            'postgres',
+            connection={
+                'user': user,
+                'database': database,
+                'host': host,
+                'port': port,
+            }
         )
 
     async def create_connection(self, with_db: bool) -> None:
