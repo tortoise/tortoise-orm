@@ -263,5 +263,6 @@ def requireCapability(**conditions):
             for key, val in conditions.items():
                 if getattr(db.capabilities, key) != val:
                     raise SkipTest('Capability {key} != {val}'.format(key=key, val=val))
+            return test_item(*args, **kwargs)
         return skip_wrapper
     return decorator

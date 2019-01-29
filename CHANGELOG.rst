@@ -3,7 +3,9 @@ Changelog
 
 0.11.3
 ------
-* Test runner now has the ability to skip tests conditionally, based on the DB driver Capabilities:
+* Added basic DB driver Capabilities.
+
+  Test runner now has the ability to skip tests conditionally, based on the DB driver Capabilities:
 
   .. code-block:: python3
 
