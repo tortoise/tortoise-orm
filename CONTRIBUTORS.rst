@@ -9,6 +9,7 @@ Contributors
 * Nickolas Grigoriadis ``@grigi``
 * ``@etzelwu``
 * Alexander Lyon ``@arlyon``
+* Florimond Manca ``@florimondmanca``
 
 Special Thanks
 ==============
