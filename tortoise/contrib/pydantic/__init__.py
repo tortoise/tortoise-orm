@@ -7,10 +7,11 @@ from tortoise import fields
 from tortoise.fields import Field
 from tortoise.serializers.backends import SerializationBackend
 from tortoise.serializers.datatypes import Data
+from tortoise.serializers.exceptions import ValidationError
 from tortoise.serializers.field_utils import is_read_only
 
 try:
-    from pydantic import BaseModel, ValidationError, create_model
+    from pydantic import BaseModel, ValidationError as PydanticValidationError, create_model
 except ImportError as exc:
     raise exc from None
 
@@ -64,7 +65,7 @@ class PydanticSerializationBackend(SerializationBackend):
     def get_field_names(self) -> Set[str]:
         return (
             super().get_field_names()
-            .union(set(getattr(self, "__annotations__", [])))
+            .union(set(getattr(self.serializer, '__annotations__', [])))
         )
 
     def build_field(
@@ -74,16 +75,16 @@ class PydanticSerializationBackend(SerializationBackend):
             field: Field = self.config.model._meta.fields_map[field_name]
         except KeyError:
             # Treat as a read-only property.
-            if operation == "write":
+            if operation == 'write':
                 raise Ignore
             return getattr(instance, field_name)
         else:
             # Tortoise field
-            if operation == "write" and is_read_only(field):
+            if operation == 'write' and is_read_only(field):
                 raise Ignore
 
             write_only = False  # Not implemented yet
-            if operation == "read" and write_only:
+            if operation == 'read' and write_only:
                 raise Ignore
 
             type_ = _FIELD_TO_PYDANTIC_TYPE[field.__class__]
@@ -99,18 +100,16 @@ class PydanticSerializationBackend(SerializationBackend):
             return (type_, value)
 
     def to_internal_value(self, data: Data) -> Data:
-        """Convert a native dict of values to a Python dict of values."""
-        schema = self._get_schema("write")
+        schema = self._get_schema('write')
         try:
             obj = schema(**data)
-        except ValidationError as exc:
-            raise exc from None
+        except PydanticValidationError as exc:
+            raise ValidationError(exc.raw_errors) from exc
         else:
             return obj.dict()
 
     def to_representation(self, instance: T) -> Data:
-        """Convert a Python object to a native dict of values."""
-        schema = self._get_schema("read", instance=instance)
+        schema = self._get_schema('read', instance=instance)
         data = {
             attr: getattr(instance, attr)
             for attr in schema.__fields__.keys()

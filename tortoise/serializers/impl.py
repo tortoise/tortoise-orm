@@ -12,22 +12,20 @@ T = TypeVar('T')
 class Serializer(BaseSerializer[T]):  # pylint: disable=unsubscriptable-object
     """A concrete serializer class backed by a serialization backend."""
 
-    serialization_backend: Union[None, str, Type[SerializationBackend]] = None
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.backend = self._get_backend()
 
     def _get_backend(self) -> SerializationBackend:
-        backend = getattr(self, "serialization_backend")
+        backend = self._meta.options.get('backend')
 
         if backend is None:
-            raise AssertionError("`serialization_backend` class attribute should be set.")
+            raise AssertionError('A value for `backend` should be set in `Meta.options`.')
 
         if isinstance(backend, str):
             backend = load_serialization_backend(backend)
 
-        return backend(config=self._meta)
+        return backend(serializer=self, config=self._meta)
 
     def to_internal_value(self, data: Data) -> Data:
         return self.backend.to_internal_value(data)

@@ -8,7 +8,8 @@ from .meta import MetaInfo
 class SerializationBackend:
     """Base serialization backend class."""
 
-    def __init__(self, config: MetaInfo):
+    def __init__(self, serializer, config: MetaInfo):
+        self.serializer = serializer
         self.config = config
 
     def get_declared_fields(self) -> Set[str]:
@@ -29,12 +30,13 @@ class SerializationBackend:
 
 def load_serialization_backend(name: str) -> SerializationBackend:
     try:
-        module = import_module("tortoise.contrib.{}".format(name))  # type: Any
+        module = import_module('tortoise.contrib.{}'.format(name))  # type: Any
     except ModuleNotFoundError as exc:
-        raise ImportError("Backend '{}' does not exist.".format(name)) from exc
+        raise ImportError('Backend "{}" does not exist.'.format(name)) from exc
     except ImportError as exc:
         raise ImportError(
-            "Backend '{}' found, but some dependencies need to be installed."
+            'Backend "{}" found, but dependency "{}" is not installed.'
+            .format(name, exc.name)
         ) from exc
 
     return module.backend

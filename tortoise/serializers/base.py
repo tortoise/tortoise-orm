@@ -10,7 +10,7 @@ T = TypeVar('T')
 class BaseSerializerMeta(type):
 
     def __new__(mcs, name: str, bases: tuple, attrs: dict):
-        attrs["_meta"] = MetaInfo(attrs.get("Meta"))
+        attrs['_meta'] = MetaInfo(attrs.get('Meta'))
         return super().__new__(mcs, name, bases, attrs)
 
 
@@ -20,9 +20,15 @@ class BaseSerializer(Generic[T], metaclass=BaseSerializerMeta):
     _meta = MetaInfo(None)
 
     def to_internal_value(self, data: Data) -> Data:
+        """Convert a native dict of values to a Python dict of values.
+
+        Concrete implementations should validate the given data and return
+        its validated version, or raise a `ValidationError` if validation has failed.
+        """
         raise NotImplementedError
 
     def to_representation(self, instance: T) -> Data:
+        """Convert a Python object to a native dict of values."""
         raise NotImplementedError
 
     def validate(self, data: Data) -> Data:
@@ -34,6 +40,7 @@ class BaseSerializer(Generic[T], metaclass=BaseSerializerMeta):
             return validated_data
 
     def dump(self, instance: T) -> Data:
+        # Simple alias: `to_representation()` is a very long name!
         return self.to_representation(instance)
 
     async def perform_create(self, validated_data: Data) -> T:
