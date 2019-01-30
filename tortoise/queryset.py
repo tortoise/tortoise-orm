@@ -373,12 +373,19 @@ class QuerySet(AwaitableQuery):
         return queryset
 
     async def explain(self) -> Any:
-        """Fetch and return the execution plan using an `EXPLAIN` query.
+        """Fetch and return information about the query execution plan.
 
-        Please note that:
+        This is done by executing an ``EXPLAIN`` query whose exact prefix depends
+        on the database backend, as documented below.
 
-        - This is provided for debugging only.
-        - The output format may (and will) vary greatly depending on the database used.
+        - PostgreSQL: ``EXPLAIN (FORMAT JSON, VERBOSE) ...``
+        - SQLite: ``EXPLAIN QUERY PLAN ...``
+        - MySQL: ``EXPLAIN FORMAT=JSON ...``
+
+        .. note::
+            This is only meant to be used in an interactive environment for debugging
+            and query optimization.
+            **The output format may (and will) vary greatly depending on the database backend.**
         """
         query = self._make_query()
         executor = self._db.executor_class(model=self.model, db=self._db)
