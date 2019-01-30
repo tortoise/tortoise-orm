@@ -1,10 +1,9 @@
 import datetime
 import decimal
 import json
-from typing import Any, Dict, Optional, Set, Tuple, Type, TypeVar, Union  # noqa
+from typing import Any, Dict, Optional, Set, Tuple, Type, TypeVar, Union, Callable  # noqa
 
 from tortoise import fields
-from tortoise.fields import Field
 from tortoise.serializers.backends import SerializationBackend
 from tortoise.serializers.datatypes import Data
 from tortoise.serializers.exceptions import MissingDependencies, ValidationError
@@ -45,12 +44,12 @@ class PydanticSerializationBackend(SerializationBackend):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._read_schema: Optional[Type[BaseModel]] = None
-        self._write_schema: Optional[Type[BaseModel]] = None
+        self._read_schema = None  # type: Optional[Type[BaseModel]]
+        self._write_schema = None  # type: Optional[Type[BaseModel]]
 
     def _get_schema(self, operation: str, instance: Optional[T] = None) -> Type[BaseModel]:
         """Create a Pydantic model for the given serialization operation."""
-        definitions: Dict[str, Definition] = {}
+        definitions = {}  # type: Dict[str, Definition]
 
         for field_name in self.get_field_names():
             try:
@@ -72,7 +71,7 @@ class PydanticSerializationBackend(SerializationBackend):
         self, field_name: str, operation: str, instance: Optional[T] = None
     ) -> Optional[Definition]:
         try:
-            field: Field = self.config.model._meta.fields_map[field_name]
+            field = self.config.model._meta.fields_map[field_name]  # type: fields.Field
         except KeyError:
             # Treat as a read-only property.
             if operation == 'write':
@@ -88,7 +87,7 @@ class PydanticSerializationBackend(SerializationBackend):
                 raise Ignore
 
             type_ = _FIELD_TO_PYDANTIC_TYPE[field.__class__]
-            value = _REQUIRED  # type: Union[None, ellipsis, Any]
+            value = _REQUIRED  # type: Union[None, ellipsis, Any, Callable]
 
             if field.default is None and field.null:
                 value = None
