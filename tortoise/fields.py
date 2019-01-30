@@ -23,9 +23,6 @@ JSON_DUMPS = functools.partial(
 JSON_LOADS = json.loads
 
 
-_NOT_PROVIDED = object()
-
-
 class Field:
     """
     Base Field type.
@@ -40,7 +37,7 @@ class Field:
         generated: bool = False,
         pk: bool = False,
         null: bool = False,
-        default: Optional[Any] = _NOT_PROVIDED,
+        default: Any = None,
         unique: bool = False,
         **kwargs
     ) -> None:
@@ -48,8 +45,7 @@ class Field:
         self.source_field = source_field
         self.generated = generated
         self.pk = pk
-        self._given_default = default
-        self.default = None if default is _NOT_PROVIDED else default
+        self.default = default
         self.null = null
         self.unique = unique
         self.model_field_name = ''  # Type: str
@@ -64,7 +60,7 @@ class Field:
 
     @property
     def required(self):
-        return self._given_default is _NOT_PROVIDED
+        return self.default is None and not self.null and not self.generated
 
 
 class IntField(Field):

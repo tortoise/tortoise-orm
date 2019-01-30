@@ -10,15 +10,20 @@ from tortoise.tests import testmodels
 
 class TestRequired(test.SimpleTestCase):
 
-    async def test_if_no_default_then_required(self):
+    async def test_required_by_default(self):
         self.assertTrue(fields.Field(str).required)
 
-    async def test_if_default_then_required(self):
-        for default in 'foo', '', None:
-            self.assertFalse(fields.Field(str, default=default).required)
+    async def test_if_generated_then_not_required(self):
+        self.assertFalse(fields.Field(str, generated=True).required)
 
-    async def test_required_independant_of_null(self):
-        self.assertTrue(fields.Field(str, null=True))
+    async def test_if_null_then_not_required(self):
+        self.assertFalse(fields.Field(str, null=True).required)
+
+    async def test_if_has_non_null_default_then_not_required(self):
+        self.assertFalse(fields.Field(str, default='').required)
+
+    async def test_if_null_default_then_required(self):
+        self.assertTrue(fields.Field(str, default=None).required)
 
 
 class TestIntFields(test.TestCase):
