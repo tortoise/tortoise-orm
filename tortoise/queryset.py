@@ -85,7 +85,7 @@ class QuerySet(AwaitableQuery):
     __slots__ = ('fields', '_prefetch_map', '_prefetch_queries',
                  '_single', '_get', '_count', '_db', '_limit', '_offset', '_filter_kwargs',
                  '_orderings', '_q_objects', '_distinct',
-                 '_annotations', '_having', '_custom_filters', '_explain')
+                 '_annotations', '_having', '_custom_filters')
 
     def __init__(self, model) -> None:
         super().__init__(model, None)
@@ -105,7 +105,6 @@ class QuerySet(AwaitableQuery):
         self._annotations = {}  # type: Dict[str, Aggregate]
         self._having = {}  # type: Dict[str, Any]
         self._custom_filters = {}  # type: Dict[str, dict]
-        self._explain = False  # type: bool
 
     def _clone(self) -> 'QuerySet':
         queryset = QuerySet.__new__(QuerySet)
@@ -128,7 +127,6 @@ class QuerySet(AwaitableQuery):
         queryset._annotations = copy(self._annotations)
         queryset._having = copy(self._having)
         queryset._custom_filters = copy(self._custom_filters)
-        queryset._explain = self._explain
         return queryset
 
     def _filter_or_exclude(self, *args, negate: bool, **kwargs):
@@ -374,10 +372,17 @@ class QuerySet(AwaitableQuery):
                 queryset._prefetch_map[first_level_field].add(forwarded_prefetch)
         return queryset
 
-    def explain(self) -> 'QuerySet':
-        queryset = self._clone()
-        queryset._explain = True
-        return queryset
+    async def explain(self) -> Any:
+        """Fetch and return the execution plan using an `EXPLAIN` query.
+
+        Please note that:
+
+        - This is provided for debugging only.
+        - The output format may (and will) vary greatly depending on the database used.
+        """
+        query = self._make_query()
+        executor = self._db.executor_class(model=self.model, db=self._db)
+        return await executor.execute_explain(query)
 
     def using_db(self, _db: BaseDBAsyncClient) -> 'QuerySet':
         """
@@ -419,18 +424,12 @@ class QuerySet(AwaitableQuery):
 
     async def _execute(self):
         self.query = self._make_query()
-
-        executor = self._db.executor_class(
+        instance_list = await self._db.executor_class(
             model=self.model,
             db=self._db,
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
-        )
-
-        if self._explain:
-            return await executor.execute_explain(self.query)
-
-        instance_list = await executor.execute_select(
+        ).execute_select(
             self.query, custom_fields=list(self._annotations.keys())
         )
         if not instance_list:
