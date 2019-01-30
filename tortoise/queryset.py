@@ -374,7 +374,7 @@ class QuerySet(AwaitableQuery):
                 queryset._prefetch_map[first_level_field].add(forwarded_prefetch)
         return queryset
 
-    def explain(self, format: Optional[str] = None, **options) -> 'QuerySet':
+    def explain(self) -> 'QuerySet':
         queryset = self._clone()
         queryset._explain = True
         return queryset

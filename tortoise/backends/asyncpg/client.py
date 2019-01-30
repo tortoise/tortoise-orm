@@ -117,15 +117,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             self.log.debug(query)
             await connection.execute(query)
 
-    @translate_exceptions
-    async def execute_explain(self, query: str) -> str:
-        async with self.acquire_connection() as connection:
-            self.log.debug("%s %s", "EXPLAIN", query)
-            prepared = await connection.prepare(query)
-            plan = await prepared.explain()  # type: dict
-            # TODO properly convert to string
-            return str(plan)
-
 
 class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     def __init__(self, connection_name: str, connection) -> None:

@@ -28,6 +28,7 @@ class SqliteExecutor(BaseExecutor):
         fields.BooleanField: to_db_bool,
         fields.DecimalField: to_db_decimal,
     }
+    EXPLAIN_PREFIX = 'EXPLAIN QUERY PLAN'
 
     def _prepare_insert_statement(self, columns: List[str]) -> str:
         return str(
