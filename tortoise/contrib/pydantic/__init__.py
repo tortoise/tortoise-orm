@@ -1,19 +1,19 @@
 import datetime
 import decimal
 import json
-from typing import Any, Dict, Optional, Set, TypeVar, Tuple, Type, Union  # noqa
+from typing import Any, Dict, Optional, Set, Tuple, Type, TypeVar, Union  # noqa
 
 from tortoise import fields
 from tortoise.fields import Field
 from tortoise.serializers.backends import SerializationBackend
 from tortoise.serializers.datatypes import Data
-from tortoise.serializers.exceptions import ValidationError
+from tortoise.serializers.exceptions import MissingDependencies, ValidationError
 from tortoise.serializers.field_utils import is_read_only
 
 try:
     from pydantic import BaseModel, ValidationError as PydanticValidationError, create_model
 except ImportError as exc:
-    raise exc from None
+    raise MissingDependencies('pydantic') from exc
 
 T = TypeVar('T')
 Definition = Union[Any, Tuple[Type, Any]]

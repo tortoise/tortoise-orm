@@ -1,7 +1,8 @@
 from importlib import import_module
-from typing import Any, Set
+from typing import Any, Set, Type
 
 from .datatypes import Data
+from .exceptions import MissingDependencies
 from .meta import MetaInfo
 
 
@@ -28,15 +29,15 @@ class SerializationBackend:
         raise NotImplementedError
 
 
-def load_serialization_backend(name: str) -> SerializationBackend:
+def load_serialization_backend(name: str) -> Type[SerializationBackend]:
     try:
         module = import_module('tortoise.contrib.{}'.format(name))  # type: Any
-    except ModuleNotFoundError as exc:
-        raise ImportError('Backend "{}" does not exist.'.format(name)) from exc
-    except ImportError as exc:
+    except MissingDependencies as exc:
         raise ImportError(
-            'Backend "{}" found, but dependency "{}" is not installed.'
-            .format(name, exc.name)
+            'Backend "{}" found, but some dependencies are missing: {}.'
+            .format(name, ', '.join(exc.dependencies))
         ) from exc
+    except ImportError as exc:
+        raise ImportError('Backend "{}" does not exist.'.format(name)) from exc
 
     return module.backend
