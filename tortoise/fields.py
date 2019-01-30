@@ -27,8 +27,8 @@ class Field:
     """
     Base Field type.
     """
-    __slots__ = ('type', 'source_field', 'generated', 'pk', 'default', '_given_default',
-                 'null', 'unique', 'model_field_name')
+    __slots__ = ('type', 'source_field', 'generated', 'pk', 'default', 'null', 'unique',
+	             'model_field_name')
 
     def __init__(
         self,
