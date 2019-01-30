@@ -6,6 +6,7 @@ Changelog
 - Performance fix with PyPika for small fetch queries.
 - Remove parameter hack now that PyPika support Parametrized queries
 - Fix typos in JSONField docstring
+- Added `.explain()` method on `QuerySet`.
 
 0.11.2
 ------
