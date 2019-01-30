@@ -7,6 +7,7 @@ Changelog
 - Remove parameter hack now that PyPika support Parametrized queries
 - Fix typos in JSONField docstring
 - Added `.explain()` method on `QuerySet`.
+- Add `required` read-only property to fields
 
 0.11.2
 ------
