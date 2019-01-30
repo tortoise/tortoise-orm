@@ -372,6 +372,25 @@ class QuerySet(AwaitableQuery):
                 queryset._prefetch_map[first_level_field].add(forwarded_prefetch)
         return queryset
 
+    async def explain(self) -> Any:
+        """Fetch and return information about the query execution plan.
+
+        This is done by executing an ``EXPLAIN`` query whose exact prefix depends
+        on the database backend, as documented below.
+
+        - PostgreSQL: ``EXPLAIN (FORMAT JSON, VERBOSE) ...``
+        - SQLite: ``EXPLAIN QUERY PLAN ...``
+        - MySQL: ``EXPLAIN FORMAT=JSON ...``
+
+        .. note::
+            This is only meant to be used in an interactive environment for debugging
+            and query optimization.
+            **The output format may (and will) vary greatly depending on the database backend.**
+        """
+        query = self._make_query()
+        executor = self._db.executor_class(model=self.model, db=self._db)
+        return await executor.execute_explain(query)
+
     def using_db(self, _db: BaseDBAsyncClient) -> 'QuerySet':
         """
         Executes query in provided db client.
