@@ -1,6 +1,6 @@
 import logging
 from copy import deepcopy
-from typing import Optional, Sequence
+from typing import Sequence
 
 from pypika import Query
 
@@ -9,14 +9,11 @@ from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
 class Capabilities:
-    def __init__(self, dialect: str, *, connection: Optional[dict] = None, **kwargs) -> None:
+    def __init__(self, dialect: str, *, connection: dict) -> None:
         super().__setattr__('_mutable', True)
 
         self.dialect = dialect
-        self.connection = deepcopy(connection or {})  # type: dict
-
-        for key, val in kwargs.items():
-            setattr(self, key, deepcopy(val))
+        self.connection = deepcopy(connection)
 
         super().__setattr__('_mutable', False)
 
@@ -37,7 +34,7 @@ class BaseDBAsyncClient:
     def __init__(self, connection_name: str, **kwargs) -> None:
         self.log = logging.getLogger('db_client')
         self.connection_name = connection_name
-        self.capabilities = Capabilities('')
+        self.capabilities = Capabilities('', connection={})
 
     async def create_connection(self, with_db: bool) -> None:
         raise NotImplementedError()  # pragma: nocoverage
