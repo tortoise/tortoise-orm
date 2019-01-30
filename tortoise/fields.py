@@ -23,12 +23,15 @@ JSON_DUMPS = functools.partial(
 JSON_LOADS = json.loads
 
 
+_NOT_PROVIDED = object()
+
+
 class Field:
     """
     Base Field type.
     """
-    __slots__ = ('type', 'source_field', 'generated', 'pk', 'default', 'null', 'unique',
-                 'model_field_name')
+    __slots__ = ('type', 'source_field', 'generated', 'pk', 'default', '_given_default',
+                 'null', 'unique', 'model_field_name')
 
     def __init__(
         self,
@@ -37,7 +40,7 @@ class Field:
         generated: bool = False,
         pk: bool = False,
         null: bool = False,
-        default: Any = None,
+        default: Optional[Any] = _NOT_PROVIDED,
         unique: bool = False,
         **kwargs
     ) -> None:
@@ -45,7 +48,8 @@ class Field:
         self.source_field = source_field
         self.generated = generated
         self.pk = pk
-        self.default = default
+        self._given_default = default
+        self.default = None if default is _NOT_PROVIDED else default
         self.null = null
         self.unique = unique
         self.model_field_name = ''  # Type: str
@@ -57,6 +61,10 @@ class Field:
         if value is None or isinstance(value, self.type):
             return value
         return self.type(value)
+
+    @property
+    def required(self):
+        return self._given_default is _NOT_PROVIDED
 
 
 class IntField(Field):

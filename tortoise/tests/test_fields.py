@@ -8,6 +8,19 @@ from tortoise.exceptions import ConfigurationError, IntegrityError
 from tortoise.tests import testmodels
 
 
+class TestRequired(test.SimpleTestCase):
+
+    async def test_if_no_default_then_required(self):
+        self.assertTrue(fields.Field(str).required)
+
+    async def test_if_default_then_required(self):
+        for default in 'foo', '', None:
+            self.assertFalse(fields.Field(str, default=default).required)
+
+    async def test_required_independant_of_null(self):
+        self.assertTrue(fields.Field(str, null=True))
+
+
 class TestIntFields(test.TestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):

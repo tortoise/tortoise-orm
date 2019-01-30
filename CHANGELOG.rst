@@ -6,6 +6,7 @@ Changelog
 - Performance fix with PyPika for small fetch queries.
 - Remove parameter hack now that PyPika support Parametrized queries
 - Fix typos in JSONField docstring
+- Add `required` read-only property to fields
 
 0.11.2
 ------
