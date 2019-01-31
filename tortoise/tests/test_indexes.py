@@ -1,25 +1,12 @@
 import re
+from datetime import datetime
 
-from tortoise import Tortoise
 from tortoise.contrib import test
+from tortoise.tests.testmodels import Tournament
 
 
 class TestFieldIndex(test.TestCase):
-
-    async def setUp(self):
-        self.db = Tortoise.get_connection('models')
-
     async def test_index_created(self):
-        explain = {
-            'sqlite': 'EXPLAIN QUERY PLAN SELECT * FROM tournament ',
-            'postgresql': 'EXPLAIN SELECT * FROM tournament ',
-            'mysql': 'EXPLAIN SELECT * FROM `tournament` ',
-        }[self.db.database]
-        query = explain + "WHERE created BETWEEN '2018-12-20' AND '2018-12-31';"
-
-        plan: dict = (await self.db.execute_query(query))[0]
-
-        self.assertIsNotNone(re.search(
-            r'tournament_created_\w+_idx',
-            plan['detail'],
-        ))
+        # The database *should* use the index on `created` when filtering on it.
+        plan = await Tournament.filter(created__lt=datetime.now()).explain()
+        self.assertIsNotNone(re.search(r'tournament_created_\w+_idx', str(plan)))
