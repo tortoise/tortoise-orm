@@ -62,6 +62,10 @@ class Field:
             return value
         return self.type(value)
 
+    @property
+    def required(self):
+        return self.default is None and not self.null and not self.generated
+
 
 class IntField(Field):
     """

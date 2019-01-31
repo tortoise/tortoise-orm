@@ -3,9 +3,21 @@ Changelog
 
 0.11.3
 ------
-- Performance fix with PyPika for small fetch queries.
+* Added basic DB driver Capabilities.
+
+  Test runner now has the ability to skip tests conditionally, based on the DB driver Capabilities:
+
+  .. code-block:: python3
+
+      @requireCapability(dialect='sqlite')
+      async def test_run_sqlite_only(self):
+          ...
+
+- Performance fix with PyPika for small fetch queries
 - Remove parameter hack now that PyPika support Parametrized queries
 - Fix typos in JSONField docstring
+- Added `.explain()` method on `QuerySet`.
+- Add `required` read-only property to fields
 
 0.11.2
 ------
@@ -99,7 +111,7 @@ Changelog
 
 0.10.0
 ------
-- Refactored ``Tortoise.init()`` to init all connections and discover models from config passed
+* Refactored ``Tortoise.init()`` to init all connections and discover models from config passed
   as argument.
 
   .. caution::
@@ -157,12 +169,12 @@ Changelog
 
 0.9.0
 -----
-- Added support for nested queries for ``values`` and ``values_list``:
+* Added support for nested queries for ``values`` and ``values_list``:
 
-.. code-block:: python3
+  .. code-block:: python3
 
-    result = await Event.filter(id=event.id).values('id', 'name', tournament='tournament__name')
-    result = await Event.filter(id=event.id).values_list('id', 'participants__name')
+      result = await Event.filter(id=event.id).values('id', 'name', tournament='tournament__name')
+      result = await Event.filter(id=event.id).values_list('id', 'participants__name')
 
 - Fixed ``DatetimeField`` and ``DateField`` to work as expected on SQLite.
 - Added ``PyLint`` plugin.
@@ -191,25 +203,25 @@ Changelog
 
 0.3.0
 -----
-- Added schema generation and more options for fields:
+* Added schema generation and more options for fields:
 
-.. code-block:: python3
+  .. code-block:: python3
 
-    from tortoise import Tortoise
-    from tortoise.backends.sqlite.client import SqliteClient
-    from tortoise.utils import generate_schema
+      from tortoise import Tortoise
+      from tortoise.backends.sqlite.client import SqliteClient
+      from tortoise.utils import generate_schema
 
-    client = SqliteClient(db_name)
-    await client.create_connection()
-    Tortoise.init(client)
-    await generate_schema(client)
+      client = SqliteClient(db_name)
+      await client.create_connection()
+      Tortoise.init(client)
+      await generate_schema(client)
 
 0.2.0
 -----
-- Added filtering and ordering by related models fields:
+* Added filtering and ordering by related models fields:
 
-.. code-block:: python3
+  .. code-block:: python3
 
-    await Tournament.filter(
-        events__name__in=['1', '3']
-    ).order_by('-events__participants__name').distinct()
+      await Tournament.filter(
+          events__name__in=['1', '3']
+      ).order_by('-events__participants__name').distinct()

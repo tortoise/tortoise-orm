@@ -47,6 +47,7 @@ class MySQLExecutor(BaseExecutor):
         insensitive_starts_with: mysql_insensitive_starts_with,
         insensitive_ends_with: mysql_insensitive_ends_with
     }
+    EXPLAIN_PREFIX = 'EXPLAIN FORMAT=JSON'
 
     def _prepare_insert_statement(self, columns: List[str]) -> str:
         return str(
