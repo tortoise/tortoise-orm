@@ -1,6 +1,7 @@
 import asyncio
 import os as _os
 from asyncio.selector_events import BaseSelectorEventLoop
+from functools import wraps
 from typing import List, Optional
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless  # noqa
 
@@ -15,7 +16,7 @@ from tortoise.transactions import current_transaction_map, start_transaction
 
 __all__ = ('SimpleTestCase', 'IsolatedTestCase', 'TestCase', 'SkipTest', 'expectedFailure',
            'skip', 'skipIf', 'skipUnless', 'env_initializer', 'initializer', 'finalizer',
-           'getDBConfig')
+           'getDBConfig', 'requireCapability')
 _TORTOISE_TEST_DB = 'sqlite://:memory:'
 
 expectedFailure.__doc__ = """
@@ -238,3 +239,30 @@ class TestCase(SimpleTestCase):
     async def _tearDownDB(self) -> None:
         _restore_default()
         await self.transaction.rollback()
+
+
+def requireCapability(**conditions):
+    """
+    Skip a test if the required capabilities are not matched.
+
+    Usage:
+
+    .. code-block:: python3
+
+        @requireCapability(dialect='sqlite')
+        async def test_run_sqlite_only(self):
+            ...
+
+    Any number of keyword-warg parameter tests can be specified,
+    but they must all pass for the test to run.
+    """
+    def decorator(test_item):
+        @wraps(test_item)
+        def skip_wrapper(*args, **kwargs):
+            db = Tortoise.get_connection('models')
+            for key, val in conditions.items():
+                if getattr(db.capabilities, key) != val:
+                    raise SkipTest('Capability {key} != {val}'.format(key=key, val=val))
+            return test_item(*args, **kwargs)
+        return skip_wrapper
+    return decorator
