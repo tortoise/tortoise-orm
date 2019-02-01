@@ -252,7 +252,7 @@ def requireCapability(connection_name: str = 'models', **conditions: Any):
         async def test_run_sqlite_only(self):
             ...
 
-    :param connection_name: name of the connection to to retrieve capabilities from.
+    :param connection_name: name of the connection to retrieve capabilities from.
     :param **conditions: capability tests which must all pass for the test to run.
     """
     def decorator(test_item):
