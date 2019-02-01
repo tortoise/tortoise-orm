@@ -2,7 +2,7 @@ import asyncio
 import os as _os
 from asyncio.selector_events import BaseSelectorEventLoop
 from functools import wraps
-from typing import List, Optional
+from typing import Any, List, Optional
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless  # noqa
 
 from asynctest import TestCase as _TestCase
@@ -14,9 +14,11 @@ from tortoise.backends.base.config_generator import generate_config as _generate
 from tortoise.exceptions import DBConnectionError
 from tortoise.transactions import current_transaction_map, start_transaction
 
-__all__ = ('SimpleTestCase', 'IsolatedTestCase', 'TestCase', 'SkipTest', 'expectedFailure',
-           'skip', 'skipIf', 'skipUnless', 'env_initializer', 'initializer', 'finalizer',
-           'getDBConfig', 'requireCapability')
+__all__ = (
+    'SimpleTestCase', 'IsolatedTestCase', 'TestCase', 'SkipTest', 'expectedFailure', 'skip',
+    'skipIf', 'skipUnless', 'env_initializer', 'initializer', 'finalizer', 'getDBConfig',
+    'requireCapability'
+)
 _TORTOISE_TEST_DB = 'sqlite://:memory:'
 
 expectedFailure.__doc__ = """
@@ -42,9 +44,7 @@ def getDBConfig(app_label: str, modules: List[str]) -> dict:
     """
     return _generate_config(
         _TORTOISE_TEST_DB,
-        app_modules={
-            app_label: modules
-        },
+        app_modules={app_label: modules},
         testing=True,
         connection_label=app_label
     )
@@ -69,8 +69,9 @@ def _restore_default() -> None:
     Tortoise._inited = True
 
 
-def initializer(modules: List[str], db_url: Optional[str] = None,
-                loop: Optional[BaseSelectorEventLoop] = None) -> None:
+def initializer(
+    modules: List[str], db_url: Optional[str] = None, loop: Optional[BaseSelectorEventLoop] = None
+) -> None:
     """
     Sets up the DB for testing. Must be called as part of test environment setup.
 
@@ -154,8 +155,7 @@ class SimpleTestCase(_TestCase):
         else:  # pragma: nocoverage
             loop = self.loop = asyncio.new_event_loop()
 
-        policy = _Policy(asyncio.get_event_loop_policy(),
-                         loop, self.forbid_get_event_loop)
+        policy = _Policy(asyncio.get_event_loop_policy(), loop, self.forbid_get_event_loop)
 
         asyncio.set_event_loop_policy(policy)
 
@@ -210,8 +210,8 @@ class IsolatedTestCase(SimpleTestCase):
     It will define a ``self.db`` which is the fully initialised (with DB schema)
     DB Client object.
     """
-    # pylint: disable=C0103,W0201
 
+    # pylint: disable=C0103,W0201
     async def _setUpDB(self) -> None:
         config = getDBConfig(
             app_label='models',
@@ -241,7 +241,7 @@ class TestCase(SimpleTestCase):
         await self.transaction.rollback()
 
 
-def requireCapability(**conditions):
+def requireCapability(connection_name: str = 'models', **conditions: Any):
     """
     Skip a test if the required capabilities are not matched.
 
@@ -253,16 +253,19 @@ def requireCapability(**conditions):
         async def test_run_sqlite_only(self):
             ...
 
-    Any number of keyword-warg parameter tests can be specified,
-    but they must all pass for the test to run.
+    :param connection_name: name of the connection to to retrieve capabilities from.
+    :param **conditions: capability tests which must all pass for the test to run.
     """
+
     def decorator(test_item):
         @wraps(test_item)
         def skip_wrapper(*args, **kwargs):
-            db = Tortoise.get_connection('models')
+            db = Tortoise.get_connection(connection_name)
             for key, val in conditions.items():
                 if getattr(db.capabilities, key) != val:
                     raise SkipTest('Capability {key} != {val}'.format(key=key, val=val))
             return test_item(*args, **kwargs)
+
         return skip_wrapper
+
     return decorator
