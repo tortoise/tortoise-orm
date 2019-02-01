@@ -20,6 +20,12 @@ class TestCapabilities(test.TestCase):
         with self.assertRaises(AttributeError):
             self.caps.dialect = 'foo'
 
+    @test.expectedFailure
+    @test.requireCapability(connection_name='other')
+    def test_connection_name(self):
+        # Will fail with a `KeyError` since the connection `"other"` does not exist.
+        pass
+
     @test.requireCapability(dialect='sqlite')
     def test_immutability_2(self):
         self.assertEquals(self.caps.connection['file'], self.db.filename)
