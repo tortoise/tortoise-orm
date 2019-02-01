@@ -2,7 +2,7 @@ import asyncio
 import os as _os
 from asyncio.selector_events import BaseSelectorEventLoop
 from functools import wraps
-from typing import List, Optional
+from typing import Any, List, Optional
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless  # noqa
 
 from asynctest import TestCase as _TestCase
@@ -211,7 +211,6 @@ class IsolatedTestCase(SimpleTestCase):
     DB Client object.
     """
     # pylint: disable=C0103,W0201
-
     async def _setUpDB(self) -> None:
         config = getDBConfig(
             app_label='models',
@@ -241,7 +240,7 @@ class TestCase(SimpleTestCase):
         await self.transaction.rollback()
 
 
-def requireCapability(**conditions):
+def requireCapability(connection_name: str = 'models', **conditions: Any):
     """
     Skip a test if the required capabilities are not matched.
 
@@ -253,13 +252,13 @@ def requireCapability(**conditions):
         async def test_run_sqlite_only(self):
             ...
 
-    Any number of keyword-warg parameter tests can be specified,
-    but they must all pass for the test to run.
+    :param connection_name: name of the connection to retrieve capabilities from.
+    :param **conditions: capability tests which must all pass for the test to run.
     """
     def decorator(test_item):
         @wraps(test_item)
         def skip_wrapper(*args, **kwargs):
-            db = Tortoise.get_connection('models')
+            db = Tortoise.get_connection(connection_name)
             for key, val in conditions.items():
                 if getattr(db.capabilities, key) != val:
                     raise SkipTest('Capability {key} != {val}'.format(key=key, val=val))
