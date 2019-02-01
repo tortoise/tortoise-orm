@@ -37,7 +37,11 @@ class SqliteClient(BaseDBAsyncClient):
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
         )
         self._connection = None  # type: Optional[aiosqlite.Connection]
-        self.capabilities = Capabilities('sqlite', connection={'file': file_path})
+        self.capabilities = Capabilities(
+            'sqlite',
+            connection={'file': file_path},
+            safe_indexes=True,
+        )
 
     async def create_connection(self, with_db: bool) -> None:
         if not self._connection:  # pragma: no branch

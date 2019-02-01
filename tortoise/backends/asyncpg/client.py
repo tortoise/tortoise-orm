@@ -54,7 +54,8 @@ class AsyncpgDBClient(BaseDBAsyncClient):
                 'database': database,
                 'host': host,
                 'port': port,
-            }
+            },
+            safe_indexes=True,
         )
 
     async def create_connection(self, with_db: bool) -> None:

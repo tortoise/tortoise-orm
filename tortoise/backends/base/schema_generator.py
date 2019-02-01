@@ -1,4 +1,5 @@
 from typing import List, Set  # noqa
+import warnings
 
 from tortoise import fields
 from tortoise.exceptions import ConfigurationError
@@ -70,6 +71,14 @@ class BaseSchemaGenerator:
         )
         return index_name
 
+    def _get_index_sql(self, model, field_names: List[str], safe: bool) -> str:
+        return self.INDEX_CREATE_TEMPLATE.format(
+            exists='IF NOT EXISTS ' if safe else '',
+            index_name=self._generate_index_name(model, field_names),
+            table_name=model._meta.table,
+            fields=', '.join(field_names),
+        )
+
     def _get_table_sql(self, model, safe=True) -> dict:
 
         fields_to_create = []
@@ -116,16 +125,22 @@ class BaseSchemaGenerator:
         )
 
         # Indexes.
-        for field_name in fields_with_index:
-            table_create_string = ' '.join([
-                table_create_string,
-                self.INDEX_CREATE_TEMPLATE.format(
-                    exists="IF NOT EXISTS " if safe else "",
-                    index_name=self._generate_index_name(model, [field_name]),
+        field_indexes_sqls = [
+            self._get_index_sql(model, [field_name], safe=safe) for field_name in fields_with_index
+        ]
+        if safe and not self.client.capabilities.safe_indexes:
+            warnings.warn(
+                'Skipping creation of field indexes for fields {field_names} '
+                'on table "{table_name}" : safe index creation is not supported yet for {dialect}. '
+                'Please find the SQL queries to create the indexes below.'.format(
+                    field_names=', '.join(fields_with_index),
                     table_name=model._meta.table,
-                    fields=field_name,
+                    dialect=self.client.capabilities.dialect,
                 )
-            ])
+            )
+            warnings.warn('\n'.join(field_indexes_sqls))
+        else:
+            table_create_string = ' '.join([table_create_string, *field_indexes_sqls])
 
         for m2m_field in model._meta.m2m_fields:
             field_object = model._meta.fields_map[m2m_field]
