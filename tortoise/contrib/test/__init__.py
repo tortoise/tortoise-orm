@@ -14,11 +14,9 @@ from tortoise.backends.base.config_generator import generate_config as _generate
 from tortoise.exceptions import DBConnectionError
 from tortoise.transactions import current_transaction_map, start_transaction
 
-__all__ = (
-    'SimpleTestCase', 'IsolatedTestCase', 'TestCase', 'SkipTest', 'expectedFailure', 'skip',
-    'skipIf', 'skipUnless', 'env_initializer', 'initializer', 'finalizer', 'getDBConfig',
-    'requireCapability'
-)
+__all__ = ('SimpleTestCase', 'IsolatedTestCase', 'TestCase', 'SkipTest', 'expectedFailure',
+           'skip', 'skipIf', 'skipUnless', 'env_initializer', 'initializer', 'finalizer',
+           'getDBConfig', 'requireCapability')
 _TORTOISE_TEST_DB = 'sqlite://:memory:'
 
 expectedFailure.__doc__ = """
@@ -44,7 +42,9 @@ def getDBConfig(app_label: str, modules: List[str]) -> dict:
     """
     return _generate_config(
         _TORTOISE_TEST_DB,
-        app_modules={app_label: modules},
+        app_modules={
+            app_label: modules
+        },
         testing=True,
         connection_label=app_label
     )
@@ -69,9 +69,8 @@ def _restore_default() -> None:
     Tortoise._inited = True
 
 
-def initializer(
-    modules: List[str], db_url: Optional[str] = None, loop: Optional[BaseSelectorEventLoop] = None
-) -> None:
+def initializer(modules: List[str], db_url: Optional[str] = None,
+                loop: Optional[BaseSelectorEventLoop] = None) -> None:
     """
     Sets up the DB for testing. Must be called as part of test environment setup.
 
@@ -155,7 +154,8 @@ class SimpleTestCase(_TestCase):
         else:  # pragma: nocoverage
             loop = self.loop = asyncio.new_event_loop()
 
-        policy = _Policy(asyncio.get_event_loop_policy(), loop, self.forbid_get_event_loop)
+        policy = _Policy(asyncio.get_event_loop_policy(),
+                         loop, self.forbid_get_event_loop)
 
         asyncio.set_event_loop_policy(policy)
 
@@ -210,7 +210,6 @@ class IsolatedTestCase(SimpleTestCase):
     It will define a ``self.db`` which is the fully initialised (with DB schema)
     DB Client object.
     """
-
     # pylint: disable=C0103,W0201
     async def _setUpDB(self) -> None:
         config = getDBConfig(
@@ -256,7 +255,6 @@ def requireCapability(connection_name: str = 'models', **conditions: Any):
     :param connection_name: name of the connection to to retrieve capabilities from.
     :param **conditions: capability tests which must all pass for the test to run.
     """
-
     def decorator(test_item):
         @wraps(test_item)
         def skip_wrapper(*args, **kwargs):
@@ -265,7 +263,5 @@ def requireCapability(connection_name: str = 'models', **conditions: Any):
                 if getattr(db.capabilities, key) != val:
                     raise SkipTest('Capability {key} != {val}'.format(key=key, val=val))
             return test_item(*args, **kwargs)
-
         return skip_wrapper
-
     return decorator
