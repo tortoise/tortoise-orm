@@ -1,5 +1,5 @@
-from typing import List, Set  # noqa
 import warnings
+from typing import List, Set  # noqa
 
 from tortoise import fields
 from tortoise.exceptions import ConfigurationError
