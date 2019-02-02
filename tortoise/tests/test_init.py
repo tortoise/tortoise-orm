@@ -56,7 +56,7 @@ class TestInitErrors(test.SimpleTestCase):
                 "apps": {
                     "models": {
                         "models": [
-                            "tortoise.tests.testmodels_dup1",
+                            "tortoise.tests.models_dup1",
                         ],
                         "default_connection": "default"
                     }
@@ -78,7 +78,7 @@ class TestInitErrors(test.SimpleTestCase):
                 "apps": {
                     "models": {
                         "models": [
-                            "tortoise.tests.testmodels_dup2",
+                            "tortoise.tests.models_dup2",
                         ],
                         "default_connection": "default"
                     }
