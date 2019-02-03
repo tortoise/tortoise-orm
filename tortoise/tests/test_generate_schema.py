@@ -84,14 +84,14 @@ class TestGenerateSchema(test.SimpleTestCase):
         sql = self.get_sql("CREATE INDEX")
         self.assertIsNotNone(re.search(r"tournament_created_\w+_idx", sql))
 
-    @test.requireCapability(safe_indexes=True)
     async def test_index_safe(self):
         await self.init_for("tortoise.tests.testmodels", safe=True)
+        test.checkCapability("default", safe_indexes=True)
         sql = self.get_sql("CREATE INDEX")
         self.assertIn("IF NOT EXISTS", sql)
 
-    @test.requireCapability(safe_indexes=False)
     async def test_safe_index_not_created_if_not_supported(self):
         await self.init_for("tortoise.tests.testmodels", safe=True)
+        test.checkCapability("default", safe_indexes=False)
         sql = self.get_sql("")
         self.assertNotIn("CREATE INDEX", sql)

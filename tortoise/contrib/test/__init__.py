@@ -16,7 +16,7 @@ from tortoise.transactions import current_transaction_map, start_transaction
 
 __all__ = ('SimpleTestCase', 'IsolatedTestCase', 'TestCase', 'SkipTest', 'expectedFailure',
            'skip', 'skipIf', 'skipUnless', 'env_initializer', 'initializer', 'finalizer',
-           'getDBConfig', 'requireCapability')
+           'getDBConfig', 'requireCapability', 'checkCapability')
 _TORTOISE_TEST_DB = 'sqlite://:memory:'
 
 expectedFailure.__doc__ = """
@@ -244,6 +244,9 @@ def requireCapability(connection_name: str = 'models', **conditions: Any):
     """
     Skip a test if the required capabilities are not matched.
 
+    .. note::
+        The database must be initialized *before* the decorated test runs.
+
     Usage:
 
     .. code-block:: python3
@@ -258,10 +261,28 @@ def requireCapability(connection_name: str = 'models', **conditions: Any):
     def decorator(test_item):
         @wraps(test_item)
         def skip_wrapper(*args, **kwargs):
-            db = Tortoise.get_connection(connection_name)
-            for key, val in conditions.items():
-                if getattr(db.capabilities, key) != val:
-                    raise SkipTest('Capability {key} != {val}'.format(key=key, val=val))
+            checkCapability(connection_name, **conditions)
             return test_item(*args, **kwargs)
         return skip_wrapper
     return decorator
+
+
+def checkCapability(connection_name: str = 'models', **conditions: Any):
+    """
+    A variant of ``requireCapability`` that skips the current test immediately.
+
+    Especially useful in a test that initializes the database.
+
+    Usage:
+
+    .. code-block:: python3
+
+        async def test_run_some_feature(self):
+            await Tortoise.init(...)
+            checkCapability(supports_some_feature=True)
+            ...
+    """
+    db = Tortoise.get_connection(connection_name)
+    for key, val in conditions.items():
+        if getattr(db.capabilities, key) != val:
+            raise SkipTest('Capability {key} != {val}'.format(key=key, val=val))
