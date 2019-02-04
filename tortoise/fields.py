@@ -466,9 +466,6 @@ class RelationQueryContainer:
     def offset(self, *args, **kwargs):
         return self._query.offset(*args, **kwargs)
 
-    def distinct(self, *args, **kwargs):
-        return self._query.distinct(*args, **kwargs)
-
     def _set_result_for_query(self, sequence) -> None:
         for item in sequence:
             if not isinstance(item, self.model):
@@ -550,3 +547,6 @@ class ManyToManyRelationManager(RelationQueryContainer):
             )
         query = db.query_class.from_(through_table).where(condition).delete()
         await db.execute_query(str(query))
+
+    def distinct(self, *args, **kwargs):
+        return self._query.distinct(*args, **kwargs)
