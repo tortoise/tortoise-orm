@@ -512,7 +512,7 @@ class TestForeignKeyField(test.TestCase):
         with self.assertRaisesRegex(NoValuesFetched,
                                     "No values were fetched for this relation,"
                                     " first use .fetch_related()"):
-            'a' in tour.minrelations
+            'a' in tour.minrelations  # pylint: disable=W0104
 
     async def test_minimal__unfetched_iter(self):
         tour = await testmodels.Tournament.create(name='Team1')
@@ -541,7 +541,7 @@ class TestForeignKeyField(test.TestCase):
         with self.assertRaisesRegex(NoValuesFetched,
                                     "No values were fetched for this relation,"
                                     " first use .fetch_related()"):
-            tour.minrelations[0]
+            tour.minrelations[0]  # pylint: disable=W0104
 
     async def test_minimal__instantiated_create(self):
         tour = await testmodels.Tournament.create(name='Team1')
@@ -589,7 +589,7 @@ class TestForeignKeyField(test.TestCase):
         self.assertEqual(tour.minrelations[0], rel)
 
         with self.assertRaises(IndexError):
-            tour.minrelations[1]
+            tour.minrelations[1]  # pylint: disable=W0104
 
     async def test_event__filter(self):
         tour = await testmodels.Tournament.create(name='Team1')

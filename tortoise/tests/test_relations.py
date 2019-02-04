@@ -20,7 +20,7 @@ class TestRelations(test.TestCase):
         await event.participants.add(participants[0], participants[1])
 
         with self.assertRaises(NoValuesFetched):
-            [team.id for team in event.participants]
+            [team.id for team in event.participants]  # pylint: disable=W0104
 
         teamids = []
         async for team in event.participants:

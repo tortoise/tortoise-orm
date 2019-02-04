@@ -8,7 +8,9 @@ from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
 class Capabilities:
-    def __init__(self, dialect: str, *, safe_indexes: bool = False, requires_limit: bool = False) -> None:
+    def __init__(self, dialect: str, *,
+                 safe_indexes: bool = False,
+                 requires_limit: bool = False) -> None:
         super().__setattr__('_mutable', True)
 
         self.dialect = dialect

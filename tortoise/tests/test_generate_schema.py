@@ -120,6 +120,3 @@ class TestGenerateSchema(test.SimpleTestCase):
         with self.assertRaisesRegex(ConfigurationError,
                                     'Foreign key accepts model name in format "app.Model"'):
             await self.init_for("tortoise.tests.models_m2m_1")
-
-        sql = self.get_sql("")
-        self.assertNotIn("CREATE INDEX", sql)
