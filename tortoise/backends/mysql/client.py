@@ -33,6 +33,7 @@ class MySQLClient(BaseDBAsyncClient):
     query_class = MySQLQuery
     executor_class = MySQLExecutor
     schema_generator = MySQLSchemaGenerator
+    capabilities = Capabilities('mysql', safe_indexes=False, requires_limit=True)
 
     def __init__(self, user: str, password: str, database: str, host: str, port: SupportsInt,
                  **kwargs) -> None:
@@ -48,17 +49,6 @@ class MySQLClient(BaseDBAsyncClient):
 
         self._transaction_class = type(
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
-        )
-        self.capabilities = Capabilities(
-            'mysql',
-            connection={
-                'user': user,
-                'database': database,
-                'host': host,
-                'port': port,
-            },
-            # NOTE: this is due to MySQL not supporting `IF NOT EXISTS` for indexes.
-            safe_indexes=False,
         )
 
     async def create_connection(self, with_db: bool) -> None:

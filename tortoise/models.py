@@ -143,18 +143,16 @@ class Model(metaclass=ModelMeta):
         # self._meta is a very common attribute lookup, lets cache it.
         meta = self._meta
 
-        # Create basic fk/m2m objects
-        is_new = 'id' not in kwargs
-
+        # Create lazy fk/m2m objects
         for key in meta.backward_fk_fields:
             field_object = meta.fields_map[key]
             setattr(self, key, RelationQueryContainer(
-                field_object.type, field_object.relation_field, self, is_new))  # type: ignore
+                field_object.type, field_object.relation_field, self))  # type: ignore
 
         for key in meta.m2m_fields:
             field_object = meta.fields_map[key]
             setattr(self, key, ManyToManyRelationManager(  # type: ignore
-                field_object.type, self, field_object, is_new))
+                field_object.type, self, field_object))
 
         # Assign values and do type conversions
         passed_fields = set(kwargs.keys())

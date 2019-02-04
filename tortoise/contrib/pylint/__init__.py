@@ -64,25 +64,27 @@ def transform_model(cls) -> None:
                                 if keyword.arg == 'related_name':
                                     relname = keyword.value.value
 
-                        if relname:
-                            # Injected model attributes need to also have the relation manager
-                            if attrname == 'ManyToManyField':
-                                relval = [
-                                    attr.value.func,
-                                    MANAGER.ast_from_module_name('tortoise.fields')
-                                    .lookup('ManyToManyRelationManager')[1][0]
-                                ]
-                            else:
-                                relval = [
-                                    attr.value.func,
-                                    MANAGER.ast_from_module_name('tortoise.fields')
-                                    .lookup('RelationQueryContainer')[1][0]
-                                ]
+                        if not relname:
+                            relname = cls.name.lower() + 's'
 
-                            if tomodel in MODELS:
-                                MODELS[tomodel].locals[relname] = relval
-                            else:
-                                FUTURE_RELATIONS.setdefault(tomodel, []).append((relname, relval))
+                        # Injected model attributes need to also have the relation manager
+                        if attrname == 'ManyToManyField':
+                            relval = [
+                                attr.value.func,
+                                MANAGER.ast_from_module_name('tortoise.fields')
+                                .lookup('ManyToManyRelationManager')[1][0]
+                            ]
+                        else:
+                            relval = [
+                                attr.value.func,
+                                MANAGER.ast_from_module_name('tortoise.fields')
+                                .lookup('RelationQueryContainer')[1][0]
+                            ]
+
+                        if tomodel in MODELS:
+                            MODELS[tomodel].locals[relname] = relval
+                        else:
+                            FUTURE_RELATIONS.setdefault(tomodel, []).append((relname, relval))
 
     cls.locals['_meta'] = [
         MANAGER.ast_from_module_name('tortoise.models').lookup('MetaInfo')[1][0].instantiate_class()

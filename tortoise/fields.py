@@ -391,11 +391,11 @@ class RelationQueryContainer:
     __slots__ = ('model', 'relation_field', 'instance', '_fetched', '_custom_query',
                  'related_objects')
 
-    def __init__(self, model, relation_field: str, instance, is_new: bool) -> None:
+    def __init__(self, model, relation_field: str, instance) -> None:
         self.model = model
         self.relation_field = relation_field
         self.instance = instance
-        self._fetched = is_new
+        self._fetched = False
         self._custom_query = False
         self.related_objects = []  # type: list
 
@@ -441,6 +441,9 @@ class RelationQueryContainer:
             )
         return self.related_objects[item]
 
+    def __await__(self):
+        return self._query.__await__()
+
     def __aiter__(self) -> QueryAsyncIterator:
         async def fetched_callback(iterator_wrapper):
             self._fetched = True
@@ -467,7 +470,6 @@ class RelationQueryContainer:
         return self._query.distinct(*args, **kwargs)
 
     def _set_result_for_query(self, sequence) -> None:
-        # TODO: What does this do?
         for item in sequence:
             if not isinstance(item, self.model):
                 OperationalError("{} is not of {}".format(item, self.model))
@@ -479,8 +481,8 @@ class RelationQueryContainer:
 class ManyToManyRelationManager(RelationQueryContainer):
     __slots__ = ('field', 'model', 'instance')
 
-    def __init__(self, model, instance, m2m_field: ManyToManyField, is_new: bool) -> None:
-        super().__init__(model, m2m_field.related_name, instance, is_new)
+    def __init__(self, model, instance, m2m_field: ManyToManyField) -> None:
+        super().__init__(model, m2m_field.related_name, instance)
         self.field = m2m_field
         self.model = m2m_field.type
         self.instance = instance
