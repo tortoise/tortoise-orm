@@ -79,7 +79,7 @@ class TestGenerateSchema(test.SimpleTestCase):
                                     "Can't create schema due to cyclic fk references"):
             await self.init_for("tortoise.tests.testmodels_cyclic")
 
-    async def continue_if_safe_indexes(self, supported: bool):
+    def continue_if_safe_indexes(self, supported: bool):
         db = Tortoise.get_connection("default")
         if db.capabilities.safe_indexes != supported:
             raise test.SkipTest('safe_indexes != {}'.format(supported))
