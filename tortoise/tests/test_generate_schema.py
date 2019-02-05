@@ -79,6 +79,11 @@ class TestGenerateSchema(test.SimpleTestCase):
                                     "Can't create schema due to cyclic fk references"):
             await self.init_for("tortoise.tests.testmodels_cyclic")
 
+    async def continue_if_safe_indexes(self, supported: bool):
+        db = Tortoise.get_connection("default")
+        if db.capabilities.safe_indexes != supported:
+            raise test.SkipTest('safe_indexes != {}'.format(supported))
+
     async def test_create_index(self):
         await self.init_for("tortoise.tests.testmodels")
         sql = self.get_sql("CREATE INDEX")
@@ -86,12 +91,12 @@ class TestGenerateSchema(test.SimpleTestCase):
 
     async def test_index_safe(self):
         await self.init_for("tortoise.tests.testmodels", safe=True)
-        test.checkCapability("default", safe_indexes=True)
+        self.continue_if_safe_indexes(supported=True)
         sql = self.get_sql("CREATE INDEX")
         self.assertIn("IF NOT EXISTS", sql)
 
     async def test_safe_index_not_created_if_not_supported(self):
         await self.init_for("tortoise.tests.testmodels", safe=True)
-        test.checkCapability("default", safe_indexes=False)
+        self.continue_if_safe_indexes(supported=False)
         sql = self.get_sql("")
         self.assertNotIn("CREATE INDEX", sql)
