@@ -8,9 +8,22 @@ from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
 class Capabilities:
-    def __init__(self, dialect: str, *,
-                 safe_indexes: bool = False,
-                 requires_limit: bool = False) -> None:
+    '''
+    DB Client Capabilities indicates the supported feature-set,
+    and is also used to note common workarounds to defeciences.
+
+    Defaults are set with the following standard:
+
+    * Defeciences: assume it is working right.
+    * Features: assume it doesn't have it.
+    '''
+
+    def __init__(
+        self, dialect: str, *,
+        # Deficiencies to work around:
+        safe_indexes: bool = True,
+        requires_limit: bool = False
+    ) -> None:
         super().__setattr__('_mutable', True)
 
         self.dialect = dialect
