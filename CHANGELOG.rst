@@ -13,6 +13,16 @@ Changelog
       async def test_run_sqlite_only(self):
           ...
 
+* Added per-field indexes.
+
+  When setting `index=True` on a field, Tortoise will now generate an index for it.
+
+  .. note::
+     Due to MySQL limitation of not supporting conditional index creation,
+     if `safe=True` (the default) is set, it won't create the index and emit a warning about it.
+
+     We plan to work around this limitation in a future release.
+
 - Performance fix with PyPika for small fetch queries
 - Remove parameter hack now that PyPika support Parametrized queries
 - Fix typos in JSONField docstring

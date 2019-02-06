@@ -58,7 +58,7 @@ async def _init_db(config: dict) -> None:
         pass
 
     await Tortoise.init(config, _create_db=True)
-    await Tortoise.generate_schemas()
+    await Tortoise.generate_schemas(safe=False)
 
 
 def _restore_default() -> None:
