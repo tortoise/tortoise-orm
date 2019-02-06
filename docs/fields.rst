@@ -78,6 +78,8 @@ Common parameters for fields:
     Defaults to ``None``, which has no effect unless the field is nullable.
 ``unique`` (bool):
     Require that values for the field are unique. Defaults to ``False``.
+``index`` (bool):
+    Set to ``True`` to create a B-Tree index for this field.
 ``generated`` (bool):
     A flag indicating that this field is read-only and its value is generated in database.
     You typically don't need to use this if you created the schema through Tortoise.

@@ -9,11 +9,14 @@ from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
 class Capabilities:
-    def __init__(self, dialect: str, *, connection: dict) -> None:
+    def __init__(
+        self, dialect: str, *, connection: dict, safe_indexes: bool = False
+    ) -> None:
         super().__setattr__('_mutable', True)
 
         self.dialect = dialect
         self.connection = deepcopy(connection)
+        self.safe_indexes = safe_indexes
 
         super().__setattr__('_mutable', False)
 

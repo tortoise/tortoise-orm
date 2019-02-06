@@ -56,7 +56,9 @@ class MySQLClient(BaseDBAsyncClient):
                 'database': database,
                 'host': host,
                 'port': port,
-            }
+            },
+            # NOTE: this is due to MySQL not supporting `IF NOT EXISTS` for indexes.
+            safe_indexes=False,
         )
 
     async def create_connection(self, with_db: bool) -> None:

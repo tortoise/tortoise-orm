@@ -244,6 +244,9 @@ def requireCapability(connection_name: str = 'models', **conditions: Any):
     """
     Skip a test if the required capabilities are not matched.
 
+    .. note::
+        The database must be initialized *before* the decorated test runs.
+
     Usage:
 
     .. code-block:: python3

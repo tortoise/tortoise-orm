@@ -1,3 +1,5 @@
+import re
+
 from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
@@ -61,13 +63,13 @@ class TestGenerateSchema(test.SimpleTestCase):
         self.assertIn('"team_id" INT NOT NULL REFERENCES "team" (id) ON DELETE CASCADE', sql)
 
     async def test_safe_generation(self):
-        """Assert that the IF NOT EXISTS clause in included when safely generating schema."""
+        """Assert that the IF NOT EXISTS clause is included when safely generating schema."""
         await self.init_for("tortoise.tests.testmodels", True)
         sql = self.get_sql("")
         self.assertIn("IF NOT EXISTS", sql)
 
     async def test_unsafe_generation(self):
-        """Assert that the IF NOT EXISTS clause in not included when generating schema."""
+        """Assert that the IF NOT EXISTS clause is not included when generating schema."""
         await self.init_for("tortoise.tests.testmodels", False)
         sql = self.get_sql("")
         self.assertNotIn("IF NOT EXISTS", sql)
@@ -76,3 +78,25 @@ class TestGenerateSchema(test.SimpleTestCase):
         with self.assertRaisesRegex(ConfigurationError,
                                     "Can't create schema due to cyclic fk references"):
             await self.init_for("tortoise.tests.testmodels_cyclic")
+
+    def continue_if_safe_indexes(self, supported: bool):
+        db = Tortoise.get_connection("default")
+        if db.capabilities.safe_indexes != supported:
+            raise test.SkipTest('safe_indexes != {}'.format(supported))
+
+    async def test_create_index(self):
+        await self.init_for("tortoise.tests.testmodels")
+        sql = self.get_sql("CREATE INDEX")
+        self.assertIsNotNone(re.search(r"tournament_created_\w+_idx", sql))
+
+    async def test_index_safe(self):
+        await self.init_for("tortoise.tests.testmodels", safe=True)
+        self.continue_if_safe_indexes(supported=True)
+        sql = self.get_sql("CREATE INDEX")
+        self.assertIn("IF NOT EXISTS", sql)
+
+    async def test_safe_index_not_created_if_not_supported(self):
+        await self.init_for("tortoise.tests.testmodels", safe=True)
+        self.continue_if_safe_indexes(supported=False)
+        sql = self.get_sql("")
+        self.assertNotIn("CREATE INDEX", sql)
