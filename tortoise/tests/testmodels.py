@@ -3,6 +3,7 @@ This is the testing Models
 """
 import binascii
 import os
+from datetime import timezone
 from enum import Enum
 
 from tortoise import fields
@@ -131,6 +132,7 @@ class DatetimeFields(Model):
     datetime_null = fields.DatetimeField(null=True)
     datetime_auto = fields.DatetimeField(auto_now=True)
     datetime_add = fields.DatetimeField(auto_now_add=True)
+    datetime_aware = fields.DatetimeField(null=True, in_timezone=timezone.utc)
 
 
 class TimeDeltaFields(Model):

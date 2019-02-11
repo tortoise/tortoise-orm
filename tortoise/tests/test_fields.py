@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from time import sleep
 
@@ -322,6 +322,20 @@ class TestDatetimeFields(test.TestCase):
         obj0 = await testmodels.DatetimeFields.create(datetime=now)
         values = await testmodels.DatetimeFields.get(id=obj0.id).values_list('datetime', flat=True)
         self.assertEqual(values[0], now)
+
+    async def test_timezone_aware(self):
+        now = datetime.now(timezone.utc)
+        with self.assertRaises(ValueError):
+            await testmodels.DatetimeFields.create(datetime=now)
+
+    async def test_timezone_aware_conversion(self):
+        now = datetime.now(timezone.utc)
+        obj0 = await testmodels.DatetimeFields.create(
+            datetime=now.replace(tzinfo=None),
+            datetime_aware=now
+        )
+        obj = await testmodels.DatetimeFields.get(id=obj0.id)
+        self.assertIsNot(obj.datetime_aware.tzinfo, None)
 
 
 class TestDateFields(test.TestCase):

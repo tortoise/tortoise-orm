@@ -1,6 +1,7 @@
 import datetime
 import functools
 import json
+from datetime import timezone
 from decimal import Decimal
 from typing import Any, Optional, Union
 
@@ -179,20 +180,35 @@ class DatetimeField(Field):
         Always set to ``datetime.utcnow()`` on save.
     ``auto_now_add`` (bool):
         Set to ``datetime.utcnow()`` on first save only.
+    ``in_timezone`` (timezone):
+        Convert all supplied timezone aware datetimes to
+        to this timezone before insertion in the database.
     """
-    __slots__ = ('auto_now', 'auto_now_add')
+    __slots__ = ('auto_now', 'auto_now_add', 'in_timezone')
 
-    def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs) -> None:
+    def __init__(
+            self,
+            auto_now: bool = False, auto_now_add: bool = False,
+            in_timezone: Optional[timezone] = None, **kwargs
+    ) -> None:
         if auto_now_add and auto_now:
             raise ConfigurationError("You can choose only 'auto_now' or 'auto_now_add'")
         super().__init__(datetime.datetime, **kwargs)
         self.auto_now = auto_now
         self.auto_now_add = auto_now | auto_now_add
+        self.in_timezone = in_timezone
 
-    def to_python_value(self, value: Any) -> datetime.datetime:
-        if value is None or isinstance(value, self.type):
+    def to_python_value(self, value: Any) -> Optional[datetime.datetime]:
+        if value is None:
             return value
-        return ciso8601.parse_datetime(value)
+
+        if not isinstance(value, self.type):
+            value = ciso8601.parse_datetime(value)
+
+        if self.in_timezone is not None:
+            value = value.replace(tzinfo=self.in_timezone)
+
+        return value
 
     def to_db_value(self, value: datetime.datetime, instance) -> datetime.datetime:
         if self.auto_now:
@@ -203,6 +219,11 @@ class DatetimeField(Field):
             value = datetime.datetime.utcnow()
             setattr(instance, self.model_field_name, value)
             return value
+        if hasattr(value, "tzinfo") and value.tzinfo is not None:
+            if self.in_timezone is not None:
+                value = value.astimezone(self.in_timezone).replace(tzinfo=None)
+            else:
+                raise ValueError(f"Timezone aware datetime {value} supplied to DatetimeField")
         return value
 
 
