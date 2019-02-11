@@ -223,7 +223,9 @@ class DatetimeField(Field):
             if self.in_timezone is not None:
                 value = value.astimezone(self.in_timezone).replace(tzinfo=None)
             else:
-                raise ValueError(f"Timezone aware datetime {value} supplied to DatetimeField")
+                raise ValueError(
+                    "Timezone aware datetime {} supplied to DatetimeField".format(value)
+                )
         return value
 
 
