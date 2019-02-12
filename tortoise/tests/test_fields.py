@@ -467,27 +467,27 @@ class TestForeignKeyField(test.TestCase):
         tour = await testmodels.Tournament.create(name='Team1')
         rel = await testmodels.MinRelation.create(tournament_id=tour.id)
         self.assertEqual(rel.tournament_id, tour.id)
-        self.assertEqual((await tour.minrelations)[0], rel)
+        self.assertEqual((await tour.minrelations.all())[0], rel)
 
     @test.expectedFailure
     async def test_minimal__create_by_name(self):
         tour = await testmodels.Tournament.create(name='Team1')
         rel = await testmodels.MinRelation.create(tournament=tour)
         self.assertEqual(rel.tournament, tour)
-        self.assertEqual((await tour.minrelations)[0], rel)
+        self.assertEqual((await tour.minrelations.all())[0], rel)
 
     async def test_event__create_by_id(self):
         tour = await testmodels.Tournament.create(name='Team1')
         rel = await testmodels.Event.create(name='Event1', tournament_id=tour.id)
         self.assertEqual(rel.tournament_id, tour.id)
-        self.assertEqual((await tour.events)[0], rel)
+        self.assertEqual((await tour.events.all())[0], rel)
 
     @test.expectedFailure
     async def test_event__create_by_name(self):
         tour = await testmodels.Tournament.create(name='Team1')
         rel = await testmodels.Event.create(name='Event1', tournament=tour)
         self.assertEqual(rel.tournament, tour)
-        self.assertEqual((await tour.events)[0], rel)
+        self.assertEqual((await tour.events.all())[0], rel)
 
     async def test_minimal__uninstantiated_create(self):
         tour = testmodels.Tournament(name='Team1')

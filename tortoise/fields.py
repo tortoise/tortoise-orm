@@ -455,7 +455,7 @@ class RelationQueryContainer:
         return self._query.filter(*args, **kwargs)
 
     def all(self):
-        return self
+        return self._query
 
     def order_by(self, *args, **kwargs):
         return self._query.order_by(*args, **kwargs)
