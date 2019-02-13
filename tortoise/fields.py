@@ -467,10 +467,6 @@ class RelationQueryContainer:
         return self._query.offset(*args, **kwargs)
 
     def _set_result_for_query(self, sequence) -> None:
-        for item in sequence:
-            if not isinstance(item, self.model):
-                OperationalError("{} is not of {}".format(item, self.model))
-
         self._fetched = True
         self.related_objects = sequence
 
@@ -547,6 +543,3 @@ class ManyToManyRelationManager(RelationQueryContainer):
             )
         query = db.query_class.from_(through_table).where(condition).delete()
         await db.execute_query(str(query))
-
-    def distinct(self, *args, **kwargs):
-        return self._query.distinct(*args, **kwargs)
