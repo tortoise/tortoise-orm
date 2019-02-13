@@ -80,9 +80,14 @@ class TestManyToManyField(test.TestCase):
         self.assertEqual(await two1.one, [])
         self.assertEqual(await two2.one, [])
 
-    @test.expectedFailure
     async def test__uninstantiated_add(self):
         one = testmodels.M2MOne(name='One')
         two = await testmodels.M2MTwo.create(name='Two')
-        with self.assertRaisesRegex(OperationalError, r'You should first call .save\(\)'):
+        with self.assertRaisesRegex(OperationalError, r'You should first call .save\(\) on <M2MOne>'):
             await one.two.add(two)
+
+    async def test__add_uninstantiated(self):
+        one = testmodels.M2MOne(name='One')
+        two = await testmodels.M2MTwo.create(name='Two')
+        with self.assertRaisesRegex(OperationalError, r'You should first call .save\(\) on <M2MOne>'):
+            await two.one.add(one)

@@ -11,12 +11,12 @@ class TestDecimalFields(test.TestCase):
         with self.assertRaisesRegex(TypeError,
                                     "missing 2 required positional arguments: 'max_digits' and"
                                     " 'decimal_places'"):
-            fields.DecimalField()
+            fields.DecimalField()  # pylint: disable=E1120
 
     def test_decimal_places_empty(self):
         with self.assertRaisesRegex(TypeError,
                                     "missing 1 required positional argument: 'decimal_places'"):
-            fields.DecimalField(max_digits=1)
+            fields.DecimalField(max_digits=1)  # pylint: disable=E1120
 
     def test_max_fields_bad(self):
         with self.assertRaisesRegex(ConfigurationError, "'max_digits' must be >= 1"):

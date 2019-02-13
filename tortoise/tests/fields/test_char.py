@@ -8,7 +8,7 @@ class TestCharFields(test.TestCase):
     def test_max_length_missing(self):
         with self.assertRaisesRegex(TypeError,
                                     "missing 1 required positional argument: 'max_length'"):
-            fields.CharField()
+            fields.CharField()  # pylint: disable=E1120
 
     def test_max_length_bad(self):
         with self.assertRaisesRegex(ConfigurationError, "'max_length' must be >= 1"):
