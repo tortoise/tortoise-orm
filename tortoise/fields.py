@@ -484,7 +484,8 @@ class ManyToManyRelationManager(RelationQueryContainer):
         if not instances:
             return
         if self.instance.id is None:
-            raise OperationalError('You should first call .save() on {model}'.format(model=self.instance))
+            raise OperationalError(
+                'You should first call .save() on {model}'.format(model=self.instance))
         db = using_db if using_db else self.model._meta.db
         through_table = Table(self.field.through)
         select_query = db.query_class.from_(through_table).where(
@@ -511,7 +512,8 @@ class ManyToManyRelationManager(RelationQueryContainer):
         insert_is_required = False
         for instance_to_add in instances:
             if instance_to_add.id is None:
-                raise OperationalError('You should first call .save() on {model}'.format(model=instance_to_add))
+                raise OperationalError(
+                    'You should first call .save() on {model}'.format(model=instance_to_add))
             if (self.instance.id, instance_to_add.id) in already_existing_relations:
                 continue
             query = query.insert(instance_to_add.id, self.instance.id)
