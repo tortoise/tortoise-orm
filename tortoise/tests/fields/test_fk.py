@@ -14,11 +14,25 @@ class TestForeignKeyField(test.TestCase):
         self.assertEqual(rel.tournament_id, tour.id)
         self.assertEqual((await tour.minrelations.all())[0], rel)
 
-    @test.expectedFailure
     async def test_minimal__create_by_name(self):
         tour = await testmodels.Tournament.create(name='Team1')
         rel = await testmodels.MinRelation.create(tournament=tour)
+        await rel.fetch_related('tournament')
         self.assertEqual(rel.tournament, tour)
+        self.assertEqual((await tour.minrelations.all())[0], rel)
+
+    @test.skip('Not yet implemented')
+    async def test_minimal__by_name__unfetched(self):
+        tour = await testmodels.Tournament.create(name='Team1')
+        rel = await testmodels.MinRelation.create(tournament=tour)
+        with self.assertRaisesRegex(NoValuesFetched, "moo"):
+            rel.tournament  # pylint: disable=W0104
+
+    @test.skip('Not yet implemented')
+    async def test_minimal__by_name__awaited(self):
+        tour = await testmodels.Tournament.create(name='Team1')
+        rel = await testmodels.MinRelation.create(tournament=tour)
+        self.assertEqual(await rel.tournament, tour)
         self.assertEqual((await tour.minrelations.all())[0], rel)
 
     async def test_event__create_by_id(self):
@@ -27,10 +41,10 @@ class TestForeignKeyField(test.TestCase):
         self.assertEqual(rel.tournament_id, tour.id)
         self.assertEqual((await tour.events.all())[0], rel)
 
-    @test.expectedFailure
     async def test_event__create_by_name(self):
         tour = await testmodels.Tournament.create(name='Team1')
         rel = await testmodels.Event.create(name='Event1', tournament=tour)
+        await rel.fetch_related('tournament')
         self.assertEqual(rel.tournament, tour)
         self.assertEqual((await tour.events.all())[0], rel)
 

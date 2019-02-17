@@ -10,7 +10,7 @@ aiomysql==0.0.20
 aiosqlite==0.9.0
 asn1crypto==0.24.0        # via cryptography
 asynctest==0.12.2
-cffi==1.11.5              # via cryptography
+cffi==1.12.1              # via cryptography
 ciso8601==2.1.1
 colorama==0.4.1           # via green
 contextvars==2.3          # via aiocontextvars
