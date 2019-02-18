@@ -139,6 +139,8 @@ To get the reverse fk, e.g. an `event.tournament` we currently only support the 
 
 Next field is ``fields.ManyToManyField('models.Team', related_name='events')``. It describes many to many relation to model Team.
 
+To add to a ``ManyToManyField`` both the models need to be saved, else you will get an ``OperationalError`` raised.
+
 Resolving many to many fields can be done with both async and sync interfaces.
 
 Async fetch:

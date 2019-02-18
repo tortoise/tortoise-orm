@@ -6,6 +6,7 @@ Changelog
 * Fixed several convenince issues with foreign relations:
   - FIXED: ``.all()`` actually returns the _query property as was documented.
   - New models with FK don't automatically fail to resolve any data. They can now be evaluated lazily.
+
 - Some DB's don't support OFFSET without Limit, added caps to signal workaround, which is to automatically add limit of 1000000
 - Pylint plugin to know about default `related_name` for ForeignKey fields.
 - Simplified capabilities to be static, and defined at class level.

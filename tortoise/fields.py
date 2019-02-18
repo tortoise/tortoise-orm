@@ -388,6 +388,9 @@ class BackwardFKRelation(Field):
 
 
 class RelationQueryContainer:
+    """
+    Relation Query container.
+    """
     __slots__ = ('model', 'relation_field', 'instance', '_fetched', '_custom_query',
                  'related_objects')
 
@@ -452,18 +455,33 @@ class RelationQueryContainer:
         return QueryAsyncIterator(self._query, callback=fetched_callback)
 
     def filter(self, *args, **kwargs):
+        """
+        Returns QuerySet with related elements filtered by args/kwargs.
+        """
         return self._query.filter(*args, **kwargs)
 
     def all(self):
+        """
+        Returns QuerySet with all related elements.
+        """
         return self._query
 
     def order_by(self, *args, **kwargs):
+        """
+        Returns QuerySet related elements in order.
+        """
         return self._query.order_by(*args, **kwargs)
 
     def limit(self, *args, **kwargs):
+        """
+        Returns a QuerySet with at most «limit» related elements.
+        """
         return self._query.limit(*args, **kwargs)
 
     def offset(self, *args, **kwargs):
+        """
+        Returns aQuerySet with all related elements offset by «offset».
+        """
         return self._query.offset(*args, **kwargs)
 
     def _set_result_for_query(self, sequence) -> None:
@@ -472,6 +490,9 @@ class RelationQueryContainer:
 
 
 class ManyToManyRelationManager(RelationQueryContainer):
+    """
+    Many to many relation Query container.
+    """
     __slots__ = ('field', 'model', 'instance')
 
     def __init__(self, model, instance, m2m_field: ManyToManyField) -> None:
@@ -481,6 +502,11 @@ class ManyToManyRelationManager(RelationQueryContainer):
         self.instance = instance
 
     async def add(self, *instances, using_db=None) -> None:
+        """
+        Adds one or more of ``instances`` to the relation.
+
+        If it is already added, it will be silently ignored.
+        """
         if not instances:
             return
         if self.instance.id is None:
@@ -522,6 +548,9 @@ class ManyToManyRelationManager(RelationQueryContainer):
             await db.execute_query(str(query))
 
     async def clear(self, using_db=None) -> None:
+        """
+        Clears ALL relations.
+        """
         db = using_db if using_db else self.model._meta.db
         through_table = Table(self.field.through)
         query = db.query_class.from_(through_table).where(
@@ -530,6 +559,9 @@ class ManyToManyRelationManager(RelationQueryContainer):
         await db.execute_query(str(query))
 
     async def remove(self, *instances, using_db=None) -> None:
+        """
+        Removes one or more of ``instances`` from the relation.
+        """
         db = using_db if using_db else self.model._meta.db
         if not instances:
             raise OperationalError('remove() called on no instances')
