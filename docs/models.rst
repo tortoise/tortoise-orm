@@ -97,21 +97,77 @@ In event model we got some more fields, that could be interesting for us.
 ``related_name``
     Is keyword argument, that defines field for related query on referenced models, so with that you could fetch all tournaments's events with like this:
 
+Fetching foreign keys can be done with both async and sync interfaces.
+
+Async fetch:
+
 .. code-block:: python3
 
-    await tournament.events.all()
+    events = await tournament.events.all()
 
-or like this:
+You can async iterate over it like this:
+
+.. code-block:: python3
+
+    async for event in tournament.events:
+        ...
+
+Sync usage requires that you call `fetch_related` before the time, and then you can use common functions such as:
 
 .. code-block:: python3
 
     await tournament.fetch_related('events')
+    events = list(tournament.events)
+    eventlen = len(tournament.events)
+    if SomeEvent in tournament.events:
+        ...
+    if tournament.events:
+        ...
+    firstevent = tournament.events[0]
+
+
+To get the reverse fk, e.g. an `event.tournament` we currently only support the sync interface.
+
+.. code-block:: python3
+
+    await event.fetch_related('tournament')
+    tournament = event.tournament
+
 
 ``ManyToManyField``
 -------------------
 
 Next field is ``fields.ManyToManyField('models.Team', related_name='events')``. It describes many to many relation to model Team.
 
+Resolving many to many fields can be done with both async and sync interfaces.
+
+Async fetch:
+
+.. code-block:: python3
+
+    participants = await tournament.participants.all()
+
+You can async iterate over it like this:
+
+.. code-block:: python3
+
+    async for participant in tournament.participants:
+        ...
+
+Sync usage requires that you call `fetch_related` before the time, and then you can use common functions such as:
+
+.. code-block:: python3
+
+    await tournament.fetch_related('participants')
+    participants = list(tournament.participants)
+    participantlen = len(tournament.participants)
+    if SomeParticipant in tournament.participants:
+        ...
+    if tournament.participants:
+        ...
+    firstparticipant = tournament.participants[0]
+
+The reverse lookup of ``team.event_team`` works exactly the same way.
 
 
 Reference
