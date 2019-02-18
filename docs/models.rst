@@ -78,6 +78,11 @@ If you don't define a primary key, we will create a primary key of type ``IntFie
 
 Sadly, currently only simple integer primary key is supported, there is plans to enhance this in the not too distant future.
 
+Further we have field ``fields.DatetimeField(auto_now=True)``. Options ``auto_now`` and ``auto_now_add`` work like Django's options.
+
+``ForeignKeyField``
+-------------------
+
 .. code-block:: python3
 
     tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
@@ -102,10 +107,11 @@ or like this:
 
     await tournament.fetch_related('events')
 
+``ManyToManyField``
+-------------------
 
 Next field is ``fields.ManyToManyField('models.Team', related_name='events')``. It describes many to many relation to model Team.
 
-Further we have field ``fields.DatetimeField(auto_now=True)``. Options ``auto_now`` and ``auto_now_add`` work like Django's options.
 
 
 Reference

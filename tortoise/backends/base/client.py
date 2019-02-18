@@ -16,6 +16,15 @@ class Capabilities:
 
     * Defeciences: assume it is working right.
     * Features: assume it doesn't have it.
+
+    Fields:
+
+    ``dialect``:
+        Dialect name of the DB Client driver.
+    ``safe_indexes``:
+        Indicates that this DB supports optional index creation using ``IF NOT EXISTS``.
+    ``requires_limit``:
+        Indicates that this DB requires a ``LIMIT`` statement for an ``OFFSET`` statement to work.
     '''
 
     def __init__(

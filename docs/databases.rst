@@ -33,22 +33,84 @@ The supported ``DB_TYPE``:
 ``mysql``:
     Typically in the form of :samp:`mysql://myuser:mypass:pass@db.host:3306/somedb`
 
+Capabilities
+============
+
+Since each database has a different set of features we have a ``Capabilities`` that is registered on each client.
+Primarily this is to work around larger-than SQL differences, or common issues.
+
+.. autoclass:: tortoise.backends.base.client.Capabilities
+    :members:
+
+
 SQLite
 ======
 
-.. todo::
-    Document SQLite options and behaviour
+SQLite is an embedded database, and can run on a file or in-memory. Good database for local development or testing of code logic, but not recommended for production use.
+
+DB URL is typically in the form of :samp:`sqlite://{DB_FILE}`
+So if the ``DB_FILE`` is "/data/db.sqlite3" then the string will be ``sqlite:///data/db.sqlite`` (note the three /'s)
+
+Parameters
+----------
+
+``path``:
+    Path to SQLite3 file. ``:memory:`` is a special path that indicates in-memory database.
 
 
 PostgreSQL
 ==========
 
-.. todo::
-    Document PostgreSQL options and behaviour
+DB URL is typically in the form of :samp:`postgres://postgres:pass@db.host:5432/somedb`
+
+Parameters
+----------
+
+``user``:
+    Username to connect with.
+``password``:
+    Password for username.
+``host``:
+    Network host that database is available at.
+``port``:
+    Network port that database is available at. (defaults to ``5432``)
+``database``:
+    Database to use.
+``min_size``:
+    Minimum connection pool size (not used right now)
+``max_size``:
+    Maximum connection pool size (not used right now)
+``max_queries``:
+    Maximum no of queries to allow before forcing a re-connect.
+``max_inactive_connection_lifetime``:
+    Duration of inactive connection before assuming that it has gone stale, and force a re-connect.
 
 
 MySQL/MariaDB
 =============
 
-.. todo::
-    Document MySQL/MariaDB options and behaviour
+DB URL is typically in the form of :samp:`mysql://myuser:mypass:pass@db.host:3306/somedb`
+
+Parameters
+----------
+
+``user``:
+    Username to connect with.
+``password``:
+    Password for username.
+``host``:
+    Network host that database is available at.
+``port``:
+    Network port that database is available at. (defaults to ``3306``)
+``database``:
+    Database to use.
+``minsize``:
+    Minimum connection pool size (not used right now)
+``maxsize``:
+    Maximum connection pool size (not used right now)
+``connect_timeout``:
+    Duration to wait for connection before throwing error.
+``echo``:
+    Echo SQL queries (debug only)
+``no_delay``:
+    Sets TCP NO_DELAY to disable Nagle.
