@@ -3,7 +3,8 @@ Changelog
 
 0.11.4
 ------
-* Fixed several convenince issues with foreign relations:
+- Fixed several convenince issues with foreign relations:
+
   - FIXED: ``.all()`` actually returns the _query property as was documented.
   - New models with FK don't automatically fail to resolve any data. They can now be evaluated lazily.
 
