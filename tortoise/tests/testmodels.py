@@ -157,13 +157,21 @@ class JSONFields(Model):
     data_null = fields.JSONField(null=True)
 
 
-# TODO: Test that minimaly specified relations work as expected
 class MinRelation(Model):
     id = fields.IntField(pk=True)
     tournament = fields.ForeignKeyField('models.Tournament')
-    participants = fields.ManyToManyField(
-        'models.Team'
-    )
+    participants = fields.ManyToManyField('models.Team')
+
+
+class M2MOne(Model):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=255, null=True)
+    two = fields.ManyToManyField('models.M2MTwo', related_name='one')
+
+
+class M2MTwo(Model):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=255, null=True)
 
 
 class NoID(Model):

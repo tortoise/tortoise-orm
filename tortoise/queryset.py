@@ -213,6 +213,8 @@ class QuerySet(AwaitableQuery):
         """
         queryset = self._clone()
         queryset._offset = offset
+        if self._db.capabilities.requires_limit and queryset._limit is None:
+            queryset._limit = 1000000
         return queryset
 
     def distinct(self) -> 'QuerySet':

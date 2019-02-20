@@ -31,6 +31,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     query_class = PostgreSQLQuery
     executor_class = AsyncpgExecutor
     schema_generator = AsyncpgSchemaGenerator
+    capabilities = Capabilities('postgres')
 
     def __init__(self, user: str, password: str, database: str, host: str, port: SupportsInt,
                  **kwargs) -> None:
@@ -46,16 +47,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
         self._transaction_class = type(
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
-        )
-        self.capabilities = Capabilities(
-            'postgres',
-            connection={
-                'user': user,
-                'database': database,
-                'host': host,
-                'port': port,
-            },
-            safe_indexes=True,
         )
 
     async def create_connection(self, with_db: bool) -> None:

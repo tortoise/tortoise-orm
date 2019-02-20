@@ -1,5 +1,4 @@
 import logging
-from copy import deepcopy
 from typing import Sequence
 
 from pypika import Query
@@ -9,13 +8,35 @@ from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
 class Capabilities:
+    '''
+    DB Client Capabilities indicates the supported feature-set,
+    and is also used to note common workarounds to defeciences.
+
+    Defaults are set with the following standard:
+
+    * Defeciences: assume it is working right.
+    * Features: assume it doesn't have it.
+
+    Fields:
+
+    ``dialect``:
+        Dialect name of the DB Client driver.
+    ``safe_indexes``:
+        Indicates that this DB supports optional index creation using ``IF NOT EXISTS``.
+    ``requires_limit``:
+        Indicates that this DB requires a ``LIMIT`` statement for an ``OFFSET`` statement to work.
+    '''
+
     def __init__(
-        self, dialect: str, *, connection: dict, safe_indexes: bool = False
+        self, dialect: str, *,
+        # Deficiencies to work around:
+        safe_indexes: bool = True,
+        requires_limit: bool = False
     ) -> None:
         super().__setattr__('_mutable', True)
 
         self.dialect = dialect
-        self.connection = deepcopy(connection)
+        self.requires_limit = requires_limit
         self.safe_indexes = safe_indexes
 
         super().__setattr__('_mutable', False)
@@ -33,11 +54,11 @@ class BaseDBAsyncClient:
     query_class = Query
     executor_class = BaseExecutor
     schema_generator = BaseSchemaGenerator
+    capabilities = Capabilities('')
 
     def __init__(self, connection_name: str, **kwargs) -> None:
         self.log = logging.getLogger('db_client')
         self.connection_name = connection_name
-        self.capabilities = Capabilities('', connection={})
 
     async def create_connection(self, with_db: bool) -> None:
         raise NotImplementedError()  # pragma: nocoverage

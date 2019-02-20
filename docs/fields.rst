@@ -94,6 +94,9 @@ Read-only properties:
 
 Here is the list of fields available at the moment with custom options of these fields:
 
+Data Fields
+-----------
+
 .. autoclass:: tortoise.fields.IntField
     :exclude-members: to_db_value, to_python_value
 
@@ -130,8 +133,25 @@ Here is the list of fields available at the moment with custom options of these 
 .. autoclass:: tortoise.fields.JSONField
     :exclude-members: to_db_value, to_python_value
 
+ForeignKeyField
+---------------
+
 .. autoclass:: tortoise.fields.ForeignKeyField
     :exclude-members: to_db_value, to_python_value
 
+On instantiation, a ``ForeignKeyField`` appears as so:
+
+.. autoclass:: tortoise.fields.RelationQueryContainer
+    :members:
+
+ManyToManyField
+---------------
+
 .. autoclass:: tortoise.fields.ManyToManyField
     :exclude-members: to_db_value, to_python_value
+
+On instantiation, a ``ManyToManyField`` appears as so:
+
+.. autoclass:: tortoise.fields.ManyToManyRelationManager
+    :members:
+    :inherited-members:

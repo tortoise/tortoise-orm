@@ -19,7 +19,8 @@ class TestRelations(test.TestCase):
         await event.participants.add(participants[0], participants[1])
         await event.participants.add(participants[0], participants[1])
 
-        self.assertEqual([team.id for team in event.participants], [])
+        with self.assertRaises(NoValuesFetched):
+            [team.id for team in event.participants]  # pylint: disable=W0104
 
         teamids = []
         async for team in event.participants:
@@ -71,7 +72,8 @@ class TestRelations(test.TestCase):
     async def test_bool_for_relation_new_object(self):
         tournament = await Tournament.create(name='New Tournament')
 
-        self.assertFalse(bool(tournament.events))
+        with self.assertRaises(NoValuesFetched):
+            bool(tournament.events)
 
     async def test_bool_for_relation_old_object(self):
         await Tournament.create(name='New Tournament')

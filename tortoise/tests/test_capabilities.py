@@ -10,10 +10,7 @@ class TestCapabilities(test.TestCase):
         self.caps = self.db.capabilities
 
     def test_str(self):
-        self.assertIn('connection', str(self.caps))
-
-    def test_connection(self):
-        self.assertIsInstance(self.caps.connection, dict)
+        self.assertIn('requires_limit', str(self.caps))
 
     def test_immutability_1(self):
         self.assertIsInstance(self.caps.dialect, str)
@@ -25,12 +22,6 @@ class TestCapabilities(test.TestCase):
     def test_connection_name(self):
         # Will fail with a `KeyError` since the connection `"other"` does not exist.
         pass
-
-    @test.requireCapability(dialect='sqlite')
-    def test_immutability_2(self):
-        self.assertEquals(self.caps.connection['file'], self.db.filename)
-        self.caps.connection['file'] = 'junk'
-        self.assertNotEquals(self.caps.connection['file'], self.db.filename)
 
     @test.requireCapability(dialect='sqlite')
     @test.expectedFailure
