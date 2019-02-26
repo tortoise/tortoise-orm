@@ -15,6 +15,7 @@ class TestGenerateSchema(test.SimpleTestCase):
         except ConfigurationError:
             pass
         Tortoise._inited = False
+        self.sqls = ''
 
     async def tearDown(self):
         await Tortoise.close_connections()

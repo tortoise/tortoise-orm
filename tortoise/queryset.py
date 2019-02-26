@@ -238,7 +238,7 @@ class QuerySet(AwaitableQuery):
             queryset._custom_filters.update(get_filters_for_field(key, None, key))
         return queryset
 
-    def values_list(self, *fields: str, flat: bool = False
+    def values_list(self, *fields_: str, flat: bool = False
                     ) -> 'ValuesListQuery':  # pylint: disable=W0621
         """
         Make QuerySet returns list of tuples for given args instead of objects.
@@ -249,7 +249,7 @@ class QuerySet(AwaitableQuery):
             model=self.model,
             q_objects=self._q_objects,
             flat=flat,
-            fields_for_select_list=fields,
+            fields_for_select_list=fields_,
             distinct=self._distinct,
             limit=self._limit,
             offset=self._offset,
