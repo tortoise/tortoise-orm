@@ -191,3 +191,12 @@ class RaceParticipant(Model):
     first_name = fields.CharField(max_length=64)
     place = EnumField(RacePlacingEnum, default=RacePlacingEnum.DNF)
     predicted_place = EnumField(RacePlacingEnum, null=True)
+
+
+class UniqueTogetherFields(Model):
+    id = fields.IntField(pk=True)
+    first_name = fields.CharField(max_length=64)
+    last_name = fields.CharField(max_length=64)
+
+    class Meta:
+        unique_together = ('first_name', 'last_name')

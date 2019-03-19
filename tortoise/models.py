@@ -1,12 +1,12 @@
 from copy import copy
-from typing import Dict, Hashable, Optional, Set, Tuple, Type, TypeVar  # noqa
+from typing import Dict, Hashable, Optional, Union, Set, Tuple, List, Type, TypeVar  # noqa
 
 from pypika import Query
 
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient  # noqa
 from tortoise.exceptions import ConfigurationError, OperationalError
-from tortoise.fields import ManyToManyRelationManager, RelationQueryContainer
+from tortoise.fields import ManyToManyField, ManyToManyRelationManager, RelationQueryContainer
 from tortoise.filters import get_filters_for_field
 from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
@@ -15,16 +15,28 @@ MODEL_TYPE = TypeVar('MODEL_TYPE', bound='Model')
 # TODO: Define Filter type object. Possibly tuple?
 
 
+def get_unique_together(meta):
+    unique_together = getattr(meta, 'unique_together', None)
+
+    if isinstance(unique_together, (list, tuple)):
+        if unique_together and isinstance(unique_together[0], str):
+            unique_together = (unique_together, )
+
+    # return without validation, validation will be done further in the code
+    return unique_together
+
+
 class MetaInfo:
     __slots__ = ('abstract', 'table', 'app', 'fields', 'db_fields', 'm2m_fields', 'fk_fields',
                  'backward_fk_fields', 'fetch_fields', 'fields_db_projection', '_inited',
                  'fields_db_projection_reverse', 'filters', 'fields_map', 'default_connection',
-                 'basequery', 'basequery_all_fields', '_filters')
+                 'basequery', 'basequery_all_fields', '_filters', 'unique_together')
 
     def __init__(self, meta) -> None:
         self.abstract = getattr(meta, 'abstract', False)  # type: bool
         self.table = getattr(meta, 'table', '')  # type: str
         self.app = getattr(meta, 'app', None)  # type: Optional[str]
+        self.unique_together = get_unique_together(meta)  # type: Optional[Union[Tuple, List]]
         self.fields = set()  # type: Set[str]
         self.db_fields = set()  # type: Set[str]
         self.m2m_fields = set()  # type: Set[str]
@@ -296,6 +308,38 @@ class Model(metaclass=ModelMeta):
             model=cls,
             db=db,
         ).fetch_for_list(instance_list, *args)
+
+    @classmethod
+    def check(cls):
+        cls._check_unique_together()
+
+    @classmethod
+    def _check_unique_together(cls):
+        """Check the value of "unique_together" option."""
+        if cls._meta.unique_together is None:
+            return
+
+        if not isinstance(cls._meta.unique_together, (tuple, list)):
+            raise ConfigurationError(
+                f"'{cls.__name__}.unique_together' must be a list or tuple.")
+
+        elif any(not isinstance(fields, (tuple, list)) for fields in cls._meta.unique_together):
+            raise ConfigurationError(
+                f"All '{cls.__name__}.unique_together' elements must be lists or tuples.")
+
+        else:
+            for fields_tuple in cls._meta.unique_together:
+                for field_name in fields_tuple:
+                    field = cls._meta.fields_map.get(field_name)
+
+                    if not field:
+                        raise ConfigurationError(
+                            f"'{cls.__name__}.unique_together' has no '{field_name}' field.")
+
+                    if isinstance(field, ManyToManyField):
+                        raise ConfigurationError(
+                            f"'{cls.__name__}.unique_together' '{field_name}' field "
+                            "refers to ManyToMany field.")
 
     class Meta:
         pass
