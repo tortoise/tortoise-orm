@@ -9,6 +9,7 @@ class BaseSchemaGenerator:
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields});'
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
+    UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'UNIQUE ({fields})'
     FK_TEMPLATE = ' REFERENCES "{table}" (id) ON DELETE {on_delete}'
     M2M_TABLE_TEMPLATE = (
         'CREATE TABLE {exists}"{table_name}" '
@@ -79,6 +80,11 @@ class BaseSchemaGenerator:
             fields=', '.join(field_names),
         )
 
+    def _get_unique_constraint_sql(self, field_names: List[str]) -> str:
+        return self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(
+            fields=', '.join(field_names),
+        )
+
     def _get_table_sql(self, model, safe=True) -> dict:
 
         fields_to_create = []
@@ -116,6 +122,14 @@ class BaseSchemaGenerator:
 
             if field_object.index:
                 fields_with_index.append(field_name)
+
+        unique_togethers = model._meta.unique_together
+        if unique_togethers is not None:
+            unique_together_sqls = [
+                self._get_unique_constraint_sql(unique_together_list)
+                for unique_together_list in unique_togethers
+            ]
+            fields_to_create.extend(unique_together_sqls)
 
         table_fields_string = ', '.join(fields_to_create)
         table_create_string = self.TABLE_CREATE_TEMPLATE.format(
@@ -172,6 +186,7 @@ class BaseSchemaGenerator:
         for app in Tortoise.apps.values():
             for model in app.values():
                 if model._meta.db == self.client:
+                    model.check()
                     models_to_create.append(model)
 
         tables_to_create = []

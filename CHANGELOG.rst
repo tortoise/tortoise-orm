@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.11.6
+------
+- Added ability to use "unique_together" meta Model option
+
+
 0.11.5
 ------
 - Fixed concurrency isolation when attempting to do multiple concurrent operations on a single connection.

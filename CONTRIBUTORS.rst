@@ -10,6 +10,7 @@ Contributors
 * ``@etzelwu``
 * Alexander Lyon ``@arlyon``
 * Florimond Manca ``@florimondmanca``
+* Vitali Rebkavets ``@REVIMI``
 
 Special Thanks
 ==============
