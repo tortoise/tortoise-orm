@@ -8,7 +8,6 @@ class SomeException(Exception):
     """
     A very specific exception so s to not accidentally catch another exception.
     """
-    pass
 
 
 @atomic()

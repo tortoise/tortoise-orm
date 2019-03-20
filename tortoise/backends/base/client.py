@@ -87,21 +87,23 @@ class BaseDBAsyncClient:
     async def execute_script(self, query: str) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def execute_explain(self, query: str) -> Sequence[dict]:
-        raise NotImplementedError()  # pragma: nocoverage
+    # async def execute_explain(self, query: str) -> Sequence[dict]:
+    #     raise NotImplementedError()  # pragma: nocoverage
 
 
 class ConnectionWrapper:
-    __slots__ = ('connection', )
+    __slots__ = ('connection', 'lock')
 
-    def __init__(self, connection) -> None:
+    def __init__(self, connection, lock) -> None:
         self.connection = connection
+        self.lock = lock
 
     async def __aenter__(self):
+        await self.lock.acquire()
         return self.connection
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        pass
+        self.lock.release()
 
 
 class BaseTransactionWrapper:

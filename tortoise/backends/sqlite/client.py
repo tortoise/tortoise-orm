@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import sqlite3
@@ -38,6 +39,7 @@ class SqliteClient(BaseDBAsyncClient):
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
         )
         self._connection = None  # type: Optional[aiosqlite.Connection]
+        self._lock = asyncio.Lock()
 
     async def create_connection(self, with_db: bool) -> None:
         if not self._connection:  # pragma: no branch
@@ -70,10 +72,10 @@ class SqliteClient(BaseDBAsyncClient):
             pass
 
     def acquire_connection(self) -> ConnectionWrapper:
-        return ConnectionWrapper(self._connection)
+        return ConnectionWrapper(self._connection, self._lock)
 
     def _in_transaction(self) -> 'TransactionWrapper':
-        return self._transaction_class(self.connection_name, connection=self._connection)
+        return self._transaction_class(self.connection_name, self._connection, self._lock)
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
@@ -95,9 +97,10 @@ class SqliteClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
-    def __init__(self, connection_name: str, connection: aiosqlite.Connection) -> None:
+    def __init__(self, connection_name: str, connection: aiosqlite.Connection, lock) -> None:
         self.connection_name = connection_name
         self._connection = connection  # type: aiosqlite.Connection
+        self._lock = lock
         self.log = logging.getLogger('db_client')
         self._transaction_class = self.__class__
         self._old_context_value = None
