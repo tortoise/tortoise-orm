@@ -123,12 +123,23 @@ class BaseSchemaGenerator:
             if field_object.index:
                 fields_with_index.append(field_name)
 
-        unique_togethers = model._meta.unique_together
-        if unique_togethers is not None:
-            unique_together_sqls = [
-                self._get_unique_constraint_sql(unique_together_list)
-                for unique_together_list in unique_togethers
-            ]
+        if model._meta.unique_together is not None:
+            unique_together_sqls = []
+
+            for unique_together_list in model._meta.unique_together:
+                unique_together_to_create = []
+
+                for field in unique_together_list:
+                    field_object = model._meta.fields_map[field]
+
+                    if field_object.source_field:
+                        unique_together_to_create.append(field_object.source_field)
+                    else:
+                        unique_together_to_create.append(field)
+
+                unique_together_sqls.append(
+                    self._get_unique_constraint_sql(unique_together_to_create))
+
             fields_to_create.extend(unique_together_sqls)
 
         table_fields_string = ', '.join(fields_to_create)

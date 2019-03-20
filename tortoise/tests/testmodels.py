@@ -200,3 +200,12 @@ class UniqueTogetherFields(Model):
 
     class Meta:
         unique_together = ('first_name', 'last_name')
+
+
+class UniqueTogetherFieldsWithFK(Model):
+    id = fields.IntField(pk=True)
+    text = fields.CharField(max_length=64)
+    tournament = fields.ForeignKeyField('models.Tournament')
+
+    class Meta:
+        unique_together = ('text', 'tournament')
