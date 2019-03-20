@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.11.5
+------
+- Fixed concurrency isolation when attempting to do multiple concurrent operations on a single connection.
+
 0.11.4
 ------
 - Fixed several convenince issues with foreign relations:

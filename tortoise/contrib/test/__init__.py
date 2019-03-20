@@ -148,6 +148,7 @@ class SimpleTestCase(_TestCase):
     use_default_loop = True
 
     def _init_loop(self) -> None:
+        # pylint: disable=W0201
         if self.use_default_loop:
             self.loop = _LOOP
             loop = None
@@ -217,7 +218,7 @@ class IsolatedTestCase(SimpleTestCase):
             modules=_MODULES,
         )
         await Tortoise.init(config, _create_db=True)
-        await Tortoise.generate_schemas()
+        await Tortoise.generate_schemas(safe=False)
         self._connections = Tortoise._connections.copy()
 
     async def _tearDownDB(self) -> None:

@@ -26,7 +26,7 @@ class TestCapabilities(test.TestCase):
     @test.requireCapability(dialect='sqlite')
     @test.expectedFailure
     def test_actually_runs(self):
-        self.assertTrue(False)
+        self.assertTrue(False)  # pylint: disable=W1503
 
     def test_attribute_error(self):
         with self.assertRaises(AttributeError):
@@ -34,12 +34,12 @@ class TestCapabilities(test.TestCase):
 
     @test.requireCapability(dialect='sqlite')
     def test_dialect_sqlite(self):
-        self.assertEquals(self.caps.dialect, 'sqlite')
+        self.assertEqual(self.caps.dialect, 'sqlite')
 
     @test.requireCapability(dialect='mysql')
     def test_dialect_mysql(self):
-        self.assertEquals(self.caps.dialect, 'mysql')
+        self.assertEqual(self.caps.dialect, 'mysql')
 
     @test.requireCapability(dialect='postgres')
     def test_dialect_postgres(self):
-        self.assertEquals(self.caps.dialect, 'postgres')
+        self.assertEqual(self.caps.dialect, 'postgres')

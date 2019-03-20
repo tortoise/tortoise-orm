@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from functools import wraps
 from typing import List, Optional, SupportsInt  # noqa
@@ -44,6 +45,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self.port = int(port)  # make sure port is int type
 
         self._connection = None  # Type: Optional[asyncpg.Connection]
+        self._lock = asyncio.Lock()
 
         self._transaction_class = type(
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
@@ -93,10 +95,10 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         await self.close()
 
     def acquire_connection(self) -> ConnectionWrapper:
-        return ConnectionWrapper(self._connection)
+        return ConnectionWrapper(self._connection, self._lock)
 
     def _in_transaction(self) -> 'TransactionWrapper':
-        return self._transaction_class(self.connection_name, self._connection)
+        return self._transaction_class(self.connection_name, self._connection, self._lock)
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
@@ -120,16 +122,14 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
-    def __init__(self, connection_name: str, connection) -> None:
+    def __init__(self, connection_name: str, connection, lock) -> None:
         self._connection = connection
+        self._lock = lock
         self.log = logging.getLogger('db_client')
         self._transaction_class = self.__class__
         self._old_context_value = None
         self.connection_name = connection_name
         self.transaction = None
-
-    def acquire_connection(self) -> ConnectionWrapper:
-        return ConnectionWrapper(self._connection)
 
     async def start(self):
         self.transaction = self._connection.transaction()

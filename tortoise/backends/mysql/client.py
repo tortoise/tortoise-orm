@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from functools import wraps
 from typing import List, Optional, SupportsInt  # noqa
@@ -46,6 +47,7 @@ class MySQLClient(BaseDBAsyncClient):
         self.port = int(port)  # make sure port is int type
 
         self._connection = None  # Type: Optional[aiomysql.Connection]
+        self._lock = asyncio.Lock()
 
         self._transaction_class = type(
             'TransactionWrapper', (TransactionWrapper, self.__class__), {}
@@ -100,10 +102,10 @@ class MySQLClient(BaseDBAsyncClient):
         await self.close()
 
     def acquire_connection(self) -> ConnectionWrapper:
-        return ConnectionWrapper(self._connection)
+        return ConnectionWrapper(self._connection, self._lock)
 
     def _in_transaction(self):
-        return self._transaction_class(self.connection_name, self._connection)
+        return self._transaction_class(self.connection_name, self._connection, self._lock)
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
@@ -131,9 +133,10 @@ class MySQLClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
-    def __init__(self, connection_name, connection):
+    def __init__(self, connection_name, connection, lock):
         self.connection_name = connection_name
         self._connection = connection
+        self._lock = lock
         self.log = logging.getLogger('db_client')
         self._transaction_class = self.__class__
         self._finalized = False
