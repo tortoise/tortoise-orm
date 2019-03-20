@@ -321,11 +321,12 @@ class Model(metaclass=ModelMeta):
 
         if not isinstance(cls._meta.unique_together, (tuple, list)):
             raise ConfigurationError(
-                f"'{cls.__name__}.unique_together' must be a list or tuple.")
+                "'{}.unique_together' must be a list or tuple.".format(cls.__name__))
 
-        elif any(not isinstance(fields, (tuple, list)) for fields in cls._meta.unique_together):
+        elif any(not isinstance(unique_fields, (tuple, list))
+                 for unique_fields in cls._meta.unique_together):
             raise ConfigurationError(
-                f"All '{cls.__name__}.unique_together' elements must be lists or tuples.")
+                "All '{}.unique_together' elements must be lists or tuples.".format(cls.__name__))
 
         else:
             for fields_tuple in cls._meta.unique_together:
@@ -334,12 +335,13 @@ class Model(metaclass=ModelMeta):
 
                     if not field:
                         raise ConfigurationError(
-                            f"'{cls.__name__}.unique_together' has no '{field_name}' field.")
+                            "'{}.unique_together' has no '{}' "
+                            "field.".format(cls.__name__, field_name))
 
                     if isinstance(field, ManyToManyField):
                         raise ConfigurationError(
-                            f"'{cls.__name__}.unique_together' '{field_name}' field "
-                            "refers to ManyToMany field.")
+                            "'{}.unique_together' '{}' field refers "
+                            "to ManyToMany field.".format(cls.__name__, field_name))
 
     class Meta:
         pass
