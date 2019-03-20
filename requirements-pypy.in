@@ -1,7 +1,7 @@
 -r requirements.txt
 
 # Optional dependencies
-pyyaml
+pyyaml>=4.2b1
 
 ## Database Drivers
 aiomysql
