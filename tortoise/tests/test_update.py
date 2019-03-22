@@ -1,5 +1,5 @@
 from tortoise.contrib import test
-from tortoise.tests.testmodels import Event, Tournament, Contact, ContactTypeEnum
+from tortoise.tests.testmodels import Contact, ContactTypeEnum, Event, Tournament
 
 
 class TestUpdate(test.TestCase):
