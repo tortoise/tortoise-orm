@@ -3,7 +3,7 @@ This is the testing Models
 """
 import binascii
 import os
-from enum import Enum
+from enum import Enum, IntEnum
 
 from tortoise import fields
 from tortoise.models import Model
@@ -209,3 +209,14 @@ class UniqueTogetherFieldsWithFK(Model):
 
     class Meta:
         unique_together = ('text', 'tournament')
+
+
+class ContactTypeEnum(IntEnum):
+    work = 1
+    home = 2
+    other = 3
+
+
+class Contact(Model):
+    id = fields.IntField(pk=True)
+    type = fields.IntField(default=ContactTypeEnum.other)
