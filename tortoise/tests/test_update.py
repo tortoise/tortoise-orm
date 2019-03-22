@@ -1,5 +1,5 @@
 from tortoise.contrib import test
-from tortoise.tests.testmodels import Event, Tournament
+from tortoise.tests.testmodels import Event, Tournament, Contact, ContactTypeEnum
 
 
 class TestUpdate(test.TestCase):
@@ -18,3 +18,10 @@ class TestUpdate(test.TestCase):
         await Event.all().update(tournament=tournament_second)
         event = await Event.first()
         self.assertEqual(event.tournament_id, tournament_second.id)
+
+    @test.expectedFailure
+    async def test_update_with_int_enum_value(self):
+        await Contact.create()
+        contact = await Contact.get(id=1)
+        contact.type = ContactTypeEnum.home
+        await contact.save()
