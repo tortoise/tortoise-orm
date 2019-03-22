@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Dict, Hashable, Optional, Union, Set, Tuple, List, Type, TypeVar  # noqa
+from typing import Dict, Hashable, List, Optional, Set, Tuple, Type, TypeVar, Union  # noqa
 
 from pypika import Query
 
