@@ -24,3 +24,11 @@ class TestUpdate(test.TestCase):
         contact = await Contact.get(id=1)
         contact.type = ContactTypeEnum.home
         await contact.save()
+
+    async def test_exception_on_invalid_data_type_in_int_field(self):
+        await Contact.create()
+        contact = await Contact.get(id=1)
+
+        contact.type = 'not_int'
+        with self.assertRaises((TypeError, ValueError)):
+            await contact.save()
