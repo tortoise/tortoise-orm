@@ -53,7 +53,7 @@ class Field:
         self.model_field_name = ''  # Type: str
 
     def to_db_value(self, value: Any, instance) -> Any:
-        if value is None or type(value) == self.type:
+        if value is None or type(value) == self.type:  # pylint: disable=C0123
             return value
         return self.type(value)
 
