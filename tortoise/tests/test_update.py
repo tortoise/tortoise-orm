@@ -19,7 +19,6 @@ class TestUpdate(test.TestCase):
         event = await Event.first()
         self.assertEqual(event.tournament_id, tournament_second.id)
 
-    @test.expectedFailure
     async def test_update_with_int_enum_value(self):
         await Contact.create()
         contact = await Contact.get(id=1)

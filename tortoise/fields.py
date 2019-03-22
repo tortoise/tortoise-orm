@@ -53,7 +53,9 @@ class Field:
         self.model_field_name = ''  # Type: str
 
     def to_db_value(self, value: Any, instance) -> Any:
-        return value
+        if value is None or type(value) == self.type:
+            return value
+        return self.type(value)
 
     def to_python_value(self, value: Any) -> Any:
         if value is None or isinstance(value, self.type):
