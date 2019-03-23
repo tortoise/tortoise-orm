@@ -19,9 +19,14 @@ class TestUpdate(test.TestCase):
         event = await Event.first()
         self.assertEqual(event.tournament_id, tournament_second.id)
 
-    @test.expectedFailure
     async def test_update_with_int_enum_value(self):
-        await Contact.create()
-        contact = await Contact.get(id=1)
+        contact = await Contact.create()
         contact.type = ContactTypeEnum.home
         await contact.save()
+
+    async def test_exception_on_invalid_data_type_in_int_field(self):
+        contact = await Contact.create()
+
+        contact.type = 'not_int'
+        with self.assertRaises((TypeError, ValueError)):
+            await contact.save()
