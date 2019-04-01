@@ -1,6 +1,6 @@
 from tortoise.contrib import test
 from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned
-from tortoise.tests.testmodels import IntFields
+from tortoise.tests.testmodels import IntFields, MinRelation, Tournament
 
 # TODO: Test the many exceptions in QuerySet
 # TODO: .filter(intnum_null=None) does not work as expected
@@ -14,8 +14,14 @@ class TestQueryset(test.TestCase):
 
     async def test_all_count(self):
         self.assertEqual(await IntFields.all().count(), 30)
-
         self.assertEqual(await IntFields.filter(intnum_null=80).count(), 0)
+
+    async def test_join_count(self):
+        tour = await Tournament.create(name="moo")
+        await MinRelation.create(tournament=tour)
+
+        self.assertEqual(await MinRelation.all().count(), 1)
+        self.assertEqual(await MinRelation.filter(tournament__id=tour.id).count(), 1)
 
     async def test_modify_dataset(self):
         # Modify dataset

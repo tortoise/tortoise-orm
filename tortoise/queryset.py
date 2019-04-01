@@ -518,7 +518,6 @@ class CountQuery(AwaitableQuery):
     def __init__(self, model, db, q_objects, annotations, custom_filters
                  ) -> None:
         super().__init__(model, db)
-        table = Table(model._meta.table)
         self.query = model._meta.basequery
         self.resolve_filters(
             model=model,
@@ -526,7 +525,7 @@ class CountQuery(AwaitableQuery):
             annotations=annotations,
             custom_filters=custom_filters,
         )
-        self.query = self.query.select(Count(table.star))
+        self.query = self.query.select(Count("*"))
 
     async def _execute(self):
         result = await self._db.execute_query(str(self.query))

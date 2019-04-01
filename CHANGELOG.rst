@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.11.8
+------
+- Fixed ``.count()`` when a join happens (#109)
+
+
 0.11.7
 ------
 - Fixed 'unique_together' for foreign keys (#114)
