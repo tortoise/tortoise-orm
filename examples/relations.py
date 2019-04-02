@@ -88,11 +88,7 @@ async def run():
         .distinct()
     )
 
-    print(
-        await Event.filter(id=event.id).values(
-            "id", "name", tournament="tournament__name"
-        )
-    )
+    print(await Event.filter(id=event.id).values("id", "name", tournament="tournament__name"))
 
     print(await Event.filter(id=event.id).values_list("id", "participants__name"))
 

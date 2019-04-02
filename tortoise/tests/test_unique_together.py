@@ -1,10 +1,6 @@
 from tortoise.contrib import test
 from tortoise.exceptions import IntegrityError
-from tortoise.tests.testmodels import (
-    Tournament,
-    UniqueTogetherFields,
-    UniqueTogetherFieldsWithFK,
-)
+from tortoise.tests.testmodels import Tournament, UniqueTogetherFields, UniqueTogetherFieldsWithFK
 
 
 class TestUniqueTogether(test.TestCase):
@@ -15,9 +11,7 @@ class TestUniqueTogether(test.TestCase):
         await UniqueTogetherFields.create(first_name=first_name, last_name=last_name)
 
         with self.assertRaises(IntegrityError):
-            await UniqueTogetherFields.create(
-                first_name=first_name, last_name=last_name
-            )
+            await UniqueTogetherFields.create(first_name=first_name, last_name=last_name)
 
     async def test_unique_together_with_foreign_keys(self):
         tournament_name = "tournament_name"

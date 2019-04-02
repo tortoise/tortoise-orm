@@ -28,15 +28,14 @@ class TestRelations(test.TestCase):
         self.assertEqual(teamids, [participants[0].id, participants[1].id])
 
         self.assertEqual(
-            [team.id for team in event.participants],
-            [participants[0].id, participants[1].id],
+            [team.id for team in event.participants], [participants[0].id, participants[1].id]
         )
 
         self.assertEqual(event.participants[0].id, participants[0].id)
 
-        selected_events = await Event.filter(
-            participants=participants[0].id
-        ).prefetch_related("participants", "tournament")
+        selected_events = await Event.filter(participants=participants[0].id).prefetch_related(
+            "participants", "tournament"
+        )
         self.assertEqual(len(selected_events), 1)
         self.assertEqual(selected_events[0].tournament.id, tournament.id)
         self.assertEqual(len(selected_events[0].participants), 2)
@@ -51,9 +50,7 @@ class TestRelations(test.TestCase):
 
         await Tournament.filter(events__name__in=["Test", "Prod"]).distinct()
 
-        result = await Event.filter(id=event.id).values(
-            "id", "name", tournament="tournament__name"
-        )
+        result = await Event.filter(id=event.id).values("id", "name", tournament="tournament__name")
         self.assertEqual(result[0]["tournament"], tournament.name)
 
         result = await Event.filter(id=event.id).values_list("id", "participants__name")

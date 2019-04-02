@@ -30,9 +30,7 @@ class TestFiltering(test.TestCase):
         await event_second.participants.add(team_second)
 
         found_events = (
-            await Event.filter(
-                Q(id__in=[event_first.id, event_second.id]) | Q(name="3")
-            )
+            await Event.filter(Q(id__in=[event_first.id, event_second.id]) | Q(name="3"))
             .filter(participants__not=team_second.id)
             .order_by("name", "tournament_id")
             .distinct()
@@ -47,9 +45,7 @@ class TestFiltering(test.TestCase):
         self.assertEqual(len(teams), 1)
         self.assertEqual(teams[0].name, "Second")
 
-        tournaments = await Tournament.filter(
-            events__participants__name__startswith="Fir"
-        )
+        tournaments = await Tournament.filter(events__participants__name__startswith="Fir")
         self.assertEqual(len(tournaments), 1)
         self.assertEqual(tournaments[0], tournament)
 
@@ -107,9 +103,7 @@ class TestFiltering(test.TestCase):
     async def test_filter_null_on_related(self):
         tournament = await Tournament.create(name="Tournament")
         reporter = await Reporter.create(name="John")
-        event_first = await Event.create(
-            name="1", tournament=tournament, reporter=reporter
-        )
+        event_first = await Event.create(name="1", tournament=tournament, reporter=reporter)
         event_second = await Event.create(name="2", tournament=tournament)
 
         team_first = await Team.create(name="1")
@@ -152,9 +146,7 @@ class TestFiltering(test.TestCase):
         await Tournament.create(name="1")
         await Event.create(name="2", tournament=tournament)
 
-        tournaments = await Tournament.annotate(events_count=Count("events")).filter(
-            events_count=1
-        )
+        tournaments = await Tournament.annotate(events_count=Count("events")).filter(events_count=1)
         self.assertEqual(len(tournaments), 1)
         self.assertEqual(tournaments[0].id, tournament.id)
 

@@ -28,12 +28,8 @@ async def run():
         async with in_transaction() as connection:
             event = Event(name="Test")
             await event.save(using_db=connection)
-            await Event.filter(id=event.id).using_db(connection).update(
-                name="Updated name"
-            )
-            saved_event = (
-                await Event.filter(name="Updated name").using_db(connection).first()
-            )
+            await Event.filter(id=event.id).using_db(connection).update(name="Updated name")
+            saved_event = await Event.filter(name="Updated name").using_db(connection).first()
             await connection.execute_query("SELECT * FROM non_existent_table")
     except OperationalError:
         pass

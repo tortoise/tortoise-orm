@@ -16,10 +16,7 @@ class TestTwoDatabases(test.SimpleTestCase):
             app_label="events", modules=["tortoise.tests.testmodels"]
         )
         merged_config = {
-            "connections": {
-                **first_db_config["connections"],
-                **second_db_config["connections"],
-            },
+            "connections": {**first_db_config["connections"], **second_db_config["connections"]},
             "apps": {**first_db_config["apps"], **second_db_config["apps"]},
         }
         await Tortoise.init(merged_config, _create_db=True)
@@ -38,9 +35,7 @@ class TestTwoDatabases(test.SimpleTestCase):
             await self.db.execute_query("SELECT * FROM eventtwo")
 
         results = await self.second_db.execute_query("SELECT * FROM eventtwo")
-        self.assertEqual(
-            dict(results[0].items()), {"id": 1, "name": "Event", "tournament_id": 1}
-        )
+        self.assertEqual(dict(results[0].items()), {"id": 1, "name": "Event", "tournament_id": 1})
 
     async def test_two_databases_relation(self):
         tournament = await Tournament.create(name="Tournament")
@@ -50,9 +45,7 @@ class TestTwoDatabases(test.SimpleTestCase):
             await self.db.execute_query("SELECT * FROM eventtwo")
 
         results = await self.second_db.execute_query("SELECT * FROM eventtwo")
-        self.assertEqual(
-            dict(results[0].items()), {"id": 1, "name": "Event", "tournament_id": 1}
-        )
+        self.assertEqual(dict(results[0].items()), {"id": 1, "name": "Event", "tournament_id": 1})
 
         teams = []
         for i in range(2):
@@ -77,9 +70,7 @@ class TestTwoDatabases(test.SimpleTestCase):
             tournament = await Tournament.create(name="Tournament")
             await Event.create(name="Event1", tournament=tournament)
             async with in_transaction("events"):
-                event = await EventTwo.create(
-                    name="Event2", tournament_id=tournament.id
-                )
+                event = await EventTwo.create(name="Event2", tournament_id=tournament.id)
                 team = await TeamTwo.create(name="Team 1")
                 await event.participants.add(team)
 

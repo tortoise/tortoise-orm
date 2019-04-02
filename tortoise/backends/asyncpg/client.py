@@ -44,13 +44,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     capabilities = Capabilities("postgres")
 
     def __init__(
-        self,
-        user: str,
-        password: str,
-        database: str,
-        host: str,
-        port: SupportsInt,
-        **kwargs
+        self, user: str, password: str, database: str, host: str, port: SupportsInt, **kwargs
     ) -> None:
         super().__init__(**kwargs)
 
@@ -122,9 +116,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         return ConnectionWrapper(self._connection, self._lock)
 
     def _in_transaction(self) -> "TransactionWrapper":
-        return self._transaction_class(
-            self.connection_name, self._connection, self._lock
-        )
+        return self._transaction_class(self.connection_name, self._connection, self._lock)
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:

@@ -61,9 +61,7 @@ class TestEnumField(test.TestCase):
     async def test_enum_field_delete(self):
         """Assert that delete correctly removes the right participant by their place."""
         await create_participants()
-        await testmodels.RaceParticipant.filter(
-            place=testmodels.RacePlacingEnum.FIRST
-        ).delete()
+        await testmodels.RaceParticipant.filter(place=testmodels.RacePlacingEnum.FIRST).delete()
         self.assertEqual(await testmodels.RaceParticipant.all().count(), 3)
 
     async def test_enum_field_default(self):
@@ -74,9 +72,7 @@ class TestEnumField(test.TestCase):
         """Assert that filtering by None selects the records which are null."""
         _, _, test3, test4 = await create_participants()
 
-        no_predictions = await testmodels.RaceParticipant.filter(
-            predicted_place__isnull=True
-        )
+        no_predictions = await testmodels.RaceParticipant.filter(predicted_place__isnull=True)
 
         self.assertIn(test3, no_predictions)
         self.assertIn(test4, no_predictions)

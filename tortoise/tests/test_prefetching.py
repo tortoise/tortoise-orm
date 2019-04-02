@@ -13,9 +13,7 @@ class TestPrefetching(test.TestCase):
         team = await Team.create(name="1")
         team_second = await Team.create(name="2")
         await event.participants.add(team, team_second)
-        tournament = (
-            await Tournament.all().prefetch_related("events__participants").first()
-        )
+        tournament = await Tournament.all().prefetch_related("events__participants").first()
         self.assertEqual(len(tournament.events[0].participants), 2)
         self.assertEqual(len(tournament.events[1].participants), 0)
 
@@ -82,10 +80,7 @@ class TestPrefetching(test.TestCase):
             await Tournament.all()
             .prefetch_related(
                 Prefetch(
-                    "events",
-                    queryset=Event.annotate(teams=Count("participants")).filter(
-                        teams=2
-                    ),
+                    "events", queryset=Event.annotate(teams=Count("participants")).filter(teams=2)
                 )
             )
             .first()

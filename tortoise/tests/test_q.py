@@ -67,9 +67,7 @@ class TestQ(TestCase):
             Q() | 2  # pylint: disable=W0106
 
     def test_q_compound_and_notq(self):
-        with self.assertRaisesRegex(
-            OperationalError, "AND operation requires a Q node"
-        ):
+        with self.assertRaisesRegex(OperationalError, "AND operation requires a Q node"):
             Q() & 2  # pylint: disable=W0106
 
     def test_q_both(self):
@@ -79,9 +77,7 @@ class TestQ(TestCase):
             Q(Q(), moo="cow")
 
     def test_q_notq(self):
-        with self.assertRaisesRegex(
-            OperationalError, "All ordered arguments must be Q nodes"
-        ):
+        with self.assertRaisesRegex(OperationalError, "All ordered arguments must be Q nodes"):
             Q(Q(), 1)
 
     def test_q_bad_join_type(self):

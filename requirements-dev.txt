@@ -9,22 +9,20 @@ aiocontextvars==0.2.1 ; python_version < "3.7"
 aiomysql==0.0.20
 aiosqlite==0.9.0
 alabaster==0.7.12         # via sphinx
-appdirs==1.4.3            # via black
 asn1crypto==0.24.0        # via cryptography
 astroid==2.2.5            # via pylint
 asyncpg==0.18.3
 asynctest==0.12.2
 atomicwrites==1.3.0       # via pytest
-attrs==19.1.0             # via black, pytest
+attrs==19.1.0             # via pytest
 babel==2.6.0              # via sphinx
 bandit==1.5.1
-black==19.3b0
 bleach==3.1.0             # via readme-renderer
 certifi==2019.3.9         # via requests
 cffi==1.12.2              # via cryptography
 chardet==3.0.4            # via requests
 ciso8601==2.1.1
-click==7.0                # via black, pip-tools
+click==7.0                # via pip-tools
 cloud-sptheme==1.9.4
 colorama==0.4.1           # via green
 contextvars==2.3          # via aiocontextvars
@@ -80,7 +78,7 @@ sphinx==1.8.5
 sphinxcontrib-websupport==1.1.0  # via sphinx
 stevedore==1.30.1         # via bandit
 testfixtures==6.6.1       # via flake8-isort
-toml==0.10.0              # via black, tox
+toml==0.10.0              # via tox
 tox==3.7.0
 tqdm==4.31.1              # via twine
 twine==1.13.0

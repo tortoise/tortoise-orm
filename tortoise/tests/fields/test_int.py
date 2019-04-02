@@ -38,9 +38,7 @@ class TestIntFields(test.TestCase):
 
     async def test_values_list(self):
         obj0 = await testmodels.IntFields.create(intnum=1)
-        values = await testmodels.IntFields.get(id=obj0.id).values_list(
-            "intnum", flat=True
-        )
+        values = await testmodels.IntFields.get(id=obj0.id).values_list("intnum", flat=True)
         self.assertEqual(values[0], 1)
 
 
@@ -115,7 +113,5 @@ class TestBigIntFields(test.TestCase):
 
     async def test_values_list(self):
         obj0 = await testmodels.BigIntFields.create(intnum=1)
-        values = await testmodels.BigIntFields.get(id=obj0.id).values_list(
-            "intnum", flat=True
-        )
+        values = await testmodels.BigIntFields.get(id=obj0.id).values_list("intnum", flat=True)
         self.assertEqual(values[0], 1)

@@ -7,9 +7,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         super().__init__(*args, **kwargs)
 
         self.TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({fields});"
-        self.INDEX_CREATE_TEMPLATE = (
-            "CREATE INDEX `{index_name}` ON `{table_name}` ({fields});"
-        )
+        self.INDEX_CREATE_TEMPLATE = "CREATE INDEX `{index_name}` ON `{table_name}` ({fields});"
         self.FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}"
         self.FK_TEMPLATE = " REFERENCES `{table}` (`id`) ON DELETE {on_delete}"
         self.M2M_TABLE_TEMPLATE = (
@@ -28,6 +26,4 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         )
 
     def _get_primary_key_create_string(self, field_name: str) -> str:
-        return "`{}` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT".format(
-            field_name
-        )
+        return "`{}` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT".format(field_name)

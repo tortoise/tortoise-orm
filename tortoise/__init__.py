@@ -44,9 +44,7 @@ class Tortoise:
                     model._meta.table = model.__name__.lower()
 
                 for field in model._meta.fk_fields:
-                    field_object = cast(
-                        fields.ForeignKeyField, model._meta.fields_map[field]
-                    )
+                    field_object = cast(fields.ForeignKeyField, model._meta.fields_map[field])
                     reference = field_object.model_name
                     related_app_name, related_model_name = reference.split(".")
                     related_model = cls.apps[related_app_name][related_model_name]
@@ -60,9 +58,7 @@ class Tortoise:
                                 backward_relation_name, related_model_name
                             )
                         )
-                    fk_relation = fields.BackwardFKRelation(
-                        model, "{}_id".format(field)
-                    )
+                    fk_relation = fields.BackwardFKRelation(model, "{}_id".format(field))
                     setattr(related_model, backward_relation_name, fk_relation)
                     related_model._meta.filters.update(
                         get_backward_fk_filters(backward_relation_name, fk_relation)
@@ -74,9 +70,7 @@ class Tortoise:
                     related_model._meta.fields.add(backward_relation_name)
 
                 for field in model._meta.m2m_fields:
-                    field_mobject = cast(
-                        fields.ManyToManyField, model._meta.fields_map[field]
-                    )
+                    field_mobject = cast(fields.ManyToManyField, model._meta.fields_map[field])
                     if field_mobject._generated:
                         continue
 
@@ -93,9 +87,9 @@ class Tortoise:
 
                     backward_relation_name = field_mobject.related_name
                     if not backward_relation_name:
-                        backward_relation_name = (
-                            field_mobject.related_name
-                        ) = "{}_through".format(model._meta.table)
+                        backward_relation_name = field_mobject.related_name = "{}_through".format(
+                            model._meta.table
+                        )
                     if backward_relation_name in related_model._meta.fields:
                         raise ConfigurationError(
                             'backward relation "{}" duplicates in model {}'.format(
@@ -130,9 +124,7 @@ class Tortoise:
                     )
                     related_model._meta.m2m_fields.add(backward_relation_name)
                     related_model._meta.fetch_fields.add(backward_relation_name)
-                    related_model._meta.fields_map[
-                        backward_relation_name
-                    ] = m2m_relation
+                    related_model._meta.fields_map[backward_relation_name] = m2m_relation
                     related_model._meta.fields.add(backward_relation_name)
 
     @classmethod
@@ -196,9 +188,7 @@ class Tortoise:
 
             models_map = {}
             for model in app_models:
-                model._meta.default_connection = info.get(
-                    "default_connection", "default"
-                )
+                model._meta.default_connection = info.get("default_connection", "default")
                 models_map[model.__name__] = model
 
             cls.apps[name] = models_map
@@ -220,9 +210,7 @@ class Tortoise:
                 config = json.load(f)
         else:
             raise ConfigurationError(
-                "Unknown config extension {}, only .yml and .json are supported".format(
-                    extension
-                )
+                "Unknown config extension {}, only .yml and .json are supported".format(extension)
             )
         return config
 
@@ -231,9 +219,7 @@ class Tortoise:
         for app in cls.apps.values():
             for model in app.values():
                 model._meta.generate_filters()
-                model._meta.basequery = model._meta.db.query_class.from_(
-                    model._meta.table
-                )
+                model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
                 model._meta.basequery_all_fields = model._meta.basequery.select(
                     *model._meta.db_fields
                 )
@@ -318,9 +304,7 @@ class Tortoise:
 
         if db_url:
             if not modules:
-                raise ConfigurationError(
-                    'You must specify "db_url" and "modules" together'
-                )
+                raise ConfigurationError('You must specify "db_url" and "modules" together')
             config = generate_config(db_url, modules)
 
         try:
@@ -366,9 +350,7 @@ class Tortoise:
             When set to true, creates the table only when it does not already exist.
         """
         if not cls._inited:
-            raise ConfigurationError(
-                "You have to call .init() first before generating schemas"
-            )
+            raise ConfigurationError("You have to call .init() first before generating schemas")
         for connection in cls._connections.values():
             await generate_schema_for_client(connection, safe)
 
@@ -379,9 +361,7 @@ class Tortoise:
         Normally should be used only for testing purposes.
         """
         if not cls._inited:
-            raise ConfigurationError(
-                "You have to call .init() first before deleting schemas"
-            )
+            raise ConfigurationError("You have to call .init() first before deleting schemas")
         for connection in cls._connections.values():
             await connection.close()
             await connection.db_delete()

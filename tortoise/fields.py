@@ -199,9 +199,7 @@ class DatetimeField(Field):
 
     __slots__ = ("auto_now", "auto_now_add")
 
-    def __init__(
-        self, auto_now: bool = False, auto_now_add: bool = False, **kwargs
-    ) -> None:
+    def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs) -> None:
         if auto_now_add and auto_now:
             raise ConfigurationError("You can choose only 'auto_now' or 'auto_now_add'")
         super().__init__(datetime.datetime, **kwargs)
@@ -256,14 +254,10 @@ class TimeDeltaField(Field):
             return value
         return datetime.timedelta(microseconds=value)
 
-    def to_db_value(
-        self, value: Optional[datetime.timedelta], instance
-    ) -> Optional[int]:
+    def to_db_value(self, value: Optional[datetime.timedelta], instance) -> Optional[int]:
         if value is None:
             return None
-        return (
-            (value.days * 86400000000) + (value.seconds * 1000000) + value.microseconds
-        )
+        return (value.days * 86400000000) + (value.seconds * 1000000) + value.microseconds
 
 
 class FloatField(Field):
@@ -296,9 +290,7 @@ class JSONField(Field):
         self.encoder = encoder
         self.decoder = decoder
 
-    def to_db_value(
-        self, value: Optional[Union[dict, list]], instance
-    ) -> Optional[str]:
+    def to_db_value(self, value: Optional[Union[dict, list]], instance) -> Optional[str]:
         if value is None:
             return None
         return self.encoder(value)
@@ -344,27 +336,17 @@ class ForeignKeyField(Field):
     __slots__ = ("model_name", "related_name", "on_delete")
 
     def __init__(
-        self,
-        model_name: str,
-        related_name: Optional[str] = None,
-        on_delete=CASCADE,
-        **kwargs
+        self, model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs
     ) -> None:
         super().__init__(**kwargs)
         if isinstance(model_name, str) and len(model_name.split(".")) != 2:
-            raise ConfigurationError(
-                'Foreign key accepts model name in format "app.Model"'
-            )
+            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name = model_name
         self.related_name = related_name
         if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
-            raise ConfigurationError(
-                "on_delete can only be CASCADE, RESTRICT or SET_NULL"
-            )
+            raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
         if on_delete == SET_NULL and not bool(kwargs.get("null")):
-            raise ConfigurationError(
-                "If on_delete is SET_NULL, then field must have null=True set"
-            )
+            raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
         self.on_delete = on_delete
 
 
@@ -414,14 +396,10 @@ class ManyToManyField(Field):
     ) -> None:
         super().__init__(**kwargs)
         if len(model_name.split(".")) != 2:
-            raise ConfigurationError(
-                'Foreign key accepts model name in format "app.Model"'
-            )
+            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name = model_name
         self.related_name = related_name
-        self.forward_key = forward_key or "{}_id".format(
-            model_name.split(".")[1].lower()
-        )
+        self.forward_key = forward_key or "{}_id".format(model_name.split(".")[1].lower())
         self.backward_key = backward_key
         self.through = through
         self._generated = False
@@ -461,8 +439,7 @@ class RelationQueryContainer:
     def _query(self):
         if not self.instance.id:
             raise OperationalError(
-                "This objects hasn't been instanced, call .save() before"
-                " calling related queries"
+                "This objects hasn't been instanced, call .save() before" " calling related queries"
             )
         return self.model.filter(**{self.relation_field: self.instance.id})
 
@@ -584,9 +561,7 @@ class ManyToManyRelationManager(RelationQueryContainer):
         )
 
         if len(instances) == 1:
-            criterion = (
-                getattr(through_table, self.field.forward_key) == instances[0].id
-            )
+            criterion = getattr(through_table, self.field.forward_key) == instances[0].id
         else:
             criterion = getattr(through_table, self.field.forward_key).isin(
                 [i.id for i in instances]
@@ -604,9 +579,7 @@ class ManyToManyRelationManager(RelationQueryContainer):
         for instance_to_add in instances:
             if instance_to_add.id is None:
                 raise OperationalError(
-                    "You should first call .save() on {model}".format(
-                        model=instance_to_add
-                    )
+                    "You should first call .save() on {model}".format(model=instance_to_add)
                 )
             if (self.instance.id, instance_to_add.id) in already_existing_relations:
                 continue
@@ -638,16 +611,12 @@ class ManyToManyRelationManager(RelationQueryContainer):
         through_table = Table(self.field.through)
 
         if len(instances) == 1:
-            condition = (
-                getattr(through_table, self.field.forward_key) == instances[0].id
-            ) & (getattr(through_table, self.field.backward_key) == self.instance.id)
-        else:
-            condition = (
+            condition = (getattr(through_table, self.field.forward_key) == instances[0].id) & (
                 getattr(through_table, self.field.backward_key) == self.instance.id
-            ) & (
-                getattr(through_table, self.field.forward_key).isin(
-                    [i.id for i in instances]
-                )
+            )
+        else:
+            condition = (getattr(through_table, self.field.backward_key) == self.instance.id) & (
+                getattr(through_table, self.field.forward_key).isin([i.id for i in instances])
             )
         query = db.query_class.from_(through_table).where(condition).delete()
         await db.execute_query(str(query))

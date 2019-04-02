@@ -4,9 +4,7 @@ from typing import Awaitable, Callable, Iterator, Optional
 class QueryAsyncIterator:
     __slots__ = ("query", "sequence", "_sequence_iterator", "_callback")
 
-    def __init__(
-        self, query: Awaitable[Iterator], callback: Optional[Callable] = None
-    ) -> None:
+    def __init__(self, query: Awaitable[Iterator], callback: Optional[Callable] = None) -> None:
         self.query = query
         self.sequence = None  # type: Optional[Iterator]
         self._sequence_iterator = None

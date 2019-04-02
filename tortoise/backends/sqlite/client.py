@@ -15,11 +15,7 @@ from tortoise.backends.base.client import (
 )
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
-from tortoise.exceptions import (
-    IntegrityError,
-    OperationalError,
-    TransactionManagementError,
-)
+from tortoise.exceptions import IntegrityError, OperationalError, TransactionManagementError
 from tortoise.transactions import current_transaction_map
 
 
@@ -57,18 +53,14 @@ class SqliteClient(BaseDBAsyncClient):
             await self._connection._connect()
             self._connection._conn.row_factory = sqlite3.Row
             self.log.debug(
-                "Created connection %s with params: filename=%s",
-                self._connection,
-                self.filename,
+                "Created connection %s with params: filename=%s", self._connection, self.filename
             )
 
     async def close(self) -> None:
         if self._connection:
             await self._connection.close()
             self.log.debug(
-                "Closed connection %s with params: filename=%s",
-                self._connection,
-                self.filename,
+                "Closed connection %s with params: filename=%s", self._connection, self.filename
             )
             self._connection = None
 
@@ -86,9 +78,7 @@ class SqliteClient(BaseDBAsyncClient):
         return ConnectionWrapper(self._connection, self._lock)
 
     def _in_transaction(self) -> "TransactionWrapper":
-        return self._transaction_class(
-            self.connection_name, self._connection, self._lock
-        )
+        return self._transaction_class(self.connection_name, self._connection, self._lock)
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
@@ -110,9 +100,7 @@ class SqliteClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
-    def __init__(
-        self, connection_name: str, connection: aiosqlite.Connection, lock
-    ) -> None:
+    def __init__(self, connection_name: str, connection: aiosqlite.Connection, lock) -> None:
         self.connection_name = connection_name
         self._connection = connection  # type: aiosqlite.Connection
         self._lock = lock

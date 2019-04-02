@@ -176,9 +176,7 @@ class TestTransactions(test.IsolatedTestCase):
         except KeyError:
             pass
 
-        self.assertEqual(
-            await Tournament.all().values("id", "name"), [{"id": 1, "name": "Test1"}]
-        )
+        self.assertEqual(await Tournament.all().values("id", "name"), [{"id": 1, "name": "Test1"}])
 
     async def test_update_await_across_transaction_success(self):
         await Tournament.create(name="Test1")
@@ -187,9 +185,7 @@ class TestTransactions(test.IsolatedTestCase):
         async with in_transaction():
             await query
 
-        self.assertEqual(
-            await Tournament.all().values("id", "name"), [{"id": 1, "name": "Test2"}]
-        )
+        self.assertEqual(await Tournament.all().values("id", "name"), [{"id": 1, "name": "Test2"}])
 
     async def test_delete_await_across_transaction_fail(self):
         await Tournament.create(name="Test1")
@@ -202,9 +198,7 @@ class TestTransactions(test.IsolatedTestCase):
         except KeyError:
             pass
 
-        self.assertEqual(
-            await Tournament.all().values("id", "name"), [{"id": 1, "name": "Test1"}]
-        )
+        self.assertEqual(await Tournament.all().values("id", "name"), [{"id": 1, "name": "Test1"}])
 
     async def test_delete_await_across_transaction_success(self):
         await Tournament.create(name="Test1")
@@ -235,6 +229,4 @@ class TestTransactions(test.IsolatedTestCase):
             result = await query
 
         self.assertEqual(result, [{"id": 1, "name": "Test1"}])
-        self.assertEqual(
-            await Tournament.all().values("id", "name"), [{"id": 1, "name": "Test1"}]
-        )
+        self.assertEqual(await Tournament.all().values("id", "name"), [{"id": 1, "name": "Test1"}])

@@ -86,14 +86,10 @@ def transform_model(cls) -> None:
                         if tomodel in MODELS:
                             MODELS[tomodel].locals[relname] = relval
                         else:
-                            FUTURE_RELATIONS.setdefault(tomodel, []).append(
-                                (relname, relval)
-                            )
+                            FUTURE_RELATIONS.setdefault(tomodel, []).append((relname, relval))
 
     cls.locals["_meta"] = [
-        MANAGER.ast_from_module_name("tortoise.models")
-        .lookup("MetaInfo")[1][0]
-        .instantiate_class()
+        MANAGER.ast_from_module_name("tortoise.models").lookup("MetaInfo")[1][0].instantiate_class()
     ]
     if "id" not in cls.locals:
         cls.locals["id"] = [nodes.ClassDef("id", None)]
@@ -125,9 +121,7 @@ def apply_type_shim(cls, _context=None) -> Iterator:
     elif cls.name == "DateField":
         base_nodes = MANAGER.ast_from_module_name("datetime").lookup("date")
     elif cls.name == "ForeignKeyField":
-        base_nodes = MANAGER.ast_from_module_name("tortoise.fields").lookup(
-            "BackwardFKRelation"
-        )
+        base_nodes = MANAGER.ast_from_module_name("tortoise.fields").lookup("BackwardFKRelation")
     elif cls.name == "ManyToManyField":
         base_nodes = MANAGER.ast_from_module_name("tortoise.fields").lookup(
             "ManyToManyRelationManager"
@@ -138,7 +132,5 @@ def apply_type_shim(cls, _context=None) -> Iterator:
     return iter([cls] + base_nodes[1])
 
 
-MANAGER.register_transform(
-    nodes.ClassDef, inference_tip(apply_type_shim), is_model_field
-)
+MANAGER.register_transform(nodes.ClassDef, inference_tip(apply_type_shim), is_model_field)
 MANAGER.register_transform(nodes.ClassDef, transform_model, is_model)

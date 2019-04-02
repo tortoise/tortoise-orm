@@ -10,8 +10,7 @@ class TestDecimalFields(test.TestCase):
     def test_max_digits_empty(self):
         with self.assertRaisesRegex(
             TypeError,
-            "missing 2 required positional arguments: 'max_digits' and"
-            " 'decimal_places'",
+            "missing 2 required positional arguments: 'max_digits' and" " 'decimal_places'",
         ):
             fields.DecimalField()  # pylint: disable=E1120
 
@@ -26,9 +25,7 @@ class TestDecimalFields(test.TestCase):
             fields.DecimalField(max_digits=0, decimal_places=2)
 
     def test_decimal_places_bad(self):
-        with self.assertRaisesRegex(
-            ConfigurationError, "'decimal_places' must be >= 0"
-        ):
+        with self.assertRaisesRegex(ConfigurationError, "'decimal_places' must be >= 0"):
             fields.DecimalField(max_digits=2, decimal_places=-1)
 
     async def test_empty(self):
@@ -36,9 +33,7 @@ class TestDecimalFields(test.TestCase):
             await testmodels.DecimalFields.create()
 
     async def test_create(self):
-        obj0 = await testmodels.DecimalFields.create(
-            decimal=Decimal("1.23456"), decimal_nodec=18.7
-        )
+        obj0 = await testmodels.DecimalFields.create(decimal=Decimal("1.23456"), decimal_nodec=18.7)
         obj = await testmodels.DecimalFields.get(id=obj0.id)
         self.assertEqual(obj.decimal, Decimal("1.2346"))
         self.assertEqual(obj.decimal_nodec, 19)
@@ -48,19 +43,13 @@ class TestDecimalFields(test.TestCase):
         self.assertEqual(obj, obj2)
 
     async def test_values(self):
-        obj0 = await testmodels.DecimalFields.create(
-            decimal=Decimal("1.23456"), decimal_nodec=18.7
-        )
-        values = await testmodels.DecimalFields.get(id=obj0.id).values(
-            "decimal", "decimal_nodec"
-        )
+        obj0 = await testmodels.DecimalFields.create(decimal=Decimal("1.23456"), decimal_nodec=18.7)
+        values = await testmodels.DecimalFields.get(id=obj0.id).values("decimal", "decimal_nodec")
         self.assertEqual(values[0]["decimal"], Decimal("1.2346"))
         self.assertEqual(values[0]["decimal_nodec"], 19)
 
     async def test_values_list(self):
-        obj0 = await testmodels.DecimalFields.create(
-            decimal=Decimal("1.23456"), decimal_nodec=18.7
-        )
+        obj0 = await testmodels.DecimalFields.create(decimal=Decimal("1.23456"), decimal_nodec=18.7)
         values = await testmodels.DecimalFields.get(id=obj0.id).values_list(
             "decimal", "decimal_nodec"
         )

@@ -7,18 +7,8 @@ from pypika.functions import Count
 from tortoise import fields
 from tortoise.aggregation import Aggregate
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.exceptions import (
-    DoesNotExist,
-    FieldError,
-    IntegrityError,
-    MultipleObjectsReturned,
-)
-from tortoise.query_utils import (
-    Prefetch,
-    Q,
-    QueryModifier,
-    _get_joins_for_related_field,
-)
+from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
+from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
 from tortoise.utils import QueryAsyncIterator
 
 
@@ -39,9 +29,7 @@ class AwaitableQuery:
         where_criterion, joins, having_criterion = modifier.get_query_modifiers()
         for join in joins:
             if join[0] not in self._joined_tables:
-                self.query = self.query.join(join[0], how=JoinType.left_outer).on(
-                    join[1]
-                )
+                self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
                 self._joined_tables.append(join[0])
 
         if where_criterion:
@@ -54,9 +42,7 @@ class AwaitableQuery:
         joins = _get_joins_for_related_field(table, related_field, related_field_name)
         for join in joins:
             if join[0] not in self._joined_tables:
-                self.query = self.query.join(join[0], how=JoinType.left_outer).on(
-                    join[1]
-                )
+                self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
                 self._joined_tables.append(join[0])
 
     def resolve_ordering(self, model, orderings, annotations) -> None:
@@ -72,26 +58,18 @@ class AwaitableQuery:
                 related_field = model._meta.fields_map[related_field_name]
                 self._join_table_by_field(table, related_field_name, related_field)
                 self.resolve_ordering(
-                    related_field.type,
-                    [("__".join(field_name.split("__")[1:]), ordering[1])],
-                    {},
+                    related_field.type, [("__".join(field_name.split("__")[1:]), ordering[1])], {}
                 )
             elif field_name in annotations:
                 aggregation = annotations[field_name]
                 aggregation_info = aggregation.resolve(self.model)
-                self.query = self.query.orderby(
-                    aggregation_info["field"], order=ordering[1]
-                )
+                self.query = self.query.orderby(aggregation_info["field"], order=ordering[1])
             else:
                 if field_name not in model._meta.fields:
                     raise FieldError(
-                        "Unknown field {} for model {}".format(
-                            field_name, self.model.__name__
-                        )
+                        "Unknown field {} for model {}".format(field_name, self.model.__name__)
                     )
-                self.query = self.query.orderby(
-                    getattr(table, ordering[0]), order=ordering[1]
-                )
+                self.query = self.query.orderby(getattr(table, ordering[0]), order=ordering[1])
 
     def __await__(self):
         return self._execute().__await__()
@@ -223,9 +201,7 @@ class QuerySet(AwaitableQuery):
                 or field_name in self._annotations
             ):
                 raise FieldError(
-                    "Unknown field {} for model {}".format(
-                        field_name, self.model.__name__
-                    )
+                    "Unknown field {} for model {}".format(field_name, self.model.__name__)
                 )
             new_ordering.append((field_name, order_type))
         queryset._orderings = new_ordering
@@ -397,9 +373,7 @@ class QuerySet(AwaitableQuery):
             first_level_field = relation_split[0]
             if first_level_field not in self.model._meta.fetch_fields:
                 raise FieldError(
-                    "relation {} for {} not found".format(
-                        first_level_field, self.model._meta.table
-                    )
+                    "relation {} for {} not found".format(first_level_field, self.model._meta.table)
                 )
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()
@@ -481,9 +455,7 @@ class QuerySet(AwaitableQuery):
             return []
         elif self._get:
             if len(instance_list) > 1:
-                raise MultipleObjectsReturned(
-                    "Multiple objects returned, expected exactly one"
-                )
+                raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
             return instance_list[0]
         elif self._single:
             return instance_list[0]
@@ -500,25 +472,18 @@ class QuerySet(AwaitableQuery):
 class UpdateQuery(AwaitableQuery):
     __slots__ = ()
 
-    def __init__(
-        self, model, update_kwargs, db, q_objects, annotations, custom_filters
-    ) -> None:
+    def __init__(self, model, update_kwargs, db, q_objects, annotations, custom_filters) -> None:
         super().__init__(model, db)
         table = Table(model._meta.table)
         self.query = self._db.query_class.update(table)
         self.resolve_filters(
-            model=model,
-            q_objects=q_objects,
-            annotations=annotations,
-            custom_filters=custom_filters,
+            model=model, q_objects=q_objects, annotations=annotations, custom_filters=custom_filters
         )
 
         for key, value in update_kwargs.items():
             field_object = model._meta.fields_map.get(key)
             if not field_object:
-                raise FieldError(
-                    "Unknown keyword argument {} for model {}".format(key, model)
-                )
+                raise FieldError("Unknown keyword argument {} for model {}".format(key, model))
             if field_object.generated:
                 raise IntegrityError("Field {} is generated and can not be updated")
             if isinstance(field_object, fields.ForeignKeyField):
@@ -539,10 +504,7 @@ class DeleteQuery(AwaitableQuery):
         super().__init__(model, db)
         self.query = model._meta.basequery
         self.resolve_filters(
-            model=model,
-            q_objects=q_objects,
-            annotations=annotations,
-            custom_filters=custom_filters,
+            model=model, q_objects=q_objects, annotations=annotations, custom_filters=custom_filters
         )
         self.query = self.query.delete()
 
@@ -557,10 +519,7 @@ class CountQuery(AwaitableQuery):
         super().__init__(model, db)
         self.query = model._meta.basequery
         self.resolve_filters(
-            model=model,
-            q_objects=q_objects,
-            annotations=annotations,
-            custom_filters=custom_filters,
+            model=model, q_objects=q_objects, annotations=annotations, custom_filters=custom_filters
         )
         self.query = self.query.select(Count("*"))
 
@@ -580,9 +539,7 @@ class FieldSelectQuery(AwaitableQuery):
             return table, db_field
         elif field in model._meta.fields_db_projection and forwarded_fields:
             raise FieldError(
-                'Field "{}" for model "{}" is not relation'.format(
-                    field, model.__name__
-                )
+                'Field "{}" for model "{}" is not relation'.format(field, model.__name__)
             )
 
         if field in self.model._meta.fetch_fields and not forwarded_fields:
@@ -593,9 +550,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         field_object = model._meta.fields_map.get(field)
         if not field_object:
-            raise FieldError(
-                'Unknown field "{}" for model "{}"'.format(field, model.__name__)
-            )
+            raise FieldError('Unknown field "{}" for model "{}"'.format(field, model.__name__))
 
         self._join_table_by_field(table, field, field_object)
         forwarded_fields_split = forwarded_fields.split("__")
@@ -621,18 +576,12 @@ class FieldSelectQuery(AwaitableQuery):
         field_split = field.split("__")
         if field_split[0] in self.model._meta.fetch_fields:
             related_table, related_db_field = self._join_table_with_forwarded_fields(
-                model=self.model,
-                field=field_split[0],
-                forwarded_fields="__".join(field_split[1:]),
+                model=self.model, field=field_split[0], forwarded_fields="__".join(field_split[1:])
             )
-            self.query = self.query.select(
-                getattr(related_table, related_db_field).as_(return_as)
-            )
+            self.query = self.query.select(getattr(related_table, related_db_field).as_(return_as))
             return
 
-        raise FieldError(
-            'Unknown field "{}" for model "{}"'.format(field, self.model.__name__)
-        )
+        raise FieldError('Unknown field "{}" for model "{}"'.format(field, self.model.__name__))
 
     def resolve_to_python_value(self, model, field):
         if field in model._meta.fetch_fields:
@@ -672,18 +621,13 @@ class ValuesListQuery(FieldSelectQuery):
             raise TypeError("You can flat value_list only if contains one field")
 
         self.query = model._meta.basequery
-        fields_for_select = {
-            str(i): field for i, field in enumerate(fields_for_select_list)
-        }
+        fields_for_select = {str(i): field for i, field in enumerate(fields_for_select_list)}
 
         for positional_number, field in fields_for_select.items():
             self.add_field_to_select_query(field, positional_number)
 
         self.resolve_filters(
-            model=model,
-            q_objects=q_objects,
-            annotations=annotations,
-            custom_filters=custom_filters,
+            model=model, q_objects=q_objects, annotations=annotations, custom_filters=custom_filters
         )
         if limit:
             self.query = self.query.limit(limit)
@@ -704,9 +648,7 @@ class ValuesListQuery(FieldSelectQuery):
         if self.flat:
             func = columns[0][1]
             return [func(entry["0"]) for entry in result]
-        return [
-            tuple(func(entry[column]) for column, func in columns) for entry in result
-        ]
+        return [tuple(func(entry[column]) for column, func in columns) for entry in result]
 
 
 class ValuesQuery(FieldSelectQuery):
@@ -731,10 +673,7 @@ class ValuesQuery(FieldSelectQuery):
             self.add_field_to_select_query(field, return_as)
 
         self.resolve_filters(
-            model=model,
-            q_objects=q_objects,
-            annotations=annotations,
-            custom_filters=custom_filters,
+            model=model, q_objects=q_objects, annotations=annotations, custom_filters=custom_filters
         )
         if limit:
             self.query = self.query.limit(limit)

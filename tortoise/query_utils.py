@@ -7,9 +7,7 @@ from tortoise import fields
 from tortoise.exceptions import FieldError, OperationalError
 
 
-def _process_filter_kwarg(
-    model, key, value
-) -> Tuple[Criterion, Optional[Tuple[Table, Criterion]]]:
+def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[Table, Criterion]]]:
     join = None
     table = Table(model._meta.table)
 
@@ -20,10 +18,7 @@ def _process_filter_kwarg(
         param = model._meta.get_filter(key)
 
     if param.get("table"):
-        join = (
-            param["table"],
-            table.id == getattr(param["table"], param["backward_key"]),
-        )
+        join = (param["table"], table.id == getattr(param["table"], param["backward_key"]))
         criterion = param["operator"](getattr(param["table"], param["field"]), value)
     else:
         field_object = model._meta.fields_map[param["field"]]
@@ -44,32 +39,20 @@ def _get_joins_for_related_field(
         related_table = Table(related_field.type._meta.table)
         through_table = Table(related_field.through)
         required_joins.append(
-            (
-                through_table,
-                table.id == getattr(through_table, related_field.backward_key),
-            )
+            (through_table, table.id == getattr(through_table, related_field.backward_key))
         )
         required_joins.append(
-            (
-                related_table,
-                getattr(through_table, related_field.forward_key) == related_table.id,
-            )
+            (related_table, getattr(through_table, related_field.forward_key) == related_table.id)
         )
     elif isinstance(related_field, fields.BackwardFKRelation):
         related_table = Table(related_field.type._meta.table)
         required_joins.append(
-            (
-                related_table,
-                table.id == getattr(related_table, related_field.relation_field),
-            )
+            (related_table, table.id == getattr(related_table, related_field.relation_field))
         )
     else:
         related_table = Table(related_field.type._meta.table)
         required_joins.append(
-            (
-                related_table,
-                related_table.id == getattr(table, "{}_id".format(related_field_name)),
-            )
+            (related_table, related_table.id == getattr(table, "{}_id".format(related_field_name)))
         )
     return required_joins
 
@@ -110,9 +93,7 @@ class QueryModifier:
     ):
         self.where_criterion = where_criterion if where_criterion else EmptyCriterion()
         self.joins = joins if joins else []
-        self.having_criterion = (
-            having_criterion if having_criterion else EmptyCriterion()
-        )
+        self.having_criterion = having_criterion if having_criterion else EmptyCriterion()
 
     def __and__(self, other: "QueryModifier") -> "QueryModifier":
         return QueryModifier(
@@ -141,17 +122,11 @@ class QueryModifier:
         if self.having_criterion:
             return QueryModifier(
                 joins=self.joins,
-                having_criterion=_and(
-                    self.where_criterion, self.having_criterion
-                ).negate(),
+                having_criterion=_and(self.where_criterion, self.having_criterion).negate(),
             )
-        return QueryModifier(
-            where_criterion=self.where_criterion.negate(), joins=self.joins
-        )
+        return QueryModifier(where_criterion=self.where_criterion.negate(), joins=self.joins)
 
-    def get_query_modifiers(
-        self
-    ) -> Tuple[Criterion, List[Tuple[Table, Criterion]], Criterion]:
+    def get_query_modifiers(self) -> Tuple[Criterion, List[Tuple[Table, Criterion]], Criterion]:
         return self.where_criterion, self.joins, self.having_criterion
 
 
@@ -170,9 +145,7 @@ class Q:  # pylint: disable=C0103
 
     def __init__(self, *args: "Q", join_type=AND, **kwargs) -> None:
         if args and kwargs:
-            raise OperationalError(
-                "You can pass only Q nodes or filter kwargs in one Q node"
-            )
+            raise OperationalError("You can pass only Q nodes or filter kwargs in one Q node")
         if not all(isinstance(node, Q) for node in args):
             raise OperationalError("All ordered arguments must be Q nodes")
         self.children = args  # type: Tuple[Q, ...]
@@ -207,9 +180,7 @@ class Q:  # pylint: disable=C0103
 
         related_field_name = key.split("__")[0]
         related_field = model._meta.fields_map[related_field_name]
-        required_joins = _get_joins_for_related_field(
-            table, related_field, related_field_name
-        )
+        required_joins = _get_joins_for_related_field(table, related_field, related_field_name)
         modifier = Q(**{"__".join(key.split("__")[1:]): value}).resolve(
             model=related_field.type,
             annotations=self._annotations,
@@ -228,15 +199,10 @@ class Q:  # pylint: disable=C0103
         )
         if overridden_operator:
             operator = overridden_operator
-        return QueryModifier(
-            having_criterion=operator(aggregation_info["field"], value)
-        )
+        return QueryModifier(having_criterion=operator(aggregation_info["field"], value))
 
     def _resolve_regular_kwarg(self, model, key, value) -> QueryModifier:
-        if (
-            key not in model._meta.filters
-            and key.split("__")[0] in model._meta.fetch_fields
-        ):
+        if key not in model._meta.filters and key.split("__")[0] in model._meta.fetch_fields:
             modifier = self._resolve_nested_filter(model, key, value)
         else:
             criterion, join = _process_filter_kwarg(model, key, value)
@@ -261,16 +227,10 @@ class Q:  # pylint: disable=C0103
             filter_value = value
         else:
             allowed = sorted(
-                list(
-                    model._meta.fields
-                    | model._meta.fetch_fields
-                    | set(self._custom_filters)
-                )
+                list(model._meta.fields | model._meta.fetch_fields | set(self._custom_filters))
             )
             raise FieldError(
-                "Unknown filter param '{}'. Allowed base values are {}".format(
-                    key, allowed
-                )
+                "Unknown filter param '{}'. Allowed base values are {}".format(key, allowed)
             )
         return filter_key, filter_value
 
@@ -325,9 +285,7 @@ class Prefetch:
         first_level_field = relation_split[0]
         if first_level_field not in queryset.model._meta.fetch_fields:
             raise OperationalError(
-                "relation {} for {} not found".format(
-                    first_level_field, queryset.model._meta.table
-                )
+                "relation {} for {} not found".format(first_level_field, queryset.model._meta.table)
             )
         forwarded_prefetch = "__".join(relation_split[1:])
         if forwarded_prefetch:

@@ -80,9 +80,7 @@ def _restore_default() -> None:
 
 
 def initializer(
-    modules: List[str],
-    db_url: Optional[str] = None,
-    loop: Optional[BaseSelectorEventLoop] = None,
+    modules: List[str], db_url: Optional[str] = None, loop: Optional[BaseSelectorEventLoop] = None
 ) -> None:
     """
     Sets up the DB for testing. Must be called as part of test environment setup.
@@ -134,9 +132,7 @@ def env_initializer() -> None:
     ``TORTOISE_TEST_DB``:
         The db_url of the test db. *(optional*)
     """
-    modules = str(
-        _os.environ.get("TORTOISE_TEST_MODULES", "tortoise.tests.testmodels")
-    ).split(",")
+    modules = str(_os.environ.get("TORTOISE_TEST_MODULES", "tortoise.tests.testmodels")).split(",")
     db_url = _os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
     if not modules:  # pragma: nocoverage
         raise Exception("TORTOISE_TEST_MODULES envvar not defined")
@@ -168,9 +164,7 @@ class SimpleTestCase(_TestCase):
         else:  # pragma: nocoverage
             loop = self.loop = asyncio.new_event_loop()
 
-        policy = _Policy(
-            asyncio.get_event_loop_policy(), loop, self.forbid_get_event_loop
-        )
+        policy = _Policy(asyncio.get_event_loop_policy(), loop, self.forbid_get_event_loop)
 
         asyncio.set_event_loop_policy(policy)
 

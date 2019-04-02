@@ -21,21 +21,14 @@ class TestConfigGenerator(test.SimpleTestCase):
     def test_sqlite_relative(self):
         res = expand_db_url("sqlite://test.sqlite")
         self.assertDictEqual(
-            res,
-            {
-                "engine": "tortoise.backends.sqlite",
-                "credentials": {"file_path": "test.sqlite"},
-            },
+            res, {"engine": "tortoise.backends.sqlite", "credentials": {"file_path": "test.sqlite"}}
         )
 
     def test_sqlite_relative_with_subdir(self):
         res = expand_db_url("sqlite://data/db.sqlite")
         self.assertDictEqual(
             res,
-            {
-                "engine": "tortoise.backends.sqlite",
-                "credentials": {"file_path": "data/db.sqlite"},
-            },
+            {"engine": "tortoise.backends.sqlite", "credentials": {"file_path": "data/db.sqlite"}},
         )
 
     def test_sqlite_testing(self):
@@ -45,11 +38,7 @@ class TestConfigGenerator(test.SimpleTestCase):
         self.assertIn(".sqlite", file_path)
         self.assertNotEqual("sqlite:///some/test-{}.sqlite", file_path)
         self.assertDictEqual(
-            res,
-            {
-                "engine": "tortoise.backends.sqlite",
-                "credentials": {"file_path": file_path},
-            },
+            res, {"engine": "tortoise.backends.sqlite", "credentials": {"file_path": file_path}}
         )
 
     def test_sqlite_params(self):
@@ -58,11 +47,7 @@ class TestConfigGenerator(test.SimpleTestCase):
             res,
             {
                 "engine": "tortoise.backends.sqlite",
-                "credentials": {
-                    "file_path": "/some/test.sqlite",
-                    "AHA": "5",
-                    "moo": "yes",
-                },
+                "credentials": {"file_path": "/some/test.sqlite", "AHA": "5", "moo": "yes"},
             },
         )
 
@@ -107,9 +92,7 @@ class TestConfigGenerator(test.SimpleTestCase):
             expand_db_url("postgres://postgres:@127.0.0.1:moo/test")
 
     def test_postgres_testing(self):
-        res = expand_db_url(
-            db_url=r"postgres://postgres:@127.0.0.1:5432/test_\{\}", testing=True
-        )
+        res = expand_db_url(db_url=r"postgres://postgres:@127.0.0.1:5432/test_\{\}", testing=True)
         database = res["credentials"]["database"]
         self.assertIn("test_", database)
         self.assertNotEqual("test_{}", database)
@@ -275,10 +258,7 @@ class TestConfigGenerator(test.SimpleTestCase):
     def test_generate_config_many_apps(self):
         res = generate_config(
             db_url="sqlite:///some/test.sqlite",
-            app_modules={
-                "models": ["one.models", "two.models"],
-                "peanuts": ["peanut.models"],
-            },
+            app_modules={"models": ["one.models", "two.models"], "peanuts": ["peanut.models"]},
         )
         self.assertEqual(
             res,
@@ -294,10 +274,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                         "models": ["one.models", "two.models"],
                         "default_connection": "default",
                     },
-                    "peanuts": {
-                        "models": ["peanut.models"],
-                        "default_connection": "default",
-                    },
+                    "peanuts": {"models": ["peanut.models"], "default_connection": "default"},
                 },
             },
         )

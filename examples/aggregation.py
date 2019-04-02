@@ -50,23 +50,11 @@ async def run():
     await event.participants.add(participants[0], participants[1])
     await event.participants.add(participants[0], participants[1])
 
-    print(
-        await Tournament.all()
-        .annotate(events_count=Count("events"))
-        .filter(events_count__gte=1)
-    )
+    print(await Tournament.all().annotate(events_count=Count("events")).filter(events_count__gte=1))
 
-    print(
-        await Event.filter(id=event.id)
-        .first()
-        .annotate(lowest_team_id=Min("participants__id"))
-    )
+    print(await Event.filter(id=event.id).first().annotate(lowest_team_id=Min("participants__id")))
 
-    print(
-        await Tournament.all()
-        .annotate(events_count=Count("events"))
-        .order_by("events_count")
-    )
+    print(await Tournament.all().annotate(events_count=Count("events")).order_by("events_count"))
 
     print(await Event.all().annotate(tournament_test_id=Sum("tournament__id")).first())
 

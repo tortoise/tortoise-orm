@@ -40,10 +40,7 @@ class Event(Model):
     tournament = fields.ForeignKeyField("models.Tournament", related_name="events")
     reporter = fields.ForeignKeyField("models.Reporter", null=True)
     participants = fields.ManyToManyField(
-        "models.Team",
-        related_name="events",
-        through="event_team",
-        backward_key="idEvent",
+        "models.Team", related_name="events", through="event_team", backward_key="idEvent"
     )
     modified = fields.DatetimeField(auto_now=True)
     token = fields.TextField(default=generate_token)

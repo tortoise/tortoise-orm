@@ -30,9 +30,7 @@ class TestGenerateSchema(test.SimpleTestCase):
                         "credentials": {"file_path": ":memory:"},
                     }
                 },
-                "apps": {
-                    "models": {"models": [module], "default_connection": "default"}
-                },
+                "apps": {"models": {"models": [module], "default_connection": "default"}},
             }
         )
         self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
@@ -50,19 +48,15 @@ class TestGenerateSchema(test.SimpleTestCase):
         await self.init_for("tortoise.tests.testmodels")
         sql = self.get_sql('"minrelation"')
         self.assertIn(
-            '"tournament_id" INT NOT NULL REFERENCES "tournament" (id) ON DELETE CASCADE',
-            sql,
+            '"tournament_id" INT NOT NULL REFERENCES "tournament" (id) ON DELETE CASCADE', sql
         )
         self.assertNotIn("participants", sql)
 
         sql = self.get_sql('"minrelation_team"')
         self.assertIn(
-            '"minrelation_id" INT NOT NULL REFERENCES "minrelation" (id) ON DELETE CASCADE',
-            sql,
+            '"minrelation_id" INT NOT NULL REFERENCES "minrelation" (id) ON DELETE CASCADE', sql
         )
-        self.assertIn(
-            '"team_id" INT NOT NULL REFERENCES "team" (id) ON DELETE CASCADE', sql
-        )
+        self.assertIn('"team_id" INT NOT NULL REFERENCES "team" (id) ON DELETE CASCADE', sql)
 
     async def test_safe_generation(self):
         """Assert that the IF NOT EXISTS clause is included when safely generating schema."""
@@ -118,8 +112,7 @@ class TestGenerateSchema(test.SimpleTestCase):
 
     async def test_fk_bad_null(self):
         with self.assertRaisesRegex(
-            ConfigurationError,
-            "If on_delete is SET_NULL, then field must have null=True set",
+            ConfigurationError, "If on_delete is SET_NULL, then field must have null=True set"
         ):
             await self.init_for("tortoise.tests.models_fk_3")
 

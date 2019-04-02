@@ -67,9 +67,7 @@ class TestManyToManyField(test.TestCase):
 
     async def test__remove__blank(self):
         one = await testmodels.M2MOne.create(name="One")
-        with self.assertRaisesRegex(
-            OperationalError, r"remove\(\) called on no instances"
-        ):
+        with self.assertRaisesRegex(OperationalError, r"remove\(\) called on no instances"):
             await one.two.remove()
 
     async def test__clear(self):

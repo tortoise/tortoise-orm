@@ -30,9 +30,7 @@ async def run():
                     },
                 }
             },
-            "apps": {
-                "models": {"models": ["__main__"], "default_connection": "default"}
-            },
+            "apps": {"models": {"models": ["__main__"], "default_connection": "default"}},
         },
         _create_db=True,
     )

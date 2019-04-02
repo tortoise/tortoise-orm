@@ -25,9 +25,7 @@ class Aggregate:
                 related_field = model._meta.fields_map[field_split[0]]
                 join = (Table(model._meta.table), field_split[0], related_field)
                 aggregation_joins.append(join)
-                aggregation_field = self.aggregation_func(
-                    Table(related_field.type._meta.table).id
-                )
+                aggregation_field = self.aggregation_func(Table(related_field.type._meta.table).id)
             else:
                 aggregation_field = self.aggregation_func(
                     getattr(Table(model._meta.table), field_split[0])

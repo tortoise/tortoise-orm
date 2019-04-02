@@ -50,13 +50,7 @@ class MySQLClient(BaseDBAsyncClient):
     capabilities = Capabilities("mysql", safe_indexes=False, requires_limit=True)
 
     def __init__(
-        self,
-        user: str,
-        password: str,
-        database: str,
-        host: str,
-        port: SupportsInt,
-        **kwargs
+        self, user: str, password: str, database: str, host: str, port: SupportsInt, **kwargs
     ) -> None:
         super().__init__(**kwargs)
 
@@ -97,10 +91,7 @@ class MySQLClient(BaseDBAsyncClient):
             raise DBConnectionError(
                 "Can't connect to MySQL server: "
                 "user={user} database={database} host={host} port={port}".format(
-                    user=self.user,
-                    database=self.database,
-                    host=self.host,
-                    port=self.port,
+                    user=self.user, database=self.database, host=self.host, port=self.port
                 )
             )
 
@@ -134,9 +125,7 @@ class MySQLClient(BaseDBAsyncClient):
         return ConnectionWrapper(self._connection, self._lock)
 
     def _in_transaction(self):
-        return self._transaction_class(
-            self.connection_name, self._connection, self._lock
-        )
+        return self._transaction_class(self.connection_name, self._connection, self._lock)
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:

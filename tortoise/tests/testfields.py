@@ -32,9 +32,7 @@ class EnumField(CharField):
         except ValueError:
             if not self.null:
                 raise ValueError(
-                    "Database value {} does not exist on Enum {}.".format(
-                        value, self._enum_type
-                    )
+                    "Database value {} does not exist on Enum {}.".format(value, self._enum_type)
                 )
 
             return None

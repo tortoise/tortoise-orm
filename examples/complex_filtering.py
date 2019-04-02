@@ -71,9 +71,7 @@ async def run():
         .distinct()
     )
 
-    print(
-        await Team.filter(events__tournament_id=tournament.id).order_by("-events__name")
-    )
+    print(await Team.filter(events__tournament_id=tournament.id).order_by("-events__name"))
     print(
         await Tournament.filter(events__name__in=["1", "3"])
         .order_by("-events__participants__name")

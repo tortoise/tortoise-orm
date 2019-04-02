@@ -33,7 +33,5 @@ class TestJSONFields(test.TestCase):
 
     async def test_values_list(self):
         obj0 = await testmodels.JSONFields.create(data={"some": ["text", 3]})
-        values = await testmodels.JSONFields.filter(id=obj0.id).values_list(
-            "data", flat=True
-        )
+        values = await testmodels.JSONFields.filter(id=obj0.id).values_list("data", flat=True)
         self.assertEqual(values[0], {"some": ["text", 3]})

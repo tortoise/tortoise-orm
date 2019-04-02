@@ -108,9 +108,7 @@ def get_m2m_filters(field_name: str, field: fields.ManyToManyField) -> Dict[str,
     }
 
 
-def get_backward_fk_filters(
-    field_name: str, field: fields.BackwardFKRelation
-) -> Dict[str, dict]:
+def get_backward_fk_filters(field_name: str, field: fields.BackwardFKRelation) -> Dict[str, dict]:
     return {
         field_name: {
             "field": "id",

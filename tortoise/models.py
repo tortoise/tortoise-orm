@@ -6,11 +6,7 @@ from pypika import Query
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient  # noqa
 from tortoise.exceptions import ConfigurationError, OperationalError
-from tortoise.fields import (
-    ManyToManyField,
-    ManyToManyRelationManager,
-    RelationQueryContainer,
-)
+from tortoise.fields import ManyToManyField, ManyToManyRelationManager, RelationQueryContainer
 from tortoise.filters import get_filters_for_field
 from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
@@ -57,9 +53,7 @@ class MetaInfo:
         self.abstract = getattr(meta, "abstract", False)  # type: bool
         self.table = getattr(meta, "table", "")  # type: str
         self.app = getattr(meta, "app", None)  # type: Optional[str]
-        self.unique_together = get_unique_together(
-            meta
-        )  # type: Optional[Union[Tuple, List]]
+        self.unique_together = get_unique_together(meta)  # type: Optional[Union[Tuple, List]]
         self.fields = set()  # type: Set[str]
         self.db_fields = set()  # type: Set[str]
         self.m2m_fields = set()  # type: Set[str]
@@ -133,9 +127,7 @@ class ModelMeta(type):
                 elif isinstance(value, fields.ManyToManyField):
                     m2m_fields.add(key)
                 else:
-                    fields_db_projection[key] = (
-                        value.source_field if value.source_field else key
-                    )
+                    fields_db_projection[key] = value.source_field if value.source_field else key
                     filters.update(
                         get_filters_for_field(
                             field_name=key,
@@ -206,9 +198,7 @@ class Model(metaclass=ModelMeta):
             if key in meta.fk_fields:
                 if hasattr(value, "id") and not value.id:
                     raise OperationalError(
-                        "You should first call .save() on {} before referring to it".format(
-                            value
-                        )
+                        "You should first call .save() on {} before referring to it".format(value)
                     )
                 relation_field = "{}_id".format(key)
                 setattr(self, relation_field, value.id)
@@ -216,9 +206,7 @@ class Model(metaclass=ModelMeta):
             elif key in meta.fields:
                 field_object = meta.fields_map[key]
                 if value is None and not field_object.null:
-                    raise ValueError(
-                        "{} is non nullable field, but null was passed".format(key)
-                    )
+                    raise ValueError("{} is non nullable field, but null was passed".format(key))
                 setattr(self, key, field_object.to_python_value(value))
             elif key in meta.db_fields:
                 setattr(self, meta.fields_db_projection_reverse[key], value)
@@ -261,9 +249,7 @@ class Model(metaclass=ModelMeta):
 
     async def fetch_related(self, *args, using_db=None):
         db = using_db if using_db else self._meta.db
-        await db.executor_class(model=self.__class__, db=db).fetch_for_list(
-            [self], *args
-        )
+        await db.executor_class(model=self.__class__, db=db).fetch_for_list([self], *args)
 
     def __str__(self) -> str:
         return "<{}>".format(self.__class__.__name__)
@@ -350,9 +336,7 @@ class Model(metaclass=ModelMeta):
             for unique_fields in cls._meta.unique_together
         ):
             raise ConfigurationError(
-                "All '{}.unique_together' elements must be lists or tuples.".format(
-                    cls.__name__
-                )
+                "All '{}.unique_together' elements must be lists or tuples.".format(cls.__name__)
             )
 
         else:

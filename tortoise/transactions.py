@@ -17,9 +17,7 @@ def _get_connection(connection_name: Optional[str]) -> BaseDBAsyncClient:
     else:
         raise ParamsError(
             "You are running with multiple databases, so you "
-            "should specify connection_name: {}".format(
-                list(Tortoise._connections.keys())
-            )
+            "should specify connection_name: {}".format(list(Tortoise._connections.keys()))
         )
     return connection
 
@@ -61,9 +59,7 @@ def atomic(connection_name: Optional[str] = None) -> Callable:
     return wrapper
 
 
-async def start_transaction(
-    connection_name: Optional[str] = None
-) -> BaseTransactionWrapper:
+async def start_transaction(connection_name: Optional[str] = None) -> BaseTransactionWrapper:
     """
     Function to manually control your transaction.
 

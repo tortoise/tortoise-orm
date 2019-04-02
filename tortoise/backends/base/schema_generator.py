@@ -8,9 +8,7 @@ from tortoise.exceptions import ConfigurationError
 class BaseSchemaGenerator:
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields});'
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}'
-    INDEX_CREATE_TEMPLATE = (
-        'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
-    )
+    INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE ({fields})"
     FK_TEMPLATE = ' REFERENCES "{table}" (id) ON DELETE {on_delete}'
     M2M_TABLE_TEMPLATE = (
@@ -37,9 +35,7 @@ class BaseSchemaGenerator:
     def __init__(self, client) -> None:
         self.client = client
 
-    def _create_string(
-        self, db_field: str, field_type: str, nullable: str, unique: str
-    ) -> str:
+    def _create_string(self, db_field: str, field_type: str, nullable: str, unique: str) -> str:
         # children can override this function to customize thier sql queries
 
         field_creation_string = self.FIELD_TEMPLATE.format(
@@ -82,9 +78,7 @@ class BaseSchemaGenerator:
         )
 
     def _get_unique_constraint_sql(self, field_names: List[str]) -> str:
-        return self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(
-            fields=", ".join(field_names)
-        )
+        return self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(fields=", ".join(field_names))
 
     def _get_table_sql(self, model, safe=True) -> dict:
 
@@ -94,34 +88,24 @@ class BaseSchemaGenerator:
         references = set()
         for field_name, db_field in model._meta.fields_db_projection.items():
             field_object = model._meta.fields_map[field_name]
-            if (
-                isinstance(field_object, (fields.IntField, fields.BigIntField))
-                and field_object.pk
-            ):
+            if isinstance(field_object, (fields.IntField, fields.BigIntField)) and field_object.pk:
                 fields_to_create.append(self._get_primary_key_create_string(field_name))
                 continue
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
 
             field_object_type = type(field_object)
-            while (
-                field_object_type.__bases__
-                and field_object_type not in self.FIELD_TYPE_MAP
-            ):
+            while field_object_type.__bases__ and field_object_type not in self.FIELD_TYPE_MAP:
                 field_object_type = field_object_type.__bases__[0]
 
             field_type = self.FIELD_TYPE_MAP[field_object_type]
 
             if isinstance(field_object, fields.DecimalField):
-                field_type = field_type.format(
-                    field_object.max_digits, field_object.decimal_places
-                )
+                field_type = field_type.format(field_object.max_digits, field_object.decimal_places)
             elif isinstance(field_object, fields.CharField):
                 field_type = field_type.format(field_object.max_length)
 
-            field_creation_string = self._create_string(
-                db_field, field_type, nullable, unique
-            )
+            field_creation_string = self._create_string(db_field, field_type, nullable, unique)
 
             if hasattr(field_object, "reference") and field_object.reference:
                 field_creation_string += self.FK_TEMPLATE.format(
@@ -163,8 +147,7 @@ class BaseSchemaGenerator:
 
         # Indexes.
         field_indexes_sqls = [
-            self._get_index_sql(model, [field_name], safe=safe)
-            for field_name in fields_with_index
+            self._get_index_sql(model, [field_name], safe=safe) for field_name in fields_with_index
         ]
         if safe and not self.client.capabilities.safe_indexes:
             warnings.warn(
@@ -228,24 +211,16 @@ class BaseSchemaGenerator:
                 break
             try:
                 next_table_for_create = next(
-                    t
-                    for t in tables_to_create
-                    if t["references"].issubset(created_tables)
+                    t for t in tables_to_create if t["references"].issubset(created_tables)
                 )
             except StopIteration:
-                raise ConfigurationError(
-                    "Can't create schema due to cyclic fk references"
-                )
+                raise ConfigurationError("Can't create schema due to cyclic fk references")
             tables_to_create.remove(next_table_for_create)
             created_tables.add(next_table_for_create["table"])
-            ordered_tables_for_create.append(
-                next_table_for_create["table_creation_string"]
-            )
+            ordered_tables_for_create.append(next_table_for_create["table_creation_string"])
             m2m_tables_to_create += next_table_for_create["m2m_tables"]
 
-        schema_creation_string = " ".join(
-            ordered_tables_for_create + m2m_tables_to_create
-        )
+        schema_creation_string = " ".join(ordered_tables_for_create + m2m_tables_to_create)
         return schema_creation_string
 
     async def generate_from_string(self, creation_string: str) -> None:

@@ -24,10 +24,7 @@ def to_db_decimal(self, value, instance):
 
 
 class SqliteExecutor(BaseExecutor):
-    TO_DB_OVERRIDE = {
-        fields.BooleanField: to_db_bool,
-        fields.DecimalField: to_db_decimal,
-    }
+    TO_DB_OVERRIDE = {fields.BooleanField: to_db_bool, fields.DecimalField: to_db_decimal}
     EXPLAIN_PREFIX = "EXPLAIN QUERY PLAN"
 
     def _prepare_insert_statement(self, columns: List[str]) -> str:

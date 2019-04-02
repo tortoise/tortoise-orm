@@ -40,9 +40,7 @@ class TestCharFields(test.TestCase):
 
     async def test_values_list(self):
         obj0 = await testmodels.CharFields.create(char="moo")
-        values = await testmodels.CharFields.get(id=obj0.id).values_list(
-            "char", flat=True
-        )
+        values = await testmodels.CharFields.get(id=obj0.id).values_list("char", flat=True)
         self.assertEqual(values[0], "moo")
 
 
@@ -67,7 +65,5 @@ class TestTextFields(test.TestCase):
 
     async def test_values_list(self):
         obj0 = await testmodels.TextFields.create(text="baa")
-        values = await testmodels.TextFields.get(id=obj0.id).values_list(
-            "text", flat=True
-        )
+        values = await testmodels.TextFields.get(id=obj0.id).values_list("text", flat=True)
         self.assertEqual(values[0], "baa")

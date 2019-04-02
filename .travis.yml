@@ -35,6 +35,7 @@ services:
 cache: pip
 install:
   - pip install -r requirements-dev.txt
+  - if [ "$TRAVIS_PYTHON_VERSION" != "3.5" ]; then pip install black==19.3b0 fi
 script:
   - make ci
 after_success:
