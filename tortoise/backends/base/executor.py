@@ -12,7 +12,7 @@ INSERT_CACHE = {}  # type: Dict[str, Tuple[list, list, str]]
 class BaseExecutor:
     TO_DB_OVERRIDE = {}  # type: Dict[Type[fields.Field], Callable]
     FILTER_FUNC_OVERRIDE = {}  # type: Dict[Callable, Callable]
-    EXPLAIN_PREFIX = 'EXPLAIN'
+    EXPLAIN_PREFIX = "EXPLAIN"
 
     def __init__(self, model, db=None, prefetch_map=None, prefetch_queries=None):
         self.model = model
@@ -21,7 +21,7 @@ class BaseExecutor:
         self._prefetch_queries = prefetch_queries if prefetch_queries else {}
 
     async def execute_explain(self, query) -> Any:
-        sql = ' '.join(((self.EXPLAIN_PREFIX, query.get_sql())))
+        sql = " ".join(((self.EXPLAIN_PREFIX, query.get_sql())))
         return await self.db.execute_query(sql)
 
     async def execute_select(self, query, custom_fields: Optional[list] = None) -> list:
@@ -42,18 +42,26 @@ class BaseExecutor:
             field_object = self.model._meta.fields_map[column]
             if not field_object.generated:
                 regular_columns.append(column)
-        result_columns = [self.model._meta.fields_db_projection[c] for c in regular_columns]
+        result_columns = [
+            self.model._meta.fields_db_projection[c] for c in regular_columns
+        ]
         return regular_columns, result_columns
 
     @classmethod
     def _field_to_db(cls, field_object: fields.Field, attr: Any, instance) -> Any:
         if field_object.__class__ in cls.TO_DB_OVERRIDE:
-            return cls.TO_DB_OVERRIDE[field_object.__class__](field_object, attr, instance)
+            return cls.TO_DB_OVERRIDE[field_object.__class__](
+                field_object, attr, instance
+            )
         return field_object.to_db_value(attr, instance)
 
     def _prepare_insert_values(self, instance, regular_columns: List[str]) -> list:
-        return [self._field_to_db(self.model._meta.fields_map[column], getattr(instance, column),
-                                  instance) for column in regular_columns]
+        return [
+            self._field_to_db(
+                self.model._meta.fields_map[column], getattr(instance, column), instance
+            )
+            for column in regular_columns
+        ]
 
     def _prepare_insert_statement(self, columns: List[str]) -> str:
         # Insert should implement returning new id to saved object
@@ -62,7 +70,7 @@ class BaseExecutor:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, instance):
-        key = '{}:{}'.format(self.db.connection_name, self.model._meta.table)
+        key = "{}:{}".format(self.db.connection_name, self.model._meta.table)
         if key not in INSERT_CACHE:
             regular_columns, columns = self._prepare_insert_columns()
             query = self._prepare_insert_statement(columns)
@@ -71,8 +79,7 @@ class BaseExecutor:
             regular_columns, columns, query = INSERT_CACHE[key]
 
         values = self._prepare_insert_values(
-            instance=instance,
-            regular_columns=regular_columns,
+            instance=instance, regular_columns=regular_columns
         )
         instance.id = await self.db.execute_insert(query, values)
         return instance
@@ -85,7 +92,7 @@ class BaseExecutor:
             if not field_object.generated:
                 query = query.set(
                     db_field,
-                    self._field_to_db(field_object, getattr(instance, field), instance)
+                    self._field_to_db(field_object, getattr(instance, field), instance),
                 )
         query = query.where(table.id == instance.id)
         await self.db.execute_query(query.get_sql())
@@ -97,8 +104,9 @@ class BaseExecutor:
         await self.db.execute_query(query.get_sql())
         return instance
 
-    async def _prefetch_reverse_relation(self, instance_list: list, field: str,
-                                         related_query) -> list:
+    async def _prefetch_reverse_relation(
+        self, instance_list: list, field: str, related_query
+    ) -> list:
         instance_id_set = set()  # type: Set[int]
         for instance in instance_list:
             instance_id_set.add(instance.id)
@@ -106,7 +114,7 @@ class BaseExecutor:
         relation_field = backward_relation_manager.relation_field
 
         related_object_list = await related_query.filter(
-            **{'{}__in'.format(relation_field): list(instance_id_set)}
+            **{"{}__in".format(relation_field): list(instance_id_set)}
         )
 
         related_object_map = {}  # type: Dict[str, list]
@@ -118,10 +126,14 @@ class BaseExecutor:
                 related_object_map[object_id] = [entry]
         for instance in instance_list:
             relation_container = getattr(instance, field)
-            relation_container._set_result_for_query(related_object_map.get(instance.id, []))
+            relation_container._set_result_for_query(
+                related_object_map.get(instance.id, [])
+            )
         return instance_list
 
-    async def _prefetch_m2m_relation(self, instance_list: list, field: str, related_query) -> list:
+    async def _prefetch_m2m_relation(
+        self, instance_list: list, field: str, related_query
+    ) -> list:
         instance_id_set = set()  # type: Set[int]
         for instance in instance_list:
             instance_id_set.add(instance.id)
@@ -130,17 +142,32 @@ class BaseExecutor:
 
         through_table = Table(field_object.through)
 
-        subquery = self.db.query_class.from_(through_table).select(
-            getattr(through_table, field_object.backward_key).as_('_backward_relation_key'),
-            getattr(through_table, field_object.forward_key).as_('_forward_relation_key')
-        ).where(getattr(through_table, field_object.backward_key).isin(instance_id_set))
+        subquery = (
+            self.db.query_class.from_(through_table)
+            .select(
+                getattr(through_table, field_object.backward_key).as_(
+                    "_backward_relation_key"
+                ),
+                getattr(through_table, field_object.forward_key).as_(
+                    "_forward_relation_key"
+                ),
+            )
+            .where(
+                getattr(through_table, field_object.backward_key).isin(instance_id_set)
+            )
+        )
 
         related_query_table = Table(related_query.model._meta.table)
-        query = related_query.query.join(subquery).on(
-            subquery._forward_relation_key == related_query_table.id
-        ).select(
-            subquery._backward_relation_key.as_('_backward_relation_key'),
-            *[getattr(related_query_table, field).as_(field) for field in related_query.fields]
+        query = (
+            related_query.query.join(subquery)
+            .on(subquery._forward_relation_key == related_query_table.id)
+            .select(
+                subquery._backward_relation_key.as_("_backward_relation_key"),
+                *[
+                    getattr(related_query_table, field).as_(field)
+                    for field in related_query.fields
+                ]
+            )
         )
 
         if related_query._q_objects:
@@ -166,7 +193,7 @@ class BaseExecutor:
                 query = query.having(having_criterion)
 
         raw_results = await self.db.execute_query(query.get_sql())
-        relations = {(e['_backward_relation_key'], e['id']) for e in raw_results}
+        relations = {(e["_backward_relation_key"], e["id"]) for e in raw_results}
         related_object_list = [related_query.model(**e) for e in raw_results]
         await self.__class__(
             model=related_query.model,
@@ -186,19 +213,24 @@ class BaseExecutor:
             relation_container._set_result_for_query(relation_map.get(instance.id, []))
         return instance_list
 
-    async def _prefetch_direct_relation(self, instance_list: list, field: str,
-                                        related_query) -> list:
+    async def _prefetch_direct_relation(
+        self, instance_list: list, field: str, related_query
+    ) -> list:
         related_objects_for_fetch = set()
-        relation_key_field = '{}_id'.format(field)
+        relation_key_field = "{}_id".format(field)
         for instance in instance_list:
             if getattr(instance, relation_key_field):
                 related_objects_for_fetch.add(getattr(instance, relation_key_field))
         if related_objects_for_fetch:
-            related_object_list = await related_query.filter(id__in=list(related_objects_for_fetch))
+            related_object_list = await related_query.filter(
+                id__in=list(related_objects_for_fetch)
+            )
             related_object_map = {obj.id: obj for obj in related_object_list}
             for instance in instance_list:
                 setattr(
-                    instance, field, related_object_map.get(getattr(instance, relation_key_field))
+                    instance,
+                    field,
+                    related_object_map.get(getattr(instance, relation_key_field)),
                 )
         return instance_list
 
@@ -214,13 +246,21 @@ class BaseExecutor:
                 related_query = related_query.prefetch_related(*forwarded_prefetches)
             self._prefetch_queries[field] = related_query
 
-    async def _do_prefetch(self, instance_id_list: list, field: str, related_query) -> list:
+    async def _do_prefetch(
+        self, instance_id_list: list, field: str, related_query
+    ) -> list:
         if isinstance(getattr(self.model, field), fields.BackwardFKRelation):
-            return await self._prefetch_reverse_relation(instance_id_list, field, related_query)
+            return await self._prefetch_reverse_relation(
+                instance_id_list, field, related_query
+            )
         elif isinstance(getattr(self.model, field), fields.ManyToManyField):
-            return await self._prefetch_m2m_relation(instance_id_list, field, related_query)
+            return await self._prefetch_m2m_relation(
+                instance_id_list, field, related_query
+            )
         else:
-            return await self._prefetch_direct_relation(instance_id_list, field, related_query)
+            return await self._prefetch_direct_relation(
+                instance_id_list, field, related_query
+            )
 
     async def _execute_prefetch_queries(self, instance_list: list) -> list:
         if instance_list and (self.prefetch_map or self._prefetch_queries):
@@ -232,14 +272,17 @@ class BaseExecutor:
     async def fetch_for_list(self, instance_list: list, *args) -> list:
         self.prefetch_map = {}
         for relation in args:
-            relation_split = relation.split('__')
+            relation_split = relation.split("__")
             first_level_field = relation_split[0]
             if first_level_field not in self.model._meta.fetch_fields:
-                raise OperationalError('relation {} for {} not found'.format(
-                    first_level_field, self.model._meta.table))
+                raise OperationalError(
+                    "relation {} for {} not found".format(
+                        first_level_field, self.model._meta.table
+                    )
+                )
             if first_level_field not in self.prefetch_map.keys():
                 self.prefetch_map[first_level_field] = set()
-            forwarded_prefetch = '__'.join(relation_split[1:])
+            forwarded_prefetch = "__".join(relation_split[1:])
             if forwarded_prefetch:
                 self.prefetch_map[first_level_field].add(forwarded_prefetch)
         await self._execute_prefetch_queries(instance_list)

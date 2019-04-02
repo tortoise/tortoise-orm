@@ -3,7 +3,6 @@ from tortoise.tests.testmodels import Tournament
 
 
 class TestExplain(test.TestCase):
-
     async def test_explain(self):
         # NOTE: we do not provide any guarantee on the format of the value
         # returned by `.explain()`, as it heavily depends on the database.

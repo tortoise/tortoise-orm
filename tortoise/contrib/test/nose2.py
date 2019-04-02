@@ -4,30 +4,36 @@ from nose2.events import Event, Plugin
 
 from tortoise.contrib.test import finalizer, initializer
 
-log = logging.getLogger('nose2.plugins.tortoise')
+log = logging.getLogger("nose2.plugins.tortoise")
 
 
 class TortoisePlugin(Plugin):
     # pylint: disable=E1101
-    configSection = 'tortoise'
+    configSection = "tortoise"
     alwaysOn = True
 
     def __init__(self) -> None:
-        self.db_url = (self.config.as_str('db-url', '').strip() or 'sqlite://:memory:')
-        self.db_modules = self.config.as_list('db-module', [])
+        self.db_url = self.config.as_str("db-url", "").strip() or "sqlite://:memory:"
+        self.db_modules = self.config.as_list("db-module", [])
         if not self.db_modules:
             self.alwaysOn = False
 
         group = self.session.pluginargs
         group.add_argument(
-            '--db-module', action='append', default=[], metavar='MODULE',
-            dest='db_modules',
-            help='Tortoise ORM modules to build models from (REQUIRED) (multi-allowed)'
+            "--db-module",
+            action="append",
+            default=[],
+            metavar="MODULE",
+            dest="db_modules",
+            help="Tortoise ORM modules to build models from (REQUIRED) (multi-allowed)",
         )
         group.add_argument(
-            '--db-url', action='store', default='', metavar='URI',
-            dest='db_url',
-            help='Tortoise ORM test DB-URL'
+            "--db-url",
+            action="store",
+            default="",
+            metavar="URI",
+            dest="db_url",
+            help="Tortoise ORM test DB-URL",
         )
 
     def handleArgs(self, event: Event) -> None:

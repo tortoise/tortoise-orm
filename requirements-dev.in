@@ -23,6 +23,7 @@ docutils
 pygments
 yapf
 bandit
+black
 
 ## Test tools
 tox

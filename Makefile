@@ -32,6 +32,7 @@ check: deps
 
 lint: deps
 	-flake8 $(checkfiles)
+	-black --check $(checkfiles)
 	-mypy $(mypy_flags) $(checkfiles)
 	-pylint $(checkfiles)
 	-bandit -r $(checkfiles)

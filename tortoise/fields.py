@@ -10,16 +10,13 @@ from pypika import Table
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
 from tortoise.utils import QueryAsyncIterator
 
-CASCADE = 'CASCADE'
-RESTRICT = 'RESTRICT'
-SET_NULL = 'SET NULL'
-SET_DEFAULT = 'SET DEFAULT'
+CASCADE = "CASCADE"
+RESTRICT = "RESTRICT"
+SET_NULL = "SET NULL"
+SET_DEFAULT = "SET DEFAULT"
 
 # Doing this we can replace json dumps/loads with different implementations
-JSON_DUMPS = functools.partial(
-    json.dumps,
-    separators=(',', ':')
-)
+JSON_DUMPS = functools.partial(json.dumps, separators=(",", ":"))
 JSON_LOADS = json.loads
 
 
@@ -27,8 +24,18 @@ class Field:
     """
     Base Field type.
     """
-    __slots__ = ('type', 'source_field', 'generated', 'pk', 'default', 'null', 'unique',
-                 'index', 'model_field_name')
+
+    __slots__ = (
+        "type",
+        "source_field",
+        "generated",
+        "pk",
+        "default",
+        "null",
+        "unique",
+        "index",
+        "model_field_name",
+    )
 
     def __init__(
         self,
@@ -50,7 +57,7 @@ class Field:
         self.null = null
         self.unique = unique
         self.index = index
-        self.model_field_name = ''  # Type: str
+        self.model_field_name = ""  # Type: str
 
     def to_db_value(self, value: Any, instance) -> Any:
         if value is None or type(value) == self.type:  # pylint: disable=C0123
@@ -74,12 +81,13 @@ class IntField(Field):
     ``pk`` (bool):
         True if field is Primary Key.
     """
-    __slots__ = ('reference', )
+
+    __slots__ = ("reference",)
 
     def __init__(self, pk: bool = False, **kwargs) -> None:
-        kwargs['generated'] = bool(kwargs.get('generated')) | pk
+        kwargs["generated"] = bool(kwargs.get("generated")) | pk
         super().__init__(int, **kwargs)
-        self.reference = kwargs.get('reference')
+        self.reference = kwargs.get("reference")
         self.pk = pk
 
 
@@ -90,12 +98,13 @@ class BigIntField(Field):
     ``pk`` (bool):
         True if field is Primary Key.
     """
-    __slots__ = ('reference', )
+
+    __slots__ = ("reference",)
 
     def __init__(self, pk: bool = False, **kwargs) -> None:
-        kwargs['generated'] = bool(kwargs.get('generated')) | pk
+        kwargs["generated"] = bool(kwargs.get("generated")) | pk
         super().__init__(int, **kwargs)
-        self.reference = kwargs.get('reference')
+        self.reference = kwargs.get("reference")
         self.pk = pk
 
 
@@ -103,6 +112,7 @@ class SmallIntField(Field):
     """
     Small integer field. (16-bit signed)
     """
+
     __slots__ = ()
 
     def __init__(self, **kwargs) -> None:
@@ -118,7 +128,8 @@ class CharField(Field):
     ``max_length`` (int):
         Maximum length of the field in characters.
     """
-    __slots__ = ('max_length', )
+
+    __slots__ = ("max_length",)
 
     def __init__(self, max_length: int, **kwargs) -> None:
         if int(max_length) < 1:
@@ -131,6 +142,7 @@ class TextField(Field):
     """
     Large Text field.
     """
+
     __slots__ = ()
 
     def __init__(self, **kwargs) -> None:
@@ -141,6 +153,7 @@ class BooleanField(Field):
     """
     Boolean field.
     """
+
     __slots__ = ()
 
     def __init__(self, **kwargs) -> None:
@@ -158,7 +171,8 @@ class DecimalField(Field):
     ``decimal_places`` (int):
         How many of those signifigant digits is after the decimal point.
     """
-    __slots__ = ('max_digits', 'decimal_places')
+
+    __slots__ = ("max_digits", "decimal_places")
 
     def __init__(self, max_digits: int, decimal_places: int, **kwargs) -> None:
         if int(max_digits) < 1:
@@ -182,9 +196,12 @@ class DatetimeField(Field):
     ``auto_now_add`` (bool):
         Set to ``datetime.utcnow()`` on first save only.
     """
-    __slots__ = ('auto_now', 'auto_now_add')
 
-    def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs) -> None:
+    __slots__ = ("auto_now", "auto_now_add")
+
+    def __init__(
+        self, auto_now: bool = False, auto_now_add: bool = False, **kwargs
+    ) -> None:
         if auto_now_add and auto_now:
             raise ConfigurationError("You can choose only 'auto_now' or 'auto_now_add'")
         super().__init__(datetime.datetime, **kwargs)
@@ -212,6 +229,7 @@ class DateField(Field):
     """
     Date field.
     """
+
     __slots__ = ()
 
     def __init__(self, **kwargs) -> None:
@@ -227,6 +245,7 @@ class TimeDeltaField(Field):
     """
     A field for storing time differences.
     """
+
     __slots__ = ()
 
     def __init__(self, **kwargs) -> None:
@@ -237,16 +256,21 @@ class TimeDeltaField(Field):
             return value
         return datetime.timedelta(microseconds=value)
 
-    def to_db_value(self, value: Optional[datetime.timedelta], instance) -> Optional[int]:
+    def to_db_value(
+        self, value: Optional[datetime.timedelta], instance
+    ) -> Optional[int]:
         if value is None:
             return None
-        return (value.days * 86400000000) + (value.seconds * 1000000) + value.microseconds
+        return (
+            (value.days * 86400000000) + (value.seconds * 1000000) + value.microseconds
+        )
 
 
 class FloatField(Field):
     """
     Float (double) field.
     """
+
     __slots__ = ()
 
     def __init__(self, **kwargs) -> None:
@@ -264,20 +288,24 @@ class JSONField(Field):
     ``decoder``:
         The JSON decoder. The default is recommended.
     """
-    __slots__ = ('encoder', 'decoder')
+
+    __slots__ = ("encoder", "decoder")
 
     def __init__(self, encoder=JSON_DUMPS, decoder=JSON_LOADS, **kwargs) -> None:
         super().__init__((dict, list), **kwargs)
         self.encoder = encoder
         self.decoder = decoder
 
-    def to_db_value(self, value: Optional[Union[dict, list]], instance) -> Optional[str]:
+    def to_db_value(
+        self, value: Optional[Union[dict, list]], instance
+    ) -> Optional[str]:
         if value is None:
             return None
         return self.encoder(value)
 
-    def to_python_value(self, value: Optional[Union[str, dict, list]]
-                        ) -> Optional[Union[dict, list]]:
+    def to_python_value(
+        self, value: Optional[Union[str, dict, list]]
+    ) -> Optional[Union[dict, list]]:
         if value is None or isinstance(value, self.type):
             return value
         return self.decoder(value)
@@ -312,7 +340,8 @@ class ForeignKeyField(Field):
                 Resets the field to ``default`` value in case the related model gets deleted.
                 Can only be set is field has a ``default`` set.
     """
-    __slots__ = ('model_name', 'related_name', 'on_delete')
+
+    __slots__ = ("model_name", "related_name", "on_delete")
 
     def __init__(
         self,
@@ -323,13 +352,19 @@ class ForeignKeyField(Field):
     ) -> None:
         super().__init__(**kwargs)
         if isinstance(model_name, str) and len(model_name.split(".")) != 2:
-            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
+            raise ConfigurationError(
+                'Foreign key accepts model name in format "app.Model"'
+            )
         self.model_name = model_name
         self.related_name = related_name
         if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
-            raise ConfigurationError('on_delete can only be CASCADE, RESTRICT or SET_NULL')
-        if on_delete == SET_NULL and not bool(kwargs.get('null')):
-            raise ConfigurationError('If on_delete is SET_NULL, then field must have null=True set')
+            raise ConfigurationError(
+                "on_delete can only be CASCADE, RESTRICT or SET_NULL"
+            )
+        if on_delete == SET_NULL and not bool(kwargs.get("null")):
+            raise ConfigurationError(
+                "If on_delete is SET_NULL, then field must have null=True set"
+            )
         self.on_delete = on_delete
 
 
@@ -358,31 +393,42 @@ class ManyToManyField(Field):
     ``related_name``:
         The attribute name on the related model to reverse resolve the many to many.
     """
-    __slots__ = ('model_name', 'related_name', 'forward_key', 'backward_key', 'through',
-                 '_generated')
+
+    __slots__ = (
+        "model_name",
+        "related_name",
+        "forward_key",
+        "backward_key",
+        "through",
+        "_generated",
+    )
 
     def __init__(
         self,
         model_name: str,
         through: Optional[str] = None,
         forward_key: Optional[str] = None,
-        backward_key: str = '',
-        related_name: str = '',
+        backward_key: str = "",
+        related_name: str = "",
         **kwargs
     ) -> None:
         super().__init__(**kwargs)
         if len(model_name.split(".")) != 2:
-            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
+            raise ConfigurationError(
+                'Foreign key accepts model name in format "app.Model"'
+            )
         self.model_name = model_name
         self.related_name = related_name
-        self.forward_key = forward_key or '{}_id'.format(model_name.split(".")[1].lower())
+        self.forward_key = forward_key or "{}_id".format(
+            model_name.split(".")[1].lower()
+        )
         self.backward_key = backward_key
         self.through = through
         self._generated = False
 
 
 class BackwardFKRelation(Field):
-    __slots__ = ('type', 'relation_field')
+    __slots__ = ("type", "relation_field")
 
     def __init__(self, type, relation_field: str) -> None:  # pylint: disable=W0622
         super().__init__(type=type)
@@ -393,8 +439,15 @@ class RelationQueryContainer:
     """
     Relation Query container.
     """
-    __slots__ = ('model', 'relation_field', 'instance', '_fetched', '_custom_query',
-                 'related_objects')
+
+    __slots__ = (
+        "model",
+        "relation_field",
+        "instance",
+        "_fetched",
+        "_custom_query",
+        "related_objects",
+    )
 
     def __init__(self, model, relation_field: str, instance) -> None:
         self.model = model
@@ -407,42 +460,44 @@ class RelationQueryContainer:
     @property
     def _query(self):
         if not self.instance.id:
-            raise OperationalError("This objects hasn't been instanced, call .save() before"
-                                   " calling related queries")
+            raise OperationalError(
+                "This objects hasn't been instanced, call .save() before"
+                " calling related queries"
+            )
         return self.model.filter(**{self.relation_field: self.instance.id})
 
     def __contains__(self, item) -> bool:
         if not self._fetched:
             raise NoValuesFetched(
-                'No values were fetched for this relation, first use .fetch_related()'
+                "No values were fetched for this relation, first use .fetch_related()"
             )
         return item in self.related_objects
 
     def __iter__(self):
         if not self._fetched:
             raise NoValuesFetched(
-                'No values were fetched for this relation, first use .fetch_related()'
+                "No values were fetched for this relation, first use .fetch_related()"
             )
         return self.related_objects.__iter__()
 
     def __len__(self) -> int:
         if not self._fetched:
             raise NoValuesFetched(
-                'No values were fetched for this relation, first use .fetch_related()'
+                "No values were fetched for this relation, first use .fetch_related()"
             )
         return len(self.related_objects)
 
     def __bool__(self) -> bool:
         if not self._fetched:
             raise NoValuesFetched(
-                'No values were fetched for this relation, first use .fetch_related()'
+                "No values were fetched for this relation, first use .fetch_related()"
             )
         return bool(self.related_objects)
 
     def __getitem__(self, item):
         if not self._fetched:
             raise NoValuesFetched(
-                'No values were fetched for this relation, first use .fetch_related()'
+                "No values were fetched for this relation, first use .fetch_related()"
             )
         return self.related_objects[item]
 
@@ -495,7 +550,8 @@ class ManyToManyRelationManager(RelationQueryContainer):
     """
     Many to many relation Query container.
     """
-    __slots__ = ('field', 'model', 'instance')
+
+    __slots__ = ("field", "model", "instance")
 
     def __init__(self, model, instance, m2m_field: ManyToManyField) -> None:
         super().__init__(model, m2m_field.related_name, instance)
@@ -513,35 +569,45 @@ class ManyToManyRelationManager(RelationQueryContainer):
             return
         if self.instance.id is None:
             raise OperationalError(
-                'You should first call .save() on {model}'.format(model=self.instance))
+                "You should first call .save() on {model}".format(model=self.instance)
+            )
         db = using_db if using_db else self.model._meta.db
         through_table = Table(self.field.through)
-        select_query = db.query_class.from_(through_table).where(
-            getattr(through_table, self.field.backward_key) == self.instance.id
-        ).select(self.field.backward_key, self.field.forward_key)
+        select_query = (
+            db.query_class.from_(through_table)
+            .where(getattr(through_table, self.field.backward_key) == self.instance.id)
+            .select(self.field.backward_key, self.field.forward_key)
+        )
         query = db.query_class.into(through_table).columns(
             getattr(through_table, self.field.forward_key),
             getattr(through_table, self.field.backward_key),
         )
 
         if len(instances) == 1:
-            criterion = getattr(through_table, self.field.forward_key) == instances[0].id
+            criterion = (
+                getattr(through_table, self.field.forward_key) == instances[0].id
+            )
         else:
-            criterion = getattr(through_table, self.field.forward_key).isin([
-                i.id for i in instances
-            ])
+            criterion = getattr(through_table, self.field.forward_key).isin(
+                [i.id for i in instances]
+            )
 
         select_query = select_query.where(criterion)
 
         already_existing_relations_raw = await db.execute_query(str(select_query))
-        already_existing_relations = {(r[self.field.backward_key], r[self.field.forward_key])
-                                      for r in already_existing_relations_raw}
+        already_existing_relations = {
+            (r[self.field.backward_key], r[self.field.forward_key])
+            for r in already_existing_relations_raw
+        }
 
         insert_is_required = False
         for instance_to_add in instances:
             if instance_to_add.id is None:
                 raise OperationalError(
-                    'You should first call .save() on {model}'.format(model=instance_to_add))
+                    "You should first call .save() on {model}".format(
+                        model=instance_to_add
+                    )
+                )
             if (self.instance.id, instance_to_add.id) in already_existing_relations:
                 continue
             query = query.insert(instance_to_add.id, self.instance.id)
@@ -555,9 +621,11 @@ class ManyToManyRelationManager(RelationQueryContainer):
         """
         db = using_db if using_db else self.model._meta.db
         through_table = Table(self.field.through)
-        query = db.query_class.from_(through_table).where(
-            getattr(through_table, self.field.backward_key) == self.instance.id
-        ).delete()
+        query = (
+            db.query_class.from_(through_table)
+            .where(getattr(through_table, self.field.backward_key) == self.instance.id)
+            .delete()
+        )
         await db.execute_query(str(query))
 
     async def remove(self, *instances, using_db=None) -> None:
@@ -566,20 +634,20 @@ class ManyToManyRelationManager(RelationQueryContainer):
         """
         db = using_db if using_db else self.model._meta.db
         if not instances:
-            raise OperationalError('remove() called on no instances')
+            raise OperationalError("remove() called on no instances")
         through_table = Table(self.field.through)
 
         if len(instances) == 1:
             condition = (
-                (getattr(through_table, self.field.forward_key) == instances[0].id)
-                & (getattr(through_table, self.field.backward_key) == self.instance.id)
-            )
+                getattr(through_table, self.field.forward_key) == instances[0].id
+            ) & (getattr(through_table, self.field.backward_key) == self.instance.id)
         else:
             condition = (
-                (getattr(through_table, self.field.backward_key) == self.instance.id)
-                & (getattr(through_table, self.field.forward_key).isin([
-                    i.id for i in instances
-                ]))
+                getattr(through_table, self.field.backward_key) == self.instance.id
+            ) & (
+                getattr(through_table, self.field.forward_key).isin(
+                    [i.id for i in instances]
+                )
             )
         query = db.query_class.from_(through_table).where(condition).delete()
         await db.execute_query(str(query))

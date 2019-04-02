@@ -10,7 +10,7 @@ from tortoise.exceptions import ConfigurationError
 
 
 class Aggregate:
-    __slots__ = ('field', )
+    __slots__ = ("field",)
 
     aggregation_func = AggregateFunction
 
@@ -18,7 +18,7 @@ class Aggregate:
         self.field = field
 
     def _resolve_field_for_model(self, field: str, model) -> dict:
-        field_split = field.split('__')
+        field_split = field.split("__")
         if not field_split[1:]:
             aggregation_joins = []  # type: list
             if field_split[0] in model._meta.fetch_fields:
@@ -32,24 +32,21 @@ class Aggregate:
                 aggregation_field = self.aggregation_func(
                     getattr(Table(model._meta.table), field_split[0])
                 )
-            return {
-                'joins': aggregation_joins,
-                'field': aggregation_field,
-            }
+            return {"joins": aggregation_joins, "field": aggregation_field}
         else:
             if field_split[0] not in model._meta.fetch_fields:
-                raise ConfigurationError('{} not resolvable'.format(field))
+                raise ConfigurationError("{} not resolvable".format(field))
             related_field = model._meta.fields_map[field_split[0]]
             join = (Table(model._meta.table), field_split[0], related_field)
             aggregation = self._resolve_field_for_model(
-                '__'.join(field_split[1:]), related_field.type
+                "__".join(field_split[1:]), related_field.type
             )
-            aggregation['joins'].append(join)
+            aggregation["joins"].append(join)
             return aggregation
 
     def resolve(self, model) -> dict:
         aggregation = self._resolve_field_for_model(self.field, model)
-        aggregation['joins'] = reversed(aggregation['joins'])
+        aggregation["joins"] = reversed(aggregation["joins"])
         return aggregation
 
 

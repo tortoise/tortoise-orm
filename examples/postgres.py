@@ -16,36 +16,34 @@ class Report(Model):
 
 
 async def run():
-    await Tortoise.init({
-        'connections': {
-            'default': {
-                'engine': 'tortoise.backends.asyncpg',
-                'credentials': {
-                    'host': 'localhost',
-                    'port': '5432',
-                    'user': 'tortoise',
-                    'password': 'qwerty123',
-                    'database': 'test',
+    await Tortoise.init(
+        {
+            "connections": {
+                "default": {
+                    "engine": "tortoise.backends.asyncpg",
+                    "credentials": {
+                        "host": "localhost",
+                        "port": "5432",
+                        "user": "tortoise",
+                        "password": "qwerty123",
+                        "database": "test",
+                    },
                 }
-            }
+            },
+            "apps": {
+                "models": {"models": ["__main__"], "default_connection": "default"}
+            },
         },
-        'apps': {
-            'models': {
-                'models': ['__main__'],
-                'default_connection': 'default',
-            }
-        }
-    }, _create_db=True)
+        _create_db=True,
+    )
     await Tortoise.generate_schemas()
 
-    report_data = {
-        'foo': 'bar',
-    }
+    report_data = {"foo": "bar"}
     print(await Report.create(content=report_data))
     print(await Report.filter(content=report_data).first())
     await Tortoise._drop_databases()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(run())

@@ -7,13 +7,23 @@ from pypika.functions import Count
 from tortoise import fields
 from tortoise.aggregation import Aggregate
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
-from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
+from tortoise.exceptions import (
+    DoesNotExist,
+    FieldError,
+    IntegrityError,
+    MultipleObjectsReturned,
+)
+from tortoise.query_utils import (
+    Prefetch,
+    Q,
+    QueryModifier,
+    _get_joins_for_related_field,
+)
 from tortoise.utils import QueryAsyncIterator
 
 
 class AwaitableQuery:
-    __slots__ = ('_joined_tables', 'query', 'model', '_db')
+    __slots__ = ("_joined_tables", "query", "model", "_db")
 
     def __init__(self, model, db: Optional[BaseDBAsyncClient]) -> None:
         self._joined_tables = []  # type: List[Table]
@@ -29,7 +39,9 @@ class AwaitableQuery:
         where_criterion, joins, having_criterion = modifier.get_query_modifiers()
         for join in joins:
             if join[0] not in self._joined_tables:
-                self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
+                self.query = self.query.join(join[0], how=JoinType.left_outer).on(
+                    join[1]
+                )
                 self._joined_tables.append(join[0])
 
         if where_criterion:
@@ -42,7 +54,9 @@ class AwaitableQuery:
         joins = _get_joins_for_related_field(table, related_field, related_field_name)
         for join in joins:
             if join[0] not in self._joined_tables:
-                self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
+                self.query = self.query.join(join[0], how=JoinType.left_outer).on(
+                    join[1]
+                )
                 self._joined_tables.append(join[0])
 
     def resolve_ordering(self, model, orderings, annotations) -> None:
@@ -53,26 +67,31 @@ class AwaitableQuery:
                 raise FieldError(
                     "Filtering by relation is not possible. Filter by nested field of related model"
                 )
-            elif field_name.split('__')[0] in model._meta.fetch_fields:
-                related_field_name = field_name.split('__')[0]
+            elif field_name.split("__")[0] in model._meta.fetch_fields:
+                related_field_name = field_name.split("__")[0]
                 related_field = model._meta.fields_map[related_field_name]
                 self._join_table_by_field(table, related_field_name, related_field)
                 self.resolve_ordering(
-                    related_field.type, [('__'.join(field_name.split('__')[1:]), ordering[1])], {}
+                    related_field.type,
+                    [("__".join(field_name.split("__")[1:]), ordering[1])],
+                    {},
                 )
             elif field_name in annotations:
                 aggregation = annotations[field_name]
                 aggregation_info = aggregation.resolve(self.model)
-                self.query = self.query.orderby(aggregation_info['field'], order=ordering[1])
+                self.query = self.query.orderby(
+                    aggregation_info["field"], order=ordering[1]
+                )
             else:
                 if field_name not in model._meta.fields:
                     raise FieldError(
-                        'Unknown field {} for model {}'.format(
-                            field_name,
-                            self.model.__name__,
+                        "Unknown field {} for model {}".format(
+                            field_name, self.model.__name__
                         )
                     )
-                self.query = self.query.orderby(getattr(table, ordering[0]), order=ordering[1])
+                self.query = self.query.orderby(
+                    getattr(table, ordering[0]), order=ordering[1]
+                )
 
     def __await__(self):
         return self._execute().__await__()
@@ -82,10 +101,24 @@ class AwaitableQuery:
 
 
 class QuerySet(AwaitableQuery):
-    __slots__ = ('fields', '_prefetch_map', '_prefetch_queries',
-                 '_single', '_get', '_count', '_db', '_limit', '_offset', '_filter_kwargs',
-                 '_orderings', '_q_objects', '_distinct',
-                 '_annotations', '_having', '_custom_filters')
+    __slots__ = (
+        "fields",
+        "_prefetch_map",
+        "_prefetch_queries",
+        "_single",
+        "_get",
+        "_count",
+        "_db",
+        "_limit",
+        "_offset",
+        "_filter_kwargs",
+        "_orderings",
+        "_q_objects",
+        "_distinct",
+        "_annotations",
+        "_having",
+        "_custom_filters",
+    )
 
     def __init__(self, model) -> None:
         super().__init__(model, None)
@@ -106,7 +139,7 @@ class QuerySet(AwaitableQuery):
         self._having = {}  # type: Dict[str, Any]
         self._custom_filters = {}  # type: Dict[str, dict]
 
-    def _clone(self) -> 'QuerySet':
+    def _clone(self) -> "QuerySet":
         queryset = QuerySet.__new__(QuerySet)
         queryset.fields = self.fields
         queryset.model = self.model
@@ -133,7 +166,7 @@ class QuerySet(AwaitableQuery):
         queryset = self._clone()
         for arg in args:
             if not isinstance(arg, Q):
-                raise TypeError('expected Q objects as args')
+                raise TypeError("expected Q objects as args")
             if negate:
                 queryset._q_objects.append(~arg)
             else:
@@ -147,7 +180,7 @@ class QuerySet(AwaitableQuery):
 
         return queryset
 
-    def filter(self, *args, **kwargs) -> 'QuerySet':
+    def filter(self, *args, **kwargs) -> "QuerySet":
         """
         Filters QuerySet by given kwargs. You can filter by related objects like this:
 
@@ -159,13 +192,13 @@ class QuerySet(AwaitableQuery):
         """
         return self._filter_or_exclude(negate=False, *args, **kwargs)
 
-    def exclude(self, *args, **kwargs) -> 'QuerySet':
+    def exclude(self, *args, **kwargs) -> "QuerySet":
         """
         Same as .filter(), but with appends all args with NOT
         """
         return self._filter_or_exclude(negate=True, *args, **kwargs)
 
-    def order_by(self, *orderings: str) -> 'QuerySet':
+    def order_by(self, *orderings: str) -> "QuerySet":
         """
         Accept args to filter by in format like this:
 
@@ -179,27 +212,26 @@ class QuerySet(AwaitableQuery):
         new_ordering = []
         for ordering in orderings:
             order_type = Order.asc
-            if ordering[0] == '-':
+            if ordering[0] == "-":
                 field_name = ordering[1:]
                 order_type = Order.desc
             else:
                 field_name = ordering
 
             if not (
-                field_name.split('__')[0] in self.model._meta.fields
+                field_name.split("__")[0] in self.model._meta.fields
                 or field_name in self._annotations
             ):
                 raise FieldError(
-                    'Unknown field {} for model {}'.format(
-                        field_name,
-                        self.model.__name__,
+                    "Unknown field {} for model {}".format(
+                        field_name, self.model.__name__
                     )
                 )
             new_ordering.append((field_name, order_type))
         queryset._orderings = new_ordering
         return queryset
 
-    def limit(self, limit: int) -> 'QuerySet':
+    def limit(self, limit: int) -> "QuerySet":
         """
         Limits QuerySet to given length.
         """
@@ -207,7 +239,7 @@ class QuerySet(AwaitableQuery):
         queryset._limit = limit
         return queryset
 
-    def offset(self, offset: int) -> 'QuerySet':
+    def offset(self, offset: int) -> "QuerySet":
         """
         Query offset for QuerySet.
         """
@@ -217,7 +249,7 @@ class QuerySet(AwaitableQuery):
             queryset._limit = 1000000
         return queryset
 
-    def distinct(self) -> 'QuerySet':
+    def distinct(self) -> "QuerySet":
         """
         Make QuerySet distinct.
         """
@@ -225,21 +257,23 @@ class QuerySet(AwaitableQuery):
         queryset._distinct = True
         return queryset
 
-    def annotate(self, **kwargs) -> 'QuerySet':
+    def annotate(self, **kwargs) -> "QuerySet":
         """
         Annotate result with aggregation result.
         """
         queryset = self._clone()
         for key, aggregation in kwargs.items():
             if not isinstance(aggregation, Aggregate):
-                raise TypeError('value is expected to be Aggregate instance')
+                raise TypeError("value is expected to be Aggregate instance")
             queryset._annotations[key] = aggregation
             from tortoise.models import get_filters_for_field
+
             queryset._custom_filters.update(get_filters_for_field(key, None, key))
         return queryset
 
-    def values_list(self, *fields_: str, flat: bool = False
-                    ) -> 'ValuesListQuery':  # pylint: disable=W0621
+    def values_list(
+        self, *fields_: str, flat: bool = False
+    ) -> "ValuesListQuery":  # pylint: disable=W0621
         """
         Make QuerySet returns list of tuples for given args instead of objects.
         If ```flat=True`` and only one arg is passed can return flat list.
@@ -258,19 +292,19 @@ class QuerySet(AwaitableQuery):
             custom_filters=self._custom_filters,
         )
 
-    def values(self, *args: str, **kwargs: str) -> 'ValuesQuery':
+    def values(self, *args: str, **kwargs: str) -> "ValuesQuery":
         """
         Make QuerySet return dicts instead of objects.
         """
         fields_for_select = {}  # type: Dict[str, str]
         for field in args:
             if field in fields_for_select:
-                raise FieldError('Duplicate key {}'.format(field))
+                raise FieldError("Duplicate key {}".format(field))
             fields_for_select[field] = field
 
         for return_as, field in kwargs.items():
             if return_as in fields_for_select:
-                raise FieldError('Duplicate key {}'.format(return_as))
+                raise FieldError("Duplicate key {}".format(return_as))
             fields_for_select[return_as] = field
 
         return ValuesQuery(
@@ -286,7 +320,7 @@ class QuerySet(AwaitableQuery):
             custom_filters=self._custom_filters,
         )
 
-    def delete(self) -> 'DeleteQuery':
+    def delete(self) -> "DeleteQuery":
         """
         Delete all objects in QuerySet.
         """
@@ -298,7 +332,7 @@ class QuerySet(AwaitableQuery):
             custom_filters=self._custom_filters,
         )
 
-    def update(self, **kwargs) -> 'UpdateQuery':
+    def update(self, **kwargs) -> "UpdateQuery":
         """
         Update all objects in QuerySet with given kwargs.
         """
@@ -311,7 +345,7 @@ class QuerySet(AwaitableQuery):
             custom_filters=self._custom_filters,
         )
 
-    def count(self) -> 'CountQuery':
+    def count(self) -> "CountQuery":
         """
         Return count of objects in queryset instead of objects.
         """
@@ -323,14 +357,14 @@ class QuerySet(AwaitableQuery):
             custom_filters=self._custom_filters,
         )
 
-    def all(self) -> 'QuerySet':
+    def all(self) -> "QuerySet":
         """
         Return the whole QuerySet.
         Essentially a no-op except as the only operation.
         """
         return self._clone()
 
-    def first(self) -> 'QuerySet':
+    def first(self) -> "QuerySet":
         """
         Limit queryset to one object and return one object instead of list.
         """
@@ -339,7 +373,7 @@ class QuerySet(AwaitableQuery):
         queryset._single = True
         return queryset
 
-    def get(self, *args, **kwargs) -> 'QuerySet':
+    def get(self, *args, **kwargs) -> "QuerySet":
         """
         Fetch exactly one object matching the parameters.
         """
@@ -348,7 +382,7 @@ class QuerySet(AwaitableQuery):
         queryset._get = True
         return queryset
 
-    def prefetch_related(self, *args: str) -> 'QuerySet':
+    def prefetch_related(self, *args: str) -> "QuerySet":
         """
         Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
         """
@@ -359,17 +393,17 @@ class QuerySet(AwaitableQuery):
             if isinstance(relation, Prefetch):
                 relation.resolve_for_queryset(queryset)
                 continue
-            relation_split = relation.split('__')
+            relation_split = relation.split("__")
             first_level_field = relation_split[0]
             if first_level_field not in self.model._meta.fetch_fields:
                 raise FieldError(
-                    'relation {} for {} not found'.format(
+                    "relation {} for {} not found".format(
                         first_level_field, self.model._meta.table
                     )
                 )
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()
-            forwarded_prefetch = '__'.join(relation_split[1:])
+            forwarded_prefetch = "__".join(relation_split[1:])
             if forwarded_prefetch:
                 queryset._prefetch_map[first_level_field].add(forwarded_prefetch)
         return queryset
@@ -393,7 +427,7 @@ class QuerySet(AwaitableQuery):
         executor = self._db.executor_class(model=self.model, db=self._db)
         return await executor.execute_explain(query)
 
-    def using_db(self, _db: BaseDBAsyncClient) -> 'QuerySet':
+    def using_db(self, _db: BaseDBAsyncClient) -> "QuerySet":
         """
         Executes query in provided db client.
         Useful for transactions workaround.
@@ -409,9 +443,9 @@ class QuerySet(AwaitableQuery):
         self.query = self.query.groupby(table.id)
         for key, aggregate in self._annotations.items():
             aggregation_info = aggregate.resolve(self.model)
-            for join in aggregation_info['joins']:
+            for join in aggregation_info["joins"]:
                 self._join_table_by_field(*join)
-            self.query = self.query.select(aggregation_info['field'].as_(key))
+            self.query = self.query.select(aggregation_info["field"].as_(key))
 
     def _make_query(self) -> Query:
         self.query = self.model._meta.basequery_all_fields
@@ -438,18 +472,18 @@ class QuerySet(AwaitableQuery):
             db=self._db,
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
-        ).execute_select(
-            self.query, custom_fields=list(self._annotations.keys())
-        )
+        ).execute_select(self.query, custom_fields=list(self._annotations.keys()))
         if not instance_list:
             if self._get:
-                raise DoesNotExist('Object does not exist')
+                raise DoesNotExist("Object does not exist")
             if self._single:
                 return None
             return []
         elif self._get:
             if len(instance_list) > 1:
-                raise MultipleObjectsReturned('Multiple objects returned, expected exactly one')
+                raise MultipleObjectsReturned(
+                    "Multiple objects returned, expected exactly one"
+                )
             return instance_list[0]
         elif self._single:
             return instance_list[0]
@@ -466,7 +500,9 @@ class QuerySet(AwaitableQuery):
 class UpdateQuery(AwaitableQuery):
     __slots__ = ()
 
-    def __init__(self, model, update_kwargs, db, q_objects, annotations, custom_filters) -> None:
+    def __init__(
+        self, model, update_kwargs, db, q_objects, annotations, custom_filters
+    ) -> None:
         super().__init__(model, db)
         table = Table(model._meta.table)
         self.query = self._db.query_class.update(table)
@@ -474,17 +510,19 @@ class UpdateQuery(AwaitableQuery):
             model=model,
             q_objects=q_objects,
             annotations=annotations,
-            custom_filters=custom_filters
+            custom_filters=custom_filters,
         )
 
         for key, value in update_kwargs.items():
             field_object = model._meta.fields_map.get(key)
             if not field_object:
-                raise FieldError('Unknown keyword argument {} for model {}'.format(key, model))
+                raise FieldError(
+                    "Unknown keyword argument {} for model {}".format(key, model)
+                )
             if field_object.generated:
-                raise IntegrityError('Field {} is generated and can not be updated')
+                raise IntegrityError("Field {} is generated and can not be updated")
             if isinstance(field_object, fields.ForeignKeyField):
-                db_field = '{}_id'.format(key)
+                db_field = "{}_id".format(key)
                 value = value.id
             else:
                 db_field = model._meta.fields_db_projection[key]
@@ -504,7 +542,7 @@ class DeleteQuery(AwaitableQuery):
             model=model,
             q_objects=q_objects,
             annotations=annotations,
-            custom_filters=custom_filters
+            custom_filters=custom_filters,
         )
         self.query = self.query.delete()
 
@@ -515,8 +553,7 @@ class DeleteQuery(AwaitableQuery):
 class CountQuery(AwaitableQuery):
     __slots__ = ()
 
-    def __init__(self, model, db, q_objects, annotations, custom_filters
-                 ) -> None:
+    def __init__(self, model, db, q_objects, annotations, custom_filters) -> None:
         super().__init__(model, db)
         self.query = model._meta.basequery
         self.resolve_filters(
@@ -544,30 +581,29 @@ class FieldSelectQuery(AwaitableQuery):
         elif field in model._meta.fields_db_projection and forwarded_fields:
             raise FieldError(
                 'Field "{}" for model "{}" is not relation'.format(
-                    field,
-                    model.__name__,
+                    field, model.__name__
                 )
             )
 
         if field in self.model._meta.fetch_fields and not forwarded_fields:
             raise ValueError(
-                'Selecting relation "{}" is not possible, select concrete field on related model'
-                .format(field)
+                'Selecting relation "{}" is not possible, select concrete field on related model'.format(
+                    field
+                )
             )
 
         field_object = model._meta.fields_map.get(field)
         if not field_object:
-            raise FieldError('Unknown field "{}" for model "{}"'.format(
-                field,
-                model.__name__,
-            ))
+            raise FieldError(
+                'Unknown field "{}" for model "{}"'.format(field, model.__name__)
+            )
 
         self._join_table_by_field(table, field, field_object)
-        forwarded_fields_split = forwarded_fields.split('__')
+        forwarded_fields_split = forwarded_fields.split("__")
         return self._join_table_with_forwarded_fields(
             model=field_object.type,
             field=forwarded_fields_split[0],
-            forwarded_fields='__'.join(forwarded_fields_split[1:]),
+            forwarded_fields="__".join(forwarded_fields_split[1:]),
         )
 
     def add_field_to_select_query(self, field, return_as) -> None:
@@ -579,24 +615,26 @@ class FieldSelectQuery(AwaitableQuery):
 
         if field in self.model._meta.fetch_fields:
             raise ValueError(
-                'Selecting relation "{}" is not possible, select concrete field on related model'
-                .format(field)
+                'Selecting relation "{}" is not possible, select concrete field on related model'.format(
+                    field
+                )
             )
 
-        field_split = field.split('__')
+        field_split = field.split("__")
         if field_split[0] in self.model._meta.fetch_fields:
             related_table, related_db_field = self._join_table_with_forwarded_fields(
                 model=self.model,
                 field=field_split[0],
-                forwarded_fields='__'.join(field_split[1:]),
+                forwarded_fields="__".join(field_split[1:]),
             )
-            self.query = self.query.select(getattr(related_table, related_db_field).as_(return_as))
+            self.query = self.query.select(
+                getattr(related_table, related_db_field).as_(return_as)
+            )
             return
 
-        raise FieldError('Unknown field "{}" for model "{}"'.format(
-            field,
-            self.model.__name__,
-        ))
+        raise FieldError(
+            'Unknown field "{}" for model "{}"'.format(field, self.model.__name__)
+        )
 
     def resolve_to_python_value(self, model, field):
         if field in model._meta.fetch_fields:
@@ -606,28 +644,39 @@ class FieldSelectQuery(AwaitableQuery):
         if field in model._meta.fields_map:
             return model._meta.fields_map[field].to_python_value
 
-        field_split = field.split('__')
+        field_split = field.split("__")
         if field_split[0] in model._meta.fetch_fields:
             new_model = model._meta.fields_map[field_split[0]].type
-            return self.resolve_to_python_value(new_model, '__'.join(field_split[1:]))
+            return self.resolve_to_python_value(new_model, "__".join(field_split[1:]))
 
-        raise FieldError('Unknown field "{}" for model "{}"'.format(
-            field,
-            model,
-        ))
+        raise FieldError('Unknown field "{}" for model "{}"'.format(field, model))
 
 
 class ValuesListQuery(FieldSelectQuery):
-    __slots__ = ('flat', 'fields')
+    __slots__ = ("flat", "fields")
 
-    def __init__(self, model, db, q_objects, fields_for_select_list, limit, offset,
-                 distinct, orderings, flat, annotations, custom_filters) -> None:
+    def __init__(
+        self,
+        model,
+        db,
+        q_objects,
+        fields_for_select_list,
+        limit,
+        offset,
+        distinct,
+        orderings,
+        flat,
+        annotations,
+        custom_filters,
+    ) -> None:
         super().__init__(model, db)
         if flat and (len(fields_for_select_list) != 1):
-            raise TypeError('You can flat value_list only if contains one field')
+            raise TypeError("You can flat value_list only if contains one field")
 
         self.query = model._meta.basequery
-        fields_for_select = {str(i): field for i, field in enumerate(fields_for_select_list)}
+        fields_for_select = {
+            str(i): field for i, field in enumerate(fields_for_select_list)
+        }
 
         for positional_number, field in fields_for_select.items():
             self.add_field_to_select_query(field, positional_number)
@@ -656,15 +705,28 @@ class ValuesListQuery(FieldSelectQuery):
         ]
         if self.flat:
             func = columns[0][1]
-            return [func(entry['0']) for entry in result]
-        return [tuple(func(entry[column]) for column, func in columns) for entry in result]
+            return [func(entry["0"]) for entry in result]
+        return [
+            tuple(func(entry[column]) for column, func in columns) for entry in result
+        ]
 
 
 class ValuesQuery(FieldSelectQuery):
-    __slots__ = ('fields_for_select',)
+    __slots__ = ("fields_for_select",)
 
-    def __init__(self, model, db, q_objects, fields_for_select, limit, offset, distinct, orderings,
-                 annotations, custom_filters) -> None:
+    def __init__(
+        self,
+        model,
+        db,
+        q_objects,
+        fields_for_select,
+        limit,
+        offset,
+        distinct,
+        orderings,
+        annotations,
+        custom_filters,
+    ) -> None:
         super().__init__(model, db)
         self.query = model._meta.basequery
         for return_as, field in fields_for_select.items():

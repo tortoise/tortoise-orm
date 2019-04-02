@@ -6,20 +6,17 @@ async def create_participants():
     test1 = await testmodels.RaceParticipant.create(
         first_name="Alex",
         place=testmodels.RacePlacingEnum.FIRST,
-        predicted_place=testmodels.RacePlacingEnum.THIRD
+        predicted_place=testmodels.RacePlacingEnum.THIRD,
     )
     test2 = await testmodels.RaceParticipant.create(
         first_name="Ben",
         place=testmodels.RacePlacingEnum.SECOND,
-        predicted_place=testmodels.RacePlacingEnum.FIRST
+        predicted_place=testmodels.RacePlacingEnum.FIRST,
     )
     test3 = await testmodels.RaceParticipant.create(
-        first_name="Chris",
-        place=testmodels.RacePlacingEnum.THIRD
+        first_name="Chris", place=testmodels.RacePlacingEnum.THIRD
     )
-    test4 = await testmodels.RaceParticipant.create(
-        first_name="Bill"
-    )
+    test4 = await testmodels.RaceParticipant.create(first_name="Bill")
 
     return test1, test2, test3, test4
 
@@ -39,8 +36,9 @@ class TestEnumField(test.TestCase):
         test1.place = testmodels.RacePlacingEnum.SECOND
         await test1.save()
 
-        tied_second = await testmodels.RaceParticipant \
-            .filter(place=testmodels.RacePlacingEnum.SECOND)
+        tied_second = await testmodels.RaceParticipant.filter(
+            place=testmodels.RacePlacingEnum.SECOND
+        )
 
         self.assertIn(test1, tied_second)
         self.assertEqual(len(tied_second), 2)
@@ -49,13 +47,13 @@ class TestEnumField(test.TestCase):
         """Assert that filters correctly select the enums."""
         await create_participants()
 
-        first_place = await testmodels.RaceParticipant \
-            .filter(place=testmodels.RacePlacingEnum.FIRST) \
-            .first()
+        first_place = await testmodels.RaceParticipant.filter(
+            place=testmodels.RacePlacingEnum.FIRST
+        ).first()
 
-        second_place = await testmodels.RaceParticipant \
-            .filter(place=testmodels.RacePlacingEnum.SECOND) \
-            .first()
+        second_place = await testmodels.RaceParticipant.filter(
+            place=testmodels.RacePlacingEnum.SECOND
+        ).first()
 
         self.assertEqual(first_place.place, testmodels.RacePlacingEnum.FIRST)
         self.assertEqual(second_place.place, testmodels.RacePlacingEnum.SECOND)
@@ -63,7 +61,9 @@ class TestEnumField(test.TestCase):
     async def test_enum_field_delete(self):
         """Assert that delete correctly removes the right participant by their place."""
         await create_participants()
-        await testmodels.RaceParticipant.filter(place=testmodels.RacePlacingEnum.FIRST).delete()
+        await testmodels.RaceParticipant.filter(
+            place=testmodels.RacePlacingEnum.FIRST
+        ).delete()
         self.assertEqual(await testmodels.RaceParticipant.all().count(), 3)
 
     async def test_enum_field_default(self):
@@ -74,7 +74,9 @@ class TestEnumField(test.TestCase):
         """Assert that filtering by None selects the records which are null."""
         _, _, test3, test4 = await create_participants()
 
-        no_predictions = await testmodels.RaceParticipant.filter(predicted_place__isnull=True)
+        no_predictions = await testmodels.RaceParticipant.filter(
+            predicted_place__isnull=True
+        )
 
         self.assertIn(test3, no_predictions)
         self.assertIn(test4, no_predictions)
