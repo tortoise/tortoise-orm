@@ -25,6 +25,7 @@ deps:
 
 check: deps
 	flake8 $(checkfiles)
+	black --check $(checkfiles)
 	mypy $(mypy_flags) $(checkfiles)
 	pylint -E $(checkfiles)
 	bandit -r $(checkfiles)

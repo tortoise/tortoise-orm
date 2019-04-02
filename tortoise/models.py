@@ -1,15 +1,5 @@
 from copy import copy
-from typing import (
-    Dict,
-    Hashable,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)  # noqa
+from typing import Dict, Hashable, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from pypika import Query
 
@@ -194,9 +184,9 @@ class Model(metaclass=ModelMeta):
                 self,
                 key,
                 RelationQueryContainer(
-                    field_object.type, field_object.relation_field, self
+                    field_object.type, field_object.relation_field, self  # type: ignore
                 ),
-            )  # type: ignore
+            )
 
         for key in meta.m2m_fields:
             field_object = meta.fields_map[key]

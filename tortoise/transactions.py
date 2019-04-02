@@ -16,7 +16,8 @@ def _get_connection(connection_name: Optional[str]) -> BaseDBAsyncClient:
         connection = list(Tortoise._connections.values())[0]
     else:
         raise ParamsError(
-            "You are running with multiple databases, so you should specify connection_name: {}".format(
+            "You are running with multiple databases, so you "
+            "should specify connection_name: {}".format(
                 list(Tortoise._connections.keys())
             )
         )

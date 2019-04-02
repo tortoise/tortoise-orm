@@ -587,9 +587,8 @@ class FieldSelectQuery(AwaitableQuery):
 
         if field in self.model._meta.fetch_fields and not forwarded_fields:
             raise ValueError(
-                'Selecting relation "{}" is not possible, select concrete field on related model'.format(
-                    field
-                )
+                'Selecting relation "{}" is not possible, select concrete '
+                "field on related model".format(field)
             )
 
         field_object = model._meta.fields_map.get(field)
@@ -615,9 +614,8 @@ class FieldSelectQuery(AwaitableQuery):
 
         if field in self.model._meta.fetch_fields:
             raise ValueError(
-                'Selecting relation "{}" is not possible, select concrete field on related model'.format(
-                    field
-                )
+                'Selecting relation "{}" is not possible, select '
+                "concrete field on related model".format(field)
             )
 
         field_split = field.split("__")
