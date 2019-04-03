@@ -157,7 +157,12 @@ class MySQLClient(BaseDBAsyncClient):
         return ConnectionWrapper(self._connection, self._lock)
 
     def _in_transaction(self):
-        return self._transaction_class(self.connection_name, self._connection, self._lock)
+        return self._transaction_class(
+            connection_name=self.connection_name,
+            connection=self._connection,
+            lock=self._lock,
+            fetch_inserted=self.fetch_inserted,
+        )
 
     @translate_exceptions
     @retry_connection
@@ -188,7 +193,7 @@ class MySQLClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
-    def __init__(self, connection_name, connection, lock):
+    def __init__(self, connection_name, connection, lock, fetch_inserted):
         self.connection_name = connection_name
         self._connection = connection
         self._lock = lock
@@ -196,6 +201,7 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         self._transaction_class = self.__class__
         self._finalized = False
         self._old_context_value = None
+        self.fetch_inserted = fetch_inserted
 
     @retry_connection
     async def start(self):

@@ -30,17 +30,23 @@ class BaseSchemaGenerator:
         fields.DateField: "DATE",
         fields.FloatField: "DOUBLE PRECISION",
         fields.JSONField: "TEXT",
+        fields.UUIDField: "CHAR(36)",
     }
 
     def __init__(self, client) -> None:
         self.client = client
 
-    def _create_string(self, db_field: str, field_type: str, nullable: str, unique: str) -> str:
+    def _create_string(
+        self, db_field: str, field_type: str, nullable: str, unique: str, is_pk: bool
+    ) -> str:
         # children can override this function to customize thier sql queries
 
         field_creation_string = self.FIELD_TEMPLATE.format(
             name=db_field, type=field_type, nullable=nullable, unique=unique
         ).strip()
+
+        if is_pk:
+            field_creation_string += " PRIMARY KEY"
 
         return field_creation_string
 
@@ -105,7 +111,13 @@ class BaseSchemaGenerator:
             elif isinstance(field_object, fields.CharField):
                 field_type = field_type.format(field_object.max_length)
 
-            field_creation_string = self._create_string(db_field, field_type, nullable, unique)
+            field_creation_string = self._create_string(
+                db_field=db_field,
+                field_type=field_type,
+                nullable=nullable,
+                unique=unique,
+                is_pk=field_object.pk,
+            )
 
             if hasattr(field_object, "reference") and field_object.reference:
                 field_creation_string += self.FK_TEMPLATE.format(

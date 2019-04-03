@@ -58,9 +58,10 @@ class BaseDBAsyncClient:
     schema_generator = BaseSchemaGenerator
     capabilities = Capabilities("")
 
-    def __init__(self, connection_name: str, **kwargs) -> None:
+    def __init__(self, connection_name: str, fetch_inserted: bool = True, **kwargs) -> None:
         self.log = logging.getLogger("db_client")
         self.connection_name = connection_name
+        self.fetch_inserted = fetch_inserted
 
     async def create_connection(self, with_db: bool) -> None:
         raise NotImplementedError()  # pragma: nocoverage

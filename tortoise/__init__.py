@@ -51,6 +51,18 @@ class Tortoise:
                     reference = field_object.model_name
                     related_app_name, related_model_name = reference.split(".")
                     related_model = cls.apps[related_app_name][related_model_name]
+
+                    key_field = "{}_id".format(field)
+                    field_object.source_field = key_field
+                    key_field_object = deepcopy(related_model._meta.pk)
+                    key_field_object.pk = False
+                    key_field_object.index = field_object.index
+                    key_field_object.default = field_object.default
+                    key_field_object.null = field_object.null
+                    key_field_object.generated = field_object.generated
+                    key_field_object.reference = field_object
+                    model._meta.add_field(key_field, key_field_object)
+
                     field_object.type = related_model
                     backward_relation_name = field_object.related_name
                     if not backward_relation_name:
@@ -62,35 +74,27 @@ class Tortoise:
                             )
                         )
                     fk_relation = fields.BackwardFKRelation(model, "{}_id".format(field))
-                    setattr(related_model, backward_relation_name, fk_relation)
-                    related_model._meta.filters.update(
-                        get_backward_fk_filters(backward_relation_name, fk_relation)
-                    )
-
-                    related_model._meta.backward_fk_fields.add(backward_relation_name)
-                    related_model._meta.fetch_fields.add(backward_relation_name)
-                    related_model._meta.fields_map[backward_relation_name] = fk_relation
-                    related_model._meta.fields.add(backward_relation_name)
+                    related_model._meta.add_field(backward_relation_name, fk_relation)
 
                 for field in model._meta.m2m_fields:
-                    field_mobject = cast(fields.ManyToManyField, model._meta.fields_map[field])
-                    if field_mobject._generated:
+                    field_object = cast(fields.ManyToManyField, model._meta.fields_map[field])
+                    if field_object._generated:
                         continue
 
-                    backward_key = field_mobject.backward_key
+                    backward_key = field_object.backward_key
                     if not backward_key:
                         backward_key = "{}_id".format(model._meta.table)
-                        field_mobject.backward_key = backward_key
+                        field_object.backward_key = backward_key
 
-                    reference = field_mobject.model_name
+                    reference = field_object.model_name
                     related_app_name, related_model_name = reference.split(".")
                     related_model = cls.apps[related_app_name][related_model_name]
 
-                    field_mobject.type = related_model
+                    field_object.type = related_model
 
-                    backward_relation_name = field_mobject.related_name
+                    backward_relation_name = field_object.related_name
                     if not backward_relation_name:
-                        backward_relation_name = field_mobject.related_name = "{}_through".format(
+                        backward_relation_name = field_object.related_name = "{}_through".format(
                             model._meta.table
                         )
                     if backward_relation_name in related_model._meta.fields:
@@ -100,35 +104,28 @@ class Tortoise:
                             )
                         )
 
-                    if not field_mobject.through:
+                    if not field_object.through:
                         related_model_table_name = (
                             related_model._meta.table
                             if related_model._meta.table
                             else related_model.__name__.lower()
                         )
 
-                        field_mobject.through = "{}_{}".format(
+                        field_object.through = "{}_{}".format(
                             model._meta.table, related_model_table_name
                         )
 
                     m2m_relation = fields.ManyToManyField(
                         "{}.{}".format(app_name, model_name),
-                        field_mobject.through,
-                        forward_key=field_mobject.backward_key,
-                        backward_key=field_mobject.forward_key,
+                        field_object.through,
+                        forward_key=field_object.backward_key,
+                        backward_key=field_object.forward_key,
                         related_name=field,
                         type=model,
                     )
                     m2m_relation._generated = True
-                    setattr(related_model, backward_relation_name, m2m_relation)
-                    model._meta.filters.update(get_m2m_filters(field, field_mobject))
-                    related_model._meta.filters.update(
-                        get_m2m_filters(backward_relation_name, m2m_relation)
-                    )
-                    related_model._meta.m2m_fields.add(backward_relation_name)
-                    related_model._meta.fetch_fields.add(backward_relation_name)
-                    related_model._meta.fields_map[backward_relation_name] = m2m_relation
-                    related_model._meta.fields.add(backward_relation_name)
+                    model._meta.filters.update(get_m2m_filters(field, field_object))
+                    related_model._meta.add_field(backward_relation_name, m2m_relation)
 
     @classmethod
     def _discover_client_class(cls, engine: str) -> BaseDBAsyncClient:

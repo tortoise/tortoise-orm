@@ -17,8 +17,14 @@ def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[
     else:
         param = model._meta.get_filter(key)
 
+    pk_db_field = model._meta.db_pk_field
     if param.get("table"):
-        join = (param["table"], table.id == getattr(param["table"], param["backward_key"]))
+        join = (
+            param["table"],
+            getattr(table, pk_db_field) == getattr(param["table"], param["backward_key"]),
+        )
+        if param.get("value_encoder"):
+            value = param["value_encoder"](value, model)
         criterion = param["operator"](getattr(param["table"], param["field"]), value)
     else:
         field_object = model._meta.fields_map[param["field"]]
@@ -35,24 +41,42 @@ def _get_joins_for_related_field(
     table, related_field, related_field_name
 ) -> List[Tuple[Table, Criterion]]:
     required_joins = []
+
+    table_pk = related_field.model._meta.db_pk_field
+    related_table_pk = related_field.type._meta.db_pk_field
+
     if isinstance(related_field, fields.ManyToManyField):
         related_table = Table(related_field.type._meta.table)
         through_table = Table(related_field.through)
         required_joins.append(
-            (through_table, table.id == getattr(through_table, related_field.backward_key))
+            (
+                through_table,
+                getattr(table, table_pk) == getattr(through_table, related_field.backward_key),
+            )
         )
         required_joins.append(
-            (related_table, getattr(through_table, related_field.forward_key) == related_table.id)
+            (
+                related_table,
+                getattr(through_table, related_field.forward_key)
+                == getattr(related_table, related_table_pk),
+            )
         )
     elif isinstance(related_field, fields.BackwardFKRelation):
         related_table = Table(related_field.type._meta.table)
         required_joins.append(
-            (related_table, table.id == getattr(related_table, related_field.relation_field))
+            (
+                related_table,
+                getattr(table, table_pk) == getattr(related_table, related_field.relation_field),
+            )
         )
     else:
         related_table = Table(related_field.type._meta.table)
         required_joins.append(
-            (related_table, related_table.id == getattr(table, "{}_id".format(related_field_name)))
+            (
+                related_table,
+                getattr(related_table, related_table_pk)
+                == getattr(table, "{}_id".format(related_field_name)),
+            )
         )
     return required_joins
 
@@ -213,11 +237,17 @@ class Q:  # pylint: disable=C0103
     def _get_actual_filter_params(self, model, key, value) -> Tuple[str, Any]:
         if key in model._meta.fk_fields:
             field_object = model._meta.fields_map[key]
-            if hasattr(value, "id"):
-                filter_value = value.id
+            if hasattr(value, "pk"):
+                filter_value = value.pk
             else:
                 filter_value = value
             filter_key = field_object.source_field
+        elif key in model._meta.m2m_fields:
+            filter_key = key
+            if hasattr(value, "pk"):
+                filter_value = value.pk
+            else:
+                filter_value = value
         elif (
             key.split("__")[0] in model._meta.fetch_fields
             or key in self._custom_filters

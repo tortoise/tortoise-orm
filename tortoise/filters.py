@@ -1,4 +1,5 @@
 import operator
+from functools import partial
 from typing import Dict, Iterable, Optional  # noqa
 
 from pypika import Table, functions
@@ -11,6 +12,13 @@ from tortoise.fields import Field
 def list_encoder(values, instance, field: Field):
     """Encodes an iterable of a given field into a database-compatible format."""
     return [field.to_db_value(element, instance) for element in values]
+
+
+def related_list_encoder(values, instance, field: Field):
+    return [
+        field.to_db_value(element.pk if hasattr(element, "pk") else element, instance)
+        for element in values
+    ]
 
 
 def bool_encoder(value, *args):
@@ -78,63 +86,69 @@ def insensitive_ends_with(field, value):
 
 
 def get_m2m_filters(field_name: str, field: fields.ManyToManyField) -> Dict[str, dict]:
+    target_table_pk = field.type._meta.pk
     return {
         field_name: {
             "field": field.forward_key,
             "backward_key": field.backward_key,
             "operator": operator.eq,
             "table": Table(field.through),
+            "value_encoder": target_table_pk.to_db_value,
         },
         "{}__not".format(field_name): {
             "field": field.forward_key,
             "backward_key": field.backward_key,
             "operator": not_equal,
             "table": Table(field.through),
+            "value_encoder": target_table_pk.to_db_value,
         },
         "{}__in".format(field_name): {
             "field": field.forward_key,
             "backward_key": field.backward_key,
             "operator": is_in,
             "table": Table(field.through),
-            "value_encoder": list_encoder,
+            "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
         "{}__not_in".format(field_name): {
             "field": field.forward_key,
             "backward_key": field.backward_key,
             "operator": not_in,
             "table": Table(field.through),
-            "value_encoder": list_encoder,
+            "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
     }
 
 
 def get_backward_fk_filters(field_name: str, field: fields.BackwardFKRelation) -> Dict[str, dict]:
+    target_table_pk = field.type._meta.pk
     return {
         field_name: {
             "field": "id",
             "backward_key": field.relation_field,
             "operator": operator.eq,
             "table": Table(field.type._meta.table),
+            "value_encoder": target_table_pk.to_db_value,
         },
         "{}__not".format(field_name): {
             "field": "id",
             "backward_key": field.relation_field,
             "operator": not_equal,
             "table": Table(field.type._meta.table),
+            "value_encoder": target_table_pk.to_db_value,
         },
         "{}__in".format(field_name): {
             "field": "id",
             "backward_key": field.relation_field,
             "operator": is_in,
             "table": Table(field.type._meta.table),
-            "value_encoder": list_encoder,
+            "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
         "{}__not_in".format(field_name): {
             "field": "id",
             "backward_key": field.relation_field,
             "operator": not_in,
             "table": Table(field.type._meta.table),
-            "value_encoder": list_encoder,
+            "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
     }
 
