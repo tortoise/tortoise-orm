@@ -9,14 +9,15 @@ current_transaction_map = {}  # type: Dict
 
 def _get_connection(connection_name: Optional[str]) -> BaseDBAsyncClient:
     from tortoise import Tortoise
+
     if connection_name:
         connection = Tortoise.get_connection(connection_name)
     elif len(Tortoise._connections) == 1:
         connection = list(Tortoise._connections.values())[0]
     else:
         raise ParamsError(
-            'You are running with multiple databases, so you should specify connection_name: {}'
-            .format(list(Tortoise._connections.keys()))
+            "You are running with multiple databases, so you "
+            "should specify connection_name: {}".format(list(Tortoise._connections.keys()))
         )
     return connection
 

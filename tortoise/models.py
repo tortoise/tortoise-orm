@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Dict, Hashable, List, Optional, Set, Tuple, Type, TypeVar, Union  # noqa
+from typing import Dict, Hashable, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from pypika import Query
 
@@ -11,31 +11,48 @@ from tortoise.filters import get_filters_for_field
 from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
 
-MODEL_TYPE = TypeVar('MODEL_TYPE', bound='Model')
+MODEL_TYPE = TypeVar("MODEL_TYPE", bound="Model")
 # TODO: Define Filter type object. Possibly tuple?
 
 
 def get_unique_together(meta):
-    unique_together = getattr(meta, 'unique_together', None)
+    unique_together = getattr(meta, "unique_together", None)
 
     if isinstance(unique_together, (list, tuple)):
         if unique_together and isinstance(unique_together[0], str):
-            unique_together = (unique_together, )
+            unique_together = (unique_together,)
 
     # return without validation, validation will be done further in the code
     return unique_together
 
 
 class MetaInfo:
-    __slots__ = ('abstract', 'table', 'app', 'fields', 'db_fields', 'm2m_fields', 'fk_fields',
-                 'backward_fk_fields', 'fetch_fields', 'fields_db_projection', '_inited',
-                 'fields_db_projection_reverse', 'filters', 'fields_map', 'default_connection',
-                 'basequery', 'basequery_all_fields', '_filters', 'unique_together')
+    __slots__ = (
+        "abstract",
+        "table",
+        "app",
+        "fields",
+        "db_fields",
+        "m2m_fields",
+        "fk_fields",
+        "backward_fk_fields",
+        "fetch_fields",
+        "fields_db_projection",
+        "_inited",
+        "fields_db_projection_reverse",
+        "filters",
+        "fields_map",
+        "default_connection",
+        "basequery",
+        "basequery_all_fields",
+        "_filters",
+        "unique_together",
+    )
 
     def __init__(self, meta) -> None:
-        self.abstract = getattr(meta, 'abstract', False)  # type: bool
-        self.table = getattr(meta, 'table', '')  # type: str
-        self.app = getattr(meta, 'app', None)  # type: Optional[str]
+        self.abstract = getattr(meta, "abstract", False)  # type: bool
+        self.table = getattr(meta, "table", "")  # type: str
+        self.app = getattr(meta, "app", None)  # type: Optional[str]
         self.unique_together = get_unique_together(meta)  # type: Optional[Union[Tuple, List]]
         self.fields = set()  # type: Set[str]
         self.db_fields = set()  # type: Set[str]
@@ -58,7 +75,7 @@ class MetaInfo:
         try:
             return current_transaction_map[self.default_connection].get()
         except KeyError:
-            raise ConfigurationError('No DB associated to model')
+            raise ConfigurationError("No DB associated to model")
 
     def get_filter(self, key: str) -> dict:
         return self.filters[key]
@@ -67,11 +84,11 @@ class MetaInfo:
         get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
         for key, filter_info in self._filters.items():
             overridden_operator = get_overridden_filter_func(  # type: ignore
-                filter_func=filter_info['operator'],
+                filter_func=filter_info["operator"]
             )
             if overridden_operator:
                 filter_info = copy(filter_info)
-                filter_info['operator'] = overridden_operator  # type: ignore
+                filter_info["operator"] = overridden_operator  # type: ignore
             self.filters[key] = filter_info
 
 
@@ -85,21 +102,19 @@ class ModelMeta(type):
         fk_fields = set()  # type: Set[str]
         m2m_fields = set()  # type: Set[str]
 
-        if 'id' not in attrs:
-            attrs['id'] = fields.IntField(pk=True)
+        if "id" not in attrs:
+            attrs["id"] = fields.IntField(pk=True)
 
         for key, value in attrs.items():
             if isinstance(value, fields.Field):
                 fields_map[key] = value
                 value.model_field_name = key
                 if isinstance(value, fields.ForeignKeyField):
-                    key_field = '{}_id'.format(key)
+                    key_field = "{}_id".format(key)
                     value.source_field = key_field
                     fields_db_projection[key_field] = key_field
                     fields_map[key_field] = fields.IntField(
-                        reference=value,
-                        null=value.null,
-                        default=value.default,
+                        reference=value, null=value.null, default=value.default
                     )
                     filters.update(
                         get_filters_for_field(
@@ -117,17 +132,16 @@ class ModelMeta(type):
                         get_filters_for_field(
                             field_name=key,
                             field=fields_map[key],
-                            source_field=fields_db_projection[key]
+                            source_field=fields_db_projection[key],
                         )
                     )
 
-        attrs['_meta'] = meta = MetaInfo(attrs.get('Meta'))
+        attrs["_meta"] = meta = MetaInfo(attrs.get("Meta"))
 
         meta.fields_map = fields_map
         meta.fields_db_projection = fields_db_projection
         meta.fields_db_projection_reverse = {
-            value: key
-            for key, value in fields_db_projection.items()
+            value: key for key, value in fields_db_projection.items()
         }
         meta.fields = set(fields_map.keys())
         meta.db_fields = set(fields_db_projection.values())
@@ -158,13 +172,23 @@ class Model(metaclass=ModelMeta):
         # Create lazy fk/m2m objects
         for key in meta.backward_fk_fields:
             field_object = meta.fields_map[key]
-            setattr(self, key, RelationQueryContainer(
-                field_object.type, field_object.relation_field, self))  # type: ignore
+            setattr(
+                self,
+                key,
+                RelationQueryContainer(
+                    field_object.type, field_object.relation_field, self  # type: ignore
+                ),
+            )
 
         for key in meta.m2m_fields:
             field_object = meta.fields_map[key]
-            setattr(self, key, ManyToManyRelationManager(  # type: ignore
-                field_object.type, self, field_object))
+            setattr(
+                self,
+                key,
+                ManyToManyRelationManager(  # type: ignore
+                    field_object.type, self, field_object
+                ),
+            )
 
         # Assign values and do type conversions
         passed_fields = set(kwargs.keys())
@@ -172,26 +196,27 @@ class Model(metaclass=ModelMeta):
 
         for key, value in kwargs.items():
             if key in meta.fk_fields:
-                if hasattr(value, 'id') and not value.id:
+                if hasattr(value, "id") and not value.id:
                     raise OperationalError(
-                        'You should first call .save() on {} before referring to it'.format(value))
-                relation_field = '{}_id'.format(key)
+                        "You should first call .save() on {} before referring to it".format(value)
+                    )
+                relation_field = "{}_id".format(key)
                 setattr(self, relation_field, value.id)
                 passed_fields.add(relation_field)
             elif key in meta.fields:
                 field_object = meta.fields_map[key]
                 if value is None and not field_object.null:
-                    raise ValueError('{} is non nullable field, but null was passed'.format(key))
+                    raise ValueError("{} is non nullable field, but null was passed".format(key))
                 setattr(self, key, field_object.to_python_value(value))
             elif key in meta.db_fields:
                 setattr(self, meta.fields_db_projection_reverse[key], value)
             elif key in meta.backward_fk_fields:
                 raise ConfigurationError(
-                    'You can\'t set backward relations through init, change related model instead'
+                    "You can't set backward relations through init, change related model instead"
                 )
             elif key in meta.m2m_fields:
                 raise ConfigurationError(
-                    'You can\'t set m2m relations through init, use m2m_manager instead'
+                    "You can't set m2m relations through init, use m2m_manager instead"
                 )
 
         # Assign defaults for missing fields
@@ -204,17 +229,11 @@ class Model(metaclass=ModelMeta):
 
     async def _insert_instance(self, using_db=None) -> None:
         db = using_db if using_db else self._meta.db
-        await db.executor_class(
-            model=self.__class__,
-            db=db,
-        ).execute_insert(self)
+        await db.executor_class(model=self.__class__, db=db).execute_insert(self)
 
     async def _update_instance(self, using_db=None) -> None:
         db = using_db if using_db else self._meta.db
-        await db.executor_class(
-            model=self.__class__,
-            db=db,
-        ).execute_update(self)
+        await db.executor_class(model=self.__class__, db=db).execute_update(self)
 
     async def save(self, *args, **kwargs) -> None:
         if not self.id:
@@ -226,29 +245,23 @@ class Model(metaclass=ModelMeta):
         db = using_db if using_db else self._meta.db
         if not self.id:
             raise OperationalError("Can't delete unpersisted record")
-        await db.executor_class(
-            model=self.__class__,
-            db=db,
-        ).execute_delete(self)
+        await db.executor_class(model=self.__class__, db=db).execute_delete(self)
 
     async def fetch_related(self, *args, using_db=None):
         db = using_db if using_db else self._meta.db
-        await db.executor_class(
-            model=self.__class__,
-            db=db,
-        ).fetch_for_list([self], *args)
+        await db.executor_class(model=self.__class__, db=db).fetch_for_list([self], *args)
 
     def __str__(self) -> str:
-        return '<{}>'.format(self.__class__.__name__)
+        return "<{}>".format(self.__class__.__name__)
 
     def __repr__(self) -> str:
         if self.id:
-            return '<{}: {}>'.format(self.__class__.__name__, self.id)
-        return '<{}>'.format(self.__class__.__name__)
+            return "<{}: {}>".format(self.__class__.__name__, self.id)
+        return "<{}>".format(self.__class__.__name__)
 
     def __hash__(self) -> int:
         if not self.id:
-            raise TypeError('Model instances without id are unhashable')
+            raise TypeError("Model instances without id are unhashable")
         return hash(self.id)
 
     def __eq__(self, other) -> bool:
@@ -259,10 +272,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def get_or_create(
-        cls: Type[MODEL_TYPE],
-        using_db=None,
-        defaults=None,
-        **kwargs
+        cls: Type[MODEL_TYPE], using_db=None, defaults=None, **kwargs
     ) -> Tuple[MODEL_TYPE, bool]:
         if not defaults:
             defaults = {}
@@ -274,7 +284,7 @@ class Model(metaclass=ModelMeta):
     @classmethod
     async def create(cls: Type[MODEL_TYPE], **kwargs) -> MODEL_TYPE:
         instance = cls(**kwargs)
-        await instance.save(using_db=kwargs.get('using_db'))
+        await instance.save(using_db=kwargs.get("using_db"))
         return instance
 
     @classmethod
@@ -304,10 +314,7 @@ class Model(metaclass=ModelMeta):
     @classmethod
     async def fetch_for_list(cls, instance_list, *args, using_db=None):
         db = using_db if using_db else cls._meta.db
-        await db.executor_class(
-            model=cls,
-            db=db,
-        ).fetch_for_list(instance_list, *args)
+        await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
 
     @classmethod
     def check(cls):
@@ -321,12 +328,16 @@ class Model(metaclass=ModelMeta):
 
         if not isinstance(cls._meta.unique_together, (tuple, list)):
             raise ConfigurationError(
-                "'{}.unique_together' must be a list or tuple.".format(cls.__name__))
+                "'{}.unique_together' must be a list or tuple.".format(cls.__name__)
+            )
 
-        elif any(not isinstance(unique_fields, (tuple, list))
-                 for unique_fields in cls._meta.unique_together):
+        elif any(
+            not isinstance(unique_fields, (tuple, list))
+            for unique_fields in cls._meta.unique_together
+        ):
             raise ConfigurationError(
-                "All '{}.unique_together' elements must be lists or tuples.".format(cls.__name__))
+                "All '{}.unique_together' elements must be lists or tuples.".format(cls.__name__)
+            )
 
         else:
             for fields_tuple in cls._meta.unique_together:
@@ -336,12 +347,14 @@ class Model(metaclass=ModelMeta):
                     if not field:
                         raise ConfigurationError(
                             "'{}.unique_together' has no '{}' "
-                            "field.".format(cls.__name__, field_name))
+                            "field.".format(cls.__name__, field_name)
+                        )
 
                     if isinstance(field, ManyToManyField):
                         raise ConfigurationError(
                             "'{}.unique_together' '{}' field refers "
-                            "to ManyToMany field.".format(cls.__name__, field_name))
+                            "to ManyToMany field.".format(cls.__name__, field_name)
+                        )
 
     class Meta:
         pass

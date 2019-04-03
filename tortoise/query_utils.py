@@ -11,28 +11,29 @@ def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[
     join = None
     table = Table(model._meta.table)
 
-    if value is None and '{}__isnull'.format(key) in model._meta.filters:
-        param = model._meta.get_filter('{}__isnull'.format(key))
+    if value is None and "{}__isnull".format(key) in model._meta.filters:
+        param = model._meta.get_filter("{}__isnull".format(key))
         value = True
     else:
         param = model._meta.get_filter(key)
 
-    if param.get('table'):
-        join = (param['table'], table.id == getattr(param['table'], param['backward_key']))
-        criterion = param['operator'](getattr(param['table'], param['field']), value)
+    if param.get("table"):
+        join = (param["table"], table.id == getattr(param["table"], param["backward_key"]))
+        criterion = param["operator"](getattr(param["table"], param["field"]), value)
     else:
-        field_object = model._meta.fields_map[param['field']]
+        field_object = model._meta.fields_map[param["field"]]
         encoded_value = (
-            param['value_encoder'](value, model, field_object)
-            if param.get('value_encoder')
+            param["value_encoder"](value, model, field_object)
+            if param.get("value_encoder")
             else model._meta.db.executor_class._field_to_db(field_object, value, model)
         )
-        criterion = param['operator'](getattr(table, param['field']), encoded_value)
+        criterion = param["operator"](getattr(table, param["field"]), encoded_value)
     return criterion, join
 
 
-def _get_joins_for_related_field(table, related_field, related_field_name
-                                 ) -> List[Tuple[Table, Criterion]]:
+def _get_joins_for_related_field(
+    table, related_field, related_field_name
+) -> List[Tuple[Table, Criterion]]:
     required_joins = []
     if isinstance(related_field, fields.ManyToManyField):
         related_table = Table(related_field.type._meta.table)
@@ -40,9 +41,9 @@ def _get_joins_for_related_field(table, related_field, related_field_name
         required_joins.append(
             (through_table, table.id == getattr(through_table, related_field.backward_key))
         )
-        required_joins.append((
-            related_table, getattr(through_table, related_field.forward_key) == related_table.id
-        ))
+        required_joins.append(
+            (related_table, getattr(through_table, related_field.forward_key) == related_table.id)
+        )
     elif isinstance(related_field, fields.BackwardFKRelation):
         related_table = Table(related_field.type._meta.table)
         required_joins.append(
@@ -50,10 +51,9 @@ def _get_joins_for_related_field(table, related_field, related_field_name
         )
     else:
         related_table = Table(related_field.type._meta.table)
-        required_joins.append((
-            related_table,
-            related_table.id == getattr(table, '{}_id'.format(related_field_name))
-        ))
+        required_joins.append(
+            (related_table, related_table.id == getattr(table, "{}_id".format(related_field_name)))
+        )
     return required_joins
 
 
@@ -86,31 +86,30 @@ def _or(left: Criterion, right: Criterion):
 
 class QueryModifier:
     def __init__(
-            self,
-            where_criterion: Optional[Criterion] = None,
-            joins: Optional[List[Tuple[Criterion, Criterion]]] = None,
-            having_criterion: Optional[Criterion] = None,
+        self,
+        where_criterion: Optional[Criterion] = None,
+        joins: Optional[List[Tuple[Criterion, Criterion]]] = None,
+        having_criterion: Optional[Criterion] = None,
     ):
         self.where_criterion = where_criterion if where_criterion else EmptyCriterion()
         self.joins = joins if joins else []
         self.having_criterion = having_criterion if having_criterion else EmptyCriterion()
 
-    def __and__(self, other: 'QueryModifier') -> 'QueryModifier':
+    def __and__(self, other: "QueryModifier") -> "QueryModifier":
         return QueryModifier(
             where_criterion=_and(self.where_criterion, other.where_criterion),
             joins=self.joins + other.joins,
             having_criterion=_and(self.having_criterion, other.having_criterion),
         )
 
-    def __or__(self, other: 'QueryModifier') -> 'QueryModifier':
+    def __or__(self, other: "QueryModifier") -> "QueryModifier":
         if self.having_criterion or other.having_criterion:
             result_having_criterion = _or(
                 _and(self.where_criterion, self.having_criterion),
-                _and(other.where_criterion, other.having_criterion)
+                _and(other.where_criterion, other.having_criterion),
             )
             return QueryModifier(
-                joins=self.joins + other.joins,
-                having_criterion=result_having_criterion,
+                joins=self.joins + other.joins, having_criterion=result_having_criterion
             )
         return QueryModifier(
             where_criterion=self.where_criterion | other.where_criterion,
@@ -123,12 +122,9 @@ class QueryModifier:
         if self.having_criterion:
             return QueryModifier(
                 joins=self.joins,
-                having_criterion=_and(self.where_criterion, self.having_criterion).negate()
+                having_criterion=_and(self.where_criterion, self.having_criterion).negate(),
             )
-        return QueryModifier(
-            where_criterion=self.where_criterion.negate(),
-            joins=self.joins,
-        )
+        return QueryModifier(where_criterion=self.where_criterion.negate(), joins=self.joins)
 
     def get_query_modifiers(self) -> Tuple[Criterion, List[Tuple[Table, Criterion]], Criterion]:
         return self.where_criterion, self.joins, self.having_criterion
@@ -136,37 +132,42 @@ class QueryModifier:
 
 class Q:  # pylint: disable=C0103
     __slots__ = (
-        'children', 'filters', 'join_type', '_is_negated', '_annotations', '_custom_filters',
+        "children",
+        "filters",
+        "join_type",
+        "_is_negated",
+        "_annotations",
+        "_custom_filters",
     )
 
-    AND = 'AND'
-    OR = 'OR'
+    AND = "AND"
+    OR = "OR"
 
-    def __init__(self, *args: 'Q', join_type=AND, **kwargs) -> None:
+    def __init__(self, *args: "Q", join_type=AND, **kwargs) -> None:
         if args and kwargs:
-            raise OperationalError('You can pass only Q nodes or filter kwargs in one Q node')
+            raise OperationalError("You can pass only Q nodes or filter kwargs in one Q node")
         if not all(isinstance(node, Q) for node in args):
-            raise OperationalError('All ordered arguments must be Q nodes')
+            raise OperationalError("All ordered arguments must be Q nodes")
         self.children = args  # type: Tuple[Q, ...]
         self.filters = kwargs  # type: Mapping[str, Any]
         if join_type not in {self.AND, self.OR}:
-            raise OperationalError('join_type must be AND or OR')
+            raise OperationalError("join_type must be AND or OR")
         self.join_type = join_type
         self._is_negated = False
         self._annotations = {}  # type: Mapping[str, Any]
         self._custom_filters = {}  # type: Mapping[str, Mapping[str, Any]]
 
-    def __and__(self, other) -> 'Q':
+    def __and__(self, other) -> "Q":
         if not isinstance(other, Q):
-            raise OperationalError('AND operation requires a Q node')
+            raise OperationalError("AND operation requires a Q node")
         return Q(self, other, join_type=self.AND)
 
-    def __or__(self, other) -> 'Q':
+    def __or__(self, other) -> "Q":
         if not isinstance(other, Q):
-            raise OperationalError('OR operation requires a Q node')
+            raise OperationalError("OR operation requires a Q node")
         return Q(self, other, join_type=self.OR)
 
-    def __invert__(self) -> 'Q':
+    def __invert__(self) -> "Q":
         q = Q(*self.children, join_type=self.join_type, **self.filters)
         q.negate()
         return q
@@ -177,35 +178,31 @@ class Q:  # pylint: disable=C0103
     def _resolve_nested_filter(self, model, key, value) -> QueryModifier:
         table = Table(model._meta.table)
 
-        related_field_name = key.split('__')[0]
+        related_field_name = key.split("__")[0]
         related_field = model._meta.fields_map[related_field_name]
         required_joins = _get_joins_for_related_field(table, related_field, related_field_name)
-        modifier = Q(**{
-            '__'.join(key.split('__')[1:]): value,
-        }).resolve(
+        modifier = Q(**{"__".join(key.split("__")[1:]): value}).resolve(
             model=related_field.type,
             annotations=self._annotations,
-            custom_filters=self._custom_filters
+            custom_filters=self._custom_filters,
         )
 
         return QueryModifier(joins=required_joins) & modifier
 
     def _resolve_custom_kwarg(self, model, key, value) -> QueryModifier:
         having_info = self._custom_filters[key]
-        aggregation = self._annotations[having_info['field']]
+        aggregation = self._annotations[having_info["field"]]
         aggregation_info = aggregation.resolve(model)
-        operator = having_info['operator']
+        operator = having_info["operator"]
         overridden_operator = model._meta.db.executor_class.get_overridden_filter_func(
-            filter_func=operator,
+            filter_func=operator
         )
         if overridden_operator:
             operator = overridden_operator
-        return QueryModifier(
-            having_criterion=operator(aggregation_info['field'], value),
-        )
+        return QueryModifier(having_criterion=operator(aggregation_info["field"], value))
 
     def _resolve_regular_kwarg(self, model, key, value) -> QueryModifier:
-        if key not in model._meta.filters and key.split('__')[0] in model._meta.fetch_fields:
+        if key not in model._meta.filters and key.split("__")[0] in model._meta.fetch_fields:
             modifier = self._resolve_nested_filter(model, key, value)
         else:
             criterion, join = _process_filter_kwarg(model, key, value)
@@ -216,29 +213,25 @@ class Q:  # pylint: disable=C0103
     def _get_actual_filter_params(self, model, key, value) -> Tuple[str, Any]:
         if key in model._meta.fk_fields:
             field_object = model._meta.fields_map[key]
-            if hasattr(value, 'id'):
+            if hasattr(value, "id"):
                 filter_value = value.id
             else:
                 filter_value = value
             filter_key = field_object.source_field
         elif (
-            key.split('__')[0] in model._meta.fetch_fields
+            key.split("__")[0] in model._meta.fetch_fields
             or key in self._custom_filters
             or key in model._meta.filters
         ):
             filter_key = key
             filter_value = value
         else:
-            allowed = sorted(list(
-                model._meta.fields
-                | model._meta.fetch_fields
-                | set(self._custom_filters)
-            ))
+            allowed = sorted(
+                list(model._meta.fields | model._meta.fetch_fields | set(self._custom_filters))
+            )
             raise FieldError(
-                "Unknown filter param '{}'. Allowed base values are {}".format(
-                    key,
-                    allowed
-                ))
+                "Unknown filter param '{}'. Allowed base values are {}".format(key, allowed)
+            )
         return filter_key, filter_value
 
     def _resolve_kwargs(self, model) -> QueryModifier:
@@ -281,19 +274,20 @@ class Q:  # pylint: disable=C0103
 
 
 class Prefetch:
-    __slots__ = ('relation', 'queryset')
+    __slots__ = ("relation", "queryset")
 
     def __init__(self, relation, queryset) -> None:
         self.relation = relation
         self.queryset = queryset
 
     def resolve_for_queryset(self, queryset) -> None:
-        relation_split = self.relation.split('__')
+        relation_split = self.relation.split("__")
         first_level_field = relation_split[0]
         if first_level_field not in queryset.model._meta.fetch_fields:
-            raise OperationalError('relation {} for {} not found'.format(
-                first_level_field, queryset.model._meta.table))
-        forwarded_prefetch = '__'.join(relation_split[1:])
+            raise OperationalError(
+                "relation {} for {} not found".format(first_level_field, queryset.model._meta.table)
+            )
+        forwarded_prefetch = "__".join(relation_split[1:])
         if forwarded_prefetch:
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()

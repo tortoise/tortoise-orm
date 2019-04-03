@@ -1,6 +1,14 @@
-__all__ = ('BaseORMException', 'FieldError', 'ConfigurationError', 'TransactionManagementError',
-           'OperationalError', 'IntegrityError', 'NoValuesFetched', 'MultipleObjectsReturned',
-           'DoesNotExist')
+__all__ = (
+    "BaseORMException",
+    "FieldError",
+    "ConfigurationError",
+    "TransactionManagementError",
+    "OperationalError",
+    "IntegrityError",
+    "NoValuesFetched",
+    "MultipleObjectsReturned",
+    "DoesNotExist",
+)
 
 
 class BaseORMException(Exception):

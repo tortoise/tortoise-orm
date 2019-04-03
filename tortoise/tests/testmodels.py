@@ -11,7 +11,7 @@ from tortoise.tests.testfields import EnumField
 
 
 def generate_token():
-    return binascii.hexlify(os.urandom(16)).decode('ascii')
+    return binascii.hexlify(os.urandom(16)).decode("ascii")
 
 
 class Tournament(Model):
@@ -28,7 +28,7 @@ class Reporter(Model):
     name = fields.TextField()
 
     class Meta:
-        table = 're_port_er'
+        table = "re_port_er"
 
     def __str__(self):
         return self.name
@@ -37,10 +37,10 @@ class Reporter(Model):
 class Event(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
-    tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
-    reporter = fields.ForeignKeyField('models.Reporter', null=True)
+    tournament = fields.ForeignKeyField("models.Tournament", related_name="events")
+    reporter = fields.ForeignKeyField("models.Reporter", null=True)
     participants = fields.ManyToManyField(
-        'models.Team', related_name='events', through='event_team', backward_key='idEvent'
+        "models.Team", related_name="events", through="event_team", backward_key="idEvent"
     )
     modified = fields.DatetimeField(auto_now=True)
     token = fields.TextField(default=generate_token)
@@ -62,10 +62,10 @@ class EventTwo(Model):
     name = fields.TextField()
     tournament_id = fields.IntField()
     # Here we make link to events.Team, not models.Team
-    participants = fields.ManyToManyField('events.TeamTwo')
+    participants = fields.ManyToManyField("events.TeamTwo")
 
     class Meta:
-        app = 'events'
+        app = "events"
 
     def __str__(self):
         return self.name
@@ -76,7 +76,7 @@ class TeamTwo(Model):
     name = fields.TextField()
 
     class Meta:
-        app = 'events'
+        app = "events"
 
     def __str__(self):
         return self.name
@@ -159,14 +159,14 @@ class JSONFields(Model):
 
 class MinRelation(Model):
     id = fields.IntField(pk=True)
-    tournament = fields.ForeignKeyField('models.Tournament')
-    participants = fields.ManyToManyField('models.Team')
+    tournament = fields.ForeignKeyField("models.Tournament")
+    participants = fields.ManyToManyField("models.Team")
 
 
 class M2MOne(Model):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=255, null=True)
-    two = fields.ManyToManyField('models.M2MTwo', related_name='one')
+    two = fields.ManyToManyField("models.M2MTwo", related_name="one")
 
 
 class M2MTwo(Model):
@@ -199,16 +199,16 @@ class UniqueTogetherFields(Model):
     last_name = fields.CharField(max_length=64)
 
     class Meta:
-        unique_together = ('first_name', 'last_name')
+        unique_together = ("first_name", "last_name")
 
 
 class UniqueTogetherFieldsWithFK(Model):
     id = fields.IntField(pk=True)
     text = fields.CharField(max_length=64)
-    tournament = fields.ForeignKeyField('models.Tournament')
+    tournament = fields.ForeignKeyField("models.Tournament")
 
     class Meta:
-        unique_together = ('text', 'tournament')
+        unique_together = ("text", "tournament")
 
 
 class ContactTypeEnum(IntEnum):

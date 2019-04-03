@@ -16,9 +16,9 @@ class Tournament(Model):
 class Event(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
-    tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
+    tournament = fields.ForeignKeyField("models.Tournament", related_name="events")
     participants = fields.ManyToManyField(
-        'models.Team', related_name='events', through='event_team'
+        "models.Team", related_name="events", through="event_team"
     )
 
     def __str__(self):
@@ -34,19 +34,21 @@ class Team(Model):
 
 
 async def run():
-    await Tortoise.init(config_file='config.json')
+    await Tortoise.init(config_file="config.json")
     await Tortoise.generate_schemas()
 
-    tournament = await Tournament.create(name='tournament')
-    await Event.create(name='First', tournament=tournament)
-    await Event.create(name='Second', tournament=tournament)
-    tournament_with_filtered = await Tournament.all().prefetch_related(
-        Prefetch('events', queryset=Event.filter(name='First'))
-    ).first()
+    tournament = await Tournament.create(name="tournament")
+    await Event.create(name="First", tournament=tournament)
+    await Event.create(name="Second", tournament=tournament)
+    tournament_with_filtered = (
+        await Tournament.all()
+        .prefetch_related(Prefetch("events", queryset=Event.filter(name="First")))
+        .first()
+    )
     print(tournament_with_filtered)
-    print(await Tournament.first().prefetch_related('events'))
+    print(await Tournament.first().prefetch_related("events"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(run())

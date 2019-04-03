@@ -21,7 +21,6 @@ flake8-isort
 pylint
 docutils
 pygments
-yapf
 bandit
 
 ## Test tools

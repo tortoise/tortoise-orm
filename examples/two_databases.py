@@ -23,7 +23,7 @@ class Tournament(Model):
         return self.name
 
     class Meta:
-        app = 'tournaments'
+        app = "tournaments"
 
 
 class Event(Model):
@@ -32,14 +32,14 @@ class Event(Model):
     tournament_id = fields.IntField()
     # Here we make link to events.Team, not models.Team
     participants = fields.ManyToManyField(
-        'events.Team', related_name='events', through='event_team'
+        "events.Team", related_name="events", through="event_team"
     )
 
     def __str__(self):
         return self.name
 
     class Meta:
-        app = 'events'
+        app = "events"
 
 
 class Team(Model):
@@ -50,51 +50,43 @@ class Team(Model):
         return self.name
 
     class Meta:
-        app = 'events'
+        app = "events"
 
 
 async def run():
-    await Tortoise.init({
-        'connections': {
-            'first': {
-                'engine': 'tortoise.backends.sqlite',
-                'credentials': {
-                    'file_path': 'example.sqlite3',
-                }
+    await Tortoise.init(
+        {
+            "connections": {
+                "first": {
+                    "engine": "tortoise.backends.sqlite",
+                    "credentials": {"file_path": "example.sqlite3"},
+                },
+                "second": {
+                    "engine": "tortoise.backends.sqlite",
+                    "credentials": {"file_path": "example1.sqlite3"},
+                },
             },
-            'second': {
-                'engine': 'tortoise.backends.sqlite',
-                'credentials': {
-                    'file_path': 'example1.sqlite3',
-                }
-            }
-        },
-        'apps': {
-            'tournaments': {
-                'models': ['__main__'],
-                'default_connection': 'first',
-            },
-            'events': {
-                'models': ['__main__'],
-                'default_connection': 'second',
+            "apps": {
+                "tournaments": {"models": ["__main__"], "default_connection": "first"},
+                "events": {"models": ["__main__"], "default_connection": "second"},
             },
         }
-    })
+    )
     await Tortoise.generate_schemas()
-    client = Tortoise.get_connection('first')
-    second_client = Tortoise.get_connection('second')
+    client = Tortoise.get_connection("first")
+    second_client = Tortoise.get_connection("second")
 
-    tournament = await Tournament.create(name='Tournament')
-    await Event(name='Event', tournament_id=tournament.id).save()
+    tournament = await Tournament.create(name="Tournament")
+    await Event(name="Event", tournament_id=tournament.id).save()
 
     try:
         await client.execute_query('SELECT * FROM "event"')
     except OperationalError:
-        print('Expected it to fail')
+        print("Expected it to fail")
     results = await second_client.execute_query('SELECT * FROM "event"')
     print(results)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(run())

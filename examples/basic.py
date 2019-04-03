@@ -13,26 +13,26 @@ class Event(Model):
     datetime = fields.DatetimeField(null=True)
 
     class Meta:
-        table = 'event'
+        table = "event"
 
     def __str__(self):
         return self.name
 
 
 async def run():
-    await Tortoise.init(config_file='config.json')
+    await Tortoise.init(config_file="config.json")
     await Tortoise.generate_schemas()
 
-    event = await Event.create(name='Test')
-    await Event.filter(id=event.id).update(name='Updated name')
+    event = await Event.create(name="Test")
+    await Event.filter(id=event.id).update(name="Updated name")
 
-    print(await Event.filter(name='Updated name').first())
+    print(await Event.filter(name="Updated name").first())
 
-    await Event(name='Test 2').save()
-    print(await Event.all().values_list('id', flat=True))
-    print(await Event.all().values('id', 'name'))
+    await Event(name="Test 2").save()
+    print(await Event.all().values_list("id", flat=True))
+    print(await Event.all().values("id", "name"))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(run())

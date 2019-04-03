@@ -46,17 +46,19 @@ class Tortoise:
                 for field in model._meta.fk_fields:
                     field_object = cast(fields.ForeignKeyField, model._meta.fields_map[field])
                     reference = field_object.model_name
-                    related_app_name, related_model_name = reference.split('.')
+                    related_app_name, related_model_name = reference.split(".")
                     related_model = cls.apps[related_app_name][related_model_name]
                     field_object.type = related_model
                     backward_relation_name = field_object.related_name
                     if not backward_relation_name:
-                        backward_relation_name = '{}s'.format(model._meta.table)
+                        backward_relation_name = "{}s".format(model._meta.table)
                     if backward_relation_name in related_model._meta.fields:
                         raise ConfigurationError(
                             'backward relation "{}" duplicates in model {}'.format(
-                                backward_relation_name, related_model_name))
-                    fk_relation = fields.BackwardFKRelation(model, '{}_id'.format(field))
+                                backward_relation_name, related_model_name
+                            )
+                        )
+                    fk_relation = fields.BackwardFKRelation(model, "{}_id".format(field))
                     setattr(related_model, backward_relation_name, fk_relation)
                     related_model._meta.filters.update(
                         get_backward_fk_filters(backward_relation_name, fk_relation)
@@ -74,49 +76,48 @@ class Tortoise:
 
                     backward_key = field_mobject.backward_key
                     if not backward_key:
-                        backward_key = '{}_id'.format(model._meta.table)
+                        backward_key = "{}_id".format(model._meta.table)
                         field_mobject.backward_key = backward_key
 
                     reference = field_mobject.model_name
-                    related_app_name, related_model_name = reference.split('.')
+                    related_app_name, related_model_name = reference.split(".")
                     related_model = cls.apps[related_app_name][related_model_name]
 
                     field_mobject.type = related_model
 
                     backward_relation_name = field_mobject.related_name
                     if not backward_relation_name:
-                        backward_relation_name = field_mobject.related_name = \
-                            '{}_through'.format(model._meta.table)
+                        backward_relation_name = field_mobject.related_name = "{}_through".format(
+                            model._meta.table
+                        )
                     if backward_relation_name in related_model._meta.fields:
                         raise ConfigurationError(
                             'backward relation "{}" duplicates in model {}'.format(
-                                backward_relation_name, related_model_name))
+                                backward_relation_name, related_model_name
+                            )
+                        )
 
                     if not field_mobject.through:
                         related_model_table_name = (
                             related_model._meta.table
-                            if related_model._meta.table else related_model.__name__.lower()
+                            if related_model._meta.table
+                            else related_model.__name__.lower()
                         )
 
-                        field_mobject.through = '{}_{}'.format(
-                            model._meta.table,
-                            related_model_table_name,
+                        field_mobject.through = "{}_{}".format(
+                            model._meta.table, related_model_table_name
                         )
 
                     m2m_relation = fields.ManyToManyField(
-                        '{}.{}'.format(app_name, model_name),
+                        "{}.{}".format(app_name, model_name),
                         field_mobject.through,
                         forward_key=field_mobject.backward_key,
                         backward_key=field_mobject.forward_key,
                         related_name=field,
-                        type=model
+                        type=model,
                     )
                     m2m_relation._generated = True
-                    setattr(
-                        related_model,
-                        backward_relation_name,
-                        m2m_relation,
-                    )
+                    setattr(related_model, backward_relation_name, m2m_relation)
                     model._meta.filters.update(get_m2m_filters(field, field_mobject))
                     related_model._meta.filters.update(
                         get_m2m_filters(backward_relation_name, m2m_relation)
@@ -160,9 +161,9 @@ class Tortoise:
         for name, info in connections_config.items():
             if isinstance(info, str):
                 info = expand_db_url(info)
-            client_class = cls._discover_client_class(info.get('engine'))
-            db_params = deepcopy(info['credentials'])
-            db_params.update({'connection_name': name})
+            client_class = cls._discover_client_class(info.get("engine"))
+            db_params = deepcopy(info["credentials"])
+            db_params.update({"connection_name": name})
             connection = client_class(**db_params)  # type: ignore
             if create_db:
                 await connection.db_create()
@@ -174,19 +175,20 @@ class Tortoise:
     def _init_apps(cls, apps_config: dict) -> None:
         for name, info in apps_config.items():
             try:
-                cls.get_connection(info.get('default_connection', 'default'))
+                cls.get_connection(info.get("default_connection", "default"))
             except KeyError:
-                raise ConfigurationError('Unknown connection "{}" for app "{}"'.format(
-                    info.get('default_connection', 'default'),
-                    name,
-                ))
+                raise ConfigurationError(
+                    'Unknown connection "{}" for app "{}"'.format(
+                        info.get("default_connection", "default"), name
+                    )
+                )
             app_models = []  # type: List[Type[Model]]
-            for module in info['models']:
+            for module in info["models"]:
                 app_models += cls._discover_models(module, name)
 
             models_map = {}
             for model in app_models:
-                model._meta.default_connection = info.get('default_connection', 'default')
+                model._meta.default_connection = info.get("default_connection", "default")
                 models_map[model.__name__] = model
 
             cls.apps[name] = models_map
@@ -198,18 +200,17 @@ class Tortoise:
     @classmethod
     def _get_config_from_config_file(cls, config_file: str) -> dict:
         _, extension = os.path.splitext(config_file)
-        if extension in ('.yml', '.yaml'):
+        if extension in (".yml", ".yaml"):
             import yaml
-            with open(config_file, 'r') as f:
+
+            with open(config_file, "r") as f:
                 config = yaml.safe_load(f)
-        elif extension == '.json':
-            with open(config_file, 'r') as f:
+        elif extension == ".json":
+            with open(config_file, "r") as f:
                 config = json.load(f)
         else:
             raise ConfigurationError(
-                'Unknown config extension {}, only .yml and .json are supported'.format(
-                    extension
-                )
+                "Unknown config extension {}, only .yml and .json are supported".format(extension)
             )
         return config
 
@@ -220,16 +221,17 @@ class Tortoise:
                 model._meta.generate_filters()
                 model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
                 model._meta.basequery_all_fields = model._meta.basequery.select(
-                    *model._meta.db_fields)
+                    *model._meta.db_fields
+                )
 
     @classmethod
     async def init(
-            cls,
-            config: Optional[dict] = None,
-            config_file: Optional[str] = None,
-            _create_db: bool = False,
-            db_url: Optional[str] = None,
-            modules: Optional[Dict[str, List[str]]] = None
+        cls,
+        config: Optional[dict] = None,
+        config_file: Optional[str] = None,
+        _create_db: bool = False,
+        db_url: Optional[str] = None,
+        modules: Optional[Dict[str, List[str]]] = None,
     ) -> None:
         """
         Sets up Tortoise-ORM.
@@ -294,7 +296,8 @@ class Tortoise:
             await cls._reset_apps()
         if int(bool(config) + bool(config_file) + bool(db_url)) != 1:
             raise ConfigurationError(
-                'You should init either from "config", "config_file" or "db_url"')
+                'You should init either from "config", "config_file" or "db_url"'
+            )
 
         if config_file:
             config = cls._get_config_from_config_file(config_file)
@@ -305,14 +308,14 @@ class Tortoise:
             config = generate_config(db_url, modules)
 
         try:
-            connections_config = config['connections']  # type: ignore
+            connections_config = config["connections"]  # type: ignore
         except KeyError:
             raise ConfigurationError('Config must define "connections" section')
 
         await cls._init_connections(connections_config, _create_db)
 
         try:
-            apps_config = config['apps']  # type: ignore
+            apps_config = config["apps"]  # type: ignore
         except KeyError:
             raise ConfigurationError('Config must define "apps" section')
 
@@ -347,7 +350,7 @@ class Tortoise:
             When set to true, creates the table only when it does not already exist.
         """
         if not cls._inited:
-            raise ConfigurationError('You have to call .init() first before generating schemas')
+            raise ConfigurationError("You have to call .init() first before generating schemas")
         for connection in cls._connections.values():
             await generate_schema_for_client(connection, safe)
 
@@ -358,7 +361,7 @@ class Tortoise:
         Normally should be used only for testing purposes.
         """
         if not cls._inited:
-            raise ConfigurationError('You have to call .init() first before deleting schemas')
+            raise ConfigurationError("You have to call .init() first before deleting schemas")
         for connection in cls._connections.values():
             await connection.close()
             await connection.db_delete()

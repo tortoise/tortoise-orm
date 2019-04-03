@@ -21,21 +21,27 @@ up:
 
 deps:
 	@pip install -q pip-tools
-	@pip-sync requirements-dev.txt
+	@pip install -q -r requirements-dev.txt
 
 check: deps
 	flake8 $(checkfiles)
+ifneq ($(shell which black),)
+	black --check -l 100 $(checkfiles)
+endif
 	mypy $(mypy_flags) $(checkfiles)
 	pylint -E $(checkfiles)
 	bandit -r $(checkfiles)
 	python setup.py check -mrs
 
 lint: deps
-	-flake8 $(checkfiles)
-	-mypy $(mypy_flags) $(checkfiles)
-	-pylint $(checkfiles)
-	-bandit -r $(checkfiles)
-	-python setup.py check -mrs
+	flake8 $(checkfiles)
+ifneq ($(shell which black),)
+	black --check -l 100 $(checkfiles)
+endif
+	mypy $(mypy_flags) $(checkfiles)
+	pylint $(checkfiles)
+	bandit -r $(checkfiles)
+	python setup.py check -mrs
 
 test: deps
 	coverage erase
@@ -57,8 +63,7 @@ docs: deps
 	python setup.py build_sphinx -E
 
 style: deps
-	@#yapf -i -r $(checkfiles)
-	isort -rc $(checkfiles)
+	black -l 100 $(checkfiles)
 
 publish: deps
 	rm -fR dist/

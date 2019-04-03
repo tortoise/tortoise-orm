@@ -8,7 +8,7 @@ from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
 class Capabilities:
-    '''
+    """
     DB Client Capabilities indicates the supported feature-set,
     and is also used to note common workarounds to defeciences.
 
@@ -25,24 +25,26 @@ class Capabilities:
         Indicates that this DB supports optional index creation using ``IF NOT EXISTS``.
     ``requires_limit``:
         Indicates that this DB requires a ``LIMIT`` statement for an ``OFFSET`` statement to work.
-    '''
+    """
 
     def __init__(
-        self, dialect: str, *,
+        self,
+        dialect: str,
+        *,
         # Deficiencies to work around:
         safe_indexes: bool = True,
         requires_limit: bool = False
     ) -> None:
-        super().__setattr__('_mutable', True)
+        super().__setattr__("_mutable", True)
 
         self.dialect = dialect
         self.requires_limit = requires_limit
         self.safe_indexes = safe_indexes
 
-        super().__setattr__('_mutable', False)
+        super().__setattr__("_mutable", False)
 
     def __setattr__(self, attr, value):
-        if not getattr(self, '_mutable', False):
+        if not getattr(self, "_mutable", False):
             raise AttributeError(attr)
         return super().__setattr__(attr, value)
 
@@ -54,10 +56,10 @@ class BaseDBAsyncClient:
     query_class = Query
     executor_class = BaseExecutor
     schema_generator = BaseSchemaGenerator
-    capabilities = Capabilities('')
+    capabilities = Capabilities("")
 
     def __init__(self, connection_name: str, **kwargs) -> None:
-        self.log = logging.getLogger('db_client')
+        self.log = logging.getLogger("db_client")
         self.connection_name = connection_name
 
     async def create_connection(self, with_db: bool) -> None:
@@ -72,10 +74,10 @@ class BaseDBAsyncClient:
     async def db_delete(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    def acquire_connection(self) -> 'ConnectionWrapper':
+    def acquire_connection(self) -> "ConnectionWrapper":
         raise NotImplementedError()  # pragma: nocoverage
 
-    def _in_transaction(self) -> 'BaseTransactionWrapper':
+    def _in_transaction(self) -> "BaseTransactionWrapper":
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, query: str, values: list) -> int:
@@ -92,7 +94,7 @@ class BaseDBAsyncClient:
 
 
 class ConnectionWrapper:
-    __slots__ = ('connection', 'lock')
+    __slots__ = ("connection", "lock")
 
     def __init__(self, connection, lock) -> None:
         self.connection = connection
