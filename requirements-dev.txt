@@ -88,4 +88,3 @@ urllib3==1.24.1           # via requests
 virtualenv==16.4.3        # via tox
 webencodings==0.5.1       # via bleach
 wrapt==1.11.1             # via astroid
-yapf==0.26.0

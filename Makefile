@@ -63,8 +63,7 @@ docs: deps
 	python setup.py build_sphinx -E
 
 style: deps
-	@#yapf -i -r $(checkfiles)
-	isort -rc $(checkfiles)
+	black -l 100 $(checkfiles)
 
 publish: deps
 	rm -fR dist/
