@@ -1,5 +1,5 @@
 checkfiles = tortoise/ examples/ setup.py conftest.py
-mypy_flags = --warn-unused-configs --warn-redundant-casts --ignore-missing-imports --allow-untyped-decorators --no-implicit-optional
+black_opts = -l 100
 py_warn = PYTHONWARNINGS=default PYTHONASYNCIODEBUG=1 PYTHONDEBUG=x PYTHONDEVMODE=dev
 
 help:
@@ -16,19 +16,19 @@ help:
 	@echo  "    style       Auto-formats the code"
 
 up:
-	pip-compile -o requirements-pypy.txt requirements-pypy.in -U
-	pip-compile -o requirements-dev.txt requirements-dev.in -U
+	CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements-pypy.txt requirements-pypy.in -U
+	CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements-dev.txt requirements-dev.in -U
 
 deps:
 	@pip install -q pip-tools
-	@pip install -q -r requirements-dev.txt
+	@pip-sync requirements-dev.txt
 
 check: deps
 	flake8 $(checkfiles)
 ifneq ($(shell which black),)
-	black --check -l 100 $(checkfiles)
+	black --check $(black_opts) $(checkfiles)
 endif
-	mypy $(mypy_flags) $(checkfiles)
+	mypy $(checkfiles)
 	pylint -E $(checkfiles)
 	bandit -r $(checkfiles)
 	python setup.py check -mrs
@@ -36,9 +36,9 @@ endif
 lint: deps
 	flake8 $(checkfiles)
 ifneq ($(shell which black),)
-	black --check -l 100 $(checkfiles)
+	black --check $(black_opts) $(checkfiles)
 endif
-	mypy $(mypy_flags) $(checkfiles)
+	mypy $(checkfiles)
 	pylint $(checkfiles)
 	bandit -r $(checkfiles)
 	python setup.py check -mrs
@@ -63,7 +63,8 @@ docs: deps
 	python setup.py build_sphinx -E
 
 style: deps
-	black -l 100 $(checkfiles)
+	isort -rc $(checkfiles)
+	black $(black_opts) $(checkfiles)
 
 publish: deps
 	rm -fR dist/

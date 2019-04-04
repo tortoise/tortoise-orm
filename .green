@@ -1,4 +1,0 @@
-# verbose       = 2
-no-skip-report= True
-initializer   = tortoise.contrib.test.env_initializer
-finalizer     = tortoise.contrib.test.finalizer

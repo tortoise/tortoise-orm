@@ -1,6 +1,7 @@
 import asyncio
 import importlib
 import json
+import logging
 import os
 from copy import deepcopy
 from inspect import isclass
@@ -21,6 +22,8 @@ try:
     from contextvars import ContextVar
 except ImportError:
     from aiocontextvars import ContextVar  # type: ignore
+
+logger = logging.getLogger("tortoise")
 
 
 class Tortoise:
@@ -312,13 +315,18 @@ class Tortoise:
         except KeyError:
             raise ConfigurationError('Config must define "connections" section')
 
-        await cls._init_connections(connections_config, _create_db)
-
         try:
             apps_config = config["apps"]  # type: ignore
         except KeyError:
             raise ConfigurationError('Config must define "apps" section')
 
+        logger.info(
+            "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
+            str(connections_config),
+            str(apps_config),
+        )
+
+        await cls._init_connections(connections_config, _create_db)
         cls._init_apps(apps_config)
 
         cls._inited = True
@@ -328,6 +336,7 @@ class Tortoise:
         for connection in cls._connections.values():
             await connection.close()
         cls._connections = {}
+        logger.info("Tortoise-ORM shutdown")
 
     @classmethod
     async def _reset_apps(cls) -> None:
