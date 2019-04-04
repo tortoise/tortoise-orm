@@ -146,7 +146,7 @@ class BaseExecutor:
             .on(subquery._forward_relation_key == related_query_table.id)
             .select(
                 subquery._backward_relation_key.as_("_backward_relation_key"),
-                *[getattr(related_query_table, field).as_(field) for field in related_query.fields],
+                *[getattr(related_query_table, field).as_(field) for field in related_query.fields]
             )
         )
 

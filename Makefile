@@ -1,5 +1,5 @@
 checkfiles = tortoise/ examples/ setup.py conftest.py
-black_opts = -l 100 -t py35
+black_opts = -l 100
 py_warn = PYTHONWARNINGS=default PYTHONASYNCIODEBUG=1 PYTHONDEBUG=x PYTHONDEVMODE=dev
 
 help:
