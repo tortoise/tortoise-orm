@@ -16,8 +16,8 @@ help:
 	@echo  "    style       Auto-formats the code"
 
 up:
-	pip-compile -o requirements-pypy.txt requirements-pypy.in -U
-	pip-compile -o requirements-dev.txt requirements-dev.in -U
+	CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements-pypy.txt requirements-pypy.in -U
+	CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements-dev.txt requirements-dev.in -U
 
 deps:
 	@pip install -q pip-tools
