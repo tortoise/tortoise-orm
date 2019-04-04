@@ -8,7 +8,7 @@ if sys.version_info < (3, 5, 3):
     raise RuntimeError("tortoise requires Python 3.5.3+")
 
 
-def version():
+def version() -> str:
     verstrline = open("tortoise/__init__.py", "rt").read()
     mob = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", verstrline, re.M)
     if mob:
@@ -17,7 +17,7 @@ def version():
         raise RuntimeError("Unable to find version string")
 
 
-def requirements():
+def requirements() -> list:
     return open("requirements.txt", "rt").read().splitlines()
 
 

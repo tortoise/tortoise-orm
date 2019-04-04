@@ -39,7 +39,7 @@ On success it will be marked as unexpected success.
 
 _CONFIG = {}  # type: dict
 _CONNECTIONS = {}  # type: dict
-_SELECTOR = None  # type: ignore
+_SELECTOR = None
 _LOOP = None  # type: BaseSelectorEventLoop
 _MODULES = []  # type: List[str]
 _CONN_MAP = {}  # type: dict
@@ -139,7 +139,7 @@ def env_initializer() -> None:
     initializer(modules, db_url=db_url)
 
 
-class SimpleTestCase(_TestCase):
+class SimpleTestCase(_TestCase):  # type: ignore
     """
     The Tortoise base test class.
 

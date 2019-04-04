@@ -47,7 +47,7 @@ class Field:
         default: Any = None,
         unique: bool = False,
         index: bool = False,
-        **kwargs
+        **kwargs,
     ) -> None:
         self.type = type
         self.source_field = source_field
@@ -392,7 +392,7 @@ class ManyToManyField(Field):
         forward_key: Optional[str] = None,
         backward_key: str = "",
         related_name: str = "",
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         if len(model_name.split(".")) != 2:
