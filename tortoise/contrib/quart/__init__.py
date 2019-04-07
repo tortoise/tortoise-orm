@@ -1,4 +1,6 @@
+import asyncio
 from typing import Dict, List, Optional
+import logging
 
 from quart import Quart
 from tortoise import Tortoise
@@ -18,6 +20,7 @@ def register_tortoise(
     """
     Registers ``before_serving`` and ``after_serving`` hooks to set-up and tear-down Tortoise-ORM
     inside a Quart service.
+    It also registers a CLI command ``generate_schemas`` that will generate the schemas.
 
     You can configure using only one of ``config``, ``config_file``
     and ``(db_url, modules)``.
@@ -84,3 +87,16 @@ def register_tortoise(
     async def close_orm():
         await Tortoise.close_connections()
         print("Tortoise-ORM shutdown")
+
+    @app.cli.command()
+    def generate_schemas():
+        """Populate DB with Tortoise-ORM schemas."""
+
+        async def inner():
+            await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
+            await Tortoise.generate_schemas()
+            await Tortoise.close_connections()
+
+        logging.basicConfig(level=logging.DEBUG)
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(inner())
