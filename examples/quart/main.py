@@ -2,10 +2,9 @@ import asyncio
 import logging
 from random import choice
 
-from quart import Quart, jsonify
-
-from tortoise.contrib.quart import register_tortoise
 from models import Users, Workers
+from quart import Quart, jsonify
+from tortoise.contrib.quart import register_tortoise
 
 STATUSES = ["New", "Old", "Gone"]
 # logging.basicConfig(level=logging.INFO)
@@ -16,10 +15,7 @@ app = Quart(__name__)
 async def list_all():
     users, workers = await asyncio.gather(Users.all(), Workers.all())
     return jsonify(
-        {
-            "users": [str(user) for user in users],
-            "workers": [str(worker) for worker in workers],
-        }
+        {"users": [str(user) for user in users], "workers": [str(worker) for worker in workers]}
     )
 
 
@@ -36,10 +32,7 @@ async def add_worker():
 
 
 register_tortoise(
-    app,
-    db_url="sqlite://:memory:",
-    modules={"models": ["models"]},
-    generate_schemas=True,
+    app, db_url="sqlite://:memory:", modules={"models": ["models"]}, generate_schemas=True
 )
 
 
