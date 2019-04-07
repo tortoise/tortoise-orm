@@ -1,13 +1,12 @@
 import asyncio
-import logging
 from random import choice
 
-from models import Users, Workers
 from quart import Quart, jsonify
+
+from models import Users, Workers  # pylint: disable=E0401
 from tortoise.contrib.quart import register_tortoise
 
 STATUSES = ["New", "Old", "Gone"]
-# logging.basicConfig(level=logging.INFO)
 app = Quart(__name__)
 
 
@@ -21,13 +20,13 @@ async def list_all():
 
 @app.route("/user")
 async def add_user():
-    user = await Users.create(status=choice(STATUSES))
+    user = await Users.create(status=choice(STATUSES))  # nosec
     return str(user)
 
 
 @app.route("/worker")
 async def add_worker():
-    worker = await Workers.create(status=choice(STATUSES))
+    worker = await Workers.create(status=choice(STATUSES))  # nosec
     return str(worker)
 
 

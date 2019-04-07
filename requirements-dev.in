@@ -34,3 +34,6 @@ nose2
 
 # Pypi
 twine
+
+# Sample integrations
+quart

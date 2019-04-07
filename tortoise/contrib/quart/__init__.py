@@ -1,8 +1,9 @@
 import asyncio
-from typing import Dict, List, Optional
 import logging
+from typing import Dict, List, Optional
 
 from quart import Quart
+
 from tortoise import Tortoise
 
 STATUSES = ["New", "Old", "Gone"]
@@ -88,12 +89,14 @@ def register_tortoise(
         await Tortoise.close_connections()
         print("Tortoise-ORM shutdown")
 
-    @app.cli.command()
-    def generate_schemas():
+    @app.cli.command()  # type: ignore
+    def generate_schemas():  # pylint: disable=E0102
         """Populate DB with Tortoise-ORM schemas."""
 
         async def inner():
-            await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
+            await Tortoise.init(
+                config=config, config_file=config_file, db_url=db_url, modules=modules
+            )
             await Tortoise.generate_schemas()
             await Tortoise.close_connections()
 
