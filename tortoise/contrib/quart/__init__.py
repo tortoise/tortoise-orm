@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional
 
-from quart import Quart
+from quart import Quart  # pylint: disable=E0401
 
 from tortoise import Tortoise
 
@@ -79,7 +79,7 @@ def register_tortoise(
     @app.before_serving
     async def init_orm():
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
-        print(f"Tortoise-ORM started, {Tortoise._connections}, {Tortoise.apps}")
+        print("Tortoise-ORM started, {}, {}".format(Tortoise._connections, Tortoise.apps))
         if generate_schemas:
             print("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()

@@ -7,7 +7,7 @@
 aenum==2.1.2              # via pypika
 aiocontextvars==0.2.1 ; python_version < "3.7"
 aiomysql==0.0.20
-aiosqlite==0.9.0
+aiosqlite==0.10.0
 asn1crypto==0.24.0        # via cryptography
 asynctest==0.12.3
 cffi==1.12.2              # via cryptography

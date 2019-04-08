@@ -1,9 +1,10 @@
+# pylint: disable=E0401,E0611
 import asyncio
 from random import choice
 
 from quart import Quart, jsonify
 
-from models import Users, Workers  # pylint: disable=E0401
+from models import Users, Workers
 from tortoise.contrib.quart import register_tortoise
 
 STATUSES = ["New", "Old", "Gone"]

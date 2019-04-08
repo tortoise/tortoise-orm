@@ -36,4 +36,5 @@ nose2
 twine
 
 # Sample integrations
-quart
+hypercorn;python_version>="3.6"
+quart;python_version>="3.6"
