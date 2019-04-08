@@ -9,9 +9,15 @@ Our short term goal is to ship the current implementation as MVP, just somewhat 
 
 For ``v1.0`` that involves:
 
-* Comprehensive test suite
+* Schema discovery
+* Timezone support
 * Clear and concise examples
 * Refactored Fields Schema generation
+* DB transaction isolation
+* Connection pooling
+* Robust connection handling
+* Change to all-parametrized queries for safety
+
 
 Mid-term
 ========
@@ -26,13 +32,10 @@ Here we have all the features that is slightly further out, in no particular ord
 * Convenience/Ease-Of-Use work:
     * Make ``DELETE`` honour ``limit`` and ``offset``
     * ``.filter(field=None)`` to work as expected
-    * Enable the use of a primary key that is not ``IntField``
-    * Enable to call the primary key something that isn't ``id``
 
 * Expand in the ``init`` framework:
     * Ability to have Management Commands
     * Ability to define Management Commands
-    * Make it simple to control ``init`` from another system
     * Make it simple to inspect Models and Management Commands without using private APIs.
 
 * Better Aggregate functions
