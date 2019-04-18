@@ -1,11 +1,15 @@
 # pylint: disable=E0401,E0611
 import asyncio
+import logging
 from random import choice
 
 from quart import Quart, jsonify
 
 from models import Users, Workers
 from tortoise.contrib.quart import register_tortoise
+
+logging.basicConfig(level=logging.DEBUG)
+
 
 STATUSES = ["New", "Old", "Gone"]
 app = Quart(__name__)
@@ -32,7 +36,10 @@ async def add_worker():
 
 
 register_tortoise(
-    app, db_url="sqlite://:memory:", modules={"models": ["models"]}, generate_schemas=True
+    app,
+    db_url="mysql://root:@127.0.0.1:3306/quart",
+    modules={"models": ["models"]},
+    generate_schemas=False,
 )
 
 

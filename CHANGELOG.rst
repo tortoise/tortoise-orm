@@ -6,6 +6,7 @@ Changelog
 - Code has been reformatted using ``black``, and minor code cleanups (#120 #123)
 - Sample Quart integration (#121)
 - Better isolation of connection handling — Allows more dynamic connections so we can do pooling & reconnections.
+- Added automatic MySQL connection retry
 
 0.11.8
 ------

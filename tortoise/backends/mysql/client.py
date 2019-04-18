@@ -24,11 +24,40 @@ from tortoise.exceptions import (
 from tortoise.transactions import current_transaction_map
 
 
+def retry_connection(func):
+    @wraps(func)
+    async def wrapped(self, *args):
+        try:
+            return await func(self, *args)
+        except (
+            RuntimeError,
+            pymysql.err.OperationalError,
+            pymysql.err.InternalError,
+            pymysql.err.InterfaceError,
+        ):
+            # Here we assume that a connection error has happened
+            # Re-create connection and re-try the function call once only.
+            await self._lock.acquire()
+            logging.info("Attempting reconnect")
+            try:
+                self._close()
+                await self.create_connection(with_db=True)
+                logging.info("Reconnected")
+            except Exception:
+                logging.info("Failed to reconnect")
+            finally:
+                self._lock.release()
+
+            return await func(self, *args)
+
+    return wrapped
+
+
 def translate_exceptions(func):
     @wraps(func)
-    async def wrapped(self, query, *args):
+    async def wrapped(self, *args):
         try:
-            return await func(self, query, *args)
+            return await func(self, *args)
         except (
             pymysql.err.OperationalError,
             pymysql.err.ProgrammingError,
@@ -95,7 +124,7 @@ class MySQLClient(BaseDBAsyncClient):
                 )
             )
 
-    async def close(self) -> None:
+    def _close(self) -> None:
         if self._connection:  # pragma: nobranch
             self._connection.close()
             self.log.debug(
@@ -106,7 +135,10 @@ class MySQLClient(BaseDBAsyncClient):
                 self.host,
                 self.port,
             )
-            self._connection = None
+
+    async def close(self) -> None:
+        self._close()
+        self._connection = None
 
     async def db_create(self) -> None:
         await self.create_connection(with_db=False)
@@ -128,6 +160,7 @@ class MySQLClient(BaseDBAsyncClient):
         return self._transaction_class(self.connection_name, self._connection, self._lock)
 
     @translate_exceptions
+    @retry_connection
     async def execute_insert(self, query: str, values: list) -> int:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
@@ -137,6 +170,7 @@ class MySQLClient(BaseDBAsyncClient):
                 return cursor.lastrowid  # return auto-generated id
 
     @translate_exceptions
+    @retry_connection
     async def execute_query(self, query: str) -> List[aiomysql.DictCursor]:
         async with self.acquire_connection() as connection:
             self.log.debug(query)
@@ -145,6 +179,7 @@ class MySQLClient(BaseDBAsyncClient):
                 return await cursor.fetchall()
 
     @translate_exceptions
+    @retry_connection
     async def execute_script(self, query: str) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug(query)
@@ -162,6 +197,7 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         self._finalized = False
         self._old_context_value = None
 
+    @retry_connection
     async def start(self):
         await self._connection.begin()
         current_transaction = current_transaction_map[self.connection_name]
