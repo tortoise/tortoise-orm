@@ -110,7 +110,7 @@ Tortoise ORM supports the following features:
     * Testing framework uses existing Python Unittest framework, just requires
       that ``initializer()`` and ``finalizer()`` gets called to set up and tear
       down the test databases. (See :ref:`unittest`)
-    * ORM :ref:`init_app` configures entierly from provided parameters
+    * ORM :ref:`init_app` configures entirely from provided parameters
 * Composable, Django-inspired :ref:`models`
 * Supports relations, such as ``ForeignKeyField`` and ``ManyToManyField``
 * Supports many standard :ref:`fields`
