@@ -211,7 +211,9 @@ class DatetimeField(Field):
             return value
         return ciso8601.parse_datetime(value)
 
-    def to_db_value(self, value: datetime.datetime, instance) -> datetime.datetime:
+    def to_db_value(
+        self, value: Optional[datetime.datetime], instance
+    ) -> Optional[datetime.datetime]:
         if self.auto_now:
             value = datetime.datetime.utcnow()
             setattr(instance, self.model_field_name, value)
