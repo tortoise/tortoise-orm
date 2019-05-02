@@ -3,9 +3,9 @@ import uuid
 from tortoise.contrib import test
 from tortoise.tests.testmodels import (
     ImplicitPkModel,
-    UUIDPkModel,
     UUIDFkRelatedModel,
     UUIDM2MRelatedModel,
+    UUIDPkModel,
 )
 
 
@@ -53,7 +53,6 @@ class TestQueryset(test.TestCase):
         await related_instance2.models.add(instance, instance2)
 
         await related_instance.fetch_related("models")
-        print(list(related_instance.models))
         self.assertEqual(len(related_instance.models), 1)
         self.assertEqual(related_instance.models[0], instance)
 

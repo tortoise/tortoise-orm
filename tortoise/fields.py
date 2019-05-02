@@ -3,7 +3,7 @@ import functools
 import json
 import uuid
 from decimal import Decimal
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 from uuid import UUID
 
 import ciso8601
@@ -11,6 +11,9 @@ from pypika import Table
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
 from tortoise.utils import QueryAsyncIterator
+
+if TYPE_CHECKING:
+    from tortoise.models import Model
 
 CASCADE = "CASCADE"
 RESTRICT = "RESTRICT"
@@ -52,8 +55,8 @@ class Field:
         default: Any = None,
         unique: bool = False,
         index: bool = False,
-        reference: str = None,
-        model: "Model" = None,
+        reference: Optional[str] = None,
+        model: "Optional[Model]" = None,
         **kwargs
     ) -> None:
         self.type = type
@@ -64,7 +67,7 @@ class Field:
         self.null = null
         self.unique = unique
         self.index = index
-        self.model_field_name = ""  # Type: str
+        self.model_field_name = ""  # type: str
         self.model = model
         self.reference = reference
 
@@ -314,8 +317,8 @@ class UUIDField(Field):
     native data type, while others will store it as string
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(type=UUID, *args, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(type=UUID, **kwargs)
 
     def to_db_value(self, value: Any, instance):
         if value is None:

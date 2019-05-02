@@ -1,7 +1,8 @@
 from typing import Optional, Union
 from uuid import UUID
 
-from tortoise.fields import JSONField as GenericJSONField, UUIDField as GenericUUIDField
+from tortoise.fields import JSONField as GenericJSONField
+from tortoise.fields import UUIDField as GenericUUIDField
 
 
 class JSONField(GenericJSONField):

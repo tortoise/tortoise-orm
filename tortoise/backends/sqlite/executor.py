@@ -1,11 +1,11 @@
 from decimal import Decimal
-from typing import List, Any
+from typing import Any, List
 
 from pypika import Parameter, Table
 
-from tortoise import fields, Model
+from tortoise import Model, fields
 from tortoise.backends.base.executor import BaseExecutor
-from tortoise.fields import IntField, BigIntField
+from tortoise.fields import BigIntField, IntField
 
 
 def to_db_bool(self, value, instance):

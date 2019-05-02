@@ -1,10 +1,13 @@
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type  # noqa
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Type  # noqa
 
 from pypika import JoinType, Table
 
 from tortoise import fields
 from tortoise.exceptions import OperationalError
 from tortoise.query_utils import QueryModifier
+
+if TYPE_CHECKING:
+    from tortoise.models import Model
 
 INSERT_CACHE = {}  # type: Dict[str, Tuple[list, list, str]]
 

@@ -95,9 +95,7 @@ class SqliteClient(BaseDBAsyncClient):
     async def execute_query(self, query: str) -> List[dict]:
         async with self.acquire_connection() as connection:
             self.log.debug(query)
-            print(query)
             res = [dict(row) for row in await connection.execute_fetchall(query)]
-            print(res)
             return res
 
     @translate_exceptions

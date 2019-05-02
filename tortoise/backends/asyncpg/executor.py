@@ -1,4 +1,4 @@
-from typing import List, Any
+from typing import Any, List
 
 from pypika import Parameter, Table
 
@@ -16,10 +16,15 @@ class AsyncpgExecutor(BaseExecutor):
             .insert(*[Parameter("$%d" % (i + 1,)) for i in range(len(columns))])
         )
         generated_fields = self.model._meta.generated_db_fields
-        if generated_fields and self.db.fetch_inserted:
+        if generated_fields:
             query = query.returning(*generated_fields)
         return str(query)
 
     async def _process_insert_result(self, instance: Model, results: Any):
-        if self.model._meta.generated_db_fields and self.db.fetch_inserted:
-            instance.set_field_values(dict(results))
+        generated_fields = self.model._meta.generated_db_fields
+        if generated_fields:
+            if len(generated_fields) == 1:
+                setattr(instance, generated_fields[0], results)
+            else:
+                for key, val in zip(generated_fields, results):
+                    setattr(instance, key, val)

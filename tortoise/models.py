@@ -1,5 +1,5 @@
 from copy import copy, deepcopy
-from typing import Dict, Hashable, List, Optional, Set, Tuple, Type, TypeVar, Union, Any
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from pypika import Query
 
@@ -7,10 +7,10 @@ from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient  # noqa
 from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields import (
+    Field,
     ManyToManyField,
     ManyToManyRelationManager,
     RelationQueryContainer,
-    Field,
 )
 from tortoise.filters import get_filters_for_field
 from tortoise.queryset import QuerySet
@@ -78,8 +78,8 @@ class MetaInfo:
         self.basequery = Query()  # type: Query
         self.basequery_all_fields = Query()  # type: Query
         self.pk_attr = getattr(meta, "pk_attr", "")  # type: str
-        self._generated_db_fields = None
-        self._model = None
+        self._generated_db_fields = None  # type: Optional[Tuple[str]]
+        self._model = None  # type: "Model"  # type: ignore
 
     def add_field(self, name: str, value: Field):
         if name in self.fields_map:
@@ -158,8 +158,8 @@ class MetaInfo:
                 if not field.generated:
                     continue
                 generated_fields.append(field.source_field or field.model_field_name)
-            self._generated_db_fields = tuple(generated_fields)
-        return self._generated_db_fields
+            self._generated_db_fields = tuple(generated_fields)  # type: ignore
+        return self._generated_db_fields  # type: ignore
 
     @property
     def db(self) -> BaseDBAsyncClient:
@@ -268,7 +268,7 @@ class ModelMeta(type):
         if not fields_map:
             meta.abstract = True
 
-        new_class = super().__new__(mcs, name, bases, attrs)
+        new_class = super().__new__(mcs, name, bases, attrs)  # type: "Model"  # type: ignore
         for field in meta.fields_map.values():
             field.model = new_class
 
@@ -319,7 +319,7 @@ class Model(metaclass=ModelMeta):
             else:
                 setattr(self, key, field_object.default)
 
-    def set_field_values(self, values_map: Dict[str, Any]) -> List[str]:
+    def set_field_values(self, values_map: Dict[str, Any]) -> Set[str]:
         """
         Sets values for fields honoring type transformations and
         return list of fields that were set additionally

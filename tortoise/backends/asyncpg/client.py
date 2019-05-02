@@ -117,10 +117,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
     def _in_transaction(self) -> "TransactionWrapper":
         return self._transaction_class(
-            connection_name=self.connection_name,
-            connection=self._connection,
-            lock=self._lock,
-            fetch_inserted=self.fetch_inserted,
+            connection_name=self.connection_name, connection=self._connection, lock=self._lock
         )
 
     @translate_exceptions
@@ -129,7 +126,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             self.log.debug("%s: %s", query, values)
             # TODO: Cache prepared statement
             stmt = await connection.prepare(query)
-            return await stmt.fetch(*values)
+            return await stmt.fetchval(*values)
 
     @translate_exceptions
     async def execute_query(self, query: str) -> List[dict]:

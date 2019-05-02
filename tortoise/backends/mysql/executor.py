@@ -1,11 +1,11 @@
-from typing import List, Any
+from typing import Any, List
 
 from pypika import MySQLQuery, Parameter, Table, functions
 from pypika.enums import SqlTypes
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
-from tortoise.fields import IntField, BigIntField
+from tortoise.fields import BigIntField, IntField
 from tortoise.filters import (
     contains,
     ends_with,
