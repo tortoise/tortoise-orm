@@ -9,14 +9,14 @@ aiocontextvars==0.2.2 ; python_version < "3.7"
 aiomysql==0.0.20
 aiosqlite==0.10.0
 asn1crypto==0.24.0        # via cryptography
-asynctest==0.12.3
-cffi==1.12.2              # via cryptography
+asynctest==0.12.4
+cffi==1.12.3              # via cryptography
 ciso8601==2.1.1
 colorama==0.4.1           # via green
 contextvars==2.4          # via aiocontextvars
 coverage==4.5.3           # via green
 cryptography==2.6.1       # via pymysql
-green==2.15.0
+green==2.16.1
 immutables==0.9           # via contextvars
 lxml==4.3.3               # via green
 pycparser==2.19           # via cffi

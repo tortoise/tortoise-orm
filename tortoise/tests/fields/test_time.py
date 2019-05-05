@@ -56,6 +56,18 @@ class TestDatetimeFields(test.TestCase):
         values = await testmodels.DatetimeFields.get(id=obj0.id).values_list("datetime", flat=True)
         self.assertEqual(values[0], now)
 
+    async def test_get_utcnow(self):
+        now = datetime.utcnow()
+        await testmodels.DatetimeFields.create(datetime=now)
+        obj = await testmodels.DatetimeFields.get(datetime=now)
+        self.assertEqual(obj.datetime, now)
+
+    async def test_get_now(self):
+        now = datetime.now()
+        await testmodels.DatetimeFields.create(datetime=now)
+        obj = await testmodels.DatetimeFields.get(datetime=now)
+        self.assertEqual(obj.datetime, now)
+
 
 class TestDateFields(test.TestCase):
     async def test_empty(self):
@@ -90,6 +102,12 @@ class TestDateFields(test.TestCase):
         values = await testmodels.DateFields.get(id=obj0.id).values_list("date", flat=True)
         self.assertEqual(values[0], today)
 
+    async def test_get(self):
+        today = date.today()
+        await testmodels.DateFields.create(date=today)
+        obj = await testmodels.DateFields.get(date=today)
+        self.assertEqual(obj.date, today)
+
 
 class TestTimeDeltaFields(test.TestCase):
     async def test_empty(self):
@@ -122,3 +140,9 @@ class TestTimeDeltaFields(test.TestCase):
             "timedelta", flat=True
         )
         self.assertEqual(values[0], timedelta(days=35, seconds=8, microseconds=1))
+
+    async def test_get(self):
+        delta = timedelta(days=35, seconds=8, microseconds=1)
+        await testmodels.TimeDeltaFields.create(timedelta=delta)
+        obj = await testmodels.TimeDeltaFields.get(timedelta=delta)
+        self.assertEqual(obj.timedelta, delta)

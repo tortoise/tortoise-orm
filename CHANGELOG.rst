@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.11.10
+-------
+- Fixed SQLite handling of DatetimeField
+
 0.11.9
 ------
 - Code has been reformatted using ``black``, and minor code cleanups (#120 #123)
