@@ -12,7 +12,7 @@ from pypika import Table
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
 from tortoise.utils import QueryAsyncIterator
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 CASCADE = "CASCADE"

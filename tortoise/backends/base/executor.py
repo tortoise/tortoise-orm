@@ -6,7 +6,7 @@ from tortoise import fields
 from tortoise.exceptions import OperationalError
 from tortoise.query_utils import QueryModifier
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 INSERT_CACHE = {}  # type: Dict[str, Tuple[list, list, str]]

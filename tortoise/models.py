@@ -93,10 +93,7 @@ class MetaInfo:
             self.fields_db_projection[name] = value.source_field or name
             self._fields_db_projection_reverse = None
 
-        if isinstance(value, fields.ForeignKeyField):
-            self.fk_fields.add(name)
-            self._fetch_fields = None
-        elif isinstance(value, fields.ManyToManyField):
+        if isinstance(value, fields.ManyToManyField):
             self.m2m_fields.add(name)
             self._fetch_fields = None
         elif isinstance(value, fields.BackwardFKRelation):
@@ -192,67 +189,67 @@ class ModelMeta(type):
         filters = {}  # type: Dict[str, Dict[str, dict]]
         fk_fields = set()  # type: Set[str]
         m2m_fields = set()  # type: Set[str]
-
-        custom_pk_present = False
-        for key, value in attrs.items():
-            if isinstance(value, fields.Field):
-                if value.pk:
-                    if custom_pk_present:
-                        raise ConfigurationError(
-                            "Can't create model {} with two primary keys, "
-                            "only single pk are supported".format(name)
-                        )
-                    elif value.generated and not isinstance(
-                        value, (fields.IntField, fields.BigIntField)
-                    ):
-                        raise ConfigurationError(
-                            "Generated primary key allowed only for IntField and BigIntField"
-                        )
-                    custom_pk_present = True
-                    pk_attr = key
-
-        if not custom_pk_present:
-            if "id" not in attrs:
-                attrs["id"] = fields.IntField(pk=True)
-                pk_attr = "id"
-
-            if not isinstance(attrs["id"], fields.Field) or not attrs["id"].pk:
-                raise ConfigurationError(
-                    "Can't create model {} without explicit primary key "
-                    "if field 'id' already present".format(name)
-                )
-
         meta_class = attrs.get("Meta", type("Meta", (), {}))
+        pk_attr = "id"
 
-        for key, value in attrs.items():
-            if isinstance(value, fields.Field):
-                if getattr(meta_class, "abstract", None):
-                    value = deepcopy(value)
-
-                fields_map[key] = value
-                value.model_field_name = key
-
-                if isinstance(value, fields.ForeignKeyField):
-                    fk_fields.add(key)
-                elif isinstance(value, fields.ManyToManyField):
-                    m2m_fields.add(key)
-                else:
-                    fields_db_projection[key] = value.source_field or key
-                    filters.update(
-                        get_filters_for_field(
-                            field_name=key,
-                            field=fields_map[key],
-                            source_field=fields_db_projection[key],
-                        )
-                    )
+        if name != "Model":
+            custom_pk_present = False
+            for key, value in attrs.items():
+                if isinstance(value, fields.Field):
                     if value.pk:
+                        if custom_pk_present:
+                            raise ConfigurationError(
+                                "Can't create model {} with two primary keys, "
+                                "only single pk are supported".format(name)
+                            )
+                        elif value.generated and not isinstance(
+                            value, (fields.IntField, fields.BigIntField)
+                        ):
+                            raise ConfigurationError(
+                                "Generated primary key allowed only for IntField and BigIntField"
+                            )
+                        custom_pk_present = True
+                        pk_attr = key
+
+            if not custom_pk_present:
+                if "id" not in attrs:
+                    attrs["id"] = fields.IntField(pk=True)
+
+                if not isinstance(attrs["id"], fields.Field) or not attrs["id"].pk:
+                    raise ConfigurationError(
+                        "Can't create model {} without explicit primary key "
+                        "if field 'id' already present".format(name)
+                    )
+
+            for key, value in attrs.items():
+                if isinstance(value, fields.Field):
+                    if getattr(meta_class, "abstract", None):
+                        value = deepcopy(value)
+
+                    fields_map[key] = value
+                    value.model_field_name = key
+
+                    if isinstance(value, fields.ForeignKeyField):
+                        fk_fields.add(key)
+                    elif isinstance(value, fields.ManyToManyField):
+                        m2m_fields.add(key)
+                    else:
+                        fields_db_projection[key] = value.source_field or key
                         filters.update(
                             get_filters_for_field(
-                                field_name="pk",
+                                field_name=key,
                                 field=fields_map[key],
                                 source_field=fields_db_projection[key],
                             )
                         )
+                        if value.pk:
+                            filters.update(
+                                get_filters_for_field(
+                                    field_name="pk",
+                                    field=fields_map[key],
+                                    source_field=fields_db_projection[key],
+                                )
+                            )
 
         attrs["_meta"] = meta = MetaInfo(meta_class)
 
