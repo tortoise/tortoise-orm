@@ -37,32 +37,35 @@ class TestConnectionParams(test.TestCase):
             )
 
     async def test_postres_connection_params(self):
-        with patch("asyncpg.connect", new=CoroutineMock()) as asyncpg_connect:
-            await Tortoise._init_connections(
-                {
-                    "models": {
-                        "engine": "tortoise.backends.asyncpg",
-                        "credentials": {
-                            "database": "test",
-                            "host": "127.0.0.1",
-                            "password": "foomip",
-                            "port": 5432,
-                            "user": "root",
-                            "timeout": 30,
-                            "ssl": True,
-                        },
-                    }
-                },
-                False,
-            )
+        try:
+            with patch("asyncpg.connect", new=CoroutineMock()) as asyncpg_connect:
+                await Tortoise._init_connections(
+                    {
+                        "models": {
+                            "engine": "tortoise.backends.asyncpg",
+                            "credentials": {
+                                "database": "test",
+                                "host": "127.0.0.1",
+                                "password": "foomip",
+                                "port": 5432,
+                                "user": "root",
+                                "timeout": 30,
+                                "ssl": True,
+                            },
+                        }
+                    },
+                    False,
+                )
 
-            asyncpg_connect.assert_awaited_once_with(  # nosec
-                None,
-                database="test",
-                host="127.0.0.1",
-                password="foomip",
-                port=5432,
-                ssl=True,
-                timeout=30,
-                user="root",
-            )
+                asyncpg_connect.assert_awaited_once_with(  # nosec
+                    None,
+                    database="test",
+                    host="127.0.0.1",
+                    password="foomip",
+                    port=5432,
+                    ssl=True,
+                    timeout=30,
+                    user="root",
+                )
+        except ImportError:
+            self.skipTest("asyncpg not installed")
