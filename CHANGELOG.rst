@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.11.11
+-------
+- Extra parameters now get passed through to the MySQL & PostgreSQL drivers
+
 0.11.10
 -------
 - Fixed SQLite handling of DatetimeField
@@ -16,22 +20,18 @@ Changelog
 ------
 - Fixed ``.count()`` when a join happens (#109)
 
-
 0.11.7
 ------
 - Fixed 'unique_together' for foreign keys (#114)
 - Fixed Field.to_db_value method to handle Enum (#113 #115 #116)
 
-
 0.11.6
 ------
 - Added ability to use "unique_together" meta Model option
 
-
 0.11.5
 ------
 - Fixed concurrency isolation when attempting to do multiple concurrent operations on a single connection.
-
 
 0.11.4
 ------
@@ -43,7 +43,6 @@ Changelog
 - Some DB's don't support OFFSET without Limit, added caps to signal workaround, which is to automatically add limit of 1000000
 - Pylint plugin to know about default `related_name` for ForeignKey fields.
 - Simplified capabilities to be static, and defined at class level.
-
 
 0.11.3
 ------
