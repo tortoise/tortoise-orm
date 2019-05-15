@@ -6,6 +6,7 @@ omit =
     tortoise/contrib/pylint/*
     tortoise/contrib/test/nose2.py
     tortoise/tests/*
+    tortoise/contrib/quart/*
 [report]
 show_missing = True
 

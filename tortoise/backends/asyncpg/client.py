@@ -53,7 +53,13 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self.database = database
         self.host = host
         self.port = int(port)  # make sure port is int type
+        self.extra = kwargs.copy()
+        self.extra.pop("connection_name", None)
+        self.extra.pop("fetch_inserted", None)
+        self.extra.pop("loop", None)
+        self.extra.pop("connection_class", None)
 
+        self._template = {}  # type: dict
         self._connection = None  # Type: Optional[asyncpg.Connection]
         self._lock = asyncio.Lock()
 
@@ -62,22 +68,17 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         )
 
     async def create_connection(self, with_db: bool) -> None:
-        dsn = self.DSN_TEMPLATE.format(
-            user=self.user,
-            password=self.password,
-            host=self.host,
-            port=self.port,
-            database=self.database if with_db else "",
-        )
+        self._template = {
+            "host": self.host,
+            "port": self.port,
+            "user": self.user,
+            "database": self.database if with_db else None,
+            **self.extra,
+        }
         try:
-            self._connection = await asyncpg.connect(dsn)
+            self._connection = await asyncpg.connect(None, password=self.password, **self._template)
             self.log.debug(
-                "Created connection %s with params: user=%s database=%s host=%s port=%s",
-                self._connection,
-                self.user,
-                self.database,
-                self.host,
-                self.port,
+                "Created connection %s with params: %s", self._connection, self._template
             )
         except asyncpg.InvalidCatalogNameError:
             raise DBConnectionError(
@@ -87,14 +88,8 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     async def close(self) -> None:
         if self._connection:  # pragma: nobranch
             await self._connection.close()
-            self.log.debug(
-                "Closed connection %s with params: user=%s database=%s host=%s port=%s",
-                self._connection,
-                self.user,
-                self.database,
-                self.host,
-                self.port,
-            )
+            self.log.debug("Closed connection %s with params: %s", self._connection, self._template)
+            self._template.clear()
             self._connection = None
 
     async def db_create(self) -> None:
