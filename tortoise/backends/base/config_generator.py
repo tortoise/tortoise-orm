@@ -48,6 +48,7 @@ DB_LOOKUP = {
             "connect_timeout": float,
             "echo": bool,
             "no_delay": bool,
+            "use_unicode": bool,
         },
     },
 }  # type: Dict[str, Dict[str, Any]]
