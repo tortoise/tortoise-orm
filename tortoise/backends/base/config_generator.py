@@ -23,6 +23,11 @@ DB_LOOKUP = {
             "max_size": int,
             "max_queries": int,
             "max_inactive_connection_lifetime": float,
+            "timeout": int,
+            "statement_cache_size": int,
+            "max_cached_statement_lifetime": int,
+            "max_cacheable_statement_size": int,
+            "ssl": bool,
         },
     },
     "sqlite": {
@@ -48,6 +53,7 @@ DB_LOOKUP = {
             "connect_timeout": float,
             "echo": bool,
             "no_delay": bool,
+            "use_unicode": bool,
         },
     },
 }  # type: Dict[str, Dict[str, Any]]

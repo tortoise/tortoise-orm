@@ -79,7 +79,7 @@ class MySQLClient(BaseDBAsyncClient):
     capabilities = Capabilities("mysql", safe_indexes=False, requires_limit=True)
 
     def __init__(
-        self, user: str, password: str, database: str, host: str, port: SupportsInt, **kwargs
+        self, *, user: str, password: str, database: str, host: str, port: SupportsInt, **kwargs
     ) -> None:
         super().__init__(**kwargs)
 
@@ -88,7 +88,13 @@ class MySQLClient(BaseDBAsyncClient):
         self.database = database
         self.host = host
         self.port = int(port)  # make sure port is int type
+        self.extra = kwargs.copy()
+        self.extra.pop("connection_name", None)
+        self.extra.pop("fetch_inserted", None)
+        self.extra.pop("db", None)
+        self.extra.pop("autocommit", None)
 
+        self._template = {}  # type: dict
         self._connection = None  # Type: Optional[aiomysql.Connection]
         self._lock = asyncio.Lock()
 
@@ -97,44 +103,29 @@ class MySQLClient(BaseDBAsyncClient):
         )
 
     async def create_connection(self, with_db: bool) -> None:
-        template = {
+        self._template = {
             "host": self.host,
             "port": self.port,
             "user": self.user,
-            "password": self.password,
             "db": self.database if with_db else None,
             "autocommit": True,
+            **self.extra,
         }
-
         try:
-            self._connection = await aiomysql.connect(**template)
+            self._connection = await aiomysql.connect(password=self.password, **self._template)
             self.log.debug(
-                "Created connection %s with params: user=%s database=%s host=%s port=%s",
-                self._connection,
-                self.user,
-                self.database,
-                self.host,
-                self.port,
+                "Created connection %s with params: %s", self._connection, self._template
             )
         except pymysql.err.OperationalError:
             raise DBConnectionError(
-                "Can't connect to MySQL server: "
-                "user={user} database={database} host={host} port={port}".format(
-                    user=self.user, database=self.database, host=self.host, port=self.port
-                )
+                "Can't connect to MySQL server: {template}".format(template=self._template)
             )
 
     def _close(self) -> None:
         if self._connection:  # pragma: nobranch
             self._connection.close()
-            self.log.debug(
-                "Closed connection %s with params: user=%s database=%s host=%s port=%s",
-                self._connection,
-                self.user,
-                self.database,
-                self.host,
-                self.port,
-            )
+            self.log.debug("Closed connection %s with params: %s", self._connection, self._template)
+            self._template.clear()
 
     async def close(self) -> None:
         self._close()
