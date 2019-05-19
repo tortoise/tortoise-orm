@@ -94,14 +94,18 @@ class BaseExecutor:
                 query = query.set(
                     db_field, self._field_to_db(field_object, getattr(instance, field), instance)
                 )
-        query = query.where(getattr(table, self.model._meta.db_pk_field) == instance.pk)
+        query = query.where(
+            getattr(table, self.model._meta.db_pk_field)
+            == self.model._meta.pk.to_db_value(instance.pk, instance)
+        )
         await self.db.execute_query(query.get_sql())
         return instance
 
     async def execute_delete(self, instance):
         table = Table(self.model._meta.table)
         query = self.model._meta.basequery.where(
-            getattr(table, self.model._meta.db_pk_field) == instance.pk
+            getattr(table, self.model._meta.db_pk_field)
+            == self.model._meta.pk.to_db_value(instance.pk, instance)
         ).delete()
         await self.db.execute_query(query.get_sql())
         return instance

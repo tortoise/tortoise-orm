@@ -1,5 +1,5 @@
 import logging
-from typing import Sequence
+from typing import Any, Sequence
 
 from pypika import Query
 
@@ -81,7 +81,7 @@ class BaseDBAsyncClient:
     def _in_transaction(self) -> "BaseTransactionWrapper":
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def execute_insert(self, query: str, values: list) -> int:
+    async def execute_insert(self, query: str, values: list) -> Any:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_query(self, query: str) -> Sequence[dict]:

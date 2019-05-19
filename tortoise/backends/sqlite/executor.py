@@ -1,6 +1,6 @@
 import datetime
 from decimal import Decimal
-from typing import Any, List, Optional
+from typing import List, Optional
 
 from pypika import Parameter, Table
 
@@ -54,28 +54,10 @@ class SqliteExecutor(BaseExecutor):
             .insert(*[Parameter("?") for _ in range(len(columns))])
         )
 
-    async def _process_insert_result(self, instance: Model, results: Any):
-        generated_fields = self.model._meta.generated_db_fields
-        if not generated_fields:
-            return
-
-        pk_fetched = False
+    async def _process_insert_result(self, instance: Model, results: int):
         pk_field_object = self.model._meta.pk
         if isinstance(pk_field_object, (IntField, BigIntField)) and pk_field_object.generated:
             instance.pk = results
-            pk_fetched = True
 
-        if self.db.fetch_inserted:
-            other_generated_fields = set(generated_fields)
-            if pk_fetched:
-                other_generated_fields.remove(self.model._meta.db_pk_field)
-            if not other_generated_fields:
-                return
-            table = Table(self.model._meta.table)
-            query = str(
-                self.db.query_class.from_(table)
-                .select(*generated_fields)
-                .where(getattr(table, self.model._meta.db_pk_field) == instance.pk)
-            )
-            fetch_results = await self.db.execute_query(query)
-            instance.set_field_values(dict(fetch_results))
+        # SQLite can only generate a single ROWID
+        #   so if any other primary key, it won't generate what we want.

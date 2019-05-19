@@ -3,6 +3,7 @@ This is the testing Models
 """
 import binascii
 import os
+import uuid
 from enum import Enum, IntEnum
 
 from tortoise import fields
@@ -158,8 +159,9 @@ class JSONFields(Model):
 
 
 class UUIDFields(Model):
-    id = fields.IntField(pk=True)
+    id = fields.UUIDField(pk=True, default=uuid.uuid1)
     data = fields.UUIDField()
+    data_auto = fields.UUIDField(default=uuid.uuid4)
     data_null = fields.UUIDField(null=True)
 
 
@@ -243,3 +245,16 @@ class UUIDFkRelatedModel(Model):
 class UUIDM2MRelatedModel(Model):
     value = fields.TextField(default="test")
     models = fields.ManyToManyField("models.UUIDPkModel", related_name="peers")
+
+
+class CharPkModel(Model):
+    id = fields.CharField(max_length=64, pk=True)
+
+
+class CharFkRelatedModel(Model):
+    model = fields.ForeignKeyField("models.CharPkModel", related_name="children")
+
+
+class CharM2MRelatedModel(Model):
+    value = fields.TextField(default="test")
+    models = fields.ManyToManyField("models.CharPkModel", related_name="peers")

@@ -1,5 +1,6 @@
-from typing import Any, List
+from typing import List, Optional
 
+import asyncpg
 from pypika import Parameter, Table
 
 from tortoise import Model
@@ -20,11 +21,8 @@ class AsyncpgExecutor(BaseExecutor):
             query = query.returning(*generated_fields)
         return str(query)
 
-    async def _process_insert_result(self, instance: Model, results: Any):
-        generated_fields = self.model._meta.generated_db_fields
-        if generated_fields:
-            if len(generated_fields) == 1:
-                setattr(instance, generated_fields[0], results)
-            else:
-                for key, val in zip(generated_fields, results):
-                    setattr(instance, key, val)
+    async def _process_insert_result(self, instance: Model, results: Optional[asyncpg.Record]):
+        if results:
+            generated_fields = self.model._meta.generated_db_fields
+            for key, val in zip(generated_fields, results):
+                setattr(instance, key, val)

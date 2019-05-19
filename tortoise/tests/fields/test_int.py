@@ -17,6 +17,10 @@ class TestIntFields(test.TestCase):
         obj2 = await testmodels.IntFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
 
+        await obj.delete()
+        obj = await testmodels.IntFields.filter(id=obj0.id).first()
+        self.assertEqual(obj, None)
+
     async def test_min(self):
         obj0 = await testmodels.IntFields.create(intnum=-2147483648)
         obj = await testmodels.IntFields.get(id=obj0.id)

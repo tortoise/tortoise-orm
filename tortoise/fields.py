@@ -315,11 +315,15 @@ class UUIDField(Field):
     """
     UUID Field
 
-    This field can store uuid value. Postgresql will store value with
-    native data type, while others will store it as string
+    This field can store uuid value.
+
+    If used as a primary key, it will auto-generate a UUID4 by default.
     """
 
     def __init__(self, **kwargs):
+        if kwargs.get("pk", False):
+            if "default" not in kwargs:
+                kwargs["default"] = uuid.uuid4
         super().__init__(type=UUID, **kwargs)
 
     def to_db_value(self, value: Any, instance):
