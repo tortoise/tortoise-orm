@@ -1,6 +1,10 @@
 Changelog
 =========
 
+0.11.12
+-------
+- Added automatic PostgreSQL connection retry
+
 0.11.11
 -------
 - Extra parameters now get passed through to the MySQL & PostgreSQL drivers

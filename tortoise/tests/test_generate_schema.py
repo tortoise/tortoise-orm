@@ -1,12 +1,14 @@
 import re
 
+from asynctest.mock import CoroutineMock, patch
+
 from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 from tortoise.utils import get_schema_sql
 
 
-class TestGenerateSchema(test.SimpleTestCase):
+class TestGenerateSchema(test.TestCase):
     async def setUp(self):
         try:
             Tortoise.apps = {}
@@ -18,25 +20,28 @@ class TestGenerateSchema(test.SimpleTestCase):
         self.sqls = ""
 
     async def tearDown(self):
-        await Tortoise.close_connections()
+        Tortoise._connections = {}
         await Tortoise._reset_apps()
 
     async def init_for(self, module: str, safe=False) -> None:
-        await Tortoise.init(
-            {
-                "connections": {
-                    "default": {
-                        "engine": "tortoise.backends.sqlite",
-                        "credentials": {"file_path": ":memory:"},
-                    }
-                },
-                "apps": {"models": {"models": [module], "default_connection": "default"}},
-            }
-        )
-        self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+        with patch(
+            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=CoroutineMock()
+        ):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "credentials": {"file_path": ":memory:"},
+                        }
+                    },
+                    "apps": {"models": {"models": [module], "default_connection": "default"}},
+                }
+            )
+            self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
 
     def get_sql(self, text: str) -> str:
-        return [sql for sql in self.sqls if text in sql][0]
+        return re.sub(r"[ \t\n\r]+", " ", [sql for sql in self.sqls if text in sql][0])
 
     async def test_noid(self):
         await self.init_for("tortoise.tests.testmodels")
@@ -121,3 +126,77 @@ class TestGenerateSchema(test.SimpleTestCase):
             ConfigurationError, 'Foreign key accepts model name in format "app.Model"'
         ):
             await self.init_for("tortoise.tests.models_m2m_1")
+
+
+class TestGenerateSchemaMySQL(TestGenerateSchema):
+    async def init_for(self, module: str, safe=False) -> None:
+        with patch("aiomysql.connect", new=CoroutineMock()):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.mysql",
+                            "credentials": {
+                                "database": "test",
+                                "host": "127.0.0.1",
+                                "password": "foomip",
+                                "port": 3306,
+                                "user": "root",
+                                "connect_timeout": 1.5,
+                                "charset": "utf-8",
+                            },
+                        }
+                    },
+                    "apps": {"models": {"models": [module], "default_connection": "default"}},
+                }
+            )
+            self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+
+    async def test_noid(self):
+        await self.init_for("tortoise.tests.testmodels")
+        sql = self.get_sql("`noid`")
+        self.assertIn("`name` VARCHAR(255)", sql)
+        self.assertIn("`id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT", sql)
+
+    async def test_minrelation(self):
+        await self.init_for("tortoise.tests.testmodels")
+        sql = self.get_sql("`minrelation`")
+        self.assertIn(
+            "`tournament_id` INT NOT NULL REFERENCES `tournament` (`id`) ON DELETE CASCADE", sql
+        )
+        self.assertNotIn("participants", sql)
+
+        sql = self.get_sql("`minrelation_team`")
+        self.assertIn(
+            "`minrelation_id` INT NOT NULL REFERENCES `minrelation` (`id`) ON DELETE CASCADE", sql
+        )
+        self.assertIn("`team_id` INT NOT NULL REFERENCES `team` (`id`) ON DELETE CASCADE", sql)
+
+
+class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
+    async def init_for(self, module: str, safe=False) -> None:
+        with patch("asyncpg.connect", new=CoroutineMock()):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.asyncpg",
+                            "credentials": {
+                                "database": "test",
+                                "host": "127.0.0.1",
+                                "password": "foomip",
+                                "port": 3306,
+                                "user": "root",
+                            },
+                        }
+                    },
+                    "apps": {"models": {"models": [module], "default_connection": "default"}},
+                }
+            )
+            self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+
+    async def test_noid(self):
+        await self.init_for("tortoise.tests.testmodels")
+        sql = self.get_sql('"noid"')
+        self.assertIn('"name" VARCHAR(255)', sql)
+        self.assertIn('"id" SERIAL NOT NULL PRIMARY KEY', sql)
