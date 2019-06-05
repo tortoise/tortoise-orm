@@ -21,7 +21,7 @@ from tortoise.transactions import current_transaction_map
 
 def translate_exceptions(func):
     @wraps(func)
-    async def wrapped(self, query, *args):
+    async def translate_exceptions_(self, query, *args):
         try:
             return await func(self, query, *args)
         except sqlite3.OperationalError as exc:
@@ -29,13 +29,13 @@ def translate_exceptions(func):
         except sqlite3.IntegrityError as exc:
             raise IntegrityError(exc)
 
-    return wrapped
+    return translate_exceptions_
 
 
 class SqliteClient(BaseDBAsyncClient):
     executor_class = SqliteExecutor
     schema_generator = SqliteSchemaGenerator
-    capabilities = Capabilities("sqlite", requires_limit=True)
+    capabilities = Capabilities("sqlite", daemon=False, requires_limit=True)
 
     def __init__(self, file_path: str, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -128,16 +128,18 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         self._old_context_value = current_transaction.get()
         current_transaction.set(self)
 
+    def release(self) -> None:
+        self._finalized = True
+        current_transaction_map[self.connection_name].set(self._old_context_value)
+
     async def rollback(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
-        self._finalized = True
         await self._connection.rollback()
-        current_transaction_map[self.connection_name].set(self._old_context_value)
+        self.release()
 
     async def commit(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
-        self._finalized = True
         await self._connection.commit()
-        current_transaction_map[self.connection_name].set(self._old_context_value)
+        self.release()

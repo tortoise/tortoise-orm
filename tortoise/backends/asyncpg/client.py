@@ -25,31 +25,40 @@ from tortoise.transactions import current_transaction_map
 
 def retry_connection(func):
     @wraps(func)
-    async def wrapped(self, *args):
+    async def retry_connection_(self, *args):
         try:
             return await func(self, *args)
-        except (asyncpg.InterfaceError):
+        except (
+            asyncpg.PostgresConnectionError,
+            asyncpg.ConnectionDoesNotExistError,
+            asyncpg.ConnectionFailureError,
+            asyncpg.InterfaceError,
+        ):
             # Here we assume that a connection error has happened
             # Re-create connection and re-try the function call once only.
+            if getattr(self, "transaction", None):
+                self._finalized = True
+                raise TransactionManagementError("Connection gone away during transaction")
             await self._lock.acquire()
             logging.info("Attempting reconnect")
             try:
                 await self._close()
                 await self.create_connection(with_db=True)
                 logging.info("Reconnected")
-            except Exception:
-                logging.info("Failed to reconnect")
+            except Exception as e:
+                logging.info("Failed to reconnect: %s", str(e))
+                raise
             finally:
                 self._lock.release()
 
             return await func(self, *args)
 
-    return wrapped
+    return retry_connection_
 
 
 def translate_exceptions(func):
     @wraps(func)
-    async def wrapped(self, *args):
+    async def translate_exceptions_(self, *args):
         try:
             return await func(self, *args)
         except asyncpg.SyntaxOrAccessError as exc:
@@ -57,7 +66,7 @@ def translate_exceptions(func):
         except asyncpg.IntegrityConstraintViolationError as exc:
             raise IntegrityError(exc)
 
-    return wrapped
+    return translate_exceptions_
 
 
 class AsyncpgDBClient(BaseDBAsyncClient):
@@ -138,9 +147,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         return ConnectionWrapper(self._connection, self._lock)
 
     def _in_transaction(self) -> "TransactionWrapper":
-        return self._transaction_class(
-            connection_name=self.connection_name, connection=self._connection, lock=self._lock
-        )
+        return self._transaction_class(self)
 
     @translate_exceptions
     @retry_connection
@@ -167,15 +174,24 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
-    def __init__(self, connection_name: str, connection, lock) -> None:
-        self._connection = connection
-        self._lock = lock
+    def __init__(self, connection) -> None:
+        self._connection = connection._connection
+        self._lock = connection._lock
         self.log = logging.getLogger("db_client")
         self._transaction_class = self.__class__
         self._old_context_value = None
-        self.connection_name = connection_name
+        self.connection_name = connection.connection_name
         self.transaction = None
         self._finalized = False
+        self._parent = connection
+
+    async def create_connection(self, with_db: bool) -> None:
+        await self._parent.create_connection(with_db)
+        self._connection = self._parent._connection
+
+    async def _close(self) -> None:
+        await self._parent._close()
+        self._connection = self._parent._connection
 
     @retry_connection
     async def start(self):
@@ -185,16 +201,18 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         self._old_context_value = current_transaction.get()
         current_transaction.set(self)
 
+    def release(self) -> None:
+        self._finalized = True
+        current_transaction_map[self.connection_name].set(self._old_context_value)
+
     async def commit(self):
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
-        self._finalized = True
         await self.transaction.commit()
-        current_transaction_map[self.connection_name].set(self._old_context_value)
+        self.release()
 
     async def rollback(self):
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
-        self._finalized = True
         await self.transaction.rollback()
-        current_transaction_map[self.connection_name].set(self._old_context_value)
+        self.release()

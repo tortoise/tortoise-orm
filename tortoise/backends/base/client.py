@@ -5,6 +5,7 @@ from pypika import Query
 
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
+from tortoise.exceptions import TransactionManagementError
 
 
 class Capabilities:
@@ -31,6 +32,8 @@ class Capabilities:
         self,
         dialect: str,
         *,
+        # Is the connection a Daemon?
+        daemon: bool = True,
         # Deficiencies to work around:
         safe_indexes: bool = True,
         requires_limit: bool = False
@@ -38,6 +41,7 @@ class Capabilities:
         super().__setattr__("_mutable", True)
 
         self.dialect = dialect
+        self.daemon = daemon
         self.requires_limit = requires_limit
         self.safe_indexes = safe_indexes
 
@@ -113,6 +117,9 @@ class BaseTransactionWrapper:
     async def start(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
+    def release(self) -> None:
+        raise NotImplementedError()  # pragma: nocoverage
+
     async def rollback(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
@@ -125,6 +132,9 @@ class BaseTransactionWrapper:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         if exc_type:
-            await self.rollback()
+            if issubclass(exc_type, TransactionManagementError):
+                self.release()
+            else:
+                await self.rollback()
         else:
             await self.commit()

@@ -8,7 +8,7 @@ from tortoise.exceptions import ConfigurationError
 from tortoise.utils import get_schema_sql
 
 
-class TestGenerateSchema(test.TestCase):
+class TestGenerateSchema(test.SimpleTestCase):
     async def setUp(self):
         try:
             Tortoise.apps = {}
@@ -18,12 +18,17 @@ class TestGenerateSchema(test.TestCase):
             pass
         Tortoise._inited = False
         self.sqls = ""
+        self.engine = test.getDBConfig(app_label="models", modules=[])["connections"]["models"][
+            "engine"
+        ]
 
     async def tearDown(self):
         Tortoise._connections = {}
         await Tortoise._reset_apps()
 
     async def init_for(self, module: str, safe=False) -> None:
+        if self.engine != "tortoise.backends.sqlite":
+            raise test.SkipTest("sqlite only")
         with patch(
             "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=CoroutineMock()
         ):
@@ -130,6 +135,8 @@ class TestGenerateSchema(test.TestCase):
 
 class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
+        if self.engine != "tortoise.backends.mysql":
+            raise test.SkipTest("mysql only")
         with patch("aiomysql.connect", new=CoroutineMock()):
             await Tortoise.init(
                 {
@@ -175,6 +182,8 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
 
 class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
+        if self.engine != "tortoise.backends.asyncpg":
+            raise test.SkipTest("asyncpg only")
         with patch("asyncpg.connect", new=CoroutineMock()):
             await Tortoise.init(
                 {

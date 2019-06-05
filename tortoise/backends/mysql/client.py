@@ -26,7 +26,7 @@ from tortoise.transactions import current_transaction_map
 
 def retry_connection(func):
     @wraps(func)
-    async def wrapped(self, *args):
+    async def retry_connection_(self, *args):
         try:
             return await func(self, *args)
         except (
@@ -37,25 +37,28 @@ def retry_connection(func):
         ):
             # Here we assume that a connection error has happened
             # Re-create connection and re-try the function call once only.
+            if getattr(self, "_finalized", None) is False:
+                raise TransactionManagementError("Connection gone away during transaction")
             await self._lock.acquire()
             logging.info("Attempting reconnect")
             try:
-                self._close()
+                await self._close()
                 await self.create_connection(with_db=True)
                 logging.info("Reconnected")
-            except Exception:
-                logging.info("Failed to reconnect")
+            except Exception as e:
+                logging.info("Failed to reconnect: %s", str(e))
+                raise
             finally:
                 self._lock.release()
 
             return await func(self, *args)
 
-    return wrapped
+    return retry_connection_
 
 
 def translate_exceptions(func):
     @wraps(func)
-    async def wrapped(self, *args):
+    async def translate_exceptions_(self, *args):
         try:
             return await func(self, *args)
         except (
@@ -69,7 +72,7 @@ def translate_exceptions(func):
         except pymysql.err.IntegrityError as exc:
             raise IntegrityError(exc)
 
-    return wrapped
+    return translate_exceptions_
 
 
 class MySQLClient(BaseDBAsyncClient):
@@ -121,14 +124,14 @@ class MySQLClient(BaseDBAsyncClient):
                 "Can't connect to MySQL server: {template}".format(template=self._template)
             )
 
-    def _close(self) -> None:
+    async def _close(self) -> None:
         if self._connection:  # pragma: nobranch
             self._connection.close()
             self.log.debug("Closed connection %s with params: %s", self._connection, self._template)
             self._template.clear()
 
     async def close(self) -> None:
-        self._close()
+        await self._close()
         self._connection = None
 
     async def db_create(self) -> None:
@@ -148,12 +151,7 @@ class MySQLClient(BaseDBAsyncClient):
         return ConnectionWrapper(self._connection, self._lock)
 
     def _in_transaction(self):
-        return self._transaction_class(
-            connection_name=self.connection_name,
-            connection=self._connection,
-            lock=self._lock,
-            fetch_inserted=self.fetch_inserted,
-        )
+        return self._transaction_class(self)
 
     @translate_exceptions
     @retry_connection
@@ -184,33 +182,45 @@ class MySQLClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
-    def __init__(self, connection_name, connection, lock, fetch_inserted):
-        self.connection_name = connection_name
-        self._connection = connection
-        self._lock = lock
+    def __init__(self, connection):
+        self.connection_name = connection.connection_name
+        self._connection = connection._connection  # type: aiomysql.Connection
+        self._lock = connection._lock
         self.log = logging.getLogger("db_client")
         self._transaction_class = self.__class__
-        self._finalized = False
+        self._finalized = None  # type: Optional[bool]
         self._old_context_value = None
-        self.fetch_inserted = fetch_inserted
+        self.fetch_inserted = connection.fetch_inserted
+        self._parent = connection
+
+    async def create_connection(self, with_db: bool) -> None:
+        await self._parent.create_connection(with_db)
+        self._connection = self._parent._connection
+
+    async def _close(self) -> None:
+        await self._parent._close()
+        self._connection = self._parent._connection
 
     @retry_connection
     async def start(self):
         await self._connection.begin()
+        self._finalized = False
         current_transaction = current_transaction_map[self.connection_name]
         self._old_context_value = current_transaction.get()
         current_transaction.set(self)
 
-    async def commit(self):
-        if self._finalized:
-            raise TransactionManagementError("Transaction already finalised")
+    def release(self) -> None:
         self._finalized = True
-        await self._connection.commit()
         current_transaction_map[self.connection_name].set(self._old_context_value)
 
-    async def rollback(self):
+    async def commit(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
-        self._finalized = True
+        await self._connection.commit()
+        self.release()
+
+    async def rollback(self) -> None:
+        if self._finalized:
+            raise TransactionManagementError("Transaction already finalised")
         await self._connection.rollback()
-        current_transaction_map[self.connection_name].set(self._old_context_value)
+        self.release()
