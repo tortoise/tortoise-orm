@@ -28,7 +28,11 @@ def retry_connection(func):
     async def wrapped(self, *args):
         try:
             return await func(self, *args)
-        except (asyncpg.InterfaceError):
+        except (
+            asyncpg.PostgresConnectionError,
+            asyncpg.ConnectionDoesNotExistError,
+            asyncpg.ConnectionFailureError,
+        ):
             # Here we assume that a connection error has happened
             # Re-create connection and re-try the function call once only.
             await self._lock.acquire()
