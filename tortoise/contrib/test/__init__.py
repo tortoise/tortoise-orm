@@ -215,9 +215,6 @@ class IsolatedTestCase(SimpleTestCase):
 
     It will create and destroy a new DB instance for every test.
     This is obviously slow, but guarantees a fresh DB.
-
-    It will define a ``self.db`` which is the fully initialised (with DB schema)
-    DB Client object.
     """
 
     # pylint: disable=C0103,W0201

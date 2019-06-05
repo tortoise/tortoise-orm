@@ -1,6 +1,11 @@
 Changelog
 =========
 
+0.11.13
+-------
+- Fixed connection retry to work with transactions
+- Added broader PostgreSQL connection failiure detection
+
 0.11.12
 -------
 - Added automatic PostgreSQL connection retry
