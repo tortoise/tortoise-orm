@@ -11,6 +11,7 @@ Contributors
 * Alexander Lyon ``@arlyon``
 * Florimond Manca ``@florimondmanca``
 * Vitali Rebkavets ``@REVIMI``
+* Shlomy Balulu ``@shaloba``
 
 Special Thanks
 ==============
