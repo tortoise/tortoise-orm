@@ -133,6 +133,9 @@ Data Fields
 .. autoclass:: tortoise.fields.JSONField
     :exclude-members: to_db_value, to_python_value
 
+.. autoclass:: tortoise.fields.UUIDField
+    :exclude-members: to_db_value, to_python_value
+
 ForeignKeyField
 ---------------
 

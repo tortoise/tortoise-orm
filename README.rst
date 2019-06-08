@@ -27,7 +27,8 @@ It's engraved in it's design that you are working not with just tables, you work
 You can find docs at `ReadTheDocs <http://tortoise-orm.readthedocs.io/en/latest/>`_
 
 .. note::
-   Tortoise ORM is young project and breaking changes without following semantic versioning are to be expected
+   Tortoise ORM is young project and breaking changes are to be expected.
+   We keep a `Changelog <http://tortoise-orm.readthedocs.io/en/latest/CHANGELOG.html>`_ and it will have possible breakage clearly documented.
 
 Tortoise ORM is supported on CPython >= 3.5.3 for SQLite, MySQL and PostgreSQL, and PyPy3.5 >= 5.10 for SQLite and MySQL only.
 
@@ -37,8 +38,7 @@ Why was Tortoise ORM built?
 Python has many existing and mature ORMs, unfortunately they are designed with an opposing paradigm of how I/O gets processed.
 ``asyncio`` is relatively new technology that has a very different concurrency model, and the largest change is regarding how I/O is handled.
 
-However, Tortoise ORM is not first attempt of building ``asyncio`` ORM, there are many cases of developers attempting to map synchronous python ORMs to the async world, having to compromise heavily as those ORMs were not designed for an asynchronous event loop.
-Those few ORMs, which tried new approaches stabilized at point, where they lost word "relational" from ORM and mostly were limited to fetching rows from single table mapped to objects.
+However, Tortoise ORM is not first attempt of building ``asyncio`` ORM, there are many cases of developers attempting to map synchronous python ORMs to the async world, initial attempts did not have a clean API.
 
 Hence we started Tortoise ORM.
 
