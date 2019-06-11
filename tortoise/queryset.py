@@ -236,6 +236,9 @@ class QuerySet(AwaitableQuery):
     def distinct(self) -> "QuerySet":
         """
         Make QuerySet distinct.
+
+        Only makes sense in combination with a .values() or .values_list() as it
+        precedes all the fetched fields with a distinct.
         """
         queryset = self._clone()
         queryset._distinct = True

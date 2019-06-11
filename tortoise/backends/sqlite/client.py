@@ -92,6 +92,12 @@ class SqliteClient(BaseDBAsyncClient):
             return (await connection.execute_insert(query, values))[0]
 
     @translate_exceptions
+    async def execute_many(self, query: str, values: List[list]) -> int:
+        async with self.acquire_connection() as connection:
+            self.log.debug("%s: %s", query, values)
+            return (await connection.executemany(query, values))[0]
+
+    @translate_exceptions
     async def execute_query(self, query: str) -> List[dict]:
         async with self.acquire_connection() as connection:
             self.log.debug(query)

@@ -14,7 +14,7 @@ from tortoise.fields import (
 )
 from tortoise.filters import get_filters_for_field
 from tortoise.queryset import QuerySet
-from tortoise.transactions import current_transaction_map
+from tortoise.transactions import current_transaction_map, in_transaction
 
 MODEL_TYPE = TypeVar("MODEL_TYPE", bound="Model")
 # TODO: Define Filter type object. Possibly tuple?
@@ -363,12 +363,12 @@ class Model(metaclass=ModelMeta):
     pk = property(_get_pk_val, _set_pk_val)
 
     async def _insert_instance(self, using_db=None) -> None:
-        db = using_db if using_db else self._meta.db
+        db = using_db or self._meta.db
         await db.executor_class(model=self.__class__, db=db).execute_insert(self)
         self._saved_in_db = True
 
     async def _update_instance(self, using_db=None) -> None:
-        db = using_db if using_db else self._meta.db
+        db = using_db or self._meta.db
         await db.executor_class(model=self.__class__, db=db).execute_update(self)
 
     async def save(self, *args, **kwargs) -> None:
@@ -378,13 +378,13 @@ class Model(metaclass=ModelMeta):
             await self._update_instance(*args, **kwargs)
 
     async def delete(self, using_db=None) -> None:
-        db = using_db if using_db else self._meta.db
+        db = using_db or self._meta.db
         if not self._saved_in_db:
             raise OperationalError("Can't delete unpersisted record")
         await db.executor_class(model=self.__class__, db=db).execute_delete(self)
 
     async def fetch_related(self, *args, using_db=None):
-        db = using_db if using_db else self._meta.db
+        db = using_db or self._meta.db
         await db.executor_class(model=self.__class__, db=db).fetch_for_list([self], *args)
 
     def __str__(self) -> str:
@@ -420,8 +420,17 @@ class Model(metaclass=ModelMeta):
     @classmethod
     async def create(cls: Type[MODEL_TYPE], **kwargs) -> MODEL_TYPE:
         instance = cls(**kwargs)
-        await instance.save(using_db=kwargs.get("using_db"))
+        await instance._insert_instance(using_db=kwargs.get("using_db"))
         return instance
+
+    @classmethod
+    async def bulk_create(cls: Type[MODEL_TYPE], objects: List[MODEL_TYPE], using_db=None) -> None:
+        db = using_db or cls._meta.db
+        executor = db.executor_class(model=cls, db=db)
+        async with in_transaction():
+            for obj in objects:
+                await executor.execute_insert(obj)
+                obj._saved_in_db = True
 
     @classmethod
     def first(cls) -> QuerySet:
@@ -449,7 +458,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def fetch_for_list(cls, instance_list, *args, using_db=None):
-        db = using_db if using_db else cls._meta.db
+        db = using_db or cls._meta.db
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
 
     @classmethod
