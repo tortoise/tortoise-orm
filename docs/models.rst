@@ -74,14 +74,19 @@ Primary Keys
 In Tortoise ORM we require that a model has a primary key.
 
 That primary key will be accesible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
+That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc...
+
 We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
 
-* ``IntField``
-* ``BigIntField``
-* ``CharField``
-* ``UUIDField``
+.. code-block:: python3
+
+    IntField
+    BigIntField
+    CharField
+    UUIDField
 
 One must define a primary key by setting a ``pk`` parameter to ``True``.
+
 If you don't define a primary key, we will create a primary key of type ``IntField`` with name of ``id`` for you.
 
 Any of these are valid primary key definitions in a Model:

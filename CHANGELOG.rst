@@ -11,6 +11,8 @@ Changelog
      This is a big feature change. It should not break any existing implementations.
 
   That primary key will be accesible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
+  That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc...
+
   We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
 
   .. code-block:: python3
