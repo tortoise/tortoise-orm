@@ -14,7 +14,7 @@ from tortoise.fields import (
 )
 from tortoise.filters import get_filters_for_field
 from tortoise.queryset import QuerySet
-from tortoise.transactions import current_transaction_map, in_transaction
+from tortoise.transactions import current_transaction_map
 
 MODEL_TYPE = TypeVar("MODEL_TYPE", bound="Model")
 # TODO: Define Filter type object. Possibly tuple?
@@ -420,17 +420,15 @@ class Model(metaclass=ModelMeta):
     @classmethod
     async def create(cls: Type[MODEL_TYPE], **kwargs) -> MODEL_TYPE:
         instance = cls(**kwargs)
-        await instance._insert_instance(using_db=kwargs.get("using_db"))
+        db = kwargs.get("using_db") or cls._meta.db
+        await db.executor_class(model=cls, db=db).execute_insert(instance)
+        instance._saved_in_db = True
         return instance
 
     @classmethod
     async def bulk_create(cls: Type[MODEL_TYPE], objects: List[MODEL_TYPE], using_db=None) -> None:
         db = using_db or cls._meta.db
-        executor = db.executor_class(model=cls, db=db)
-        async with in_transaction():
-            for obj in objects:
-                await executor.execute_insert(obj)
-                obj._saved_in_db = True
+        await db.executor_class(model=cls, db=db).execute_bulk_insert(objects)
 
     @classmethod
     def first(cls) -> QuerySet:

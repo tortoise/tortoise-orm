@@ -85,6 +85,21 @@ class BaseExecutor:
         await self._process_insert_result(instance, insert_result)
         return instance
 
+    async def execute_bulk_insert(self, instances):
+        key = "{}:{}".format(self.db.connection_name, self.model._meta.table)
+        if key not in INSERT_CACHE:
+            regular_columns, columns = self._prepare_insert_columns()
+            query = self._prepare_insert_statement(columns)
+            INSERT_CACHE[key] = regular_columns, columns, query
+        else:
+            regular_columns, columns, query = INSERT_CACHE[key]
+
+        valueses = [
+            self._prepare_insert_values(instance=instance, regular_columns=regular_columns)
+            for instance in instances
+        ]
+        await self.db.execute_many(query, valueses)
+
     async def execute_update(self, instance):
         table = Table(self.model._meta.table)
         query = self.db.query_class.update(table)
