@@ -12,9 +12,12 @@ class BaseSchemaGenerator:
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE ({fields})"
     FK_TEMPLATE = ' REFERENCES "{table}" (id) ON DELETE {on_delete}'
     M2M_TABLE_TEMPLATE = (
-        'CREATE TABLE {exists}"{table_name}" '
-        '("{backward_key}" INT NOT NULL REFERENCES "{backward_table}" (id) ON DELETE CASCADE, '
-        '"{forward_key}" INT NOT NULL REFERENCES "{forward_table}" (id) ON DELETE CASCADE);'
+        'CREATE TABLE {exists}"{table_name}" ('
+        '"{backward_key}" {backward_type} NOT NULL REFERENCES "{backward_table}" (id)'
+        " ON DELETE CASCADE,"
+        '"{forward_key}" {forward_type} NOT NULL REFERENCES "{forward_table}" (id)'
+        " ON DELETE CASCADE"
+        ");"
     )
 
     FIELD_TYPE_MAP = {
@@ -30,17 +33,23 @@ class BaseSchemaGenerator:
         fields.DateField: "DATE",
         fields.FloatField: "DOUBLE PRECISION",
         fields.JSONField: "TEXT",
+        fields.UUIDField: "CHAR(36)",
     }
 
     def __init__(self, client) -> None:
         self.client = client
 
-    def _create_string(self, db_field: str, field_type: str, nullable: str, unique: str) -> str:
+    def _create_string(
+        self, db_field: str, field_type: str, nullable: str, unique: str, is_pk: bool
+    ) -> str:
         # children can override this function to customize thier sql queries
 
         field_creation_string = self.FIELD_TEMPLATE.format(
             name=db_field, type=field_type, nullable=nullable, unique=unique
         ).strip()
+
+        if is_pk:
+            field_creation_string += " PRIMARY KEY"
 
         return field_creation_string
 
@@ -80,6 +89,20 @@ class BaseSchemaGenerator:
     def _get_unique_constraint_sql(self, field_names: List[str]) -> str:
         return self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(fields=", ".join(field_names))
 
+    def _get_field_type(self, field_object) -> str:
+        field_object_type = type(field_object)
+        while field_object_type.__bases__ and field_object_type not in self.FIELD_TYPE_MAP:
+            field_object_type = field_object_type.__bases__[0]
+
+        field_type = self.FIELD_TYPE_MAP[field_object_type]
+
+        if isinstance(field_object, fields.DecimalField):
+            field_type = field_type.format(field_object.max_digits, field_object.decimal_places)
+        elif isinstance(field_object, fields.CharField):
+            field_type = field_type.format(field_object.max_length)
+
+        return field_type
+
     def _get_table_sql(self, model, safe=True) -> dict:
 
         fields_to_create = []
@@ -94,18 +117,13 @@ class BaseSchemaGenerator:
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
 
-            field_object_type = type(field_object)
-            while field_object_type.__bases__ and field_object_type not in self.FIELD_TYPE_MAP:
-                field_object_type = field_object_type.__bases__[0]
-
-            field_type = self.FIELD_TYPE_MAP[field_object_type]
-
-            if isinstance(field_object, fields.DecimalField):
-                field_type = field_type.format(field_object.max_digits, field_object.decimal_places)
-            elif isinstance(field_object, fields.CharField):
-                field_type = field_type.format(field_object.max_length)
-
-            field_creation_string = self._create_string(db_field, field_type, nullable, unique)
+            field_creation_string = self._create_string(
+                db_field=db_field,
+                field_type=self._get_field_type(field_object),
+                nullable=nullable,
+                unique=unique,
+                is_pk=field_object.pk,
+            )
 
             if hasattr(field_object, "reference") and field_object.reference:
                 field_creation_string += self.FK_TEMPLATE.format(
@@ -174,7 +192,9 @@ class BaseSchemaGenerator:
                     backward_table=model._meta.table,
                     forward_table=field_object.type._meta.table,
                     backward_key=field_object.backward_key,
+                    backward_type=self._get_field_type(model._meta.pk),
                     forward_key=field_object.forward_key,
+                    forward_type=self._get_field_type(field_object.type._meta.pk),
                 )
             )
 

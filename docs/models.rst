@@ -65,20 +65,40 @@ Every model should be derived from base model. You also can derive from your own
 
 This models won't be created in schema generation and won't create relations to other models.
 
-Further, let's take a look at created fields for models
+
+Further we have field ``fields.DatetimeField(auto_now=True)``. Options ``auto_now`` and ``auto_now_add`` work like Django's options.
+
+Primary Keys
+------------
+
+In Tortoise ORM we require that a model has a primary key.
+
+That primary key will be accesible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
+That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc...
+
+We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
+
+.. code-block:: python3
+
+    IntField
+    BigIntField
+    CharField
+    UUIDField
+
+One must define a primary key by setting a ``pk`` parameter to ``True``.
+
+If you don't define a primary key, we will create a primary key of type ``IntField`` with name of ``id`` for you.
+
+Any of these are valid primary key definitions in a Model:
 
 .. code-block:: python3
 
     id = fields.IntField(pk=True)
 
-This code defines integer primary key for table.
+    checksum = fields.CharField(pk=True)
 
-Currently we **only** support the primary key to be called ``id``, and to be an ``IntField``.
-If you don't define a primary key, we will create a primary key of type ``IntField`` with name of ``id`` for you.
+    guid = fields.UUIDField(pk=True)
 
-Sadly, currently only simple integer primary key is supported, there is plans to enhance this in the not too distant future.
-
-Further we have field ``fields.DatetimeField(auto_now=True)``. Options ``auto_now`` and ``auto_now_add`` work like Django's options.
 
 ``ForeignKeyField``
 -------------------

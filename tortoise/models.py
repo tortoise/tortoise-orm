@@ -1,12 +1,17 @@
-from copy import copy
-from typing import Dict, Hashable, List, Optional, Set, Tuple, Type, TypeVar, Union
+from copy import copy, deepcopy
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from pypika import Query
 
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient  # noqa
 from tortoise.exceptions import ConfigurationError, OperationalError
-from tortoise.fields import ManyToManyField, ManyToManyRelationManager, RelationQueryContainer
+from tortoise.fields import (
+    Field,
+    ManyToManyField,
+    ManyToManyRelationManager,
+    RelationQueryContainer,
+)
 from tortoise.filters import get_filters_for_field
 from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
@@ -31,15 +36,15 @@ class MetaInfo:
         "abstract",
         "table",
         "app",
-        "fields",
-        "db_fields",
+        "_fields",
+        "_db_fields",
         "m2m_fields",
         "fk_fields",
         "backward_fk_fields",
-        "fetch_fields",
+        "_fetch_fields",
         "fields_db_projection",
         "_inited",
-        "fields_db_projection_reverse",
+        "_fields_db_projection_reverse",
         "filters",
         "fields_map",
         "default_connection",
@@ -47,6 +52,9 @@ class MetaInfo:
         "basequery_all_fields",
         "_filters",
         "unique_together",
+        "pk_attr",
+        "_generated_db_fields",
+        "_model",
     )
 
     def __init__(self, meta) -> None:
@@ -54,14 +62,14 @@ class MetaInfo:
         self.table = getattr(meta, "table", "")  # type: str
         self.app = getattr(meta, "app", None)  # type: Optional[str]
         self.unique_together = get_unique_together(meta)  # type: Optional[Union[Tuple, List]]
-        self.fields = set()  # type: Set[str]
-        self.db_fields = set()  # type: Set[str]
+        self._fields = None  # type: Optional[Set[str]]
+        self._db_fields = None  # type: Optional[Set[str]]
         self.m2m_fields = set()  # type: Set[str]
         self.fk_fields = set()  # type: Set[str]
         self.backward_fk_fields = set()  # type: Set[str]
-        self.fetch_fields = set()  # type: Set[str]
+        self._fetch_fields = None  # type: Optional[Set[str]]
         self.fields_db_projection = {}  # type: Dict[str,str]
-        self.fields_db_projection_reverse = {}  # type: Dict[str,str]
+        self._fields_db_projection_reverse = None  # type: Optional[Dict[str,str]]
         self._filters = {}  # type: Dict[str, Dict[str, dict]]
         self.filters = {}  # type: Dict[str, dict]
         self.fields_map = {}  # type: Dict[str, fields.Field]
@@ -69,6 +77,86 @@ class MetaInfo:
         self.default_connection = None  # type: Optional[str]
         self.basequery = Query()  # type: Query
         self.basequery_all_fields = Query()  # type: Query
+        self.pk_attr = getattr(meta, "pk_attr", "")  # type: str
+        self._generated_db_fields = None  # type: Optional[Tuple[str]]
+        self._model = None  # type: "Model"  # type: ignore
+
+    def add_field(self, name: str, value: Field):
+        if name in self.fields_map:
+            raise ConfigurationError("Field {} already present in meta".format(name))
+        setattr(self._model, name, value)
+        value.model = self._model
+        self.fields_map[name] = value
+        self._fields = None
+
+        if value.has_db_field:
+            self.fields_db_projection[name] = value.source_field or name
+            self._fields_db_projection_reverse = None
+
+        if isinstance(value, fields.ManyToManyField):
+            self.m2m_fields.add(name)
+            self._fetch_fields = None
+        elif isinstance(value, fields.BackwardFKRelation):
+            self.backward_fk_fields.add(name)
+            self._fetch_fields = None
+
+        field_filters = get_filters_for_field(
+            field_name=name, field=value, source_field=value.source_field or name
+        )
+        self._filters.update(field_filters)
+        self.generate_filters()
+
+    @property
+    def fields_db_projection_reverse(self) -> Dict[str, str]:
+        if self._fields_db_projection_reverse is None:
+            self._fields_db_projection_reverse = {
+                value: key for key, value in self.fields_db_projection.items()
+            }
+        return self._fields_db_projection_reverse
+
+    @property
+    def fields(self) -> Set[str]:
+        if self._fields is None:
+            self._fields = set(self.fields_map.keys())
+        return self._fields
+
+    @property
+    def db_fields(self) -> Set[str]:
+        if self._db_fields is None:
+            self._db_fields = set(self.fields_db_projection.values())
+        return self._db_fields
+
+    @property
+    def fetch_fields(self):
+        if self._fetch_fields is None:
+            self._fetch_fields = self.m2m_fields | self.backward_fk_fields | self.fk_fields
+        return self._fetch_fields
+
+    @property
+    def pk(self):
+        return self.fields_map[self.pk_attr]
+
+    @property
+    def db_pk_field(self) -> str:
+        field_object = self.fields_map[self.pk_attr]
+        return field_object.source_field or self.pk_attr
+
+    @property
+    def is_pk_generated(self) -> bool:
+        field_object = self.fields_map[self.pk_attr]
+        return field_object.generated
+
+    @property
+    def generated_db_fields(self) -> Tuple[str]:
+        """Return list of names of db fields that are generated on db side"""
+        if self._generated_db_fields is None:
+            generated_fields = []
+            for field in self.fields_map.values():
+                if not field.generated:
+                    continue
+                generated_fields.append(field.source_field or field.model_field_name)
+            self._generated_db_fields = tuple(generated_fields)  # type: ignore
+        return self._generated_db_fields  # type: ignore
 
     @property
     def db(self) -> BaseDBAsyncClient:
@@ -101,73 +189,98 @@ class ModelMeta(type):
         filters = {}  # type: Dict[str, Dict[str, dict]]
         fk_fields = set()  # type: Set[str]
         m2m_fields = set()  # type: Set[str]
+        meta_class = attrs.get("Meta", type("Meta", (), {}))
+        pk_attr = "id"
 
-        if "id" not in attrs:
-            attrs["id"] = fields.IntField(pk=True)
+        if name != "Model":
+            custom_pk_present = False
+            for key, value in attrs.items():
+                if isinstance(value, fields.Field):
+                    if value.pk:
+                        if custom_pk_present:
+                            raise ConfigurationError(
+                                "Can't create model {} with two primary keys, "
+                                "only single pk are supported".format(name)
+                            )
+                        elif value.generated and not isinstance(
+                            value, (fields.IntField, fields.BigIntField)
+                        ):
+                            raise ConfigurationError(
+                                "Generated primary key allowed only for IntField and BigIntField"
+                            )
+                        custom_pk_present = True
+                        pk_attr = key
 
-        for key, value in attrs.items():
-            if isinstance(value, fields.Field):
-                fields_map[key] = value
-                value.model_field_name = key
-                if isinstance(value, fields.ForeignKeyField):
-                    key_field = "{}_id".format(key)
-                    value.source_field = key_field
-                    fields_db_projection[key_field] = key_field
-                    fields_map[key_field] = fields.IntField(
-                        reference=value, null=value.null, default=value.default
+            if not custom_pk_present:
+                if "id" not in attrs:
+                    attrs["id"] = fields.IntField(pk=True)
+
+                if not isinstance(attrs["id"], fields.Field) or not attrs["id"].pk:
+                    raise ConfigurationError(
+                        "Can't create model {} without explicit primary key "
+                        "if field 'id' already present".format(name)
                     )
-                    filters.update(
-                        get_filters_for_field(
-                            field_name=key_field,
-                            field=fields_map[key_field],
-                            source_field=key_field,
+
+            for key, value in attrs.items():
+                if isinstance(value, fields.Field):
+                    if getattr(meta_class, "abstract", None):
+                        value = deepcopy(value)
+
+                    fields_map[key] = value
+                    value.model_field_name = key
+
+                    if isinstance(value, fields.ForeignKeyField):
+                        fk_fields.add(key)
+                    elif isinstance(value, fields.ManyToManyField):
+                        m2m_fields.add(key)
+                    else:
+                        fields_db_projection[key] = value.source_field or key
+                        filters.update(
+                            get_filters_for_field(
+                                field_name=key,
+                                field=fields_map[key],
+                                source_field=fields_db_projection[key],
+                            )
                         )
-                    )
-                    fk_fields.add(key)
-                elif isinstance(value, fields.ManyToManyField):
-                    m2m_fields.add(key)
-                else:
-                    fields_db_projection[key] = value.source_field if value.source_field else key
-                    filters.update(
-                        get_filters_for_field(
-                            field_name=key,
-                            field=fields_map[key],
-                            source_field=fields_db_projection[key],
-                        )
-                    )
+                        if value.pk:
+                            filters.update(
+                                get_filters_for_field(
+                                    field_name="pk",
+                                    field=fields_map[key],
+                                    source_field=fields_db_projection[key],
+                                )
+                            )
 
-        attrs["_meta"] = meta = MetaInfo(attrs.get("Meta"))
+        attrs["_meta"] = meta = MetaInfo(meta_class)
 
         meta.fields_map = fields_map
         meta.fields_db_projection = fields_db_projection
-        meta.fields_db_projection_reverse = {
-            value: key for key, value in fields_db_projection.items()
-        }
-        meta.fields = set(fields_map.keys())
-        meta.db_fields = set(fields_db_projection.values())
         meta._filters = filters
         meta.fk_fields = fk_fields
         meta.backward_fk_fields = set()
         meta.m2m_fields = m2m_fields
-        meta.fetch_fields = fk_fields | m2m_fields
         meta.default_connection = None
+        meta.pk_attr = pk_attr
         meta._inited = False
         if not fields_map:
             meta.abstract = True
 
-        new_class = super().__new__(mcs, name, bases, attrs)
+        new_class = super().__new__(mcs, name, bases, attrs)  # type: "Model"  # type: ignore
+        for field in meta.fields_map.values():
+            field.model = new_class
 
+        meta._model = new_class
         return new_class
 
 
 class Model(metaclass=ModelMeta):
     # I don' like this here, but it makes autocompletion and static analysis much happier
     _meta = MetaInfo(None)
-    id = None  # type: Optional[Hashable]
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args, _from_db: bool = False, **kwargs) -> None:
         # self._meta is a very common attribute lookup, lets cache it.
         meta = self._meta
+        self._saved_in_db = _from_db or (meta.pk_attr in kwargs and meta.is_pk_generated)
 
         # Create lazy fk/m2m objects
         for key in meta.backward_fk_fields:
@@ -193,31 +306,7 @@ class Model(metaclass=ModelMeta):
         # Assign values and do type conversions
         passed_fields = set(kwargs.keys())
         passed_fields.update(meta.fetch_fields)
-
-        for key, value in kwargs.items():
-            if key in meta.fk_fields:
-                if hasattr(value, "id") and not value.id:
-                    raise OperationalError(
-                        "You should first call .save() on {} before referring to it".format(value)
-                    )
-                relation_field = "{}_id".format(key)
-                setattr(self, relation_field, value.id)
-                passed_fields.add(relation_field)
-            elif key in meta.fields:
-                field_object = meta.fields_map[key]
-                if value is None and not field_object.null:
-                    raise ValueError("{} is non nullable field, but null was passed".format(key))
-                setattr(self, key, field_object.to_python_value(value))
-            elif key in meta.db_fields:
-                setattr(self, meta.fields_db_projection_reverse[key], value)
-            elif key in meta.backward_fk_fields:
-                raise ConfigurationError(
-                    "You can't set backward relations through init, change related model instead"
-                )
-            elif key in meta.m2m_fields:
-                raise ConfigurationError(
-                    "You can't set m2m relations through init, use m2m_manager instead"
-                )
+        passed_fields |= self.set_field_values(kwargs)
 
         # Assign defaults for missing fields
         for key in meta.fields.difference(passed_fields):
@@ -227,23 +316,70 @@ class Model(metaclass=ModelMeta):
             else:
                 setattr(self, key, field_object.default)
 
+    def set_field_values(self, values_map: Dict[str, Any]) -> Set[str]:
+        """
+        Sets values for fields honoring type transformations and
+        return list of fields that were set additionally
+        """
+        meta = self._meta
+        passed_fields = set()
+
+        for key, value in values_map.items():
+            if key in meta.fk_fields:
+                if hasattr(value, "pk") and not value.pk:
+                    raise OperationalError(
+                        "You should first call .save() on {} before referring to it".format(value)
+                    )
+                relation_field = "{}_id".format(key)
+                setattr(self, relation_field, value.pk)
+                passed_fields.add(relation_field)
+            elif key in meta.fields:
+                field_object = meta.fields_map[key]
+                if value is None and not field_object.null:
+                    raise ValueError("{} is non nullable field, but null was passed".format(key))
+                setattr(self, key, field_object.to_python_value(value))
+            elif key in meta.db_fields:
+                field_object = meta.fields_map[meta.fields_db_projection_reverse[key]]
+                if value is None and not field_object.null:
+                    raise ValueError("{} is non nullable field, but null was passed".format(key))
+                setattr(self, key, field_object.to_python_value(value))
+            elif key in meta.backward_fk_fields:
+                raise ConfigurationError(
+                    "You can't set backward relations through init, change related model instead"
+                )
+            elif key in meta.m2m_fields:
+                raise ConfigurationError(
+                    "You can't set m2m relations through init, use m2m_manager instead"
+                )
+
+        return passed_fields
+
+    def _get_pk_val(self):
+        return getattr(self, self._meta.pk_attr)
+
+    def _set_pk_val(self, value):
+        setattr(self, self._meta.pk_attr, value)
+
+    pk = property(_get_pk_val, _set_pk_val)
+
     async def _insert_instance(self, using_db=None) -> None:
         db = using_db if using_db else self._meta.db
         await db.executor_class(model=self.__class__, db=db).execute_insert(self)
+        self._saved_in_db = True
 
     async def _update_instance(self, using_db=None) -> None:
         db = using_db if using_db else self._meta.db
         await db.executor_class(model=self.__class__, db=db).execute_update(self)
 
     async def save(self, *args, **kwargs) -> None:
-        if not self.id:
+        if not self._saved_in_db:
             await self._insert_instance(*args, **kwargs)
         else:
             await self._update_instance(*args, **kwargs)
 
     async def delete(self, using_db=None) -> None:
         db = using_db if using_db else self._meta.db
-        if not self.id:
+        if not self._saved_in_db:
             raise OperationalError("Can't delete unpersisted record")
         await db.executor_class(model=self.__class__, db=db).execute_delete(self)
 
@@ -255,18 +391,18 @@ class Model(metaclass=ModelMeta):
         return "<{}>".format(self.__class__.__name__)
 
     def __repr__(self) -> str:
-        if self.id:
-            return "<{}: {}>".format(self.__class__.__name__, self.id)
+        if self.pk:
+            return "<{}: {}>".format(self.__class__.__name__, self.pk)
         return "<{}>".format(self.__class__.__name__)
 
     def __hash__(self) -> int:
-        if not self.id:
+        if not self.pk:
             raise TypeError("Model instances without id are unhashable")
-        return hash(self.id)
+        return hash(self.pk)
 
     def __eq__(self, other) -> bool:
         # pylint: disable=C0123
-        if type(self) == type(other) and self.id == other.id:
+        if type(self) == type(other) and self.pk == other.pk:
             return True
         return False
 

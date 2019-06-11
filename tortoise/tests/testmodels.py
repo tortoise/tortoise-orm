@@ -3,6 +3,7 @@ This is the testing Models
 """
 import binascii
 import os
+import uuid
 from enum import Enum, IntEnum
 
 from tortoise import fields
@@ -157,6 +158,13 @@ class JSONFields(Model):
     data_null = fields.JSONField(null=True)
 
 
+class UUIDFields(Model):
+    id = fields.UUIDField(pk=True, default=uuid.uuid1)
+    data = fields.UUIDField()
+    data_auto = fields.UUIDField(default=uuid.uuid4)
+    data_null = fields.UUIDField(null=True)
+
+
 class MinRelation(Model):
     id = fields.IntField(pk=True)
     tournament = fields.ForeignKeyField("models.Tournament")
@@ -220,3 +228,33 @@ class ContactTypeEnum(IntEnum):
 class Contact(Model):
     id = fields.IntField(pk=True)
     type = fields.IntField(default=ContactTypeEnum.other)
+
+
+class ImplicitPkModel(Model):
+    value = fields.TextField()
+
+
+class UUIDPkModel(Model):
+    id = fields.UUIDField(pk=True)
+
+
+class UUIDFkRelatedModel(Model):
+    model = fields.ForeignKeyField("models.UUIDPkModel", related_name="children")
+
+
+class UUIDM2MRelatedModel(Model):
+    value = fields.TextField(default="test")
+    models = fields.ManyToManyField("models.UUIDPkModel", related_name="peers")
+
+
+class CharPkModel(Model):
+    id = fields.CharField(max_length=64, pk=True)
+
+
+class CharFkRelatedModel(Model):
+    model = fields.ForeignKeyField("models.CharPkModel", related_name="children")
+
+
+class CharM2MRelatedModel(Model):
+    value = fields.TextField(default="test")
+    models = fields.ManyToManyField("models.CharPkModel", related_name="peers")

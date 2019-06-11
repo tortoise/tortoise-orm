@@ -1,6 +1,6 @@
 -r ../requirements.txt
 
-sphinx < 2
+sphinx
 cloud_sptheme
-sphinx-autodoc-typehints<1.5
+sphinx-autodoc-typehints
 asynctest

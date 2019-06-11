@@ -78,7 +78,12 @@ class SqliteClient(BaseDBAsyncClient):
         return ConnectionWrapper(self._connection, self._lock)
 
     def _in_transaction(self) -> "TransactionWrapper":
-        return self._transaction_class(self.connection_name, self._connection, self._lock)
+        return self._transaction_class(
+            connection_name=self.connection_name,
+            connection=self._connection,
+            lock=self._lock,
+            fetch_inserted=self.fetch_inserted,
+        )
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
@@ -90,7 +95,8 @@ class SqliteClient(BaseDBAsyncClient):
     async def execute_query(self, query: str) -> List[dict]:
         async with self.acquire_connection() as connection:
             self.log.debug(query)
-            return [dict(row) for row in await connection.execute_fetchall(query)]
+            res = [dict(row) for row in await connection.execute_fetchall(query)]
+            return res
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:
@@ -100,7 +106,9 @@ class SqliteClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
-    def __init__(self, connection_name: str, connection: aiosqlite.Connection, lock) -> None:
+    def __init__(
+        self, connection_name: str, connection: aiosqlite.Connection, lock, fetch_inserted
+    ) -> None:
         self.connection_name = connection_name
         self._connection = connection  # type: aiosqlite.Connection
         self._lock = lock
@@ -108,6 +116,7 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         self._transaction_class = self.__class__
         self._old_context_value = None
         self._finalized = False
+        self.fetch_inserted = fetch_inserted
 
     async def start(self) -> None:
         try:

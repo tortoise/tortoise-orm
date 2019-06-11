@@ -1,14 +1,19 @@
 import datetime
 import functools
 import json
+import uuid
 from decimal import Decimal
-from typing import Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
+from uuid import UUID
 
 import ciso8601
 from pypika import Table
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
 from tortoise.utils import QueryAsyncIterator
+
+if TYPE_CHECKING:  # pragma: nocoverage
+    from tortoise.models import Model
 
 CASCADE = "CASCADE"
 RESTRICT = "RESTRICT"
@@ -35,7 +40,10 @@ class Field:
         "unique",
         "index",
         "model_field_name",
+        "model",
+        "reference",
     )
+    has_db_field = True
 
     def __init__(
         self,
@@ -47,6 +55,8 @@ class Field:
         default: Any = None,
         unique: bool = False,
         index: bool = False,
+        reference: Optional[str] = None,
+        model: "Optional[Model]" = None,
         **kwargs
     ) -> None:
         self.type = type
@@ -57,7 +67,9 @@ class Field:
         self.null = null
         self.unique = unique
         self.index = index
-        self.model_field_name = ""  # Type: str
+        self.model_field_name = ""  # type: str
+        self.model = model
+        self.reference = reference
 
     def to_db_value(self, value: Any, instance) -> Any:
         if value is None or type(value) == self.type:  # pylint: disable=C0123
@@ -82,13 +94,10 @@ class IntField(Field):
         True if field is Primary Key.
     """
 
-    __slots__ = ("reference",)
-
     def __init__(self, pk: bool = False, **kwargs) -> None:
-        kwargs["generated"] = bool(kwargs.get("generated")) | pk
-        super().__init__(int, **kwargs)
-        self.reference = kwargs.get("reference")
-        self.pk = pk
+        if pk:
+            kwargs["generated"] = bool(kwargs.get("generated", True))
+        super().__init__(int, pk=pk, **kwargs)
 
 
 class BigIntField(Field):
@@ -99,13 +108,10 @@ class BigIntField(Field):
         True if field is Primary Key.
     """
 
-    __slots__ = ("reference",)
-
     def __init__(self, pk: bool = False, **kwargs) -> None:
-        kwargs["generated"] = bool(kwargs.get("generated")) | pk
-        super().__init__(int, **kwargs)
-        self.reference = kwargs.get("reference")
-        self.pk = pk
+        if pk:
+            kwargs["generated"] = bool(kwargs.get("generated", True))
+        super().__init__(int, pk=pk, **kwargs)
 
 
 class SmallIntField(Field):
@@ -288,7 +294,7 @@ class JSONField(Field):
     __slots__ = ("encoder", "decoder")
 
     def __init__(self, encoder=JSON_DUMPS, decoder=JSON_LOADS, **kwargs) -> None:
-        super().__init__((dict, list), **kwargs)
+        super().__init__(type=(dict, list), **kwargs)
         self.encoder = encoder
         self.decoder = decoder
 
@@ -303,6 +309,32 @@ class JSONField(Field):
         if value is None or isinstance(value, self.type):
             return value
         return self.decoder(value)
+
+
+class UUIDField(Field):
+    """
+    UUID Field
+
+    This field can store uuid value.
+
+    If used as a primary key, it will auto-generate a UUID4 by default.
+    """
+
+    def __init__(self, **kwargs):
+        if kwargs.get("pk", False):
+            if "default" not in kwargs:
+                kwargs["default"] = uuid.uuid4
+        super().__init__(type=UUID, **kwargs)
+
+    def to_db_value(self, value: Any, instance):
+        if value is None:
+            return None
+        return str(value)
+
+    def to_python_value(self, value: Any):
+        if value is None or isinstance(value, self.type):
+            return value
+        return uuid.UUID(value)
 
 
 class ForeignKeyField(Field):
@@ -336,6 +368,7 @@ class ForeignKeyField(Field):
     """
 
     __slots__ = ("model_name", "related_name", "on_delete")
+    has_db_field = False
 
     def __init__(
         self, model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs
@@ -386,6 +419,7 @@ class ManyToManyField(Field):
         "through",
         "_generated",
     )
+    has_db_field = False
 
     def __init__(
         self,
@@ -409,6 +443,7 @@ class ManyToManyField(Field):
 
 class BackwardFKRelation(Field):
     __slots__ = ("type", "relation_field")
+    has_db_field = False
 
     def __init__(self, type, relation_field: str) -> None:  # pylint: disable=W0622
         super().__init__(type=type)
@@ -439,11 +474,11 @@ class RelationQueryContainer:
 
     @property
     def _query(self):
-        if not self.instance.id:
+        if not self.instance.pk:
             raise OperationalError(
                 "This objects hasn't been instanced, call .save() before" " calling related queries"
             )
-        return self.model.filter(**{self.relation_field: self.instance.id})
+        return self.model.filter(**{self.relation_field: self.instance.pk})
 
     def __contains__(self, item) -> bool:
         if not self._fetched:
@@ -546,15 +581,20 @@ class ManyToManyRelationManager(RelationQueryContainer):
         """
         if not instances:
             return
-        if self.instance.id is None:
+        if self.instance.pk is None:
             raise OperationalError(
                 "You should first call .save() on {model}".format(model=self.instance)
             )
         db = using_db if using_db else self.model._meta.db
+        pk_formatting_func = type(self.instance)._meta.pk.to_db_value
+        related_pk_formatting_func = type(instances[0])._meta.pk.to_db_value
         through_table = Table(self.field.through)
         select_query = (
             db.query_class.from_(through_table)
-            .where(getattr(through_table, self.field.backward_key) == self.instance.id)
+            .where(
+                getattr(through_table, self.field.backward_key)
+                == pk_formatting_func(self.instance.pk, self.instance)
+            )
             .select(self.field.backward_key, self.field.forward_key)
         )
         query = db.query_class.into(through_table).columns(
@@ -563,10 +603,12 @@ class ManyToManyRelationManager(RelationQueryContainer):
         )
 
         if len(instances) == 1:
-            criterion = getattr(through_table, self.field.forward_key) == instances[0].id
+            criterion = getattr(
+                through_table, self.field.forward_key
+            ) == related_pk_formatting_func(instances[0].pk, instances[0])
         else:
             criterion = getattr(through_table, self.field.forward_key).isin(
-                [i.id for i in instances]
+                [related_pk_formatting_func(i.pk, i) for i in instances]
             )
 
         select_query = select_query.where(criterion)
@@ -579,13 +621,16 @@ class ManyToManyRelationManager(RelationQueryContainer):
 
         insert_is_required = False
         for instance_to_add in instances:
-            if instance_to_add.id is None:
+            if instance_to_add.pk is None:
                 raise OperationalError(
                     "You should first call .save() on {model}".format(model=instance_to_add)
                 )
-            if (self.instance.id, instance_to_add.id) in already_existing_relations:
+            if (self.instance.pk, instance_to_add.pk) in already_existing_relations:
                 continue
-            query = query.insert(instance_to_add.id, self.instance.id)
+            query = query.insert(
+                related_pk_formatting_func(instance_to_add.pk, instance_to_add),
+                pk_formatting_func(self.instance.pk, self.instance),
+            )
             insert_is_required = True
         if insert_is_required:
             await db.execute_query(str(query))
@@ -596,9 +641,13 @@ class ManyToManyRelationManager(RelationQueryContainer):
         """
         db = using_db if using_db else self.model._meta.db
         through_table = Table(self.field.through)
+        pk_formatting_func = type(self.instance)._meta.pk.to_db_value
         query = (
             db.query_class.from_(through_table)
-            .where(getattr(through_table, self.field.backward_key) == self.instance.id)
+            .where(
+                getattr(through_table, self.field.backward_key)
+                == pk_formatting_func(self.instance.pk, self.instance)
+            )
             .delete()
         )
         await db.execute_query(str(query))
@@ -611,14 +660,25 @@ class ManyToManyRelationManager(RelationQueryContainer):
         if not instances:
             raise OperationalError("remove() called on no instances")
         through_table = Table(self.field.through)
+        pk_formatting_func = type(self.instance)._meta.pk.to_db_value
+        related_pk_formatting_func = type(instances[0])._meta.pk.to_db_value
 
         if len(instances) == 1:
-            condition = (getattr(through_table, self.field.forward_key) == instances[0].id) & (
-                getattr(through_table, self.field.backward_key) == self.instance.id
+            condition = (
+                getattr(through_table, self.field.forward_key)
+                == related_pk_formatting_func(instances[0].pk, instances[0])
+            ) & (
+                getattr(through_table, self.field.backward_key)
+                == pk_formatting_func(self.instance.pk, self.instance)
             )
         else:
-            condition = (getattr(through_table, self.field.backward_key) == self.instance.id) & (
-                getattr(through_table, self.field.forward_key).isin([i.id for i in instances])
+            condition = (
+                getattr(through_table, self.field.backward_key)
+                == pk_formatting_func(self.instance.pk, self.instance)
+            ) & (
+                getattr(through_table, self.field.forward_key).isin(
+                    [related_pk_formatting_func(i.pk, i) for i in instances]
+                )
             )
         query = db.query_class.from_(through_table).where(condition).delete()
         await db.execute_query(str(query))

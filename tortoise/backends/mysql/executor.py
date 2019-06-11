@@ -3,7 +3,9 @@ from typing import List
 from pypika import MySQLQuery, Parameter, Table, functions
 from pypika.enums import SqlTypes
 
+from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
+from tortoise.fields import BigIntField, IntField
 from tortoise.filters import (
     contains,
     ends_with,
@@ -61,3 +63,11 @@ class MySQLExecutor(BaseExecutor):
             .columns(*columns)
             .insert(*[Parameter("%s") for _ in range(len(columns))])
         )
+
+    async def _process_insert_result(self, instance: Model, results: int):
+        pk_field_object = self.model._meta.pk
+        if isinstance(pk_field_object, (IntField, BigIntField)) and pk_field_object.generated:
+            instance.pk = results
+
+        # MySQL can only generate a single ROWID
+        #   so if any other primary key, it won't generate what we want.

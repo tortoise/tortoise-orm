@@ -4,8 +4,9 @@ from typing import List, Optional
 
 from pypika import Parameter, Table
 
-from tortoise import fields
+from tortoise import Model, fields
 from tortoise.backends.base.executor import BaseExecutor
+from tortoise.fields import BigIntField, IntField
 
 
 def to_db_bool(self, value, instance) -> Optional[int]:
@@ -28,13 +29,13 @@ def to_db_datetime(self, value: Optional[datetime.datetime], instance) -> Option
     if self.auto_now:
         value = datetime.datetime.utcnow()
         setattr(instance, self.model_field_name, value)
-        return str(value)
+        return value.isoformat(" ")
     if self.auto_now_add and getattr(instance, self.model_field_name) is None:
         value = datetime.datetime.utcnow()
         setattr(instance, self.model_field_name, value)
-        return str(value)
+        return value.isoformat(" ")
     if isinstance(value, datetime.datetime):
-        return str(value)
+        return value.isoformat(" ")
     return None
 
 
@@ -52,3 +53,11 @@ class SqliteExecutor(BaseExecutor):
             .columns(*columns)
             .insert(*[Parameter("?") for _ in range(len(columns))])
         )
+
+    async def _process_insert_result(self, instance: Model, results: int):
+        pk_field_object = self.model._meta.pk
+        if isinstance(pk_field_object, (IntField, BigIntField)) and pk_field_object.generated:
+            instance.pk = results
+
+        # SQLite can only generate a single ROWID
+        #   so if any other primary key, it won't generate what we want.

@@ -190,8 +190,8 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         self._transaction_class = self.__class__
         self._finalized = None  # type: Optional[bool]
         self._old_context_value = None
+        self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
-        self.transaction = None
 
     async def create_connection(self, with_db: bool) -> None:
         await self._parent.create_connection(with_db)

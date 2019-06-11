@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from functools import wraps
-from typing import List, Optional, SupportsInt  # noqa
+from typing import Any, List, Optional, SupportsInt  # noqa
 
 import asyncpg
 from pypika import PostgreSQLQuery
@@ -151,12 +151,12 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
     @translate_exceptions
     @retry_connection
-    async def execute_insert(self, query: str, values: list) -> int:
+    async def execute_insert(self, query: str, values: list) -> Optional[asyncpg.Record]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             # TODO: Cache prepared statement
             stmt = await connection.prepare(query)
-            return await stmt.fetchval(*values)
+            return await stmt.fetchrow(*values)
 
     @translate_exceptions
     @retry_connection

@@ -7,8 +7,9 @@ Tortoise ORM is an easy-to-use ``asyncio`` ORM *(Object Relational Mapper)* insp
 Tortoise ORM was build with relations in mind and admiration for the excellent and popular Django ORM.
 It's engraved in it's design that you are working not with just tables, you work with relational data.
 
-.. caution::
-   Tortoise ORM is young project and breaking changes without following semantic versioning are to be expected
+.. note::
+   Tortoise ORM is young project and breaking changes are to be expected.
+   We keep a :ref:`changelog` and it will have possible breakage clearly documented.
 
 Source & issue trackers are available at `<https://github.com/tortoise/tortoise-orm/>`_
 
@@ -23,8 +24,7 @@ Why was Tortoise ORM built?
 Python has many existing and mature ORMs, unfortunately they are designed with an opposing paradigm of how I/O gets processed.
 ``asyncio`` is relatively new technology that has a very different concurrency model, and the largest change is regarding how I/O is handled.
 
-However, Tortoise ORM is not first attempt of building ``asyncio`` ORM, there are many cases of developers attempting to map synchronous python ORMs to the async world, having to compromise heavily as those ORMs were not designed for an asynchronous event loop.
-Those few ORMs, which tried new approaches stabilized at point, where they lost word "relational" from ORM and mostly were limited to fetching rows from single table mapped to objects.
+However, Tortoise ORM is not first attempt of building ``asyncio`` ORM, there are many cases of developers attempting to map synchronous python ORMs to the async world, initial attempts did not have a clean API.
 
 Hence we started Tortoise ORM.
 

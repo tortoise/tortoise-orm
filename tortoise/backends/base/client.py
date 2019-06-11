@@ -1,5 +1,5 @@
 import logging
-from typing import Sequence
+from typing import Any, Sequence
 
 from pypika import Query
 
@@ -62,9 +62,10 @@ class BaseDBAsyncClient:
     schema_generator = BaseSchemaGenerator
     capabilities = Capabilities("")
 
-    def __init__(self, connection_name: str, **kwargs) -> None:
+    def __init__(self, connection_name: str, fetch_inserted: bool = True, **kwargs) -> None:
         self.log = logging.getLogger("db_client")
         self.connection_name = connection_name
+        self.fetch_inserted = fetch_inserted
 
     async def create_connection(self, with_db: bool) -> None:
         raise NotImplementedError()  # pragma: nocoverage
@@ -84,7 +85,7 @@ class BaseDBAsyncClient:
     def _in_transaction(self) -> "BaseTransactionWrapper":
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def execute_insert(self, query: str, values: list) -> int:
+    async def execute_insert(self, query: str, values: list) -> Any:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_query(self, query: str) -> Sequence[dict]:

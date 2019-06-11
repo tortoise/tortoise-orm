@@ -1,5 +1,43 @@
+.. _changelog:
+
 Changelog
 =========
+
+0.12.0
+------
+* Tortoise ORM now supports non-autonumber primary keys.
+
+  .. note::
+     This is a big feature change. It should not break any existing implementations.
+
+  That primary key will be accesible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
+  That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc...
+
+  We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
+
+  .. code-block:: python3
+
+      IntField
+      BigIntField
+      CharField
+      UUIDField
+
+  One must define a primary key by setting a ``pk`` parameter to ``True``.
+
+  If you don't define a primary key, we will create a primary key of type ``IntField`` with name of ``id`` for you.
+
+  Any of these are valid primary key definitions in a Model:
+
+  .. code-block:: python3
+
+      id = fields.IntField(pk=True)
+
+      checksum = fields.CharField(pk=True)
+
+      guid = fields.UUIDField(pk=True)
+
+  For more info, please have a look at :ref:`init_app`
+
 
 0.11.13
 -------
