@@ -3,6 +3,28 @@
 Changelog
 =========
 
+0.12.1
+------
+* Notable efficiency improvement for regular inserts
+* Bulk insert operation:
+
+  .. note::
+     The bulk insert operation will do the minimum to ensure that the object
+     created in the DB has all the defaults and generated fields set,
+     but may be incomplete reference in Python.
+
+     e.g. ``IntField`` primary keys will not be poplulated.
+
+  This is recommend only for throw away inserts where you want to ensure optimal
+  insert performance.
+
+  .. code-block:: python3
+
+      User.bulk_create([
+          User(name="...", email="..."),
+          User(name="...", email="...")
+      ])
+
 0.12.0
 ------
 * Tortoise ORM now supports non-autonumber primary keys.
@@ -36,8 +58,6 @@ Changelog
 
       guid = fields.UUIDField(pk=True)
 
-  For more info, please have a look at :ref:`init_app`
-
 
 0.11.13
 -------
@@ -69,12 +89,12 @@ Changelog
 
 0.11.7
 ------
-- Fixed 'unique_together' for foreign keys (#114)
+- Fixed ``unique_together`` for foreign keys (#114)
 - Fixed Field.to_db_value method to handle Enum (#113 #115 #116)
 
 0.11.6
 ------
-- Added ability to use "unique_together" meta Model option
+- Added ability to use ``unique_together`` meta Model option
 
 0.11.5
 ------
