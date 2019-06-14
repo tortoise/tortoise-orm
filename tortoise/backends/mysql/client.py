@@ -159,9 +159,16 @@ class MySQLClient(BaseDBAsyncClient):
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
-                # TODO: Use prepared statement, and cache it
                 await cursor.execute(query, values)
                 return cursor.lastrowid  # return auto-generated id
+
+    @translate_exceptions
+    @retry_connection
+    async def execute_many(self, query: str, values: list) -> None:
+        async with self.acquire_connection() as connection:
+            self.log.debug("%s: %s", query, values)
+            async with connection.cursor() as cursor:
+                await cursor.executemany(query, values)
 
     @translate_exceptions
     @retry_connection

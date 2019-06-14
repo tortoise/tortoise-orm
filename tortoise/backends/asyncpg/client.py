@@ -160,6 +160,14 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
     @translate_exceptions
     @retry_connection
+    async def execute_many(self, query: str, values: list) -> None:
+        async with self.acquire_connection() as connection:
+            self.log.debug("%s: %s", query, values)
+            # TODO: Consider using copy_records_to_table instead
+            await connection.executemany(query, values)
+
+    @translate_exceptions
+    @retry_connection
     async def execute_query(self, query: str) -> List[dict]:
         async with self.acquire_connection() as connection:
             self.log.debug(query)
