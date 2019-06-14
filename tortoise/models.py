@@ -362,20 +362,14 @@ class Model(metaclass=ModelMeta):
 
     pk = property(_get_pk_val, _set_pk_val)
 
-    async def _insert_instance(self, using_db=None) -> None:
-        db = using_db or self._meta.db
-        await db.executor_class(model=self.__class__, db=db).execute_insert(self)
-        self._saved_in_db = True
-
-    async def _update_instance(self, using_db=None) -> None:
-        db = using_db or self._meta.db
-        await db.executor_class(model=self.__class__, db=db).execute_update(self)
-
     async def save(self, *args, **kwargs) -> None:
-        if not self._saved_in_db:
-            await self._insert_instance(*args, **kwargs)
+        db = kwargs.get("using_db") or self._meta.db
+        executor = db.executor_class(model=self.__class__, db=db)
+        if self._saved_in_db:
+            await executor.execute_update(self)
         else:
-            await self._update_instance(*args, **kwargs)
+            await executor.execute_insert(self)
+            self._saved_in_db = True
 
     async def delete(self, using_db=None) -> None:
         db = using_db or self._meta.db
