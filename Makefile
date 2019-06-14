@@ -44,18 +44,12 @@ endif
 	python setup.py check -mrs
 
 test: deps
-	coverage erase
-	$(py_warn) coverage run -p --concurrency=multiprocessing `which green`
-	coverage combine
-	coverage report
+	$(py_warn) pytest --cov=tortoise tortoise/tests
 
 testall: deps
-	coverage erase
-	-$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: coverage run -p --concurrency=multiprocessing `which green`
-	-$(py_warn) TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_\{\} coverage run -p --concurrency=multiprocessing `which green`
-	-$(py_warn) TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_\{\}" coverage run -p --concurrency=multiprocessing `which green`
-	coverage combine
-	coverage report
+	-$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: pytest --cov=tortoise tortoise/tests
+	-$(py_warn) TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_\{\} pytest --cov=tortoise tortoise/tests
+	-$(py_warn) TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_\{\}" pytest --cov=tortoise tortoise/tests
 
 ci: check test
 

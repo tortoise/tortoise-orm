@@ -27,9 +27,9 @@ black;python_version>="3.6"
 ## Test tools
 tox
 asynctest
-green
 coveralls
 pytest
+pytest-cov
 nose2
 
 # Pypi

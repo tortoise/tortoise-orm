@@ -1,11 +1,11 @@
 from copy import copy, deepcopy
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Union
 
 from pypika import Query
 
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient  # noqa
-from tortoise.exceptions import ConfigurationError, OperationalError
+from tortoise.exceptions import ConfigurationError, IntegrityError, OperationalError
 from tortoise.fields import (
     Field,
     ManyToManyField,
@@ -14,10 +14,6 @@ from tortoise.fields import (
 )
 from tortoise.filters import get_filters_for_field
 from tortoise.queryset import QuerySet
-from tortoise.transactions import current_transaction_map
-
-MODEL_TYPE = TypeVar("MODEL_TYPE", bound="Model")
-# TODO: Define Filter type object. Possibly tuple?
 
 
 def get_unique_together(meta) -> Tuple[Tuple[str, ...], ...]:
@@ -162,8 +158,16 @@ class MetaInfo:
 
     @property
     def db(self) -> BaseDBAsyncClient:
+        from tortoise import Tortoise
+
+        if not self.default_connection:
+            raise OperationalError(
+                "Can't determine connection for model {} because it was not initialized".format(
+                    self._model
+                )
+            )
         try:
-            return current_transaction_map[self.default_connection].get()
+            return Tortoise.get_connection(self.default_connection).get_current_transaction()
         except KeyError:
             raise ConfigurationError("No DB associated to model")
 
@@ -451,9 +455,22 @@ class Model(metaclass=ModelMeta):
         await db.executor_class(model=self.__class__, db=db).fetch_for_list([self], *args)
 
     @classmethod
-    async def get_or_create(
-        cls: Type[MODEL_TYPE], using_db=None, defaults=None, **kwargs
-    ) -> Tuple[MODEL_TYPE, bool]:
+    async def _create_object_from_params(
+        cls, lookup: Mapping, params: Mapping, using_db: BaseDBAsyncClient
+    ) -> Tuple["Model", bool]:
+        try:
+            db = using_db if using_db else cls._meta.db
+            async with db._in_transaction():
+                instance = await cls.create(**lookup, **params, using_db=using_db)
+            return instance, True
+        except IntegrityError:
+            instance = await cls.filter(**lookup).first()
+            if instance:
+                return instance, False
+            raise
+
+    @classmethod
+    async def get_or_create(cls, using_db=None, defaults=None, **kwargs) -> Tuple["Model", bool]:
         """
         Fetches the object if exists (filtering on the provided parameters),
         else creates an instance with any unspecified parameters as default values.
@@ -463,10 +480,10 @@ class Model(metaclass=ModelMeta):
         instance = await cls.filter(**kwargs).first()
         if instance:
             return instance, False
-        return await cls.create(**defaults, **kwargs, using_db=using_db), True
+        return await cls._create_object_from_params(kwargs, defaults, using_db)
 
     @classmethod
-    async def create(cls: Type[MODEL_TYPE], **kwargs) -> MODEL_TYPE:
+    async def create(cls, **kwargs) -> "Model":
         """
         Create a record in the DB and returns the object.
 
@@ -488,7 +505,7 @@ class Model(metaclass=ModelMeta):
         return instance
 
     @classmethod
-    async def bulk_create(cls: Type[MODEL_TYPE], objects: List[MODEL_TYPE], using_db=None) -> None:
+    async def bulk_create(cls, objects: List["Model"], using_db=None) -> None:
         """
         Bulk insert operation:
 

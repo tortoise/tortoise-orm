@@ -4,8 +4,6 @@ from typing import Callable, Dict, Optional  # noqa
 from tortoise.backends.base.client import BaseDBAsyncClient, BaseTransactionWrapper
 from tortoise.exceptions import ParamsError
 
-current_transaction_map = {}  # type: Dict
-
 
 def _get_connection(connection_name: Optional[str]) -> BaseDBAsyncClient:
     from tortoise import Tortoise

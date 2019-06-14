@@ -1,4 +1,5 @@
 import logging
+import sys
 from typing import Any, Sequence
 
 from pypika import Query
@@ -6,6 +7,11 @@ from pypika import Query
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.exceptions import TransactionManagementError
+
+if sys.version_info < (3, 7):
+    from aiocontextvars import ContextVar  # pylint: disable=E0401
+else:
+    from contextvars import ContextVar
 
 
 class Capabilities:
@@ -37,7 +43,8 @@ class Capabilities:
         # Deficiencies to work around:
         safe_indexes: bool = True,
         requires_limit: bool = False,
-        inline_comment: bool = False
+        inline_comment: bool = False,
+        pooling: bool = False
     ) -> None:
         super().__setattr__("_mutable", True)
 
@@ -46,6 +53,7 @@ class Capabilities:
         self.requires_limit = requires_limit
         self.safe_indexes = safe_indexes
         self.inline_comment = inline_comment
+        self.pooling = pooling
 
         super().__setattr__("_mutable", False)
 
@@ -69,6 +77,8 @@ class BaseDBAsyncClient:
         self.connection_name = connection_name
         self.fetch_inserted = fetch_inserted
 
+        self._current_transaction = ContextVar(self.connection_name, default=self)  # Type: dict
+
     async def create_connection(self, with_db: bool) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
@@ -81,7 +91,7 @@ class BaseDBAsyncClient:
     async def db_delete(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    def acquire_connection(self) -> "ConnectionWrapper":
+    def acquire_connection(self):
         raise NotImplementedError()  # pragma: nocoverage
 
     def _in_transaction(self) -> "BaseTransactionWrapper":
@@ -95,6 +105,9 @@ class BaseDBAsyncClient:
 
     async def execute_script(self, query: str) -> None:
         raise NotImplementedError()  # pragma: nocoverage
+
+    def get_current_transaction(self) -> "BaseDBAsyncClient":
+        return self._current_transaction.get()
 
     # async def execute_explain(self, query: str) -> Sequence[dict]:
     #     raise NotImplementedError()  # pragma: nocoverage
@@ -119,7 +132,7 @@ class BaseTransactionWrapper:
     async def start(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    def release(self) -> None:
+    async def finalize(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def rollback(self) -> None:
@@ -128,6 +141,9 @@ class BaseTransactionWrapper:
     async def commit(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
+    async def release(self, connection):
+        pass
+
     async def __aenter__(self):
         await self.start()
         return self
@@ -135,7 +151,7 @@ class BaseTransactionWrapper:
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         if exc_type:
             if issubclass(exc_type, TransactionManagementError):
-                self.release()
+                await self.finalize()
             else:
                 await self.rollback()
         else:

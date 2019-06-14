@@ -215,7 +215,7 @@ class DatetimeField(Field):
         self.auto_now = auto_now
         self.auto_now_add = auto_now | auto_now_add
 
-    def to_python_value(self, value: Any) -> datetime.datetime:
+    def to_python_value(self, value: Any) -> Optional[datetime.datetime]:
         if value is None or isinstance(value, self.type):
             return value
         return ciso8601.parse_datetime(value)
@@ -244,7 +244,7 @@ class DateField(Field):
     def __init__(self, **kwargs) -> None:
         super().__init__(datetime.date, **kwargs)
 
-    def to_python_value(self, value: Any) -> datetime.date:
+    def to_python_value(self, value: Any) -> Optional[datetime.date]:
         if value is None or isinstance(value, self.type):
             return value
         return ciso8601.parse_datetime(value).date()
@@ -260,7 +260,7 @@ class TimeDeltaField(Field):
     def __init__(self, **kwargs) -> None:
         super().__init__(datetime.timedelta, **kwargs)
 
-    def to_python_value(self, value: Any) -> datetime.timedelta:
+    def to_python_value(self, value: Any) -> Optional[datetime.timedelta]:
         if value is None or isinstance(value, self.type):
             return value
         return datetime.timedelta(microseconds=value)

@@ -10,4 +10,4 @@ aiomysql
 
 ## Test tools
 asynctest
-green
+pytest

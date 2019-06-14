@@ -24,6 +24,15 @@ class Tournament(Model):
         return self.name
 
 
+class UniqueTournament(Model):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(unique=True, max_length=32)
+    created = fields.DatetimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Reporter(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()

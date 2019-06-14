@@ -5,7 +5,7 @@ import logging
 import os
 from copy import deepcopy
 from inspect import isclass
-from typing import Coroutine, Dict, List, Optional, Tuple, Type, Union, cast  # noqa
+from typing import Coroutine, Dict, List, Optional, Tuple, Type, cast  # noqa
 
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
@@ -15,13 +15,7 @@ from tortoise.fields import ManyToManyRelationManager  # noqa
 from tortoise.filters import get_m2m_filters
 from tortoise.models import Model
 from tortoise.queryset import QuerySet  # noqa
-from tortoise.transactions import current_transaction_map
 from tortoise.utils import generate_schema_for_client
-
-try:
-    from contextvars import ContextVar
-except ImportError:
-    from aiocontextvars import ContextVar  # type: ignore
 
 logger = logging.getLogger("tortoise")
 
@@ -220,7 +214,6 @@ class Tortoise:
                 await connection.db_create()
             await connection.create_connection(with_db=True)
             cls._connections[name] = connection
-            current_transaction_map[name] = ContextVar(name, default=connection)
 
     @classmethod
     def _init_apps(cls, apps_config: dict) -> None:
@@ -399,7 +392,6 @@ class Tortoise:
             for model in app.values():
                 model._meta.default_connection = None
         cls.apps = {}
-        current_transaction_map.clear()
 
     @classmethod
     async def generate_schemas(cls, safe: bool = True) -> None:

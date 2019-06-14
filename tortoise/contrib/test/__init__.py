@@ -12,7 +12,6 @@ from asynctest.case import _Policy
 from tortoise import Tortoise
 from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise.exceptions import DBConnectionError
-from tortoise.transactions import current_transaction_map, start_transaction
 
 __all__ = (
     "SimpleTestCase",
@@ -74,7 +73,6 @@ async def _init_db(config: dict) -> None:
 def _restore_default() -> None:
     Tortoise.apps = {}
     Tortoise._connections = _CONNECTIONS.copy()
-    current_transaction_map.update(_CONN_MAP)
     Tortoise._init_apps(_CONFIG["apps"])
     Tortoise._inited = True
 
@@ -96,7 +94,6 @@ def initializer(
     global _LOOP
     global _TORTOISE_TEST_DB
     global _MODULES
-    global _CONN_MAP
     _MODULES = modules
     if db_url is not None:  # pragma: nobranch
         _TORTOISE_TEST_DB = db_url
@@ -107,7 +104,6 @@ def initializer(
     _SELECTOR = loop._selector  # type: ignore
     loop.run_until_complete(_init_db(_CONFIG))
     _CONNECTIONS = Tortoise._connections.copy()
-    _CONN_MAP = current_transaction_map.copy()
     Tortoise.apps = {}
     Tortoise._connections = {}
     Tortoise._inited = False
@@ -235,13 +231,24 @@ class TestCase(SimpleTestCase):
     separate transaction that will rollback on finish.
     """
 
+    # async def _setUpDB(self) -> None:
+    #     _restore_default()
+    #     self.transaction = await start_transaction()  # pylint: disable=W0201
+    #
+    # async def _tearDownDB(self) -> None:
+    #     _restore_default()
+    #     await self.transaction.rollback()
+
+    # pylint: disable=C0103,W0201
     async def _setUpDB(self) -> None:
-        _restore_default()
-        self.transaction = await start_transaction()  # pylint: disable=W0201
+        config = getDBConfig(app_label="models", modules=_MODULES)
+        await Tortoise.init(config, _create_db=True)
+        await Tortoise.generate_schemas(safe=False)
+        self._connections = Tortoise._connections.copy()
 
     async def _tearDownDB(self) -> None:
-        _restore_default()
-        await self.transaction.rollback()
+        Tortoise._connections = self._connections.copy()
+        await Tortoise._drop_databases()
 
 
 def requireCapability(connection_name: str = "models", **conditions: Any):

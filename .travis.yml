@@ -15,15 +15,11 @@ matrix:
   - python: pypy3.5
     env: TORTOISE_TEST_DB="sqlite:///tmp/test-{}.sqlite"
     install: pip install -r requirements-pypy.txt
-    script: green
+    script: pytest tortoise/tests
   - python: pypy3.5
     env: TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_{}"
     install: pip install -r requirements-pypy.txt
-    script: green
-  - python: 3.6
-    env: TEST_RUNNER=py.test
-    install: pip install -r requirements-dev.txt
-    script: py.test
+    script: pytest tortoise/tests
   - python: 3.6
     env: TEST_RUNNER=nose2
     install: pip install -r requirements-dev.txt
