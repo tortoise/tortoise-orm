@@ -99,6 +99,33 @@ Any of these are valid primary key definitions in a Model:
 
     guid = fields.UUIDField(pk=True)
 
+The ``Meta`` class
+------------------
+
+.. autoclass:: tortoise.models.Model.Meta
+
+    .. attribute:: abstract
+        :annotation: = False
+
+        Set to ``True`` to indicate this is an abstract class
+
+    .. attribute:: table
+        :annotation: = ""
+
+        Set this to configure a manual table name, instead of a generated one
+
+    .. attribute:: unique_together
+        :annotation: = None
+
+        Specify ``unique_together`` to set up compound unique indexes for sets of columns.
+
+        It should be a tuple of tuples (lists are fine) in the format of:
+
+        .. code-block:: python3
+
+            unique_together=("field_a", "field_b")
+            unique_together=(("field_a", "field_b"), )
+            unique_together=(("field_a", "field_b"), ("field_c", "field_d", "field_e")
 
 ``ForeignKeyField``
 -------------------
@@ -195,7 +222,6 @@ The reverse lookup of ``team.event_team`` works exactly the same way.
 Reference
 =========
 
-.. autoclass:: tortoise.models.Model
-    :members:
+.. automodule:: tortoise.models
+    :members: Model
     :undoc-members:
-

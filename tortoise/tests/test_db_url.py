@@ -14,21 +14,40 @@ class TestConfigGenerator(test.SimpleTestCase):
             res,
             {
                 "engine": "tortoise.backends.sqlite",
-                "credentials": {"file_path": "/some/test.sqlite"},
+                "credentials": {
+                    "file_path": "/some/test.sqlite",
+                    "journal_mode": "WAL",
+                    "journal_size_limit": 16384,
+                },
             },
         )
 
     def test_sqlite_relative(self):
         res = expand_db_url("sqlite://test.sqlite")
         self.assertDictEqual(
-            res, {"engine": "tortoise.backends.sqlite", "credentials": {"file_path": "test.sqlite"}}
+            res,
+            {
+                "engine": "tortoise.backends.sqlite",
+                "credentials": {
+                    "file_path": "test.sqlite",
+                    "journal_mode": "WAL",
+                    "journal_size_limit": 16384,
+                },
+            },
         )
 
     def test_sqlite_relative_with_subdir(self):
         res = expand_db_url("sqlite://data/db.sqlite")
         self.assertDictEqual(
             res,
-            {"engine": "tortoise.backends.sqlite", "credentials": {"file_path": "data/db.sqlite"}},
+            {
+                "engine": "tortoise.backends.sqlite",
+                "credentials": {
+                    "file_path": "data/db.sqlite",
+                    "journal_mode": "WAL",
+                    "journal_size_limit": 16384,
+                },
+            },
         )
 
     def test_sqlite_testing(self):
@@ -38,16 +57,30 @@ class TestConfigGenerator(test.SimpleTestCase):
         self.assertIn(".sqlite", file_path)
         self.assertNotEqual("sqlite:///some/test-{}.sqlite", file_path)
         self.assertDictEqual(
-            res, {"engine": "tortoise.backends.sqlite", "credentials": {"file_path": file_path}}
+            res,
+            {
+                "engine": "tortoise.backends.sqlite",
+                "credentials": {
+                    "file_path": file_path,
+                    "journal_mode": "WAL",
+                    "journal_size_limit": 16384,
+                },
+            },
         )
 
     def test_sqlite_params(self):
-        res = expand_db_url("sqlite:///some/test.sqlite?AHA=5&moo=yes")
+        res = expand_db_url("sqlite:///some/test.sqlite?AHA=5&moo=yes&journal_mode=TRUNCATE")
         self.assertDictEqual(
             res,
             {
                 "engine": "tortoise.backends.sqlite",
-                "credentials": {"file_path": "/some/test.sqlite", "AHA": "5", "moo": "yes"},
+                "credentials": {
+                    "file_path": "/some/test.sqlite",
+                    "AHA": "5",
+                    "moo": "yes",
+                    "journal_mode": "TRUNCATE",
+                    "journal_size_limit": 16384,
+                },
             },
         )
 
@@ -217,7 +250,11 @@ class TestConfigGenerator(test.SimpleTestCase):
             {
                 "connections": {
                     "default": {
-                        "credentials": {"file_path": "/some/test.sqlite"},
+                        "credentials": {
+                            "file_path": "/some/test.sqlite",
+                            "journal_mode": "WAL",
+                            "journal_size_limit": 16384,
+                        },
                         "engine": "tortoise.backends.sqlite",
                     }
                 },
@@ -242,7 +279,11 @@ class TestConfigGenerator(test.SimpleTestCase):
             {
                 "connections": {
                     "models": {
-                        "credentials": {"file_path": "/some/test.sqlite"},
+                        "credentials": {
+                            "file_path": "/some/test.sqlite",
+                            "journal_mode": "WAL",
+                            "journal_size_limit": 16384,
+                        },
                         "engine": "tortoise.backends.sqlite",
                     }
                 },
@@ -265,7 +306,11 @@ class TestConfigGenerator(test.SimpleTestCase):
             {
                 "connections": {
                     "default": {
-                        "credentials": {"file_path": "/some/test.sqlite"},
+                        "credentials": {
+                            "file_path": "/some/test.sqlite",
+                            "journal_mode": "WAL",
+                            "journal_size_limit": 16384,
+                        },
                         "engine": "tortoise.backends.sqlite",
                     }
                 },

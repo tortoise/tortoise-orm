@@ -40,6 +40,11 @@ class SqliteClient(BaseDBAsyncClient):
     def __init__(self, file_path: str, **kwargs) -> None:
         super().__init__(**kwargs)
         self.filename = file_path
+
+        self.pragmas = kwargs.copy()
+        self.pragmas.pop("connection_name", None)
+        self.pragmas.pop("fetch_inserted", None)
+
         self._transaction_class = type(
             "TransactionWrapper", (TransactionWrapper, self.__class__), {}
         )
@@ -52,15 +57,24 @@ class SqliteClient(BaseDBAsyncClient):
             self._connection.start()
             await self._connection._connect()
             self._connection._conn.row_factory = sqlite3.Row
+            for pragma, val in self.pragmas.items():
+                cursor = await self._connection.execute("PRAGMA {}={}".format(pragma, val))
+                await cursor.close()
             self.log.debug(
-                "Created connection %s with params: filename=%s", self._connection, self.filename
+                "Created connection %s with params: filename=%s %s",
+                self._connection,
+                self.filename,
+                " ".join(["{}={}".format(k, v) for k, v in self.pragmas.items()]),
             )
 
     async def close(self) -> None:
         if self._connection:
             await self._connection.close()
             self.log.debug(
-                "Closed connection %s with params: filename=%s", self._connection, self.filename
+                "Closed connection %s with params: filename=%s %s",
+                self._connection,
+                self.filename,
+                " ".join(["{}={}".format(k, v) for k, v in self.pragmas.items()]),
             )
             self._connection = None
 
@@ -90,6 +104,13 @@ class SqliteClient(BaseDBAsyncClient):
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             return (await connection.execute_insert(query, values))[0]
+
+    @translate_exceptions
+    async def execute_many(self, query: str, values: List[list]) -> None:
+        async with self.acquire_connection() as connection:
+            self.log.debug("%s: %s", query, values)
+            # TODO: Ensure that this is wrapped by a transaction, will provide a big speedup
+            await connection.executemany(query, values)
 
     @translate_exceptions
     async def execute_query(self, query: str) -> List[dict]:

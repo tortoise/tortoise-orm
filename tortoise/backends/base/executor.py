@@ -1,3 +1,4 @@
+from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Type  # noqa
 
 from pypika import JoinType, Table
@@ -9,7 +10,7 @@ from tortoise.query_utils import QueryModifier
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
-INSERT_CACHE = {}  # type: Dict[str, Tuple[list, list, str]]
+INSERT_CACHE = {}  # type: Dict[str, Tuple[list, str, Dict[str, Callable]]]
 
 
 class BaseExecutor:
@@ -22,6 +23,24 @@ class BaseExecutor:
         self.db = db
         self.prefetch_map = prefetch_map if prefetch_map else {}
         self._prefetch_queries = prefetch_queries if prefetch_queries else {}
+
+        key = "{}:{}".format(self.db.connection_name, self.model._meta.table)
+        if key not in INSERT_CACHE:
+            self.regular_columns, columns = self._prepare_insert_columns()
+            self.query = self._prepare_insert_statement(columns)
+
+            self.column_map = {}  # type: Dict[str, Callable]
+            for column in self.regular_columns:
+                field_object = self.model._meta.fields_map[column]
+                if field_object.__class__ in self.TO_DB_OVERRIDE:
+                    func = partial(self.TO_DB_OVERRIDE[field_object.__class__], field_object)
+                else:
+                    func = field_object.to_db_value
+                self.column_map[column] = func
+
+            INSERT_CACHE[key] = self.regular_columns, self.query, self.column_map
+        else:
+            self.regular_columns, self.query, self.column_map = INSERT_CACHE[key]
 
     async def execute_explain(self, query) -> Any:
         sql = " ".join(((self.EXPLAIN_PREFIX, query.get_sql())))
@@ -54,14 +73,6 @@ class BaseExecutor:
             return cls.TO_DB_OVERRIDE[field_object.__class__](field_object, attr, instance)
         return field_object.to_db_value(attr, instance)
 
-    def _prepare_insert_values(self, instance, regular_columns: List[str]) -> list:
-        return [
-            self._field_to_db(
-                self.model._meta.fields_map[column], getattr(instance, column), instance
-            )
-            for column in regular_columns
-        ]
-
     def _prepare_insert_statement(self, columns: List[str]) -> str:
         # Insert should implement returning new id to saved object
         # Each db has it's own methods for it, so each implementation should
@@ -72,18 +83,23 @@ class BaseExecutor:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, instance):
-        key = "{}:{}".format(self.db.connection_name, self.model._meta.table)
-        if key not in INSERT_CACHE:
-            regular_columns, columns = self._prepare_insert_columns()
-            query = self._prepare_insert_statement(columns)
-            INSERT_CACHE[key] = regular_columns, columns, query
-        else:
-            regular_columns, columns, query = INSERT_CACHE[key]
-
-        values = self._prepare_insert_values(instance=instance, regular_columns=regular_columns)
-        insert_result = await self.db.execute_insert(query, values)
+        values = [
+            self.column_map[column](getattr(instance, column), instance)
+            for column in self.regular_columns
+        ]
+        insert_result = await self.db.execute_insert(self.query, values)
         await self._process_insert_result(instance, insert_result)
         return instance
+
+    async def execute_bulk_insert(self, instances):
+        values_lists = [
+            [
+                self.column_map[column](getattr(instance, column), instance)
+                for column in self.regular_columns
+            ]
+            for instance in instances
+        ]
+        await self.db.execute_many(self.query, values_lists)
 
     async def execute_update(self, instance):
         table = Table(self.model._meta.table)
@@ -92,7 +108,7 @@ class BaseExecutor:
             field_object = self.model._meta.fields_map[field]
             if not field_object.generated:
                 query = query.set(
-                    db_field, self._field_to_db(field_object, getattr(instance, field), instance)
+                    db_field, self.column_map[field](getattr(instance, field), instance)
                 )
         query = query.where(
             getattr(table, self.model._meta.db_pk_field)

@@ -306,7 +306,7 @@ class Model(metaclass=ModelMeta):
         # Assign values and do type conversions
         passed_fields = set(kwargs.keys())
         passed_fields.update(meta.fetch_fields)
-        passed_fields |= self.set_field_values(kwargs)
+        passed_fields |= self._set_field_values(kwargs)
 
         # Assign defaults for missing fields
         for key in meta.fields.difference(passed_fields):
@@ -316,7 +316,7 @@ class Model(metaclass=ModelMeta):
             else:
                 setattr(self, key, field_object.default)
 
-    def set_field_values(self, values_map: Dict[str, Any]) -> Set[str]:
+    def _set_field_values(self, values_map: Dict[str, Any]) -> Set[str]:
         """
         Sets values for fields honoring type transformations and
         return list of fields that were set additionally
@@ -354,39 +354,6 @@ class Model(metaclass=ModelMeta):
 
         return passed_fields
 
-    def _get_pk_val(self):
-        return getattr(self, self._meta.pk_attr)
-
-    def _set_pk_val(self, value):
-        setattr(self, self._meta.pk_attr, value)
-
-    pk = property(_get_pk_val, _set_pk_val)
-
-    async def _insert_instance(self, using_db=None) -> None:
-        db = using_db if using_db else self._meta.db
-        await db.executor_class(model=self.__class__, db=db).execute_insert(self)
-        self._saved_in_db = True
-
-    async def _update_instance(self, using_db=None) -> None:
-        db = using_db if using_db else self._meta.db
-        await db.executor_class(model=self.__class__, db=db).execute_update(self)
-
-    async def save(self, *args, **kwargs) -> None:
-        if not self._saved_in_db:
-            await self._insert_instance(*args, **kwargs)
-        else:
-            await self._update_instance(*args, **kwargs)
-
-    async def delete(self, using_db=None) -> None:
-        db = using_db if using_db else self._meta.db
-        if not self._saved_in_db:
-            raise OperationalError("Can't delete unpersisted record")
-        await db.executor_class(model=self.__class__, db=db).execute_delete(self)
-
-    async def fetch_related(self, *args, using_db=None):
-        db = using_db if using_db else self._meta.db
-        await db.executor_class(model=self.__class__, db=db).fetch_for_list([self], *args)
-
     def __str__(self) -> str:
         return "<{}>".format(self.__class__.__name__)
 
@@ -406,6 +373,37 @@ class Model(metaclass=ModelMeta):
             return True
         return False
 
+    def _get_pk_val(self):
+        return getattr(self, self._meta.pk_attr)
+
+    def _set_pk_val(self, value):
+        setattr(self, self._meta.pk_attr, value)
+
+    pk = property(_get_pk_val, _set_pk_val)
+    """
+    Alias to the models Primary Key.
+    Can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc...
+    """
+
+    async def save(self, using_db=None) -> None:
+        db = using_db or self._meta.db
+        executor = db.executor_class(model=self.__class__, db=db)
+        if self._saved_in_db:
+            await executor.execute_update(self)
+        else:
+            await executor.execute_insert(self)
+            self._saved_in_db = True
+
+    async def delete(self, using_db=None) -> None:
+        db = using_db or self._meta.db
+        if not self._saved_in_db:
+            raise OperationalError("Can't delete unpersisted record")
+        await db.executor_class(model=self.__class__, db=db).execute_delete(self)
+
+    async def fetch_related(self, *args, using_db=None):
+        db = using_db or self._meta.db
+        await db.executor_class(model=self.__class__, db=db).fetch_for_list([self], *args)
+
     @classmethod
     async def get_or_create(
         cls: Type[MODEL_TYPE], using_db=None, defaults=None, **kwargs
@@ -420,8 +418,37 @@ class Model(metaclass=ModelMeta):
     @classmethod
     async def create(cls: Type[MODEL_TYPE], **kwargs) -> MODEL_TYPE:
         instance = cls(**kwargs)
-        await instance.save(using_db=kwargs.get("using_db"))
+        db = kwargs.get("using_db") or cls._meta.db
+        await db.executor_class(model=cls, db=db).execute_insert(instance)
+        instance._saved_in_db = True
         return instance
+
+    @classmethod
+    async def bulk_create(cls: Type[MODEL_TYPE], objects: List[MODEL_TYPE], using_db=None) -> None:
+        """
+        Bulk insert operation:
+
+        .. note::
+            The bulk insert operation will do the minimum to ensure that the object
+            created in the DB has all the defaults and generated fields set,
+            but may be incomplete reference in Python.
+
+            e.g. ``IntField`` primary keys will not be poplulated.
+
+        This is recommend only for throw away inserts where you want to ensure optimal
+        insert performance.
+
+        .. code-block:: python3
+
+            User.bulk_create([
+                User(name="...", email="..."),
+                User(name="...", email="...")
+            ])
+
+        :param objects: List of objects to bulk create
+        """
+        db = using_db or cls._meta.db
+        await db.executor_class(model=cls, db=db).execute_bulk_insert(objects)
 
     @classmethod
     def first(cls) -> QuerySet:
@@ -449,7 +476,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def fetch_for_list(cls, instance_list, *args, using_db=None):
-        db = using_db if using_db else cls._meta.db
+        db = using_db or cls._meta.db
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
 
     @classmethod
@@ -493,4 +520,19 @@ class Model(metaclass=ModelMeta):
                         )
 
     class Meta:
+        """
+        The ``Meta`` class is used to configure metadate for the Model.
+
+        Usage:
+
+        .. code-block:: python3
+
+            class Foo(Model):
+                ...
+
+                class Meta:
+                    table="custom_table"
+                    unique_together=(("field_a", "field_b"), )
+        """
+
         pass
