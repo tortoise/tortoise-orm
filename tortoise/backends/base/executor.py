@@ -92,14 +92,14 @@ class BaseExecutor:
         return instance
 
     async def execute_bulk_insert(self, instances):
-        valueses = [
+        values_lists = [
             [
                 self.column_map[column](getattr(instance, column), instance)
                 for column in self.regular_columns
             ]
             for instance in instances
         ]
-        await self.db.execute_many(self.query, valueses)
+        await self.db.execute_many(self.query, values_lists)
 
     async def execute_update(self, instance):
         table = Table(self.model._meta.table)
