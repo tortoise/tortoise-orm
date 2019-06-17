@@ -93,7 +93,7 @@ def register_tortoise(
     def generate_schemas():  # pylint: disable=E0102
         """Populate DB with Tortoise-ORM schemas."""
 
-        async def inner():
+        async def inner() -> None:
             await Tortoise.init(
                 config=config, config_file=config_file, db_url=db_url, modules=modules
             )

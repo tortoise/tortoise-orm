@@ -196,7 +196,7 @@ class Q:  # pylint: disable=C0103
         q.negate()
         return q
 
-    def negate(self):
+    def negate(self) -> None:
         self._is_negated = not self._is_negated
 
     def _resolve_nested_filter(self, model, key, value) -> QueryModifier:

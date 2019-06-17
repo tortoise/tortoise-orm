@@ -33,6 +33,11 @@ class Tortoise:
 
     @classmethod
     def get_connection(cls, connection_name: str) -> BaseDBAsyncClient:
+        """
+        Returns the connection by name.
+
+        :raises KeyError: If connection name does not exist.
+        """
         return cls._connections[connection_name]
 
     @classmethod
@@ -141,7 +146,7 @@ class Tortoise:
         return client_class
 
     @classmethod
-    def _discover_models(cls, models_path, app_label) -> List[Type[Model]]:
+    def _discover_models(cls, models_path: str, app_label: str) -> List[Type[Model]]:
         try:
             module = importlib.import_module(models_path)
         except ImportError:
@@ -330,6 +335,13 @@ class Tortoise:
 
     @classmethod
     async def close_connections(cls) -> None:
+        """
+        Close all connections cleanly.
+
+        It is required for this to be called on exit,
+        else your event loop may never complete
+        as it is waiting for the connections to die.
+        """
         for connection in cls._connections.values():
             await connection.close()
         cls._connections = {}
@@ -344,7 +356,7 @@ class Tortoise:
         current_transaction_map.clear()
 
     @classmethod
-    async def generate_schemas(cls, safe=True) -> None:
+    async def generate_schemas(cls, safe: bool = True) -> None:
         """
         Generate schemas according to models provided to ``.init()`` method.
         Will fail if schemas already exists, so it's not recommended to be used as part

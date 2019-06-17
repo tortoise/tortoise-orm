@@ -320,18 +320,18 @@ class UUIDField(Field):
     If used as a primary key, it will auto-generate a UUID4 by default.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         if kwargs.get("pk", False):
             if "default" not in kwargs:
                 kwargs["default"] = uuid.uuid4
         super().__init__(type=UUID, **kwargs)
 
-    def to_db_value(self, value: Any, instance):
+    def to_db_value(self, value: Any, instance) -> Optional[str]:
         if value is None:
             return None
         return str(value)
 
-    def to_python_value(self, value: Any):
+    def to_python_value(self, value: Any) -> Optional[uuid.UUID]:
         if value is None or isinstance(value, self.type):
             return value
         return uuid.UUID(value)

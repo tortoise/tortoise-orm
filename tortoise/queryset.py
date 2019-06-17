@@ -576,7 +576,9 @@ class FieldSelectQuery(AwaitableQuery):
     # pylint: disable=W0223
     __slots__ = ()
 
-    def _join_table_with_forwarded_fields(self, model, field, forwarded_fields):
+    def _join_table_with_forwarded_fields(
+        self, model, field: str, forwarded_fields: str
+    ) -> Tuple[Table, str]:
         table = Table(model._meta.table)
         if field in model._meta.fields_db_projection and not forwarded_fields:
             db_field = model._meta.fields_db_projection[field]

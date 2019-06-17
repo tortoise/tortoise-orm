@@ -20,7 +20,7 @@ MODEL_TYPE = TypeVar("MODEL_TYPE", bound="Model")
 # TODO: Define Filter type object. Possibly tuple?
 
 
-def get_unique_together(meta):
+def get_unique_together(meta) -> Tuple[Tuple[str, ...], ...]:
     unique_together = getattr(meta, "unique_together", None)
 
     if isinstance(unique_together, (list, tuple)):
@@ -386,6 +386,9 @@ class Model(metaclass=ModelMeta):
     """
 
     async def save(self, using_db=None) -> None:
+        """
+        Creates/Updates the current model object.
+        """
         db = using_db or self._meta.db
         executor = db.executor_class(model=self.__class__, db=db)
         if self._saved_in_db:
@@ -395,12 +398,26 @@ class Model(metaclass=ModelMeta):
             self._saved_in_db = True
 
     async def delete(self, using_db=None) -> None:
+        """
+        Deletes the current model object.
+
+        :raises OperationalError: If object has never been persisted.
+        """
         db = using_db or self._meta.db
         if not self._saved_in_db:
             raise OperationalError("Can't delete unpersisted record")
         await db.executor_class(model=self.__class__, db=db).execute_delete(self)
 
-    async def fetch_related(self, *args, using_db=None):
+    async def fetch_related(self, *args, using_db=None) -> None:
+        """
+        Fetch related fields.
+
+        .. code-block:: python3
+
+            User.fetch_related("emails", "manager")
+
+        :param args: The related fields that should be fetched.
+        """
         db = using_db or self._meta.db
         await db.executor_class(model=self.__class__, db=db).fetch_for_list([self], *args)
 
@@ -408,6 +425,10 @@ class Model(metaclass=ModelMeta):
     async def get_or_create(
         cls: Type[MODEL_TYPE], using_db=None, defaults=None, **kwargs
     ) -> Tuple[MODEL_TYPE, bool]:
+        """
+        Fetches the object if exists (filtering on the provided parameters),
+        else creates an instance with any unspecified parameters as default values.
+        """
         if not defaults:
             defaults = {}
         instance = await cls.filter(**kwargs).first()
@@ -417,6 +438,20 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def create(cls: Type[MODEL_TYPE], **kwargs) -> MODEL_TYPE:
+        """
+        Create a record in the DB and returns the object.
+
+        .. code-block:: python3
+
+            user = await User.create(name="...", email="...")
+
+        Equivalent to:
+
+        .. code-block:: python3
+
+            user = User(name="...", email="...")
+            await user.save()
+        """
         instance = cls(**kwargs)
         db = kwargs.get("using_db") or cls._meta.db
         await db.executor_class(model=cls, db=db).execute_insert(instance)
@@ -452,14 +487,23 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def first(cls) -> QuerySet:
+        """
+        Generates a QuerySet that returns the first record.
+        """
         return QuerySet(cls).first()
 
     @classmethod
     def filter(cls, *args, **kwargs) -> QuerySet:
+        """
+        Generates a QuerySet with the filter applied.
+        """
         return QuerySet(cls).filter(*args, **kwargs)
 
     @classmethod
     def exclude(cls, *args, **kwargs) -> QuerySet:
+        """
+        Generates a QuerySet with the exclude applied.
+        """
         return QuerySet(cls).exclude(*args, **kwargs)
 
     @classmethod
@@ -468,10 +512,23 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def all(cls) -> QuerySet:
+        """
+        Returns the complete QuerySet.
+        """
         return QuerySet(cls)
 
     @classmethod
     def get(cls, *args, **kwargs) -> QuerySet:
+        """
+        Fetches a single record for a Model type using the provided filter parameters.
+
+        .. code-block:: python3
+
+            user = await User.get(username="foo")
+
+        :raises MultipleObjectsReturned: If provided search returned more than one object.
+        :raises DoesNotExist: If object can not be found.
+        """
         return QuerySet(cls).get(*args, **kwargs)
 
     @classmethod
@@ -480,11 +537,16 @@ class Model(metaclass=ModelMeta):
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
 
     @classmethod
-    def check(cls):
+    def check(cls) -> None:
+        """
+        Calls various checks to validate the model.
+
+        :raises ConfigurationError: If the model has not been configured correctly.
+        """
         cls._check_unique_together()
 
     @classmethod
-    def _check_unique_together(cls):
+    def _check_unique_together(cls) -> None:
         """Check the value of "unique_together" option."""
         if cls._meta.unique_together is None:
             return
