@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.12.2
+------
+* Fix accidental double order-by for ``.values()`` based queries. (#143)
+
 0.12.1
 ------
 * Notable efficiency improvement for regular inserts

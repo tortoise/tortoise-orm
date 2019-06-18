@@ -775,8 +775,6 @@ class ValuesQuery(FieldSelectQuery):
             self.query = self.query.offset(self.offset)
         if self.distinct:
             self.query = self.query.distinct()
-        for ordering in self.orderings:
-            self.query = self.query.orderby(ordering[0], order=ordering[1])
         self.resolve_ordering(self.model, self.orderings, self.annotations)
 
     async def _execute(self):
