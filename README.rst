@@ -42,7 +42,12 @@ However, Tortoise ORM is not first attempt of building ``asyncio`` ORM, there ar
 
 Hence we started Tortoise ORM.
 
-Tortoise ORM was designed to be functional, yet familiar, to ease the migration of developers wishing to switch to ``asyncio``.
+Tortoise ORM is designed to be functional, yet familiar, to ease the migration of developers wishing to switch to ``asyncio``.
+
+It also performs well when compared to other Python ORMS, only ever losing to Pony ORM:
+
+.. image:: docs/ORM_Perf.png
+    :target: https://github.com/tortoise/orm-benchmarks
 
 How is an ORM useful?
 ---------------------
