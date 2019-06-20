@@ -138,6 +138,7 @@ html_theme_options = {
     'roottarget': index_doc,
     'sidebarwidth': '3in',
     'hyphenation_language': 'en',
+    'max_width': '1180px',
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
