@@ -42,6 +42,7 @@ class Field:
         "model_field_name",
         "model",
         "reference",
+        "description",
     )
     has_db_field = True
 
@@ -57,6 +58,7 @@ class Field:
         index: bool = False,
         reference: Optional[str] = None,
         model: "Optional[Model]" = None,
+        description: Optional[str] = None,
         **kwargs
     ) -> None:
         self.type = type
@@ -70,6 +72,7 @@ class Field:
         self.model_field_name = ""  # type: str
         self.model = model
         self.reference = reference
+        self.description = description
 
     def to_db_value(self, value: Any, instance) -> Any:
         if value is None or type(value) == self.type:  # pylint: disable=C0123
