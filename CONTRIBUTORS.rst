@@ -12,6 +12,7 @@ Contributors
 * Florimond Manca ``@florimondmanca``
 * Vitali Rebkavets ``@REVIMI``
 * Shlomy Balulu ``@shaloba``
+* Klaas Nebuhr ``@FirstKlaas`` 
 
 Special Thanks
 ==============

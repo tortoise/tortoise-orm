@@ -6,6 +6,7 @@ Changelog
 0.12.2
 ------
 * Fix accidental double order-by for ``.values()`` based queries. (#143)
+* Added description attribute to Field class. (#124)
 
 0.12.1
 ------
