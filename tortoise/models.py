@@ -15,6 +15,7 @@ from tortoise.fields import (
 from tortoise.filters import get_filters_for_field
 from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
+from typing import Iterable
 
 MODEL_TYPE = TypeVar("MODEL_TYPE", bound="Model")
 # TODO: Define Filter type object. Possibly tuple?
@@ -191,6 +192,42 @@ class ModelMeta(type):
         m2m_fields = set()  # type: Set[str]
         meta_class = attrs.get("Meta", type("Meta", (), {}))
         pk_attr = "id"
+
+        def __add_anchestor_fields(bases: Iterable, attrs: dict) -> None:
+            """
+                Find field attributes in classes, listet in bases
+            
+                Iterates over the elements of bases, which have to be 
+                classes, and searches for class attributes of type
+                Field. THese are added to the attributes of this class,
+                if the field name is not already present. This way only
+                none defined attributes are added to the dict.
+                For every class the mro pth ist also checked. This
+                way the multiple inheritance mechanisms of python are 
+                supported.
+            """ 
+
+            def find_class_fields(base, attrs: dict):
+                """
+                Check for Fields in this class
+
+                All class attributes are scanned and tested if
+                the attribute is an instancce of Field and not already
+                in the atrribute dict.
+                """
+                for key, value in base.__dict__.items():
+                    if isinstance(value, fields.Field):
+                        if not key in attrs:
+                            attrs[key] = value
+
+                for base_p in base.__mro__[1:]:
+                    find_class_fields(base_p, attrs)
+
+            for base in bases:
+                find_class_fields(base, attrs)
+
+        # Get all Fields fom base classes as well
+        __add_anchestor_fields(bases, attrs)
 
         if name != "Model":
             custom_pk_present = False
