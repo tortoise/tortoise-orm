@@ -192,7 +192,6 @@ class ModelMeta(type):
         meta_class = attrs.get("Meta", type("Meta", (), {}))
         pk_attr = "id"
 
-        # Search for Field class attributes        
         if name != "Model":
             custom_pk_present = False
             for key, value in attrs.items():
