@@ -51,7 +51,8 @@ Let see in details what we accomplished here:
 
     class Tournament(Model):
 
-Every model should be derived from base model. You also can derive from your own model subclasses and you can make abstract models like this
+Every model should be derived from base model. You also can derive
+from your own model subclasses and you can make abstract models like this
 
 .. code-block:: python3
 
@@ -66,20 +67,25 @@ Every model should be derived from base model. You also can derive from your own
         def __str__(self):
             return self.name
 
-This models won't be created in schema generation and won't create relations to other models.
+This models won't be created in schema generation and won't create
+relations to other models.
 
 
-Further we have field ``fields.DatetimeField(auto_now=True)``. Options ``auto_now`` and ``auto_now_add`` work like Django's options.
+Further we have field ``fields.DatetimeField(auto_now=True)``. Options
+``auto_now`` and ``auto_now_add`` work like Django's options.
 
 Primary Keys
 ------------
 
 In Tortoise ORM we require that a model has a primary key.
 
-That primary key will be accesible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
-That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc...
+That primary key will be accesible through a reserved field ``pk`` which
+will be an alias of whichever field has been nominated as a primary key.
+That alias field can be used as a field name when doing filtering e.g.
+``.filter(pk=...)`` etc...
 
-We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
+We currently support single (non-composite) primary keys of any indexable
+field type, but only these field types are recommended:
 
 .. code-block:: python3
 
@@ -90,7 +96,8 @@ We currently support single (non-composite) primary keys of any indexable field 
 
 One must define a primary key by setting a ``pk`` parameter to ``True``.
 
-If you don't define a primary key, we will create a primary key of type ``IntField`` with name of ``id`` for you.
+If you don't define a primary key, we will create a primary key of type
+``IntField`` with name of ``id`` for you.
 
 Any of these are valid primary key definitions in a Model:
 
@@ -107,7 +114,7 @@ Inheritence
 -----------
 
 When defining models in Tortoise ORM, you can save a lot of
-repetitive work by leveraging from inheritence. 
+repetitive work by leveraging from inheritence.
 
 You can define fields in more generic classes and they are
 automatically available in derived classes. Base classes are
@@ -120,14 +127,14 @@ Let's have a look at some examples.
 .. code-block:: python3
 
     from tortoise.fields import (
-        IntField, TextField, 
-        CharField, DatetimeField, 
-        ManyToManyField, ForeignKeyField, 
+        IntField, TextField,
+        CharField, DatetimeField,
+        ManyToManyField, ForeignKeyField,
         UUIDField, IntField)
 
     from tortoise.models import Model
 
-    class TimeStampMixin():
+    class TimestampMixin():
         created_at = DatetimeField(null=True, auto_now_add=True)
         modified_at = DatetimeField(null=True, auto_now=True)
 
@@ -140,8 +147,8 @@ Let's have a look at some examples.
         class Meta:
             abstract = True
 
-    class UserModel(TimeStampMixin, MyAbstractBaseModel):
-        # Overriding the id definition 
+    class UserModel(TimestampMixin, MyAbstractBaseModel):
+        # Overriding the id definition
         # from MyAbstractBaseModel
         id = UUIDField(pk=True)
 
@@ -152,7 +159,7 @@ Let's have a look at some examples.
             table = "user"
 
 
-    class RoleModel(TimeStampMixin, NameMixin, MyAbstractBaseModel):
+    class RoleModel(TimestampMixin, NameMixin, MyAbstractBaseModel):
 
         class Meta:
             table = "role"
@@ -199,9 +206,14 @@ The ``Meta`` class
 In event model we got some more fields, that could be interesting for us.
 
 ``fields.ForeignKeyField('models.Tournament', related_name='events')``
-    Here we create foreign key reference to tournament. We create it by referring to model by it's literal, consisting of app name and model name. `models` is default app name, but you can change it in `class Meta` with `app = 'other'`.
+    Here we create foreign key reference to tournament. We create it by
+    referring to model by it's literal, consisting of app name and model
+    name. `models` is default app name, but you can change it in `class Meta`
+    with `app = 'other'`.
 ``related_name``
-    Is keyword argument, that defines field for related query on referenced models, so with that you could fetch all tournaments's events with like this:
+    Is keyword argument, that defines field for related query on referenced
+    models, so with that you could fetch all tournaments's events with like
+    this:
 
 Fetching foreign keys can be done with both async and sync interfaces.
 
@@ -218,7 +230,8 @@ You can async iterate over it like this:
     async for event in tournament.events:
         ...
 
-Sync usage requires that you call `fetch_related` before the time, and then you can use common functions such as:
+Sync usage requires that you call `fetch_related` before the time, and then
+you can use common functions such as:
 
 .. code-block:: python3
 
@@ -232,7 +245,8 @@ Sync usage requires that you call `fetch_related` before the time, and then you 
     firstevent = tournament.events[0]
 
 
-To get the reverse fk, e.g. an `event.tournament` we currently only support the sync interface.
+To get the reverse fk, e.g. an `event.tournament` we currently only support
+the sync interface.
 
 .. code-block:: python3
 
@@ -243,9 +257,11 @@ To get the reverse fk, e.g. an `event.tournament` we currently only support the 
 ``ManyToManyField``
 -------------------
 
-Next field is ``fields.ManyToManyField('models.Team', related_name='events')``. It describes many to many relation to model Team.
+Next field is ``fields.ManyToManyField('models.Team', related_name='events')``.
+It describes many to many relation to model Team.
 
-To add to a ``ManyToManyField`` both the models need to be saved, else you will get an ``OperationalError`` raised.
+To add to a ``ManyToManyField`` both the models need to be saved, else you
+will get an ``OperationalError`` raised.
 
 Resolving many to many fields can be done with both async and sync interfaces.
 
@@ -262,7 +278,8 @@ You can async iterate over it like this:
     async for participant in tournament.participants:
         ...
 
-Sync usage requires that you call `fetch_related` before the time, and then you can use common functions such as:
+Sync usage requires that you call `fetch_related` before the time, and then
+you can use common functions such as:
 
 .. code-block:: python3
 
