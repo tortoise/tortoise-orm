@@ -7,8 +7,11 @@ Models
 Usage
 =====
 
-To get working with models, first you should import them 
- from tortoise.models import Model
+To get working with models, first you should import them
+
+.. code-block:: python3
+
+    from tortoise.models import Model
 
 With that you can start describing your own models like that
 
