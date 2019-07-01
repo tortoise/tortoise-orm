@@ -99,6 +99,62 @@ Any of these are valid primary key definitions in a Model:
 
     guid = fields.UUIDField(pk=True)
 
+
+Inheritence
+-----------
+
+When defining models in Tortoise ORM, you can save a lot of
+repetitive work by leveraging from inheritence. 
+
+You can define fields in more generic classes and they are
+automatically available in derived classes. Base classes are
+not limited to Model classes. Any class will work. This way
+you are able to define your models in a very natural and easy
+to maintain way.
+
+Let's have a look at some examples.
+
+.. code-block:: python3
+
+    from tortoise.fields import (
+        IntField, TextField, 
+        CharField, DatetimeField, 
+        ManyToManyField, ForeignKeyField, 
+        UUIDField, IntField)
+
+    from tortoise.models import Model
+
+    class TimeStampMixin():
+        created_at = DatetimeField(null=True, auto_now_add=True)
+        modified_at = DatetimeField(null=True, auto_now=True)
+
+    class NameMixin():
+        name = CharField(40, unique=True)
+
+    class MyAbstractBaseModel(Model):
+        id = IntField(pk=True)
+
+        class Meta:
+            abstract = True
+
+    class UserModel(TimeStampMixin, MyAbstractBaseModel):
+        # Overriding the id definition 
+        # from MyAbstractBaseModel
+        id = UUIDField(pk=True)
+
+        # Adding additional fields
+        first_name = CharField(20, null=True)
+
+        class Meta:
+            table = "user"
+
+
+    class RoleModel(TimeStampMixin, NameMixin, MyAbstractBaseModel):
+
+        class Meta:
+            table = "role"
+
+
 The ``Meta`` class
 ------------------
 
