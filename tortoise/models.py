@@ -55,6 +55,7 @@ class MetaInfo:
         "pk_attr",
         "_generated_db_fields",
         "_model",
+        "table_description",
     )
 
     def __init__(self, meta) -> None:
@@ -80,6 +81,7 @@ class MetaInfo:
         self.pk_attr = getattr(meta, "pk_attr", "")  # type: str
         self._generated_db_fields = None  # type: Optional[Tuple[str]]
         self._model = None  # type: "Model"  # type: ignore
+        self.table_description = getattr(meta, "table_description", "")  # type: str
 
     def add_field(self, name: str, value: Field):
         if name in self.fields_map:

@@ -6,8 +6,8 @@ from tortoise.exceptions import ConfigurationError
 
 
 class BaseSchemaGenerator:
-    TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields});'
-    FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}'
+    TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}) {comment};'
+    FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique} {comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE ({fields})"
     FK_TEMPLATE = ' REFERENCES "{table}" (id) ON DELETE {on_delete}'
@@ -17,7 +17,7 @@ class BaseSchemaGenerator:
         " ON DELETE CASCADE,"
         '"{forward_key}" {forward_type} NOT NULL REFERENCES "{forward_table}" (id)'
         " ON DELETE CASCADE"
-        ");"
+        ") {comment};"
     )
 
     FIELD_TYPE_MAP = {
@@ -40,12 +40,12 @@ class BaseSchemaGenerator:
         self.client = client
 
     def _create_string(
-        self, db_field: str, field_type: str, nullable: str, unique: str, is_pk: bool
+        self, db_field: str, field_type: str, nullable: str, unique: str, is_pk: bool, comment: str
     ) -> str:
         # children can override this function to customize thier sql queries
 
         field_creation_string = self.FIELD_TEMPLATE.format(
-            name=db_field, type=field_type, nullable=nullable, unique=unique
+            name=db_field, type=field_type, nullable=nullable, unique=unique, comment=comment
         ).strip()
 
         if is_pk:
@@ -116,13 +116,16 @@ class BaseSchemaGenerator:
                 continue
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
-
+            comment = (
+                "COMMENT {}".format(field_object.description) if field_object.description else ""
+            )
             field_creation_string = self._create_string(
                 db_field=db_field,
                 field_type=self._get_field_type(field_object),
                 nullable=nullable,
                 unique=unique,
                 is_pk=field_object.pk,
+                comment=comment,
             )
 
             if hasattr(field_object, "reference") and field_object.reference:
@@ -157,10 +160,17 @@ class BaseSchemaGenerator:
             fields_to_create.extend(unique_together_sqls)
 
         table_fields_string = ", ".join(fields_to_create)
+        table_comment = (
+            "COMMENT={}".format(model._meta.table_description)
+            if model._meta.table_description
+            else ""
+        )
+
         table_create_string = self.TABLE_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
             table_name=model._meta.table,
             fields=table_fields_string,
+            comment=table_comment,
         )
 
         # Indexes.
@@ -195,6 +205,7 @@ class BaseSchemaGenerator:
                     backward_type=self._get_field_type(model._meta.pk),
                     forward_key=field_object.forward_key,
                     forward_type=self._get_field_type(field_object.type._meta.pk),
+                    comment=table_comment,
                 )
             )
 
