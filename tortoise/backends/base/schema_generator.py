@@ -59,9 +59,13 @@ class BaseSchemaGenerator:
         raise NotImplementedError()  # pragma: nocoverage
 
     def _table_comment_generator(self, model, comments_array: List) -> str:
+        # Databases have their own way of supporting comments for table level
+        # needs to be implemented for each supported client
         raise NotImplementedError()  # pragma: nocoverage
 
     def _column_comment_generator(self, model, field, comments_array: List) -> str:
+        # Databases have their own way of supporting comments for column level
+        # needs to be implemented for each supported client
         raise NotImplementedError()  # pragma: nocoverage
 
     @staticmethod

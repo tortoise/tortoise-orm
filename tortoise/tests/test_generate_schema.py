@@ -223,3 +223,5 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
         sql = self.get_sql("comments")
         self.assertIn("COMMENT ON TABLE", sql)
         self.assertIn("COMMENT ON COLUMN", sql)
+        self.assertRegex(sql, r"COMMENT ON TABLE comments IS.*")
+        self.assertRegex(sql, r"COMMENT ON COLUMN comments\..* IS.*")
