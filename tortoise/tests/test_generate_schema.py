@@ -179,6 +179,13 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
         )
         self.assertIn("`team_id` INT NOT NULL REFERENCES `team` (`id`) ON DELETE CASCADE", sql)
 
+    async def test_table_and_row_comment_generation(self):
+        await self.init_for("tortoise.tests.testmodels", safe=True)
+        self.continue_if_safe_indexes(supported=False)
+        sql = self.get_sql("comments")
+        self.assertIn("COMMENT=", sql)
+        self.assertIn("COMMENT ", sql)
+
 
 class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
@@ -209,3 +216,10 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
         sql = self.get_sql('"noid"')
         self.assertIn('"name" VARCHAR(255)', sql)
         self.assertIn('"id" SERIAL NOT NULL PRIMARY KEY', sql)
+
+    async def test_table_and_row_comment_generation(self):
+        await self.init_for("tortoise.tests.testmodels", safe=True)
+        self.continue_if_safe_indexes(supported=False)
+        sql = self.get_sql("comments")
+        self.assertIn("COMMENT ON TABLE", sql)
+        self.assertIn("COMMENT ON COLUMN", sql)

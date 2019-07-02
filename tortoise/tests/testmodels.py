@@ -258,3 +258,13 @@ class CharFkRelatedModel(Model):
 class CharM2MRelatedModel(Model):
     value = fields.TextField(default="test")
     models = fields.ManyToManyField("models.CharPkModel", related_name="peers")
+
+
+class CommentModel(Model):
+    class Meta:
+        table = "comments"
+        table_description = "Test Table comment"
+
+    id = fields.IntField(pk=True, description="Primary key field for the comments")
+    message = fields.TextField(description="Comment messages entered in the blog post")
+    commented_by = fields.TextField()

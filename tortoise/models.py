@@ -300,9 +300,7 @@ class Model(metaclass=ModelMeta):
             setattr(
                 self,
                 key,
-                ManyToManyRelationManager(  # type: ignore
-                    field_object.type, self, field_object
-                ),
+                ManyToManyRelationManager(field_object.type, self, field_object),  # type: ignore
             )
 
         # Assign values and do type conversions

@@ -58,6 +58,12 @@ class BaseSchemaGenerator:
         # has to implement in children
         raise NotImplementedError()  # pragma: nocoverage
 
+    def _table_comment_generator(self, model, comments_array: List) -> str:
+        raise NotImplementedError()  # pragma: nocoverage
+
+    def _column_comment_generator(self, model, field, comments_array: List) -> str:
+        raise NotImplementedError()  # pragma: nocoverage
+
     @staticmethod
     def _make_hash(*args: str, length: int) -> str:
         # Hash a set of string values and get a digest of the given length.
@@ -109,6 +115,8 @@ class BaseSchemaGenerator:
         fields_with_index = []
         m2m_tables_for_create = []
         references = set()
+        comments = []  # type: List
+
         for field_name, db_field in model._meta.fields_db_projection.items():
             field_object = model._meta.fields_map[field_name]
             if isinstance(field_object, (fields.IntField, fields.BigIntField)) and field_object.pk:
@@ -116,16 +124,15 @@ class BaseSchemaGenerator:
                 continue
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
-            comment = (
-                "COMMENT {}".format(field_object.description) if field_object.description else ""
-            )
             field_creation_string = self._create_string(
                 db_field=db_field,
                 field_type=self._get_field_type(field_object),
                 nullable=nullable,
                 unique=unique,
                 is_pk=field_object.pk,
-                comment=comment,
+                comment=self._column_comment_generator(
+                    model=model, field=field_object, comments_array=comments
+                ),
             )
 
             if hasattr(field_object, "reference") and field_object.reference:
@@ -160,11 +167,7 @@ class BaseSchemaGenerator:
             fields_to_create.extend(unique_together_sqls)
 
         table_fields_string = ", ".join(fields_to_create)
-        table_comment = (
-            "COMMENT={}".format(model._meta.table_description)
-            if model._meta.table_description
-            else ""
-        )
+        table_comment = self._table_comment_generator(model=model, comments_array=comments)
 
         table_create_string = self.TABLE_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
@@ -190,6 +193,9 @@ class BaseSchemaGenerator:
             warnings.warn("\n".join(field_indexes_sqls))
         else:
             table_create_string = " ".join([table_create_string, *field_indexes_sqls])
+
+        if comments:
+            table_create_string = " ".join([table_create_string, *comments])
 
         for m2m_field in model._meta.m2m_fields:
             field_object = model._meta.fields_map[m2m_field]
