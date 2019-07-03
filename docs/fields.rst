@@ -86,7 +86,8 @@ Common parameters for fields:
     Defaults to ``False``.
 ``description`` (str):
     Human readable description of the field. Defaults to ``None``. This allows consumers 
-    to build automated documentation tooling based on the declarative model api. 
+    to build automated documentation tooling based on the declarative model api. This field is also
+    leveraged to generate comment messages for each database columns.
 
 Read-only properties:
 

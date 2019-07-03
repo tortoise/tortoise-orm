@@ -33,11 +33,13 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         return "`{}` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT".format(field_name)
 
     def _table_comment_generator(self, model, comments_array=None) -> str:
-        return (
-            "COMMENT='{}'".format(model._meta.table_description)
-            if model._meta.table_description
-            else ""
-        )
+        comment = ""
+        if model._meta.table_description:
+            comment = "COMMENT='{}'".format(self._escape_comment(model._meta.table_description))
+        return comment
 
     def _column_comment_generator(self, model, field, comments_array: List) -> str:
-        return "COMMENT '{}'".format(field.description) if field.description else ""
+        comment = ""
+        if field.description:
+            comment = "COMMENT '{}'".format(self._escape_comment(field.description))
+        return comment

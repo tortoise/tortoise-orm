@@ -268,4 +268,6 @@ class CommentModel(Model):
     id = fields.IntField(pk=True, description="Primary key field for the comments")
     message = fields.TextField(description="Comment messages entered in the blog post")
     rating = fields.IntField(description="Upvotes done on the comment")
+    escaped_comment_field = fields.TextField(description="This column acts as it's own comment")
+    multiline_comment = fields.TextField(description="Some \n comment")
     commented_by = fields.TextField()

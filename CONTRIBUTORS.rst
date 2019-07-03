@@ -13,6 +13,7 @@ Contributors
 * Vitali Rebkavets ``@REVIMI``
 * Shlomy Balulu ``@shaloba``
 * Klaas Nebuhr ``@FirstKlaas`` 
+* Harsha Narayana ``@harshanarayana``
 
 Special Thanks
 ==============

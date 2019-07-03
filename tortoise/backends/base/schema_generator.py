@@ -3,6 +3,7 @@ from typing import List, Set  # noqa
 
 from tortoise import fields
 from tortoise.exceptions import ConfigurationError
+from tortoise.utils import get_escape_translation_table
 
 
 class BaseSchemaGenerator:
@@ -45,7 +46,11 @@ class BaseSchemaGenerator:
         # children can override this function to customize thier sql queries
 
         field_creation_string = self.FIELD_TEMPLATE.format(
-            name=db_field, type=field_type, nullable=nullable, unique=unique, comment=comment
+            name=db_field,
+            type=field_type,
+            nullable=nullable,
+            unique=unique,
+            comment=comment if self.client.capabilities.inline_comment else "",
         ).strip()
 
         if is_pk:
@@ -67,6 +72,18 @@ class BaseSchemaGenerator:
         # Databases have their own way of supporting comments for column level
         # needs to be implemented for each supported client
         raise NotImplementedError()  # pragma: nocoverage
+
+    def _post_table_hook(self, *, models=None, safe=True) -> str:
+        # This method provides a mechanism where you can perform a set of
+        # operation on the database table after  it's initialized. This method
+        # by default does nothing. If need be, it can be over-written
+        return ""
+
+    def _escape_comment(self, comment: str) -> str:
+        # This method provides a default method to escape comment strings as per
+        # default standard as applied under mysql like database. This can be
+        # overwritten if required to match the database specific escaping.
+        return comment.translate(get_escape_translation_table())
 
     @staticmethod
     def _make_hash(*args: str, length: int) -> str:
@@ -171,7 +188,11 @@ class BaseSchemaGenerator:
             fields_to_create.extend(unique_together_sqls)
 
         table_fields_string = ", ".join(fields_to_create)
-        table_comment = self._table_comment_generator(model=model, comments_array=comments)
+        table_comment = (
+            self._table_comment_generator(model=model, comments_array=comments)
+            if self.client.capabilities.inline_comment
+            else ""
+        )
 
         table_create_string = self.TABLE_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
@@ -227,16 +248,19 @@ class BaseSchemaGenerator:
             "m2m_tables": m2m_tables_for_create,
         }
 
-    def get_create_schema_sql(self, safe=True) -> str:
+    def _get_models_to_create(self, models_to_create) -> None:
         from tortoise import Tortoise
-
-        models_to_create = []
 
         for app in Tortoise.apps.values():
             for model in app.values():
                 if model._meta.db == self.client:
                     model.check()
                     models_to_create.append(model)
+
+    def get_create_schema_sql(self, safe=True) -> str:
+        models_to_create = []  # type: List
+
+        self._get_models_to_create(models_to_create)
 
         tables_to_create = []
         for model in models_to_create:
@@ -264,5 +288,12 @@ class BaseSchemaGenerator:
         schema_creation_string = " ".join(ordered_tables_for_create + m2m_tables_to_create)
         return schema_creation_string
 
+    def generate_post_table_hook_sql(self, safe=True) -> str:
+        models_to_use = []  # type: List
+
+        self._get_models_to_create(models_to_use)
+        return self._post_table_hook(models=models_to_use, safe=safe)
+
     async def generate_from_string(self, creation_string: str) -> None:
+        # print(creation_string)
         await self.client.execute_script(creation_string)
