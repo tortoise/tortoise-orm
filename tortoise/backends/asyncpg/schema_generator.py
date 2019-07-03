@@ -44,7 +44,7 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
         column_comments = []  # type: List[str]
         for model in models:
             self._table_comment_generator(model=model, comments_array=table_comments)
-            for field_name, db_field in model._meta.fields_db_projection.items():
+            for field_name, _ in model._meta.fields_db_projection.items():
                 field_object = model._meta.fields_map[field_name]
                 self._column_comment_generator(
                     model=model, field=field_object, comments_array=column_comments
