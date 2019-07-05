@@ -6,6 +6,7 @@ Changelog
 0.12.3
 ------
 * Added description attribute to Field class. (#124)
+* Added the ability to leverage field description from (#124) to generate table column comments and ability to add table level comments
 
 0.12.2
 ------
