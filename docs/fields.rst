@@ -84,6 +84,10 @@ Common parameters for fields:
     A flag indicating that this field is read-only and its value is generated in database.
     You typically don't need to use this if you created the schema through Tortoise.
     Defaults to ``False``.
+``description`` (str):
+    Human readable description of the field. Defaults to ``None``. This allows consumers 
+    to build automated documentation tooling based on the declarative model api. This field is also
+    leveraged to generate comment messages for each database columns.
 
 Read-only properties:
 

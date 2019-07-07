@@ -36,7 +36,8 @@ class Capabilities:
         daemon: bool = True,
         # Deficiencies to work around:
         safe_indexes: bool = True,
-        requires_limit: bool = False
+        requires_limit: bool = False,
+        inline_comment: bool = False
     ) -> None:
         super().__setattr__("_mutable", True)
 
@@ -44,6 +45,7 @@ class Capabilities:
         self.daemon = daemon
         self.requires_limit = requires_limit
         self.safe_indexes = safe_indexes
+        self.inline_comment = inline_comment
 
         super().__setattr__("_mutable", False)
 

@@ -3,11 +3,12 @@ from typing import List, Set  # noqa
 
 from tortoise import fields
 from tortoise.exceptions import ConfigurationError
+from tortoise.utils import get_escape_translation_table
 
 
 class BaseSchemaGenerator:
-    TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields});'
-    FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}'
+    TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}) {comment};'
+    FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique} {comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE ({fields})"
     FK_TEMPLATE = ' REFERENCES "{table}" (id) ON DELETE {on_delete}'
@@ -17,7 +18,7 @@ class BaseSchemaGenerator:
         " ON DELETE CASCADE,"
         '"{forward_key}" {forward_type} NOT NULL REFERENCES "{forward_table}" (id)'
         " ON DELETE CASCADE"
-        ");"
+        ") {comment};"
     )
 
     FIELD_TYPE_MAP = {
@@ -40,12 +41,16 @@ class BaseSchemaGenerator:
         self.client = client
 
     def _create_string(
-        self, db_field: str, field_type: str, nullable: str, unique: str, is_pk: bool
+        self, db_field: str, field_type: str, nullable: str, unique: str, is_pk: bool, comment: str
     ) -> str:
         # children can override this function to customize thier sql queries
 
         field_creation_string = self.FIELD_TEMPLATE.format(
-            name=db_field, type=field_type, nullable=nullable, unique=unique
+            name=db_field,
+            type=field_type,
+            nullable=nullable,
+            unique=unique,
+            comment=comment if self.client.capabilities.inline_comment else "",
         ).strip()
 
         if is_pk:
@@ -57,6 +62,28 @@ class BaseSchemaGenerator:
         # All databases have their unique way for autoincrement,
         # has to implement in children
         raise NotImplementedError()  # pragma: nocoverage
+
+    def _table_comment_generator(self, model, comments_array: List) -> str:
+        # Databases have their own way of supporting comments for table level
+        # needs to be implemented for each supported client
+        raise NotImplementedError()  # pragma: nocoverage
+
+    def _column_comment_generator(self, model, field, comments_array: List) -> str:
+        # Databases have their own way of supporting comments for column level
+        # needs to be implemented for each supported client
+        raise NotImplementedError()  # pragma: nocoverage
+
+    def _post_table_hook(self, *, models=None, safe=True) -> str:
+        # This method provides a mechanism where you can perform a set of
+        # operation on the database table after  it's initialized. This method
+        # by default does nothing. If need be, it can be over-written
+        return ""
+
+    def _escape_comment(self, comment: str) -> str:
+        # This method provides a default method to escape comment strings as per
+        # default standard as applied under mysql like database. This can be
+        # overwritten if required to match the database specific escaping.
+        return comment.translate(get_escape_translation_table())
 
     @staticmethod
     def _make_hash(*args: str, length: int) -> str:
@@ -109,6 +136,8 @@ class BaseSchemaGenerator:
         fields_with_index = []
         m2m_tables_for_create = []
         references = set()
+        comments = []  # type: List
+
         for field_name, db_field in model._meta.fields_db_projection.items():
             field_object = model._meta.fields_map[field_name]
             if isinstance(field_object, (fields.IntField, fields.BigIntField)) and field_object.pk:
@@ -116,13 +145,15 @@ class BaseSchemaGenerator:
                 continue
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
-
             field_creation_string = self._create_string(
                 db_field=db_field,
                 field_type=self._get_field_type(field_object),
                 nullable=nullable,
                 unique=unique,
                 is_pk=field_object.pk,
+                comment=self._column_comment_generator(
+                    model=model, field=field_object, comments_array=comments
+                ),
             )
 
             if hasattr(field_object, "reference") and field_object.reference:
@@ -157,10 +188,17 @@ class BaseSchemaGenerator:
             fields_to_create.extend(unique_together_sqls)
 
         table_fields_string = ", ".join(fields_to_create)
+        table_comment = (
+            self._table_comment_generator(model=model, comments_array=comments)
+            if self.client.capabilities.inline_comment
+            else ""
+        )
+
         table_create_string = self.TABLE_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
             table_name=model._meta.table,
             fields=table_fields_string,
+            comment=table_comment,
         )
 
         # Indexes.
@@ -181,6 +219,9 @@ class BaseSchemaGenerator:
         else:
             table_create_string = " ".join([table_create_string, *field_indexes_sqls])
 
+        if comments:
+            table_create_string = " ".join([table_create_string, *comments])
+
         for m2m_field in model._meta.m2m_fields:
             field_object = model._meta.fields_map[m2m_field]
             if field_object._generated:
@@ -195,6 +236,7 @@ class BaseSchemaGenerator:
                     backward_type=self._get_field_type(model._meta.pk),
                     forward_key=field_object.forward_key,
                     forward_type=self._get_field_type(field_object.type._meta.pk),
+                    comment=table_comment,
                 )
             )
 
@@ -206,16 +248,19 @@ class BaseSchemaGenerator:
             "m2m_tables": m2m_tables_for_create,
         }
 
-    def get_create_schema_sql(self, safe=True) -> str:
+    def _get_models_to_create(self, models_to_create) -> None:
         from tortoise import Tortoise
-
-        models_to_create = []
 
         for app in Tortoise.apps.values():
             for model in app.values():
                 if model._meta.db == self.client:
                     model.check()
                     models_to_create.append(model)
+
+    def get_create_schema_sql(self, safe=True) -> str:
+        models_to_create = []  # type: List
+
+        self._get_models_to_create(models_to_create)
 
         tables_to_create = []
         for model in models_to_create:
@@ -243,5 +288,12 @@ class BaseSchemaGenerator:
         schema_creation_string = " ".join(ordered_tables_for_create + m2m_tables_to_create)
         return schema_creation_string
 
+    def generate_post_table_hook_sql(self, safe=True) -> str:
+        models_to_use = []  # type: List
+
+        self._get_models_to_create(models_to_use)
+        return self._post_table_hook(models=models_to_use, safe=safe)
+
     async def generate_from_string(self, creation_string: str) -> None:
+        # print(creation_string)
         await self.client.execute_script(creation_string)

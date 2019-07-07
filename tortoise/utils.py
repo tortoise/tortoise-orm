@@ -1,4 +1,4 @@
-from typing import Awaitable, Callable, Iterator, Optional
+from typing import Awaitable, Callable, Iterator, List, Optional
 
 
 class QueryAsyncIterator:
@@ -30,6 +30,27 @@ def get_schema_sql(client, safe: bool) -> str:
     return generator.get_create_schema_sql(safe)
 
 
+def generate_post_table_sql(client, safe: bool) -> str:
+    generator = client.schema_generator(client)
+    return generator.generate_post_table_hook_sql(safe=safe)
+
+
 async def generate_schema_for_client(client, safe: bool) -> None:
     generator = client.schema_generator(client)
     await generator.generate_from_string(get_schema_sql(client, safe))
+    post_table_generation_hook = generate_post_table_sql(client, safe)
+    if post_table_generation_hook:
+        await generator.generate_from_string(post_table_generation_hook)
+
+
+def get_escape_translation_table() -> List[str]:
+    """escape sequence taken based on definition provided by PostgreSQL and MySQL"""
+    _escape_table = [chr(x) for x in range(128)]
+    _escape_table[0] = u"\\0"
+    _escape_table[ord("\\")] = u"\\\\"
+    _escape_table[ord("\n")] = u"\\n"
+    _escape_table[ord("\r")] = u"\\r"
+    _escape_table[ord("\032")] = u"\\Z"
+    _escape_table[ord('"')] = u'\\"'
+    _escape_table[ord("'")] = u"\\'"
+    return _escape_table
