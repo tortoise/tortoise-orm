@@ -207,14 +207,9 @@ The ``Meta`` class
 In event model we got some more fields, that could be interesting for us.
 
 ``fields.ForeignKeyField('models.Tournament', related_name='events')``
-    Here we create foreign key reference to tournament. We create it by
-    referring to model by it's literal, consisting of app name and model
-    name. `models` is default app name, but you can change it in `class Meta`
-    with `app = 'other'`.
+    Here we create foreign key reference to tournament. We create it by referring to model by it's literal, consisting of app name and model name. `models` is default app name, but you can change it in `class Meta` with `app = 'other'`.
 ``related_name``
-    Is keyword argument, that defines field for related query on referenced
-    models, so with that you could fetch all tournaments's events with like
-    this:
+    Is keyword argument, that defines field for related query on referenced models, so with that you could fetch all tournaments's events with like this:
 
 Fetching foreign keys can be done with both async and sync interfaces.
 
@@ -231,8 +226,7 @@ You can async iterate over it like this:
     async for event in tournament.events:
         ...
 
-Sync usage requires that you call `fetch_related` before the time, and then
-you can use common functions such as:
+Sync usage requires that you call `fetch_related` before the time, and then you can use common functions such as:
 
 .. code-block:: python3
 
@@ -246,8 +240,7 @@ you can use common functions such as:
     firstevent = tournament.events[0]
 
 
-To get the reverse fk, e.g. an `event.tournament` we currently only support
-the sync interface.
+To get the reverse fk, e.g. an `event.tournament` we currently only support the sync interface.
 
 .. code-block:: python3
 
@@ -258,11 +251,9 @@ the sync interface.
 ``ManyToManyField``
 -------------------
 
-Next field is ``fields.ManyToManyField('models.Team', related_name='events')``.
-It describes many to many relation to model Team.
+Next field is ``fields.ManyToManyField('models.Team', related_name='events')``. It describes many to many relation to model Team.
 
-To add to a ``ManyToManyField`` both the models need to be saved, else you
-will get an ``OperationalError`` raised.
+To add to a ``ManyToManyField`` both the models need to be saved, else you will get an ``OperationalError`` raised.
 
 Resolving many to many fields can be done with both async and sync interfaces.
 
@@ -279,8 +270,7 @@ You can async iterate over it like this:
     async for participant in tournament.participants:
         ...
 
-Sync usage requires that you call `fetch_related` before the time, and then
-you can use common functions such as:
+Sync usage requires that you call `fetch_related` before the time, and then you can use common functions such as:
 
 .. code-block:: python3
 
