@@ -176,6 +176,11 @@ The ``Meta`` class
 
         Set this to configure a manual table name, instead of a generated one
 
+    .. attribute:: table_description
+        :annotation: = ""
+
+        Set this to generate a comment message for the table being created for the current model
+
     .. attribute:: unique_together
         :annotation: = None
 
