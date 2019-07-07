@@ -258,3 +258,23 @@ class CharFkRelatedModel(Model):
 class CharM2MRelatedModel(Model):
     value = fields.TextField(default="test")
     models = fields.ManyToManyField("models.CharPkModel", related_name="peers")
+
+
+class TimestampMixin:
+    created_at = fields.DatetimeField(null=True, auto_now_add=True)
+    modified_at = fields.DatetimeField(null=True, auto_now=True)
+
+
+class NameMixin:
+    name = fields.CharField(40, unique=True)
+
+
+class MyAbstractBaseModel(NameMixin, Model):
+    id = fields.IntField(pk=True)
+
+    class Meta:
+        abstract = True
+
+
+class MyDerivedModel(TimestampMixin, MyAbstractBaseModel):
+    first_name = fields.CharField(20, null=True)

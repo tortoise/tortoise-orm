@@ -51,8 +51,7 @@ Let see in details what we accomplished here:
 
     class Tournament(Model):
 
-Every model should be derived from base model. You also can derive
-from your own model subclasses and you can make abstract models like this
+Every model should be derived from base model. You also can derive from your own model subclasses and you can make abstract models like this
 
 .. code-block:: python3
 
@@ -67,25 +66,20 @@ from your own model subclasses and you can make abstract models like this
         def __str__(self):
             return self.name
 
-This models won't be created in schema generation and won't create
-relations to other models.
+This models won't be created in schema generation and won't create relations to other models.
 
 
-Further we have field ``fields.DatetimeField(auto_now=True)``. Options
-``auto_now`` and ``auto_now_add`` work like Django's options.
+Further we have field ``fields.DatetimeField(auto_now=True)``. Options ``auto_now`` and ``auto_now_add`` work like Django's options.
 
 Primary Keys
 ------------
 
 In Tortoise ORM we require that a model has a primary key.
 
-That primary key will be accesible through a reserved field ``pk`` which
-will be an alias of whichever field has been nominated as a primary key.
-That alias field can be used as a field name when doing filtering e.g.
-``.filter(pk=...)`` etc...
+That primary key will be accesible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
+That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc...
 
-We currently support single (non-composite) primary keys of any indexable
-field type, but only these field types are recommended:
+We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
 
 .. code-block:: python3
 
@@ -96,8 +90,7 @@ field type, but only these field types are recommended:
 
 One must define a primary key by setting a ``pk`` parameter to ``True``.
 
-If you don't define a primary key, we will create a primary key of type
-``IntField`` with name of ``id`` for you.
+If you don't define a primary key, we will create a primary key of type ``IntField`` with name of ``id`` for you.
 
 Any of these are valid primary key definitions in a Model:
 
@@ -126,23 +119,18 @@ Let's have a look at some examples.
 
 .. code-block:: python3
 
-    from tortoise.fields import (
-        IntField, TextField,
-        CharField, DatetimeField,
-        ManyToManyField, ForeignKeyField,
-        UUIDField, IntField)
-
+    from tortoise import fields
     from tortoise.models import Model
 
     class TimestampMixin():
-        created_at = DatetimeField(null=True, auto_now_add=True)
-        modified_at = DatetimeField(null=True, auto_now=True)
+        created_at = fields.DatetimeField(null=True, auto_now_add=True)
+        modified_at = fields.DatetimeField(null=True, auto_now=True)
 
     class NameMixin():
-        name = CharField(40, unique=True)
+        name = fields.CharField(40, unique=True)
 
     class MyAbstractBaseModel(Model):
-        id = IntField(pk=True)
+        id = fields.IntField(pk=True)
 
         class Meta:
             abstract = True
@@ -150,10 +138,10 @@ Let's have a look at some examples.
     class UserModel(TimestampMixin, MyAbstractBaseModel):
         # Overriding the id definition
         # from MyAbstractBaseModel
-        id = UUIDField(pk=True)
+        id = fields.UUIDField(pk=True)
 
         # Adding additional fields
-        first_name = CharField(20, null=True)
+        first_name = fields.CharField(20, null=True)
 
         class Meta:
             table = "user"
@@ -164,6 +152,14 @@ Let's have a look at some examples.
         class Meta:
             table = "role"
 
+Using the ``Meta`` class is not necessary. But it is a good habit, to
+give your table an explicit name. This way you can change the model name
+without breaking the schema. So the following definition is valid.
+
+.. code-block:: python3
+
+    class RoleModel(TimestampMixin, NameMixin, MyAbstractBaseModel):
+        pass
 
 The ``Meta`` class
 ------------------

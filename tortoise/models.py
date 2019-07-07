@@ -203,8 +203,13 @@ class ModelMeta(type):
             key is not already in the dict. So derived classes have a higher
             precedence. Multiple Inheritence is supported from left to right.
 
-            After checking the given class, the funkction will look into
-            the classes according to the mro.
+            After checking the given class, the function will look into
+            the classes according to the mro (method resolution order).
+
+            The mro is 'natural' order, in wich python traverses methods and
+            fields. For more information on the magic behind check out:
+            `The Python 2.3 Method Resolution Order
+            <https://www.python.org/download/releases/2.3/mro/>`_.
             """
             for key, value in base.__dict__.items():
                 if isinstance(value, fields.Field) and key not in attrs:
