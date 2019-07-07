@@ -413,4 +413,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.12.3"
+__version__ = "0.12.4"

@@ -1,0 +1,4 @@
+{
+    "python.pythonPath": "${workspaceFolder}/venv/bin/python3",
+    "restructuredtext.confPath": "${workspaceFolder}/docs"
+}
