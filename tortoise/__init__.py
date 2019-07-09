@@ -459,8 +459,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-<<<<<<< HEAD
 __version__ = "0.12.5"
-=======
-__version__ = "0.12.4"
->>>>>>> master
