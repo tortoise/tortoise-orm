@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.12.4
+------
+* Inherit fields from Mixins, together with abstract model classes.
+
 0.12.3
 ------
 * Added description attribute to Field class. (#124)

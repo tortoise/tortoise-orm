@@ -7,8 +7,11 @@ Models
 Usage
 =====
 
-To get working with models, first you should import them 
- from tortoise.models import Model
+To get working with models, first you should import them
+
+.. code-block:: python3
+
+    from tortoise.models import Model
 
 With that you can start describing your own models like that
 
@@ -98,6 +101,65 @@ Any of these are valid primary key definitions in a Model:
     checksum = fields.CharField(pk=True)
 
     guid = fields.UUIDField(pk=True)
+
+
+Inheritence
+-----------
+
+When defining models in Tortoise ORM, you can save a lot of
+repetitive work by leveraging from inheritence.
+
+You can define fields in more generic classes and they are
+automatically available in derived classes. Base classes are
+not limited to Model classes. Any class will work. This way
+you are able to define your models in a very natural and easy
+to maintain way.
+
+Let's have a look at some examples.
+
+.. code-block:: python3
+
+    from tortoise import fields
+    from tortoise.models import Model
+
+    class TimestampMixin():
+        created_at = fields.DatetimeField(null=True, auto_now_add=True)
+        modified_at = fields.DatetimeField(null=True, auto_now=True)
+
+    class NameMixin():
+        name = fields.CharField(40, unique=True)
+
+    class MyAbstractBaseModel(Model):
+        id = fields.IntField(pk=True)
+
+        class Meta:
+            abstract = True
+
+    class UserModel(TimestampMixin, MyAbstractBaseModel):
+        # Overriding the id definition
+        # from MyAbstractBaseModel
+        id = fields.UUIDField(pk=True)
+
+        # Adding additional fields
+        first_name = fields.CharField(20, null=True)
+
+        class Meta:
+            table = "user"
+
+
+    class RoleModel(TimestampMixin, NameMixin, MyAbstractBaseModel):
+
+        class Meta:
+            table = "role"
+
+Using the ``Meta`` class is not necessary. But it is a good habit, to
+give your table an explicit name. This way you can change the model name
+without breaking the schema. So the following definition is valid.
+
+.. code-block:: python3
+
+    class RoleModel(TimestampMixin, NameMixin, MyAbstractBaseModel):
+        pass
 
 The ``Meta`` class
 ------------------
