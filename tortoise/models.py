@@ -194,6 +194,35 @@ class ModelMeta(type):
         meta_class = attrs.get("Meta", type("Meta", (), {}))
         pk_attr = "id"
 
+        # Searching for Field attributes in the class hierarchie
+        def __search_for_field_attributes(base, attrs: dict):
+            """
+            Searching for class attributes of type fields.Field
+            in the given class.
+
+            If an attribute of the class is an instance of fields.Field,
+            then it will be added to the attrs dict. But only, if the
+            key is not already in the dict. So derived classes have a higher
+            precedence. Multiple Inheritence is supported from left to right.
+
+            After checking the given class, the function will look into
+            the classes according to the mro (method resolution order).
+
+            The mro is 'natural' order, in wich python traverses methods and
+            fields. For more information on the magic behind check out:
+            `The Python 2.3 Method Resolution Order
+            <https://www.python.org/download/releases/2.3/mro/>`_.
+            """
+            for key, value in base.__dict__.items():
+                if isinstance(value, fields.Field) and key not in attrs:
+                    attrs[key] = value
+                    for parent in base.__mro__[1:]:
+                        __search_for_field_attributes(parent, attrs)
+
+        # Start searching for fields in the base classes.
+        for base in bases:
+            __search_for_field_attributes(base, attrs)
+
         if name != "Model":
             custom_pk_present = False
             for key, value in attrs.items():
