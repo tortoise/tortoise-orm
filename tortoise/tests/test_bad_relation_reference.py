@@ -18,7 +18,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
         await Tortoise._reset_apps()
 
     async def test_wrong_app_init(self):
-        with self.assertRaises(ConfigurationError):
+        with self.assertRaisesRegex(ConfigurationError, "No app with name 'app' registered."):
             await Tortoise.init(
                 {
                     "connections": {
@@ -37,7 +37,9 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
             )
 
     async def test_wrong_model_init(self):
-        with self.assertRaises(ConfigurationError):
+        with self.assertRaisesRegex(
+            ConfigurationError, "No model with name 'Tour' registered in app 'models'."
+        ):
             await Tortoise.init(
                 {
                     "connections": {
@@ -56,7 +58,9 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
             )
 
     async def test_no_app_in_reference_init(self):
-        with self.assertRaises(ConfigurationError):
+        with self.assertRaisesRegex(
+            ConfigurationError, 'Foreign key accepts model name in format "app.Model"'
+        ):
             await Tortoise.init(
                 {
                     "connections": {
@@ -75,7 +79,9 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
             )
 
     async def test_more_than_two_dots_in_reference_init(self):
-        with self.assertRaises(ConfigurationError):
+        with self.assertRaisesRegex(
+            ConfigurationError, 'Foreign key accepts model name in format "app.Model"'
+        ):
             await Tortoise.init(
                 {
                     "connections": {

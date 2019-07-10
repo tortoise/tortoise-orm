@@ -41,6 +41,7 @@ setup(
     url="https://github.com/tortoise/tortoise-orm",
     description="Easy async ORM for python, built with relations in mind",
     long_description=open("README.rst", "r").read(),
+    long_description_content_type="text/x-rst",
     project_urls={"Documentation": "https://tortoise-orm.readthedocs.io/"},
     classifiers=[
         "License :: OSI Approved :: Apache Software License",
