@@ -5,7 +5,7 @@ import logging
 import os
 from copy import deepcopy
 from inspect import isclass
-from typing import Coroutine, Dict, List, Optional, Type, Union, cast  # noqa
+from typing import Coroutine, Dict, List, Optional, Tuple, Type, Union, cast  # noqa
 
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
@@ -42,6 +42,52 @@ class Tortoise:
 
     @classmethod
     def _init_relations(cls) -> None:
+        def get_related_model(related_app_name: str, related_model_name: str):
+            """
+            Test, if app and model really exist. Throws a ConfigurationError with a hopefully
+            helpful message. If successfull, returns the requested model.
+            """
+            try:
+                return cls.apps[related_app_name][related_model_name]
+            except KeyError:
+                if related_app_name not in cls.apps:
+                    raise ConfigurationError(
+                        "No app with name '{}' registered.".format(related_app_name)
+                    )
+                if related_model_name not in cls.apps[related_app_name]:
+                    raise ConfigurationError(
+                        "No model with name '{}' registered in app '{}'.".format(
+                            related_model_name, related_app_name
+                        )
+                    )
+
+        def split_reference(reference: str) -> Tuple[str, str]:
+            """
+            Test, if reference follow the official naming conventions. Throws a
+            ConfigurationError with a hopefully helpful message. If successfull,
+            returns the app and the model name.
+            """
+            if "." not in reference:
+                raise ConfigurationError(
+                    (
+                        "'%s' ist not a valid model reference."
+                        " Should be something like <appname>.<modelname>."
+                    )
+                    % reference
+                )
+
+            items = reference.split(".")
+            if len(items) != 2:
+                raise ConfigurationError(
+                    (
+                        "'%s' is not a valid model reference Bad Reference."
+                        " Should be something like <appname>.<modelname>."
+                    )
+                    % reference
+                )
+
+            return (items[0], items[1])
+
         for app_name, app in cls.apps.items():
             for model_name, model in app.items():
                 if model._meta._inited:
@@ -54,8 +100,8 @@ class Tortoise:
                 for field in model._meta.fk_fields:
                     fk_object = cast(fields.ForeignKeyField, model._meta.fields_map[field])
                     reference = fk_object.model_name
-                    related_app_name, related_model_name = reference.split(".")
-                    related_model = cls.apps[related_app_name][related_model_name]
+                    related_app_name, related_model_name = split_reference(reference)
+                    related_model = get_related_model(related_app_name, related_model_name)
 
                     key_field = "{}_id".format(field)
                     fk_object.source_field = key_field
@@ -92,8 +138,8 @@ class Tortoise:
                         m2m_object.backward_key = backward_key
 
                     reference = m2m_object.model_name
-                    related_app_name, related_model_name = reference.split(".")
-                    related_model = cls.apps[related_app_name][related_model_name]
+                    related_app_name, related_model_name = split_reference(reference)
+                    related_model = get_related_model(related_app_name, related_model_name)
 
                     m2m_object.type = related_model
 
@@ -413,4 +459,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.12.4"
+__version__ = "0.12.5"

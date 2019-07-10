@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.12.5
+------
+* Using non registered models or wrong references causes an ConfigurationError with a helpful message.
+
 0.12.4
 ------
 * Inherit fields from Mixins, together with abstract model classes.
