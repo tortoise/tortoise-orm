@@ -24,20 +24,20 @@ deps:
 	@pip-sync requirements-dev.txt
 
 check: deps
-	flake8 $(checkfiles)
 ifneq ($(shell which black),)
-	black --check $(black_opts) $(checkfiles)
+	black --check $(black_opts) $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
+	flake8 $(checkfiles)
 	mypy $(checkfiles)
 	pylint -E $(checkfiles)
 	bandit -r $(checkfiles)
 	python setup.py check -mrs
 
 lint: deps
-	flake8 $(checkfiles)
 ifneq ($(shell which black),)
-	black --check $(black_opts) $(checkfiles)
+	black --check $(black_opts) $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
+	flake8 $(checkfiles)
 	mypy $(checkfiles)
 	pylint $(checkfiles)
 	bandit -r $(checkfiles)
