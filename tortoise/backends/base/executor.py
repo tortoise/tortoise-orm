@@ -50,7 +50,7 @@ class BaseExecutor:
         raw_results = await self.db.execute_query(query.get_sql())
         instance_list = []
         for row in raw_results:
-            instance = self.model(_from_db=True, **row)
+            instance = self.model._init_from_db(**row)
             if custom_fields:
                 for field in custom_fields:
                     setattr(instance, field, row[field])

@@ -210,6 +210,7 @@ class Tortoise:
                 if attr._meta.app and attr._meta.app != app_label:
                     continue
                 attr._meta.app = app_label
+                attr._meta.finalise_pk()
                 discovered_models.append(attr)
         return discovered_models
 
@@ -275,7 +276,7 @@ class Tortoise:
     def _build_initial_querysets(cls) -> None:
         for app in cls.apps.values():
             for model in app.values():
-                model._meta.generate_filters()
+                model._meta.finalise_model()
                 model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
                 model._meta.basequery_all_fields = model._meta.basequery.select(
                     *model._meta.db_fields
