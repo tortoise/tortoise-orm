@@ -5,7 +5,8 @@ Changelog
 
 0.12.6
 ------
-* Handle a __models__ variable within modules to override the model discovery mechanism.
+* Handle a ``__models__`` variable within modules to override the model discovery mechanism.
+* Split model consructor into from-Python and from-DB paths, leading to 15-25% speedup for large fetch operations.
 
 0.12.5
 ------
