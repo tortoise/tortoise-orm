@@ -11,6 +11,9 @@ from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, Multip
 from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
 from tortoise.utils import QueryAsyncIterator
 
+# Empty placeholder - Should never be edited.
+QUERY = Query()
+
 
 class AwaitableQuery:
     __slots__ = ("_joined_tables", "query", "model", "_db", "capabilities")
@@ -18,7 +21,7 @@ class AwaitableQuery:
     def __init__(self, model) -> None:
         self._joined_tables = []  # type: List[Table]
         self.model = model
-        self.query = model._meta.basequery  # type: Query
+        self.query = QUERY  # type: Query
         self._db = None  # type: Optional[BaseDBAsyncClient]
         self.capabilities = model._meta.db.capabilities
 
@@ -33,11 +36,8 @@ class AwaitableQuery:
                 self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
                 self._joined_tables.append(join[0])
 
-        if where_criterion:
-            self.query = self.query.where(where_criterion)
-
-        if having_criterion:
-            self.query = self.query.having(having_criterion)
+        self.query._wheres = where_criterion
+        self.query._havings = having_criterion
 
     def _join_table_by_field(self, table, related_field_name, related_field) -> None:
         joins = _get_joins_for_related_field(table, related_field, related_field_name)
@@ -80,6 +80,9 @@ class AwaitableQuery:
             self._db = self.model._meta.db
         self._make_query()
         return self._execute().__await__()
+
+    def __aiter__(self) -> QueryAsyncIterator:
+        return QueryAsyncIterator(self)
 
     async def _execute(self):
         raise NotImplementedError()  # pragma: nocoverage
@@ -433,10 +436,10 @@ class QuerySet(AwaitableQuery):
             aggregation_info = aggregate.resolve(self.model)
             for join in aggregation_info["joins"]:
                 self._join_table_by_field(*join)
-            self.query = self.query.select(aggregation_info["field"].as_(key))
+            self.query._select_other(aggregation_info["field"].as_(key))
 
     def _make_query(self) -> Query:
-        self.query = self.model._meta.basequery_all_fields
+        self.query = copy(self.model._meta.basequery_all_fields)
         self._resolve_annotate()
         self.resolve_filters(
             model=self.model,
@@ -445,11 +448,11 @@ class QuerySet(AwaitableQuery):
             custom_filters=self._custom_filters,
         )
         if self._limit:
-            self.query = self.query.limit(self._limit)
+            self.query._limit = self._limit
         if self._offset:
-            self.query = self.query.offset(self._offset)
+            self.query._offset = self._offset
         if self._distinct:
-            self.query = self.query.distinct()
+            self.query._distinct = True
         self.resolve_ordering(self.model, self._orderings, self._annotations)
         return self.query
 
@@ -460,29 +463,17 @@ class QuerySet(AwaitableQuery):
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
         ).execute_select(self.query, custom_fields=list(self._annotations.keys()))
-        if not instance_list:
-            if self._get:
+        if self._get:
+            if len(instance_list) == 1:
+                return instance_list[0]
+            if not instance_list:
                 raise DoesNotExist("Object does not exist")
-            if self._single:
+            raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
+        if self._single:
+            if not instance_list:
                 return None
-            return []
-        elif self._get:
-            if len(instance_list) > 1:
-                raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
-            return instance_list[0]
-        elif self._single:
             return instance_list[0]
         return instance_list
-
-    def __await__(self):
-        clone = self._clone()
-        if clone._db is None:
-            clone._db = self.model._meta.db
-        clone._make_query()
-        return clone._execute().__await__()
-
-    def __aiter__(self) -> QueryAsyncIterator:
-        return QueryAsyncIterator(self)
 
 
 class UpdateQuery(AwaitableQuery):
@@ -517,6 +508,7 @@ class UpdateQuery(AwaitableQuery):
                 value = value.id
             else:
                 db_field = self.model._meta.fields_db_projection[key]
+            # self.query._updates.append((Field(db_field), ValueWrapper(value))
             self.query = self.query.set(db_field, value)
 
     async def _execute(self):
@@ -534,14 +526,14 @@ class DeleteQuery(AwaitableQuery):
         self._db = db
 
     def _make_query(self):
-        self.query = self.model._meta.basequery
+        self.query = copy(self.model._meta.basequery)
         self.resolve_filters(
             model=self.model,
             q_objects=self.q_objects,
             annotations=self.annotations,
             custom_filters=self.custom_filters,
         )
-        self.query = self.query.delete()
+        self.query._delete_from = True
 
     async def _execute(self):
         await self._db.execute_query(str(self.query))
@@ -558,14 +550,14 @@ class CountQuery(AwaitableQuery):
         self._db = db
 
     def _make_query(self):
-        self.query = self.model._meta.basequery
+        self.query = copy(self.model._meta.basequery)
         self.resolve_filters(
             model=self.model,
             q_objects=self.q_objects,
             annotations=self.annotations,
             custom_filters=self.custom_filters,
         )
-        self.query = self.query.select(Count("*"))
+        self.query._select_other(Count("*"))
 
     async def _execute(self):
         result = await self._db.execute_query(str(self.query))
@@ -610,7 +602,7 @@ class FieldSelectQuery(AwaitableQuery):
         table = Table(self.model._meta.table)
         if field in self.model._meta.fields_db_projection:
             db_field = self.model._meta.fields_db_projection[field]
-            self.query = self.query.select(getattr(table, db_field).as_(return_as))
+            self.query._select_field(getattr(table, db_field).as_(return_as))
             return
 
         if field in self.model._meta.fetch_fields:
@@ -624,7 +616,7 @@ class FieldSelectQuery(AwaitableQuery):
             related_table, related_db_field = self._join_table_with_forwarded_fields(
                 model=self.model, field=field_split[0], forwarded_fields="__".join(field_split[1:])
             )
-            self.query = self.query.select(getattr(related_table, related_db_field).as_(return_as))
+            self.query._select_field(getattr(related_table, related_db_field).as_(return_as))
             return
 
         raise FieldError('Unknown field "{}" for model "{}"'.format(field, self.model.__name__))
@@ -691,8 +683,7 @@ class ValuesListQuery(FieldSelectQuery):
         self._db = db
 
     def _make_query(self):
-        self.query = self.model._meta.basequery
-
+        self.query = copy(self.model._meta.basequery)
         for positional_number, field in self.fields.items():
             self.add_field_to_select_query(field, positional_number)
 
@@ -703,11 +694,11 @@ class ValuesListQuery(FieldSelectQuery):
             custom_filters=self.custom_filters,
         )
         if self.limit:
-            self.query = self.query.limit(self.limit)
+            self.query._limit = self.limit
         if self.offset:
-            self.query = self.query.offset(self.offset)
+            self.query._offset = self.offset
         if self.distinct:
-            self.query = self.query.distinct()
+            self.query._distinct = True
         self.resolve_ordering(self.model, self.orderings, self.annotations)
 
     async def _execute(self):
@@ -759,7 +750,7 @@ class ValuesQuery(FieldSelectQuery):
         self._db = db
 
     def _make_query(self):
-        self.query = self.model._meta.basequery
+        self.query = copy(self.model._meta.basequery)
         for return_as, field in self.fields_for_select.items():
             self.add_field_to_select_query(field, return_as)
 
@@ -770,11 +761,11 @@ class ValuesQuery(FieldSelectQuery):
             custom_filters=self.custom_filters,
         )
         if self.limit:
-            self.query = self.query.limit(self.limit)
+            self.query._limit = self.limit
         if self.offset:
-            self.query = self.query.offset(self.offset)
+            self.query._offset = self.offset
         if self.distinct:
-            self.query = self.query.distinct()
+            self.query._distinct = True
         self.resolve_ordering(self.model, self.orderings, self.annotations)
 
     async def _execute(self):
