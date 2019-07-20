@@ -60,12 +60,12 @@ class TestGenerateSchema(test.SimpleTestCase):
 
     async def test_good(self):
         await self.init_for("tortoise.tests.test__models__good")
-        self.assertIn('goodtournament', '; '.join(self.sqls))
-        self.assertIn('inaclasstournament', '; '.join(self.sqls))
-        self.assertNotIn('badtournament', '; '.join(self.sqls))
+        self.assertIn("goodtournament", "; ".join(self.sqls))
+        self.assertIn("inaclasstournament", "; ".join(self.sqls))
+        self.assertNotIn("badtournament", "; ".join(self.sqls))
 
     async def test_bad(self):
         await self.init_for("tortoise.tests.test__models__bad")
-        self.assertNotIn('goodtournament', '; '.join(self.sqls))
-        self.assertNotIn('inaclasstournament', '; '.join(self.sqls))
-        self.assertIn('badtournament', '; '.join(self.sqls))
+        self.assertNotIn("goodtournament", "; ".join(self.sqls))
+        self.assertNotIn("inaclasstournament", "; ".join(self.sqls))
+        self.assertIn("badtournament", "; ".join(self.sqls))
