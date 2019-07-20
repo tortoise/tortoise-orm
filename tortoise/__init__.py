@@ -201,7 +201,7 @@ class Tortoise:
         try:
             # use duck typing to check for existence and iterability
             possible_models = [*module.__models__]
-        except (AttributeError, TypeError):
+        except Exception:
             possible_models = [getattr(module, attr_name) for attr_name in dir(module)]
         for attr in possible_models:
             if isclass(attr) and issubclass(attr, Model) and not attr._meta.abstract:
