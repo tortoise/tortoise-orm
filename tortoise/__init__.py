@@ -198,7 +198,11 @@ class Tortoise:
         except ImportError:
             raise ConfigurationError('Module "{}" not found'.format(models_path))
         discovered_models = []
-        possible_models = [*getattr(module, '__models__', None)]
+        possible_models = getattr(module, "__models__", None)
+        try:
+            possible_models = [*possible_models]
+        except TypeError:
+            possible_models = None
         if not possible_models:
             possible_models = [getattr(module, attr_name) for attr_name in dir(module)]
         for attr in possible_models:
