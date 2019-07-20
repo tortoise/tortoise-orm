@@ -71,6 +71,11 @@ This models won't be created in schema generation and won't create relations to 
 
 Further we have field ``fields.DatetimeField(auto_now=True)``. Options ``auto_now`` and ``auto_now_add`` work like Django's options.
 
+Use of ``__models__``
+------------
+
+If you define the variable ``__models__`` in the module which you load your models from, ``generate_schema`` will use that list, rather than automatically finding models for you.
+
 Primary Keys
 ------------
 
