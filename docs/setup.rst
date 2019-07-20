@@ -30,8 +30,9 @@ You can do it like this:
 Here we create connection to SQLite database client and then we discover & initialise models.
 
 ``generate_schema`` generates schema on empty database, you shouldn't run it on every app init, run it just once, maybe out of your main code.
-There is also the option when generating the schemas to set the ``safe`` parameter to ``True`` which will only insert the tables if they don't
-already exist.
+There is also the option when generating the schemas to set the ``safe`` parameter to ``True`` which will only insert the tables if they don't already exist.
+
+If you define the ``__models__`` variable in ``app.models`` (or wherever you specify to load your models from), ``generate_schema`` will use that list, rather than automatically finding models for you.
 
 .. _cleaningup:
 
