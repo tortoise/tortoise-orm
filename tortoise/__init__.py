@@ -198,10 +198,8 @@ class Tortoise:
         except ImportError:
             raise ConfigurationError('Module "{}" not found'.format(models_path))
         discovered_models = []
-        try:
-            # use duck typing to check for existence and iterability
-            possible_models = [*module.__models__]
-        except Exception:
+        possible_models = [*getattr(module, '__models__', None)]
+        if not possible_models:
             possible_models = [getattr(module, attr_name) for attr_name in dir(module)]
         for attr in possible_models:
             if isclass(attr) and issubclass(attr, Model) and not attr._meta.abstract:
