@@ -4,7 +4,6 @@
 
 from tortoise import fields
 from tortoise.models import Model
-from tortoise.tests.testfields import EnumField
 
 
 class BadTournament(Model):
