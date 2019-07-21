@@ -61,7 +61,7 @@ Parameters
 PostgreSQL
 ==========
 
-DB URL is typically in the form of :samp:`postgres://postgres:pass@db.host:5432/somedb`
+DB URL is typically in the form of :samp:`postgres://postgres:pass@db.host:5432/somedb`, or, if connecting via Unix domain socket :samp:`postgres:///somedb`.
 
 Parameters
 ----------
