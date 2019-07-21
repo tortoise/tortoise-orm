@@ -198,8 +198,14 @@ class Tortoise:
         except ImportError:
             raise ConfigurationError('Module "{}" not found'.format(models_path))
         discovered_models = []
-        for attr_name in dir(module):
-            attr = getattr(module, attr_name)
+        possible_models = getattr(module, "__models__", None)
+        try:
+            possible_models = [*possible_models]
+        except TypeError:
+            possible_models = None
+        if not possible_models:
+            possible_models = [getattr(module, attr_name) for attr_name in dir(module)]
+        for attr in possible_models:
             if isclass(attr) and issubclass(attr, Model) and not attr._meta.abstract:
                 if attr._meta.app and attr._meta.app != app_label:
                     continue

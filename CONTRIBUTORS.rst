@@ -14,6 +14,7 @@ Contributors
 * Shlomy Balulu ``@shaloba``
 * Klaas Nebuhr ``@FirstKlaas`` 
 * Harsha Narayana ``@harshanarayana``
+* Terra Brown ``@superloach``
 
 Special Thanks
 ==============
