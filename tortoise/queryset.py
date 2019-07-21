@@ -508,7 +508,6 @@ class UpdateQuery(AwaitableQuery):
                 value = value.id
             else:
                 db_field = self.model._meta.fields_db_projection[key]
-            # self.query._updates.append((Field(db_field), ValueWrapper(value))
             self.query = self.query.set(db_field, value)
 
     async def _execute(self):
