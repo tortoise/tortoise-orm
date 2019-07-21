@@ -113,7 +113,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                 "credentials": {
                     "database": "test",
                     "host": "127.0.0.1",
-                    "password": "",
+                    "password": None,
                     "port": 5432,
                     "user": "postgres",
                 },
@@ -136,7 +136,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                 "credentials": {
                     "database": database,
                     "host": "127.0.0.1",
-                    "password": "",
+                    "password": None,
                     "port": 5432,
                     "user": "postgres",
                 },
@@ -152,7 +152,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                 "credentials": {
                     "database": "test",
                     "host": "127.0.0.1",
-                    "password": "",
+                    "password": None,
                     "port": 5432,
                     "user": "postgres",
                     "AHA": "5",

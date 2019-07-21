@@ -64,14 +64,19 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     if url.scheme not in DB_LOOKUP:
         raise ConfigurationError("Unknown DB scheme: {}".format(url.scheme))
 
-    db = DB_LOOKUP[url.scheme]
+    db_backend = url.scheme
+    db = DB_LOOKUP[db_backend]
     if db.get("skip_first_char", True):
         path = url.path[1:]
     else:
         path = url.netloc + url.path
 
     if not path:
-        raise ConfigurationError("No path specified for DB_URL")
+        if db_backend == 'sqlite':
+            raise ConfigurationError("No path specified for DB_URL")
+        else:
+            # Other database backend accepts database name being None (but not empty string).
+            path = None
 
     params = {}  # type: dict
     for key, val in db["defaults"].items():
@@ -88,7 +93,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     vmap.update(db["vmap"])
     params[vmap["path"]] = path
     if vmap.get("hostname"):
-        params[vmap["hostname"]] = str(url.hostname or "")
+        params[vmap["hostname"]] = None if not url.hostname else str(url.hostname)
     try:
         if vmap.get("port"):
             if url.port:
@@ -100,7 +105,9 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         # to let asyncpg retrieve username from evionment variable or OS user
         params[vmap["username"]] = None if not url.username else str(url.username)
     if vmap.get("password"):
-        params[vmap["password"]] = str(url.password or "")
+        # asyncpg accepts None for password, but aiomysql not
+        params[vmap["password"]] = None if (not url.password and db_backend == 'postgres') \
+            else str(url.password or "")
 
     return {"engine": db["engine"], "credentials": params}
 
