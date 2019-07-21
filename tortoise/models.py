@@ -36,15 +36,15 @@ class MetaInfo:
         "abstract",
         "table",
         "app",
-        "_fields",
-        "_db_fields",
+        "fields",
+        "db_fields",
         "m2m_fields",
         "fk_fields",
         "backward_fk_fields",
-        "_fetch_fields",
+        "fetch_fields",
         "fields_db_projection",
         "_inited",
-        "_fields_db_projection_reverse",
+        "fields_db_projection_reverse",
         "filters",
         "fields_map",
         "default_connection",
@@ -53,24 +53,26 @@ class MetaInfo:
         "_filters",
         "unique_together",
         "pk_attr",
-        "_generated_db_fields",
+        "generated_db_fields",
         "_model",
         "table_description",
+        "pk",
+        "db_pk_field",
     )
 
     def __init__(self, meta) -> None:
         self.abstract = getattr(meta, "abstract", False)  # type: bool
         self.table = getattr(meta, "table", "")  # type: str
         self.app = getattr(meta, "app", None)  # type: Optional[str]
-        self.unique_together = get_unique_together(meta)  # type: Optional[Union[Tuple, List]]
-        self._fields = None  # type: Optional[Set[str]]
-        self._db_fields = None  # type: Optional[Set[str]]
+        self.unique_together = get_unique_together(meta)  # type: Union[Tuple, List]
+        self.fields = set()  # type: Set[str]
+        self.db_fields = set()  # type: Set[str]
         self.m2m_fields = set()  # type: Set[str]
         self.fk_fields = set()  # type: Set[str]
         self.backward_fk_fields = set()  # type: Set[str]
-        self._fetch_fields = None  # type: Optional[Set[str]]
+        self.fetch_fields = set()  # type: Set[str]
         self.fields_db_projection = {}  # type: Dict[str,str]
-        self._fields_db_projection_reverse = None  # type: Optional[Dict[str,str]]
+        self.fields_db_projection_reverse = {}  # type: Dict[str,str]
         self._filters = {}  # type: Dict[str, Dict[str, dict]]
         self.filters = {}  # type: Dict[str, dict]
         self.fields_map = {}  # type: Dict[str, fields.Field]
@@ -79,9 +81,11 @@ class MetaInfo:
         self.basequery = Query()  # type: Query
         self.basequery_all_fields = Query()  # type: Query
         self.pk_attr = getattr(meta, "pk_attr", "")  # type: str
-        self._generated_db_fields = None  # type: Optional[Tuple[str]]
+        self.generated_db_fields = None  # type: Tuple[str]  # type: ignore
         self._model = None  # type: "Model"  # type: ignore
         self.table_description = getattr(meta, "table_description", "")  # type: str
+        self.pk = None  # type: fields.Field  # type: ignore
+        self.db_pk_field = ""  # type: str
 
     def add_field(self, name: str, value: Field):
         if name in self.fields_map:
@@ -89,76 +93,20 @@ class MetaInfo:
         setattr(self._model, name, value)
         value.model = self._model
         self.fields_map[name] = value
-        self._fields = None
 
         if value.has_db_field:
             self.fields_db_projection[name] = value.source_field or name
-            self._fields_db_projection_reverse = None
 
         if isinstance(value, fields.ManyToManyField):
             self.m2m_fields.add(name)
-            self._fetch_fields = None
         elif isinstance(value, fields.BackwardFKRelation):
             self.backward_fk_fields.add(name)
-            self._fetch_fields = None
 
         field_filters = get_filters_for_field(
             field_name=name, field=value, source_field=value.source_field or name
         )
         self._filters.update(field_filters)
-        self.generate_filters()
-
-    @property
-    def fields_db_projection_reverse(self) -> Dict[str, str]:
-        if self._fields_db_projection_reverse is None:
-            self._fields_db_projection_reverse = {
-                value: key for key, value in self.fields_db_projection.items()
-            }
-        return self._fields_db_projection_reverse
-
-    @property
-    def fields(self) -> Set[str]:
-        if self._fields is None:
-            self._fields = set(self.fields_map.keys())
-        return self._fields
-
-    @property
-    def db_fields(self) -> Set[str]:
-        if self._db_fields is None:
-            self._db_fields = set(self.fields_db_projection.values())
-        return self._db_fields
-
-    @property
-    def fetch_fields(self):
-        if self._fetch_fields is None:
-            self._fetch_fields = self.m2m_fields | self.backward_fk_fields | self.fk_fields
-        return self._fetch_fields
-
-    @property
-    def pk(self):
-        return self.fields_map[self.pk_attr]
-
-    @property
-    def db_pk_field(self) -> str:
-        field_object = self.fields_map[self.pk_attr]
-        return field_object.source_field or self.pk_attr
-
-    @property
-    def is_pk_generated(self) -> bool:
-        field_object = self.fields_map[self.pk_attr]
-        return field_object.generated
-
-    @property
-    def generated_db_fields(self) -> Tuple[str]:
-        """Return list of names of db fields that are generated on db side"""
-        if self._generated_db_fields is None:
-            generated_fields = []
-            for field in self.fields_map.values():
-                if not field.generated:
-                    continue
-                generated_fields.append(field.source_field or field.model_field_name)
-            self._generated_db_fields = tuple(generated_fields)  # type: ignore
-        return self._generated_db_fields  # type: ignore
+        self.finalise_fields()
 
     @property
     def db(self) -> BaseDBAsyncClient:
@@ -170,7 +118,33 @@ class MetaInfo:
     def get_filter(self, key: str) -> dict:
         return self.filters[key]
 
-    def generate_filters(self) -> None:
+    def finalise_pk(self) -> None:
+        self.pk = self.fields_map[self.pk_attr]
+        self.db_pk_field = self.pk.source_field or self.pk_attr
+
+    def finalise_model(self) -> None:
+        """
+        Finalise the model after it had been fully loaded.
+        """
+        self.finalise_fields()
+        self._generate_filters()
+
+    def finalise_fields(self) -> None:
+        self.db_fields = set(self.fields_db_projection.values())
+        self.fields = set(self.fields_map.keys())
+        self.fields_db_projection_reverse = {
+            value: key for key, value in self.fields_db_projection.items()
+        }
+        self.fetch_fields = self.m2m_fields | self.backward_fk_fields | self.fk_fields
+
+        generated_fields = []
+        for field in self.fields_map.values():
+            if not field.generated:
+                continue
+            generated_fields.append(field.source_field or field.model_field_name)
+        self.generated_db_fields = tuple(generated_fields)  # type: ignore
+
+    def _generate_filters(self) -> None:
         get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
         for key, filter_info in self._filters.items():
             overridden_operator = get_overridden_filter_func(  # type: ignore
@@ -301,6 +275,7 @@ class ModelMeta(type):
             field.model = new_class
 
         meta._model = new_class
+        meta.finalise_fields()
         return new_class
 
 
@@ -311,8 +286,42 @@ class Model(metaclass=ModelMeta):
     def __init__(self, *args, _from_db: bool = False, **kwargs) -> None:
         # self._meta is a very common attribute lookup, lets cache it.
         meta = self._meta
-        self._saved_in_db = _from_db or (meta.pk_attr in kwargs and meta.is_pk_generated)
+        self._saved_in_db = _from_db or (meta.pk_attr in kwargs and meta.pk.generated)
+        self._init_lazy_fkm2m()
 
+        # Assign values and do type conversions
+        passed_fields = {*kwargs.keys()}
+        passed_fields.update(meta.fetch_fields)
+        passed_fields |= self._set_field_values(kwargs)
+
+        # Assign defaults for missing fields
+        for key in meta.fields.difference(passed_fields):
+            field_object = meta.fields_map[key]
+            if callable(field_object.default):
+                setattr(self, key, field_object.default())
+            else:
+                setattr(self, key, field_object.default)
+
+    @classmethod
+    def _init_from_db(cls, **kwargs) -> MODEL_TYPE:
+        self = cls.__new__(cls)
+        self._saved_in_db = True
+        self._init_lazy_fkm2m()
+
+        meta = self._meta
+
+        for key, value in kwargs.items():
+            if key in meta.fields:
+                field_object = meta.fields_map[key]
+                setattr(self, key, field_object.to_python_value(value))
+            elif key in meta.db_fields:
+                field_object = meta.fields_map[meta.fields_db_projection_reverse[key]]
+                setattr(self, key, field_object.to_python_value(value))
+
+        return self
+
+    def _init_lazy_fkm2m(self) -> None:
+        meta = self._meta
         # Create lazy fk/m2m objects
         for key in meta.backward_fk_fields:
             field_object = meta.fields_map[key]
@@ -331,19 +340,6 @@ class Model(metaclass=ModelMeta):
                 key,
                 ManyToManyRelationManager(field_object.type, self, field_object),  # type: ignore
             )
-
-        # Assign values and do type conversions
-        passed_fields = set(kwargs.keys())
-        passed_fields.update(meta.fetch_fields)
-        passed_fields |= self._set_field_values(kwargs)
-
-        # Assign defaults for missing fields
-        for key in meta.fields.difference(passed_fields):
-            field_object = meta.fields_map[key]
-            if callable(field_object.default):
-                setattr(self, key, field_object.default())
-            else:
-                setattr(self, key, field_object.default)
 
     def _set_field_values(self, values_map: Dict[str, Any]) -> Set[str]:
         """

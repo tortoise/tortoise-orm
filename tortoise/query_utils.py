@@ -1,3 +1,4 @@
+from copy import copy
 from typing import Any, List, Mapping, Optional, Tuple  # noqa
 
 from pypika import Table
@@ -309,6 +310,7 @@ class Prefetch:
     def __init__(self, relation, queryset) -> None:
         self.relation = relation
         self.queryset = queryset
+        self.queryset.query = copy(self.queryset.model._meta.basequery)
 
     def resolve_for_queryset(self, queryset) -> None:
         relation_split = self.relation.split("__")

@@ -5,7 +5,13 @@ Changelog
 
 0.12.6
 ------
-* Handle a __models__ variable within modules to override the model discovery mechanism.
+* Handle a ``__models__`` variable within modules to override the model discovery mechanism.
+
+    If you define the ``__models__`` variable in ``yourapp.models`` (or wherever you specify to load your models from),
+    ``generate_schema()`` will use that list, rather than automatically finding all models for you.
+
+* Split model consructor into from-Python and from-DB paths, leading to 15-25% speedup for large fetch operations.
+* More efficient queryset manipulation, 5-30% speedup for small fetches.
 
 0.12.5
 ------
