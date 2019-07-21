@@ -1,3 +1,4 @@
+from copy import copy
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Type  # noqa
 
@@ -50,7 +51,7 @@ class BaseExecutor:
         raw_results = await self.db.execute_query(query.get_sql())
         instance_list = []
         for row in raw_results:
-            instance = self.model(_from_db=True, **row)
+            instance = self.model._init_from_db(**row)
             if custom_fields:
                 for field in custom_fields:
                     setattr(instance, field, row[field])
@@ -248,6 +249,7 @@ class BaseExecutor:
                 related_model_field = self.model._meta.fields_map.get(field)
                 related_model = related_model_field.type
                 related_query = related_model.all().using_db(self.db)
+                related_query.query = copy(related_query.model._meta.basequery)
             if forwarded_prefetches:
                 related_query = related_query.prefetch_related(*forwarded_prefetches)
             self._prefetch_queries[field] = related_query

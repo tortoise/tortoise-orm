@@ -198,12 +198,19 @@ class Tortoise:
         except ImportError:
             raise ConfigurationError('Module "{}" not found'.format(models_path))
         discovered_models = []
-        for attr_name in dir(module):
-            attr = getattr(module, attr_name)
+        possible_models = getattr(module, "__models__", None)
+        try:
+            possible_models = [*possible_models]
+        except TypeError:
+            possible_models = None
+        if not possible_models:
+            possible_models = [getattr(module, attr_name) for attr_name in dir(module)]
+        for attr in possible_models:
             if isclass(attr) and issubclass(attr, Model) and not attr._meta.abstract:
                 if attr._meta.app and attr._meta.app != app_label:
                     continue
                 attr._meta.app = app_label
+                attr._meta.finalise_pk()
                 discovered_models.append(attr)
         return discovered_models
 
@@ -269,7 +276,7 @@ class Tortoise:
     def _build_initial_querysets(cls) -> None:
         for app in cls.apps.values():
             for model in app.values():
-                model._meta.generate_filters()
+                model._meta.finalise_model()
                 model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
                 model._meta.basequery_all_fields = model._meta.basequery.select(
                     *model._meta.db_fields
@@ -459,4 +466,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.12.5"
+__version__ = "0.12.6"
