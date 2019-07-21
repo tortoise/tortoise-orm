@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.12.7
+------
+* Support connecting to PostgreSQL via Unix domain socket (simple case).
+
 0.12.5
 ------
 * Using non registered models or wrong references causes an ConfigurationError with a helpful message.

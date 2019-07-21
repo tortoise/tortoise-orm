@@ -12,11 +12,11 @@ Contributors
 * Florimond Manca ``@florimondmanca``
 * Vitali Rebkavets ``@REVIMI``
 * Shlomy Balulu ``@shaloba``
-* Klaas Nebuhr ``@FirstKlaas`` 
+* Klaas Nebuhr ``@FirstKlaas``
 * Harsha Narayana ``@harshanarayana``
+* Nguyễn Hồng Quân ``@hongquan``
 
 Special Thanks
 ==============
 
 Huge thanks to https://github.com/kayak/pypika for all heavy lifting.
-
