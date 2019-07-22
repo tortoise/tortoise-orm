@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.12.7
+------
+* Support connecting to PostgreSQL via Unix domain socket (simple case).
+
 0.12.6
 ------
 * Handle a ``__models__`` variable within modules to override the model discovery mechanism.

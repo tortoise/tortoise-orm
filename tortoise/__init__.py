@@ -321,7 +321,7 @@ class Tortoise:
                             }
                         },
                         # Using a DB_URL string
-                        'default': 'postgres://postgres:@qwerty123localhost:5432/events'
+                        'default': 'postgres://postgres:qwerty123@localhost:5432/events'
                     },
                     'apps': {
                         'models': {

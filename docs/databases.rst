@@ -61,7 +61,7 @@ Parameters
 PostgreSQL
 ==========
 
-DB URL is typically in the form of :samp:`postgres://postgres:pass@db.host:5432/somedb`
+DB URL is typically in the form of :samp:`postgres://postgres:pass@db.host:5432/somedb`, or, if connecting via Unix domain socket :samp:`postgres:///somedb`.
 
 Parameters
 ----------
@@ -84,6 +84,8 @@ Parameters
     Maximum no of queries to allow before forcing a re-connect.
 ``max_inactive_connection_lifetime``:
     Duration of inactive connection before assuming that it has gone stale, and force a re-connect.
+
+In case any of ``user``, ``password``, ``host``, ``port`` parameters is missing, we are letting ``asyncpg`` retrieve it from default sources (standard PostgreSQL environment variables or default values).
 
 
 MySQL/MariaDB
