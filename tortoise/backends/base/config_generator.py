@@ -93,7 +93,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     vmap.update(db["vmap"])
     params[vmap["path"]] = path
     if vmap.get("hostname"):
-        params[vmap["hostname"]] = None if not url.hostname else str(url.hostname)
+        params[vmap["hostname"]] = url.hostname or None
     try:
         if vmap.get("port"):
             if url.port:
@@ -103,7 +103,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     if vmap.get("username"):
         # Pass username as None, instead of empty string,
         # to let asyncpg retrieve username from evionment variable or OS user
-        params[vmap["username"]] = None if not url.username else str(url.username)
+        params[vmap["username"]] = url.username or None
     if vmap.get("password"):
         # asyncpg accepts None for password, but aiomysql not
         params[vmap["password"]] = None if (not url.password and db_backend == 'postgres') \
