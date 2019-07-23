@@ -276,7 +276,9 @@ class BaseSchemaGenerator:
                 break
             try:
                 next_table_for_create = next(
-                    t for t in tables_to_create if t["references"].issubset(created_tables)
+                    t
+                    for t in tables_to_create
+                    if t["references"].issubset(created_tables | {t["table"]})
                 )
             except StopIteration:
                 raise ConfigurationError("Can't create schema due to cyclic fk references")

@@ -6,6 +6,7 @@ Changelog
 0.12.7
 ------
 * Support connecting to PostgreSQL via Unix domain socket (simple case).
+* Self-referential Foreign and Many-to-Many keys are now allowed
 
 0.12.6
 ------

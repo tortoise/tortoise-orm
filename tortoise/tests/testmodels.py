@@ -75,6 +75,8 @@ class EventTwo(Model):
 class TeamTwo(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
+    parent = fields.ForeignKeyField("events.TeamTwo", related_name="children", null=True)
+    related = fields.ManyToManyField("events.TeamTwo", related_name="related_from")
 
     class Meta:
         app = "events"

@@ -127,7 +127,7 @@ class Tortoise:
                     fk_relation = fields.BackwardFKRelation(model, "{}_id".format(field))
                     related_model._meta.add_field(backward_relation_name, fk_relation)
 
-                for field in model._meta.m2m_fields:
+                for field in list(model._meta.m2m_fields):
                     m2m_object = cast(fields.ManyToManyField, model._meta.fields_map[field])
                     if m2m_object._generated:
                         continue
@@ -135,6 +135,8 @@ class Tortoise:
                     backward_key = m2m_object.backward_key
                     if not backward_key:
                         backward_key = "{}_id".format(model._meta.table)
+                        if backward_key == m2m_object.forward_key:
+                            backward_key = "{}_rel_id".format(model._meta.table)
                         m2m_object.backward_key = backward_key
 
                     reference = m2m_object.model_name
@@ -466,4 +468,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.12.6"
+__version__ = "0.12.7"
