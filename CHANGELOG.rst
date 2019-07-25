@@ -3,8 +3,8 @@
 Changelog
 =========
 
-0.12.6
-------
+0.12.6/0.12.8
+-------------
 * Handle a ``__models__`` variable within modules to override the model discovery mechanism.
 
     If you define the ``__models__`` variable in ``yourapp.models`` (or wherever you specify to load your models from),
