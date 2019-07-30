@@ -240,7 +240,7 @@ class QuerySet(AwaitableQuery):
         """
         Make QuerySet distinct.
 
-        Only makes sense in combination with a .values() or .values_list() as it
+        Only makes sense in combination with a ``.values()`` or ``.values_list()`` as it
         precedes all the fetched fields with a distinct.
         """
         queryset = self._clone()
@@ -266,7 +266,10 @@ class QuerySet(AwaitableQuery):
     ) -> "ValuesListQuery":  # pylint: disable=W0621
         """
         Make QuerySet returns list of tuples for given args instead of objects.
+
         If ```flat=True`` and only one arg is passed can return flat list.
+
+        If no arguments are passed it will default to a tuple containing all fields in order of declaration.
         """
         return ValuesListQuery(
             db=self._db,
@@ -285,6 +288,10 @@ class QuerySet(AwaitableQuery):
     def values(self, *args: str, **kwargs: str) -> "ValuesQuery":
         """
         Make QuerySet return dicts instead of objects.
+
+        Can pass names of fields to fetch, or as a ``field_name='name_in_dict'`` kwarg.
+
+        If no arguments are passed it will default to a dict containing all fields.
         """
         if args or kwargs:
             fields_for_select = {}  # type: Dict[str, str]

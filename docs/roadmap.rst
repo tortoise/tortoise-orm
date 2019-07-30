@@ -11,13 +11,10 @@ For ``v1.0`` that involves:
 
 * Schema discovery
 * Timezone support
-* Clear and concise examples
-* Refactored Fields Schema generation
 * DB transaction isolation
 * Connection pooling
-* Robust connection handling
 * Change to all-parametrized queries for safety
-
+* Clear and concise examples
 
 Mid-term
 ========
@@ -26,7 +23,6 @@ Here we have all the features that is slightly further out, in no particular ord
 
 * Performance work:
     * Sub queries
-    * Bulk operations
     * Consider using Cython to accelerate critical loops
 
 * Convenience/Ease-Of-Use work:
@@ -43,15 +39,15 @@ Here we have all the features that is slightly further out, in no particular ord
     * Expand annotation framework to add statistical functions
 
 * Migrations
-    * Comprehensive schema in Migrations
+    * Comprehensive schema Migrations
     * Automatic forward Migration building
-    * Ability to easily run arb code in a migration
+    * Ability to easily run arbitrary code in a migration
     * Ability to get a the Models for that exact time of the migration, to ensure safe & consistent data migrations
     * Cross-DB support
     * Fixtures as a property of a migration
 
 * Serialization support
-    * Take inspiration from ``attrs`` and ``marshmallow``
+    * Take inspiration from ``attrs``, ``marshmallow`` and ``pydantic``
     * Provide sane default serializers that will work as-is for CRUD
     * Provide sane default schema generators
     * Make default serializers support some validation
