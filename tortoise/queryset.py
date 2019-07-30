@@ -269,7 +269,8 @@ class QuerySet(AwaitableQuery):
 
         If ```flat=True`` and only one arg is passed can return flat list.
 
-        If no arguments are passed it will default to a tuple containing all fields in order of declaration.
+        If no arguments are passed it will default to a tuple containing all fields
+        in order of declaration.
         """
         return ValuesListQuery(
             db=self._db,
