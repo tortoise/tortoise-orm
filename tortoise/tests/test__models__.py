@@ -22,6 +22,7 @@ class TestGenerateSchema(test.SimpleTestCase):
             pass
         Tortoise._inited = False
         self.sqls = ""
+        self.post_sqls = ""
         self.engine = test.getDBConfig(app_label="models", modules=[])["connections"]["models"][
             "engine"
         ]

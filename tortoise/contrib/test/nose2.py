@@ -44,5 +44,5 @@ class TortoisePlugin(Plugin):  # type: ignore
     def startTestRun(self, event: Event) -> None:
         initializer(self.db_modules, db_url=self.db_url)
 
-    def stopTestRun(self, event: Event) -> None:
+    def stopTestRun(self, event: Event) -> None:  # pylint: disable=R0201
         finalizer()

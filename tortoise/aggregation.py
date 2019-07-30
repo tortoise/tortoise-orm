@@ -31,16 +31,14 @@ class Aggregate:
                     getattr(Table(model._meta.table), field_split[0])
                 )
             return {"joins": aggregation_joins, "field": aggregation_field}
-        else:
-            if field_split[0] not in model._meta.fetch_fields:
-                raise ConfigurationError("{} not resolvable".format(field))
-            related_field = model._meta.fields_map[field_split[0]]
-            join = (Table(model._meta.table), field_split[0], related_field)
-            aggregation = self._resolve_field_for_model(
-                "__".join(field_split[1:]), related_field.type
-            )
-            aggregation["joins"].append(join)
-            return aggregation
+
+        if field_split[0] not in model._meta.fetch_fields:
+            raise ConfigurationError("{} not resolvable".format(field))
+        related_field = model._meta.fields_map[field_split[0]]
+        join = (Table(model._meta.table), field_split[0], related_field)
+        aggregation = self._resolve_field_for_model("__".join(field_split[1:]), related_field.type)
+        aggregation["joins"].append(join)
+        return aggregation
 
     def resolve(self, model) -> dict:
         aggregation = self._resolve_field_for_model(self.field, model)

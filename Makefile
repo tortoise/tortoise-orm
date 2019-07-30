@@ -18,6 +18,8 @@ help:
 up:
 	CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements-pypy.txt requirements-pypy.in -U
 	CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements-dev.txt requirements-dev.in -U
+	cat docs/extra_requirements.txt >> requirements-pypy.txt
+	cat docs/extra_requirements.txt >> requirements-dev.txt
 
 deps:
 	@pip install -q pip-tools

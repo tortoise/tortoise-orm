@@ -17,7 +17,7 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
 
     def _escape_comment(self, comment: str) -> str:
         table = get_escape_translation_table()
-        table[ord("'")] = u"''"
+        table[ord("'")] = "''"
         return comment.translate(table)
 
     def _table_comment_generator(self, model, comments_array: List) -> str:

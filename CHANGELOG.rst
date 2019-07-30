@@ -3,13 +3,17 @@
 Changelog
 =========
 
-0.12.7
+0.12.9
 ------
+* ``.values()`` and ``.values_list()`` now default to all fields if none are specified.
+
+0.12.7 (retracted)
+------------------
 * Support connecting to PostgreSQL via Unix domain socket (simple case).
 * Self-referential Foreign and Many-to-Many keys are now allowed
 
-0.12.6
-------
+0.12.6 / 0.12.8
+---------------
 * Handle a ``__models__`` variable within modules to override the model discovery mechanism.
 
     If you define the ``__models__`` variable in ``yourapp.models`` (or wherever you specify to load your models from),
@@ -43,7 +47,7 @@ Changelog
   .. note::
      The bulk insert operation will do the minimum to ensure that the object
      created in the DB has all the defaults and generated fields set,
-     but may be incomplete reference in Python.
+     this may result in incomplete references in Python.
 
      e.g. ``IntField`` primary keys will not be poplulated.
 
@@ -65,7 +69,7 @@ Changelog
      This is a big feature change. It should not break any existing implementations.
 
   That primary key will be accesible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
-  That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc...
+  That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc…
 
   We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
 

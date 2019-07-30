@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from functools import wraps
-from typing import Any, List, Optional, SupportsInt  # noqa
+from typing import List, Optional, SupportsInt  # noqa
 
 import asyncpg
 from pypika import PostgreSQLQuery

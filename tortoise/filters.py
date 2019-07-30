@@ -1,6 +1,6 @@
 import operator
 from functools import partial
-from typing import Dict, Iterable, Optional  # noqa
+from typing import Dict, Optional  # noqa
 
 from pypika import Table, functions
 from pypika.enums import SqlTypes
@@ -44,15 +44,13 @@ def not_equal(field, value):
 def is_null(field, value):
     if value:
         return field.isnull()
-    else:
-        return field.notnull()
+    return field.notnull()
 
 
 def not_null(field, value):
     if value:
         return field.notnull()
-    else:
-        return field.isnull()
+    return field.isnull()
 
 
 def contains(field, value):

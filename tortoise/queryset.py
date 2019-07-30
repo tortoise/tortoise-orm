@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Any, Dict, Generator, List, Optional, Set, Tuple  # noqa
+from typing import Any, Dict, List, Optional, Set, Tuple  # noqa
 
 from pypika import JoinType, Order, Query, Table  # noqa
 from pypika.functions import Count
@@ -54,7 +54,7 @@ class AwaitableQuery:
                 raise FieldError(
                     "Filtering by relation is not possible. Filter by nested field of related model"
                 )
-            elif field_name.split("__")[0] in model._meta.fetch_fields:
+            if field_name.split("__")[0] in model._meta.fetch_fields:
                 related_field_name = field_name.split("__")[0]
                 related_field = model._meta.fields_map[related_field_name]
                 self._join_table_by_field(table, related_field_name, related_field)
@@ -273,7 +273,7 @@ class QuerySet(AwaitableQuery):
             model=self.model,
             q_objects=self._q_objects,
             flat=flat,
-            fields_for_select_list=fields_,
+            fields_for_select_list=fields_ or list(self.model._meta.db_fields),
             distinct=self._distinct,
             limit=self._limit,
             offset=self._offset,
@@ -286,16 +286,19 @@ class QuerySet(AwaitableQuery):
         """
         Make QuerySet return dicts instead of objects.
         """
-        fields_for_select = {}  # type: Dict[str, str]
-        for field in args:
-            if field in fields_for_select:
-                raise FieldError("Duplicate key {}".format(field))
-            fields_for_select[field] = field
+        if args or kwargs:
+            fields_for_select = {}  # type: Dict[str, str]
+            for field in args:
+                if field in fields_for_select:
+                    raise FieldError("Duplicate key {}".format(field))
+                fields_for_select[field] = field
 
-        for return_as, field in kwargs.items():
-            if return_as in fields_for_select:
-                raise FieldError("Duplicate key {}".format(return_as))
-            fields_for_select[return_as] = field
+            for return_as, field in kwargs.items():
+                if return_as in fields_for_select:
+                    raise FieldError("Duplicate key {}".format(return_as))
+                fields_for_select[return_as] = field
+        else:
+            fields_for_select = {field: field for field in self.model._meta.db_fields}
 
         return ValuesQuery(
             db=self._db,
@@ -572,9 +575,9 @@ class FieldSelectQuery(AwaitableQuery):
     ) -> Tuple[Table, str]:
         table = Table(model._meta.table)
         if field in model._meta.fields_db_projection and not forwarded_fields:
-            db_field = model._meta.fields_db_projection[field]
-            return table, db_field
-        elif field in model._meta.fields_db_projection and forwarded_fields:
+            return table, model._meta.fields_db_projection[field]
+
+        if field in model._meta.fields_db_projection and forwarded_fields:
             raise FieldError(
                 'Field "{}" for model "{}" is not relation'.format(field, model.__name__)
             )
@@ -591,6 +594,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         self._join_table_by_field(table, field, field_object)
         forwarded_fields_split = forwarded_fields.split("__")
+
         return self._join_table_with_forwarded_fields(
             model=field_object.type,
             field=forwarded_fields_split[0],

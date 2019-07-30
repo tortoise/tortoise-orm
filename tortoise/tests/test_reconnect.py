@@ -16,7 +16,7 @@ class TestQueryset(test.IsolatedTestCase):
 
         await Tortoise._connections["models"]._close()
 
-        self.assertEquals(
+        self.assertEqual(
             ["{}:{}".format(a.id, a.name) for a in await Tournament.all()], ["1:1", "2:2"]
         )
 
@@ -33,7 +33,7 @@ class TestQueryset(test.IsolatedTestCase):
         await Tortoise._connections["models"]._close()
 
         async with in_transaction():
-            self.assertEquals(
+            self.assertEqual(
                 ["{}:{}".format(a.id, a.name) for a in await Tournament.all()], ["1:1", "2:2"]
             )
 
@@ -47,4 +47,4 @@ class TestQueryset(test.IsolatedTestCase):
                 await Tortoise._connections["models"]._close()
                 await Tournament.create(name="3")
 
-        self.assertEquals(["{}:{}".format(a.id, a.name) for a in await Tournament.all()], ["1:1"])
+        self.assertEqual(["{}:{}".format(a.id, a.name) for a in await Tournament.all()], ["1:1"])

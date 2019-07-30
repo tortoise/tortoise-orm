@@ -54,10 +54,9 @@ confidence=
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use"--disable=all --enable=classes
 # --disable=W"
-disable=C0301,C0330,C0412,C0411,
-        W0613,W0212,W0611,
+disable=C0330,C0412,W0212,W0613,R0902,R0903,R0904,
         # tune down below here
-        R,C0111,C0103
+        C0103,C0111,R1702,R0912,R0913,R0914,R0915
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

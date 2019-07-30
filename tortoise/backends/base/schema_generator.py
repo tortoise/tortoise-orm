@@ -73,13 +73,13 @@ class BaseSchemaGenerator:
         # needs to be implemented for each supported client
         raise NotImplementedError()  # pragma: nocoverage
 
-    def _post_table_hook(self, *, models=None, safe=True) -> str:
+    def _post_table_hook(self, *, models=None, safe=True) -> str:  # pylint: disable=R0201
         # This method provides a mechanism where you can perform a set of
         # operation on the database table after  it's initialized. This method
         # by default does nothing. If need be, it can be over-written
         return ""
 
-    def _escape_comment(self, comment: str) -> str:
+    def _escape_comment(self, comment: str) -> str:  # pylint: disable=R0201
         # This method provides a default method to escape comment strings as per
         # default standard as applied under mysql like database. This can be
         # overwritten if required to match the database specific escaping.

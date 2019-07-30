@@ -18,6 +18,7 @@ class TestGenerateSchema(test.SimpleTestCase):
             pass
         Tortoise._inited = False
         self.sqls = ""
+        self.post_sqls = ""
         self.engine = test.getDBConfig(app_label="models", modules=[])["connections"]["models"][
             "engine"
         ]
@@ -92,7 +93,8 @@ class TestGenerateSchema(test.SimpleTestCase):
         ):
             await self.init_for("tortoise.tests.models_cyclic")
 
-    def continue_if_safe_indexes(self, supported: bool):
+    @staticmethod
+    def continue_if_safe_indexes(supported: bool):
         db = Tortoise.get_connection("default")
         if db.capabilities.safe_indexes != supported:
             raise test.SkipTest("safe_indexes != {}".format(supported))
