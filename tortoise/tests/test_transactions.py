@@ -6,7 +6,7 @@ from tortoise.transactions import atomic, in_transaction, start_transaction
 
 class SomeException(Exception):
     """
-    A very specific exception so s to not accidentally catch another exception.
+    A very specific exception so as to not accidentally catch another exception.
     """
 
 
