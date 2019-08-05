@@ -5,7 +5,7 @@ from asynctest.mock import CoroutineMock, patch
 from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
-from tortoise.utils import generate_post_table_sql, get_schema_sql
+from tortoise.utils import get_schema_sql
 
 
 class TestGenerateSchema(test.SimpleTestCase):
@@ -44,16 +44,10 @@ class TestGenerateSchema(test.SimpleTestCase):
                     "apps": {"models": {"models": [module], "default_connection": "default"}},
                 }
             )
-            self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
-            self.post_sqls = generate_post_table_sql(Tortoise._connections["default"], safe).split(
-                "; "
-            )
+            self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split(";\n")
 
     def get_sql(self, text: str) -> str:
-        return re.sub(r"[ \t\n\r]+", " ", [sql for sql in self.sqls if text in sql][0])
-
-    def get_post_sql(self, text: str) -> str:
-        return re.sub(r"[ \t\n\r]+", " ", [sql for sql in self.post_sqls if text in sql][0])
+        return re.sub(r"[ \t\n\r]+", " ", " ".join([sql for sql in self.sqls if text in sql]))
 
     async def test_noid(self):
         await self.init_for("tortoise.tests.testmodels")
@@ -141,12 +135,11 @@ class TestGenerateSchema(test.SimpleTestCase):
             await self.init_for("tortoise.tests.models_m2m_1")
 
     async def test_table_and_row_comment_generation(self):
-        await self.init_for("tortoise.tests.testmodels", safe=True)
-        self.continue_if_safe_indexes(supported=False)
+        await self.init_for("tortoise.tests.testmodels")
         sql = self.get_sql("comments")
         self.assertRegex(sql, r".*\/\* Upvotes done on the comment.*\*\/")
         self.assertRegex(sql, r".*\\n.*")
-        self.assertRegex(sql, r".*it\'s.*")
+        self.assertIn("\\'", sql)
 
 
 class TestGenerateSchemaMySQL(TestGenerateSchema):
@@ -196,11 +189,10 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
         self.assertIn("`team_id` INT NOT NULL REFERENCES `team` (`id`) ON DELETE CASCADE", sql)
 
     async def test_table_and_row_comment_generation(self):
-        await self.init_for("tortoise.tests.testmodels", safe=True)
-        self.continue_if_safe_indexes(supported=False)
+        await self.init_for("tortoise.tests.testmodels")
         sql = self.get_sql("comments")
-        self.assertIn("COMMENT=", sql)
-        self.assertIn("COMMENT ", sql)
+        self.assertIn("COMMENT='Test Table comment'", sql)
+        self.assertIn("COMMENT 'This column acts as it\\'s own comment'", sql)
         self.assertRegex(sql, r".*\\n.*")
         self.assertRegex(sql, r".*it\\'s.*")
 
@@ -236,14 +228,12 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
         self.assertIn('"id" SERIAL NOT NULL PRIMARY KEY', sql)
 
     async def test_table_and_row_comment_generation(self):
-        await self.init_for("tortoise.tests.testmodels", safe=True)
-        self.continue_if_safe_indexes(supported=False)
-        sql = self.get_post_sql("comments")
-        self.assertIn("COMMENT ON TABLE", sql)
-        self.assertIn("COMMENT ON COLUMN", sql)
-        self.assertRegex(sql, r"COMMENT ON TABLE comments IS.*")
-        self.assertRegex(
-            sql, r"COMMENT ON COLUMN comments\..* IS.*;.*COMMENT ON COLUMN comments\..* IS.*"
+        await self.init_for("tortoise.tests.testmodels")
+        sql = self.get_sql("comments")
+        self.assertIn("COMMENT ON TABLE comments IS 'Test Table comment'", sql)
+        self.assertIn(
+            "COMMENT ON COLUMN comments.escaped_comment_field IS "
+            "'This column acts as it''s own comment'",
+            sql,
         )
-        self.assertRegex(sql, r".*\\n.*")
-        self.assertRegex(sql, r".*it\'s.*")
+        self.assertIn("COMMENT ON COLUMN comments.multiline_comment IS 'Some \\n comment'", sql)

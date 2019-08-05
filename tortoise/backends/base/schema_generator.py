@@ -7,18 +7,18 @@ from tortoise.utils import get_escape_translation_table
 
 
 class BaseSchemaGenerator:
-    TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}) {comment};'
-    FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique} {comment}'
+    TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){comment};'
+    FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE ({fields})"
     FK_TEMPLATE = ' REFERENCES "{table}" (id) ON DELETE {on_delete}'
     M2M_TABLE_TEMPLATE = (
-        'CREATE TABLE {exists}"{table_name}" ('
-        '"{backward_key}" {backward_type} NOT NULL REFERENCES "{backward_table}" (id)'
-        " ON DELETE CASCADE,"
-        '"{forward_key}" {forward_type} NOT NULL REFERENCES "{forward_table}" (id)'
-        " ON DELETE CASCADE"
-        ") {comment};"
+        'CREATE TABLE {exists}"{table_name}" (\n'
+        '    "{backward_key}" {backward_type} NOT NULL REFERENCES "{backward_table}" (id)'
+        " ON DELETE CASCADE,\n"
+        '    "{forward_key}" {forward_type} NOT NULL REFERENCES "{forward_table}" (id)'
+        " ON DELETE CASCADE\n"
+        "){comment};"
     )
 
     FIELD_TYPE_MAP = {
@@ -153,7 +153,9 @@ class BaseSchemaGenerator:
                 is_pk=field_object.pk,
                 comment=self._column_comment_generator(
                     model=model, field=field_object, comments_array=comments
-                ),
+                )
+                if field_object.description
+                else "",
             )
 
             if hasattr(field_object, "reference") and field_object.reference:
@@ -187,10 +189,10 @@ class BaseSchemaGenerator:
 
             fields_to_create.extend(unique_together_sqls)
 
-        table_fields_string = ", ".join(fields_to_create)
+        table_fields_string = "\n    {}\n".format(",\n    ".join(fields_to_create))
         table_comment = (
             self._table_comment_generator(model=model, comments_array=comments)
-            if self.client.capabilities.inline_comment
+            if model._meta.table_description
             else ""
         )
 
@@ -217,7 +219,7 @@ class BaseSchemaGenerator:
             )
             warnings.warn("\n".join(field_indexes_sqls))
         else:
-            table_create_string = " ".join([table_create_string, *field_indexes_sqls])
+            table_create_string = "\n".join([table_create_string, *field_indexes_sqls])
 
         if comments:
             table_create_string = " ".join([table_create_string, *comments])
@@ -287,7 +289,7 @@ class BaseSchemaGenerator:
             ordered_tables_for_create.append(next_table_for_create["table_creation_string"])
             m2m_tables_to_create += next_table_for_create["m2m_tables"]
 
-        schema_creation_string = " ".join(ordered_tables_for_create + m2m_tables_to_create)
+        schema_creation_string = "\n".join(ordered_tables_for_create + m2m_tables_to_create)
         return schema_creation_string
 
     def generate_post_table_hook_sql(self, safe=True) -> str:

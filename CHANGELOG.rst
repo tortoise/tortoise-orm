@@ -6,6 +6,7 @@ Changelog
 0.12.9
 ------
 * ``.values()`` and ``.values_list()`` now default to all fields if none are specified.
+* ``generate_schema()`` now generates well-formatted DDL SQL statements.
 
 0.12.7 (retracted)
 ------------------

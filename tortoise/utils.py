@@ -1,4 +1,7 @@
+import logging
 from typing import Awaitable, Callable, Iterator, List, Optional
+
+logger = logging.getLogger("tortoise")
 
 
 class QueryAsyncIterator:
@@ -27,20 +30,18 @@ class QueryAsyncIterator:
 
 def get_schema_sql(client, safe: bool) -> str:
     generator = client.schema_generator(client)
-    return generator.get_create_schema_sql(safe)
-
-
-def generate_post_table_sql(client, safe: bool) -> str:
-    generator = client.schema_generator(client)
-    return generator.generate_post_table_hook_sql(safe=safe)
+    schema = generator.get_create_schema_sql(safe)
+    post_schema = generator.generate_post_table_hook_sql(safe=safe)
+    if post_schema:
+        schema += "\n" + post_schema
+    return schema
 
 
 async def generate_schema_for_client(client, safe: bool) -> None:
     generator = client.schema_generator(client)
-    await generator.generate_from_string(get_schema_sql(client, safe))
-    post_table_generation_hook = generate_post_table_sql(client, safe)
-    if post_table_generation_hook:
-        await generator.generate_from_string(post_table_generation_hook)
+    schema = get_schema_sql(client, safe)
+    logger.debug("Creating schema: %s", schema)
+    await generator.generate_from_string(schema)
 
 
 def get_escape_translation_table() -> List[str]:

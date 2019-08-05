@@ -8,17 +8,17 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        self.TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({fields}) {comment};"
+        self.TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({fields}){comment};"
         self.INDEX_CREATE_TEMPLATE = "CREATE INDEX `{index_name}` ON `{table_name}` ({fields});"
-        self.FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique} {comment}"
+        self.FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{comment}"
         self.FK_TEMPLATE = " REFERENCES `{table}` (`id`) ON DELETE {on_delete}"
         self.M2M_TABLE_TEMPLATE = (
-            "CREATE TABLE `{table_name}` ("
-            "`{backward_key}` {backward_type} NOT NULL REFERENCES `{backward_table}` (`id`)"
-            " ON DELETE CASCADE,"
-            "`{forward_key}` {forward_type} NOT NULL REFERENCES `{forward_table}` (`id`)"
-            " ON DELETE CASCADE"
-            ") {comment};"
+            "CREATE TABLE `{table_name}` (\n"
+            "    `{backward_key}` {backward_type} NOT NULL REFERENCES `{backward_table}` (`id`)"
+            " ON DELETE CASCADE,\n"
+            "    `{forward_key}` {forward_type} NOT NULL REFERENCES `{forward_table}` (`id`)"
+            " ON DELETE CASCADE\n"
+            "){comment};"
         )
 
         self.FIELD_TYPE_MAP.update(
@@ -33,13 +33,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         return "`{}` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT".format(field_name)
 
     def _table_comment_generator(self, model, comments_array=None) -> str:
-        comment = ""
-        if model._meta.table_description:
-            comment = "COMMENT='{}'".format(self._escape_comment(model._meta.table_description))
-        return comment
+        return " COMMENT='{}'".format(self._escape_comment(model._meta.table_description))
 
     def _column_comment_generator(self, model, field, comments_array: List) -> str:
-        comment = ""
-        if field.description:
-            comment = "COMMENT '{}'".format(self._escape_comment(field.description))
-        return comment
+        return " COMMENT '{}'".format(self._escape_comment(field.description))

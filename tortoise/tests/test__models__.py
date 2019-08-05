@@ -9,7 +9,7 @@ from asynctest.mock import CoroutineMock, patch
 from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
-from tortoise.utils import generate_post_table_sql, get_schema_sql
+from tortoise.utils import get_schema_sql
 
 
 class TestGenerateSchema(test.SimpleTestCase):
@@ -48,16 +48,10 @@ class TestGenerateSchema(test.SimpleTestCase):
                     "apps": {"models": {"models": [module], "default_connection": "default"}},
                 }
             )
-            self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
-            self.post_sqls = generate_post_table_sql(Tortoise._connections["default"], safe).split(
-                "; "
-            )
+            self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split(";\n")
 
     def get_sql(self, text: str) -> str:
         return re.sub(r"[ \t\n\r]+", " ", [sql for sql in self.sqls if text in sql][0])
-
-    def get_post_sql(self, text: str) -> str:
-        return re.sub(r"[ \t\n\r]+", " ", [sql for sql in self.post_sqls if text in sql][0])
 
     async def test_good(self):
         await self.init_for("tortoise.tests.test__models__good")
