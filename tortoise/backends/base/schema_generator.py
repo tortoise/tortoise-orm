@@ -8,7 +8,7 @@ from tortoise.utils import get_escape_translation_table
 
 class BaseSchemaGenerator:
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){comment};'
-    FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{comment}'
+    FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE ({fields})"
     FK_TEMPLATE = ' REFERENCES "{table}" (id) ON DELETE {on_delete}'
@@ -51,14 +51,12 @@ class BaseSchemaGenerator:
             nullable=nullable,
             unique=unique,
             comment=comment if self.client.capabilities.inline_comment else "",
+            primary=" PRIMARY KEY" if is_pk else "",
         ).strip()
-
-        if is_pk:
-            field_creation_string += " PRIMARY KEY"
 
         return field_creation_string
 
-    def _get_primary_key_create_string(self, field_name: str) -> str:
+    def _get_primary_key_create_string(self, field_name: str, comment: str) -> str:
         # All databases have their unique way for autoincrement,
         # has to implement in children
         raise NotImplementedError()  # pragma: nocoverage
@@ -140,8 +138,15 @@ class BaseSchemaGenerator:
 
         for field_name, db_field in model._meta.fields_db_projection.items():
             field_object = model._meta.fields_map[field_name]
+            comment = (
+                self._column_comment_generator(
+                    model=model, field=field_object, comments_array=comments
+                )
+                if field_object.description
+                else ""
+            )
             if isinstance(field_object, (fields.IntField, fields.BigIntField)) and field_object.pk:
-                fields_to_create.append(self._get_primary_key_create_string(field_name))
+                fields_to_create.append(self._get_primary_key_create_string(field_name, comment))
                 continue
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
@@ -151,11 +156,7 @@ class BaseSchemaGenerator:
                 nullable=nullable,
                 unique=unique,
                 is_pk=field_object.pk,
-                comment=self._column_comment_generator(
-                    model=model, field=field_object, comments_array=comments
-                )
-                if field_object.description
-                else "",
+                comment=comment,
             )
 
             if hasattr(field_object, "reference") and field_object.reference:

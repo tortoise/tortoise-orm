@@ -1,63 +1,65 @@
-import asyncio
-import binascii
-import os
-
-from tortoise import Tortoise, fields
+"""
+This example demonstrates SQL Schema generation for each DB type supported.
+"""
+from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
+from tortoise.utils import get_schema_sql
 
 
 class Tournament(Model):
     id = fields.IntField(pk=True)
-    name = fields.TextField()
-    created = fields.DatetimeField(auto_now_add=True)
+    name = fields.TextField(description="Tournament name", index=True)
+    created = fields.DatetimeField(auto_now_add=True, description="Created datetime")
 
-    def __str__(self):
-        return self.name
-
-
-def generate_token():
-    return binascii.hexlify(os.urandom(16)).decode("ascii")
+    class Meta:
+        table_description = "What Tournaments we have"
 
 
 class Event(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(pk=True, description="Event ID")
     name = fields.TextField(unique=True)
-    tournament = fields.ForeignKeyField("models.Tournament", related_name="events")
+    tournament = fields.ForeignKeyField(
+        "models.Tournament", related_name="events", description="FK to tournament"
+    )
     participants = fields.ManyToManyField(
-        "models.Team", related_name="events", through="event_team"
+        "models.Team",
+        related_name="events",
+        through="event_team",
+        description="How participants relate",
     )
     modified = fields.DatetimeField(auto_now=True)
     prize = fields.DecimalField(max_digits=10, decimal_places=2, null=True)
-    token = fields.TextField(default=generate_token)
+    token = fields.CharField(max_length=100, description="Unique token", unique=True)
 
-    def __str__(self):
-        return self.name
+    class Meta:
+        table_description = "This table contains a list of all the events"
 
 
 class Team(Model):
-    id = fields.IntField(pk=True)
-    name = fields.TextField(source_field="title")
+    name = fields.CharField(max_length=50, pk=True, description="The TEAM name (and PK)")
 
-    def __str__(self):
-        return self.name
+    class Meta:
+        table_description = "The TEAMS!"
 
 
 async def run():
-    await Tortoise.init(config_file="config.json")
-    await Tortoise.generate_schemas()
+    print("SQLite:\n")
+    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
+    sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+    print(sql)
 
-    tournament = await Tournament.create(name="Test")
+    print("\n\nMySQL:\n")
+    await Tortoise.init(db_url="mysql://root:@127.0.0.1:3306/", modules={"models": ["__main__"]})
+    sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+    print(sql)
 
-    event = await Event.create(name="Test 1", tournament=tournament, prize=100)
-    print(event.modified)
-    event.name = "Test 2"
-    await event.save()
-    print(event.modified)
-
-    await Team.create(name="test")
-    print(await Team.all().values("name"))
+    print("\n\nPostgreSQL:\n")
+    await Tortoise.init(
+        db_url="postgres://postgres:@127.0.0.1:5432/", modules={"models": ["__main__"]}
+    )
+    sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+    print(sql)
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run())
+    run_async(run())

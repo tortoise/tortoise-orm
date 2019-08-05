@@ -6,13 +6,14 @@ from tortoise.utils import get_escape_translation_table
 
 
 class AsyncpgSchemaGenerator(BaseSchemaGenerator):
+    TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE {table} IS '{comment}';"
+    COLUMN_COMMNET_TEMPLATE = "COMMENT ON COLUMN {table}.{column} IS '{comment}';"
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.FIELD_TYPE_MAP.update({fields.JSONField: "JSONB", fields.UUIDField: "UUID"})
-        self.TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE {table} IS '{comment}';"
-        self.COLUMN_COMMNET_TEMPLATE = "COMMENT ON COLUMN {table}.{column} IS '{comment}';"
 
-    def _get_primary_key_create_string(self, field_name: str) -> str:
+    def _get_primary_key_create_string(self, field_name: str, comment: str) -> str:
         return '"{}" SERIAL NOT NULL PRIMARY KEY'.format(field_name)
 
     def _escape_comment(self, comment: str) -> str:
@@ -49,4 +50,4 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
                 self._column_comment_generator(
                     model=model, field=field_object, comments_array=column_comments
                 )
-        return " ".join(table_comments + column_comments)
+        return "\n".join(table_comments + column_comments)

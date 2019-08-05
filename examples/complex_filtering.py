@@ -3,9 +3,7 @@ This example shows some more complex querying
 
 Key points are filtering by related names and using Q objects
 """
-import asyncio
-
-from tortoise import Tortoise, fields
+from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
 from tortoise.query_utils import Q
 
@@ -39,7 +37,7 @@ class Team(Model):
 
 
 async def run():
-    await Tortoise.init(config_file="config.json")
+    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
     await Tortoise.generate_schemas()
 
     tournament = Tournament(name="Tournament")
@@ -85,5 +83,4 @@ async def run():
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run())
+    run_async(run())

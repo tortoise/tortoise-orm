@@ -15,8 +15,8 @@ class SqliteSchemaGenerator(BaseSchemaGenerator):
             }
         )
 
-    def _get_primary_key_create_string(self, field_name: str) -> str:
-        return '"{}" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL'.format(field_name)
+    def _get_primary_key_create_string(self, field_name: str, comment: str) -> str:
+        return '"{}" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL{}'.format(field_name, comment)
 
     def _table_comment_generator(self, model, comments_array: List) -> str:
         return " /* {} */".format(self._escape_comment(model._meta.table_description))
