@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional
 
 from sanic import Sanic  # pylint: disable=E0401
+
 from tortoise import Tortoise
 
 app = Sanic(__name__)

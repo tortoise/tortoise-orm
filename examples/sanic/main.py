@@ -1,5 +1,6 @@
-from models import Users
 from sanic import Sanic, response
+
+from models import Users
 from tortoise.contrib.sanic import register_tortoise
 
 app = Sanic(__name__)
