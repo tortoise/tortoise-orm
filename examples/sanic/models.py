@@ -6,4 +6,4 @@ class Users(Model):
     name = fields.CharField(50)
 
     def __str__(self):
-        return f"User {self.id}: {self.name}"
+        return "User {}: {}".format(self.id, self.name)
