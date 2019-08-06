@@ -17,7 +17,7 @@ async def atomic_decorated_func():
     return tournament
 
 
-class TestTransactions(test.IsolatedTestCase):
+class TestTransactions(test.TruncationTestCase):
     async def test_transactions(self):
         with self.assertRaises(SomeException):
             async with in_transaction():
@@ -166,9 +166,9 @@ class TestTransactions(test.IsolatedTestCase):
         self.assertEqual(await Tournament.all(), [tournament])
 
     async def test_update_await_across_transaction_fail(self):
-        await Tournament.create(name="Test1")
+        obj = await Tournament.create(name="Test1")
 
-        query = Tournament.filter(id=1).update(name="Test2")
+        query = Tournament.filter(id=obj.id).update(name="Test2")
         try:
             async with in_transaction():
                 await query
@@ -176,21 +176,25 @@ class TestTransactions(test.IsolatedTestCase):
         except KeyError:
             pass
 
-        self.assertEqual(await Tournament.all().values("id", "name"), [{"id": 1, "name": "Test1"}])
+        self.assertEqual(
+            await Tournament.all().values("id", "name"), [{"id": obj.id, "name": "Test1"}]
+        )
 
     async def test_update_await_across_transaction_success(self):
-        await Tournament.create(name="Test1")
+        obj = await Tournament.create(name="Test1")
 
-        query = Tournament.filter(id=1).update(name="Test2")
+        query = Tournament.filter(id=obj.id).update(name="Test2")
         async with in_transaction():
             await query
 
-        self.assertEqual(await Tournament.all().values("id", "name"), [{"id": 1, "name": "Test2"}])
+        self.assertEqual(
+            await Tournament.all().values("id", "name"), [{"id": obj.id, "name": "Test2"}]
+        )
 
     async def test_delete_await_across_transaction_fail(self):
-        await Tournament.create(name="Test1")
+        obj = await Tournament.create(name="Test1")
 
-        query = Tournament.filter(id=1).delete()
+        query = Tournament.filter(id=obj.id).delete()
         try:
             async with in_transaction():
                 await query
@@ -198,19 +202,21 @@ class TestTransactions(test.IsolatedTestCase):
         except KeyError:
             pass
 
-        self.assertEqual(await Tournament.all().values("id", "name"), [{"id": 1, "name": "Test1"}])
+        self.assertEqual(
+            await Tournament.all().values("id", "name"), [{"id": obj.id, "name": "Test1"}]
+        )
 
     async def test_delete_await_across_transaction_success(self):
-        await Tournament.create(name="Test1")
+        obj = await Tournament.create(name="Test1")
 
-        query = Tournament.filter(id=1).delete()
+        query = Tournament.filter(id=obj.id).delete()
         async with in_transaction():
             await query
 
         self.assertEqual(await Tournament.all(), [])
 
     async def test_select_await_across_transaction_fail(self):
-        query = Tournament.all().values("id", "name")
+        query = Tournament.all().values("name")
         try:
             async with in_transaction():
                 await Tournament.create(name="Test1")
@@ -219,14 +225,16 @@ class TestTransactions(test.IsolatedTestCase):
         except KeyError:
             pass
 
-        self.assertEqual(result, [{"id": 1, "name": "Test1"}])
+        self.assertEqual(result, [{"name": "Test1"}])
         self.assertEqual(await Tournament.all(), [])
 
     async def test_select_await_across_transaction_success(self):
         query = Tournament.all().values("id", "name")
         async with in_transaction():
-            await Tournament.create(name="Test1")
+            obj = await Tournament.create(name="Test1")
             result = await query
 
-        self.assertEqual(result, [{"id": 1, "name": "Test1"}])
-        self.assertEqual(await Tournament.all().values("id", "name"), [{"id": 1, "name": "Test1"}])
+        self.assertEqual(result, [{"id": obj.id, "name": "Test1"}])
+        self.assertEqual(
+            await Tournament.all().values("id", "name"), [{"id": obj.id, "name": "Test1"}]
+        )

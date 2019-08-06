@@ -16,18 +16,19 @@ from tortoise.transactions import current_transaction_map, start_transaction
 
 __all__ = (
     "SimpleTestCase",
-    "IsolatedTestCase",
     "TestCase",
+    "TruncationTestCase",
+    "IsolatedTestCase",
+    "getDBConfig",
+    "requireCapability",
+    "env_initializer",
+    "initializer",
+    "finalizer",
     "SkipTest",
     "expectedFailure",
     "skip",
     "skipIf",
     "skipUnless",
-    "env_initializer",
-    "initializer",
-    "finalizer",
-    "getDBConfig",
-    "requireCapability",
 )
 _TORTOISE_TEST_DB = "sqlite://:memory:"
 
@@ -213,6 +214,11 @@ class IsolatedTestCase(SimpleTestCase):
     An asyncio capable test class that will ensure that an isolated test db
     is available for each test.
 
+    Use this if your test needs perfect isolation.
+
+    Note to use ``{}`` as a string-replacement parameter, for your DB_URL.
+    That will create a randomised database name.
+
     It will create and destroy a new DB instance for every test.
     This is obviously slow, but guarantees a fresh DB.
     """
@@ -229,10 +235,36 @@ class IsolatedTestCase(SimpleTestCase):
         await Tortoise._drop_databases()
 
 
+class TruncationTestCase(SimpleTestCase):
+    """
+    An asyncio capable test class that will truncate the tables after a test.
+
+    Use this when your tests contain transactions.
+
+    This is slower than ``TestCase`` but faster than ``IsolatedTestCase``.
+    Note that usage of this does not guarantee that auto-number-pks will be reset to 1.
+    """
+
+    # pylint: disable=C0103,W0201
+    async def _setUpDB(self) -> None:
+        _restore_default()
+
+    async def _tearDownDB(self) -> None:
+        _restore_default()
+        # TODO: This is a naïve implementation: Will fail to clear M2M and non-cascade foreign keys
+        for app in Tortoise.apps.values():
+            for model in app.values():
+                await model._meta.db.execute_script(
+                    "DELETE FROM {}".format(model._meta.table)  # nosec
+                )
+
+
 class TestCase(SimpleTestCase):
     """
     An asyncio capable test class that will ensure that each test will be run at
     separate transaction that will rollback on finish.
+
+    This is a fast test runner. Don't use it if your test uses transactions.
     """
 
     async def _setUpDB(self) -> None:
