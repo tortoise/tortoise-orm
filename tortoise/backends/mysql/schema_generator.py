@@ -15,16 +15,12 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         " ON DELETE CASCADE\n"
         "){comment};"
     )
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.FIELD_TYPE_MAP.update(
-            {
-                fields.FloatField: "DOUBLE",
-                fields.DatetimeField: "DATETIME(6)",
-                fields.TextField: "TEXT",
-            }
-        )
+    FIELD_TYPE_MAP = {
+        **BaseSchemaGenerator.FIELD_TYPE_MAP,
+        fields.FloatField: "DOUBLE",
+        fields.DatetimeField: "DATETIME(6)",
+        fields.TextField: "TEXT",
+    }
 
     def _get_primary_key_create_string(self, field_name: str, comment: str) -> str:
         return "`{}` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT{}".format(field_name, comment)

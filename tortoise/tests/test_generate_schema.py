@@ -28,8 +28,6 @@ class TestGenerateSchema(test.SimpleTestCase):
         await Tortoise._reset_apps()
 
     async def init_for(self, module: str, safe=False) -> None:
-        if self.engine != "tortoise.backends.sqlite":
-            raise test.SkipTest("sqlite only")
         with patch(
             "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=CoroutineMock()
         ):
@@ -173,8 +171,6 @@ CREATE TABLE "event_team" (
 
 class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
-        if self.engine != "tortoise.backends.mysql":
-            raise test.SkipTest("mysql only")
         with patch("aiomysql.connect", new=CoroutineMock()):
             await Tortoise.init(
                 {
@@ -244,7 +240,7 @@ CREATE TABLE `event` (
     `id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
     `name` TEXT NOT NULL UNIQUE,
     `modified` DATETIME(6) NOT NULL,
-    `prize` VARCHAR(40),
+    `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
     `tournament_id` INT NOT NULL REFERENCES `tournament` (`id`) ON DELETE CASCADE COMMENT 'FK to tournament'
 ) COMMENT='This table contains a list of all the events';
@@ -257,8 +253,6 @@ CREATE TABLE `event_team` (
 
 class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
-        if self.engine != "tortoise.backends.asyncpg":
-            raise test.SkipTest("asyncpg only")
         with patch("asyncpg.connect", new=CoroutineMock()):
             await Tortoise.init(
                 {
@@ -310,7 +304,7 @@ COMMENT ON TABLE team IS 'The TEAMS!';
 CREATE TABLE "tournament" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "created" DATETIME(6) NOT NULL
+    "created" TIMESTAMP NOT NULL
 );
 CREATE INDEX "tournament_name_116110_idx" ON "tournament" (name);
 COMMENT ON COLUMN tournament.name IS 'Tournament name';
@@ -319,8 +313,8 @@ COMMENT ON TABLE tournament IS 'What Tournaments */''`/* we have';
 CREATE TABLE "event" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL UNIQUE,
-    "modified" DATETIME(6) NOT NULL,
-    "prize" VARCHAR(40),
+    "modified" TIMESTAMP NOT NULL,
+    "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "tournament_id" INT NOT NULL REFERENCES "tournament" (id) ON DELETE CASCADE
 );

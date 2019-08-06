@@ -7,6 +7,7 @@ Changelog
 ------
 * ``.values()`` and ``.values_list()`` now default to all fields if none are specified.
 * ``generate_schema()`` now generates well-formatted DDL SQL statements.
+* Fixed state leak between databas drivers which could cause incorrect DDL generation.
 
 0.12.7 (retracted)
 ------------------

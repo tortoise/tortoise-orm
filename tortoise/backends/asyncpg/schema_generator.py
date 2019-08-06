@@ -9,10 +9,15 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
     TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE {table} IS '{comment}';"
     COLUMN_COMMNET_TEMPLATE = "COMMENT ON COLUMN {table}.{column} IS '{comment}';"
 
+    FIELD_TYPE_MAP = {
+        **BaseSchemaGenerator.FIELD_TYPE_MAP,
+        fields.JSONField: "JSONB",
+        fields.UUIDField: "UUID",
+    }
+
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.comments_array = []  # type: List[str]
-        self.FIELD_TYPE_MAP.update({fields.JSONField: "JSONB", fields.UUIDField: "UUID"})
 
     def _get_primary_key_create_string(self, field_name: str, comment: str) -> str:
         return '"{}" SERIAL NOT NULL PRIMARY KEY'.format(field_name)
