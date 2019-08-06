@@ -1,3 +1,4 @@
+# pylint: disable=C0301
 import re
 
 from asynctest.mock import CoroutineMock, patch
@@ -171,27 +172,30 @@ CREATE TABLE "event_team" (
 
 class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
-        with patch("aiomysql.connect", new=CoroutineMock()):
-            await Tortoise.init(
-                {
-                    "connections": {
-                        "default": {
-                            "engine": "tortoise.backends.mysql",
-                            "credentials": {
-                                "database": "test",
-                                "host": "127.0.0.1",
-                                "password": "foomip",
-                                "port": 3306,
-                                "user": "root",
-                                "connect_timeout": 1.5,
-                                "charset": "utf-8",
-                            },
-                        }
-                    },
-                    "apps": {"models": {"models": [module], "default_connection": "default"}},
-                }
-            )
-            self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+        try:
+            with patch("aiomysql.connect", new=CoroutineMock()):
+                await Tortoise.init(
+                    {
+                        "connections": {
+                            "default": {
+                                "engine": "tortoise.backends.mysql",
+                                "credentials": {
+                                    "database": "test",
+                                    "host": "127.0.0.1",
+                                    "password": "foomip",
+                                    "port": 3306,
+                                    "user": "root",
+                                    "connect_timeout": 1.5,
+                                    "charset": "utf-8",
+                                },
+                            }
+                        },
+                        "apps": {"models": {"models": [module], "default_connection": "default"}},
+                    }
+                )
+                self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+        except ImportError:
+            raise test.SkipTest("aiomysql not installed")
 
     async def test_noid(self):
         await self.init_for("tortoise.tests.testmodels")
@@ -253,25 +257,28 @@ CREATE TABLE `event_team` (
 
 class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
-        with patch("asyncpg.connect", new=CoroutineMock()):
-            await Tortoise.init(
-                {
-                    "connections": {
-                        "default": {
-                            "engine": "tortoise.backends.asyncpg",
-                            "credentials": {
-                                "database": "test",
-                                "host": "127.0.0.1",
-                                "password": "foomip",
-                                "port": 3306,
-                                "user": "root",
-                            },
-                        }
-                    },
-                    "apps": {"models": {"models": [module], "default_connection": "default"}},
-                }
-            )
-            self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+        try:
+            with patch("asyncpg.connect", new=CoroutineMock()):
+                await Tortoise.init(
+                    {
+                        "connections": {
+                            "default": {
+                                "engine": "tortoise.backends.asyncpg",
+                                "credentials": {
+                                    "database": "test",
+                                    "host": "127.0.0.1",
+                                    "password": "foomip",
+                                    "port": 3306,
+                                    "user": "root",
+                                },
+                            }
+                        },
+                        "apps": {"models": {"models": [module], "default_connection": "default"}},
+                    }
+                )
+                self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+        except ImportError:
+            raise test.SkipTest("asyncpg not installed")
 
     async def test_noid(self):
         await self.init_for("tortoise.tests.testmodels")
