@@ -139,7 +139,36 @@ class TestGenerateSchema(test.SimpleTestCase):
         sql = self.get_sql("comments")
         self.assertRegex(sql, r".*\/\* Upvotes done on the comment.*\*\/")
         self.assertRegex(sql, r".*\\n.*")
-        self.assertIn("\\'", sql)
+        self.assertIn("\\/", sql)
+
+    async def test_schema(self):
+        self.maxDiff = None
+        await self.init_for("tortoise.tests.models_schema_create")
+        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        self.assertEqual(
+            sql.strip(),
+            """CREATE TABLE "team" (
+    "name" VARCHAR(50) NOT NULL  PRIMARY KEY /* The TEAM name (and PK) */
+) /* The TEAMS! */;
+CREATE TABLE "tournament" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "name" TEXT NOT NULL  /* Tournament name */,
+    "created" TIMESTAMP NOT NULL  /* Created *\\/'`\\/* datetime */
+) /* What Tournaments *\\/'`\\/* we have */;
+CREATE INDEX "tournament_name_116110_idx" ON "tournament" (name);
+CREATE TABLE "event" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,
+    "name" TEXT NOT NULL UNIQUE,
+    "modified" TIMESTAMP NOT NULL,
+    "prize" VARCHAR(40),
+    "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
+    "tournament_id" INT NOT NULL REFERENCES "tournament" (id) ON DELETE CASCADE /* FK to tournament */
+) /* This table contains a list of all the events */;
+CREATE TABLE "event_team" (
+    "event_id" INT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (id) ON DELETE CASCADE
+) /* How participants relate */;""",  # noqa
+        )
 
 
 class TestGenerateSchemaMySQL(TestGenerateSchema):
@@ -196,6 +225,35 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
         self.assertRegex(sql, r".*\\n.*")
         self.assertRegex(sql, r".*it\\'s.*")
 
+    async def test_schema(self):
+        self.maxDiff = None
+        await self.init_for("tortoise.tests.models_schema_create")
+        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        self.assertEqual(
+            sql.strip(),
+            """CREATE TABLE `team` (
+    `name` VARCHAR(50) NOT NULL  COMMENT 'The TEAM name (and PK)'
+) COMMENT='The TEAMS!';
+CREATE TABLE `tournament` (
+    `id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `name` TEXT NOT NULL  COMMENT 'Tournament name',
+    `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime'
+) COMMENT='What Tournaments */\\'`/* we have';
+CREATE INDEX `tournament_name_116110_idx` ON `tournament` (name);
+CREATE TABLE `event` (
+    `id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
+    `name` TEXT NOT NULL UNIQUE,
+    `modified` DATETIME(6) NOT NULL,
+    `prize` VARCHAR(40),
+    `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
+    `tournament_id` INT NOT NULL REFERENCES `tournament` (`id`) ON DELETE CASCADE COMMENT 'FK to tournament'
+) COMMENT='This table contains a list of all the events';
+CREATE TABLE `event_team` (
+    `event_id` INT NOT NULL REFERENCES `event` (`id`) ON DELETE CASCADE,
+    `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`id`) ON DELETE CASCADE
+) COMMENT='How participants relate';""",  # noqa
+        )
+
 
 class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
@@ -237,3 +295,42 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
             sql,
         )
         self.assertIn("COMMENT ON COLUMN comments.multiline_comment IS 'Some \\n comment'", sql)
+
+    async def test_schema(self):
+        self.maxDiff = None
+        await self.init_for("tortoise.tests.models_schema_create")
+        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        self.assertEqual(
+            sql.strip(),
+            """CREATE TABLE "team" (
+    "name" VARCHAR(50) NOT NULL  PRIMARY KEY
+);
+COMMENT ON COLUMN team.name IS 'The TEAM name (and PK)';
+COMMENT ON TABLE team IS 'The TEAMS!';
+CREATE TABLE "tournament" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "created" DATETIME(6) NOT NULL
+);
+CREATE INDEX "tournament_name_116110_idx" ON "tournament" (name);
+COMMENT ON COLUMN tournament.name IS 'Tournament name';
+COMMENT ON COLUMN tournament.created IS 'Created */''`/* datetime';
+COMMENT ON TABLE tournament IS 'What Tournaments */''`/* we have';
+CREATE TABLE "event" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL UNIQUE,
+    "modified" DATETIME(6) NOT NULL,
+    "prize" VARCHAR(40),
+    "token" VARCHAR(100) NOT NULL UNIQUE,
+    "tournament_id" INT NOT NULL REFERENCES "tournament" (id) ON DELETE CASCADE
+);
+COMMENT ON COLUMN event.id IS 'Event ID';
+COMMENT ON COLUMN event.token IS 'Unique token';
+COMMENT ON COLUMN event.tournament_id IS 'FK to tournament';
+COMMENT ON TABLE event IS 'This table contains a list of all the events';
+CREATE TABLE "event_team" (
+    "event_id" INT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (id) ON DELETE CASCADE
+);
+COMMENT ON TABLE event_team IS 'How participants relate';""",
+        )

@@ -30,11 +30,7 @@ class QueryAsyncIterator:
 
 def get_schema_sql(client, safe: bool) -> str:
     generator = client.schema_generator(client)
-    schema = generator.get_create_schema_sql(safe)
-    post_schema = generator.generate_post_table_hook_sql(safe=safe)
-    if post_schema:
-        schema += "\n" + post_schema
-    return schema
+    return generator.get_create_schema_sql(safe)
 
 
 async def generate_schema_for_client(client, safe: bool) -> None:

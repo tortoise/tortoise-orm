@@ -11,6 +11,7 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+        self.comments_array = []  # type: List[str]
         self.FIELD_TYPE_MAP.update({fields.JSONField: "JSONB", fields.UUIDField: "UUID"})
 
     def _get_primary_key_create_string(self, field_name: str, comment: str) -> str:
@@ -21,33 +22,21 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
         table[ord("'")] = "''"
         return comment.translate(table)
 
-    def _table_comment_generator(self, model, comments_array: List) -> str:
-        if model._meta.table_description:
-            comment = self.TABLE_COMMENT_TEMPLATE.format(
-                table=model._meta.table,
-                comment=self._escape_comment(comment=model._meta.table_description),
-            )
-            comments_array.append(comment)
+    def _table_comment_generator(self, table: str, comment: str) -> str:
+        comment = self.TABLE_COMMENT_TEMPLATE.format(
+            table=table, comment=self._escape_comment(comment)
+        )
+        self.comments_array.append(comment)
         return ""
 
-    def _column_comment_generator(self, model, field, comments_array: List) -> str:
-        if field.description:
-            comment = self.COLUMN_COMMNET_TEMPLATE.format(
-                table=model._meta.table,
-                column=field.model_field_name,
-                comment=self._escape_comment(field.description),
-            )
-            comments_array.append(comment)
+    def _column_comment_generator(self, table: str, column: str, comment: str) -> str:
+        comment = self.COLUMN_COMMNET_TEMPLATE.format(
+            table=table, column=column, comment=self._escape_comment(comment)
+        )
+        self.comments_array.append(comment)
         return ""
 
-    def _post_table_hook(self, *, models=None, safe=True) -> str:
-        table_comments = []  # type: List[str]
-        column_comments = []  # type: List[str]
-        for model in models:
-            self._table_comment_generator(model=model, comments_array=table_comments)
-            for field_name, _ in model._meta.fields_db_projection.items():
-                field_object = model._meta.fields_map[field_name]
-                self._column_comment_generator(
-                    model=model, field=field_object, comments_array=column_comments
-                )
-        return "\n".join(table_comments + column_comments)
+    def _post_table_hook(self) -> str:
+        val = "\n" + "\n".join(self.comments_array)
+        self.comments_array = []
+        return val
