@@ -1,16 +1,15 @@
-import asyncio
 import logging
 from typing import Dict, List, Optional
 
-from quart import Quart  # pylint: disable=E0401
+from sanic import Sanic  # pylint: disable=E0401
 
 from tortoise import Tortoise
 
-app = Quart(__name__)
+app = Sanic(__name__)
 
 
 def register_tortoise(
-    app: Quart,
+    app: Sanic,
     config: Optional[dict] = None,
     config_file: Optional[str] = None,
     db_url: Optional[str] = None,
@@ -18,9 +17,8 @@ def register_tortoise(
     generate_schemas: bool = False,
 ) -> None:
     """
-    Registers ``before_serving`` and ``after_serving`` hooks to set-up and tear-down Tortoise-ORM
-    inside a Quart service.
-    It also registers a CLI command ``generate_schemas`` that will generate the schemas.
+    Registers ``before_server_start`` and ``after_server_stop`` hooks to set-up and tear-down
+    Tortoise-ORM inside a Sanic webserver.
 
     You can configure using only one of ``config``, ``config_file``
     and ``(db_url, modules)``.
@@ -28,7 +26,7 @@ def register_tortoise(
     Parameters
     ----------
     app:
-        Quart app.
+        Sanic app.
     config:
         Dict containing config:
 
@@ -75,30 +73,15 @@ def register_tortoise(
         or SQLite ``:memory:`` databases
     """
 
-    @app.before_serving
-    async def init_orm():
+    @app.listener("before_server_start")
+    async def init_orm(app, loop):  # pylint: disable=W0612
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
         logging.info("Tortoise-ORM started, %s, %s", Tortoise._connections, Tortoise.apps)
         if generate_schemas:
             logging.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()
 
-    @app.after_serving
-    async def close_orm():
+    @app.listener("after_server_stop")
+    async def close_orm(app, loop):  # pylint: disable=W0612
         await Tortoise.close_connections()
         logging.info("Tortoise-ORM shutdown")
-
-    @app.cli.command()  # type: ignore
-    def generate_schemas():  # pylint: disable=E0102
-        """Populate DB with Tortoise-ORM schemas."""
-
-        async def inner() -> None:
-            await Tortoise.init(
-                config=config, config_file=config_file, db_url=db_url, modules=modules
-            )
-            await Tortoise.generate_schemas()
-            await Tortoise.close_connections()
-
-        logging.basicConfig(level=logging.DEBUG)
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(inner())

@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.12.9
+------
+* Example Sanic integration along with register_tortoise hook in contrib (#163)
+
 0.12.7
 ------
 * Support connecting to PostgreSQL via Unix domain socket (simple case).

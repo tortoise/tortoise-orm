@@ -85,6 +85,7 @@ quart==0.6.13 ; python_version >= "3.6"
 readme-renderer==24.0     # via twine
 requests-toolbelt==0.9.1  # via twine
 requests==2.22.0          # via coveralls, requests-toolbelt, sphinx, twine
+sanic;python_version>="3.6"  # manual entry until #162 is merged
 six==1.12.0               # via astroid, bandit, bleach, cryptography, nose2, packaging, pip-tools, pytest, readme-renderer, stevedore, tox
 smmap2==2.0.5             # via gitdb2
 snowballstemmer==1.2.1    # via sphinx
