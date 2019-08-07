@@ -5,6 +5,7 @@ Changelog
 
 0.12.9
 ------
+* Example Sanic integration along with register_tortoise hook in contrib (#163)
 * ``.values()`` and ``.values_list()`` now default to all fields if none are specified.
 * ``generate_schema()`` now generates well-formatted DDL SQL statements.
 * Fixed state leak between databas drivers which could cause incorrect DDL generation.

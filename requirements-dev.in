@@ -35,6 +35,11 @@ nose2
 # Pypi
 twine
 
-# Sample integrations
+# Sample integration - Quart
 hypercorn;python_version>="3.7"
 quart;python_version>="3.7"
+
+# Sample integration - Sanic
+httpcore;python_version>="3.6"
+sanic;python_version>="3.6"
+requests-async;python_version>="3.6"
