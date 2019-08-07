@@ -5,44 +5,44 @@ Changelog
 
 0.12.9
 ------
-- Example Sanic integration along with register_tortoise hook in contrib (#163)
+* Example Sanic integration along with register_tortoise hook in contrib (#163)
 
 0.12.7
 ------
-- Support connecting to PostgreSQL via Unix domain socket (simple case).
-- Self-referential Foreign and Many-to-Many keys are now allowed
+* Support connecting to PostgreSQL via Unix domain socket (simple case).
+* Self-referential Foreign and Many-to-Many keys are now allowed
 
 0.12.6
 ------
-- Handle a ``__models__`` variable within modules to override the model discovery mechanism.
+* Handle a ``__models__`` variable within modules to override the model discovery mechanism.
 
     If you define the ``__models__`` variable in ``yourapp.models`` (or wherever you specify to load your models from),
     ``generate_schema()`` will use that list, rather than automatically finding all models for you.
 
-- Split model consructor into from-Python and from-DB paths, leading to 15-25% speedup for large fetch operations.
-- More efficient queryset manipulation, 5-30% speedup for small fetches.
+* Split model consructor into from-Python and from-DB paths, leading to 15-25% speedup for large fetch operations.
+* More efficient queryset manipulation, 5-30% speedup for small fetches.
 
 0.12.5
 ------
-- Using non registered models or wrong references causes an ConfigurationError with a helpful message.
+* Using non registered models or wrong references causes an ConfigurationError with a helpful message.
 
 0.12.4
 ------
-- Inherit fields from Mixins, together with abstract model classes.
+* Inherit fields from Mixins, together with abstract model classes.
 
 0.12.3
 ------
-- Added description attribute to Field class. (#124)
-- Added the ability to leverage field description from (#124) to generate table column comments and ability to add table level comments
+* Added description attribute to Field class. (#124)
+* Added the ability to leverage field description from (#124) to generate table column comments and ability to add table level comments
 
 0.12.2
 ------
-- Fix accidental double order-by for ``.values()`` based queries. (#143)
+* Fix accidental double order-by for ``.values()`` based queries. (#143)
 
 0.12.1
 ------
-- Notable efficiency improvement for regular inserts
-- Bulk insert operation:
+* Notable efficiency improvement for regular inserts
+* Bulk insert operation:
 
   .. note::
      The bulk insert operation will do the minimum to ensure that the object
@@ -63,7 +63,7 @@ Changelog
 
 0.12.0
 ------
-- Tortoise ORM now supports non-autonumber primary keys.
+* Tortoise ORM now supports non-autonumber primary keys.
 
   .. note::
      This is a big feature change. It should not break any existing implementations.
@@ -149,7 +149,7 @@ Changelog
 
 0.11.3
 ------
-- Added basic DB driver Capabilities.
+* Added basic DB driver Capabilities.
 
   Test runner now has the ability to skip tests conditionally, based on the DB driver Capabilities:
 
@@ -159,7 +159,7 @@ Changelog
       async def test_run_sqlite_only(self):
           ...
 
-- Added per-field indexes.
+* Added per-field indexes.
 
   When setting `index=True` on a field, Tortoise will now generate an index for it.
 
@@ -267,7 +267,7 @@ Changelog
 
 0.10.0
 ------
-- Refactored ``Tortoise.init()`` to init all connections and discover models from config passed
+* Refactored ``Tortoise.init()`` to init all connections and discover models from config passed
   as argument.
 
   .. caution::
@@ -325,7 +325,7 @@ Changelog
 
 0.9.0
 -----
-- Added support for nested queries for ``values`` and ``values_list``:
+* Added support for nested queries for ``values`` and ``values_list``:
 
   .. code-block:: python3
 
@@ -359,7 +359,7 @@ Changelog
 
 0.3.0
 -----
-- Added schema generation and more options for fields:
+* Added schema generation and more options for fields:
 
   .. code-block:: python3
 
@@ -374,7 +374,7 @@ Changelog
 
 0.2.0
 -----
-- Added filtering and ordering by related models fields:
+* Added filtering and ordering by related models fields:
 
   .. code-block:: python3
 
