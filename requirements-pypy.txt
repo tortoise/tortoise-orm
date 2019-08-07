@@ -4,6 +4,8 @@
 #
 #    make up
 #
+aenum==2.1.2              # via pypika
+aiocontextvars==0.2.2 ; python_version < "3.7"
 aiomysql==0.0.20
 aiosqlite==0.10.0
 asn1crypto==0.24.0        # via cryptography
@@ -11,13 +13,15 @@ asynctest==0.13.0
 cffi==1.12.3              # via cryptography
 ciso8601==2.1.1
 colorama==0.4.1           # via green
-coverage==4.5.4           # via green
+contextvars==2.4          # via aiocontextvars
+coverage==4.5.3           # via green
 cryptography==2.7         # via pymysql
 green==2.16.1
-lxml==4.4.0               # via green
+immutables==0.9           # via contextvars
+lxml==4.3.4               # via green
 pycparser==2.19           # via cffi
 pymysql==0.9.2            # via aiomysql
-pypika==0.31.1
-pyyaml==5.1.2
+pypika==0.28.0
+pyyaml==5.1.1
 six==1.12.0               # via cryptography
-unidecode==1.1.1          # via green
+unidecode==1.1.0          # via green
