@@ -312,11 +312,7 @@ class Model(metaclass=ModelMeta):
 
         for key, value in kwargs.items():
             if key in meta.fields:
-                field_object = meta.fields_map[key]
-                setattr(self, key, field_object.to_python_value(value))
-            elif key in meta.db_fields:
-                field_object = meta.fields_map[meta.fields_db_projection_reverse[key]]
-                setattr(self, key, field_object.to_python_value(value))
+                setattr(self, key, meta.fields_map[key].to_python_value(value))
 
         return self
 

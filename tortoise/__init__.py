@@ -20,7 +20,7 @@ from tortoise.utils import generate_schema_for_client
 
 try:
     from contextvars import ContextVar
-except ImportError:
+except ImportError:  # pragma: nocoverage
     from aiocontextvars import ContextVar  # type: ignore
 
 logger = logging.getLogger("tortoise")
@@ -54,12 +54,11 @@ class Tortoise:
                     raise ConfigurationError(
                         "No app with name '{}' registered.".format(related_app_name)
                     )
-                if related_model_name not in cls.apps[related_app_name]:
-                    raise ConfigurationError(
-                        "No model with name '{}' registered in app '{}'.".format(
-                            related_model_name, related_app_name
-                        )
+                raise ConfigurationError(
+                    "No model with name '{}' registered in app '{}'.".format(
+                        related_model_name, related_app_name
                     )
+                )
 
         def split_reference(reference: str) -> Tuple[str, str]:
             """
@@ -67,17 +66,8 @@ class Tortoise:
             ConfigurationError with a hopefully helpful message. If successfull,
             returns the app and the model name.
             """
-            if "." not in reference:
-                raise ConfigurationError(
-                    (
-                        "'%s' ist not a valid model reference."
-                        " Should be something like <appname>.<modelname>."
-                    )
-                    % reference
-                )
-
             items = reference.split(".")
-            if len(items) != 2:
+            if len(items) != 2:  # pragma: nocoverage
                 raise ConfigurationError(
                     (
                         "'%s' is not a valid model reference Bad Reference."
