@@ -16,6 +16,7 @@ Contributors
 * Harsha Narayana ``@harshanarayana``
 * Terra Brown ``@superloach``
 * Nguyễn Hồng Quân ``@hongquan``
+* Mateusz Bocian ``@mrstork``
 
 Special Thanks
 ==============
