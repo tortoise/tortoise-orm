@@ -1,6 +1,7 @@
 from tortoise.aggregation import Count, Min, Sum
 from tortoise.contrib import test
 from tortoise.tests.testmodels import Event, Team, Tournament
+from tortoise.exceptions import ConfigurationError
 
 
 class TestAggregation(test.TestCase):
@@ -43,3 +44,6 @@ class TestAggregation(test.TestCase):
         self.assertEqual(
             event_with_annotation.tournament_test_id, event_with_annotation.tournament_id
         )
+
+        with self.assertRaisesRegex(ConfigurationError, 'name__id not resolvable'):
+            await Event.all().annotate(tournament_test_id=Sum("name__id")).first()

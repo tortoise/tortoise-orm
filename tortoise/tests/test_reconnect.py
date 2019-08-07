@@ -1,6 +1,6 @@
 from tortoise import Tortoise
 from tortoise.contrib import test
-from tortoise.exceptions import TransactionManagementError
+from tortoise.exceptions import TransactionManagementError, DBConnectionError
 from tortoise.tests.testmodels import Tournament
 from tortoise.transactions import in_transaction
 
@@ -19,6 +19,19 @@ class TestQueryset(test.IsolatedTestCase):
         self.assertEqual(
             ["{}:{}".format(a.id, a.name) for a in await Tournament.all()], ["1:1", "2:2"]
         )
+
+    @test.requireCapability(daemon=True)
+    async def test_reconnect_fail(self):
+        await Tournament.create(name="1")
+
+        await Tortoise._connections["models"]._close()
+        realport = Tortoise._connections["models"].port
+        Tortoise._connections["models"].port  =1234
+
+        with self.assertRaisesRegex(DBConnectionError, "Failed to reconnect:"):
+            await Tournament.create(name="2")
+
+        Tortoise._connections["models"].port = realport
 
     @test.requireCapability(daemon=True)
     async def test_reconnect_transaction_start(self):

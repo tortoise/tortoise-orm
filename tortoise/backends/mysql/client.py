@@ -46,8 +46,7 @@ def retry_connection(func):
                 await self.create_connection(with_db=True)
                 logging.info("Reconnected")
             except Exception as e:
-                logging.info("Failed to reconnect: %s", str(e))
-                raise
+                raise DBConnectionError("Failed to reconnect: %s", str(e))
             finally:
                 self._lock.release()
 
