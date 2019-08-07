@@ -1,3 +1,4 @@
+# pylint: disable=E0401,E0611
 import logging
 
 from sanic import Sanic, response
