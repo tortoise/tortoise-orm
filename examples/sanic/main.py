@@ -1,4 +1,5 @@
 import logging
+
 from sanic import Sanic, response
 
 from models import Users
