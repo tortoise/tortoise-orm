@@ -22,5 +22,6 @@ register_tortoise(
     app, db_url="sqlite://:memory:", modules={"models": ["models"]}, generate_schemas=True
 )
 
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8000)
+    app.run(port=5000)
