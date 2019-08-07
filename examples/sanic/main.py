@@ -1,7 +1,10 @@
+import logging
 from sanic import Sanic, response
 
 from models import Users
 from tortoise.contrib.sanic import register_tortoise
+
+logging.basicConfig(level=logging.DEBUG)
 
 app = Sanic(__name__)
 
