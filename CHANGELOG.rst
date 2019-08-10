@@ -5,16 +5,16 @@ Changelog
 
 0.12.9
 ------
-* Example Sanic integration along with register_tortoise hook in contrib (#163)
-* ``.values()`` and ``.values_list()`` now default to all fields if none are specified.
-* ``generate_schema()`` now generates well-formatted DDL SQL statements.
-* Fixed state leak between databas drivers which could cause incorrect DDL generation.
-* Added ``TruncationTestCase`` testing class that truncates tables to allow faster testing of transactions.
+- Example Sanic integration along with register_tortoise hook in contrib (#163)
+- ``.values()`` and ``.values_list()`` now default to all fields if none are specified.
+- ``generate_schema()`` now generates well-formatted DDL SQL statements.
+- Fixed state leak between database drivers which could cause incorrect DDL generation.
+- Added ``TruncationTestCase`` testing class that truncates tables to allow faster testing of transactions.
 
 0.12.7 (retracted)
 ------------------
-* Support connecting to PostgreSQL via Unix domain socket (simple case).
-* Self-referential Foreign and Many-to-Many keys are now allowed
+- Support connecting to PostgreSQL via Unix domain socket (simple case).
+- Self-referential Foreign and Many-to-Many keys are now allowed
 
 0.12.6 / 0.12.8
 ---------------
@@ -23,29 +23,28 @@ Changelog
     If you define the ``__models__`` variable in ``yourapp.models`` (or wherever you specify to load your models from),
     ``generate_schema()`` will use that list, rather than automatically finding all models for you.
 
-* Split model consructor into from-Python and from-DB paths, leading to 15-25% speedup for large fetch operations.
-* More efficient queryset manipulation, 5-30% speedup for small fetches.
+- Split model consructor into from-Python and from-DB paths, leading to 15-25% speedup for large fetch operations.
+- More efficient queryset manipulation, 5-30% speedup for small fetches.
 
 0.12.5
 ------
-* Using non registered models or wrong references causes an ConfigurationError with a helpful message.
+- Using non registered models or wrong references causes an ConfigurationError with a helpful message.
 
 0.12.4
 ------
-* Inherit fields from Mixins, together with abstract model classes.
+- Inherit fields from Mixins, together with abstract model classes.
 
 0.12.3
 ------
-* Added description attribute to Field class. (#124)
-* Added the ability to leverage field description from (#124) to generate table column comments and ability to add table level comments
+- Added description attribute to Field class. (#124)
+- Added the ability to leverage field description from (#124) to generate table column comments and ability to add table level comments
 
 0.12.2
 ------
-* Fix accidental double order-by for ``.values()`` based queries. (#143)
+- Fix accidental double order-by for ``.values()`` based queries. (#143)
 
 0.12.1
 ------
-* Notable efficiency improvement for regular inserts
 * Bulk insert operation:
 
   .. note::
@@ -53,7 +52,7 @@ Changelog
      created in the DB has all the defaults and generated fields set,
      this may result in incomplete references in Python.
 
-     e.g. ``IntField`` primary keys will not be poplulated.
+     e.g. ``IntField`` primary keys will not be populated.
 
   This is recommend only for throw away inserts where you want to ensure optimal
   insert performance.
@@ -61,9 +60,11 @@ Changelog
   .. code-block:: python3
 
       User.bulk_create([
-          User(name="...", email="..."),
-          User(name="...", email="...")
+          User(name="…", email="…"),
+          User(name="…", email="…")
       ])
+
+- Notable efficiency improvement for regular inserts
 
 0.12.0
 ------
@@ -73,7 +74,7 @@ Changelog
      This is a big feature change. It should not break any existing implementations.
 
   That primary key will be accesible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
-  That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc…
+  That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=…)`` etc…
 
   We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
 
@@ -142,13 +143,13 @@ Changelog
 
 0.11.4
 ------
-- Fixed several convenince issues with foreign relations:
+- Fixed several convenience issues with foreign relations:
 
   - FIXED: ``.all()`` actually returns the _query property as was documented.
   - New models with FK don't automatically fail to resolve any data. They can now be evaluated lazily.
 
 - Some DB's don't support OFFSET without Limit, added caps to signal workaround, which is to automatically add limit of 1000000
-- Pylint plugin to know about default `related_name` for ForeignKey fields.
+- Pylint plugin to know about default ``related_name`` for ForeignKey fields.
 - Simplified capabilities to be static, and defined at class level.
 
 0.11.3
@@ -161,23 +162,23 @@ Changelog
 
       @requireCapability(dialect='sqlite')
       async def test_run_sqlite_only(self):
-          ...
+          …
 
 * Added per-field indexes.
 
-  When setting `index=True` on a field, Tortoise will now generate an index for it.
+  When setting ``index=True`` on a field, Tortoise will now generate an index for it.
 
   .. note::
      Due to MySQL limitation of not supporting conditional index creation,
-     if `safe=True` (the default) is set, it won't create the index and emit a warning about it.
+     if ``safe=True`` (the default) is set, it won't create the index and emit a warning about it.
 
      We plan to work around this limitation in a future release.
 
 - Performance fix with PyPika for small fetch queries
 - Remove parameter hack now that PyPika support Parametrized queries
 - Fix typos in JSONField docstring
-- Added `.explain()` method on `QuerySet`.
-- Add `required` read-only property to fields
+- Added ``.explain()`` method on ``QuerySet``.
+- Add ``required`` read-only property to fields
 
 0.11.2
 ------
@@ -198,8 +199,8 @@ Changelog
 
 0.11.0
 ------
-- Added `.exclude()` method for QuerySet
-- Q objects can now be negated for `NOT` query (`~Q(...)`)
+- Added ``.exclude()`` method for QuerySet
+- Q objects can now be negated for ``NOT`` query (``~Q(…)``)
 - Support subclassing on existing fields
 - Numerous bug fixes
 - Removed known broken connection pooling
@@ -320,7 +321,7 @@ Changelog
 - Fixed ``DecimalField`` and ``BooleanField`` to work as expected on SQLite.
 - Added ``FloatField``.
 - Minimum supported version of PostgreSQL is 9.4
-- Added ``.get(...)`` shortcut on query set.
+- Added ``.get(…)`` shortcut on query set.
 - ``values()`` and ``values_list()`` now converts field values to python types
 
 0.9.1

@@ -1,7 +1,7 @@
 from tortoise.aggregation import Count
 from tortoise.contrib import test
 from tortoise.exceptions import NoValuesFetched
-from tortoise.tests.testmodels import Event, Team, Tournament
+from tortoise.tests.testmodels import Employee, Event, Team, Tournament
 
 
 class TestRelations(test.TestCase):
@@ -142,3 +142,40 @@ class TestRelations(test.TestCase):
         await event.participants.remove(team, team_second)
         fetched_event = await Event.first().prefetch_related("participants")
         self.assertEqual(len(fetched_event.participants), 0)
+
+    async def test_self_ref(self):
+        self.maxDiff = None
+        root = await Employee.create(name="Root")
+        loose = await Employee.create(name="Loose")
+        _1 = await Employee.create(name="1. First H1", manager=root)
+        _2 = await Employee.create(name="2. Second H1", manager=root)
+        _1_1 = await Employee.create(name="1.1. First H2", manager=_1)
+        _1_1_1 = await Employee.create(name="1.1.1. First H3", manager=_1_1)
+        _2_1 = await Employee.create(name="2.1. Second H2", manager=_2)
+        _2_2 = await Employee.create(name="2.2. Third H2", manager=_2)
+
+        await _1.talks_to.add(_2, _1_1_1, loose)
+        await _2_1.gets_talked_to.add(_2_2, _1_1, loose)
+
+        LOOSE_TEXT = "Loose (to: 2.1. Second H2) (from: 1. First H1)"
+        ROOT_TEXT = """Root (to: ) (from: )
+  1. First H1 (to: 1.1.1. First H3, 2. Second H1, Loose) (from: )
+    1.1. First H2 (to: 2.1. Second H2) (from: )
+      1.1.1. First H3 (to: ) (from: 1. First H1)
+  2. Second H1 (to: ) (from: 1. First H1)
+    2.1. Second H2 (to: ) (from: 1.1. First H2, 2.2. Third H2, Loose)
+    2.2. Third H2 (to: 2.1. Second H2) (from: )"""
+
+        # Evaluated off creation objects
+        self.assertEqual(await loose.full_hierarchy__async_for(), LOOSE_TEXT)
+        self.assertEqual(await loose.full_hierarchy__fetch_related(), LOOSE_TEXT)
+        self.assertEqual(await root.full_hierarchy__async_for(), ROOT_TEXT)
+        self.assertEqual(await root.full_hierarchy__fetch_related(), ROOT_TEXT)
+
+        # Evaluated off new objects → Result is identical
+        root2 = await Employee.get(name="Root")
+        loose2 = await Employee.get(name="Loose")
+        self.assertEqual(await loose2.full_hierarchy__async_for(), LOOSE_TEXT)
+        self.assertEqual(await loose2.full_hierarchy__fetch_related(), LOOSE_TEXT)
+        self.assertEqual(await root2.full_hierarchy__async_for(), ROOT_TEXT)
+        self.assertEqual(await root2.full_hierarchy__fetch_related(), ROOT_TEXT)
