@@ -11,13 +11,13 @@ class BaseSchemaGenerator:
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE ({fields})"
-    FK_TEMPLATE = ' REFERENCES "{table}" (id) ON DELETE {on_delete}{comment}'
+    FK_TEMPLATE = ' REFERENCES "{table}" ({field}) ON DELETE {on_delete}{comment}'
     M2M_TABLE_TEMPLATE = (
         'CREATE TABLE {exists}"{table_name}" (\n'
-        '    "{backward_key}" {backward_type} NOT NULL REFERENCES "{backward_table}" (id)'
-        " ON DELETE CASCADE,\n"
-        '    "{forward_key}" {forward_type} NOT NULL REFERENCES "{forward_table}" (id)'
-        " ON DELETE CASCADE\n"
+        '    "{backward_key}" {backward_type} NOT NULL REFERENCES "{backward_table}"'
+        " ({backward_field}) ON DELETE CASCADE,\n"
+        '    "{forward_key}" {forward_type} NOT NULL REFERENCES "{forward_table}"'
+        " ({forward_field}) ON DELETE CASCADE\n"
         "){comment};"
     )
 
@@ -145,7 +145,7 @@ class BaseSchemaGenerator:
                 else ""
             )
             if isinstance(field_object, (fields.IntField, fields.BigIntField)) and field_object.pk:
-                fields_to_create.append(self._get_primary_key_create_string(field_name, comment))
+                fields_to_create.append(self._get_primary_key_create_string(db_field, comment))
                 continue
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
@@ -170,6 +170,7 @@ class BaseSchemaGenerator:
                 )
                 field_creation_string += self.FK_TEMPLATE.format(
                     table=field_object.reference.type._meta.table,
+                    field=field_object.reference.type._meta.db_pk_field,
                     on_delete=field_object.reference.on_delete,
                     comment=comment,
                 )
@@ -177,7 +178,7 @@ class BaseSchemaGenerator:
             fields_to_create.append(field_creation_string)
 
             if field_object.index:
-                fields_with_index.append(field_name)
+                fields_with_index.append(db_field)
 
         if model._meta.unique_together is not None:
             unique_together_sqls = []
@@ -244,6 +245,8 @@ class BaseSchemaGenerator:
                 table_name=field_object.through,
                 backward_table=model._meta.table,
                 forward_table=field_object.type._meta.table,
+                backward_field=model._meta.db_pk_field,
+                forward_field=field_object.type._meta.db_pk_field,
                 backward_key=field_object.backward_key,
                 backward_type=self._get_field_type(model._meta.pk),
                 forward_key=field_object.forward_key,
@@ -251,7 +254,7 @@ class BaseSchemaGenerator:
                 comment=self._table_comment_generator(
                     table=field_object.through, comment=field_object.description
                 )
-                if model._meta.table_description
+                if field_object.description
                 else "",
             )
             m2m_create_string += self._post_table_hook()

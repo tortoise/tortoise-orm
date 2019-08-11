@@ -339,3 +339,21 @@ class Employee(Model):
         for member in self.team_members:
             text.append(await member.full_hierarchy__fetch_related(level + 1))
         return "\n".join(text)
+
+
+class SourceFields(Model):
+    id = fields.IntField(pk=True, source_field="sometable_id")
+    chars = fields.CharField(max_length=255, source_field="some_chars_table", index=True)
+    fk = fields.ForeignKeyField(
+        "models.SourceFields", related_name="team_members", null=True, source_field="fk_sometable"
+    )
+    rel_to = fields.ManyToManyField(
+        "models.SourceFields",
+        related_name="rel_from",
+        through="sometable_self",
+        forward_key="sts_forward",
+        backward_key="backward_sts",
+    )
+
+    class Meta:
+        table = "sometable"

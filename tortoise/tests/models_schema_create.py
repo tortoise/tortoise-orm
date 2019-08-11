@@ -6,7 +6,7 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
+    tid = fields.IntField(pk=True)
     name = fields.TextField(description="Tournament name", index=True)
     created = fields.DatetimeField(auto_now_add=True, description="Created */'`/* datetime")
 
@@ -23,7 +23,7 @@ class Event(Model):
     participants = fields.ManyToManyField(
         "models.Team",
         related_name="events",
-        through="event_team",
+        through="teamevents",
         description="How participants relate",
     )
     modified = fields.DatetimeField(auto_now=True)
@@ -36,6 +36,26 @@ class Event(Model):
 
 class Team(Model):
     name = fields.CharField(max_length=50, pk=True, description="The TEAM name (and PK)")
+    manager = fields.ForeignKeyField("models.Team", related_name="team_members", null=True)
+    talks_to = fields.ManyToManyField("models.Team", related_name="gets_talked_to")
 
     class Meta:
         table_description = "The TEAMS!"
+
+
+class SourceFields(Model):
+    id = fields.IntField(pk=True, source_field="sometable_id")
+    chars = fields.CharField(max_length=255, source_field="some_chars_table", index=True)
+    fk = fields.ForeignKeyField(
+        "models.SourceFields", related_name="team_members", null=True, source_field="fk_sometable"
+    )
+    rel_to = fields.ManyToManyField(
+        "models.SourceFields",
+        related_name="rel_from",
+        through="sometable_self",
+        forward_key="sts_forward",
+        backward_key="backward_sts",
+    )
+
+    class Meta:
+        table = "sometable"

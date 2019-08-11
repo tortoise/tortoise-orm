@@ -148,11 +148,19 @@ class TestGenerateSchema(test.SimpleTestCase):
         sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
         self.assertEqual(
             sql.strip(),
-            """CREATE TABLE "team" (
-    "name" VARCHAR(50) NOT NULL  PRIMARY KEY /* The TEAM name (and PK) */
+            """
+CREATE TABLE "sometable" (
+    "sometable_id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "some_chars_table" VARCHAR(255) NOT NULL,
+    "fk_sometable" INT REFERENCES "sometable" (sometable_id) ON DELETE CASCADE
+);
+CREATE INDEX "sometable_some_ch_115115_idx" ON "sometable" (some_chars_table);
+CREATE TABLE "team" (
+    "name" VARCHAR(50) NOT NULL  PRIMARY KEY /* The TEAM name (and PK) */,
+    "manager_id" VARCHAR(50)   /* The TEAM name (and PK) */ REFERENCES "team" (name) ON DELETE CASCADE
 ) /* The TEAMS! */;
 CREATE TABLE "tournament" (
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" TEXT NOT NULL  /* Tournament name */,
     "created" TIMESTAMP NOT NULL  /* Created *\\/'`\\/* datetime */
 ) /* What Tournaments *\\/'`\\/* we have */;
@@ -163,12 +171,21 @@ CREATE TABLE "event" (
     "modified" TIMESTAMP NOT NULL,
     "prize" VARCHAR(40),
     "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
-    "tournament_id" INT NOT NULL REFERENCES "tournament" (id) ON DELETE CASCADE /* FK to tournament */
+    "tournament_id" INT NOT NULL REFERENCES "tournament" (tid) ON DELETE CASCADE /* FK to tournament */
 ) /* This table contains a list of all the events */;
-CREATE TABLE "event_team" (
+CREATE TABLE "sometable_self" (
+    "backward_sts" INT NOT NULL REFERENCES "sometable" (sometable_id) ON DELETE CASCADE,
+    "sts_forward" INT NOT NULL REFERENCES "sometable" (sometable_id) ON DELETE CASCADE
+);
+CREATE TABLE "team_team" (
+    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
+);
+CREATE TABLE "teamevents" (
     "event_id" INT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (id) ON DELETE CASCADE
-) /* How participants relate */;""",  # noqa
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
+) /* How participants relate */;
+""".strip(),  # noqa
         )
 
 
@@ -234,11 +251,19 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
         sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
         self.assertEqual(
             sql.strip(),
-            """CREATE TABLE `team` (
-    `name` VARCHAR(50) NOT NULL  COMMENT 'The TEAM name (and PK)'
+            """
+CREATE TABLE `sometable` (
+    `sometable_id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `some_chars_table` VARCHAR(255) NOT NULL,
+    `fk_sometable` INT REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
+);
+CREATE INDEX `sometable_some_ch_115115_idx` ON `sometable` (some_chars_table);
+CREATE TABLE `team` (
+    `name` VARCHAR(50) NOT NULL  COMMENT 'The TEAM name (and PK)',
+    `manager_id` VARCHAR(50)   COMMENT 'The TEAM name (and PK)' REFERENCES `team` (`name`) ON DELETE CASCADE
 ) COMMENT='The TEAMS!';
 CREATE TABLE `tournament` (
-    `id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `tid` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` TEXT NOT NULL  COMMENT 'Tournament name',
     `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime'
 ) COMMENT='What Tournaments */\\'`/* we have';
@@ -249,12 +274,21 @@ CREATE TABLE `event` (
     `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
-    `tournament_id` INT NOT NULL REFERENCES `tournament` (`id`) ON DELETE CASCADE COMMENT 'FK to tournament'
+    `tournament_id` INT NOT NULL REFERENCES `tournament` (`tid`) ON DELETE CASCADE COMMENT 'FK to tournament'
 ) COMMENT='This table contains a list of all the events';
-CREATE TABLE `event_team` (
+CREATE TABLE `sometable_self` (
+    `backward_sts` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
+    `sts_forward` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
+);
+CREATE TABLE `team_team` (
+    `team_rel_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE,
+    `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
+);
+CREATE TABLE `teamevents` (
     `event_id` INT NOT NULL REFERENCES `event` (`id`) ON DELETE CASCADE,
-    `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`id`) ON DELETE CASCADE
-) COMMENT='How participants relate';""",  # noqa
+    `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
+) COMMENT='How participants relate';
+""".strip(),  # noqa
         )
 
 
@@ -307,13 +341,22 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
         sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
         self.assertEqual(
             sql.strip(),
-            """CREATE TABLE "team" (
-    "name" VARCHAR(50) NOT NULL  PRIMARY KEY
+            """
+CREATE TABLE "sometable" (
+    "sometable_id" SERIAL NOT NULL PRIMARY KEY,
+    "some_chars_table" VARCHAR(255) NOT NULL,
+    "fk_sometable" INT REFERENCES "sometable" (sometable_id) ON DELETE CASCADE
+);
+CREATE INDEX "sometable_some_ch_115115_idx" ON "sometable" (some_chars_table);
+CREATE TABLE "team" (
+    "name" VARCHAR(50) NOT NULL  PRIMARY KEY,
+    "manager_id" VARCHAR(50) REFERENCES "team" (name) ON DELETE CASCADE
 );
 COMMENT ON COLUMN team.name IS 'The TEAM name (and PK)';
+COMMENT ON COLUMN team.manager_id IS 'The TEAM name (and PK)';
 COMMENT ON TABLE team IS 'The TEAMS!';
 CREATE TABLE "tournament" (
-    "id" SERIAL NOT NULL PRIMARY KEY,
+    "tid" SERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "created" TIMESTAMP NOT NULL
 );
@@ -327,15 +370,24 @@ CREATE TABLE "event" (
     "modified" TIMESTAMP NOT NULL,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
-    "tournament_id" INT NOT NULL REFERENCES "tournament" (id) ON DELETE CASCADE
+    "tournament_id" INT NOT NULL REFERENCES "tournament" (tid) ON DELETE CASCADE
 );
 COMMENT ON COLUMN event.id IS 'Event ID';
 COMMENT ON COLUMN event.token IS 'Unique token';
 COMMENT ON COLUMN event.tournament_id IS 'FK to tournament';
 COMMENT ON TABLE event IS 'This table contains a list of all the events';
-CREATE TABLE "event_team" (
-    "event_id" INT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (id) ON DELETE CASCADE
+CREATE TABLE "sometable_self" (
+    "backward_sts" INT NOT NULL REFERENCES "sometable" (sometable_id) ON DELETE CASCADE,
+    "sts_forward" INT NOT NULL REFERENCES "sometable" (sometable_id) ON DELETE CASCADE
 );
-COMMENT ON TABLE event_team IS 'How participants relate';""",
+CREATE TABLE "team_team" (
+    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
+);
+CREATE TABLE "teamevents" (
+    "event_id" INT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
+);
+COMMENT ON TABLE teamevents IS 'How participants relate';
+""".strip(),
         )

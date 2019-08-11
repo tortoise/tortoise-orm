@@ -42,6 +42,8 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
         return ""
 
     def _post_table_hook(self) -> str:
-        val = "\n" + "\n".join(self.comments_array)
+        val = "\n".join(self.comments_array)
         self.comments_array = []
-        return val
+        if val:
+            return "\n" + val
+        return ""
