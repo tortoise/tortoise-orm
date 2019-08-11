@@ -90,7 +90,6 @@ class BaseExecutor:
         ]
         insert_result = await self.db.execute_insert(self.query, values)
         await self._process_insert_result(instance, insert_result)
-        return instance
 
     async def execute_bulk_insert(self, instances):
         values_lists = [
@@ -102,21 +101,29 @@ class BaseExecutor:
         ]
         await self.db.execute_many(self.query, values_lists)
 
-    async def execute_update(self, instance):
+    async def execute_update(self, instance, update_fields):
         table = Table(self.model._meta.table)
         query = self.db.query_class.update(table)
-        for field, db_field in self.model._meta.fields_db_projection.items():
-            field_object = self.model._meta.fields_map[field]
-            if not field_object.generated:
-                query = query.set(
-                    db_field, self.column_map[field](getattr(instance, field), instance)
-                )
+        if update_fields:
+            for field in update_fields:
+                db_field = self.model._meta.fields_db_projection[field]
+                field_object = self.model._meta.fields_map[field]
+                if not field_object.generated:
+                    query = query.set(
+                        db_field, self.column_map[field](getattr(instance, field), instance)
+                    )
+        else:
+            for field, db_field in self.model._meta.fields_db_projection.items():
+                field_object = self.model._meta.fields_map[field]
+                if not field_object.generated:
+                    query = query.set(
+                        db_field, self.column_map[field](getattr(instance, field), instance)
+                    )
         query = query.where(
             getattr(table, self.model._meta.db_pk_field)
             == self.model._meta.pk.to_db_value(instance.pk, instance)
         )
         await self.db.execute_query(query.get_sql())
-        return instance
 
     async def execute_delete(self, instance):
         table = Table(self.model._meta.table)

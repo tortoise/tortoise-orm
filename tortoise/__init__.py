@@ -3,6 +3,8 @@ import importlib
 import json
 import logging
 import os
+import sys
+import warnings
 from copy import deepcopy
 from inspect import isclass
 from typing import Coroutine, Dict, List, Optional, Tuple, Type, Union, cast  # noqa
@@ -24,6 +26,9 @@ except ImportError:  # pragma: nocoverage
     from aiocontextvars import ContextVar  # type: ignore
 
 logger = logging.getLogger("tortoise")
+
+if sys.version_info < (3, 6):
+    warnings.warn("Tortoise-ORM is soon going to require Python 3.6", DeprecationWarning)
 
 
 class Tortoise:
