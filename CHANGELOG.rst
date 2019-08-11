@@ -3,13 +3,40 @@
 Changelog
 =========
 
-0.12.9
+0.13.0
 ------
+.. warning::
+   **This release brings with it, deprecation of Python 3.5:**
+
+   We will increase the minimum supported version of Python to 3.6,
+   as 3.5 is reaching end-of-life,
+   and is missing many useful features for async applications.
+
+   We will discontinue Python 3.5 support on the next major release (Likely 0.14.0)
+
+New Features:
+^^^^^^^^^^^^^
 - Example Sanic integration along with register_tortoise hook in contrib (#163)
 - ``.values()`` and ``.values_list()`` now default to all fields if none are specified.
 - ``generate_schema()`` now generates well-formatted DDL SQL statements.
-- Fixed state leak between database drivers which could cause incorrect DDL generation.
 - Added ``TruncationTestCase`` testing class that truncates tables to allow faster testing of transactions.
+
+Bugfixes:
+^^^^^^^^^
+- Fixed state leak between database drivers which could cause incorrect DDL generation.
+- Fixed missing table/column comment generation for ``ForeignKeyField`` and ``ManyToManyField``
+- Fixed comment generation to escape properly for ``SQLite``
+- Fixed comment generation for ``PostgreSQL`` to not duplicate comments
+
+Docs/examples:
+^^^^^^^^^^^^^^
+- Examples have been reworked:
+
+  - Simplified init of many examples
+  - Re-did ``generate_schema.py`` example
+  - A new ``relations_recirsive.py`` example (turned into test case)
+
+- Lots of small documentation cleanups
 
 0.12.7 (retracted)
 ------------------
@@ -60,8 +87,8 @@ Changelog
   .. code-block:: python3
 
       User.bulk_create([
-          User(name="…", email="…"),
-          User(name="…", email="…")
+          User(name="...", email="..."),
+          User(name="...", email="...")
       ])
 
 - Notable efficiency improvement for regular inserts
@@ -74,7 +101,7 @@ Changelog
      This is a big feature change. It should not break any existing implementations.
 
   That primary key will be accesible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
-  That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=…)`` etc…
+  That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc…
 
   We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
 
@@ -162,7 +189,7 @@ Changelog
 
       @requireCapability(dialect='sqlite')
       async def test_run_sqlite_only(self):
-          …
+          ...
 
 * Added per-field indexes.
 
@@ -200,7 +227,7 @@ Changelog
 0.11.0
 ------
 - Added ``.exclude()`` method for QuerySet
-- Q objects can now be negated for ``NOT`` query (``~Q(…)``)
+- Q objects can now be negated for ``NOT`` query (``~Q(...)``)
 - Support subclassing on existing fields
 - Numerous bug fixes
 - Removed known broken connection pooling
@@ -321,7 +348,7 @@ Changelog
 - Fixed ``DecimalField`` and ``BooleanField`` to work as expected on SQLite.
 - Added ``FloatField``.
 - Minimum supported version of PostgreSQL is 9.4
-- Added ``.get(…)`` shortcut on query set.
+- Added ``.get(...)`` shortcut on query set.
 - ``values()`` and ``values_list()`` now converts field values to python types
 
 0.9.1
