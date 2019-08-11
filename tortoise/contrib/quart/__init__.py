@@ -6,8 +6,6 @@ from quart import Quart  # pylint: disable=E0401
 
 from tortoise import Tortoise
 
-app = Quart(__name__)
-
 
 def register_tortoise(
     app: Quart,
@@ -76,7 +74,7 @@ def register_tortoise(
     """
 
     @app.before_serving
-    async def init_orm():
+    async def init_orm():  # pylint: disable=W0612
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
         logging.info("Tortoise-ORM started, %s, %s", Tortoise._connections, Tortoise.apps)
         if generate_schemas:
@@ -84,7 +82,7 @@ def register_tortoise(
             await Tortoise.generate_schemas()
 
     @app.after_serving
-    async def close_orm():
+    async def close_orm():  # pylint: disable=W0612
         await Tortoise.close_connections()
         logging.info("Tortoise-ORM shutdown")
 

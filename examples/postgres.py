@@ -1,9 +1,7 @@
 """
-This example showcases special postgres features
+This example showcases postgres features
 """
-import asyncio
-
-from tortoise import Tortoise, fields
+from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
 
 
@@ -43,5 +41,4 @@ async def run():
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run())
+    run_async(run())

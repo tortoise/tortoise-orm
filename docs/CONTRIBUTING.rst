@@ -47,7 +47,7 @@ We have a ``Makefile`` that has the common operations listed, to get started jus
         docs        Builds the documentation
         style       Auto-formats the code
 
-So to run the tests you just need to run ``make test``, etc...
+So to run the tests you just need to run ``make test``, etc…
 
 The code is structured in the following directories:
 

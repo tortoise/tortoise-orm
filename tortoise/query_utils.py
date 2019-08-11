@@ -300,8 +300,7 @@ class Q:  # pylint: disable=C0103
         self._custom_filters = custom_filters
         if self.filters:
             return self._resolve_kwargs(model)
-        else:
-            return self._resolve_children(model)
+        return self._resolve_children(model)
 
 
 class Prefetch:

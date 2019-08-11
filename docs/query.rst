@@ -116,7 +116,7 @@ produces 1 additional query, so ``.prefetch_related('events__participants')`` wi
 additional queries to fetch your data.
 
 Sometimes, when performance is crucial, you don't want to make additional queries like this.
-In cases like this you could use `values()` or `values_list()` to produce more efficient query
+In cases like this you could use ``values()`` or ``values_list()`` to produce more efficient query
 
 .. code-block:: python3
 

@@ -44,7 +44,7 @@ class BaseExecutor:
             self.regular_columns, self.query, self.column_map = INSERT_CACHE[key]
 
     async def execute_explain(self, query) -> Any:
-        sql = " ".join(((self.EXPLAIN_PREFIX, query.get_sql())))
+        sql = " ".join((self.EXPLAIN_PREFIX, query.get_sql()))
         return await self.db.execute_query(sql)
 
     async def execute_select(self, query, custom_fields: Optional[list] = None) -> list:
@@ -257,10 +257,9 @@ class BaseExecutor:
     async def _do_prefetch(self, instance_id_list: list, field: str, related_query) -> list:
         if isinstance(getattr(self.model, field), fields.BackwardFKRelation):
             return await self._prefetch_reverse_relation(instance_id_list, field, related_query)
-        elif isinstance(getattr(self.model, field), fields.ManyToManyField):
+        if isinstance(getattr(self.model, field), fields.ManyToManyField):
             return await self._prefetch_m2m_relation(instance_id_list, field, related_query)
-        else:
-            return await self._prefetch_direct_relation(instance_id_list, field, related_query)
+        return await self._prefetch_direct_relation(instance_id_list, field, related_query)
 
     async def _execute_prefetch_queries(self, instance_list: list) -> list:
         if instance_list and (self.prefetch_map or self._prefetch_queries):

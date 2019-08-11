@@ -70,7 +70,7 @@ class TestQueryset(test.TestCase):
 
         await related_instance2.fetch_related("models")
         self.assertEqual(len(related_instance2.models), 2)
-        self.assertEqual(set(m.pk for m in related_instance2.models), {instance.pk, instance2.pk})
+        self.assertEqual({m.pk for m in related_instance2.models}, {instance.pk, instance2.pk})
 
         related_instance_list = await UUIDM2MRelatedModel.filter(models=instance2)
         self.assertEqual(len(related_instance_list), 1)
@@ -123,7 +123,7 @@ class TestQueryset(test.TestCase):
 
         await related_instance2.fetch_related("models")
         self.assertEqual(len(related_instance2.models), 2)
-        self.assertEqual(set(m.pk for m in related_instance2.models), {instance.pk, instance2.pk})
+        self.assertEqual({m.pk for m in related_instance2.models}, {instance.pk, instance2.pk})
 
         related_instance_list = await CharM2MRelatedModel.filter(models=instance2)
         self.assertEqual(len(related_instance_list), 1)

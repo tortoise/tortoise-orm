@@ -1,9 +1,7 @@
 """
 This example demonstrates most basic operations with single model
 """
-import asyncio
-
-from tortoise import Tortoise, fields
+from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
 
 
@@ -20,7 +18,7 @@ class Event(Model):
 
 
 async def run():
-    await Tortoise.init(config_file="config.json")
+    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
     await Tortoise.generate_schemas()
 
     event = await Event.create(name="Test")
@@ -34,5 +32,4 @@ async def run():
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run())
+    run_async(run())

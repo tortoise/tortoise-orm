@@ -22,6 +22,10 @@ class TestConfigGenerator(test.SimpleTestCase):
             },
         )
 
+    def test_sqlite_no_db(self):
+        with self.assertRaisesRegex(ConfigurationError, "No path specified for DB_URL"):
+            expand_db_url("sqlite://")
+
     def test_sqlite_relative(self):
         res = expand_db_url("sqlite://test.sqlite")
         self.assertDictEqual(
@@ -104,6 +108,22 @@ class TestConfigGenerator(test.SimpleTestCase):
             },
         )
 
+    def test_postgres_no_db(self):
+        res = expand_db_url("postgres://postgres:moo@127.0.0.1:54321")
+        self.assertDictEqual(
+            res,
+            {
+                "engine": "tortoise.backends.asyncpg",
+                "credentials": {
+                    "database": None,
+                    "host": "127.0.0.1",
+                    "password": "moo",
+                    "port": 54321,
+                    "user": "postgres",
+                },
+            },
+        )
+
     def test_postgres_no_port(self):
         res = expand_db_url("postgres://postgres@127.0.0.1/test")
         self.assertDictEqual(
@@ -169,6 +189,22 @@ class TestConfigGenerator(test.SimpleTestCase):
                 "engine": "tortoise.backends.mysql",
                 "credentials": {
                     "database": "test",
+                    "host": "127.0.0.1",
+                    "password": "",
+                    "port": 33060,
+                    "user": "root",
+                },
+            },
+        )
+
+    def test_mysql_no_db(self):
+        res = expand_db_url("mysql://root:@127.0.0.1:33060")
+        self.assertEqual(
+            res,
+            {
+                "engine": "tortoise.backends.mysql",
+                "credentials": {
+                    "database": None,
                     "host": "127.0.0.1",
                     "password": "",
                     "port": 33060,

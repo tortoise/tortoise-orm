@@ -82,7 +82,7 @@ Primary Keys
 In Tortoise ORM we require that a model has a primary key.
 
 That primary key will be accesible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
-That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc...
+That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc…
 
 We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
 
@@ -117,7 +117,7 @@ repetitive work by leveraging from inheritence.
 You can define fields in more generic classes and they are
 automatically available in derived classes. Base classes are
 not limited to Model classes. Any class will work. This way
-you are able to define your models in a very natural and easy
+you are able to define your models in a natural and easy
 to maintain way.
 
 Let's have a look at some examples.

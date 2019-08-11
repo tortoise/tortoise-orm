@@ -5,9 +5,7 @@ Key points in this example are use of ForeignKeyField and ManyToManyField
 to declare relations and use of .prefetch_related() and .fetch_related()
 to get this related objects
 """
-import asyncio
-
-from tortoise import Tortoise, fields
+from tortoise import Tortoise, fields, run_async
 from tortoise.exceptions import NoValuesFetched
 from tortoise.models import Model
 
@@ -41,7 +39,7 @@ class Team(Model):
 
 
 async def run():
-    await Tortoise.init(config_file="config.json")
+    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
     await Tortoise.generate_schemas()
 
     tournament = Tournament(name="New Tournament")
@@ -94,5 +92,4 @@ async def run():
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run())
+    run_async(run())

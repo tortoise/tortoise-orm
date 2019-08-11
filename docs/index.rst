@@ -22,7 +22,7 @@ Why was Tortoise ORM built?
 ---------------------------
 
 Python has many existing and mature ORMs, unfortunately they are designed with an opposing paradigm of how I/O gets processed.
-``asyncio`` is relatively new technology that has a very different concurrency model, and the largest change is regarding how I/O is handled.
+``asyncio`` is relatively new technology that has a different concurrency model, and the largest change is regarding how I/O is handled.
 
 However, Tortoise ORM is not first attempt of building ``asyncio`` ORM, there are many cases of developers attempting to map synchronous python ORMs to the async world, initial attempts did not have a clean API.
 

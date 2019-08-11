@@ -7,18 +7,18 @@ from tortoise.utils import get_escape_translation_table
 
 
 class BaseSchemaGenerator:
-    TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}) {comment};'
-    FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique} {comment}'
+    TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){comment};'
+    FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE ({fields})"
-    FK_TEMPLATE = ' REFERENCES "{table}" (id) ON DELETE {on_delete}'
+    FK_TEMPLATE = ' REFERENCES "{table}" (id) ON DELETE {on_delete}{comment}'
     M2M_TABLE_TEMPLATE = (
-        'CREATE TABLE {exists}"{table_name}" ('
-        '"{backward_key}" {backward_type} NOT NULL REFERENCES "{backward_table}" (id)'
-        " ON DELETE CASCADE,"
-        '"{forward_key}" {forward_type} NOT NULL REFERENCES "{forward_table}" (id)'
-        " ON DELETE CASCADE"
-        ") {comment};"
+        'CREATE TABLE {exists}"{table_name}" (\n'
+        '    "{backward_key}" {backward_type} NOT NULL REFERENCES "{backward_table}" (id)'
+        " ON DELETE CASCADE,\n"
+        '    "{forward_key}" {forward_type} NOT NULL REFERENCES "{forward_table}" (id)'
+        " ON DELETE CASCADE\n"
+        "){comment};"
     )
 
     FIELD_TYPE_MAP = {
@@ -51,35 +51,33 @@ class BaseSchemaGenerator:
             nullable=nullable,
             unique=unique,
             comment=comment if self.client.capabilities.inline_comment else "",
+            primary=" PRIMARY KEY" if is_pk else "",
         ).strip()
-
-        if is_pk:
-            field_creation_string += " PRIMARY KEY"
 
         return field_creation_string
 
-    def _get_primary_key_create_string(self, field_name: str) -> str:
+    def _get_primary_key_create_string(self, field_name: str, comment: str) -> str:
         # All databases have their unique way for autoincrement,
         # has to implement in children
         raise NotImplementedError()  # pragma: nocoverage
 
-    def _table_comment_generator(self, model, comments_array: List) -> str:
+    def _table_comment_generator(self, table: str, comment: str) -> str:
         # Databases have their own way of supporting comments for table level
         # needs to be implemented for each supported client
         raise NotImplementedError()  # pragma: nocoverage
 
-    def _column_comment_generator(self, model, field, comments_array: List) -> str:
+    def _column_comment_generator(self, table: str, column: str, comment: str) -> str:
         # Databases have their own way of supporting comments for column level
         # needs to be implemented for each supported client
         raise NotImplementedError()  # pragma: nocoverage
 
-    def _post_table_hook(self, *, models=None, safe=True) -> str:
+    def _post_table_hook(self) -> str:  # pylint: disable=R0201
         # This method provides a mechanism where you can perform a set of
         # operation on the database table after  it's initialized. This method
         # by default does nothing. If need be, it can be over-written
         return ""
 
-    def _escape_comment(self, comment: str) -> str:
+    def _escape_comment(self, comment: str) -> str:  # pylint: disable=R0201
         # This method provides a default method to escape comment strings as per
         # default standard as applied under mysql like database. This can be
         # overwritten if required to match the database specific escaping.
@@ -136,12 +134,18 @@ class BaseSchemaGenerator:
         fields_with_index = []
         m2m_tables_for_create = []
         references = set()
-        comments = []  # type: List
 
         for field_name, db_field in model._meta.fields_db_projection.items():
             field_object = model._meta.fields_map[field_name]
+            comment = (
+                self._column_comment_generator(
+                    table=model._meta.table, column=db_field, comment=field_object.description
+                )
+                if field_object.description
+                else ""
+            )
             if isinstance(field_object, (fields.IntField, fields.BigIntField)) and field_object.pk:
-                fields_to_create.append(self._get_primary_key_create_string(field_name))
+                fields_to_create.append(self._get_primary_key_create_string(field_name, comment))
                 continue
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
@@ -151,15 +155,23 @@ class BaseSchemaGenerator:
                 nullable=nullable,
                 unique=unique,
                 is_pk=field_object.pk,
-                comment=self._column_comment_generator(
-                    model=model, field=field_object, comments_array=comments
-                ),
+                comment=comment,
             )
 
             if hasattr(field_object, "reference") and field_object.reference:
+                comment = (
+                    self._column_comment_generator(
+                        table=model._meta.table,
+                        column=db_field,
+                        comment=field_object.reference.description,
+                    )
+                    if field_object.reference.description
+                    else ""
+                )
                 field_creation_string += self.FK_TEMPLATE.format(
                     table=field_object.reference.type._meta.table,
                     on_delete=field_object.reference.on_delete,
+                    comment=comment,
                 )
                 references.add(field_object.reference.type._meta.table)
             fields_to_create.append(field_creation_string)
@@ -187,10 +199,12 @@ class BaseSchemaGenerator:
 
             fields_to_create.extend(unique_together_sqls)
 
-        table_fields_string = ", ".join(fields_to_create)
+        table_fields_string = "\n    {}\n".format(",\n    ".join(fields_to_create))
         table_comment = (
-            self._table_comment_generator(model=model, comments_array=comments)
-            if self.client.capabilities.inline_comment
+            self._table_comment_generator(
+                table=model._meta.table, comment=model._meta.table_description
+            )
+            if model._meta.table_description
             else ""
         )
 
@@ -217,28 +231,31 @@ class BaseSchemaGenerator:
             )
             warnings.warn("\n".join(field_indexes_sqls))
         else:
-            table_create_string = " ".join([table_create_string, *field_indexes_sqls])
+            table_create_string = "\n".join([table_create_string, *field_indexes_sqls])
 
-        if comments:
-            table_create_string = " ".join([table_create_string, *comments])
+        table_create_string += self._post_table_hook()
 
         for m2m_field in model._meta.m2m_fields:
             field_object = model._meta.fields_map[m2m_field]
             if field_object._generated:
                 continue
-            m2m_tables_for_create.append(
-                self.M2M_TABLE_TEMPLATE.format(
-                    exists="IF NOT EXISTS " if safe else "",
-                    table_name=field_object.through,
-                    backward_table=model._meta.table,
-                    forward_table=field_object.type._meta.table,
-                    backward_key=field_object.backward_key,
-                    backward_type=self._get_field_type(model._meta.pk),
-                    forward_key=field_object.forward_key,
-                    forward_type=self._get_field_type(field_object.type._meta.pk),
-                    comment=table_comment,
+            m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
+                exists="IF NOT EXISTS " if safe else "",
+                table_name=field_object.through,
+                backward_table=model._meta.table,
+                forward_table=field_object.type._meta.table,
+                backward_key=field_object.backward_key,
+                backward_type=self._get_field_type(model._meta.pk),
+                forward_key=field_object.forward_key,
+                forward_type=self._get_field_type(field_object.type._meta.pk),
+                comment=self._table_comment_generator(
+                    table=field_object.through, comment=field_object.description
                 )
+                if model._meta.table_description
+                else "",
             )
+            m2m_create_string += self._post_table_hook()
+            m2m_tables_for_create.append(m2m_create_string)
 
         return {
             "table": model._meta.table,
@@ -287,14 +304,8 @@ class BaseSchemaGenerator:
             ordered_tables_for_create.append(next_table_for_create["table_creation_string"])
             m2m_tables_to_create += next_table_for_create["m2m_tables"]
 
-        schema_creation_string = " ".join(ordered_tables_for_create + m2m_tables_to_create)
+        schema_creation_string = "\n".join(ordered_tables_for_create + m2m_tables_to_create)
         return schema_creation_string
-
-    def generate_post_table_hook_sql(self, safe=True) -> str:
-        models_to_use = []  # type: List
-
-        self._get_models_to_create(models_to_use)
-        return self._post_table_hook(models=models_to_use, safe=safe)
 
     async def generate_from_string(self, creation_string: str) -> None:
         # print(creation_string)

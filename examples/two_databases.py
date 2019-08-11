@@ -8,10 +8,8 @@ use relations between two databases
 Key notes of this example is using db_route for Tortoise init
 and explicitly declaring model apps in class Meta
 """
-import asyncio
-from sqlite3 import OperationalError
-
-from tortoise import Tortoise, fields
+from tortoise import Tortoise, fields, run_async
+from tortoise.exceptions import OperationalError
 from tortoise.models import Model
 
 
@@ -88,5 +86,4 @@ async def run():
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run())
+    run_async(run())

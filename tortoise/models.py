@@ -207,7 +207,7 @@ class ModelMeta(type):
                                 "Can't create model {} with two primary keys, "
                                 "only single pk are supported".format(name)
                             )
-                        elif value.generated and not isinstance(
+                        if value.generated and not isinstance(
                             value, (fields.IntField, fields.BigIntField)
                         ):
                             raise ConfigurationError(
@@ -312,11 +312,7 @@ class Model(metaclass=ModelMeta):
 
         for key, value in kwargs.items():
             if key in meta.fields:
-                field_object = meta.fields_map[key]
-                setattr(self, key, field_object.to_python_value(value))
-            elif key in meta.db_fields:
-                field_object = meta.fields_map[meta.fields_db_projection_reverse[key]]
-                setattr(self, key, field_object.to_python_value(value))
+                setattr(self, key, meta.fields_map[key].to_python_value(value))
 
         return self
 
@@ -581,7 +577,7 @@ class Model(metaclass=ModelMeta):
                 "'{}.unique_together' must be a list or tuple.".format(cls.__name__)
             )
 
-        elif any(
+        if any(
             not isinstance(unique_fields, (tuple, list))
             for unique_fields in cls._meta.unique_together
         ):
@@ -589,22 +585,21 @@ class Model(metaclass=ModelMeta):
                 "All '{}.unique_together' elements must be lists or tuples.".format(cls.__name__)
             )
 
-        else:
-            for fields_tuple in cls._meta.unique_together:
-                for field_name in fields_tuple:
-                    field = cls._meta.fields_map.get(field_name)
+        for fields_tuple in cls._meta.unique_together:
+            for field_name in fields_tuple:
+                field = cls._meta.fields_map.get(field_name)
 
-                    if not field:
-                        raise ConfigurationError(
-                            "'{}.unique_together' has no '{}' "
-                            "field.".format(cls.__name__, field_name)
-                        )
+                if not field:
+                    raise ConfigurationError(
+                        "'{}.unique_together' has no '{}' "
+                        "field.".format(cls.__name__, field_name)
+                    )
 
-                    if isinstance(field, ManyToManyField):
-                        raise ConfigurationError(
-                            "'{}.unique_together' '{}' field refers "
-                            "to ManyToMany field.".format(cls.__name__, field_name)
-                        )
+                if isinstance(field, ManyToManyField):
+                    raise ConfigurationError(
+                        "'{}.unique_together' '{}' field refers "
+                        "to ManyToMany field.".format(cls.__name__, field_name)
+                    )
 
     class Meta:
         """
@@ -621,5 +616,3 @@ class Model(metaclass=ModelMeta):
                     table="custom_table"
                     unique_together=(("field_a", "field_b"), )
         """
-
-        pass

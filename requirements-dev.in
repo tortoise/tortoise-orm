@@ -1,4 +1,4 @@
--r requirements.txt
+-e .
 
 # Optional dependencies
 pyyaml>=4.2b1
@@ -35,7 +35,11 @@ nose2
 # Pypi
 twine
 
-# Sample integrations
-hypercorn;python_version>="3.6"
-quart;python_version>="3.6"
+# Sample integration - Quart
+hypercorn;python_version>="3.7"
+quart;python_version>="3.7"
+
+# Sample integration - Sanic
+httpcore;python_version>="3.6"
 sanic;python_version>="3.6"
+requests-async;python_version>="3.6"

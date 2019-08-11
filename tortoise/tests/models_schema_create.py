@@ -1,18 +1,17 @@
 """
 This example demonstrates SQL Schema generation for each DB type supported.
 """
-from tortoise import Tortoise, fields, run_async
+from tortoise import fields
 from tortoise.models import Model
-from tortoise.utils import get_schema_sql
 
 
 class Tournament(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField(description="Tournament name", index=True)
-    created = fields.DatetimeField(auto_now_add=True, description="Created datetime")
+    created = fields.DatetimeField(auto_now_add=True, description="Created */'`/* datetime")
 
     class Meta:
-        table_description = "What Tournaments we have"
+        table_description = "What Tournaments */'`/* we have"
 
 
 class Event(Model):
@@ -40,26 +39,3 @@ class Team(Model):
 
     class Meta:
         table_description = "The TEAMS!"
-
-
-async def run():
-    print("SQLite:\n")
-    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
-    sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
-    print(sql)
-
-    print("\n\nMySQL:\n")
-    await Tortoise.init(db_url="mysql://root:@127.0.0.1:3306/", modules={"models": ["__main__"]})
-    sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
-    print(sql)
-
-    print("\n\nPostgreSQL:\n")
-    await Tortoise.init(
-        db_url="postgres://postgres:@127.0.0.1:5432/", modules={"models": ["__main__"]}
-    )
-    sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
-    print(sql)
-
-
-if __name__ == "__main__":
-    run_async(run())

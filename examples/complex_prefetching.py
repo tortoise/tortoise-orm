@@ -1,6 +1,4 @@
-import asyncio
-
-from tortoise import Tortoise, fields
+from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
 from tortoise.query_utils import Prefetch
 
@@ -34,7 +32,7 @@ class Team(Model):
 
 
 async def run():
-    await Tortoise.init(config_file="config.json")
+    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
     await Tortoise.generate_schemas()
 
     tournament = await Tournament.create(name="tournament")
@@ -50,5 +48,4 @@ async def run():
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(run())
+    run_async(run())

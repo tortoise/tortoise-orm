@@ -11,10 +11,9 @@ if sys.version_info < (3, 5, 3):
 def version() -> str:
     verstrline = open("tortoise/__init__.py", "rt").read()
     mob = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", verstrline, re.M)
-    if mob:
-        return mob.group(1)
-    else:
+    if not mob:
         raise RuntimeError("Unable to find version string")
+    return mob.group(1)
 
 
 def requirements() -> list:

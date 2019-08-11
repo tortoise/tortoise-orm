@@ -74,9 +74,8 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     if not path:
         if db_backend == "sqlite":
             raise ConfigurationError("No path specified for DB_URL")
-        else:
-            # Other database backend accepts database name being None (but not empty string).
-            path = None
+        # Other database backend accepts database name being None (but not empty string).
+        path = None
 
     params = {}  # type: dict
     for key, val in db["defaults"].items():
