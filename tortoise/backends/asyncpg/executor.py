@@ -24,5 +24,6 @@ class AsyncpgExecutor(BaseExecutor):
     async def _process_insert_result(self, instance: Model, results: Optional[asyncpg.Record]):
         if results:
             generated_fields = self.model._meta.generated_db_fields
+            db_projection = instance._meta.fields_db_projection_reverse
             for key, val in zip(generated_fields, results):
-                setattr(instance, key, val)
+                setattr(instance, db_projection[key], val)

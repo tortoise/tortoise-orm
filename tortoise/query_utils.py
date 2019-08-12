@@ -34,7 +34,7 @@ def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[
             if param.get("value_encoder")
             else model._meta.db.executor_class._field_to_db(field_object, value, model)
         )
-        criterion = param["operator"](getattr(table, param["field"]), encoded_value)
+        criterion = param["operator"](getattr(table, param["source_field"]), encoded_value)
     return criterion, join
 
 

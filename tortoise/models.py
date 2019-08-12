@@ -311,8 +311,9 @@ class Model(metaclass=ModelMeta):
         meta = self._meta
 
         for key, value in kwargs.items():
-            if key in meta.fields:
-                setattr(self, key, meta.fields_map[key].to_python_value(value))
+            model_field = meta.fields_db_projection_reverse.get(key)
+            if model_field:
+                setattr(self, model_field, meta.fields_map[model_field].to_python_value(value))
 
         return self
 
