@@ -407,14 +407,18 @@ class Model(metaclass=ModelMeta):
     Can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc...
     """
 
-    async def save(self, using_db=None) -> None:
+    async def save(self, using_db=None, update_fields=None) -> None:
         """
         Creates/Updates the current model object.
+
+        If ``update_fields`` is provided, it should be a tuple/list of fields by name.
+        This is the subset of fields that should be updated.
+        If the object needs to be created ``update_fields`` will be ignored.
         """
         db = using_db or self._meta.db
         executor = db.executor_class(model=self.__class__, db=db)
         if self._saved_in_db:
-            await executor.execute_update(self)
+            await executor.execute_update(self, update_fields)
         else:
             await executor.execute_insert(self)
             self._saved_in_db = True

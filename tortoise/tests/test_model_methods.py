@@ -14,6 +14,22 @@ class TestModelMethods(test.TestCase):
         await self.mdl.save()
         self.assertEqual(self.mdl.id, oldid)
 
+    async def test_save_full(self):
+        self.mdl.name = "TestS"
+        self.mdl.desc = "Something"
+        await self.mdl.save()
+        n_mdl = await self.cls.get(id=self.mdl.id)
+        self.assertEqual(n_mdl.name, "TestS")
+        self.assertEqual(n_mdl.desc, "Something")
+
+    async def test_save_partial(self):
+        self.mdl.name = "TestS"
+        self.mdl.desc = "Something"
+        await self.mdl.save(update_fields=["desc"])
+        n_mdl = await self.cls.get(id=self.mdl.id)
+        self.assertEqual(n_mdl.name, "Test")
+        self.assertEqual(n_mdl.desc, "Something")
+
     async def test_create(self):
         mdl = self.cls(name="Test2")
         self.assertIsNone(mdl.id)

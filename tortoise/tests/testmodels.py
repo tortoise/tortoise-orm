@@ -17,7 +17,8 @@ def generate_token():
 
 class Tournament(Model):
     id = fields.IntField(pk=True)
-    name = fields.TextField()
+    name = fields.CharField(max_length=255)
+    desc = fields.TextField(null=True)
     created = fields.DatetimeField(auto_now_add=True, index=True)
 
     def __str__(self):
@@ -184,6 +185,7 @@ class M2MTwo(Model):
 
 class NoID(Model):
     name = fields.CharField(max_length=255, null=True)
+    desc = fields.TextField(null=True)
 
 
 class RacePlacingEnum(Enum):

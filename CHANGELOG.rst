@@ -20,6 +20,7 @@ New Features:
 - ``.values()`` and ``.values_list()`` now default to all fields if none are specified.
 - ``generate_schema()`` now generates well-formatted DDL SQL statements.
 - Added ``TruncationTestCase`` testing class that truncates tables to allow faster testing of transactions.
+- Partial saves are now supported (#157): ``obj.save(update_fields=['model','field','names'])``
 
 Bugfixes:
 ^^^^^^^^^
