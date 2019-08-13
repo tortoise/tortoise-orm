@@ -28,6 +28,8 @@ Bugfixes:
 - Fixed missing table/column comment generation for ``ForeignKeyField`` and ``ManyToManyField``
 - Fixed comment generation to escape properly for ``SQLite``
 - Fixed comment generation for ``PostgreSQL`` to not duplicate comments
+- Fixed generation of schema for fields that defined custom ``source_field`` values defined
+- Fixed working with Models that have fields with custom ``source_field`` values defined
 
 Docs/examples:
 ^^^^^^^^^^^^^^
