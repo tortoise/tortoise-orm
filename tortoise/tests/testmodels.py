@@ -366,6 +366,3 @@ class SourceFields(Model):
 
     class Meta:
         table = "sometable"
-
-    def __str__(self):
-        return "<SourceFields {}, {}, {}>".format(self.id, self.chars, self.fk_id)

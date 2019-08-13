@@ -214,7 +214,7 @@ class BaseExecutor:
             )
             for e in raw_results
         }
-        related_object_list = [related_query.model(_from_db=True, **e) for e in raw_results]
+        related_object_list = [related_query.model._init_from_db(**e) for e in raw_results]
         await self.__class__(
             model=related_query.model, db=self.db, prefetch_map=related_query._prefetch_map
         ).fetch_for_list(related_object_list)

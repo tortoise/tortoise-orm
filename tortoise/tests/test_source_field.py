@@ -163,4 +163,4 @@ class StraightFieldTests(test.TestCase):
 
 class SourceFieldTests(StraightFieldTests):
     def setUp(self) -> None:
-        self.model = SourceFields
+        self.model = SourceFields  # type: ignore
