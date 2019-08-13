@@ -1,6 +1,7 @@
 # pylint: disable=C0301
 import re
 import sys
+import warnings
 
 from asynctest.mock import CoroutineMock, patch
 
@@ -188,6 +189,53 @@ CREATE TABLE "teamevents" (
 """.strip(),  # noqa
         )
 
+    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
+    async def test_schema_safe(self):
+        self.maxDiff = None
+        await self.init_for("tortoise.tests.models_schema_create")
+        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        self.assertEqual(
+            sql.strip(),
+            """
+CREATE TABLE IF NOT EXISTS "sometable" (
+    "sometable_id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "some_chars_table" VARCHAR(255) NOT NULL,
+    "fk_sometable" INT REFERENCES "sometable" (sometable_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS "sometable_some_ch_115115_idx" ON "sometable" (some_chars_table);
+CREATE TABLE IF NOT EXISTS "team" (
+    "name" VARCHAR(50) NOT NULL  PRIMARY KEY /* The TEAM name (and PK) */,
+    "manager_id" VARCHAR(50)   /* The TEAM name (and PK) */ REFERENCES "team" (name) ON DELETE CASCADE
+) /* The TEAMS! */;
+CREATE TABLE IF NOT EXISTS "tournament" (
+    "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "name" TEXT NOT NULL  /* Tournament name */,
+    "created" TIMESTAMP NOT NULL  /* Created *\\/'`\\/* datetime */
+) /* What Tournaments *\\/'`\\/* we have */;
+CREATE INDEX IF NOT EXISTS "tournament_name_116110_idx" ON "tournament" (name);
+CREATE TABLE IF NOT EXISTS "event" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,
+    "name" TEXT NOT NULL UNIQUE,
+    "modified" TIMESTAMP NOT NULL,
+    "prize" VARCHAR(40),
+    "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
+    "tournament_id" INT NOT NULL REFERENCES "tournament" (tid) ON DELETE CASCADE /* FK to tournament */
+) /* This table contains a list of all the events */;
+CREATE TABLE IF NOT EXISTS "sometable_self" (
+    "backward_sts" INT NOT NULL REFERENCES "sometable" (sometable_id) ON DELETE CASCADE,
+    "sts_forward" INT NOT NULL REFERENCES "sometable" (sometable_id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS "team_team" (
+    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS "teamevents" (
+    "event_id" INT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
+) /* How participants relate */;
+""".strip(),  # noqa
+        )
+
 
 class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
@@ -291,6 +339,72 @@ CREATE TABLE `teamevents` (
 """.strip(),  # noqa
         )
 
+    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
+    async def test_schema_safe(self):
+        self.maxDiff = None
+        await self.init_for("tortoise.tests.models_schema_create")
+        with warnings.catch_warnings(record=True) as w:
+            with self.assertLogs("tortoise", level="WARNING") as cm:
+                sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+
+        self.assertEqual(
+            cm.output,
+            [
+                "WARNING:tortoise:CREATE INDEX `sometable_some_ch_115115_idx` ON `sometable`"
+                " (some_chars_table);",
+                "WARNING:tortoise:CREATE INDEX `tournament_name_116110_idx` ON `tournament`"
+                " (name);",
+            ],
+        )
+
+        self.assertEqual(len(w), 1)
+        self.assertEqual(w[0].category, UserWarning)
+        self.assertEqual(
+            str(w[0].message),
+            "Skipping creation of field indexes: safe index creation is not supported yet for"
+            " mysql. Please find the SQL queries to create the indexes in the logs.",
+        )
+
+        self.assertEqual(
+            sql.strip(),
+            """
+CREATE TABLE IF NOT EXISTS `sometable` (
+    `sometable_id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `some_chars_table` VARCHAR(255) NOT NULL,
+    `fk_sometable` INT REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS `team` (
+    `name` VARCHAR(50) NOT NULL  COMMENT 'The TEAM name (and PK)',
+    `manager_id` VARCHAR(50)   COMMENT 'The TEAM name (and PK)' REFERENCES `team` (`name`) ON DELETE CASCADE
+) COMMENT='The TEAMS!';
+CREATE TABLE IF NOT EXISTS `tournament` (
+    `tid` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `name` TEXT NOT NULL  COMMENT 'Tournament name',
+    `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime'
+) COMMENT='What Tournaments */\\'`/* we have';
+CREATE TABLE IF NOT EXISTS `event` (
+    `id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
+    `name` TEXT NOT NULL UNIQUE,
+    `modified` DATETIME(6) NOT NULL,
+    `prize` DECIMAL(10,2),
+    `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
+    `tournament_id` INT NOT NULL REFERENCES `tournament` (`tid`) ON DELETE CASCADE COMMENT 'FK to tournament'
+) COMMENT='This table contains a list of all the events';
+CREATE TABLE IF NOT EXISTS `sometable_self` (
+    `backward_sts` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
+    `sts_forward` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS `team_team` (
+    `team_rel_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE,
+    `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS `teamevents` (
+    `event_id` INT NOT NULL REFERENCES `event` (`id`) ON DELETE CASCADE,
+    `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
+) COMMENT='How participants relate';
+""".strip(),  # noqa
+        )
+
 
 class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
@@ -385,6 +499,64 @@ CREATE TABLE "team_team" (
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
 );
 CREATE TABLE "teamevents" (
+    "event_id" INT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
+);
+COMMENT ON TABLE teamevents IS 'How participants relate';
+""".strip(),
+        )
+
+    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
+    async def test_schema_safe(self):
+        self.maxDiff = None
+        await self.init_for("tortoise.tests.models_schema_create")
+        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        self.assertEqual(
+            sql.strip(),
+            """
+CREATE TABLE IF NOT EXISTS "sometable" (
+    "sometable_id" SERIAL NOT NULL PRIMARY KEY,
+    "some_chars_table" VARCHAR(255) NOT NULL,
+    "fk_sometable" INT REFERENCES "sometable" (sometable_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS "sometable_some_ch_115115_idx" ON "sometable" (some_chars_table);
+CREATE TABLE IF NOT EXISTS "team" (
+    "name" VARCHAR(50) NOT NULL  PRIMARY KEY,
+    "manager_id" VARCHAR(50) REFERENCES "team" (name) ON DELETE CASCADE
+);
+COMMENT ON COLUMN team.name IS 'The TEAM name (and PK)';
+COMMENT ON COLUMN team.manager_id IS 'The TEAM name (and PK)';
+COMMENT ON TABLE team IS 'The TEAMS!';
+CREATE TABLE IF NOT EXISTS "tournament" (
+    "tid" SERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "created" TIMESTAMP NOT NULL
+);
+CREATE INDEX IF NOT EXISTS "tournament_name_116110_idx" ON "tournament" (name);
+COMMENT ON COLUMN tournament.name IS 'Tournament name';
+COMMENT ON COLUMN tournament.created IS 'Created */''`/* datetime';
+COMMENT ON TABLE tournament IS 'What Tournaments */''`/* we have';
+CREATE TABLE IF NOT EXISTS "event" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL UNIQUE,
+    "modified" TIMESTAMP NOT NULL,
+    "prize" DECIMAL(10,2),
+    "token" VARCHAR(100) NOT NULL UNIQUE,
+    "tournament_id" INT NOT NULL REFERENCES "tournament" (tid) ON DELETE CASCADE
+);
+COMMENT ON COLUMN event.id IS 'Event ID';
+COMMENT ON COLUMN event.token IS 'Unique token';
+COMMENT ON COLUMN event.tournament_id IS 'FK to tournament';
+COMMENT ON TABLE event IS 'This table contains a list of all the events';
+CREATE TABLE IF NOT EXISTS "sometable_self" (
+    "backward_sts" INT NOT NULL REFERENCES "sometable" (sometable_id) ON DELETE CASCADE,
+    "sts_forward" INT NOT NULL REFERENCES "sometable" (sometable_id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS "team_team" (
+    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS "teamevents" (
     "event_id" INT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
 );

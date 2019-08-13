@@ -8,7 +8,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{comment}"
     FK_TEMPLATE = " REFERENCES `{table}` (`{field}`) ON DELETE {on_delete}{comment}"
     M2M_TABLE_TEMPLATE = (
-        "CREATE TABLE `{table_name}` (\n"
+        "CREATE TABLE {exists}`{table_name}` (\n"
         "    `{backward_key}` {backward_type} NOT NULL REFERENCES `{backward_table}`"
         " (`{backward_field}`) ON DELETE CASCADE,\n"
         "    `{forward_key}` {forward_type} NOT NULL REFERENCES `{forward_table}`"

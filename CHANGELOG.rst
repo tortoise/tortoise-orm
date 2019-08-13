@@ -30,6 +30,7 @@ Bugfixes:
 - Fixed comment generation for ``PostgreSQL`` to not duplicate comments
 - Fixed generation of schema for fields that defined custom ``source_field`` values defined
 - Fixed working with Models that have fields with custom ``source_field`` values defined
+- Fixed safe creation of M2M tables for MySQL dialect (#168)
 
 Docs/examples:
 ^^^^^^^^^^^^^^
