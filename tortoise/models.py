@@ -283,10 +283,10 @@ class Model(metaclass=ModelMeta):
     # I don' like this here, but it makes autocompletion and static analysis much happier
     _meta = MetaInfo(None)
 
-    def __init__(self, *args, _from_db: bool = False, **kwargs) -> None:
+    def __init__(self, *args, **kwargs) -> None:
         # self._meta is a very common attribute lookup, lets cache it.
         meta = self._meta
-        self._saved_in_db = _from_db or (meta.pk_attr in kwargs and meta.pk.generated)
+        self._saved_in_db = meta.pk_attr in kwargs and meta.pk.generated
         self._init_lazy_fkm2m()
 
         # Assign values and do type conversions
@@ -311,8 +311,9 @@ class Model(metaclass=ModelMeta):
         meta = self._meta
 
         for key, value in kwargs.items():
-            if key in meta.fields:
-                setattr(self, key, meta.fields_map[key].to_python_value(value))
+            model_field = meta.fields_db_projection_reverse.get(key)
+            if model_field:
+                setattr(self, model_field, meta.fields_map[model_field].to_python_value(value))
 
         return self
 

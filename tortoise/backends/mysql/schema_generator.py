@@ -6,13 +6,13 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({fields}){comment};"
     INDEX_CREATE_TEMPLATE = "CREATE INDEX `{index_name}` ON `{table_name}` ({fields});"
     FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{comment}"
-    FK_TEMPLATE = " REFERENCES `{table}` (`id`) ON DELETE {on_delete}{comment}"
+    FK_TEMPLATE = " REFERENCES `{table}` (`{field}`) ON DELETE {on_delete}{comment}"
     M2M_TABLE_TEMPLATE = (
         "CREATE TABLE `{table_name}` (\n"
-        "    `{backward_key}` {backward_type} NOT NULL REFERENCES `{backward_table}` (`id`)"
-        " ON DELETE CASCADE,\n"
-        "    `{forward_key}` {forward_type} NOT NULL REFERENCES `{forward_table}` (`id`)"
-        " ON DELETE CASCADE\n"
+        "    `{backward_key}` {backward_type} NOT NULL REFERENCES `{backward_table}`"
+        " (`{backward_field}`) ON DELETE CASCADE,\n"
+        "    `{forward_key}` {forward_type} NOT NULL REFERENCES `{forward_table}`"
+        " (`{forward_field}`) ON DELETE CASCADE\n"
         "){comment};"
     )
     FIELD_TYPE_MAP = {

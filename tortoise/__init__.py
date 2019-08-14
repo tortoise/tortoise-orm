@@ -27,7 +27,7 @@ except ImportError:  # pragma: nocoverage
 
 logger = logging.getLogger("tortoise")
 
-if sys.version_info < (3, 6):
+if sys.version_info < (3, 6):  # pragma: nocoverage
     warnings.warn("Tortoise-ORM is soon going to require Python 3.6", DeprecationWarning)
 
 
@@ -99,7 +99,6 @@ class Tortoise:
                     related_model = get_related_model(related_app_name, related_model_name)
 
                     key_field = "{}_id".format(field)
-                    fk_object.source_field = key_field
                     key_fk_object = deepcopy(related_model._meta.pk)
                     key_fk_object.pk = False
                     key_fk_object.index = fk_object.index
@@ -107,6 +106,12 @@ class Tortoise:
                     key_fk_object.null = fk_object.null
                     key_fk_object.generated = fk_object.generated
                     key_fk_object.reference = fk_object
+                    if fk_object.source_field:
+                        key_fk_object.source_field = fk_object.source_field
+                        fk_object.source_field = key_field
+                    else:
+                        fk_object.source_field = key_field
+                        key_fk_object.source_field = key_field
                     model._meta.add_field(key_field, key_fk_object)
 
                     fk_object.type = related_model
