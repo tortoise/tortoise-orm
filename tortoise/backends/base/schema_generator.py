@@ -1,9 +1,12 @@
+import logging
 import warnings
 from typing import List, Set  # noqa
 
 from tortoise import fields
 from tortoise.exceptions import ConfigurationError
 from tortoise.utils import get_escape_translation_table
+
+logger = logging.getLogger("tortoise")
 
 
 class BaseSchemaGenerator:
@@ -222,15 +225,13 @@ class BaseSchemaGenerator:
         ]
         if safe and not self.client.capabilities.safe_indexes:
             warnings.warn(
-                "Skipping creation of field indexes for fields {field_names} "
-                'on table "{table_name}" : safe index creation is not supported yet for {dialect}. '
-                "Please find the SQL queries to create the indexes below.".format(
-                    field_names=", ".join(fields_with_index),
-                    table_name=model._meta.table,
-                    dialect=self.client.capabilities.dialect,
+                "Skipping creation of field indexes: safe index creation is not supported yet for "
+                "{dialect}. Please find the SQL queries to create the indexes in the logs.".format(
+                    dialect=self.client.capabilities.dialect
                 )
             )
-            warnings.warn("\n".join(field_indexes_sqls))
+            for fis in field_indexes_sqls:
+                logger.warning(fis)
         else:
             table_create_string = "\n".join([table_create_string, *field_indexes_sqls])
 
