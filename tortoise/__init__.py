@@ -7,7 +7,7 @@ import sys
 import warnings
 from copy import deepcopy
 from inspect import isclass
-from typing import Coroutine, Dict, List, Optional, Tuple, Type, Union, cast  # noqa
+from typing import Any, Coroutine, Dict, List, Optional, Tuple, Type, Union, cast
 
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
@@ -44,6 +44,112 @@ class Tortoise:
         :raises KeyError: If connection name does not exist.
         """
         return cls._connections[connection_name]
+
+    @classmethod
+    def describe_model(cls, model: Type[Model], serializable: bool = True) -> dict:
+        def _type_name(typ) -> str:
+            if typ.__module__ == "builtins":
+                return typ.__name__
+            return "{}.{}".format(typ.__module__, typ.__name__)
+
+        def type_name(typ: Any) -> Union[str, List[str]]:
+            try:
+                if issubclass(typ, Model):
+                    for app in cls.apps.values():  # pragma: nobranch
+                        for _name, _model in app.items():  # pragma: nobranch
+                            if typ == _model:
+                                return "{}.{}".format(typ._meta.app, _name)
+            except TypeError:
+                pass
+            try:
+                return _type_name(typ)
+            except AttributeError:
+                return [_type_name(_typ) for _typ in typ]
+
+        def default_name(default: Any) -> Optional[Union[int, float, str, bool]]:
+            if isinstance(default, (int, float, str, bool, type(None))):
+                return default
+            if callable(default):
+                return "<function {}.{}>".format(default.__module__, default.__name__)
+            return str(default)
+
+        def describe_field(name: str) -> dict:
+            field = model._meta.fields_map[name]
+            if serializable:
+                return {
+                    "name": name,
+                    "field_type": field.__class__.__name__,
+                    "python_type": type_name(field.type),
+                    "source_field": field.source_field or name,
+                    "generated": field.generated,
+                    "default": default_name(field.default),
+                    "nullable": field.null,
+                    "unique": field.unique,
+                    "indexed": field.index or field.unique,
+                    "description": field.description,
+                }
+            else:
+                return {
+                    "name": name,
+                    "field_type": field.__class__,
+                    "python_type": field.type,
+                    "source_field": field.source_field or name,
+                    "generated": field.generated,
+                    "default": field.default,
+                    "nullable": field.null,
+                    "unique": field.unique,
+                    "indexed": field.index or field.unique,
+                    "description": field.description,
+                }
+
+        return {
+            "pk": describe_field(model._meta.pk_attr),
+            "data_fields": [
+                describe_field(name)
+                for name in model._meta.fields_map.keys()
+                if name != model._meta.pk_attr
+                and name in (model._meta.db_fields - model._meta.fetch_fields)
+            ],
+            "fk_fields": [
+                describe_field(name)
+                for name in model._meta.fields_map.keys()
+                if name in model._meta.fk_fields
+            ],
+            "backward_fk_fields": [
+                describe_field(name)
+                for name in model._meta.fields_map.keys()
+                if name in model._meta.backward_fk_fields
+            ],
+            "m2m_fields": [
+                describe_field(name)
+                for name in model._meta.fields_map.keys()
+                if name in model._meta.m2m_fields
+            ],
+        }
+
+    @classmethod
+    def describe_models(
+        cls, models: Optional[List[Type[Model]]] = None, serializable: bool = True
+    ) -> Dict[str, dict]:
+        """
+        Describes the given models, if not provided, describes ALL the models that are initialised.
+
+        :param models: List of models to describe,
+                       if not provided then describes ALL registered models.
+        :param serializable: False if you want raw python objects
+        :return:
+        """
+
+        if not models:
+            models = []
+            for app in cls.apps.values():
+                for model in app.values():
+                    models.append(model)
+
+        return {
+            "{}.{}".format(model._meta.app, model.__name__): cls.describe_model(model, serializable)
+            for model in models
+        }
 
     @classmethod
     def _init_relations(cls) -> None:
