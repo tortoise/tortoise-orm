@@ -152,14 +152,6 @@ class BaseSchemaGenerator:
                 continue
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
-            field_creation_string = self._create_string(
-                db_field=db_field,
-                field_type=self._get_field_type(field_object),
-                nullable=nullable,
-                unique=unique,
-                is_pk=field_object.pk,
-                comment=comment,
-            )
 
             if hasattr(field_object, "reference") and field_object.reference:
                 comment = (
@@ -171,13 +163,30 @@ class BaseSchemaGenerator:
                     if field_object.reference.description
                     else ""
                 )
-                field_creation_string += self.FK_TEMPLATE.format(
+                field_creation_string = self._create_string(
+                    db_field=db_field,
+                    field_type=self._get_field_type(field_object),
+                    nullable=nullable,
+                    unique=unique,
+                    is_pk=field_object.pk,
+                    comment="",
+                ) + self.FK_TEMPLATE.format(
                     table=field_object.reference.type._meta.table,
                     field=field_object.reference.type._meta.db_pk_field,
                     on_delete=field_object.reference.on_delete,
                     comment=comment,
                 )
                 references.add(field_object.reference.type._meta.table)
+            else:
+                field_creation_string = self._create_string(
+                    db_field=db_field,
+                    field_type=self._get_field_type(field_object),
+                    nullable=nullable,
+                    unique=unique,
+                    is_pk=field_object.pk,
+                    comment=comment,
+                )
+
             fields_to_create.append(field_creation_string)
 
             if field_object.index:

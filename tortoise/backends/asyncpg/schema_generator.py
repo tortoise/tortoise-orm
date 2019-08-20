@@ -31,14 +31,16 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
         comment = self.TABLE_COMMENT_TEMPLATE.format(
             table=table, comment=self._escape_comment(comment)
         )
-        self.comments_array.append(comment)
+        if comment not in self.comments_array:
+            self.comments_array.append(comment)
         return ""
 
     def _column_comment_generator(self, table: str, column: str, comment: str) -> str:
         comment = self.COLUMN_COMMNET_TEMPLATE.format(
             table=table, column=column, comment=self._escape_comment(comment)
         )
-        self.comments_array.append(comment)
+        if comment not in self.comments_array:
+            self.comments_array.append(comment)
         return ""
 
     def _post_table_hook(self) -> str:
