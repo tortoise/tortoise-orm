@@ -157,6 +157,7 @@ class JSONFields(Model):
     id = fields.IntField(pk=True)
     data = fields.JSONField()
     data_null = fields.JSONField(null=True)
+    data_default = fields.JSONField(default={"a": 1})
 
 
 class UUIDFields(Model):

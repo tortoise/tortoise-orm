@@ -1,4 +1,5 @@
 import json
+import sys
 
 from tortoise import Tortoise
 from tortoise.contrib import test
@@ -36,6 +37,7 @@ class TestBasic(test.TestCase):
             {"models.Event", "models.Tournament", "models.Reporter", "models.Team"}, set(val.keys())
         )
 
+    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_describe_model_straight(self):
         val = Tortoise.describe_model(StraightFields)
 
@@ -152,6 +154,7 @@ class TestBasic(test.TestCase):
             },
         )
 
+    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_describe_model_source(self):
         val = Tortoise.describe_model(SourceFields)
 
@@ -268,6 +271,7 @@ class TestBasic(test.TestCase):
             },
         )
 
+    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_describe_model_uuidpk(self):
         val = Tortoise.describe_model(UUIDPkModel)
 
@@ -323,6 +327,7 @@ class TestBasic(test.TestCase):
             },
         )
 
+    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_describe_model_json(self):
         val = Tortoise.describe_model(JSONFields)
 
@@ -370,6 +375,18 @@ class TestBasic(test.TestCase):
                         "unique": False,
                         "indexed": False,
                         "default": None,
+                        "description": None,
+                    },
+                    {
+                        "name": "data_default",
+                        "field_type": "JSONField",
+                        "db_column": "data_default",
+                        "python_type": ["dict", "list"],
+                        "generated": False,
+                        "nullable": False,
+                        "unique": False,
+                        "indexed": False,
+                        "default": "{'a': 1}",
                         "description": None,
                     },
                 ],
