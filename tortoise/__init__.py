@@ -107,6 +107,7 @@ class Tortoise:
                     "description":  str     # Description of the field (nullable)
                 }
         """
+
         def _type_name(typ) -> str:
             if typ.__module__ == "builtins":
                 return typ.__name__
@@ -202,7 +203,8 @@ class Tortoise:
             ``True`` for JSON-serialisable data. (Defaults to ``True``)
 
         :return:
-            A dictionary containing the model qualifier as key, and the same output as ``describe_model(…)`` as value:
+            A dictionary containing the model qualifier as key,
+            and the same output as ``describe_model(…)`` as value:
 
             .. code-block:: python3
 
