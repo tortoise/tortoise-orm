@@ -322,7 +322,7 @@ CREATE TABLE `event` (
     `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
-    `tournament_id` INT NOT NULL REFERENCES `tournament` (`tid`) ON DELETE CASCADE COMMENT 'FK to tournament'
+    `tournament_id` INT NOT NULL COMMENT 'FK to tournament' REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) COMMENT='This table contains a list of all the events';
 CREATE TABLE `sometable_self` (
     `backward_sts` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
@@ -388,7 +388,7 @@ CREATE TABLE IF NOT EXISTS `event` (
     `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
-    `tournament_id` INT NOT NULL REFERENCES `tournament` (`tid`) ON DELETE CASCADE COMMENT 'FK to tournament'
+    `tournament_id` INT NOT NULL COMMENT 'FK to tournament' REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) COMMENT='This table contains a list of all the events';
 CREATE TABLE IF NOT EXISTS `sometable_self` (
     `backward_sts` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
