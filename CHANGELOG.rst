@@ -3,6 +3,17 @@
 Changelog
 =========
 
+0.13.1
+------
+* Model schema now has a discovery API:
+
+  One can call ``Tortoise.describe_models()`` or ``Tortoise.describe_model(<Model>)`` to get
+  a full description of the model(s).
+
+  Please see :meth:`tortoise.Tortoise.describe_model` and :meth:`tortoise.Tortoise.describe_models` for more info.
+
+- Fix in generating comments for Foreign Keys in ``MySQL``
+
 0.13.0
 ------
 .. warning::
