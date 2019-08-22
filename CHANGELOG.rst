@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.13.1
+------
+- Default MySQL charset to ``utf8mb4``. If a charset is provided it will also force the TABLE charset to the same.
+
 0.13.0
 ------
 .. warning::

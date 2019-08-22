@@ -46,7 +46,7 @@ DB_LOOKUP = {
             "username": "user",
             "password": "password",
         },
-        "defaults": {"port": 3306},
+        "defaults": {"port": 3306, "charset": "utf8mb4"},
         "cast": {
             "minsize": int,
             "maxsize": int,

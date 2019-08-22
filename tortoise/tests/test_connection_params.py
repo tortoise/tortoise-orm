@@ -18,7 +18,7 @@ class TestConnectionParams(test.TestCase):
                             "port": 3306,
                             "user": "root",
                             "connect_timeout": 1.5,
-                            "charset": "utf-8",
+                            "charset": "utf8mb4",
                         },
                     }
                 },
@@ -27,7 +27,7 @@ class TestConnectionParams(test.TestCase):
 
             mysql_connect.assert_awaited_once_with(  # nosec
                 autocommit=True,
-                charset="utf-8",
+                charset="utf8mb4",
                 connect_timeout=1.5,
                 db="test",
                 host="127.0.0.1",

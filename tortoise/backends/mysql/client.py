@@ -97,6 +97,7 @@ class MySQLClient(BaseDBAsyncClient):
         self.extra.pop("fetch_inserted", None)
         self.extra.pop("db", None)
         self.extra.pop("autocommit", None)
+        self.charset = self.extra.pop("charset", "")
 
         self._template = {}  # type: dict
         self._connection = None  # Type: Optional[aiomysql.Connection]
@@ -113,6 +114,7 @@ class MySQLClient(BaseDBAsyncClient):
             "user": self.user,
             "db": self.database if with_db else None,
             "autocommit": True,
+            "charset": self.charset,
             **self.extra,
         }
         try:
