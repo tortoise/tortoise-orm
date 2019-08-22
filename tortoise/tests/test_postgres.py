@@ -1,8 +1,6 @@
 """
 Test some postgres-specific features
 """
-from asyncpg.exceptions import InvalidSchemaNameError
-
 from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import OperationalError
@@ -22,6 +20,8 @@ class TestTwoDatabases(test.SimpleTestCase):
             await Tortoise._drop_databases()
 
     async def test_schema(self):
+        from asyncpg.exceptions import InvalidSchemaNameError
+
         self.db_config["connections"]["models"]["credentials"]["schema"] = "mytestschema"
         await Tortoise.init(self.db_config, _create_db=True)
 
