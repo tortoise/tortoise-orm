@@ -2,9 +2,9 @@
 
 Changelog
 =========
-
 0.13.1
 ------
+- Added schema support for PostgreSQL. Either set  ``"schema": "custom"`` var in ``credentials`` or as a query parameter ``?schema=custom``
 - Default MySQL charset to ``utf8mb4``. If a charset is provided it will also force the TABLE charset to the same.
 
 0.13.0

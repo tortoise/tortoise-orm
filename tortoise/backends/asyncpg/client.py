@@ -86,6 +86,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self.host = host
         self.port = int(port)  # make sure port is int type
         self.extra = kwargs.copy()
+        self.schema = self.extra.pop("schema", None)
         self.extra.pop("connection_name", None)
         self.extra.pop("fetch_inserted", None)
         self.extra.pop("loop", None)
@@ -116,6 +117,9 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             raise DBConnectionError(
                 "Can't establish connection to database {}".format(self.database)
             )
+        # Set post-connection variables
+        if self.schema:
+            await self.execute_script("SET search_path TO {}".format(self.schema))
 
     async def _close(self) -> None:
         if self._connection:  # pragma: nobranch
