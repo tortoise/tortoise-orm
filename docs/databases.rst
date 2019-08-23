@@ -84,6 +84,8 @@ Parameters
     Maximum no of queries to allow before forcing a re-connect.
 ``max_inactive_connection_lifetime``:
     Duration of inactive connection before assuming that it has gone stale, and force a re-connect.
+``schema``:
+    A specific schema to use by default.
 
 In case any of ``user``, ``password``, ``host``, ``port`` parameters is missing, we are letting ``asyncpg`` retrieve it from default sources (standard PostgreSQL environment variables or default values).
 

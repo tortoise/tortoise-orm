@@ -2,6 +2,9 @@
 
 Changelog
 =========
+0.13.1
+------
+- Added schema support for PostgreSQL. Either set  ``"schema": "custom"`` var in ``credentials`` or as a query parameter ``?schema=custom``
 
 0.13.0
 ------
