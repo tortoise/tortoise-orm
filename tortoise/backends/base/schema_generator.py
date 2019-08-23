@@ -10,7 +10,7 @@ logger = logging.getLogger("tortoise")
 
 
 class BaseSchemaGenerator:
-    TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){comment};'
+    TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment};'
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE ({fields})"
@@ -21,7 +21,7 @@ class BaseSchemaGenerator:
         " ({backward_field}) ON DELETE CASCADE,\n"
         '    "{forward_key}" {forward_type} NOT NULL REFERENCES "{forward_table}"'
         " ({forward_field}) ON DELETE CASCADE\n"
-        "){comment};"
+        "){extra}{comment};"
     )
 
     FIELD_TYPE_MAP = {
@@ -85,6 +85,9 @@ class BaseSchemaGenerator:
         # default standard as applied under mysql like database. This can be
         # overwritten if required to match the database specific escaping.
         return comment.translate(get_escape_translation_table())
+
+    def _table_generate_extra(self, table: str) -> str:
+        return ""
 
     @staticmethod
     def _make_hash(*args: str, length: int) -> str:
@@ -226,6 +229,7 @@ class BaseSchemaGenerator:
             table_name=model._meta.table,
             fields=table_fields_string,
             comment=table_comment,
+            extra=self._table_generate_extra(table=model._meta.table),
         )
 
         # Indexes.
@@ -261,6 +265,7 @@ class BaseSchemaGenerator:
                 backward_type=self._get_field_type(model._meta.pk),
                 forward_key=field_object.forward_key,
                 forward_type=self._get_field_type(field_object.type._meta.pk),
+                extra=self._table_generate_extra(table=field_object.through),
                 comment=self._table_comment_generator(
                     table=field_object.through, comment=field_object.description
                 )

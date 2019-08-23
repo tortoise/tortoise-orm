@@ -253,7 +253,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
                                     "port": 3306,
                                     "user": "root",
                                     "connect_timeout": 1.5,
-                                    "charset": "utf-8",
+                                    "charset": "utf8mb4",
                                 },
                             }
                         },
@@ -304,17 +304,17 @@ CREATE TABLE `sometable` (
     `sometable_id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `some_chars_table` VARCHAR(255) NOT NULL,
     `fk_sometable` INT REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
-);
+) CHARACTER SET utf8mb4;
 CREATE INDEX `sometable_some_ch_115115_idx` ON `sometable` (some_chars_table);
 CREATE TABLE `team` (
     `name` VARCHAR(50) NOT NULL  COMMENT 'The TEAM name (and PK)',
     `manager_id` VARCHAR(50) REFERENCES `team` (`name`) ON DELETE CASCADE
-) COMMENT='The TEAMS!';
+) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE `tournament` (
     `tid` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` TEXT NOT NULL  COMMENT 'Tournament name',
     `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime'
-) COMMENT='What Tournaments */\\'`/* we have';
+) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
 CREATE INDEX `tournament_name_116110_idx` ON `tournament` (name);
 CREATE TABLE `event` (
     `id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
@@ -323,19 +323,19 @@ CREATE TABLE `event` (
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
     `tournament_id` INT NOT NULL COMMENT 'FK to tournament' REFERENCES `tournament` (`tid`) ON DELETE CASCADE
-) COMMENT='This table contains a list of all the events';
+) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
 CREATE TABLE `sometable_self` (
     `backward_sts` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
     `sts_forward` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
-);
+) CHARACTER SET utf8mb4;
 CREATE TABLE `team_team` (
     `team_rel_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE,
     `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
-);
+) CHARACTER SET utf8mb4;
 CREATE TABLE `teamevents` (
     `event_id` INT NOT NULL REFERENCES `event` (`id`) ON DELETE CASCADE,
     `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
-) COMMENT='How participants relate';
+) CHARACTER SET utf8mb4 COMMENT='How participants relate';
 """.strip(),  # noqa
         )
 
@@ -372,16 +372,16 @@ CREATE TABLE IF NOT EXISTS `sometable` (
     `sometable_id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `some_chars_table` VARCHAR(255) NOT NULL,
     `fk_sometable` INT REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
-);
+) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `team` (
     `name` VARCHAR(50) NOT NULL  COMMENT 'The TEAM name (and PK)',
     `manager_id` VARCHAR(50) REFERENCES `team` (`name`) ON DELETE CASCADE
-) COMMENT='The TEAMS!';
+) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE IF NOT EXISTS `tournament` (
     `tid` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` TEXT NOT NULL  COMMENT 'Tournament name',
     `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime'
-) COMMENT='What Tournaments */\\'`/* we have';
+) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
 CREATE TABLE IF NOT EXISTS `event` (
     `id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
     `name` TEXT NOT NULL UNIQUE,
@@ -389,19 +389,19 @@ CREATE TABLE IF NOT EXISTS `event` (
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
     `tournament_id` INT NOT NULL COMMENT 'FK to tournament' REFERENCES `tournament` (`tid`) ON DELETE CASCADE
-) COMMENT='This table contains a list of all the events';
+) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
 CREATE TABLE IF NOT EXISTS `sometable_self` (
     `backward_sts` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
     `sts_forward` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
-);
+) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `team_team` (
     `team_rel_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE,
     `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
-);
+) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `teamevents` (
     `event_id` INT NOT NULL REFERENCES `event` (`id`) ON DELETE CASCADE,
     `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
-) COMMENT='How participants relate';
+) CHARACTER SET utf8mb4 COMMENT='How participants relate';
 """.strip(),  # noqa
         )
 
