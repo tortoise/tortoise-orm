@@ -118,3 +118,5 @@ Parameters
     Echo SQL queries (debug only)
 ``no_delay``:
     Sets TCP NO_DELAY to disable Nagle.
+``charset``:
+    Sets the character set in use, defaults to ``utf8mb4``

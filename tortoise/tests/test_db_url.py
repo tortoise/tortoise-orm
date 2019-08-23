@@ -193,6 +193,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                     "password": "",
                     "port": 33060,
                     "user": "root",
+                    "charset": "utf8mb4",
                 },
             },
         )
@@ -209,6 +210,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                     "password": "",
                     "port": 33060,
                     "user": "root",
+                    "charset": "utf8mb4",
                 },
             },
         )
@@ -225,6 +227,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                     "password": "",
                     "port": 3306,
                     "user": "root",
+                    "charset": "utf8mb4",
                 },
             },
         )
@@ -247,6 +250,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                     "password": "",
                     "port": 3306,
                     "user": "root",
+                    "charset": "utf8mb4",
                 },
             },
         )
@@ -272,6 +276,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                     "maxsize": 20,
                     "connect_timeout": 1.5,
                     "echo": True,
+                    "charset": "utf8mb4",
                 },
             },
         )
