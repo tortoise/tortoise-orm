@@ -1,3 +1,5 @@
+from typing import Optional
+
 from tortoise import fields
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
@@ -23,8 +25,12 @@ class SqliteSchemaGenerator(BaseSchemaGenerator):
         _escape_table[ord("/")] = "\\/"
         return comment.translate(_escape_table)
 
-    def _get_primary_key_create_string(self, field_name: str, comment: str) -> str:
-        return '"{}" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL{}'.format(field_name, comment)
+    def _get_primary_key_create_string(
+        self, field_object: fields.Field, field_name: str, comment: str
+    ) -> Optional[str]:
+        if isinstance(field_object, (fields.SmallIntField, fields.IntField, fields.BigIntField)):
+            return '"{}" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL{}'.format(field_name, comment)
+        return None
 
     def _table_comment_generator(self, table: str, comment: str) -> str:
         return " /* {} */".format(self._escape_comment(comment))

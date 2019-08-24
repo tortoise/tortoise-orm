@@ -1,6 +1,6 @@
 import logging
 import warnings
-from typing import List, Set  # noqa
+from typing import List, Optional, Set  # noqa
 
 from tortoise import fields
 from tortoise.exceptions import ConfigurationError
@@ -59,7 +59,9 @@ class BaseSchemaGenerator:
 
         return field_creation_string
 
-    def _get_primary_key_create_string(self, field_name: str, comment: str) -> str:
+    def _get_primary_key_create_string(
+        self, field_object: fields.Field, field_name: str, comment: str
+    ) -> Optional[str]:
         # All databases have their unique way for autoincrement,
         # has to implement in children
         raise NotImplementedError()  # pragma: nocoverage
@@ -150,9 +152,11 @@ class BaseSchemaGenerator:
                 if field_object.description
                 else ""
             )
-            if isinstance(field_object, (fields.IntField, fields.BigIntField)) and field_object.pk:
-                fields_to_create.append(self._get_primary_key_create_string(db_field, comment))
-                continue
+            if field_object.pk:
+                pk_string = self._get_primary_key_create_string(field_object, db_field, comment)
+                if pk_string:
+                    fields_to_create.append(pk_string)
+                    continue
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
 

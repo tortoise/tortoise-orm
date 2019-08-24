@@ -120,12 +120,17 @@ class BigIntField(Field):
 class SmallIntField(Field):
     """
     Small integer field. (16-bit signed)
+
+    ``pk`` (bool):
+        True if field is Primary Key.
     """
 
     __slots__ = ()
 
-    def __init__(self, **kwargs) -> None:
-        super().__init__(int, **kwargs)
+    def __init__(self, pk: bool = False, **kwargs) -> None:
+        if pk:
+            kwargs["generated"] = bool(kwargs.get("generated", True))
+        super().__init__(int, pk=pk, **kwargs)
 
 
 class CharField(Field):

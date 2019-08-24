@@ -60,7 +60,7 @@ class TestGenerateSchema(test.SimpleTestCase):
         await self.init_for("tortoise.tests.testmodels")
         sql = self.get_sql('"minrelation"')
         self.assertIn(
-            '"tournament_id" INT NOT NULL REFERENCES "tournament" (id) ON DELETE CASCADE', sql
+            '"tournament_id" SMALLINT NOT NULL REFERENCES "tournament" (id) ON DELETE CASCADE', sql
         )
         self.assertNotIn("participants", sql)
 
@@ -172,7 +172,7 @@ CREATE TABLE "event" (
     "modified" TIMESTAMP NOT NULL,
     "prize" VARCHAR(40),
     "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
-    "tournament_id" INT NOT NULL REFERENCES "tournament" (tid) ON DELETE CASCADE /* FK to tournament */
+    "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" (tid) ON DELETE CASCADE /* FK to tournament */
 ) /* This table contains a list of all the events */;
 CREATE TABLE "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" (sometable_id) ON DELETE CASCADE,
@@ -183,7 +183,7 @@ CREATE TABLE "team_team" (
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
 );
 CREATE TABLE "teamevents" (
-    "event_id" INT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
+    "event_id" BIGINT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
 ) /* How participants relate */;
 """.strip(),  # noqa
@@ -219,7 +219,7 @@ CREATE TABLE IF NOT EXISTS "event" (
     "modified" TIMESTAMP NOT NULL,
     "prize" VARCHAR(40),
     "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
-    "tournament_id" INT NOT NULL REFERENCES "tournament" (tid) ON DELETE CASCADE /* FK to tournament */
+    "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" (tid) ON DELETE CASCADE /* FK to tournament */
 ) /* This table contains a list of all the events */;
 CREATE TABLE IF NOT EXISTS "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" (sometable_id) ON DELETE CASCADE,
@@ -230,7 +230,7 @@ CREATE TABLE IF NOT EXISTS "team_team" (
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS "teamevents" (
-    "event_id" INT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
+    "event_id" BIGINT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
 ) /* How participants relate */;
 """.strip(),  # noqa
@@ -274,7 +274,8 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
         await self.init_for("tortoise.tests.testmodels")
         sql = self.get_sql("`minrelation`")
         self.assertIn(
-            "`tournament_id` INT NOT NULL REFERENCES `tournament` (`id`) ON DELETE CASCADE", sql
+            "`tournament_id` SMALLINT NOT NULL REFERENCES `tournament` (`id`) ON DELETE CASCADE",
+            sql,
         )
         self.assertNotIn("participants", sql)
 
@@ -311,18 +312,18 @@ CREATE TABLE `team` (
     `manager_id` VARCHAR(50) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE `tournament` (
-    `tid` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `tid` SMALLINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` TEXT NOT NULL  COMMENT 'Tournament name',
     `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime'
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
 CREATE INDEX `tournament_name_116110_idx` ON `tournament` (name);
 CREATE TABLE `event` (
-    `id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
+    `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
     `name` TEXT NOT NULL UNIQUE,
     `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
-    `tournament_id` INT NOT NULL COMMENT 'FK to tournament' REFERENCES `tournament` (`tid`) ON DELETE CASCADE
+    `tournament_id` SMALLINT NOT NULL COMMENT 'FK to tournament' REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
 CREATE TABLE `sometable_self` (
     `backward_sts` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
@@ -333,7 +334,7 @@ CREATE TABLE `team_team` (
     `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `teamevents` (
-    `event_id` INT NOT NULL REFERENCES `event` (`id`) ON DELETE CASCADE,
+    `event_id` BIGINT NOT NULL REFERENCES `event` (`id`) ON DELETE CASCADE,
     `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
 """.strip(),  # noqa
@@ -378,17 +379,17 @@ CREATE TABLE IF NOT EXISTS `team` (
     `manager_id` VARCHAR(50) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE IF NOT EXISTS `tournament` (
-    `tid` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `tid` SMALLINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` TEXT NOT NULL  COMMENT 'Tournament name',
     `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime'
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
 CREATE TABLE IF NOT EXISTS `event` (
-    `id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
+    `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
     `name` TEXT NOT NULL UNIQUE,
     `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
-    `tournament_id` INT NOT NULL COMMENT 'FK to tournament' REFERENCES `tournament` (`tid`) ON DELETE CASCADE
+    `tournament_id` SMALLINT NOT NULL COMMENT 'FK to tournament' REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
 CREATE TABLE IF NOT EXISTS `sometable_self` (
     `backward_sts` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
@@ -399,7 +400,7 @@ CREATE TABLE IF NOT EXISTS `team_team` (
     `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `teamevents` (
-    `event_id` INT NOT NULL REFERENCES `event` (`id`) ON DELETE CASCADE,
+    `event_id` BIGINT NOT NULL REFERENCES `event` (`id`) ON DELETE CASCADE,
     `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
 """.strip(),  # noqa
@@ -469,7 +470,7 @@ CREATE TABLE "team" (
 COMMENT ON COLUMN team.name IS 'The TEAM name (and PK)';
 COMMENT ON TABLE team IS 'The TEAMS!';
 CREATE TABLE "tournament" (
-    "tid" SERIAL NOT NULL PRIMARY KEY,
+    "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "created" TIMESTAMP NOT NULL
 );
@@ -478,12 +479,12 @@ COMMENT ON COLUMN tournament.name IS 'Tournament name';
 COMMENT ON COLUMN tournament.created IS 'Created */''`/* datetime';
 COMMENT ON TABLE tournament IS 'What Tournaments */''`/* we have';
 CREATE TABLE "event" (
-    "id" SERIAL NOT NULL PRIMARY KEY,
+    "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL UNIQUE,
     "modified" TIMESTAMP NOT NULL,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
-    "tournament_id" INT NOT NULL REFERENCES "tournament" (tid) ON DELETE CASCADE
+    "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" (tid) ON DELETE CASCADE
 );
 COMMENT ON COLUMN event.id IS 'Event ID';
 COMMENT ON COLUMN event.token IS 'Unique token';
@@ -498,7 +499,7 @@ CREATE TABLE "team_team" (
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
 );
 CREATE TABLE "teamevents" (
-    "event_id" INT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
+    "event_id" BIGINT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
 );
 COMMENT ON TABLE teamevents IS 'How participants relate';
@@ -526,7 +527,7 @@ CREATE TABLE IF NOT EXISTS "team" (
 COMMENT ON COLUMN team.name IS 'The TEAM name (and PK)';
 COMMENT ON TABLE team IS 'The TEAMS!';
 CREATE TABLE IF NOT EXISTS "tournament" (
-    "tid" SERIAL NOT NULL PRIMARY KEY,
+    "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
     "created" TIMESTAMP NOT NULL
 );
@@ -535,12 +536,12 @@ COMMENT ON COLUMN tournament.name IS 'Tournament name';
 COMMENT ON COLUMN tournament.created IS 'Created */''`/* datetime';
 COMMENT ON TABLE tournament IS 'What Tournaments */''`/* we have';
 CREATE TABLE IF NOT EXISTS "event" (
-    "id" SERIAL NOT NULL PRIMARY KEY,
+    "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL UNIQUE,
     "modified" TIMESTAMP NOT NULL,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
-    "tournament_id" INT NOT NULL REFERENCES "tournament" (tid) ON DELETE CASCADE
+    "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" (tid) ON DELETE CASCADE
 );
 COMMENT ON COLUMN event.id IS 'Event ID';
 COMMENT ON COLUMN event.token IS 'Unique token';
@@ -555,7 +556,7 @@ CREATE TABLE IF NOT EXISTS "team_team" (
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS "teamevents" (
-    "event_id" INT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
+    "event_id" BIGINT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
 );
 COMMENT ON TABLE teamevents IS 'How participants relate';
