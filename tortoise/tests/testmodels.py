@@ -157,6 +157,7 @@ class JSONFields(Model):
     id = fields.IntField(pk=True)
     data = fields.JSONField()
     data_null = fields.JSONField(null=True)
+    data_default = fields.JSONField(default={"a": 1})
 
 
 class UUIDFields(Model):
@@ -344,17 +345,33 @@ class Employee(Model):
 
 
 class StraightFields(Model):
-    id = fields.IntField(pk=True)
-    chars = fields.CharField(max_length=255, index=True)
-    fk = fields.ForeignKeyField("models.StraightFields", related_name="fkrev", null=True)
-    rel_to = fields.ManyToManyField("models.StraightFields", related_name="rel_from")
+    id = fields.IntField(pk=True, description="Da PK")
+    chars = fields.CharField(max_length=255, index=True, description="Some chars")
+    blip = fields.CharField(max_length=255, default="BLIP")
+    fk = fields.ForeignKeyField(
+        "models.StraightFields", related_name="fkrev", null=True, description="Tree!"
+    )
+    rel_to = fields.ManyToManyField(
+        "models.StraightFields", related_name="rel_from", description="M2M to myself"
+    )
+
+    class Meta:
+        unique_together = [["chars", "blip"]]
+        table_description = "Straight auto-mapped fields"
 
 
 class SourceFields(Model):
-    id = fields.IntField(pk=True, source_field="sometable_id")
-    chars = fields.CharField(max_length=255, source_field="some_chars_table", index=True)
+    id = fields.IntField(pk=True, source_field="sometable_id", description="Da PK")
+    chars = fields.CharField(
+        max_length=255, source_field="some_chars_table", index=True, description="Some chars"
+    )
+    blip = fields.CharField(max_length=255, default="BLIP", source_field="da_blip")
     fk = fields.ForeignKeyField(
-        "models.SourceFields", related_name="fkrev", null=True, source_field="fk_sometable"
+        "models.SourceFields",
+        related_name="fkrev",
+        null=True,
+        source_field="fk_sometable",
+        description="Tree!",
     )
     rel_to = fields.ManyToManyField(
         "models.SourceFields",
@@ -362,7 +379,10 @@ class SourceFields(Model):
         through="sometable_self",
         forward_key="sts_forward",
         backward_key="backward_sts",
+        description="M2M to myself",
     )
 
     class Meta:
         table = "sometable"
+        unique_together = [["chars", "blip"]]
+        table_description = "Source mapped fields"

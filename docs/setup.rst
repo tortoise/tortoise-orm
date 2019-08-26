@@ -52,9 +52,7 @@ The small helper function ``tortoise.run_async()`` will ensure that connections 
 Reference
 =========
 
-.. autoclass:: tortoise.Tortoise
+.. automodule:: tortoise
     :members:
     :undoc-members:
-
-.. autofunction:: tortoise.run_async
 

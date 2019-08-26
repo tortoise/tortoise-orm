@@ -9,7 +9,6 @@ Our short term goal is to ship the current implementation as MVP, just somewhat 
 
 For ``v1.0`` that involves:
 
-* Schema discovery
 * Timezone support
 * DB transaction isolation
 * Connection pooling

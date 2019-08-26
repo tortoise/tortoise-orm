@@ -158,7 +158,7 @@ CREATE TABLE "sometable" (
 CREATE INDEX "sometable_some_ch_115115_idx" ON "sometable" (some_chars_table);
 CREATE TABLE "team" (
     "name" VARCHAR(50) NOT NULL  PRIMARY KEY /* The TEAM name (and PK) */,
-    "manager_id" VARCHAR(50)   /* The TEAM name (and PK) */ REFERENCES "team" (name) ON DELETE CASCADE
+    "manager_id" VARCHAR(50) REFERENCES "team" (name) ON DELETE CASCADE
 ) /* The TEAMS! */;
 CREATE TABLE "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -205,7 +205,7 @@ CREATE TABLE IF NOT EXISTS "sometable" (
 CREATE INDEX IF NOT EXISTS "sometable_some_ch_115115_idx" ON "sometable" (some_chars_table);
 CREATE TABLE IF NOT EXISTS "team" (
     "name" VARCHAR(50) NOT NULL  PRIMARY KEY /* The TEAM name (and PK) */,
-    "manager_id" VARCHAR(50)   /* The TEAM name (and PK) */ REFERENCES "team" (name) ON DELETE CASCADE
+    "manager_id" VARCHAR(50) REFERENCES "team" (name) ON DELETE CASCADE
 ) /* The TEAMS! */;
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -308,7 +308,7 @@ CREATE TABLE `sometable` (
 CREATE INDEX `sometable_some_ch_115115_idx` ON `sometable` (some_chars_table);
 CREATE TABLE `team` (
     `name` VARCHAR(50) NOT NULL  COMMENT 'The TEAM name (and PK)',
-    `manager_id` VARCHAR(50)   COMMENT 'The TEAM name (and PK)' REFERENCES `team` (`name`) ON DELETE CASCADE
+    `manager_id` VARCHAR(50) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE `tournament` (
     `tid` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -322,7 +322,7 @@ CREATE TABLE `event` (
     `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
-    `tournament_id` INT NOT NULL REFERENCES `tournament` (`tid`) ON DELETE CASCADE COMMENT 'FK to tournament'
+    `tournament_id` INT NOT NULL COMMENT 'FK to tournament' REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
 CREATE TABLE `sometable_self` (
     `backward_sts` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
@@ -375,7 +375,7 @@ CREATE TABLE IF NOT EXISTS `sometable` (
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `team` (
     `name` VARCHAR(50) NOT NULL  COMMENT 'The TEAM name (and PK)',
-    `manager_id` VARCHAR(50)   COMMENT 'The TEAM name (and PK)' REFERENCES `team` (`name`) ON DELETE CASCADE
+    `manager_id` VARCHAR(50) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE IF NOT EXISTS `tournament` (
     `tid` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -388,7 +388,7 @@ CREATE TABLE IF NOT EXISTS `event` (
     `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
-    `tournament_id` INT NOT NULL REFERENCES `tournament` (`tid`) ON DELETE CASCADE COMMENT 'FK to tournament'
+    `tournament_id` INT NOT NULL COMMENT 'FK to tournament' REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
 CREATE TABLE IF NOT EXISTS `sometable_self` (
     `backward_sts` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
@@ -467,7 +467,6 @@ CREATE TABLE "team" (
     "manager_id" VARCHAR(50) REFERENCES "team" (name) ON DELETE CASCADE
 );
 COMMENT ON COLUMN team.name IS 'The TEAM name (and PK)';
-COMMENT ON COLUMN team.manager_id IS 'The TEAM name (and PK)';
 COMMENT ON TABLE team IS 'The TEAMS!';
 CREATE TABLE "tournament" (
     "tid" SERIAL NOT NULL PRIMARY KEY,
@@ -525,7 +524,6 @@ CREATE TABLE IF NOT EXISTS "team" (
     "manager_id" VARCHAR(50) REFERENCES "team" (name) ON DELETE CASCADE
 );
 COMMENT ON COLUMN team.name IS 'The TEAM name (and PK)';
-COMMENT ON COLUMN team.manager_id IS 'The TEAM name (and PK)';
 COMMENT ON TABLE team IS 'The TEAMS!';
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" SERIAL NOT NULL PRIMARY KEY,

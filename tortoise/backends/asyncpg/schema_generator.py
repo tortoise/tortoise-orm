@@ -38,7 +38,8 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
         comment = self.COLUMN_COMMNET_TEMPLATE.format(
             table=table, column=column, comment=self._escape_comment(comment)
         )
-        self.comments_array.append(comment)
+        if comment not in self.comments_array:
+            self.comments_array.append(comment)
         return ""
 
     def _post_table_hook(self) -> str:
