@@ -2,7 +2,7 @@ from copy import copy
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Type  # noqa
 
-from pypika import JoinType, Table
+from pypika import JoinType, Parameter, Query, Table  # noqa
 
 from tortoise import fields
 from tortoise.exceptions import OperationalError
@@ -11,7 +11,7 @@ from tortoise.query_utils import QueryModifier
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
-INSERT_CACHE = {}  # type: Dict[str, Tuple[list, str, Dict[str, Callable]]]
+INSERT_CACHE = {}  # type: Dict[str, Tuple[list, str, Dict[str, Callable], Query, str]]
 
 
 class BaseExecutor:
@@ -39,9 +39,31 @@ class BaseExecutor:
                     func = field_object.to_db_value
                 self.column_map[column] = func
 
-            INSERT_CACHE[key] = self.regular_columns, self.query, self.column_map
+            table = Table(self.model._meta.table)
+            self.update_query = self.db.query_class.update(table).where(
+                getattr(table, self.model._meta.db_pk_field) == self.Parameter(0)
+            )
+            self.delete_query = str(
+                self.model._meta.basequery.where(
+                    getattr(table, self.model._meta.db_pk_field) == self.Parameter(0)
+                ).delete()
+            )
+
+            INSERT_CACHE[key] = (
+                self.regular_columns,
+                self.query,
+                self.column_map,
+                self.update_query,
+                self.delete_query,
+            )
         else:
-            self.regular_columns, self.query, self.column_map = INSERT_CACHE[key]
+            (
+                self.regular_columns,
+                self.query,
+                self.column_map,
+                self.update_query,
+                self.delete_query,
+            ) = INSERT_CACHE[key]
 
     async def execute_explain(self, query) -> Any:
         sql = " ".join((self.EXPLAIN_PREFIX, query.get_sql()))
@@ -78,9 +100,16 @@ class BaseExecutor:
         # Insert should implement returning new id to saved object
         # Each db has it's own methods for it, so each implementation should
         # go to descendant executors
-        raise NotImplementedError()  # pragma: nocoverage
+        return str(
+            self.db.query_class.into(Table(self.model._meta.table))
+            .columns(*columns)
+            .insert(*[self.Parameter(i) for i in range(len(columns))])
+        )
 
     async def _process_insert_result(self, instance: "Model", results: Any):
+        raise NotImplementedError()  # pragma: nocoverage
+
+    def Parameter(self, pos: int) -> Parameter:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, instance):
@@ -102,8 +131,7 @@ class BaseExecutor:
         await self.db.execute_many(self.query, values_lists)
 
     async def execute_update(self, instance, update_fields):
-        table = Table(self.model._meta.table)
-        query = self.db.query_class.update(table)
+        query = self.update_query
         if update_fields:
             for field in update_fields:
                 db_field = self.model._meta.fields_db_projection[field]
@@ -119,19 +147,14 @@ class BaseExecutor:
                     query = query.set(
                         db_field, self.column_map[field](getattr(instance, field), instance)
                     )
-        query = query.where(
-            getattr(table, self.model._meta.db_pk_field)
-            == self.model._meta.pk.to_db_value(instance.pk, instance)
+        await self.db.execute_query(
+            query.get_sql(), [self.model._meta.pk.to_db_value(instance.pk, instance)]
         )
-        await self.db.execute_query(query.get_sql())
 
     async def execute_delete(self, instance):
-        table = Table(self.model._meta.table)
-        query = self.model._meta.basequery.where(
-            getattr(table, self.model._meta.db_pk_field)
-            == self.model._meta.pk.to_db_value(instance.pk, instance)
-        ).delete()
-        await self.db.execute_query(query.get_sql())
+        await self.db.execute_query(
+            self.delete_query, [self.model._meta.pk.to_db_value(instance.pk, instance)]
+        )
         return instance
 
     async def _prefetch_reverse_relation(

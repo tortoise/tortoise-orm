@@ -10,11 +10,14 @@ from tortoise.backends.base.executor import BaseExecutor
 class AsyncpgExecutor(BaseExecutor):
     EXPLAIN_PREFIX = "EXPLAIN (FORMAT JSON, VERBOSE)"
 
+    def Parameter(self, pos: int) -> Parameter:
+        return Parameter("$%d" % (pos + 1,))
+
     def _prepare_insert_statement(self, columns: List[str]) -> str:
         query = (
             self.db.query_class.into(Table(self.model._meta.table))
             .columns(*columns)
-            .insert(*[Parameter("$%d" % (i + 1,)) for i in range(len(columns))])
+            .insert(*[self.Parameter(i) for i in range(len(columns))])
         )
         generated_fields = self.model._meta.generated_db_fields
         if generated_fields:

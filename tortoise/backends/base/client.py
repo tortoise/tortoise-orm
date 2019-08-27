@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Sequence
+from typing import Any, Optional, Sequence
 
 from pypika import Query
 
@@ -90,7 +90,7 @@ class BaseDBAsyncClient:
     async def execute_insert(self, query: str, values: list) -> Any:
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def execute_query(self, query: str) -> Sequence[dict]:
+    async def execute_query(self, query: str, values: Optional[list] = None) -> Sequence[dict]:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_script(self, query: str) -> None:

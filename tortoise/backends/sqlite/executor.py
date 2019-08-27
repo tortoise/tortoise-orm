@@ -1,8 +1,8 @@
 import datetime
 from decimal import Decimal
-from typing import List, Optional
+from typing import Optional
 
-from pypika import Parameter, Table
+from pypika import Parameter
 
 from tortoise import Model, fields
 from tortoise.backends.base.executor import BaseExecutor
@@ -47,12 +47,8 @@ class SqliteExecutor(BaseExecutor):
     }
     EXPLAIN_PREFIX = "EXPLAIN QUERY PLAN"
 
-    def _prepare_insert_statement(self, columns: List[str]) -> str:
-        return str(
-            self.db.query_class.into(Table(self.model._meta.table))
-            .columns(*columns)
-            .insert(*[Parameter("?") for _ in range(len(columns))])
-        )
+    def Parameter(self, pos: int) -> Parameter:
+        return Parameter("?")
 
     async def _process_insert_result(self, instance: Model, results: int):
         pk_field_object = self.model._meta.pk
