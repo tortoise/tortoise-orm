@@ -11,7 +11,9 @@ from tortoise.query_utils import QueryModifier
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
-INSERT_CACHE = {}  # type: Dict[str, Tuple[list, str, Dict[str, Callable], Query, str]]
+INSERT_CACHE = (
+    {}
+)  # type: Dict[str, Tuple[list, str, Dict[str, Callable], Query, str, Dict[str, str]]]
 
 
 class BaseExecutor:
@@ -48,6 +50,7 @@ class BaseExecutor:
                     getattr(table, self.model._meta.db_pk_field) == self.Parameter(0)
                 ).delete()
             )
+            self.update_cache = {}  # type: Dict[str, str]
 
             INSERT_CACHE[key] = (
                 self.regular_columns,
@@ -55,6 +58,7 @@ class BaseExecutor:
                 self.column_map,
                 self.update_query,
                 self.delete_query,
+                self.update_cache,
             )
         else:
             (
@@ -63,6 +67,7 @@ class BaseExecutor:
                 self.column_map,
                 self.update_query,
                 self.delete_query,
+                self.update_cache,
             ) = INSERT_CACHE[key]
 
     async def execute_explain(self, query) -> Any:
@@ -130,26 +135,55 @@ class BaseExecutor:
         ]
         await self.db.execute_many(self.query, values_lists)
 
-    async def execute_update(self, instance, update_fields):
+    def get_update_sql(self, update_fields: Optional[List[str]]) -> str:
+        """
+        Generates the SQL for updating a model depending on provided update_fields.
+        Result is cached for performance.
+        """
         query = self.update_query
         if update_fields:
+            key = ",".join(update_fields)
+            if key in self.update_cache:
+                sql = self.update_cache[key]
+            else:
+                count = 1
+                for field in update_fields:
+                    db_field = self.model._meta.fields_db_projection[field]
+                    field_object = self.model._meta.fields_map[field]
+                    if not field_object.generated:
+                        query = query.set(db_field, self.Parameter(count))
+                        count += 1
+                sql = self.update_cache[key] = query.get_sql()
+
+        else:
+            if "" in self.update_cache:
+                sql = self.update_cache[""]
+            else:
+                count = 1
+                for field, db_field in self.model._meta.fields_db_projection.items():
+                    field_object = self.model._meta.fields_map[field]
+                    if not field_object.generated:
+                        query = query.set(db_field, self.Parameter(count))
+                        count += 1
+                sql = self.update_cache[""] = query.get_sql()
+
+        return sql
+
+    async def execute_update(self, instance, update_fields: Optional[List[str]]) -> None:
+        values = []
+        if update_fields:
             for field in update_fields:
-                db_field = self.model._meta.fields_db_projection[field]
                 field_object = self.model._meta.fields_map[field]
                 if not field_object.generated:
-                    query = query.set(
-                        db_field, self.column_map[field](getattr(instance, field), instance)
-                    )
+                    values.append(self.column_map[field](getattr(instance, field), instance))
         else:
             for field, db_field in self.model._meta.fields_db_projection.items():
                 field_object = self.model._meta.fields_map[field]
                 if not field_object.generated:
-                    query = query.set(
-                        db_field, self.column_map[field](getattr(instance, field), instance)
-                    )
-        await self.db.execute_query(
-            query.get_sql(), [self.model._meta.pk.to_db_value(instance.pk, instance)]
-        )
+                    values.append(self.column_map[field](getattr(instance, field), instance))
+
+        values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
+        await self.db.execute_query(self.get_update_sql(update_fields), values)
 
     async def execute_delete(self, instance):
         await self.db.execute_query(
