@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from typing import AsyncContextManager
 
 from contextvars import ContextVar
-current_transaction = ContextVar("Current TransactionWrapper obj")
+current_transaction = ContextVar("Current TransactionWrapper obj", default=None)
 
 
 def retry_connection(func):
