@@ -2,7 +2,7 @@ from copy import copy
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Type  # noqa
 
-from pypika import JoinType, Parameter, Table  # noqa
+from pypika import JoinType, Parameter, Table
 
 from tortoise import fields
 from tortoise.exceptions import OperationalError
