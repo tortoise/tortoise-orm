@@ -30,20 +30,3 @@ class AsyncpgExecutor(BaseExecutor):
             db_projection = instance._meta.fields_db_projection_reverse
             for key, val in zip(generated_fields, results):
                 setattr(instance, db_projection[key], val)
-
-    async def execute_update(self, instance, update_fields: Optional[List[str]]) -> None:
-        # The only difference is Postgres respects the parameter ordering,
-        # so we need to put PK at front.
-        values = [self.model._meta.pk.to_db_value(instance.pk, instance)]
-        if update_fields:
-            for field in update_fields:
-                field_object = self.model._meta.fields_map[field]
-                if not field_object.generated:
-                    values.append(self.column_map[field](getattr(instance, field), instance))
-        else:
-            for field, db_field in self.model._meta.fields_db_projection.items():
-                field_object = self.model._meta.fields_map[field]
-                if not field_object.generated:
-                    values.append(self.column_map[field](getattr(instance, field), instance))
-
-        await self.db.execute_query(self.get_update_sql(update_fields), values)

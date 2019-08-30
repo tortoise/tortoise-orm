@@ -2,7 +2,7 @@ from copy import copy
 from functools import partial
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Type  # noqa
 
-from pypika import JoinType, Parameter, Query, Table  # noqa
+from pypika import JoinType, Parameter, Table  # noqa
 
 from tortoise import fields
 from tortoise.exceptions import OperationalError
@@ -11,9 +11,7 @@ from tortoise.query_utils import QueryModifier
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
-INSERT_CACHE = (
-    {}
-)  # type: Dict[str, Tuple[list, str, Dict[str, Callable], Query, str, Dict[str, str]]]
+EXECUTOR_CACHE = {}  # type: Dict[str, Tuple[list, str, Dict[str, Callable], str, Dict[str, str]]]
 
 
 class BaseExecutor:
@@ -28,9 +26,9 @@ class BaseExecutor:
         self._prefetch_queries = prefetch_queries if prefetch_queries else {}
 
         key = "{}:{}".format(self.db.connection_name, self.model._meta.table)
-        if key not in INSERT_CACHE:
+        if key not in EXECUTOR_CACHE:
             self.regular_columns, columns = self._prepare_insert_columns()
-            self.query = self._prepare_insert_statement(columns)
+            self.insert_query = self._prepare_insert_statement(columns)
 
             self.column_map = {}  # type: Dict[str, Callable]
             for column in self.regular_columns:
@@ -42,9 +40,6 @@ class BaseExecutor:
                 self.column_map[column] = func
 
             table = Table(self.model._meta.table)
-            self.update_query = self.db.query_class.update(table).where(
-                getattr(table, self.model._meta.db_pk_field) == self.Parameter(0)
-            )
             self.delete_query = str(
                 self.model._meta.basequery.where(
                     getattr(table, self.model._meta.db_pk_field) == self.Parameter(0)
@@ -52,23 +47,21 @@ class BaseExecutor:
             )
             self.update_cache = {}  # type: Dict[str, str]
 
-            INSERT_CACHE[key] = (
+            EXECUTOR_CACHE[key] = (
                 self.regular_columns,
-                self.query,
+                self.insert_query,
                 self.column_map,
-                self.update_query,
                 self.delete_query,
                 self.update_cache,
             )
         else:
             (
                 self.regular_columns,
-                self.query,
+                self.insert_query,
                 self.column_map,
-                self.update_query,
                 self.delete_query,
                 self.update_cache,
-            ) = INSERT_CACHE[key]
+            ) = EXECUTOR_CACHE[key]
 
     async def execute_explain(self, query) -> Any:
         sql = " ".join((self.EXPLAIN_PREFIX, query.get_sql()))
@@ -122,7 +115,7 @@ class BaseExecutor:
             self.column_map[column](getattr(instance, column), instance)
             for column in self.regular_columns
         ]
-        insert_result = await self.db.execute_insert(self.query, values)
+        insert_result = await self.db.execute_insert(self.insert_query, values)
         await self._process_insert_result(instance, insert_result)
 
     async def execute_bulk_insert(self, instances):
@@ -133,55 +126,38 @@ class BaseExecutor:
             ]
             for instance in instances
         ]
-        await self.db.execute_many(self.query, values_lists)
+        await self.db.execute_many(self.insert_query, values_lists)
 
     def get_update_sql(self, update_fields: Optional[List[str]]) -> str:
         """
         Generates the SQL for updating a model depending on provided update_fields.
         Result is cached for performance.
         """
-        query = self.update_query
-        if update_fields:
-            key = ",".join(update_fields)
-            if key in self.update_cache:
-                sql = self.update_cache[key]
-            else:
-                count = 1
-                for field in update_fields:
-                    db_field = self.model._meta.fields_db_projection[field]
-                    field_object = self.model._meta.fields_map[field]
-                    if not field_object.generated:
-                        query = query.set(db_field, self.Parameter(count))
-                        count += 1
-                sql = self.update_cache[key] = query.get_sql()
+        key = ",".join(update_fields) if update_fields else ""
+        if key in self.update_cache:
+            return self.update_cache[key]
 
-        else:
-            if "" in self.update_cache:
-                sql = self.update_cache[""]
-            else:
-                count = 1
-                for field, db_field in self.model._meta.fields_db_projection.items():
-                    field_object = self.model._meta.fields_map[field]
-                    if not field_object.generated:
-                        query = query.set(db_field, self.Parameter(count))
-                        count += 1
-                sql = self.update_cache[""] = query.get_sql()
+        table = Table(self.model._meta.table)
+        query = self.db.query_class.update(table)
+        count = 0
+        for field in update_fields or self.model._meta.fields_db_projection.keys():
+            db_field = self.model._meta.fields_db_projection[field]
+            field_object = self.model._meta.fields_map[field]
+            if not field_object.pk:
+                query = query.set(db_field, self.Parameter(count))
+                count += 1
 
+        query = query.where(getattr(table, self.model._meta.db_pk_field) == self.Parameter(count))
+
+        sql = self.update_cache[key] = query.get_sql()
         return sql
 
     async def execute_update(self, instance, update_fields: Optional[List[str]]) -> None:
-        values = []
-        if update_fields:
-            for field in update_fields:
-                field_object = self.model._meta.fields_map[field]
-                if not field_object.generated:
-                    values.append(self.column_map[field](getattr(instance, field), instance))
-        else:
-            for field, db_field in self.model._meta.fields_db_projection.items():
-                field_object = self.model._meta.fields_map[field]
-                if not field_object.generated:
-                    values.append(self.column_map[field](getattr(instance, field), instance))
-
+        values = [
+            self.column_map[field](getattr(instance, field), instance)
+            for field in update_fields or self.model._meta.fields_db_projection.keys()
+            if not self.model._meta.fields_map[field].pk
+        ]
         values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
         await self.db.execute_query(self.get_update_sql(update_fields), values)
 
