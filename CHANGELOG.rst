@@ -2,6 +2,16 @@
 
 Changelog
 =========
+0.13.2
+------
+* Security fixes for ``«model».save()`` & ``«model».dete()``:
+
+  This is now fully parametrized, and these operations are no longer susceptible to escaping issues.
+
+- Simple update is now ~3-6× faster
+- Partial update is now ~3× faster
+- Delete is now ~2.7x faster
+
 0.13.1
 ------
 * Model schema now has a discovery API:
