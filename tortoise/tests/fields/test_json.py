@@ -17,6 +17,13 @@ class TestJSONFields(test.TestCase):
         obj2 = await testmodels.JSONFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
 
+    async def test_update(self):
+        obj0 = await testmodels.JSONFields.create(data={"some": ["text", 3]})
+        await testmodels.JSONFields.filter(id=obj0.id).update(data={"other": ["text", 5]})
+        obj = await testmodels.JSONFields.get(id=obj0.id)
+        self.assertEqual(obj.data, {"other": ["text", 5]})
+        self.assertEqual(obj.data_null, None)
+
     async def test_list(self):
         obj0 = await testmodels.JSONFields.create(data=["text", 3])
         obj = await testmodels.JSONFields.get(id=obj0.id)

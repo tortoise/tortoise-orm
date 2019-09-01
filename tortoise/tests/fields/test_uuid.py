@@ -29,6 +29,15 @@ class TestUUIDFields(test.TestCase):
         obj = await testmodels.UUIDFields.filter(id=obj0.id).first()
         self.assertEqual(obj, None)
 
+    async def test_update(self):
+        data = uuid.uuid4()
+        data2 = uuid.uuid4()
+        obj0 = await testmodels.UUIDFields.create(data=data)
+        await testmodels.UUIDFields.filter(id=obj0.id).update(data=data2)
+        obj = await testmodels.UUIDFields.get(id=obj0.id)
+        self.assertEqual(obj.data, data2)
+        self.assertEqual(obj.data_null, None)
+
     async def test_create_not_null(self):
         data = uuid.uuid4()
         obj0 = await testmodels.UUIDFields.create(data=data, data_null=data)

@@ -507,18 +507,24 @@ class UpdateQuery(AwaitableQuery):
             annotations=self.annotations,
             custom_filters=self.custom_filters,
         )
+        # Need to get executor to get correct column_map
+        executor = self._db.executor_class(model=self.model, db=self._db)
 
         for key, value in self.update_kwargs.items():
             field_object = self.model._meta.fields_map.get(key)
             if not field_object:
                 raise FieldError("Unknown keyword argument {} for model {}".format(key, self.model))
             if field_object.generated:
-                raise IntegrityError("Field {} is generated and can not be updated")
-            if isinstance(field_object, fields.ForeignKeyField):
+                raise IntegrityError("Field {} is generated and can not be updated".format(key))
+            if key in self.model._meta.db_fields:
+                db_field = self.model._meta.fields_db_projection[key]
+                value = executor.column_map[key](value, None)
+            elif isinstance(field_object, fields.ForeignKeyField):
                 db_field = "{}_id".format(key)
                 value = value.id
             else:
-                db_field = self.model._meta.fields_db_projection[key]
+                raise FieldError("Field {} is virtual and can not be updated".format(key))
+
             self.query = self.query.set(db_field, value)
 
     async def _execute(self):
