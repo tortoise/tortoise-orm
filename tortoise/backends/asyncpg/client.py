@@ -171,10 +171,15 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
     @translate_exceptions
     @retry_connection
-    async def execute_query(self, query: str) -> List[dict]:
+    async def execute_query(self, query: str, values: Optional[list] = None) -> List[dict]:
         async with self.acquire_connection() as connection:
-            self.log.debug(query)
-            return await connection.fetch(query)
+            self.log.debug("%s: %s", query, values)
+            if values:
+                # TODO: Cache prepared statement
+                stmt = await connection.prepare(query)
+                return await stmt.fetch(*values)
+            else:
+                return await connection.fetch(query)
 
     @translate_exceptions
     @retry_connection

@@ -175,11 +175,13 @@ class MySQLClient(BaseDBAsyncClient):
 
     @translate_exceptions
     @retry_connection
-    async def execute_query(self, query: str) -> List[aiomysql.DictCursor]:
+    async def execute_query(
+        self, query: str, values: Optional[list] = None
+    ) -> List[aiomysql.DictCursor]:
         async with self.acquire_connection() as connection:
-            self.log.debug(query)
+            self.log.debug("%s: %s", query, values)
             async with connection.cursor(aiomysql.DictCursor) as cursor:
-                await cursor.execute(query)
+                await cursor.execute(query, values)
                 return await cursor.fetchall()
 
     @translate_exceptions

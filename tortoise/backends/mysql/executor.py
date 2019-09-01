@@ -1,6 +1,4 @@
-from typing import List
-
-from pypika import MySQLQuery, Parameter, Table, functions
+from pypika import Parameter, functions
 from pypika.enums import SqlTypes
 
 from tortoise import Model
@@ -57,12 +55,8 @@ class MySQLExecutor(BaseExecutor):
     }
     EXPLAIN_PREFIX = "EXPLAIN FORMAT=JSON"
 
-    def _prepare_insert_statement(self, columns: List[str]) -> str:
-        return str(
-            MySQLQuery.into(Table(self.model._meta.table))
-            .columns(*columns)
-            .insert(*[Parameter("%s") for _ in range(len(columns))])
-        )
+    def Parameter(self, pos: int) -> Parameter:
+        return Parameter("%s")
 
     async def _process_insert_result(self, instance: Model, results: int):
         pk_field_object = self.model._meta.pk
