@@ -2,6 +2,10 @@
 
 Changelog
 =========
+0.13.3
+------
+- ``«queryset».update(…)`` now correctly uses the DB-specific ``to_db_value()``
+
 0.13.2
 ------
 * Security fixes for ``«model».save()`` & ``«model».dete()``:
