@@ -3,7 +3,7 @@ from pypika.enums import SqlTypes
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
-from tortoise.fields import BigIntField, IntField
+from tortoise.fields import BigIntField, IntField, SmallIntField
 from tortoise.filters import (
     contains,
     ends_with,
@@ -60,7 +60,10 @@ class MySQLExecutor(BaseExecutor):
 
     async def _process_insert_result(self, instance: Model, results: int):
         pk_field_object = self.model._meta.pk
-        if isinstance(pk_field_object, (IntField, BigIntField)) and pk_field_object.generated:
+        if (
+            isinstance(pk_field_object, (SmallIntField, IntField, BigIntField))
+            and pk_field_object.generated
+        ):
             instance.pk = results
 
         # MySQL can only generate a single ROWID

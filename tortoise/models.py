@@ -208,7 +208,7 @@ class ModelMeta(type):
                                 "only single pk are supported".format(name)
                             )
                         if value.generated and not isinstance(
-                            value, (fields.IntField, fields.BigIntField)
+                            value, (fields.SmallIntField, fields.IntField, fields.BigIntField)
                         ):
                             raise ConfigurationError(
                                 "Generated primary key allowed only for IntField and BigIntField"

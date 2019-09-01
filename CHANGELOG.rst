@@ -11,6 +11,8 @@ Changelog
 - Simple update is now ~3-6× faster
 - Partial update is now ~3× faster
 - Delete is now ~2.7x faster
+- Fix generated Schema Primary Key for ``BigIntField`` for MySQL and PostgreSQL.
+- Added support for using a ``SmallIntField`` as a auto-gen Primary Key.
 
 0.13.1
 ------

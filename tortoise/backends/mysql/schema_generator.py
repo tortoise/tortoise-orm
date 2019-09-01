@@ -1,3 +1,5 @@
+from typing import Optional
+
 from tortoise import fields
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
@@ -22,8 +24,22 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         fields.TextField: "TEXT",
     }
 
-    def _get_primary_key_create_string(self, field_name: str, comment: str) -> str:
-        return "`{}` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT{}".format(field_name, comment)
+    def _get_primary_key_create_string(
+        self, field_object: fields.Field, field_name: str, comment: str
+    ) -> Optional[str]:
+        if isinstance(field_object, fields.SmallIntField):
+            return "`{}` SMALLINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT{}".format(
+                field_name, comment
+            )
+        if isinstance(field_object, fields.IntField):
+            return "`{}` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT{}".format(
+                field_name, comment
+            )
+        if isinstance(field_object, fields.BigIntField):
+            return "`{}` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT{}".format(
+                field_name, comment
+            )
+        return None
 
     def _table_generate_extra(self, table: str) -> str:
         return " CHARACTER SET {}".format(self.client.charset) if self.client.charset else ""

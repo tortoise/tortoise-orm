@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from tortoise import fields
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
@@ -19,8 +19,16 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
         super().__init__(*args, **kwargs)
         self.comments_array = []  # type: List[str]
 
-    def _get_primary_key_create_string(self, field_name: str, comment: str) -> str:
-        return '"{}" SERIAL NOT NULL PRIMARY KEY'.format(field_name)
+    def _get_primary_key_create_string(
+        self, field_object: fields.Field, field_name: str, comment: str
+    ) -> Optional[str]:
+        if isinstance(field_object, fields.SmallIntField):
+            return '"{}" SMALLSERIAL NOT NULL PRIMARY KEY'.format(field_name)
+        if isinstance(field_object, fields.IntField):
+            return '"{}" SERIAL NOT NULL PRIMARY KEY'.format(field_name)
+        if isinstance(field_object, fields.BigIntField):
+            return '"{}" BIGSERIAL NOT NULL PRIMARY KEY'.format(field_name)
+        return None
 
     def _escape_comment(self, comment: str) -> str:
         table = get_escape_translation_table()
