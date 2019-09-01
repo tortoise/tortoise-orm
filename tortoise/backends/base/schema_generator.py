@@ -88,7 +88,7 @@ class BaseSchemaGenerator:
         # overwritten if required to match the database specific escaping.
         return comment.translate(get_escape_translation_table())
 
-    def _table_generate_extra(self, table: str) -> str:
+    def _table_generate_extra(self, table: str) -> str:  # pylint: disable=R0201
         return ""
 
     @staticmethod

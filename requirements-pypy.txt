@@ -13,13 +13,14 @@ ciso8601==2.1.1
 colorama==0.4.1           # via green
 coverage==4.5.4           # via green
 cryptography==2.7         # via pymysql
-green==2.16.1
-lxml==4.4.0               # via green
+green==3.0.0
+lxml==4.4.1               # via green
 pycparser==2.19           # via cffi
 pymysql==0.9.2            # via aiomysql
-pypika==0.31.1
+pypika==0.35.2
 pyyaml==5.1.2
 six==1.12.0               # via cryptography
+typing==3.6.2             # via pypika
 unidecode==1.1.1          # via green
 aiocontextvars==0.2.2 ; python_version < "3.7"
 contextvars==2.4 ; python_version < "3.7"
