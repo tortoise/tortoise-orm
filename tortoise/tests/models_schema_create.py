@@ -59,3 +59,7 @@ class SourceFields(Model):
 
     class Meta:
         table = "sometable"
+
+
+class DefaultPK(Model):
+    val = fields.IntField()

@@ -218,7 +218,7 @@ class ModelMeta(type):
 
             if not custom_pk_present:
                 if "id" not in attrs:
-                    attrs["id"] = fields.IntField(pk=True)
+                    attrs = {"id": fields.IntField(pk=True), **attrs}
 
                 if not isinstance(attrs["id"], fields.Field) or not attrs["id"].pk:
                     raise ConfigurationError(
