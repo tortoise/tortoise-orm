@@ -108,3 +108,8 @@ class TestManyToManyUUIDField(test.TestCase):
             await two.models.add(one)
 
     # TODO: Sorting?
+
+
+class TestManyToManyUUIDSourceField(TestManyToManyUUIDField):
+    UUIDPkModel = testmodels.UUIDPkSourceModel  # type: ignore
+    UUIDM2MRelatedModel = testmodels.UUIDM2MRelatedSourceModel  # type: ignore

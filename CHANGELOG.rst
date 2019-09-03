@@ -10,6 +10,8 @@ Changelog
 - ``ForeignKey`` fields of type ``UUIDField`` are now escaped consistently.
 - Pre-generated ForeignKey fields (e.g. UUIDField) is now checked for persistence correctly.
 - Duplicate M2M ``.add(…)`` now checks using consistent field encoding.
+- ``source_field`` Fields are now handled correctly for ordering.
+- ``source_field`` Fields are now handled correctly for updating.
 
 0.13.2
 ------
