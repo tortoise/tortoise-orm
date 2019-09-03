@@ -485,9 +485,9 @@ class RelationQueryContainer:
 
     @property
     def _query(self):
-        if not self.instance.pk:
+        if not getattr(self.instance, "_saved_in_db", False):
             raise OperationalError(
-                "This objects hasn't been instanced, call .save() before" " calling related queries"
+                "This objects hasn't been instanced, call .save() before calling related queries"
             )
         return self.model.filter(**{self.relation_field: self.instance.pk})
 

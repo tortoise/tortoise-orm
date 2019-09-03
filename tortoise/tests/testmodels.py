@@ -242,6 +242,7 @@ class UUIDPkModel(Model):
 
 
 class UUIDFkRelatedModel(Model):
+    name = fields.CharField(max_length=50, null=True)
     model = fields.ForeignKeyField("models.UUIDPkModel", related_name="children")
 
 
