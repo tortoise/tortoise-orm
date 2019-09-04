@@ -6,6 +6,8 @@ Changelog
 ------
 - Fixed installing Tortoise-ORM in non-unicode systems. (#180)
 - ``«queryset».update(…)`` now correctly uses the DB-specific ``to_db_value()``
+- ``fetch_related(…)`` now correctly encodes non-integer keys.
+- Duplicate M2M ``.add(…)`` now checks using consistent field encoding.
 
 0.13.2
 ------
