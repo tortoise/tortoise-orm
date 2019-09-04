@@ -485,7 +485,7 @@ class RelationQueryContainer:
 
     @property
     def _query(self):
-        if not getattr(self.instance, "_saved_in_db", False):
+        if not self.instance._saved_in_db:
             raise OperationalError(
                 "This objects hasn't been instanced, call .save() before calling related queries"
             )
