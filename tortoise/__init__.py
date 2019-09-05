@@ -222,7 +222,7 @@ class Tortoise:
 
         :return:
             A dictionary containing the model qualifier as key,
-            and the same output as ``describe_model(…)`` as value:
+            and the same output as ``describe_model(...)`` as value:
 
             .. code-block:: python3
 
