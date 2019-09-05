@@ -242,10 +242,13 @@ class UUIDPkModel(Model):
 
 
 class UUIDFkRelatedModel(Model):
+    id = fields.UUIDField(pk=True)
+    name = fields.CharField(max_length=50, null=True)
     model = fields.ForeignKeyField("models.UUIDPkModel", related_name="children")
 
 
 class UUIDM2MRelatedModel(Model):
+    id = fields.UUIDField(pk=True)
     value = fields.TextField(default="test")
     models = fields.ManyToManyField("models.UUIDPkModel", related_name="peers")
 

@@ -485,9 +485,9 @@ class RelationQueryContainer:
 
     @property
     def _query(self):
-        if not self.instance.pk:
+        if not self.instance._saved_in_db:
             raise OperationalError(
-                "This objects hasn't been instanced, call .save() before" " calling related queries"
+                "This objects hasn't been instanced, call .save() before calling related queries"
             )
         return self.model.filter(**{self.relation_field: self.instance.pk})
 
@@ -592,7 +592,7 @@ class ManyToManyRelationManager(RelationQueryContainer):
         """
         if not instances:
             return
-        if self.instance.pk is None:
+        if not self.instance._saved_in_db:
             raise OperationalError(
                 "You should first call .save() on {model}".format(model=self.instance)
             )
@@ -624,24 +624,28 @@ class ManyToManyRelationManager(RelationQueryContainer):
 
         select_query = select_query.where(criterion)
 
+        # TODO: This is highly inefficient. Should use UNIQUE index by default.
+        #  And optionally allow duplicates.
         already_existing_relations_raw = await db.execute_query(str(select_query))
         already_existing_relations = {
-            (r[self.field.backward_key], r[self.field.forward_key])
+            (
+                pk_formatting_func(r[self.field.backward_key], self.instance),
+                related_pk_formatting_func(r[self.field.forward_key], self.instance),
+            )
             for r in already_existing_relations_raw
         }
 
         insert_is_required = False
         for instance_to_add in instances:
-            if instance_to_add.pk is None:
+            if not instance_to_add._saved_in_db:
                 raise OperationalError(
                     "You should first call .save() on {model}".format(model=instance_to_add)
                 )
-            if (self.instance.pk, instance_to_add.pk) in already_existing_relations:
+            pk_f = related_pk_formatting_func(instance_to_add.pk, instance_to_add)
+            pk_b = pk_formatting_func(self.instance.pk, self.instance)
+            if (pk_b, pk_f) in already_existing_relations:
                 continue
-            query = query.insert(
-                related_pk_formatting_func(instance_to_add.pk, instance_to_add),
-                pk_formatting_func(self.instance.pk, self.instance),
-            )
+            query = query.insert(pk_f, pk_b)
             insert_is_required = True
         if insert_is_required:
             await db.execute_query(str(query))

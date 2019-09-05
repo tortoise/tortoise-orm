@@ -170,7 +170,10 @@ class BaseExecutor:
     async def _prefetch_reverse_relation(
         self, instance_list: list, field: str, related_query
     ) -> list:
-        instance_id_set = {instance.pk for instance in instance_list}  # type: Set[Any]
+        instance_id_set = {
+            self._field_to_db(instance._meta.pk, instance.pk, instance)
+            for instance in instance_list
+        }  # type: Set[Any]
         backward_relation_manager = getattr(self.model, field)
         relation_field = backward_relation_manager.relation_field
 
@@ -191,7 +194,10 @@ class BaseExecutor:
         return instance_list
 
     async def _prefetch_m2m_relation(self, instance_list: list, field: str, related_query) -> list:
-        instance_id_set = {instance.pk for instance in instance_list}  # type: Set[Any]
+        instance_id_set = {
+            self._field_to_db(instance._meta.pk, instance.pk, instance)
+            for instance in instance_list
+        }  # type: Set[Any]
 
         field_object = self.model._meta.fields_map[field]
 

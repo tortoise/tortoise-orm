@@ -348,11 +348,12 @@ class Model(metaclass=ModelMeta):
 
         for key, value in values_map.items():
             if key in meta.fk_fields:
-                if hasattr(value, "pk") and not value.pk:
+                if not getattr(value, "_saved_in_db", False):
                     raise OperationalError(
                         "You should first call .save() on {} before referring to it".format(value)
                     )
-                relation_field = "{}_id".format(key)
+                field_object = meta.fields_map[key]
+                relation_field = field_object.source_field  # type: str  # type: ignore
                 setattr(self, relation_field, value.pk)
                 passed_fields.add(relation_field)
             elif key in meta.fields:

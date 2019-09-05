@@ -520,8 +520,8 @@ class UpdateQuery(AwaitableQuery):
                 db_field = self.model._meta.fields_db_projection[key]
                 value = executor.column_map[key](value, None)
             elif isinstance(field_object, fields.ForeignKeyField):
-                db_field = "{}_id".format(key)
-                value = value.id
+                db_field = field_object.source_field
+                value = executor.column_map[db_field](value.id, None)
             else:
                 raise FieldError("Field {} is virtual and can not be updated".format(key))
 

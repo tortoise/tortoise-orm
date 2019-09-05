@@ -50,6 +50,9 @@ class TestQueryset(test.TestCase):
         related_instance = await UUIDFkRelatedModel.filter(model_id=value).first()
         self.assertEqual(related_instance.model_id, value)
 
+        await related_instance.fetch_related("model")
+        self.assertEqual(related_instance.model, instance)
+
         await instance.fetch_related("children")
         self.assertEqual(instance.children[0], related_instance)
 
@@ -63,6 +66,10 @@ class TestQueryset(test.TestCase):
 
         await instance.peers.add(related_instance)
         await related_instance2.models.add(instance, instance2)
+
+        await instance.fetch_related("peers")
+        self.assertEqual(len(instance.peers), 2)
+        self.assertEqual(set(instance.peers), {related_instance, related_instance2})
 
         await related_instance.fetch_related("models")
         self.assertEqual(len(related_instance.models), 1)
