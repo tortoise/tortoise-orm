@@ -66,11 +66,13 @@ class AwaitableQuery:
                 aggregation_info = aggregation.resolve(self.model)
                 self.query = self.query.orderby(aggregation_info["field"], order=ordering[1])
             else:
-                if field_name not in model._meta.fields:
+                field_object = self.model._meta.fields_map.get(field_name)
+                if not field_object:
                     raise FieldError(
                         "Unknown field {} for model {}".format(field_name, self.model.__name__)
                     )
-                self.query = self.query.orderby(getattr(table, ordering[0]), order=ordering[1])
+                field_name = field_object.source_field or field_name
+                self.query = self.query.orderby(getattr(table, field_name), order=ordering[1])
 
     def _make_query(self):
         raise NotImplementedError()  # pragma: nocoverage
@@ -514,16 +516,18 @@ class UpdateQuery(AwaitableQuery):
             field_object = self.model._meta.fields_map.get(key)
             if not field_object:
                 raise FieldError("Unknown keyword argument {} for model {}".format(key, self.model))
-            if field_object.generated:
-                raise IntegrityError("Field {} is generated and can not be updated".format(key))
-            if key in self.model._meta.db_fields:
-                db_field = self.model._meta.fields_db_projection[key]
-                value = executor.column_map[key](value, None)
-            elif isinstance(field_object, fields.ForeignKeyField):
-                db_field = field_object.source_field
-                value = executor.column_map[db_field](value.id, None)
+            if field_object.pk:
+                raise IntegrityError("Field {} is PK and can not be updated".format(key))
+            if isinstance(field_object, fields.ForeignKeyField):
+                fk_field = field_object.source_field
+                db_field = self.model._meta.fields_map[fk_field].source_field
+                value = executor.column_map[fk_field](value.id, None)
             else:
-                raise FieldError("Field {} is virtual and can not be updated".format(key))
+                try:
+                    db_field = self.model._meta.fields_db_projection[key]
+                except KeyError:
+                    raise FieldError("Field {} is virtual and can not be updated".format(key))
+                value = executor.column_map[key](value, None)
 
             self.query = self.query.set(db_field, value)
 

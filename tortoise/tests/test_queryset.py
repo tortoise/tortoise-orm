@@ -202,7 +202,7 @@ class TestQueryset(test.TestCase):
 
     async def test_update_pk(self):
         obj0 = await IntFields.create(intnum=2147483647)
-        with self.assertRaisesRegex(IntegrityError, "is generated and can not be updated"):
+        with self.assertRaisesRegex(IntegrityError, "is PK and can not be updated"):
             await IntFields.filter(id=obj0.id).update(id=1)
 
     async def test_update_virtual(self):

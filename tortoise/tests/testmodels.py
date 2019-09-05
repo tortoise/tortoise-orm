@@ -253,6 +253,35 @@ class UUIDM2MRelatedModel(Model):
     models = fields.ManyToManyField("models.UUIDPkModel", related_name="peers")
 
 
+class UUIDPkSourceModel(Model):
+    id = fields.UUIDField(pk=True, source_field="a")
+
+    class Meta:
+        table = "upsm"
+
+
+class UUIDFkRelatedSourceModel(Model):
+    id = fields.UUIDField(pk=True, source_field="b")
+    name = fields.CharField(max_length=50, null=True, source_field="c")
+    model = fields.ForeignKeyField(
+        "models.UUIDPkSourceModel", related_name="children", source_field="d"
+    )
+
+    class Meta:
+        table = "ufrsm"
+
+
+class UUIDM2MRelatedSourceModel(Model):
+    id = fields.UUIDField(pk=True, source_field="e")
+    value = fields.TextField(default="test", source_field="f")
+    models = fields.ManyToManyField(
+        "models.UUIDPkSourceModel", related_name="peers", forward_key="e", backward_key="h"
+    )
+
+    class Meta:
+        table = "umrsm"
+
+
 class CharPkModel(Model):
     id = fields.CharField(max_length=64, pk=True)
 

@@ -4,44 +4,55 @@ from tortoise.tests import testmodels
 
 
 class TestForeignKeyUUIDField(test.TestCase):
+    """
+    Here we do the same FK tests but using UUID. The reason this is useful is:
+
+    * UUID needs escaping, so a good indicator of where we may have missed it.
+    * UUID populates a value BEFORE it gets committed to DB, whereas int is AFTER.
+    * UUID is stored differently for different DB backends. (native in PG)
+    """
+
+    UUIDPkModel = testmodels.UUIDPkModel
+    UUIDFkRelatedModel = testmodels.UUIDFkRelatedModel
+
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
-            await testmodels.UUIDFkRelatedModel.create()
+            await self.UUIDFkRelatedModel.create()
 
     async def test_create_by_id(self):
-        tour = await testmodels.UUIDPkModel.create()
-        rel = await testmodels.UUIDFkRelatedModel.create(model_id=tour.id)
+        tour = await self.UUIDPkModel.create()
+        rel = await self.UUIDFkRelatedModel.create(model_id=tour.id)
         self.assertEqual(rel.model_id, tour.id)
         self.assertEqual((await tour.children.all())[0], rel)
 
     async def test_create_by_name(self):
-        tour = await testmodels.UUIDPkModel.create()
-        rel = await testmodels.UUIDFkRelatedModel.create(model=tour)
+        tour = await self.UUIDPkModel.create()
+        rel = await self.UUIDFkRelatedModel.create(model=tour)
         await rel.fetch_related("model")
         self.assertEqual(rel.model, tour)
         self.assertEqual((await tour.children.all())[0], rel)
 
     @test.skip("Not yet implemented")
     async def test_by_name__unfetched(self):
-        tour = await testmodels.UUIDPkModel.create()
-        rel = await testmodels.UUIDFkRelatedModel.create(model=tour)
+        tour = await self.UUIDPkModel.create()
+        rel = await self.UUIDFkRelatedModel.create(model=tour)
         with self.assertRaisesRegex(NoValuesFetched, "moo"):
             rel.model  # pylint: disable=W0104
 
     @test.skip("Not yet implemented")
     async def test_by_name__awaited(self):
-        tour = await testmodels.UUIDPkModel.create()
-        rel = await testmodels.UUIDFkRelatedModel.create(model=tour)
+        tour = await self.UUIDPkModel.create()
+        rel = await self.UUIDFkRelatedModel.create(model=tour)
         self.assertEqual(await rel.model, tour)
         self.assertEqual((await tour.children.all())[0], rel)
 
     async def test_update_by_name(self):
-        tour = await testmodels.UUIDPkModel.create()
-        tour2 = await testmodels.UUIDPkModel.create()
-        rel0 = await testmodels.UUIDFkRelatedModel.create(model=tour)
+        tour = await self.UUIDPkModel.create()
+        tour2 = await self.UUIDPkModel.create()
+        rel0 = await self.UUIDFkRelatedModel.create(model=tour)
 
-        await testmodels.UUIDFkRelatedModel.filter(id=rel0.id).update(model=tour2)
-        rel = await testmodels.UUIDFkRelatedModel.get(id=rel0.id)
+        await self.UUIDFkRelatedModel.filter(id=rel0.id).update(model=tour2)
+        rel = await self.UUIDFkRelatedModel.get(id=rel0.id)
 
         await rel.fetch_related("model")
         self.assertEqual(rel.model, tour2)
@@ -49,24 +60,24 @@ class TestForeignKeyUUIDField(test.TestCase):
         self.assertEqual((await tour2.children.all())[0], rel)
 
     async def test_update_by_id(self):
-        tour = await testmodels.UUIDPkModel.create()
-        tour2 = await testmodels.UUIDPkModel.create()
-        rel0 = await testmodels.UUIDFkRelatedModel.create(model_id=tour.id)
+        tour = await self.UUIDPkModel.create()
+        tour2 = await self.UUIDPkModel.create()
+        rel0 = await self.UUIDFkRelatedModel.create(model_id=tour.id)
 
-        await testmodels.UUIDFkRelatedModel.filter(id=rel0.id).update(model_id=tour2.id)
-        rel = await testmodels.UUIDFkRelatedModel.get(id=rel0.id)
+        await self.UUIDFkRelatedModel.filter(id=rel0.id).update(model_id=tour2.id)
+        rel = await self.UUIDFkRelatedModel.get(id=rel0.id)
 
         self.assertEqual(rel.model_id, tour2.id)
         self.assertEqual(await tour.children.all(), [])
         self.assertEqual((await tour2.children.all())[0], rel)
 
     async def test_uninstantiated_create(self):
-        tour = testmodels.UUIDPkModel()
+        tour = self.UUIDPkModel()
         with self.assertRaisesRegex(OperationalError, "You should first call .save()"):
-            await testmodels.UUIDFkRelatedModel.create(model=tour)
+            await self.UUIDFkRelatedModel.create(model=tour)
 
     async def test_uninstantiated_iterate(self):
-        tour = testmodels.UUIDPkModel()
+        tour = self.UUIDPkModel()
         with self.assertRaisesRegex(
             OperationalError, "This objects hasn't been instanced, call .save()"
         ):
@@ -74,14 +85,14 @@ class TestForeignKeyUUIDField(test.TestCase):
                 pass
 
     async def test_uninstantiated_await(self):
-        tour = testmodels.UUIDPkModel()
+        tour = self.UUIDPkModel()
         with self.assertRaisesRegex(
             OperationalError, "This objects hasn't been instanced, call .save()"
         ):
             await tour.children
 
     async def test_unfetched_contains(self):
-        tour = await testmodels.UUIDPkModel.create()
+        tour = await self.UUIDPkModel.create()
         with self.assertRaisesRegex(
             NoValuesFetched,
             "No values were fetched for this relation," " first use .fetch_related()",
@@ -89,7 +100,7 @@ class TestForeignKeyUUIDField(test.TestCase):
             "a" in tour.children  # pylint: disable=W0104
 
     async def test_unfetched_iter(self):
-        tour = await testmodels.UUIDPkModel.create()
+        tour = await self.UUIDPkModel.create()
         with self.assertRaisesRegex(
             NoValuesFetched,
             "No values were fetched for this relation," " first use .fetch_related()",
@@ -98,7 +109,7 @@ class TestForeignKeyUUIDField(test.TestCase):
                 pass
 
     async def test_unfetched_len(self):
-        tour = await testmodels.UUIDPkModel.create()
+        tour = await self.UUIDPkModel.create()
         with self.assertRaisesRegex(
             NoValuesFetched,
             "No values were fetched for this relation," " first use .fetch_related()",
@@ -106,7 +117,7 @@ class TestForeignKeyUUIDField(test.TestCase):
             len(tour.children)
 
     async def test_unfetched_bool(self):
-        tour = await testmodels.UUIDPkModel.create()
+        tour = await self.UUIDPkModel.create()
         with self.assertRaisesRegex(
             NoValuesFetched,
             "No values were fetched for this relation," " first use .fetch_related()",
@@ -114,7 +125,7 @@ class TestForeignKeyUUIDField(test.TestCase):
             bool(tour.children)
 
     async def test_unfetched_getitem(self):
-        tour = await testmodels.UUIDPkModel.create()
+        tour = await self.UUIDPkModel.create()
         with self.assertRaisesRegex(
             NoValuesFetched,
             "No values were fetched for this relation," " first use .fetch_related()",
@@ -122,47 +133,47 @@ class TestForeignKeyUUIDField(test.TestCase):
             tour.children[0]  # pylint: disable=W0104
 
     async def test_instantiated_create(self):
-        tour = await testmodels.UUIDPkModel.create()
-        await testmodels.UUIDFkRelatedModel.create(model=tour)
+        tour = await self.UUIDPkModel.create()
+        await self.UUIDFkRelatedModel.create(model=tour)
 
     async def test_instantiated_iterate(self):
-        tour = await testmodels.UUIDPkModel.create()
+        tour = await self.UUIDPkModel.create()
         async for _ in tour.children:
             pass
 
     async def test_instantiated_await(self):
-        tour = await testmodels.UUIDPkModel.create()
+        tour = await self.UUIDPkModel.create()
         await tour.children
 
     async def test_minimal__fetched_contains(self):
-        tour = await testmodels.UUIDPkModel.create()
-        rel = await testmodels.UUIDFkRelatedModel.create(model=tour)
+        tour = await self.UUIDPkModel.create()
+        rel = await self.UUIDFkRelatedModel.create(model=tour)
         await tour.fetch_related("children")
         self.assertTrue(rel in tour.children)
 
     async def test_minimal__fetched_iter(self):
-        tour = await testmodels.UUIDPkModel.create()
-        rel = await testmodels.UUIDFkRelatedModel.create(model=tour)
+        tour = await self.UUIDPkModel.create()
+        rel = await self.UUIDFkRelatedModel.create(model=tour)
         await tour.fetch_related("children")
         self.assertEqual([obj for obj in tour.children], [rel])
 
     async def test_minimal__fetched_len(self):
-        tour = await testmodels.UUIDPkModel.create()
-        await testmodels.UUIDFkRelatedModel.create(model=tour)
+        tour = await self.UUIDPkModel.create()
+        await self.UUIDFkRelatedModel.create(model=tour)
         await tour.fetch_related("children")
         self.assertEqual(len(tour.children), 1)
 
     async def test_minimal__fetched_bool(self):
-        tour = await testmodels.UUIDPkModel.create()
+        tour = await self.UUIDPkModel.create()
         await tour.fetch_related("children")
         self.assertFalse(bool(tour.children))
-        await testmodels.UUIDFkRelatedModel.create(model=tour)
+        await self.UUIDFkRelatedModel.create(model=tour)
         await tour.fetch_related("children")
         self.assertTrue(bool(tour.children))
 
     async def test_minimal__fetched_getitem(self):
-        tour = await testmodels.UUIDPkModel.create()
-        rel = await testmodels.UUIDFkRelatedModel.create(model=tour)
+        tour = await self.UUIDPkModel.create()
+        rel = await self.UUIDFkRelatedModel.create(model=tour)
         await tour.fetch_related("children")
         self.assertEqual(tour.children[0], rel)
 
@@ -170,36 +181,47 @@ class TestForeignKeyUUIDField(test.TestCase):
             tour.children[1]  # pylint: disable=W0104
 
     async def test_event__filter(self):
-        tour = await testmodels.UUIDPkModel.create()
-        event1 = await testmodels.UUIDFkRelatedModel.create(name="Event1", model=tour)
-        event2 = await testmodels.UUIDFkRelatedModel.create(name="Event2", model=tour)
+        tour = await self.UUIDPkModel.create()
+        event1 = await self.UUIDFkRelatedModel.create(name="Event1", model=tour)
+        event2 = await self.UUIDFkRelatedModel.create(name="Event2", model=tour)
         self.assertEqual(await tour.children.filter(name="Event1"), [event1])
         self.assertEqual(await tour.children.filter(name="Event2"), [event2])
         self.assertEqual(await tour.children.filter(name="Event3"), [])
 
     async def test_event__all(self):
-        tour = await testmodels.UUIDPkModel.create()
-        event1 = await testmodels.UUIDFkRelatedModel.create(name="Event1", model=tour)
-        event2 = await testmodels.UUIDFkRelatedModel.create(name="Event2", model=tour)
+        tour = await self.UUIDPkModel.create()
+        event1 = await self.UUIDFkRelatedModel.create(name="Event1", model=tour)
+        event2 = await self.UUIDFkRelatedModel.create(name="Event2", model=tour)
         self.assertSetEqual(set(await tour.children.all()), {event1, event2})
 
     async def test_event__order_by(self):
-        tour = await testmodels.UUIDPkModel.create()
-        event1 = await testmodels.UUIDFkRelatedModel.create(name="Event1", model=tour)
-        event2 = await testmodels.UUIDFkRelatedModel.create(name="Event2", model=tour)
+        tour = await self.UUIDPkModel.create()
+        event1 = await self.UUIDFkRelatedModel.create(name="Event1", model=tour)
+        event2 = await self.UUIDFkRelatedModel.create(name="Event2", model=tour)
         self.assertEqual(await tour.children.order_by("-name"), [event2, event1])
         self.assertEqual(await tour.children.order_by("name"), [event1, event2])
 
     async def test_event__limit(self):
-        tour = await testmodels.UUIDPkModel.create()
-        event1 = await testmodels.UUIDFkRelatedModel.create(name="Event1", model=tour)
-        event2 = await testmodels.UUIDFkRelatedModel.create(name="Event2", model=tour)
-        await testmodels.UUIDFkRelatedModel.create(name="Event3", model=tour)
+        tour = await self.UUIDPkModel.create()
+        event1 = await self.UUIDFkRelatedModel.create(name="Event1", model=tour)
+        event2 = await self.UUIDFkRelatedModel.create(name="Event2", model=tour)
+        await self.UUIDFkRelatedModel.create(name="Event3", model=tour)
         self.assertEqual(await tour.children.limit(2).order_by("name"), [event1, event2])
 
     async def test_event__offset(self):
-        tour = await testmodels.UUIDPkModel.create()
-        await testmodels.UUIDFkRelatedModel.create(name="Event1", model=tour)
-        event2 = await testmodels.UUIDFkRelatedModel.create(name="Event2", model=tour)
-        event3 = await testmodels.UUIDFkRelatedModel.create(name="Event3", model=tour)
+        tour = await self.UUIDPkModel.create()
+        await self.UUIDFkRelatedModel.create(name="Event1", model=tour)
+        event2 = await self.UUIDFkRelatedModel.create(name="Event2", model=tour)
+        event3 = await self.UUIDFkRelatedModel.create(name="Event3", model=tour)
         self.assertEqual(await tour.children.offset(1).order_by("name"), [event2, event3])
+
+
+class TestForeignKeyUUIDSourcedField(TestForeignKeyUUIDField):
+    """
+    Here we test the identical Python-like models, but with all customized DB names.
+
+    This helps test that we don't confuse the two concepts.
+    """
+
+    UUIDPkModel = testmodels.UUIDPkSourceModel  # type: ignore
+    UUIDFkRelatedModel = testmodels.UUIDFkRelatedSourceModel  # type: ignore
