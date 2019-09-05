@@ -28,6 +28,13 @@ class TestCharFields(test.TestCase):
         obj2 = await testmodels.CharFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
 
+    async def test_update(self):
+        obj0 = await testmodels.CharFields.create(char="moo")
+        await testmodels.CharFields.filter(id=obj0.id).update(char="ba'a")
+        obj = await testmodels.CharFields.get(id=obj0.id)
+        self.assertEqual(obj.char, "ba'a")
+        self.assertEqual(obj.char_null, None)
+
     async def test_cast(self):
         obj0 = await testmodels.CharFields.create(char=33)
         obj = await testmodels.CharFields.get(id=obj0.id)

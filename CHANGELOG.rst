@@ -5,6 +5,8 @@ Changelog
 0.13.3
 ------
 - Fixed installing Tortoise-ORM in non-unicode systems. (#180)
+- ``«queryset».update(…)`` now correctly uses the DB-specific ``to_db_value()``
+
 0.13.2
 ------
 * Security fixes for ``«model».save()`` & ``«model».dete()``:

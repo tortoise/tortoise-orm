@@ -38,6 +38,15 @@ class TestDatetimeFields(test.TestCase):
         self.assertLess(obj2.datetime_auto - now, timedelta(seconds=1))
         self.assertEqual(obj2.datetime_add, obj.datetime_add)
 
+    async def test_update(self):
+        obj0 = await testmodels.DatetimeFields.create(datetime=datetime(2019, 9, 1, 0, 0, 0))
+        await testmodels.DatetimeFields.filter(id=obj0.id).update(
+            datetime=datetime(2019, 9, 1, 6, 0, 8)
+        )
+        obj = await testmodels.DatetimeFields.get(id=obj0.id)
+        self.assertEqual(obj.datetime, datetime(2019, 9, 1, 6, 0, 8))
+        self.assertEqual(obj.datetime_null, None)
+
     async def test_cast(self):
         now = datetime.utcnow()
         obj0 = await testmodels.DatetimeFields.create(datetime=now.isoformat())

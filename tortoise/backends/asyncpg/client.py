@@ -46,7 +46,7 @@ def retry_connection(func):
                 await self.create_connection(with_db=True)
                 logging.info("Reconnected")
             except Exception as e:
-                raise DBConnectionError("Failed to reconnect: %s", str(e))
+                raise DBConnectionError("Failed to reconnect: {}".format(str(e)))
             finally:
                 self._lock.release()
 
@@ -178,8 +178,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
                 # TODO: Cache prepared statement
                 stmt = await connection.prepare(query)
                 return await stmt.fetch(*values)
-            else:
-                return await connection.fetch(query)
+            return await connection.fetch(query)
 
     @translate_exceptions
     @retry_connection

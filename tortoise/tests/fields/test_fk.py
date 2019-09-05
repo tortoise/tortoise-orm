@@ -48,6 +48,31 @@ class TestForeignKeyField(test.TestCase):
         self.assertEqual(rel.tournament, tour)
         self.assertEqual((await tour.events.all())[0], rel)
 
+    async def test_update_by_name(self):
+        tour = await testmodels.Tournament.create(name="Team1")
+        tour2 = await testmodels.Tournament.create(name="Team2")
+        rel0 = await testmodels.Event.create(name="Event1", tournament=tour)
+
+        await testmodels.Event.filter(id=rel0.id).update(tournament=tour2)
+        rel = await testmodels.Event.get(id=rel0.id)
+
+        await rel.fetch_related("tournament")
+        self.assertEqual(rel.tournament, tour2)
+        self.assertEqual(await tour.events.all(), [])
+        self.assertEqual((await tour2.events.all())[0], rel)
+
+    async def test_update_by_id(self):
+        tour = await testmodels.Tournament.create(name="Team1")
+        tour2 = await testmodels.Tournament.create(name="Team2")
+        rel0 = await testmodels.Event.create(name="Event1", tournament_id=tour.id)
+
+        await testmodels.Event.filter(id=rel0.id).update(tournament_id=tour2.id)
+        rel = await testmodels.Event.get(id=rel0.id)
+
+        self.assertEqual(rel.tournament_id, tour2.id)
+        self.assertEqual(await tour.events.all(), [])
+        self.assertEqual((await tour2.events.all())[0], rel)
+
     async def test_minimal__uninstantiated_create(self):
         tour = testmodels.Tournament(name="Team1")
         with self.assertRaisesRegex(OperationalError, "You should first call .save()"):

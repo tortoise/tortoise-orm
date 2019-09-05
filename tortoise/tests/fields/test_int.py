@@ -21,6 +21,13 @@ class TestIntFields(test.TestCase):
         obj = await testmodels.IntFields.filter(id=obj0.id).first()
         self.assertEqual(obj, None)
 
+    async def test_update(self):
+        obj0 = await testmodels.IntFields.create(intnum=2147483647)
+        await testmodels.IntFields.filter(id=obj0.id).update(intnum=2147483646)
+        obj = await testmodels.IntFields.get(id=obj0.id)
+        self.assertEqual(obj.intnum, 2147483646)
+        self.assertEqual(obj.intnum_null, None)
+
     async def test_min(self):
         obj0 = await testmodels.IntFields.create(intnum=-2147483648)
         obj = await testmodels.IntFields.get(id=obj0.id)

@@ -1,5 +1,5 @@
 from tortoise.contrib import test
-from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned
+from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
 from tortoise.tests.testmodels import IntFields, MinRelation, Tournament
 
 # TODO: Test the many exceptions in QuerySet
@@ -187,3 +187,26 @@ class TestQueryset(test.TestCase):
             counter += 1
 
         self.assertEqual(await IntFields.all().count(), counter)
+
+    async def test_update_basic(self):
+        obj0 = await IntFields.create(intnum=2147483647)
+        await IntFields.filter(id=obj0.id).update(intnum=2147483646)
+        obj = await IntFields.get(id=obj0.id)
+        self.assertEqual(obj.intnum, 2147483646)
+        self.assertEqual(obj.intnum_null, None)
+
+    async def test_update_badparam(self):
+        obj0 = await IntFields.create(intnum=2147483647)
+        with self.assertRaisesRegex(FieldError, "Unknown keyword argument"):
+            await IntFields.filter(id=obj0.id).update(badparam=1)
+
+    async def test_update_pk(self):
+        obj0 = await IntFields.create(intnum=2147483647)
+        with self.assertRaisesRegex(IntegrityError, "is generated and can not be updated"):
+            await IntFields.filter(id=obj0.id).update(id=1)
+
+    async def test_update_virtual(self):
+        tour = await Tournament.create(name="moo")
+        obj0 = await MinRelation.create(tournament=tour)
+        with self.assertRaisesRegex(FieldError, "is virtual and can not be updated"):
+            await MinRelation.filter(id=obj0.id).update(participants=[])

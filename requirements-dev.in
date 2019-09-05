@@ -36,6 +36,7 @@ nose2
 twine
 
 # Sample integration - Quart
+wsproto;python_version>="3.7"
 hypercorn;python_version>="3.7"
 quart;python_version>="3.7"
 

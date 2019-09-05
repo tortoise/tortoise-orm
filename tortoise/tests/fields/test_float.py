@@ -20,6 +20,14 @@ class TestFloatFields(test.TestCase):
         obj2 = await testmodels.FloatFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
 
+    async def test_update(self):
+        obj0 = await testmodels.FloatFields.create(floatnum=1.23)
+        await testmodels.FloatFields.filter(id=obj0.id).update(floatnum=2.34)
+        obj = await testmodels.FloatFields.get(id=obj0.id)
+        self.assertEqual(obj.floatnum, 2.34)
+        self.assertNotEqual(Decimal(obj.floatnum), Decimal("2.34"))
+        self.assertEqual(obj.floatnum_null, None)
+
     async def test_cast_int(self):
         obj0 = await testmodels.FloatFields.create(floatnum=123)
         obj = await testmodels.FloatFields.get(id=obj0.id)
