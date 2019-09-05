@@ -2,6 +2,9 @@
 
 Changelog
 =========
+0.13.3
+------
+- Fixed installing Tortoise-ORM in non-unicode systems. (#180)
 0.13.2
 ------
 * Security fixes for ``«model».save()`` & ``«model».dete()``:
