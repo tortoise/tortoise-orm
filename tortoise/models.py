@@ -32,10 +32,7 @@ def get_unique_together(meta) -> Tuple[Tuple[str, ...], ...]:
     return unique_together
 
 
-def _fk_setter(self, value, _key, key):
-    meta = self._meta
-    field_object = meta.fields_map[key]
-    relation_field = field_object.source_field
+def _fk_setter(self, value, _key, relation_field):
     setattr(self, relation_field, value.pk if value else None)
     setattr(self, _key, value)
 
@@ -160,13 +157,14 @@ class MetaInfo:
         # Create lazy FK fields on model.
         for key in self.fk_fields:
             _key = f"_{key}"
+            relation_field = self.fields_map[key].source_field
             setattr(
                 self._model,
                 key,
                 property(
                     partial(_fk_getter, _key=_key),
-                    partial(_fk_setter, _key=_key, key=key),
-                    partial(_fk_setter, value=None, _key=_key, key=key),
+                    partial(_fk_setter, _key=_key, relation_field=relation_field),
+                    partial(_fk_setter, value=None, _key=_key, relation_field=relation_field),
                 ),
             )
 
