@@ -455,10 +455,10 @@ class BackwardFKRelation(Field):
 
     def __init__(
         self,
-        type,
+        type,  # pylint: disable=W0622
         relation_field: str,
         null: bool,
-        description: Optional[str],  # pylint: disable=W0622
+        description: Optional[str],
     ) -> None:
         super().__init__(type=type, null=null)
         self.relation_field = relation_field
