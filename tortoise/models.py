@@ -156,7 +156,7 @@ class MetaInfo:
 
         # Create lazy FK fields on model.
         for key in self.fk_fields:
-            _key = f"_{key}"
+            _key = "_{}".format(key)
             relation_field = self.fields_map[key].source_field
             setattr(
                 self._model,
