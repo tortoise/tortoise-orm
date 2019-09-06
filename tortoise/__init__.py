@@ -324,7 +324,7 @@ class Tortoise:
                             )
                         )
                     fk_relation = fields.BackwardFKRelation(
-                        model, "{}_id".format(field), fk_object.description
+                        model, "{}_id".format(field), fk_object.null, fk_object.description
                     )
                     related_model._meta.add_field(backward_relation_name, fk_relation)
 

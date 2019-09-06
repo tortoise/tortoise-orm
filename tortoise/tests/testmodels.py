@@ -247,6 +247,12 @@ class UUIDFkRelatedModel(Model):
     model = fields.ForeignKeyField("models.UUIDPkModel", related_name="children")
 
 
+class UUIDFkRelatedNullModel(Model):
+    id = fields.UUIDField(pk=True)
+    name = fields.CharField(max_length=50, null=True)
+    model = fields.ForeignKeyField("models.UUIDPkModel", related_name="children_null", null=True)
+
+
 class UUIDM2MRelatedModel(Model):
     id = fields.UUIDField(pk=True)
     value = fields.TextField(default="test")
@@ -269,6 +275,17 @@ class UUIDFkRelatedSourceModel(Model):
 
     class Meta:
         table = "ufrsm"
+
+
+class UUIDFkRelatedNullSourceModel(Model):
+    id = fields.UUIDField(pk=True, source_field="i")
+    name = fields.CharField(max_length=50, null=True, source_field="j")
+    model = fields.ForeignKeyField(
+        "models.UUIDPkSourceModel", related_name="children_null", source_field="k", null=True
+    )
+
+    class Meta:
+        table = "ufrnsm"
 
 
 class UUIDM2MRelatedSourceModel(Model):

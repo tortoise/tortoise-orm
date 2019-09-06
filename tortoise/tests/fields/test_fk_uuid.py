@@ -14,10 +14,14 @@ class TestForeignKeyUUIDField(test.TestCase):
 
     UUIDPkModel = testmodels.UUIDPkModel
     UUIDFkRelatedModel = testmodels.UUIDFkRelatedModel
+    UUIDFkRelatedNullModel = testmodels.UUIDFkRelatedNullModel
 
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await self.UUIDFkRelatedModel.create()
+
+    async def test_empty_null(self):
+        await self.UUIDFkRelatedNullModel.create()
 
     async def test_create_by_id(self):
         tour = await self.UUIDPkModel.create()
@@ -225,3 +229,4 @@ class TestForeignKeyUUIDSourcedField(TestForeignKeyUUIDField):
 
     UUIDPkModel = testmodels.UUIDPkSourceModel  # type: ignore
     UUIDFkRelatedModel = testmodels.UUIDFkRelatedSourceModel  # type: ignore
+    UUIDFkRelatedNullModel = testmodels.UUIDFkRelatedNullSourceModel  # type: ignore
