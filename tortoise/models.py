@@ -1,4 +1,5 @@
 from copy import copy, deepcopy
+from functools import partial
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from pypika import Query
@@ -29,6 +30,18 @@ def get_unique_together(meta) -> Tuple[Tuple[str, ...], ...]:
 
     # return without validation, validation will be done further in the code
     return unique_together
+
+
+def _fk_setter(self, value, _key, key):
+    meta = self._meta
+    field_object = meta.fields_map[key]
+    relation_field = field_object.source_field
+    setattr(self, relation_field, value.pk if value else None)
+    setattr(self, _key, value)
+
+
+def _fk_getter(self, _key):
+    return getattr(self, _key, None)
 
 
 class MetaInfo:
@@ -143,6 +156,19 @@ class MetaInfo:
                 continue
             generated_fields.append(field.source_field or field.model_field_name)
         self.generated_db_fields = tuple(generated_fields)  # type: ignore
+
+        # Create lazy FK fields on model.
+        for key in self.fk_fields:
+            _key = f"_{key}"
+            setattr(
+                self._model,
+                key,
+                property(
+                    partial(_fk_getter, _key=_key),
+                    partial(_fk_setter, _key=_key, key=key),
+                    partial(_fk_setter, value=None, _key=_key, key=key),
+                ),
+            )
 
     def _generate_filters(self) -> None:
         get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
@@ -348,13 +374,13 @@ class Model(metaclass=ModelMeta):
 
         for key, value in values_map.items():
             if key in meta.fk_fields:
-                if not getattr(value, "_saved_in_db", False):
+                if value and not value._saved_in_db:
                     raise OperationalError(
                         "You should first call .save() on {} before referring to it".format(value)
                     )
                 field_object = meta.fields_map[key]
                 relation_field = field_object.source_field  # type: str  # type: ignore
-                setattr(self, relation_field, value.pk)
+                setattr(self, key, value)
                 passed_fields.add(relation_field)
             elif key in meta.fields:
                 field_object = meta.fields_map[key]
