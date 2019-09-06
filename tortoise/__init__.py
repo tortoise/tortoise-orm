@@ -324,7 +324,7 @@ class Tortoise:
                             )
                         )
                     fk_relation = fields.BackwardFKRelation(
-                        model, "{}_id".format(field), fk_object.description
+                        model, "{}_id".format(field), fk_object.null, fk_object.description
                     )
                     related_model._meta.add_field(backward_relation_name, fk_relation)
 
@@ -670,4 +670,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.13.3"
+__version__ = "0.13.4"

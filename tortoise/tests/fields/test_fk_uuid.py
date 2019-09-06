@@ -14,10 +14,14 @@ class TestForeignKeyUUIDField(test.TestCase):
 
     UUIDPkModel = testmodels.UUIDPkModel
     UUIDFkRelatedModel = testmodels.UUIDFkRelatedModel
+    UUIDFkRelatedNullModel = testmodels.UUIDFkRelatedNullModel
 
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await self.UUIDFkRelatedModel.create()
+
+    async def test_empty_null(self):
+        await self.UUIDFkRelatedNullModel.create()
 
     async def test_create_by_id(self):
         tour = await self.UUIDPkModel.create()
@@ -215,6 +219,67 @@ class TestForeignKeyUUIDField(test.TestCase):
         event3 = await self.UUIDFkRelatedModel.create(name="Event3", model=tour)
         self.assertEqual(await tour.children.offset(1).order_by("name"), [event2, event3])
 
+    async def test_assign_by_id(self):
+        tour = await self.UUIDPkModel.create()
+        event = await self.UUIDFkRelatedNullModel.create(model=None)
+        event.model_id = tour.id
+        await event.save()
+        event0 = await self.UUIDFkRelatedNullModel.get(id=event.id)
+        self.assertEqual(event0.model_id, tour.id)
+        await event0.fetch_related("model")
+        self.assertEqual(event0.model, tour)
+
+    async def test_assign_by_name(self):
+        tour = await self.UUIDPkModel.create()
+        event = await self.UUIDFkRelatedNullModel.create(model=None)
+        event.model = tour
+        await event.save()
+        event0 = await self.UUIDFkRelatedNullModel.get(id=event.id)
+        self.assertEqual(event0.model_id, tour.id)
+        await event0.fetch_related("model")
+        self.assertEqual(event0.model, tour)
+
+    async def test_assign_none_by_id(self):
+        tour = await self.UUIDPkModel.create()
+        event = await self.UUIDFkRelatedNullModel.create(model=tour)
+        event.model_id = None
+        await event.save()
+        event0 = await self.UUIDFkRelatedNullModel.get(id=event.id)
+        self.assertEqual(event0.model_id, None)
+        await event0.fetch_related("model")
+        self.assertEqual(event0.model, None)
+
+    async def test_assign_none_by_name(self):
+        tour = await self.UUIDPkModel.create()
+        event = await self.UUIDFkRelatedNullModel.create(model=tour)
+        event.model = None
+        await event.save()
+        event0 = await self.UUIDFkRelatedNullModel.get(id=event.id)
+        self.assertEqual(event0.model_id, None)
+        await event0.fetch_related("model")
+        self.assertEqual(event0.model, None)
+
+    async def test_assign_none_by_id_fails(self):
+        tour = await self.UUIDPkModel.create()
+        event = await self.UUIDFkRelatedModel.create(model=tour)
+        event.model_id = None
+        with self.assertRaises(IntegrityError):
+            await event.save()
+
+    async def test_assign_none_by_name_fails(self):
+        tour = await self.UUIDPkModel.create()
+        event = await self.UUIDFkRelatedModel.create(model=tour)
+        event.model = None
+        with self.assertRaises(IntegrityError):
+            await event.save()
+
+    async def test_delete_by_name(self):
+        tour = await self.UUIDPkModel.create()
+        event = await self.UUIDFkRelatedModel.create(model=tour)
+        del event.model
+        with self.assertRaises(IntegrityError):
+            await event.save()
+
 
 class TestForeignKeyUUIDSourcedField(TestForeignKeyUUIDField):
     """
@@ -225,3 +290,4 @@ class TestForeignKeyUUIDSourcedField(TestForeignKeyUUIDField):
 
     UUIDPkModel = testmodels.UUIDPkSourceModel  # type: ignore
     UUIDFkRelatedModel = testmodels.UUIDFkRelatedSourceModel  # type: ignore
+    UUIDFkRelatedNullModel = testmodels.UUIDFkRelatedNullSourceModel  # type: ignore

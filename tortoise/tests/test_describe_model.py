@@ -13,6 +13,7 @@ from tortoise.tests.testmodels import (
     Team,
     Tournament,
     UUIDFkRelatedModel,
+    UUIDFkRelatedNullModel,
     UUIDM2MRelatedModel,
     UUIDPkModel,
 )
@@ -123,7 +124,7 @@ class TestBasic(test.TestCase):
                         "field_type": "BackwardFKRelation",
                         "python_type": "models.StraightFields",
                         "generated": False,
-                        "nullable": False,
+                        "nullable": True,
                         "unique": False,
                         "indexed": False,
                         "default": None,
@@ -240,7 +241,7 @@ class TestBasic(test.TestCase):
                         "field_type": fields.BackwardFKRelation,
                         "python_type": StraightFields,
                         "generated": False,
-                        "nullable": False,
+                        "nullable": True,
                         "unique": False,
                         "indexed": False,
                         "default": None,
@@ -357,7 +358,7 @@ class TestBasic(test.TestCase):
                         "field_type": "BackwardFKRelation",
                         "python_type": "models.SourceFields",
                         "generated": False,
-                        "nullable": False,
+                        "nullable": True,
                         "unique": False,
                         "indexed": False,
                         "default": None,
@@ -474,7 +475,7 @@ class TestBasic(test.TestCase):
                         "field_type": fields.BackwardFKRelation,
                         "python_type": SourceFields,
                         "generated": False,
-                        "nullable": False,
+                        "nullable": True,
                         "unique": False,
                         "indexed": False,
                         "default": None,
@@ -546,7 +547,18 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": None,
-                    }
+                    },
+                    {
+                        "name": "children_null",
+                        "field_type": "BackwardFKRelation",
+                        "python_type": "models.UUIDFkRelatedNullModel",
+                        "generated": False,
+                        "nullable": True,
+                        "unique": False,
+                        "indexed": False,
+                        "default": None,
+                        "description": None,
+                    },
                 ],
                 "m2m_fields": [
                     {
@@ -602,7 +614,18 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": None,
-                    }
+                    },
+                    {
+                        "name": "children_null",
+                        "field_type": fields.BackwardFKRelation,
+                        "python_type": UUIDFkRelatedNullModel,
+                        "generated": False,
+                        "nullable": True,
+                        "unique": False,
+                        "indexed": False,
+                        "default": None,
+                        "description": None,
+                    },
                 ],
                 "m2m_fields": [
                     {

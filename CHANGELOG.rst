@@ -2,6 +2,14 @@
 
 Changelog
 =========
+
+0.13.4
+------
+- Assigning to the FK field will correctly set the associated db-field
+- Reading a nullalble FK field can now be None
+- Nullalble FK fields reverse-FK is now also nullable
+- Deleting a nullable FK field sets it to None
+
 0.13.3
 ------
 - Fixed installing Tortoise-ORM in non-unicode systems. (#180)
