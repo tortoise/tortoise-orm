@@ -15,19 +15,21 @@
 import os
 import re
 import sys
+
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
 
 from unittest.mock import MagicMock
+
 
 class Mock(MagicMock):
     @classmethod
     def __getattr__(cls, name):
         return MagicMock()
 
-MOCK_MODULES = ['aiosqlite', 'astroid', 'asyncpg', 'aiomysql', 'quart', 'sanic', 'starlette']
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
+MOCK_MODULES = ['aiosqlite', 'astroid', 'asyncpg', 'aiomysql', 'quart', 'sanic', 'starlette', 'starlette.applications']
+sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # -- Project information -----------------------------------------------------
 
@@ -50,7 +52,6 @@ def get_version():
 version = get_version()
 # The full version, including alpha/beta/rc tags
 release = version
-
 
 # -- General configuration ---------------------------------------------------
 
@@ -177,12 +178,10 @@ html_sidebars = {
     ]
 }
 
-
 # -- Options for HTMLHelp output ---------------------------------------------
 
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'tortoisedoc'
-
 
 # -- Options for LaTeX output ------------------------------------------------
 
@@ -212,7 +211,6 @@ latex_documents = [
      'Andrey Bondar', 'manual'),
 ]
 
-
 # -- Options for manual page output ------------------------------------------
 
 # One entry per manual page. List of tuples
@@ -221,7 +219,6 @@ man_pages = [
     (master_doc, 'tortoise', 'tortoise Documentation',
      [author], 1)
 ]
-
 
 # -- Options for Texinfo output ----------------------------------------------
 
@@ -233,6 +230,5 @@ texinfo_documents = [
      author, 'tortoise', 'One line description of project.',
      'Miscellaneous'),
 ]
-
 
 # -- Extension configuration -------------------------------------------------
