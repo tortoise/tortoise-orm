@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.13.5
+------
+- Sample Starlette integration
+
 0.13.4
 ------
 - Assigning to the FK field will correctly set the associated db-field

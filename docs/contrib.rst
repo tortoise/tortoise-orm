@@ -7,6 +7,8 @@ Contrib
    contrib/linters
    contrib/unittest
    contrib/quart
+   contrib/sanic
+   contrib/starlette
 
 
 

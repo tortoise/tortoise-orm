@@ -44,3 +44,7 @@ quart;python_version>="3.7"
 httpcore;python_version>="3.6"
 sanic;python_version>="3.6"
 requests-async;python_version>="3.6"
+
+# Sample integration - Starlette
+uvicorn==0.8.6; python_version>="3.6"
+starlette;python_version>="3.6"
