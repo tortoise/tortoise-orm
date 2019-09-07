@@ -28,7 +28,16 @@ class Mock(MagicMock):
         return MagicMock()
 
 
-MOCK_MODULES = ['aiosqlite', 'astroid', 'asyncpg', 'aiomysql', 'quart', 'sanic', 'starlette', 'starlette.applications']
+MOCK_MODULES = [
+    "aiosqlite",
+    "astroid",
+    "asyncpg",
+    "aiomysql",
+    "quart",
+    "sanic",
+    "starlette",
+    "starlette.applications",
+]
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # -- Project information -----------------------------------------------------
