@@ -41,6 +41,22 @@ def _fk_getter(self, _key):
     return getattr(self, _key, None)
 
 
+def _rfk_getter(self, _key, ftype, frelfield):
+    val = getattr(self, _key, None)
+    if val is None:
+        val = RelationQueryContainer(ftype, frelfield, self)
+        setattr(self, _key, val)
+    return val
+
+
+def _m2m_getter(self, _key, field_object):
+    val = getattr(self, _key, None)
+    if val is None:
+        val = ManyToManyRelationManager(field_object.type, self, field_object)
+        setattr(self, _key, val)
+    return val
+
+
 class MetaInfo:
     __slots__ = (
         "abstract",
@@ -166,6 +182,32 @@ class MetaInfo:
                     partial(_fk_setter, _key=_key, relation_field=relation_field),
                     partial(_fk_setter, value=None, _key=_key, relation_field=relation_field),
                 ),
+            )
+
+        # Create lazy reverse FK fields on model.
+        for key in self.backward_fk_fields:
+            _key = "_{}".format(key)
+            field_object = self.fields_map[key]  # type: fields.BackwardFKRelation  # type: ignore
+            setattr(
+                self._model,
+                key,
+                property(
+                    partial(
+                        _rfk_getter,
+                        _key=_key,
+                        ftype=field_object.type,
+                        frelfield=field_object.relation_field,
+                    )
+                ),
+            )
+
+        # Create lazy M2M fields on model.
+        for key in self.m2m_fields:
+            _key = "_{}".format(key)
+            setattr(
+                self._model,
+                key,
+                property(partial(_m2m_getter, _key=_key, field_object=self.fields_map[key])),
             )
 
     def _generate_filters(self) -> None:
@@ -311,7 +353,6 @@ class Model(metaclass=ModelMeta):
         # self._meta is a very common attribute lookup, lets cache it.
         meta = self._meta
         self._saved_in_db = meta.pk_attr in kwargs and meta.pk.generated
-        self._init_lazy_fkm2m()
 
         # Assign values and do type conversions
         passed_fields = {*kwargs.keys()}
@@ -330,7 +371,6 @@ class Model(metaclass=ModelMeta):
     def _init_from_db(cls, **kwargs) -> MODEL_TYPE:
         self = cls.__new__(cls)
         self._saved_in_db = True
-        self._init_lazy_fkm2m()
 
         meta = self._meta
 
@@ -340,27 +380,6 @@ class Model(metaclass=ModelMeta):
                 setattr(self, model_field, meta.fields_map[model_field].to_python_value(value))
 
         return self
-
-    def _init_lazy_fkm2m(self) -> None:
-        meta = self._meta
-        # Create lazy fk/m2m objects
-        for key in meta.backward_fk_fields:
-            field_object = meta.fields_map[key]
-            setattr(
-                self,
-                key,
-                RelationQueryContainer(
-                    field_object.type, field_object.relation_field, self  # type: ignore
-                ),
-            )
-
-        for key in meta.m2m_fields:
-            field_object = meta.fields_map[key]
-            setattr(
-                self,
-                key,
-                ManyToManyRelationManager(field_object.type, self, field_object),  # type: ignore
-            )
 
     def _set_field_values(self, values_map: Dict[str, Any]) -> Set[str]:
         """
