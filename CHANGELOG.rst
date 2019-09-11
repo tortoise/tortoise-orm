@@ -6,6 +6,8 @@ Changelog
 0.13.5
 ------
 - Sample Starlette integration
+- Relational fields are now lazily constructed via properties instead of in the constructor,
+  this results in a significant overhead reduction for Model instantiation with many relationships.
 
 0.13.4
 ------
@@ -27,7 +29,7 @@ Changelog
 
 0.13.2
 ------
-* Security fixes for ``«model».save()`` & ``«model».dete()``:
+* Security fixes for ``«model».save()`` & ``«model».delete()``:
 
   This is now fully parametrized, and these operations are no longer susceptible to escaping issues.
 

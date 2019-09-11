@@ -174,8 +174,7 @@ class BaseExecutor:
             self._field_to_db(instance._meta.pk, instance.pk, instance)
             for instance in instance_list
         }  # type: Set[Any]
-        backward_relation_manager = getattr(self.model, field)
-        relation_field = backward_relation_manager.relation_field
+        relation_field = self.model._meta.fields_map[field].relation_field
 
         related_object_list = await related_query.filter(
             **{"{}__in".format(relation_field): list(instance_id_set)}
@@ -301,9 +300,9 @@ class BaseExecutor:
             self._prefetch_queries[field] = related_query
 
     async def _do_prefetch(self, instance_id_list: list, field: str, related_query) -> list:
-        if isinstance(getattr(self.model, field), fields.BackwardFKRelation):
+        if field in self.model._meta.backward_fk_fields:
             return await self._prefetch_reverse_relation(instance_id_list, field, related_query)
-        if isinstance(getattr(self.model, field), fields.ManyToManyField):
+        if field in self.model._meta.m2m_fields:
             return await self._prefetch_m2m_relation(instance_id_list, field, related_query)
         return await self._prefetch_direct_relation(instance_id_list, field, related_query)
 
