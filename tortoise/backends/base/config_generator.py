@@ -1,13 +1,13 @@
 import urllib.parse as urlparse
 import uuid
-from typing import Any, Dict, List, Optional  # noqa
+from typing import Any, Dict, List, Optional
 
 from tortoise.exceptions import ConfigurationError
 
 urlparse.uses_netloc.append("postgres")
 urlparse.uses_netloc.append("sqlite")
 urlparse.uses_netloc.append("mysql")
-DB_LOOKUP = {
+DB_LOOKUP: Dict[str, Dict[str, Any]] = {
     "postgres": {
         "engine": "tortoise.backends.asyncpg",
         "vmap": {
@@ -56,7 +56,7 @@ DB_LOOKUP = {
             "use_unicode": bool,
         },
     },
-}  # type: Dict[str, Dict[str, Any]]
+}
 
 
 def expand_db_url(db_url: str, testing: bool = False) -> dict:
@@ -67,7 +67,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     db_backend = url.scheme
     db = DB_LOOKUP[db_backend]
     if db.get("skip_first_char", True):
-        path = url.path[1:]  # type: Optional[str]
+        path: Optional[str] = url.path[1:]
     else:
         path = url.netloc + url.path
 
@@ -77,7 +77,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         # Other database backend accepts database name being None (but not empty string).
         path = None
 
-    params = {}  # type: dict
+    params: dict = {}
     for key, val in db["defaults"].items():
         params[key] = val
     for key, val in urlparse.parse_qs(url.query).items():
@@ -88,7 +88,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         path = path.replace("\\{", "{").replace("\\}", "}")
         path = path.format(uuid.uuid4().hex)
 
-    vmap = {}  # type: dict
+    vmap: dict = {}
     vmap.update(db["vmap"])
     params[vmap["path"]] = path
     if vmap.get("hostname"):

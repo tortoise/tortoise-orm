@@ -7,8 +7,8 @@ from astroid import MANAGER, inference_tip, nodes, scoped_nodes
 from astroid.node_classes import Assign
 from astroid.nodes import ClassDef
 
-MODELS = {}  # type: dict
-FUTURE_RELATIONS = {}  # type: dict
+MODELS: dict = {}
+FUTURE_RELATIONS: dict = {}
 
 
 def register(linter) -> None:

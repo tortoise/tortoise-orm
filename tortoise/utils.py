@@ -9,7 +9,7 @@ class QueryAsyncIterator:
 
     def __init__(self, query: Awaitable[Iterator], callback: Optional[Callable] = None) -> None:
         self.query = query
-        self.sequence = None  # type: Optional[Iterator]
+        self.sequence: Optional[Iterator] = None
         self._sequence_iterator = None
         self._callback = callback
 

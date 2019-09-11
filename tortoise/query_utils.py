@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Any, List, Mapping, Optional, Tuple  # noqa
+from typing import Any, Dict, List, Optional, Tuple
 
 from pypika import Table
 from pypika.terms import Criterion
@@ -173,14 +173,14 @@ class Q:  # pylint: disable=C0103
             raise OperationalError("You can pass only Q nodes or filter kwargs in one Q node")
         if not all(isinstance(node, Q) for node in args):
             raise OperationalError("All ordered arguments must be Q nodes")
-        self.children = args  # type: Tuple[Q, ...]
-        self.filters = kwargs  # type: Mapping[str, Any]
+        self.children: Tuple[Q, ...] = args
+        self.filters: Dict[str, Any] = kwargs
         if join_type not in {self.AND, self.OR}:
             raise OperationalError("join_type must be AND or OR")
         self.join_type = join_type
         self._is_negated = False
-        self._annotations = {}  # type: Mapping[str, Any]
-        self._custom_filters = {}  # type: Mapping[str, Mapping[str, Any]]
+        self._annotations: Dict[str, Any] = {}
+        self._custom_filters: Dict[str, Dict[str, Any]] = {}
 
     def __and__(self, other) -> "Q":
         if not isinstance(other, Q):

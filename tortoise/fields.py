@@ -69,7 +69,7 @@ class Field:
         self.null = null
         self.unique = unique
         self.index = index
-        self.model_field_name = ""  # type: str
+        self.model_field_name = ""
         self.model = model
         self.reference = reference
         self.description = description
@@ -485,7 +485,7 @@ class RelationQueryContainer:
         self.instance = instance
         self._fetched = False
         self._custom_query = False
-        self.related_objects = []  # type: list
+        self.related_objects: list = []
 
     @property
     def _query(self):

@@ -1,10 +1,10 @@
 from functools import wraps
-from typing import Callable, Dict, Optional  # noqa
+from typing import Callable, Optional
 
 from tortoise.backends.base.client import BaseDBAsyncClient, BaseTransactionWrapper
 from tortoise.exceptions import ParamsError
 
-current_transaction_map = {}  # type: Dict
+current_transaction_map: dict = {}
 
 
 def _get_connection(connection_name: Optional[str]) -> BaseDBAsyncClient:

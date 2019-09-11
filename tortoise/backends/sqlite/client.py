@@ -3,7 +3,7 @@ import logging
 import os
 import sqlite3
 from functools import wraps
-from typing import List, Optional  # noqa
+from typing import List, Optional
 
 import aiosqlite
 
@@ -48,7 +48,7 @@ class SqliteClient(BaseDBAsyncClient):
         self._transaction_class = type(
             "TransactionWrapper", (TransactionWrapper, self.__class__), {}
         )
-        self._connection = None  # type: Optional[aiosqlite.Connection]
+        self._connection: Optional[aiosqlite.Connection] = None
         self._lock = asyncio.Lock()
 
     async def create_connection(self, with_db: bool) -> None:
@@ -131,7 +131,7 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         self, connection_name: str, connection: aiosqlite.Connection, lock, fetch_inserted
     ) -> None:
         self.connection_name = connection_name
-        self._connection = connection  # type: aiosqlite.Connection
+        self._connection: aiosqlite.Connection = connection
         self._lock = lock
         self.log = logging.getLogger("db_client")
         self._transaction_class = self.__class__

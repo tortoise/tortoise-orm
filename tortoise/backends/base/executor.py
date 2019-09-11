@@ -1,6 +1,6 @@
 from copy import copy
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Type  # noqa
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type
 
 from pypika import JoinType, Parameter, Table
 
@@ -11,12 +11,12 @@ from tortoise.query_utils import QueryModifier
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
-EXECUTOR_CACHE = {}  # type: Dict[str, Tuple[list, str, Dict[str, Callable], str, Dict[str, str]]]
+EXECUTOR_CACHE: Dict[str, Tuple[list, str, Dict[str, Callable], str, Dict[str, str]]] = {}
 
 
 class BaseExecutor:
-    TO_DB_OVERRIDE = {}  # type: Dict[Type[fields.Field], Callable]
-    FILTER_FUNC_OVERRIDE = {}  # type: Dict[Callable, Callable]
+    TO_DB_OVERRIDE: Dict[Type[fields.Field], Callable] = {}
+    FILTER_FUNC_OVERRIDE: Dict[Callable, Callable] = {}
     EXPLAIN_PREFIX = "EXPLAIN"
 
     def __init__(self, model, db=None, prefetch_map=None, prefetch_queries=None):
@@ -30,7 +30,7 @@ class BaseExecutor:
             self.regular_columns, columns = self._prepare_insert_columns()
             self.insert_query = self._prepare_insert_statement(columns)
 
-            self.column_map = {}  # type: Dict[str, Callable]
+            self.column_map: Dict[str, Callable] = {}
             for column in self.regular_columns:
                 field_object = self.model._meta.fields_map[column]
                 if field_object.__class__ in self.TO_DB_OVERRIDE:
@@ -45,7 +45,7 @@ class BaseExecutor:
                     getattr(table, self.model._meta.db_pk_field) == self.Parameter(0)
                 ).delete()
             )
-            self.update_cache = {}  # type: Dict[str, str]
+            self.update_cache: Dict[str, str] = {}
 
             EXECUTOR_CACHE[key] = (
                 self.regular_columns,
@@ -170,17 +170,17 @@ class BaseExecutor:
     async def _prefetch_reverse_relation(
         self, instance_list: list, field: str, related_query
     ) -> list:
-        instance_id_set = {
+        instance_id_set: set = {
             self._field_to_db(instance._meta.pk, instance.pk, instance)
             for instance in instance_list
-        }  # type: Set[Any]
+        }
         relation_field = self.model._meta.fields_map[field].relation_field
 
         related_object_list = await related_query.filter(
             **{f"{relation_field}__in": list(instance_id_set)}
         )
 
-        related_object_map = {}  # type: Dict[str, list]
+        related_object_map: Dict[str, list] = {}
         for entry in related_object_list:
             object_id = getattr(entry, relation_field)
             if object_id in related_object_map.keys():
@@ -193,10 +193,10 @@ class BaseExecutor:
         return instance_list
 
     async def _prefetch_m2m_relation(self, instance_list: list, field: str, related_query) -> list:
-        instance_id_set = {
+        instance_id_set: set = {
             self._field_to_db(instance._meta.pk, instance.pk, instance)
             for instance in instance_list
-        }  # type: Set[Any]
+        }
 
         field_object = self.model._meta.fields_map[field]
 
@@ -223,7 +223,7 @@ class BaseExecutor:
         )
 
         if related_query._q_objects:
-            joined_tables = []  # type: List[Table]
+            joined_tables: List[Table] = []
             modifier = QueryModifier()
             for node in related_query._q_objects:
                 modifier &= node.resolve(
@@ -257,7 +257,7 @@ class BaseExecutor:
             model=related_query.model, db=self.db, prefetch_map=related_query._prefetch_map
         ).fetch_for_list(related_object_list)
         related_object_map = {e.pk: e for e in related_object_list}
-        relation_map = {}  # type: Dict[str, list]
+        relation_map: Dict[str, list] = {}
 
         for object_id, related_object_id in relations:
             if object_id not in relation_map:

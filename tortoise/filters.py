@@ -1,6 +1,6 @@
 import operator
 from functools import partial
-from typing import Dict, Optional  # noqa
+from typing import Dict, Optional
 
 from pypika import Table, functions
 from pypika.enums import SqlTypes

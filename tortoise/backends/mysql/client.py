@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from functools import wraps
-from typing import List, Optional, SupportsInt  # noqa
+from typing import List, Optional, SupportsInt
 
 import aiomysql
 import pymysql
@@ -99,8 +99,8 @@ class MySQLClient(BaseDBAsyncClient):
         self.extra.pop("autocommit", None)
         self.charset = self.extra.pop("charset", "")
 
-        self._template = {}  # type: dict
-        self._connection = None  # Type: Optional[aiomysql.Connection]
+        self._template: dict = {}
+        self._connection: Optional[aiomysql.Connection] = None
         self._lock = asyncio.Lock()
 
         self._transaction_class = type(
@@ -194,11 +194,11 @@ class MySQLClient(BaseDBAsyncClient):
 class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
     def __init__(self, connection):
         self.connection_name = connection.connection_name
-        self._connection = connection._connection  # type: aiomysql.Connection
+        self._connection: aiomysql.Connection = connection._connection
         self._lock = connection._lock
         self.log = logging.getLogger("db_client")
         self._transaction_class = self.__class__
-        self._finalized = None  # type: Optional[bool]
+        self._finalized: Optional[bool] = None
         self._old_context_value = None
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection

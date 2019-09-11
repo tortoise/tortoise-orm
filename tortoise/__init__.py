@@ -27,9 +27,9 @@ logger = logging.getLogger("tortoise")
 
 
 class Tortoise:
-    apps = {}  # type: Dict[str, Dict[str, Type[Model]]]
-    _connections = {}  # type: Dict[str, BaseDBAsyncClient]
-    _inited = False  # type: bool
+    apps: Dict[str, Dict[str, Type[Model]]] = {}
+    _connections: Dict[str, BaseDBAsyncClient] = {}
+    _inited: bool = False
 
     @classmethod
     def get_connection(cls, connection_name: str) -> BaseDBAsyncClient:
@@ -433,7 +433,7 @@ class Tortoise:
                         info.get("default_connection", "default"), name
                     )
                 )
-            app_models = []  # type: List[Type[Model]]
+            app_models: List[Type[Model]] = []
             for module in info["models"]:
                 app_models += cls._discover_models(module, name)
 

@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Any, Dict, List, Optional, Set, Tuple  # noqa
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from pypika import JoinType, Order, Query, Table  # noqa
 from pypika.functions import Count
@@ -19,10 +19,10 @@ class AwaitableQuery:
     __slots__ = ("_joined_tables", "query", "model", "_db", "capabilities")
 
     def __init__(self, model) -> None:
-        self._joined_tables = []  # type: List[Table]
+        self._joined_tables: List[Table] = []
         self.model = model
-        self.query = QUERY  # type: Query
-        self._db = None  # type: Optional[BaseDBAsyncClient]
+        self.query: Query = QUERY
+        self._db: Optional[BaseDBAsyncClient] = None
         self.capabilities = model._meta.db.capabilities
 
     def resolve_filters(self, model, q_objects, annotations, custom_filters) -> None:
@@ -112,20 +112,20 @@ class QuerySet(AwaitableQuery):
         super().__init__(model)
         self.fields = model._meta.db_fields
 
-        self._prefetch_map = {}  # type: Dict[str, Set[str]]
-        self._prefetch_queries = {}  # type: Dict[str, QuerySet]
-        self._single = False  # type: bool
-        self._get = False  # type: bool
-        self._count = False  # type: bool
-        self._limit = None  # type: Optional[int]
-        self._offset = None  # type: Optional[int]
-        self._filter_kwargs = {}  # type: Dict[str, Any]
-        self._orderings = []  # type: List[Tuple[str, Any]]
-        self._q_objects = []  # type: List[Q]
-        self._distinct = False  # type: bool
-        self._annotations = {}  # type: Dict[str, Aggregate]
-        self._having = {}  # type: Dict[str, Any]
-        self._custom_filters = {}  # type: Dict[str, dict]
+        self._prefetch_map: Dict[str, Set[str]] = {}
+        self._prefetch_queries: Dict[str, QuerySet] = {}
+        self._single: bool = False
+        self._get: bool = False
+        self._count: bool = False
+        self._limit: Optional[int] = None
+        self._offset: Optional[int] = None
+        self._filter_kwargs: Dict[str, Any] = {}
+        self._orderings: List[Tuple[str, Any]] = []
+        self._q_objects: List[Q] = []
+        self._distinct: bool = False
+        self._annotations: Dict[str, Aggregate] = {}
+        self._having: Dict[str, Any] = {}
+        self._custom_filters: Dict[str, dict] = {}
 
     def _clone(self) -> "QuerySet":
         queryset = QuerySet.__new__(QuerySet)
@@ -298,7 +298,7 @@ class QuerySet(AwaitableQuery):
         If no arguments are passed it will default to a dict containing all fields.
         """
         if args or kwargs:
-            fields_for_select = {}  # type: Dict[str, str]
+            fields_for_select: Dict[str, str] = {}
             for field in args:
                 if field in fields_for_select:
                     raise FieldError(f"Duplicate key {field}")

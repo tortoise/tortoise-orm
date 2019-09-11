@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from functools import wraps
-from typing import List, Optional, SupportsInt  # noqa
+from typing import List, Optional, SupportsInt
 
 import asyncpg
 from pypika import PostgreSQLQuery
@@ -92,8 +92,8 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self.extra.pop("loop", None)
         self.extra.pop("connection_class", None)
 
-        self._template = {}  # type: dict
-        self._connection = None  # Type: Optional[asyncpg.Connection]
+        self._template: dict = {}
+        self._connection: Optional[asyncpg.Connection] = None
         self._lock = asyncio.Lock()
 
         self._transaction_class = type(

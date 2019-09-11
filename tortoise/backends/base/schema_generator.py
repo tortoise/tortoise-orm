@@ -1,6 +1,6 @@
 import logging
 import warnings
-from typing import List, Optional, Set  # noqa
+from typing import List, Optional, Set
 
 from tortoise import fields
 from tortoise.exceptions import ConfigurationError
@@ -94,7 +94,7 @@ class BaseSchemaGenerator:
     @staticmethod
     def _make_hash(*args: str, length: int) -> str:
         # Hash a set of string values and get a digest of the given length.
-        letters = []  # type: List[str]
+        letters: List[str] = []
         for i_th_letters in zip(*args):
             letters.extend(i_th_letters)
         return "".join([str(ord(letter)) for letter in letters])[:length]
@@ -297,7 +297,7 @@ class BaseSchemaGenerator:
                     models_to_create.append(model)
 
     def get_create_schema_sql(self, safe=True) -> str:
-        models_to_create = []  # type: List
+        models_to_create: list = []
 
         self._get_models_to_create(models_to_create)
 
@@ -307,9 +307,9 @@ class BaseSchemaGenerator:
 
         tables_to_create_count = len(tables_to_create)
 
-        created_tables = set()  # type: Set[dict]
-        ordered_tables_for_create = []
-        m2m_tables_to_create = []  # type: List[str]
+        created_tables: Set[dict] = set()
+        ordered_tables_for_create: List[str] = []
+        m2m_tables_to_create: List[str] = []
         while True:
             if len(created_tables) == tables_to_create_count:
                 break

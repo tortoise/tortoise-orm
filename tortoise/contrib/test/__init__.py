@@ -38,12 +38,12 @@ Mark test as expecting failiure.
 On success it will be marked as unexpected success.
 """
 
-_CONFIG = {}  # type: dict
-_CONNECTIONS = {}  # type: dict
+_CONFIG: dict = {}
+_CONNECTIONS: dict = {}
 _SELECTOR = None
-_LOOP = None  # type: BaseSelectorEventLoop
-_MODULES = []  # type: List[str]
-_CONN_MAP = {}  # type: dict
+_LOOP: BaseSelectorEventLoop = None
+_MODULES: List[str] = []
+_CONN_MAP: dict = {}
 
 
 def getDBConfig(app_label: str, modules: List[str]) -> dict:

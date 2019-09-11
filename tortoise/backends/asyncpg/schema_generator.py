@@ -17,7 +17,7 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.comments_array = []  # type: List[str]
+        self.comments_array: List[str] = []
 
     def _get_primary_key_create_string(
         self, field_object: fields.Field, field_name: str, comment: str

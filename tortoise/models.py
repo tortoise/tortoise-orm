@@ -1,6 +1,6 @@
 from copy import copy, deepcopy
 from functools import partial
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from pypika import Query
 
@@ -87,31 +87,31 @@ class MetaInfo:
     )
 
     def __init__(self, meta) -> None:
-        self.abstract = getattr(meta, "abstract", False)  # type: bool
-        self.table = getattr(meta, "table", "")  # type: str
-        self.app = getattr(meta, "app", None)  # type: Optional[str]
-        self.unique_together = get_unique_together(meta)  # type: Union[Tuple, List]
-        self.fields = set()  # type: Set[str]
-        self.db_fields = set()  # type: Set[str]
-        self.m2m_fields = set()  # type: Set[str]
-        self.fk_fields = set()  # type: Set[str]
-        self.backward_fk_fields = set()  # type: Set[str]
-        self.fetch_fields = set()  # type: Set[str]
-        self.fields_db_projection = {}  # type: Dict[str,str]
-        self.fields_db_projection_reverse = {}  # type: Dict[str,str]
-        self._filters = {}  # type: Dict[str, Dict[str, dict]]
-        self.filters = {}  # type: Dict[str, dict]
-        self.fields_map = {}  # type: Dict[str, fields.Field]
-        self._inited = False  # type: bool
-        self.default_connection = None  # type: Optional[str]
-        self.basequery = Query()  # type: Query
-        self.basequery_all_fields = Query()  # type: Query
-        self.pk_attr = getattr(meta, "pk_attr", "")  # type: str
-        self.generated_db_fields = None  # type: Tuple[str]  # type: ignore
-        self._model = None  # type: "Model"  # type: ignore
-        self.table_description = getattr(meta, "table_description", "")  # type: str
-        self.pk = None  # type: fields.Field  # type: ignore
-        self.db_pk_field = ""  # type: str
+        self.abstract: bool = getattr(meta, "abstract", False)
+        self.table: str = getattr(meta, "table", "")
+        self.app: Optional[str] = getattr(meta, "app", None)
+        self.unique_together: Tuple[Tuple[str, ...], ...] = get_unique_together(meta)
+        self.fields: Set[str] = set()
+        self.db_fields: Set[str] = set()
+        self.m2m_fields: Set[str] = set()
+        self.fk_fields: Set[str] = set()
+        self.backward_fk_fields: Set[str] = set()
+        self.fetch_fields: Set[str] = set()
+        self.fields_db_projection: Dict[str, str] = {}
+        self.fields_db_projection_reverse: Dict[str, str] = {}
+        self._filters: Dict[str, Dict[str, dict]] = {}
+        self.filters: Dict[str, dict] = {}
+        self.fields_map: Dict[str, fields.Field] = {}
+        self._inited: bool = False
+        self.default_connection: Optional[str] = None
+        self.basequery: Query = Query()
+        self.basequery_all_fields: Query = Query()
+        self.pk_attr: str = getattr(meta, "pk_attr", "")
+        self.generated_db_fields: Tuple[str] = None  # type: ignore
+        self._model: "Model" = None  # type: ignore
+        self.table_description: str = getattr(meta, "table_description", "")
+        self.pk: fields.Field = None  # type: ignore
+        self.db_pk_field: str = ""
 
     def add_field(self, name: str, value: Field):
         if name in self.fields_map:
@@ -187,7 +187,7 @@ class MetaInfo:
         # Create lazy reverse FK fields on model.
         for key in self.backward_fk_fields:
             _key = f"_{key}"
-            field_object = self.fields_map[key]  # type: fields.BackwardFKRelation  # type: ignore
+            field_object: fields.BackwardFKRelation = self.fields_map[key]  # type: ignore
             setattr(
                 self._model,
                 key,
@@ -226,15 +226,15 @@ class ModelMeta(type):
     __slots__ = ()
 
     def __new__(mcs, name: str, bases, attrs: dict, *args, **kwargs):
-        fields_db_projection = {}  # type: Dict[str,str]
-        fields_map = {}  # type: Dict[str, fields.Field]
-        filters = {}  # type: Dict[str, Dict[str, dict]]
-        fk_fields = set()  # type: Set[str]
-        m2m_fields = set()  # type: Set[str]
+        fields_db_projection: Dict[str, str] = {}
+        fields_map: Dict[str, fields.Field] = {}
+        filters: Dict[str, Dict[str, dict]] = {}
+        fk_fields: Set[str] = set()
+        m2m_fields: Set[str] = set()
         meta_class = attrs.get("Meta", type("Meta", (), {}))
-        pk_attr = "id"
+        pk_attr: str = "id"
 
-        # Searching for Field attributes in the class hierarchie
+        # Searching for Field attributes in the class hierarchy
         def __search_for_field_attributes(base, attrs: dict):
             """
             Searching for class attributes of type fields.Field
@@ -336,7 +336,7 @@ class ModelMeta(type):
         if not fields_map:
             meta.abstract = True
 
-        new_class = super().__new__(mcs, name, bases, attrs)  # type: "Model"  # type: ignore
+        new_class: "Model" = super().__new__(mcs, name, bases, attrs)  # type: ignore
         for field in meta.fields_map.values():
             field.model = new_class
 
@@ -396,7 +396,7 @@ class Model(metaclass=ModelMeta):
                         f"You should first call .save() on {value} before referring to it"
                     )
                 field_object = meta.fields_map[key]
-                relation_field = field_object.source_field  # type: str  # type: ignore
+                relation_field: str = field_object.source_field  # type: ignore
                 setattr(self, key, value)
                 passed_fields.add(relation_field)
             elif key in meta.fields_db_projection:
