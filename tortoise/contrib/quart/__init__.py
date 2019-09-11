@@ -74,7 +74,7 @@ def register_tortoise(
     """
 
     @app.before_serving
-    async def init_orm():  # pylint: disable=W0612
+    async def init_orm() -> None:  # pylint: disable=W0612
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
         logging.info("Tortoise-ORM started, %s, %s", Tortoise._connections, Tortoise.apps)
         if generate_schemas:
@@ -82,12 +82,12 @@ def register_tortoise(
             await Tortoise.generate_schemas()
 
     @app.after_serving
-    async def close_orm():  # pylint: disable=W0612
+    async def close_orm() -> None:  # pylint: disable=W0612
         await Tortoise.close_connections()
         logging.info("Tortoise-ORM shutdown")
 
     @app.cli.command()  # type: ignore
-    def generate_schemas():  # pylint: disable=E0102
+    def generate_schemas() -> None:  # pylint: disable=E0102
         """Populate DB with Tortoise-ORM schemas."""
 
         async def inner() -> None:

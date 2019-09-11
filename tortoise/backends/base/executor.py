@@ -10,6 +10,7 @@ from tortoise.query_utils import QueryModifier
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
+    from tortoise.backends.base.client import BaseDBAsyncClient
 
 EXECUTOR_CACHE: Dict[str, Tuple[list, str, Dict[str, Callable], str, Dict[str, str]]] = {}
 
@@ -17,11 +18,17 @@ EXECUTOR_CACHE: Dict[str, Tuple[list, str, Dict[str, Callable], str, Dict[str, s
 class BaseExecutor:
     TO_DB_OVERRIDE: Dict[Type[fields.Field], Callable] = {}
     FILTER_FUNC_OVERRIDE: Dict[Callable, Callable] = {}
-    EXPLAIN_PREFIX = "EXPLAIN"
+    EXPLAIN_PREFIX: str = "EXPLAIN"
 
-    def __init__(self, model, db=None, prefetch_map=None, prefetch_queries=None):
+    def __init__(
+        self,
+        model: "Type[Model]",
+        db: "BaseDBAsyncClient",
+        prefetch_map=None,
+        prefetch_queries=None,
+    ) -> None:
         self.model = model
-        self.db = db
+        self.db: "BaseDBAsyncClient" = db
         self.prefetch_map = prefetch_map if prefetch_map else {}
         self._prefetch_queries = prefetch_queries if prefetch_queries else {}
 
@@ -30,14 +37,15 @@ class BaseExecutor:
             self.regular_columns, columns = self._prepare_insert_columns()
             self.insert_query = self._prepare_insert_statement(columns)
 
-            self.column_map: Dict[str, Callable] = {}
+            self.column_map: Dict[str, Callable[[Any, Any], Any]] = {}
             for column in self.regular_columns:
                 field_object = self.model._meta.fields_map[column]
                 if field_object.__class__ in self.TO_DB_OVERRIDE:
-                    func = partial(self.TO_DB_OVERRIDE[field_object.__class__], field_object)
+                    self.column_map[column] = partial(
+                        self.TO_DB_OVERRIDE[field_object.__class__], field_object
+                    )
                 else:
-                    func = field_object.to_db_value
-                self.column_map[column] = func
+                    self.column_map[column] = field_object.to_db_value
 
             table = Table(self.model._meta.table)
             self.delete_query = str(
@@ -71,7 +79,7 @@ class BaseExecutor:
         raw_results = await self.db.execute_query(query.get_sql())
         instance_list = []
         for row in raw_results:
-            instance = self.model._init_from_db(**row)
+            instance: "Model" = self.model._init_from_db(**row)
             if custom_fields:
                 for field in custom_fields:
                     setattr(instance, field, row[field])
@@ -174,7 +182,7 @@ class BaseExecutor:
             self._field_to_db(instance._meta.pk, instance.pk, instance)
             for instance in instance_list
         }
-        relation_field = self.model._meta.fields_map[field].relation_field
+        relation_field = self.model._meta.fields_map[field].relation_field  # type: ignore
 
         related_object_list = await related_query.filter(
             **{f"{relation_field}__in": list(instance_id_set)}
@@ -198,7 +206,7 @@ class BaseExecutor:
             for instance in instance_list
         }
 
-        field_object = self.model._meta.fields_map[field]
+        field_object: fields.ManyToManyField = self.model._meta.fields_map[field]  # type: ignore
 
         through_table = Table(field_object.through)
 
@@ -291,7 +299,7 @@ class BaseExecutor:
             if field in self._prefetch_queries:
                 related_query = self._prefetch_queries.get(field)
             else:
-                related_model_field = self.model._meta.fields_map.get(field)
+                related_model_field = self.model._meta.fields_map[field]
                 related_model = related_model_field.type
                 related_query = related_model.all().using_db(self.db)
                 related_query.query = copy(related_query.model._meta.basequery)

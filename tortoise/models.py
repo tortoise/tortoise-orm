@@ -22,7 +22,7 @@ MODEL_TYPE = TypeVar("MODEL_TYPE", bound="Model")
 
 
 def get_unique_together(meta) -> Tuple[Tuple[str, ...], ...]:
-    unique_together = getattr(meta, "unique_together", None)
+    unique_together = getattr(meta, "unique_together", ())
 
     if isinstance(unique_together, (list, tuple)):
         if unique_together and isinstance(unique_together[0], str):
@@ -618,9 +618,6 @@ class Model(metaclass=ModelMeta):
     @classmethod
     def _check_unique_together(cls) -> None:
         """Check the value of "unique_together" option."""
-        if cls._meta.unique_together is None:
-            return
-
         if not isinstance(cls._meta.unique_together, (tuple, list)):
             raise ConfigurationError(f"'{cls.__name__}.unique_together' must be a list or tuple.")
 

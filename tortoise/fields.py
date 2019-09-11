@@ -382,7 +382,7 @@ class ForeignKeyField(Field):
         self, model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs
     ) -> None:
         super().__init__(**kwargs)
-        if isinstance(model_name, str) and len(model_name.split(".")) != 2:
+        if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name = model_name
         self.related_name = related_name

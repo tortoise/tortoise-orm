@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from pypika import JoinType, Order, Query, Table  # noqa
 from pypika.functions import Count
@@ -22,7 +22,7 @@ class AwaitableQuery:
         self._joined_tables: List[Table] = []
         self.model = model
         self.query: Query = QUERY
-        self._db: Optional[BaseDBAsyncClient] = None
+        self._db: BaseDBAsyncClient = None  # type: ignore
         self.capabilities = model._meta.db.capabilities
 
     def resolve_filters(self, model, q_objects, annotations, custom_filters) -> None:
@@ -72,7 +72,7 @@ class AwaitableQuery:
                 field_name = field_object.source_field or field_name
                 self.query = self.query.orderby(getattr(table, field_name), order=ordering[1])
 
-    def _make_query(self):
+    def _make_query(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
     def __await__(self):
@@ -390,7 +390,7 @@ class QuerySet(AwaitableQuery):
         queryset._get = True
         return queryset
 
-    def prefetch_related(self, *args: str) -> "QuerySet":
+    def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySet":
         """
         Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
         """
@@ -435,10 +435,10 @@ class QuerySet(AwaitableQuery):
             **The output format may (and will) vary greatly depending on the database backend.**
         """
         if self._db is None:
-            self._db = self.model._meta.db
-
+            self._db = self.model._meta.db  # type: ignore
+        self._make_query()
         return await self._db.executor_class(model=self.model, db=self._db).execute_explain(
-            self._make_query()
+            self.query
         )
 
     def using_db(self, _db: BaseDBAsyncClient) -> "QuerySet":
@@ -461,7 +461,7 @@ class QuerySet(AwaitableQuery):
                 self._join_table_by_field(*join)
             self.query._select_other(aggregation_info["field"].as_(key))
 
-    def _make_query(self) -> Query:
+    def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery_all_fields)
         self._resolve_annotate()
         self.resolve_filters(
@@ -477,7 +477,6 @@ class QuerySet(AwaitableQuery):
         if self._distinct:
             self.query._distinct = True
         self.resolve_ordering(self.model, self._orderings, self._annotations)
-        return self.query
 
     async def _execute(self):
         instance_list = await self._db.executor_class(
@@ -510,7 +509,7 @@ class UpdateQuery(AwaitableQuery):
         self.custom_filters = custom_filters
         self._db = db
 
-    def _make_query(self):
+    def _make_query(self) -> None:
         table = Table(self.model._meta.table)
         self.query = self._db.query_class.update(table)
         self.resolve_filters(
@@ -531,7 +530,7 @@ class UpdateQuery(AwaitableQuery):
             if isinstance(field_object, fields.ForeignKeyField):
                 fk_field = field_object.source_field
                 db_field = self.model._meta.fields_map[fk_field].source_field
-                value = executor.column_map[fk_field](value.id, None)
+                value = executor.column_map[fk_field](value.pk, None)  # type: ignore
             else:
                 try:
                     db_field = self.model._meta.fields_db_projection[key]
@@ -555,7 +554,7 @@ class DeleteQuery(AwaitableQuery):
         self.custom_filters = custom_filters
         self._db = db
 
-    def _make_query(self):
+    def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
         self.resolve_filters(
             model=self.model,
@@ -579,7 +578,7 @@ class CountQuery(AwaitableQuery):
         self.custom_filters = custom_filters
         self._db = db
 
-    def _make_query(self):
+    def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
         self.resolve_filters(
             model=self.model,
@@ -711,7 +710,7 @@ class ValuesListQuery(FieldSelectQuery):
         self.flat = flat
         self._db = db
 
-    def _make_query(self):
+    def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
         for positional_number, field in self.fields.items():
             self.add_field_to_select_query(field, positional_number)
@@ -778,7 +777,7 @@ class ValuesQuery(FieldSelectQuery):
         self.q_objects = q_objects
         self._db = db
 
-    def _make_query(self):
+    def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
         for return_as, field in self.fields_for_select.items():
             self.add_field_to_select_query(field, return_as)

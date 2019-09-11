@@ -199,7 +199,7 @@ class BaseSchemaGenerator:
             if field_object.index:
                 fields_with_index.append(db_field)
 
-        if model._meta.unique_together is not None:
+        if model._meta.unique_together:
             unique_together_sqls = []
 
             for unique_together_list in model._meta.unique_together:

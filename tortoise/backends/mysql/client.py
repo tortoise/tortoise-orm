@@ -212,7 +212,7 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         self._connection = self._parent._connection
 
     @retry_connection
-    async def start(self):
+    async def start(self) -> None:
         await self._connection.begin()
         self._finalized = False
         current_transaction = current_transaction_map[self.connection_name]
