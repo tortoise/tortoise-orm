@@ -54,32 +54,32 @@ def not_null(field, value):
 
 
 def contains(field, value):
-    return functions.Cast(field, SqlTypes.VARCHAR).like("%{}%".format(value))
+    return functions.Cast(field, SqlTypes.VARCHAR).like(f"%{value}%")
 
 
 def starts_with(field, value):
-    return functions.Cast(field, SqlTypes.VARCHAR).like("{}%".format(value))
+    return functions.Cast(field, SqlTypes.VARCHAR).like(f"{value}%")
 
 
 def ends_with(field, value):
-    return functions.Cast(field, SqlTypes.VARCHAR).like("%{}".format(value))
+    return functions.Cast(field, SqlTypes.VARCHAR).like(f"%{value}")
 
 
 def insensitive_contains(field, value):
     return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
-        functions.Upper("%{}%".format(value))
+        functions.Upper(f"%{value}%")
     )
 
 
 def insensitive_starts_with(field, value):
     return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
-        functions.Upper("{}%".format(value))
+        functions.Upper(f"{value}%")
     )
 
 
 def insensitive_ends_with(field, value):
     return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
-        functions.Upper("%{}".format(value))
+        functions.Upper(f"%{value}")
     )
 
 
@@ -93,21 +93,21 @@ def get_m2m_filters(field_name: str, field: fields.ManyToManyField) -> Dict[str,
             "table": Table(field.through),
             "value_encoder": target_table_pk.to_db_value,
         },
-        "{}__not".format(field_name): {
+        f"{field_name}__not": {
             "field": field.forward_key,
             "backward_key": field.backward_key,
             "operator": not_equal,
             "table": Table(field.through),
             "value_encoder": target_table_pk.to_db_value,
         },
-        "{}__in".format(field_name): {
+        f"{field_name}__in": {
             "field": field.forward_key,
             "backward_key": field.backward_key,
             "operator": is_in,
             "table": Table(field.through),
             "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
-        "{}__not_in".format(field_name): {
+        f"{field_name}__not_in": {
             "field": field.forward_key,
             "backward_key": field.backward_key,
             "operator": not_in,
@@ -127,21 +127,21 @@ def get_backward_fk_filters(field_name: str, field: fields.BackwardFKRelation) -
             "table": Table(field.type._meta.table),
             "value_encoder": target_table_pk.to_db_value,
         },
-        "{}__not".format(field_name): {
+        f"{field_name}__not": {
             "field": "id",
             "backward_key": field.relation_field,
             "operator": not_equal,
             "table": Table(field.type._meta.table),
             "value_encoder": target_table_pk.to_db_value,
         },
-        "{}__in".format(field_name): {
+        f"{field_name}__in": {
             "field": "id",
             "backward_key": field.relation_field,
             "operator": is_in,
             "table": Table(field.type._meta.table),
             "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
-        "{}__not_in".format(field_name): {
+        f"{field_name}__not_in": {
             "field": "id",
             "backward_key": field.relation_field,
             "operator": not_in,
@@ -167,86 +167,86 @@ def get_filters_for_field(
             "source_field": source_field,
             "operator": operator.eq,
         },
-        "{}__not".format(field_name): {
+        f"{field_name}__not": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": not_equal,
         },
-        "{}__in".format(field_name): {
+        f"{field_name}__in": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": is_in,
             "value_encoder": list_encoder,
         },
-        "{}__not_in".format(field_name): {
+        f"{field_name}__not_in": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": not_in,
             "value_encoder": list_encoder,
         },
-        "{}__isnull".format(field_name): {
+        f"{field_name}__isnull": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": is_null,
             "value_encoder": bool_encoder,
         },
-        "{}__not_isnull".format(field_name): {
+        f"{field_name}__not_isnull": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": not_null,
             "value_encoder": bool_encoder,
         },
-        "{}__gte".format(field_name): {
+        f"{field_name}__gte": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": operator.ge,
         },
-        "{}__lte".format(field_name): {
+        f"{field_name}__lte": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": operator.le,
         },
-        "{}__gt".format(field_name): {
+        f"{field_name}__gt": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": operator.gt,
         },
-        "{}__lt".format(field_name): {
+        f"{field_name}__lt": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": operator.lt,
         },
-        "{}__contains".format(field_name): {
+        f"{field_name}__contains": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": contains,
             "value_encoder": string_encoder,
         },
-        "{}__startswith".format(field_name): {
+        f"{field_name}__startswith": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": starts_with,
             "value_encoder": string_encoder,
         },
-        "{}__endswith".format(field_name): {
+        f"{field_name}__endswith": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": ends_with,
             "value_encoder": string_encoder,
         },
-        "{}__icontains".format(field_name): {
+        f"{field_name}__icontains": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": insensitive_contains,
             "value_encoder": string_encoder,
         },
-        "{}__istartswith".format(field_name): {
+        f"{field_name}__istartswith": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": insensitive_starts_with,
             "value_encoder": string_encoder,
         },
-        "{}__iendswith".format(field_name): {
+        f"{field_name}__iendswith": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": insensitive_ends_with,

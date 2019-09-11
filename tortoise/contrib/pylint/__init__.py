@@ -43,7 +43,7 @@ def transform_model(cls) -> None:
                         if attr.targets[0].name == "app":
                             appname = attr.value.value
 
-        mname = "{}.{}".format(appname, cls.name)
+        mname = f"{appname}.{cls.name}"
         MODELS[mname] = cls
 
         for relname, relval in FUTURE_RELATIONS.get(mname, []):

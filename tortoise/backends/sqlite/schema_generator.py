@@ -29,11 +29,11 @@ class SqliteSchemaGenerator(BaseSchemaGenerator):
         self, field_object: fields.Field, field_name: str, comment: str
     ) -> Optional[str]:
         if isinstance(field_object, (fields.SmallIntField, fields.IntField, fields.BigIntField)):
-            return '"{}" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL{}'.format(field_name, comment)
+            return f'"{field_name}" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL{comment}'
         return None
 
     def _table_comment_generator(self, table: str, comment: str) -> str:
-        return " /* {} */".format(self._escape_comment(comment))
+        return f" /* {self._escape_comment(comment)} */"
 
     def _column_comment_generator(self, table: str, column: str, comment: str) -> str:
-        return " /* {} */".format(self._escape_comment(comment))
+        return f" /* {self._escape_comment(comment)} */"

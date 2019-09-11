@@ -46,7 +46,7 @@ def retry_connection(func):
                 await self.create_connection(with_db=True)
                 logging.info("Reconnected")
             except Exception as e:
-                raise DBConnectionError("Failed to reconnect: {}".format(str(e)))
+                raise DBConnectionError(f"Failed to reconnect: {str(e)}")
             finally:
                 self._lock.release()
 
@@ -114,12 +114,10 @@ class AsyncpgDBClient(BaseDBAsyncClient):
                 "Created connection %s with params: %s", self._connection, self._template
             )
         except asyncpg.InvalidCatalogNameError:
-            raise DBConnectionError(
-                "Can't establish connection to database {}".format(self.database)
-            )
+            raise DBConnectionError(f"Can't establish connection to database {self.database}")
         # Set post-connection variables
         if self.schema:
-            await self.execute_script("SET search_path TO {}".format(self.schema))
+            await self.execute_script(f"SET search_path TO {self.schema}")
 
     async def _close(self) -> None:
         if self._connection:  # pragma: nobranch
@@ -133,15 +131,13 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
     async def db_create(self) -> None:
         await self.create_connection(with_db=False)
-        await self.execute_script(
-            'CREATE DATABASE "{}" OWNER "{}"'.format(self.database, self.user)
-        )
+        await self.execute_script(f'CREATE DATABASE "{self.database}" OWNER "{self.user}"')
         await self.close()
 
     async def db_delete(self) -> None:
         await self.create_connection(with_db=False)
         try:
-            await self.execute_script('DROP DATABASE "{}"'.format(self.database))
+            await self.execute_script(f'DROP DATABASE "{self.database}"')
         except asyncpg.InvalidCatalogNameError:  # pragma: nocoverage
             pass
         await self.close()

@@ -37,7 +37,7 @@ class Capabilities:
         # Deficiencies to work around:
         safe_indexes: bool = True,
         requires_limit: bool = False,
-        inline_comment: bool = False
+        inline_comment: bool = False,
     ) -> None:
         super().__setattr__("_mutable", True)
 

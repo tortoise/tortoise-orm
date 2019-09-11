@@ -58,13 +58,13 @@ class SqliteClient(BaseDBAsyncClient):
             await self._connection._connect()
             self._connection._conn.row_factory = sqlite3.Row
             for pragma, val in self.pragmas.items():
-                cursor = await self._connection.execute("PRAGMA {}={}".format(pragma, val))
+                cursor = await self._connection.execute(f"PRAGMA {pragma}={val}")
                 await cursor.close()
             self.log.debug(
                 "Created connection %s with params: filename=%s %s",
                 self._connection,
                 self.filename,
-                " ".join(["{}={}".format(k, v) for k, v in self.pragmas.items()]),
+                " ".join([f"{k}={v}" for k, v in self.pragmas.items()]),
             )
 
     async def close(self) -> None:
@@ -74,7 +74,7 @@ class SqliteClient(BaseDBAsyncClient):
                 "Closed connection %s with params: filename=%s %s",
                 self._connection,
                 self.filename,
-                " ".join(["{}={}".format(k, v) for k, v in self.pragmas.items()]),
+                " ".join([f"{k}={v}" for k, v in self.pragmas.items()]),
             )
             self._connection = None
 

@@ -12,8 +12,8 @@ def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[
     join = None
     table = Table(model._meta.table)
 
-    if value is None and "{}__isnull".format(key) in model._meta.filters:
-        param = model._meta.get_filter("{}__isnull".format(key))
+    if value is None and f"{key}__isnull" in model._meta.filters:
+        param = model._meta.get_filter(f"{key}__isnull")
         value = True
     else:
         param = model._meta.get_filter(key)
@@ -76,7 +76,7 @@ def _get_joins_for_related_field(
             (
                 related_table,
                 getattr(related_table, related_table_pk)
-                == getattr(table, "{}_id".format(related_field_name)),
+                == getattr(table, f"{related_field_name}_id"),
             )
         )
     return required_joins
@@ -260,9 +260,7 @@ class Q:  # pylint: disable=C0103
             allowed = sorted(
                 list(model._meta.fields | model._meta.fetch_fields | set(self._custom_filters))
             )
-            raise FieldError(
-                "Unknown filter param '{}'. Allowed base values are {}".format(key, allowed)
-            )
+            raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
         return filter_key, filter_value
 
     def _resolve_kwargs(self, model) -> QueryModifier:
@@ -316,7 +314,7 @@ class Prefetch:
         first_level_field = relation_split[0]
         if first_level_field not in queryset.model._meta.fetch_fields:
             raise OperationalError(
-                "relation {} for {} not found".format(first_level_field, queryset.model._meta.table)
+                f"relation {first_level_field} for {queryset.model._meta.table} not found"
             )
         forwarded_prefetch = "__".join(relation_split[1:])
         if forwarded_prefetch:

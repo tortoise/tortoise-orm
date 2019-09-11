@@ -57,7 +57,7 @@ class TestModelMethods(test.TestCase):
         self.assertEqual(str(self.mdl), "Test")
 
     def test_repr(self):
-        self.assertEqual(repr(self.mdl), "<Tournament: {}>".format(self.mdl.id))
+        self.assertEqual(repr(self.mdl), f"<Tournament: {self.mdl.id}>")
         self.assertEqual(repr(self.mdl2), "<Tournament>")
 
     def test_hash(self):
@@ -117,7 +117,7 @@ class TestModelMethodsNoID(TestModelMethods):
         self.assertEqual(str(self.mdl), "<NoID>")
 
     def test_repr(self):
-        self.assertEqual(repr(self.mdl), "<NoID: {}>".format(self.mdl.id))
+        self.assertEqual(repr(self.mdl), f"<NoID: {self.mdl.id}>")
         self.assertEqual(repr(self.mdl2), "<NoID>")
 
 

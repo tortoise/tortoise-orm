@@ -123,9 +123,7 @@ class MySQLClient(BaseDBAsyncClient):
                 "Created connection %s with params: %s", self._connection, self._template
             )
         except pymysql.err.OperationalError:
-            raise DBConnectionError(
-                "Can't connect to MySQL server: {template}".format(template=self._template)
-            )
+            raise DBConnectionError(f"Can't connect to MySQL server: {self._template}")
 
     async def _close(self) -> None:
         if self._connection:  # pragma: nobranch
@@ -139,13 +137,13 @@ class MySQLClient(BaseDBAsyncClient):
 
     async def db_create(self) -> None:
         await self.create_connection(with_db=False)
-        await self.execute_script("CREATE DATABASE {}".format(self.database))
+        await self.execute_script(f"CREATE DATABASE {self.database}")
         await self.close()
 
     async def db_delete(self) -> None:
         await self.create_connection(with_db=False)
         try:
-            await self.execute_script("DROP DATABASE {}".format(self.database))
+            await self.execute_script(f"DROP DATABASE {self.database}")
         except pymysql.err.DatabaseError:  # pragma: nocoverage
             pass
         await self.close()

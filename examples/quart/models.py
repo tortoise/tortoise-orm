@@ -6,7 +6,7 @@ class Users(Model):
     status = fields.CharField(20)
 
     def __str__(self):
-        return "User {}: {}".format(self.id, self.status)
+        return f"User {self.id}: {self.status}"
 
 
 class Workers(Model):
@@ -14,4 +14,4 @@ class Workers(Model):
     status = fields.CharField(20)
 
     def __str__(self):
-        return "Worker {}: {}".format(self.id, self.status)
+        return f"Worker {self.id}: {self.status}"

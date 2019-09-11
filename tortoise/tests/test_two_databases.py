@@ -49,7 +49,7 @@ class TestTwoDatabases(test.SimpleTestCase):
 
         teams = []
         for i in range(2):
-            team = await TeamTwo.create(name="Team {}".format(i + 1))
+            team = await TeamTwo.create(name=f"Team {(i + 1)}")
             teams.append(team)
             await event.participants.add(team)
 

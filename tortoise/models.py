@@ -115,7 +115,7 @@ class MetaInfo:
 
     def add_field(self, name: str, value: Field):
         if name in self.fields_map:
-            raise ConfigurationError("Field {} already present in meta".format(name))
+            raise ConfigurationError(f"Field {name} already present in meta")
         setattr(self._model, name, value)
         value.model = self._model
         self.fields_map[name] = value
@@ -172,7 +172,7 @@ class MetaInfo:
 
         # Create lazy FK fields on model.
         for key in self.fk_fields:
-            _key = "_{}".format(key)
+            _key = f"_{key}"
             relation_field = self.fields_map[key].source_field
             setattr(
                 self._model,
@@ -186,7 +186,7 @@ class MetaInfo:
 
         # Create lazy reverse FK fields on model.
         for key in self.backward_fk_fields:
-            _key = "_{}".format(key)
+            _key = f"_{key}"
             field_object = self.fields_map[key]  # type: fields.BackwardFKRelation  # type: ignore
             setattr(
                 self._model,
@@ -203,7 +203,7 @@ class MetaInfo:
 
         # Create lazy M2M fields on model.
         for key in self.m2m_fields:
-            _key = "_{}".format(key)
+            _key = f"_{key}"
             setattr(
                 self._model,
                 key,
@@ -393,7 +393,7 @@ class Model(metaclass=ModelMeta):
             if key in meta.fk_fields:
                 if value and not value._saved_in_db:
                     raise OperationalError(
-                        "You should first call .save() on {} before referring to it".format(value)
+                        f"You should first call .save() on {value} before referring to it"
                     )
                 field_object = meta.fields_map[key]
                 relation_field = field_object.source_field  # type: str  # type: ignore
@@ -402,12 +402,12 @@ class Model(metaclass=ModelMeta):
             elif key in meta.fields_db_projection:
                 field_object = meta.fields_map[key]
                 if value is None and not field_object.null:
-                    raise ValueError("{} is non nullable field, but null was passed".format(key))
+                    raise ValueError(f"{key} is non nullable field, but null was passed")
                 setattr(self, key, field_object.to_python_value(value))
             elif key in meta.db_fields:
                 field_object = meta.fields_map[meta.fields_db_projection_reverse[key]]
                 if value is None and not field_object.null:
-                    raise ValueError("{} is non nullable field, but null was passed".format(key))
+                    raise ValueError(f"{key} is non nullable field, but null was passed")
                 setattr(self, key, field_object.to_python_value(value))
             elif key in meta.backward_fk_fields:
                 raise ConfigurationError(
@@ -421,12 +421,12 @@ class Model(metaclass=ModelMeta):
         return passed_fields
 
     def __str__(self) -> str:
-        return "<{}>".format(self.__class__.__name__)
+        return f"<{self.__class__.__name__}>"
 
     def __repr__(self) -> str:
         if self.pk:
-            return "<{}: {}>".format(self.__class__.__name__, self.pk)
-        return "<{}>".format(self.__class__.__name__)
+            return f"<{self.__class__.__name__}: {self.pk}>"
+        return f"<{self.__class__.__name__}>"
 
     def __hash__(self) -> int:
         if not self.pk:
@@ -622,16 +622,14 @@ class Model(metaclass=ModelMeta):
             return
 
         if not isinstance(cls._meta.unique_together, (tuple, list)):
-            raise ConfigurationError(
-                "'{}.unique_together' must be a list or tuple.".format(cls.__name__)
-            )
+            raise ConfigurationError(f"'{cls.__name__}.unique_together' must be a list or tuple.")
 
         if any(
             not isinstance(unique_fields, (tuple, list))
             for unique_fields in cls._meta.unique_together
         ):
             raise ConfigurationError(
-                "All '{}.unique_together' elements must be lists or tuples.".format(cls.__name__)
+                f"All '{cls.__name__}.unique_together' elements must be lists or tuples."
             )
 
         for fields_tuple in cls._meta.unique_together:
@@ -640,8 +638,7 @@ class Model(metaclass=ModelMeta):
 
                 if not field:
                     raise ConfigurationError(
-                        "'{}.unique_together' has no '{}' "
-                        "field.".format(cls.__name__, field_name)
+                        f"'{cls.__name__}.unique_together' has no '{field_name}' field."
                     )
 
                 if isinstance(field, ManyToManyField):

@@ -68,9 +68,7 @@ class AwaitableQuery:
             else:
                 field_object = self.model._meta.fields_map.get(field_name)
                 if not field_object:
-                    raise FieldError(
-                        "Unknown field {} for model {}".format(field_name, self.model.__name__)
-                    )
+                    raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
                 field_name = field_object.source_field or field_name
                 self.query = self.query.orderby(getattr(table, field_name), order=ordering[1])
 
@@ -213,9 +211,7 @@ class QuerySet(AwaitableQuery):
                 field_name.split("__")[0] in self.model._meta.fields
                 or field_name in self._annotations
             ):
-                raise FieldError(
-                    "Unknown field {} for model {}".format(field_name, self.model.__name__)
-                )
+                raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
             new_ordering.append((field_name, order_type))
         queryset._orderings = new_ordering
         return queryset
@@ -305,12 +301,12 @@ class QuerySet(AwaitableQuery):
             fields_for_select = {}  # type: Dict[str, str]
             for field in args:
                 if field in fields_for_select:
-                    raise FieldError("Duplicate key {}".format(field))
+                    raise FieldError(f"Duplicate key {field}")
                 fields_for_select[field] = field
 
             for return_as, field in kwargs.items():
                 if return_as in fields_for_select:
-                    raise FieldError("Duplicate key {}".format(return_as))
+                    raise FieldError(f"Duplicate key {return_as}")
                 fields_for_select[return_as] = field
         else:
             fields_for_select = {
@@ -410,15 +406,11 @@ class QuerySet(AwaitableQuery):
             if first_level_field not in self.model._meta.fetch_fields:
                 if first_level_field in self.model._meta.fields:
                     raise FieldError(
-                        "Field {} on {} is not a relation".format(
-                            first_level_field, self.model._meta.table
-                        )
+                        f"Field {first_level_field} on {self.model._meta.table} is not a relation"
                     )
                 else:
                     raise FieldError(
-                        "Relation {} for {} not found".format(
-                            first_level_field, self.model._meta.table
-                        )
+                        f"Relation {first_level_field} for {self.model._meta.table} not found"
                     )
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()
@@ -533,9 +525,9 @@ class UpdateQuery(AwaitableQuery):
         for key, value in self.update_kwargs.items():
             field_object = self.model._meta.fields_map.get(key)
             if not field_object:
-                raise FieldError("Unknown keyword argument {} for model {}".format(key, self.model))
+                raise FieldError(f"Unknown keyword argument {key} for model {self.model}")
             if field_object.pk:
-                raise IntegrityError("Field {} is PK and can not be updated".format(key))
+                raise IntegrityError(f"Field {key} is PK and can not be updated")
             if isinstance(field_object, fields.ForeignKeyField):
                 fk_field = field_object.source_field
                 db_field = self.model._meta.fields_map[fk_field].source_field
@@ -544,7 +536,7 @@ class UpdateQuery(AwaitableQuery):
                 try:
                     db_field = self.model._meta.fields_db_projection[key]
                 except KeyError:
-                    raise FieldError("Field {} is virtual and can not be updated".format(key))
+                    raise FieldError(f"Field {key} is virtual and can not be updated")
                 value = executor.column_map[key](value, None)
 
             self.query = self.query.set(db_field, value)
@@ -614,9 +606,7 @@ class FieldSelectQuery(AwaitableQuery):
             return table, model._meta.fields_db_projection[field]
 
         if field in model._meta.fields_db_projection and forwarded_fields:
-            raise FieldError(
-                'Field "{}" for model "{}" is not relation'.format(field, model.__name__)
-            )
+            raise FieldError(f'Field "{field}" for model "{model.__name__}" is not relation')
 
         if field in self.model._meta.fetch_fields and not forwarded_fields:
             raise ValueError(
@@ -626,7 +616,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         field_object = model._meta.fields_map.get(field)
         if not field_object:
-            raise FieldError('Unknown field "{}" for model "{}"'.format(field, model.__name__))
+            raise FieldError(f'Unknown field "{field}" for model "{model.__name__}"')
 
         self._join_table_by_field(table, field, field_object)
         forwarded_fields_split = forwarded_fields.split("__")
@@ -658,7 +648,7 @@ class FieldSelectQuery(AwaitableQuery):
             self.query._select_field(getattr(related_table, related_db_field).as_(return_as))
             return
 
-        raise FieldError('Unknown field "{}" for model "{}"'.format(field, self.model.__name__))
+        raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')
 
     def resolve_to_python_value(self, model, field):
         if field in model._meta.fetch_fields:
@@ -673,7 +663,7 @@ class FieldSelectQuery(AwaitableQuery):
             new_model = model._meta.fields_map[field_split[0]].type
             return self.resolve_to_python_value(new_model, "__".join(field_split[1:]))
 
-        raise FieldError('Unknown field "{}" for model "{}"'.format(field, model))
+        raise FieldError(f'Unknown field "{field}" for model "{model}"')
 
 
 class ValuesListQuery(FieldSelectQuery):

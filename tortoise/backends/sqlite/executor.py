@@ -21,7 +21,7 @@ def to_db_decimal(self, value, instance) -> Optional[str]:
     if self.decimal_places == 0:
         quant = "1"
     else:
-        quant = "1.{}".format("0" * self.decimal_places)
+        quant = f"1.{('0' * self.decimal_places)}"
     return str(Decimal(value).quantize(Decimal(quant)).normalize())
 
 

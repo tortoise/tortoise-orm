@@ -13,7 +13,7 @@ class TestRelations(test.TestCase):
         await event.save()
         participants = []
         for i in range(2):
-            team = Team(name="Team {}".format(i + 1))
+            team = Team(name=f"Team {(i + 1)}")
             await team.save()
             participants.append(team)
         await event.participants.add(participants[0], participants[1])
@@ -61,7 +61,7 @@ class TestRelations(test.TestCase):
         event = await Event.create(name="Test", tournament_id=tournament.id)
         participants = []
         for i in range(2):
-            team = await Team.create(name="Team {}".format(i + 1))
+            team = await Team.create(name=f"Team {(i + 1)}")
             participants.append(team)
         await event.participants.add(*participants)
         queryset = Event.all().annotate(count=Count("participants"))

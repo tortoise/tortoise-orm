@@ -16,9 +16,7 @@ class TestQueryset(test.IsolatedTestCase):
 
         await Tortoise._connections["models"]._close()
 
-        self.assertEqual(
-            ["{}:{}".format(a.id, a.name) for a in await Tournament.all()], ["1:1", "2:2"]
-        )
+        self.assertEqual([f"{a.id}:{a.name}" for a in await Tournament.all()], ["1:1", "2:2"])
 
     @test.requireCapability(daemon=True)
     async def test_reconnect_fail(self):
@@ -46,9 +44,7 @@ class TestQueryset(test.IsolatedTestCase):
         await Tortoise._connections["models"]._close()
 
         async with in_transaction():
-            self.assertEqual(
-                ["{}:{}".format(a.id, a.name) for a in await Tournament.all()], ["1:1", "2:2"]
-            )
+            self.assertEqual([f"{a.id}:{a.name}" for a in await Tournament.all()], ["1:1", "2:2"])
 
     @test.requireCapability(daemon=True)
     async def test_reconnect_during_transaction_fails(self):
@@ -60,4 +56,4 @@ class TestQueryset(test.IsolatedTestCase):
                 await Tortoise._connections["models"]._close()
                 await Tournament.create(name="3")
 
-        self.assertEqual(["{}:{}".format(a.id, a.name) for a in await Tournament.all()], ["1:1"])
+        self.assertEqual([f"{a.id}:{a.name}" for a in await Tournament.all()], ["1:1"])

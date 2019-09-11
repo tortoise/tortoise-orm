@@ -62,7 +62,7 @@ DB_LOOKUP = {
 def expand_db_url(db_url: str, testing: bool = False) -> dict:
     url = urlparse.urlparse(db_url)
     if url.scheme not in DB_LOOKUP:
-        raise ConfigurationError("Unknown DB scheme: {}".format(url.scheme))
+        raise ConfigurationError(f"Unknown DB scheme: {url.scheme}")
 
     db_backend = url.scheme
     db = DB_LOOKUP[db_backend]

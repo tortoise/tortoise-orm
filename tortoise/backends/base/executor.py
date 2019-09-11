@@ -25,7 +25,7 @@ class BaseExecutor:
         self.prefetch_map = prefetch_map if prefetch_map else {}
         self._prefetch_queries = prefetch_queries if prefetch_queries else {}
 
-        key = "{}:{}".format(self.db.connection_name, self.model._meta.table)
+        key = f"{self.db.connection_name}:{self.model._meta.table}"
         if key not in EXECUTOR_CACHE:
             self.regular_columns, columns = self._prepare_insert_columns()
             self.insert_query = self._prepare_insert_statement(columns)
@@ -177,7 +177,7 @@ class BaseExecutor:
         relation_field = self.model._meta.fields_map[field].relation_field
 
         related_object_list = await related_query.filter(
-            **{"{}__in".format(relation_field): list(instance_id_set)}
+            **{f"{relation_field}__in": list(instance_id_set)}
         )
 
         related_object_map = {}  # type: Dict[str, list]
@@ -273,7 +273,7 @@ class BaseExecutor:
         self, instance_list: list, field: str, related_query
     ) -> list:
         related_objects_for_fetch = set()
-        relation_key_field = "{}_id".format(field)
+        relation_key_field = f"{field}_id"
         for instance in instance_list:
             if getattr(instance, relation_key_field):
                 related_objects_for_fetch.add(getattr(instance, relation_key_field))
@@ -320,7 +320,7 @@ class BaseExecutor:
             first_level_field = relation_split[0]
             if first_level_field not in self.model._meta.fetch_fields:
                 raise OperationalError(
-                    "relation {} for {} not found".format(first_level_field, self.model._meta.table)
+                    f"relation {first_level_field} for {self.model._meta.table} not found"
                 )
             if first_level_field not in self.prefetch_map.keys():
                 self.prefetch_map[first_level_field] = set()

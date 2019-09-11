@@ -14,7 +14,7 @@ class EnumField(CharField):
     def __init__(self, enum_type: Type[Enum], **kwargs):
         super().__init__(128, **kwargs)
         if not issubclass(enum_type, Enum):
-            raise ConfigurationError("{} is not a subclass of Enum!".format(enum_type))
+            raise ConfigurationError(f"{enum_type} is not a subclass of Enum!")
         self._enum_type = enum_type
 
     def to_db_value(self, value, instance):
@@ -22,7 +22,7 @@ class EnumField(CharField):
             return None
 
         if not isinstance(value, self._enum_type):
-            raise TypeError("Expected type {}, got {}".format(self._enum_type, value))
+            raise TypeError(f"Expected type {self._enum_type}, got {value}")
 
         return value.value
 
@@ -32,7 +32,7 @@ class EnumField(CharField):
         except ValueError:
             if not self.null:
                 raise ValueError(
-                    "Database value {} does not exist on Enum {}.".format(value, self._enum_type)
+                    f"Database value {value} does not exist on Enum {self._enum_type}."
                 )
 
             return None

@@ -23,11 +23,11 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
         self, field_object: fields.Field, field_name: str, comment: str
     ) -> Optional[str]:
         if isinstance(field_object, fields.SmallIntField):
-            return '"{}" SMALLSERIAL NOT NULL PRIMARY KEY'.format(field_name)
+            return f'"{field_name}" SMALLSERIAL NOT NULL PRIMARY KEY'
         if isinstance(field_object, fields.IntField):
-            return '"{}" SERIAL NOT NULL PRIMARY KEY'.format(field_name)
+            return f'"{field_name}" SERIAL NOT NULL PRIMARY KEY'
         if isinstance(field_object, fields.BigIntField):
-            return '"{}" BIGSERIAL NOT NULL PRIMARY KEY'.format(field_name)
+            return f'"{field_name}" BIGSERIAL NOT NULL PRIMARY KEY'
         return None
 
     def _escape_comment(self, comment: str) -> str:

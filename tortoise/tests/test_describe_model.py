@@ -1,5 +1,4 @@
 import json
-import sys
 import uuid
 
 from tortoise import Tortoise, fields
@@ -41,7 +40,6 @@ class TestBasic(test.TestCase):
             {"models.Event", "models.Tournament", "models.Reporter", "models.Team"}, set(val.keys())
         )
 
-    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_describe_model_straight(self):
         val = Tortoise.describe_model(StraightFields)
 
@@ -158,7 +156,6 @@ class TestBasic(test.TestCase):
             },
         )
 
-    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_describe_model_straight_native(self):
         val = Tortoise.describe_model(StraightFields, serializable=False)
 
@@ -275,7 +272,6 @@ class TestBasic(test.TestCase):
             },
         )
 
-    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_describe_model_source(self):
         val = Tortoise.describe_model(SourceFields)
 
@@ -392,7 +388,6 @@ class TestBasic(test.TestCase):
             },
         )
 
-    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_describe_model_source_native(self):
         val = Tortoise.describe_model(SourceFields, serializable=False)
 
@@ -509,7 +504,6 @@ class TestBasic(test.TestCase):
             },
         )
 
-    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_describe_model_uuidpk(self):
         val = Tortoise.describe_model(UUIDPkModel)
 
@@ -576,7 +570,6 @@ class TestBasic(test.TestCase):
             },
         )
 
-    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_describe_model_uuidpk_native(self):
         val = Tortoise.describe_model(UUIDPkModel, serializable=False)
 
@@ -643,7 +636,6 @@ class TestBasic(test.TestCase):
             },
         )
 
-    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_describe_model_json(self):
         val = Tortoise.describe_model(JSONFields)
 
@@ -712,7 +704,6 @@ class TestBasic(test.TestCase):
             },
         )
 
-    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_describe_model_json_native(self):
         val = Tortoise.describe_model(JSONFields, serializable=False)
 
