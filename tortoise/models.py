@@ -241,14 +241,14 @@ class ModelMeta(type):
             in the given class.
 
             If an attribute of the class is an instance of fields.Field,
-            then it will be added to the attrs dict. But only, if the
+            then it will be added to the fields dict. But only, if the
             key is not already in the dict. So derived classes have a higher
-            precedence. Multiple Inheritence is supported from left to right.
+            precedence. Multiple Inheritance is supported from left to right.
 
             After checking the given class, the function will look into
-            the classes according to the mro (method resolution order).
+            the classes according to the MRO (method resolution order).
 
-            The mro is 'natural' order, in wich python traverses methods and
+            The MRO is 'natural' order, in which python traverses methods and
             fields. For more information on the magic behind check out:
             `The Python 2.3 Method Resolution Order
             <https://www.python.org/download/releases/2.3/mro/>`_.
@@ -346,7 +346,7 @@ class ModelMeta(type):
 
 
 class Model(metaclass=ModelMeta):
-    # I don' like this here, but it makes autocompletion and static analysis much happier
+    # I don' like this here, but it makes auto completion and static analysis much happier
     _meta = MetaInfo(None)
 
     def __init__(self, *args, **kwargs) -> None:
@@ -374,10 +374,33 @@ class Model(metaclass=ModelMeta):
 
         meta = self._meta
 
-        for key, value in kwargs.items():
-            model_field = meta.fields_db_projection_reverse.get(key)
-            if model_field:
-                setattr(self, model_field, meta.fields_map[model_field].to_python_value(value))
+        # WIP: lighter _init_from_db?
+        # e.g. meta.db_native_fields, meta.db_default_fields and meta.db_complex_fields
+        # have it resolve key, model_field and field as tuples?
+        for key in meta.db_fields:
+            value = kwargs[key]
+            model_field = meta.fields_db_projection_reverse[key]
+            field = meta.fields_map[model_field]
+            default_converter = field.__class__.to_python_value is fields.Field.to_python_value
+            nullable = field.null
+            db_native = field.type in {str, int, bool, float}
+            if default_converter and db_native:
+                # print(1)
+                setattr(self, model_field, value)
+            elif default_converter and not nullable:
+                # print(2)
+                setattr(self, model_field, field.type(value))
+            elif default_converter and nullable:
+                # print(3)
+                setattr(self, model_field, None if value is None else field.type(value))
+            else:
+                # print(4)
+                setattr(self, model_field, field.to_python_value(value))
+
+        # for key, value in kwargs.items():
+        #     model_field = meta.fields_db_projection_reverse.get(key)
+        #     if model_field:
+        #         setattr(self, model_field, meta.fields_map[model_field].to_python_value(value))
 
         return self
 
@@ -538,7 +561,7 @@ class Model(metaclass=ModelMeta):
             created in the DB has all the defaults and generated fields set,
             but may be incomplete reference in Python.
 
-            e.g. ``IntField`` primary keys will not be poplulated.
+            e.g. ``IntField`` primary keys will not be populated.
 
         This is recommend only for throw away inserts where you want to ensure optimal
         insert performance.
@@ -646,7 +669,7 @@ class Model(metaclass=ModelMeta):
 
     class Meta:
         """
-        The ``Meta`` class is used to configure metadate for the Model.
+        The ``Meta`` class is used to configure metadata for the Model.
 
         Usage:
 
