@@ -122,7 +122,6 @@ class MetaInfo:
     def add_field(self, name: str, value: Field):
         if name in self.fields_map:
             raise ConfigurationError(f"Field {name} already present in meta")
-        setattr(self._model, name, value)
         value.model = self._model
         self.fields_map[name] = value
 
@@ -160,6 +159,7 @@ class MetaInfo:
         """
         self.finalise_fields()
         self._generate_filters()
+        self._generate_lazy_fk_m2m_fields()
         self._generate_db_fields()
 
     def finalise_fields(self) -> None:
@@ -177,6 +177,7 @@ class MetaInfo:
             generated_fields.append(field.source_field or field.model_field_name)
         self.generated_db_fields = tuple(generated_fields)  # type: ignore
 
+    def _generate_lazy_fk_m2m_fields(self) -> None:
         # Create lazy FK fields on model.
         for key in self.fk_fields:
             _key = f"_{key}"
@@ -223,11 +224,9 @@ class MetaInfo:
             field = self.fields_map[model_field]
 
             default_converter = field.__class__.to_python_value is fields.Field.to_python_value
-            # TODO: Get this set from DB driver?
-            db_native = field.type in {str, int, bool, float}
             if not default_converter:
                 self.db_complex_fields.append((key, model_field, field))
-            elif db_native:
+            elif field.type in self.db.executor_class.DB_NATIVE:
                 self.db_native_fields.append((key, model_field, field))
             else:
                 self.db_default_fields.append((key, model_field, field))
@@ -344,6 +343,9 @@ class ModelMeta(type):
                                 )
                             )
 
+        # Clean the class attributes
+        for slot in fields_map.keys():
+            attrs.pop(slot, None)
         attrs["_meta"] = meta = MetaInfo(meta_class)
 
         meta.fields_map = fields_map
@@ -377,9 +379,7 @@ class Model(metaclass=ModelMeta):
         self._saved_in_db = meta.pk_attr in kwargs and meta.pk.generated
 
         # Assign values and do type conversions
-        passed_fields = {*kwargs.keys()}
-        passed_fields.update(meta.fetch_fields)
-        passed_fields |= self._set_field_values(kwargs)
+        passed_fields = self._set_field_values(kwargs) | meta.fetch_fields | {*kwargs.keys()}
 
         # Assign defaults for missing fields
         for key in meta.fields.difference(passed_fields):
@@ -420,17 +420,10 @@ class Model(metaclass=ModelMeta):
                     raise OperationalError(
                         f"You should first call .save() on {value} before referring to it"
                     )
-                field_object = meta.fields_map[key]
-                relation_field: str = field_object.source_field  # type: ignore
                 setattr(self, key, value)
-                passed_fields.add(relation_field)
+                passed_fields.add(meta.fields_map[key].source_field)
             elif key in meta.fields_db_projection:
                 field_object = meta.fields_map[key]
-                if value is None and not field_object.null:
-                    raise ValueError(f"{key} is non nullable field, but null was passed")
-                setattr(self, key, field_object.to_python_value(value))
-            elif key in meta.db_fields:
-                field_object = meta.fields_map[meta.fields_db_projection_reverse[key]]
                 if value is None and not field_object.null:
                     raise ValueError(f"{key} is non nullable field, but null was passed")
                 setattr(self, key, field_object.to_python_value(value))
@@ -443,7 +436,7 @@ class Model(metaclass=ModelMeta):
                     "You can't set m2m relations through init, use m2m_manager instead"
                 )
 
-        return passed_fields
+        return passed_fields  # type: ignore
 
     def __str__(self) -> str:
         return f"<{self.__class__.__name__}>"
