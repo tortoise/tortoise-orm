@@ -84,6 +84,9 @@ class MetaInfo:
         "table_description",
         "pk",
         "db_pk_field",
+        "db_native_fields",
+        "db_default_fields",
+        "db_complex_fields",
     )
 
     def __init__(self, meta) -> None:
@@ -112,6 +115,9 @@ class MetaInfo:
         self.table_description: str = getattr(meta, "table_description", "")
         self.pk: fields.Field = None  # type: ignore
         self.db_pk_field: str = ""
+        self.db_native_fields: List[Tuple[str, str, fields.Field]] = []
+        self.db_default_fields: List[Tuple[str, str, fields.Field]] = []
+        self.db_complex_fields: List[Tuple[str, str, fields.Field]] = []
 
     def add_field(self, name: str, value: Field):
         if name in self.fields_map:
@@ -154,6 +160,7 @@ class MetaInfo:
         """
         self.finalise_fields()
         self._generate_filters()
+        self._generate_db_fields()
 
     def finalise_fields(self) -> None:
         self.db_fields = set(self.fields_db_projection.values())
@@ -209,6 +216,21 @@ class MetaInfo:
                 key,
                 property(partial(_m2m_getter, _key=_key, field_object=self.fields_map[key])),
             )
+
+    def _generate_db_fields(self) -> None:
+        for key in self.db_fields:
+            model_field = self.fields_db_projection_reverse[key]
+            field = self.fields_map[model_field]
+
+            default_converter = field.__class__.to_python_value is fields.Field.to_python_value
+            # TODO: Get this set from DB driver?
+            db_native = field.type in {str, int, bool, float}
+            if not default_converter:
+                self.db_complex_fields.append((key, model_field, field))
+            elif db_native:
+                self.db_native_fields.append((key, model_field, field))
+            else:
+                self.db_default_fields.append((key, model_field, field))
 
     def _generate_filters(self) -> None:
         get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
@@ -374,33 +396,13 @@ class Model(metaclass=ModelMeta):
 
         meta = self._meta
 
-        # WIP: lighter _init_from_db?
-        # e.g. meta.db_native_fields, meta.db_default_fields and meta.db_complex_fields
-        # have it resolve key, model_field and field as tuples?
-        for key in meta.db_fields:
+        for key, model_field, field in meta.db_native_fields:
+            setattr(self, model_field, kwargs[key])
+        for key, model_field, field in meta.db_default_fields:
             value = kwargs[key]
-            model_field = meta.fields_db_projection_reverse[key]
-            field = meta.fields_map[model_field]
-            default_converter = field.__class__.to_python_value is fields.Field.to_python_value
-            nullable = field.null
-            db_native = field.type in {str, int, bool, float}
-            if default_converter and db_native:
-                # print(1)
-                setattr(self, model_field, value)
-            elif default_converter and not nullable:
-                # print(2)
-                setattr(self, model_field, field.type(value))
-            elif default_converter and nullable:
-                # print(3)
-                setattr(self, model_field, None if value is None else field.type(value))
-            else:
-                # print(4)
-                setattr(self, model_field, field.to_python_value(value))
-
-        # for key, value in kwargs.items():
-        #     model_field = meta.fields_db_projection_reverse.get(key)
-        #     if model_field:
-        #         setattr(self, model_field, meta.fields_map[model_field].to_python_value(value))
+            setattr(self, model_field, None if value is None else field.type(value))
+        for key, model_field, field in meta.db_complex_fields:
+            setattr(self, model_field, field.to_python_value(kwargs[key]))
 
         return self
 
