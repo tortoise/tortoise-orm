@@ -104,10 +104,8 @@ class BaseSchemaGenerator:
         # characters (Oracle limit).
         # That's why we slice some of the strings here.
         table_name = model._meta.table
-        index_name = "{t}_{f}_{h}_idx".format(
-            t=table_name[:11],
-            f=field_names[0][:7],
-            h=self._make_hash(table_name, *field_names, length=6),
+        index_name = "{}_{}_{}_idx".format(
+            table_name[:11], field_names[0][:7], self._make_hash(table_name, *field_names, length=6)
         )
         return index_name
 
@@ -242,10 +240,9 @@ class BaseSchemaGenerator:
         ]
         if safe and not self.client.capabilities.safe_indexes:
             warnings.warn(
-                "Skipping creation of field indexes: safe index creation is not supported yet for "
-                "{dialect}. Please find the SQL queries to create the indexes in the logs.".format(
-                    dialect=self.client.capabilities.dialect
-                )
+                f"Skipping creation of field indexes: safe index creation is not supported"
+                f" yet for {self.client.capabilities.dialect}. Please find the SQL queries"
+                f" to create the indexes in the logs."
             )
             for fis in field_indexes_sqls:
                 logger.warning(fis)

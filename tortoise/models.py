@@ -291,8 +291,8 @@ class ModelMeta(type):
                     if value.pk:
                         if custom_pk_present:
                             raise ConfigurationError(
-                                "Can't create model {} with two primary keys, "
-                                "only single pk are supported".format(name)
+                                f"Can't create model {name} with two primary keys,"
+                                " only single pk are supported"
                             )
                         if value.generated and not isinstance(
                             value, (fields.SmallIntField, fields.IntField, fields.BigIntField)
@@ -309,8 +309,8 @@ class ModelMeta(type):
 
                 if not isinstance(attrs["id"], fields.Field) or not attrs["id"].pk:
                     raise ConfigurationError(
-                        "Can't create model {} without explicit primary key "
-                        "if field 'id' already present".format(name)
+                        f"Can't create model {name} without explicit primary key if field 'id'"
+                        " already present"
                     )
 
             for key, value in attrs.items():
@@ -658,8 +658,8 @@ class Model(metaclass=ModelMeta):
 
                 if isinstance(field, ManyToManyField):
                     raise ConfigurationError(
-                        "'{}.unique_together' '{}' field refers "
-                        "to ManyToMany field.".format(cls.__name__, field_name)
+                        f"'{cls.__name__}.unique_together' '{field_name}' field refers"
+                        " to ManyToMany field."
                     )
 
     class Meta:

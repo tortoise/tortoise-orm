@@ -251,9 +251,8 @@ class Tortoise:
                 if related_app_name not in cls.apps:
                     raise ConfigurationError(f"No app with name '{related_app_name}' registered.")
                 raise ConfigurationError(
-                    "No model with name '{}' registered in app '{}'.".format(
-                        related_model_name, related_app_name
-                    )
+                    f"No model with name '{related_model_name}' registered in"
+                    f" app '{related_app_name}'."
                 )
 
         def split_reference(reference: str) -> Tuple[str, str]:
@@ -312,9 +311,8 @@ class Tortoise:
                         backward_relation_name = f"{model._meta.table}s"
                     if backward_relation_name in related_model._meta.fields:
                         raise ConfigurationError(
-                            'backward relation "{}" duplicates in model {}'.format(
-                                backward_relation_name, related_model_name
-                            )
+                            f'backward relation "{backward_relation_name}" duplicates in'
+                            f" model {related_model_name}"
                         )
                     fk_relation = fields.BackwardFKRelation(
                         model, f"{field}_id", fk_object.null, fk_object.description
@@ -341,14 +339,13 @@ class Tortoise:
 
                     backward_relation_name = m2m_object.related_name
                     if not backward_relation_name:
-                        backward_relation_name = m2m_object.related_name = "{}_through".format(
-                            model._meta.table
-                        )
+                        backward_relation_name = (
+                            m2m_object.related_name
+                        ) = f"{model._meta.table}_through"
                     if backward_relation_name in related_model._meta.fields:
                         raise ConfigurationError(
-                            'backward relation "{}" duplicates in model {}'.format(
-                                backward_relation_name, related_model_name
-                            )
+                            f'backward relation "{backward_relation_name}" duplicates in'
+                            f" model {related_model_name}"
                         )
 
                     if not m2m_object.through:
