@@ -3,6 +3,24 @@
 Changelog
 =========
 
+0.14.0
+------
+.. note::
+   **This release dropped support of Python 3.5:**
+
+   Our minimum supported of Python is CPython >= 3.6 & PyPy >= 7.1
+
+New Features:
+^^^^^^^^^^^^^
+- Optimized the fast-path of constructing an object directly from the DB. This results in a 20-25% speedup for fetching Model objects from the DB.
+
+Bugfixes:
+^^^^^^^^^
+- Fix minor bug in ``Model.__init__`` where we raise the wrong error on setting RFK/M2M values directly.
+- Fields in ``Queryset.values_list()`` is now in the defined Model order.
+- Fields in ``Queryset.values()`` is now in the defined Model order.
+
+
 0.13.5
 ------
 - Sample Starlette integration

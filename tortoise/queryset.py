@@ -279,7 +279,12 @@ class QuerySet(AwaitableQuery):
             model=self.model,
             q_objects=self._q_objects,
             flat=flat,
-            fields_for_select_list=fields_ or list(self.model._meta.db_fields),
+            fields_for_select_list=fields_
+            or [
+                field
+                for field in self.model._meta.fields_map.keys()
+                if field in self.model._meta.db_fields
+            ],
             distinct=self._distinct,
             limit=self._limit,
             offset=self._offset,
@@ -308,7 +313,11 @@ class QuerySet(AwaitableQuery):
                     raise FieldError("Duplicate key {}".format(return_as))
                 fields_for_select[return_as] = field
         else:
-            fields_for_select = {field: field for field in self.model._meta.db_fields}
+            fields_for_select = {
+                field: field
+                for field in self.model._meta.fields_map.keys()
+                if field in self.model._meta.db_fields
+            }
 
         return ValuesQuery(
             db=self._db,
