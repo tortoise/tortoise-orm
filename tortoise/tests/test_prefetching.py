@@ -1,6 +1,6 @@
 from tortoise.aggregation import Count
 from tortoise.contrib import test
-from tortoise.exceptions import OperationalError
+from tortoise.exceptions import FieldError, OperationalError
 from tortoise.query_utils import Prefetch
 from tortoise.tests.testmodels import Event, Team, Tournament
 
@@ -93,3 +93,21 @@ class TestPrefetching(test.TestCase):
         await Event.create(name="First", tournament=tournament)
         event = await Event.first().prefetch_related("tournament")
         self.assertEqual(event.tournament.id, tournament.id)
+
+    async def test_prefetch_bad_key(self):
+        tournament = await Tournament.create(name="tournament")
+        await Event.create(name="First", tournament=tournament)
+        with self.assertRaisesRegex(FieldError, "relation tour1nament for event not found"):
+            await Event.first().prefetch_related("tour1nament")
+
+    async def test_prefetch_m2m_filter(self):
+        tournament = await Tournament.create(name="tournament")
+        team = await Team.create(name="1")
+        team_second = await Team.create(name="2")
+        event = await Event.create(name="First", tournament=tournament)
+        await event.participants.add(team, team_second)
+        event = await Event.first().prefetch_related(
+            Prefetch("participants", Team.filter(name="2"))
+        )
+        self.assertEqual(len(event.participants), 1)
+        self.assertEqual(list(event.participants), [team_second])
