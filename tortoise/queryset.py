@@ -408,9 +408,18 @@ class QuerySet(AwaitableQuery):
             relation_split = relation.split("__")
             first_level_field = relation_split[0]
             if first_level_field not in self.model._meta.fetch_fields:
-                raise FieldError(
-                    "relation {} for {} not found".format(first_level_field, self.model._meta.table)
-                )
+                if first_level_field in self.model._meta.fields:
+                    raise FieldError(
+                        "Field {} on {} is not a relation".format(
+                            first_level_field, self.model._meta.table
+                        )
+                    )
+                else:
+                    raise FieldError(
+                        "Relation {} for {} not found".format(
+                            first_level_field, self.model._meta.table
+                        )
+                    )
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()
             forwarded_prefetch = "__".join(relation_split[1:])

@@ -1,6 +1,6 @@
 from tortoise.aggregation import Count
 from tortoise.contrib import test
-from tortoise.exceptions import NoValuesFetched
+from tortoise.exceptions import FieldError, NoValuesFetched
 from tortoise.tests.testmodels import Employee, Event, Team, Tournament
 
 
@@ -179,3 +179,38 @@ class TestRelations(test.TestCase):
         self.assertEqual(await loose2.full_hierarchy__fetch_related(), LOOSE_TEXT)
         # self.assertEqual(await root2.full_hierarchy__async_for(), ROOT_TEXT)
         self.assertEqual(await root2.full_hierarchy__fetch_related(), ROOT_TEXT)
+
+    async def test_prefetch_related_fk(self):
+        tournament = await Tournament.create(name="New Tournament")
+        await Event.create(name="Test", tournament_id=tournament.id)
+
+        event2 = await Event.filter(name="Test").prefetch_related("tournament")
+        self.assertEqual(event2[0].tournament, tournament)
+
+    async def test_prefetch_related_rfk(self):
+        tournament = await Tournament.create(name="New Tournament")
+        event = await Event.create(name="Test", tournament_id=tournament.id)
+
+        tournament2 = await Tournament.filter(name="New Tournament").prefetch_related("events")
+        self.assertEqual(list(tournament2[0].events), [event])
+
+    async def test_prefetch_related_missing_field(self):
+        tournament = await Tournament.create(name="New Tournament")
+        await Event.create(name="Test", tournament_id=tournament.id)
+
+        with self.assertRaisesRegex(FieldError, "Relation tourn1ment for event not found"):
+            await Event.filter(name="Test").prefetch_related("tourn1ment")
+
+    async def test_prefetch_related_nonrel_field(self):
+        tournament = await Tournament.create(name="New Tournament")
+        await Event.create(name="Test", tournament_id=tournament.id)
+
+        with self.assertRaisesRegex(FieldError, "Field modified on event is not a relation"):
+            await Event.filter(name="Test").prefetch_related("modified")
+
+    async def test_prefetch_related_id(self):
+        tournament = await Tournament.create(name="New Tournament")
+        await Event.create(name="Test", tournament_id=tournament.id)
+
+        with self.assertRaisesRegex(FieldError, "Field id on event is not a relation"):
+            await Event.filter(name="Test").prefetch_related("id")

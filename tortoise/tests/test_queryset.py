@@ -1,3 +1,5 @@
+import sys
+
 from tortoise.contrib import test
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
 from tortoise.tests.testmodels import IntFields, MinRelation, Tournament
@@ -9,7 +11,9 @@ from tortoise.tests.testmodels import IntFields, MinRelation, Tournament
 class TestQueryset(test.TestCase):
     async def setUp(self):
         # Build large dataset
-        self.intfields = [await IntFields.create(intnum=val) for val in range(10, 100, 3)]
+        self.intfields = []
+        for val in range(10, 100, 3):
+            self.intfields.append(await IntFields.create(intnum=val))
 
     async def test_all_count(self):
         self.assertEqual(await IntFields.all().count(), 30)
@@ -249,6 +253,7 @@ class TestQueryset(test.TestCase):
         ):
             await IntFields.all().values_list(flat=True)
 
+    @test.skipIf(sys.version_info < (3, 6), "Class fields not sorted in 3.5")
     async def test_all_values_list(self):
         data = await IntFields.all().order_by("id").values_list()
         self.assertEqual(data[2], (self.intfields[2].id, 16, None))
@@ -256,3 +261,7 @@ class TestQueryset(test.TestCase):
     async def test_all_values(self):
         data = await IntFields.all().order_by("id").values()
         self.assertEqual(data[2], {"id": self.intfields[2].id, "intnum": 16, "intnum_null": None})
+
+    async def test_order_by_bad_value(self):
+        with self.assertRaisesRegex(FieldError, "Unknown field badid for model IntFields"):
+            await IntFields.all().order_by("badid").values_list()
