@@ -10,7 +10,6 @@ import ciso8601
 from pypika import Table
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
-from tortoise.utils import QueryAsyncIterator
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -533,12 +532,13 @@ class RelationQueryContainer:
     def __await__(self):
         return self._query.__await__()
 
-    def __aiter__(self) -> QueryAsyncIterator:
-        async def fetched_callback(iterator_wrapper):
+    async def __aiter__(self):
+        if not self._fetched:
+            self.related_objects = await self
             self._fetched = True
-            self.related_objects = iterator_wrapper.sequence
 
-        return QueryAsyncIterator(self._query, callback=fetched_callback)
+        for val in self.related_objects:
+            yield val
 
     def filter(self, *args, **kwargs):
         """

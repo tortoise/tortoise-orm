@@ -9,7 +9,6 @@ from tortoise.aggregation import Aggregate
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
 from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
-from tortoise.utils import QueryAsyncIterator
 
 # Empty placeholder - Should never be edited.
 QUERY = Query()
@@ -81,8 +80,9 @@ class AwaitableQuery:
         self._make_query()
         return self._execute().__await__()
 
-    def __aiter__(self) -> QueryAsyncIterator:
-        return QueryAsyncIterator(self)
+    async def __aiter__(self):
+        for val in await self:
+            yield val
 
     async def _execute(self):
         raise NotImplementedError()  # pragma: nocoverage
