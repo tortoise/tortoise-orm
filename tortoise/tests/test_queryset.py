@@ -1,3 +1,5 @@
+import sys
+
 from tortoise.contrib import test
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
 from tortoise.tests.testmodels import IntFields, MinRelation, Tournament
@@ -9,8 +11,9 @@ from tortoise.tests.testmodels import IntFields, MinRelation, Tournament
 class TestQueryset(test.TestCase):
     async def setUp(self):
         # Build large dataset
+        self.intfields = []
         for val in range(10, 100, 3):
-            await IntFields.create(intnum=val)
+            self.intfields.append(await IntFields.create(intnum=val))
 
     async def test_all_count(self):
         self.assertEqual(await IntFields.all().count(), 30)
@@ -210,3 +213,55 @@ class TestQueryset(test.TestCase):
         obj0 = await MinRelation.create(tournament=tour)
         with self.assertRaisesRegex(FieldError, "is virtual and can not be updated"):
             await MinRelation.filter(id=obj0.id).update(participants=[])
+
+    async def test_bad_ordering(self):
+        with self.assertRaisesRegex(FieldError, "Unknown field moo1fip for model IntFields"):
+            await IntFields.all().order_by("moo1fip")
+
+    async def test_duplicate_values(self):
+        with self.assertRaisesRegex(FieldError, "Duplicate key intnum"):
+            await IntFields.all().values("intnum", "intnum")
+
+    async def test_duplicate_values_list(self):
+        await IntFields.all().values_list("intnum", "intnum")
+
+    async def test_duplicate_values_kw(self):
+        with self.assertRaisesRegex(FieldError, "Duplicate key intnum"):
+            await IntFields.all().values("intnum", intnum="intnum_null")
+
+    async def test_duplicate_values_kw_badmap(self):
+        with self.assertRaisesRegex(FieldError, 'Unknown field "intnum2" for model "IntFields"'):
+            await IntFields.all().values(intnum="intnum2")
+
+    async def test_bad_values(self):
+        with self.assertRaisesRegex(FieldError, 'Unknown field "int2num" for model "IntFields"'):
+            await IntFields.all().values("int2num")
+
+    async def test_bad_values_list(self):
+        with self.assertRaisesRegex(FieldError, 'Unknown field "int2num" for model "IntFields"'):
+            await IntFields.all().values_list("int2num")
+
+    async def test_many_flat_values_list(self):
+        with self.assertRaisesRegex(
+            TypeError, "You can flat value_list only if contains one field"
+        ):
+            await IntFields.all().values_list("intnum", "intnum_null", flat=True)
+
+    async def test_all_flat_values_list(self):
+        with self.assertRaisesRegex(
+            TypeError, "You can flat value_list only if contains one field"
+        ):
+            await IntFields.all().values_list(flat=True)
+
+    @test.skipIf(sys.version_info < (3, 6), "Class fields not sorted in 3.5")
+    async def test_all_values_list(self):
+        data = await IntFields.all().order_by("id").values_list()
+        self.assertEqual(data[2], (self.intfields[2].id, 16, None))
+
+    async def test_all_values(self):
+        data = await IntFields.all().order_by("id").values()
+        self.assertEqual(data[2], {"id": self.intfields[2].id, "intnum": 16, "intnum_null": None})
+
+    async def test_order_by_bad_value(self):
+        with self.assertRaisesRegex(FieldError, "Unknown field badid for model IntFields"):
+            await IntFields.all().order_by("badid").values_list()

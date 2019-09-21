@@ -3,6 +3,12 @@
 Changelog
 =========
 
+0.13.6
+------
+- Fix minor bug in ``Model.__init__`` where we raise the wrong error on setting RFK/M2M values directly.
+- Fields in ``Queryset.values_list()`` is now in the defined Model order.
+- Fields in ``Queryset.values()`` is now in the defined Model order.
+
 0.13.5
 ------
 - Sample Starlette integration

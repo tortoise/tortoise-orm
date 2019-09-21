@@ -1,6 +1,11 @@
 from tortoise.contrib import test
-from tortoise.exceptions import DoesNotExist, MultipleObjectsReturned, OperationalError
-from tortoise.tests.testmodels import NoID, Tournament
+from tortoise.exceptions import (
+    ConfigurationError,
+    DoesNotExist,
+    MultipleObjectsReturned,
+    OperationalError,
+)
+from tortoise.tests.testmodels import Event, NoID, Team, Tournament
 
 
 class TestModelMethods(test.TestCase):
@@ -114,3 +119,35 @@ class TestModelMethodsNoID(TestModelMethods):
     def test_repr(self):
         self.assertEqual(repr(self.mdl), "<NoID: {}>".format(self.mdl.id))
         self.assertEqual(repr(self.mdl2), "<NoID>")
+
+
+class TestModelConstructor(test.TestCase):
+    def test_null_in_nonnull_field(self):
+        with self.assertRaisesRegex(ValueError, "name is non nullable field, but null was passed"):
+            Event(name=None)
+
+    def test_rev_fk(self):
+        with self.assertRaisesRegex(
+            ConfigurationError,
+            "You can't set backward relations through init, change related model instead",
+        ):
+            Tournament(name="a", events=[])
+
+    def test_m2m(self):
+        with self.assertRaisesRegex(
+            ConfigurationError, "You can't set m2m relations through init, use m2m_manager instead"
+        ):
+            Event(name="a", participants=[])
+
+    def test_rev_m2m(self):
+        with self.assertRaisesRegex(
+            ConfigurationError, "You can't set m2m relations through init, use m2m_manager instead"
+        ):
+            Team(name="a", events=[])
+
+    def test_fk_unsaved(self):
+        with self.assertRaisesRegex(OperationalError, "You should first call .save()"):
+            Event(name="a", tournament=Tournament(name="a"))
+
+    async def test_fk_saved(self):
+        Event(name="a", tournament=await Tournament.create(name="a"))

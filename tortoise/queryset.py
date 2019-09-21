@@ -279,7 +279,12 @@ class QuerySet(AwaitableQuery):
             model=self.model,
             q_objects=self._q_objects,
             flat=flat,
-            fields_for_select_list=fields_ or list(self.model._meta.db_fields),
+            fields_for_select_list=fields_
+            or [
+                field
+                for field in self.model._meta.fields_map.keys()
+                if field in self.model._meta.db_fields
+            ],
             distinct=self._distinct,
             limit=self._limit,
             offset=self._offset,
@@ -308,7 +313,11 @@ class QuerySet(AwaitableQuery):
                     raise FieldError("Duplicate key {}".format(return_as))
                 fields_for_select[return_as] = field
         else:
-            fields_for_select = {field: field for field in self.model._meta.db_fields}
+            fields_for_select = {
+                field: field
+                for field in self.model._meta.fields_map.keys()
+                if field in self.model._meta.db_fields
+            }
 
         return ValuesQuery(
             db=self._db,
@@ -399,9 +408,18 @@ class QuerySet(AwaitableQuery):
             relation_split = relation.split("__")
             first_level_field = relation_split[0]
             if first_level_field not in self.model._meta.fetch_fields:
-                raise FieldError(
-                    "relation {} for {} not found".format(first_level_field, self.model._meta.table)
-                )
+                if first_level_field in self.model._meta.fields:
+                    raise FieldError(
+                        "Field {} on {} is not a relation".format(
+                            first_level_field, self.model._meta.table
+                        )
+                    )
+                else:
+                    raise FieldError(
+                        "Relation {} for {} not found".format(
+                            first_level_field, self.model._meta.table
+                        )
+                    )
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()
             forwarded_prefetch = "__".join(relation_split[1:])

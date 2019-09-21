@@ -399,7 +399,7 @@ class Model(metaclass=ModelMeta):
                 relation_field = field_object.source_field  # type: str  # type: ignore
                 setattr(self, key, value)
                 passed_fields.add(relation_field)
-            elif key in meta.fields:
+            elif key in meta.fields_db_projection:
                 field_object = meta.fields_map[key]
                 if value is None and not field_object.null:
                     raise ValueError("{} is non nullable field, but null was passed".format(key))
