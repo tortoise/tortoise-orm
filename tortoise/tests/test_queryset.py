@@ -11,9 +11,7 @@ from tortoise.tests.testmodels import IntFields, MinRelation, Tournament
 class TestQueryset(test.TestCase):
     async def setUp(self):
         # Build large dataset
-        self.intfields = []
-        for val in range(10, 100, 3):
-            self.intfields.append(await IntFields.create(intnum=val))
+        self.intfields = [await IntFields.create(intnum=val) for val in range(10, 100, 3)]
 
     async def test_all_count(self):
         self.assertEqual(await IntFields.all().count(), 30)
