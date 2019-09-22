@@ -1,4 +1,4 @@
-checkfiles = tortoise/ examples/ setup.py conftest.py
+checkfiles = tortoise/ examples/ tests/ setup.py conftest.py
 black_opts = -l 100
 py_warn = PYTHONWARNINGS=default PYTHONASYNCIODEBUG=1 PYTHONDEBUG=x PYTHONDEVMODE=dev
 
@@ -16,15 +16,15 @@ help:
 	@echo  "    style       Auto-formats the code"
 
 up:
-	CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements-pypy.txt requirements-pypy.in -U
-	CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements-dev.txt requirements-dev.in -U
-	cat docs/extra_requirements.txt >> requirements-pypy.txt
-	cat docs/extra_requirements.txt >> requirements-dev.txt
-	sed -i "s/^-e .*/-e ./" requirements-dev.txt
+	cd tests && CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements-pypy.txt requirements-pypy.in -U
+	cd tests && CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements.txt requirements.in -U
+	cat docs/extra_requirements.txt >> tests/requirements-pypy.txt
+	cat docs/extra_requirements.txt >> tests/requirements.txt
+	sed -i "s/^-e .*/-e ./" tests/requirements.txt
 
 deps:
-	@pip install -q pip-tools
-	@pip-sync requirements-dev.txt
+	@which pip-sync || pip install -q pip-tools
+	@pip-sync tests/requirements.txt
 
 check: deps
 ifneq ($(shell which black),)
@@ -47,20 +47,14 @@ endif
 	python setup.py check -mrs
 
 test: deps
-	coverage erase
-	$(py_warn) coverage run -p --concurrency=multiprocessing `which green`
-	coverage combine
-	coverage report
+	-$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: py.test -q
 
 testall: deps
-	coverage erase
-	-$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: coverage run -p --concurrency=multiprocessing `which green`
-	-$(py_warn) TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_\{\} coverage run -p --concurrency=multiprocessing `which green`
-	-$(py_warn) TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_\{\}" coverage run -p --concurrency=multiprocessing `which green`
-	coverage combine
-	coverage report
+	-$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: py.test -q --cov-report=
+	-python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_\{\} py.test -q --cov-append --cov-report=
+	-$(py_warn) TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_\{\}" py.test -q --cov-append
 
-ci: check test
+ci: check testall
 
 docs: deps
 	python setup.py build_sphinx -E

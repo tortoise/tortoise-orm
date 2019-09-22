@@ -1,9 +1,12 @@
+import os
+
+import pytest
+
 from tortoise.contrib.test import finalizer, initializer
 
 
-def pytest_runtest_setup(item):
-    initializer(["tortoise.tests.testmodels"], db_url="sqlite://:memory:")
-
-
-def pytest_runtest_teardown(item, nextitem):
-    finalizer()
+@pytest.fixture(scope="session", autouse=True)
+def initialize_tests(request):
+    db_url = os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
+    initializer(["tests.testmodels"], db_url=db_url)
+    request.addfinalizer(finalizer)

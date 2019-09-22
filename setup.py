@@ -35,7 +35,7 @@ setup(
     # License
     license="Apache License Version 2.0",
     # Packages
-    packages=find_packages(include=["tortoise*"], exclude=["tortoise.tests"]),
+    packages=find_packages(include=["tortoise*"]),
     zip_safe=True,
     # Include additional files into the package
     include_package_data=True,

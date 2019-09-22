@@ -1,0 +1,52 @@
+-e ..
+
+# Optional dependencies
+pyyaml>=4.2b1
+
+## Database Drivers
+asyncpg
+aiomysql
+
+# Dev Tools
+
+## Administration tools
+pip-tools
+
+## Documentation tools
+-r ../docs/requirements.txt
+
+## Linter tools
+mypy
+flake8-isort
+pylint
+docutils
+pygments
+bandit
+black;python_version>="3.6"
+
+## Test tools
+tox
+asynctest
+green
+coveralls
+pytest
+nose2
+pytest-xdist
+pytest-cov
+
+# Pypi
+twine
+
+# Sample integration - Quart
+wsproto;python_version>="3.7"
+hypercorn;python_version>="3.7"
+quart;python_version>="3.7"
+
+# Sample integration - Sanic
+httpcore;python_version>="3.6"
+sanic;python_version>="3.6"
+requests-async;python_version>="3.6"
+
+# Sample integration - Starlette
+uvicorn==0.8.6; python_version>="3.6"
+starlette;python_version>="3.6"
