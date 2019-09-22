@@ -9,16 +9,14 @@ env:
 matrix:
   include:
   - python: pypy3.6-7.1.1
-    install: pip install -r requirements-pypy.txt
+    install: pip install -r tests/requirements-pypy.txt
     script: make testall
   - python: 3.7
     env: TEST_RUNNER=green
-    install: pip install -r requirements-dev.txt
     script: green
     after_success: echo
   - python: 3.7
     env: TEST_RUNNER=nose2
-    install: pip install -r requirements-dev.txt
     script: "nose2 --plugin tortoise.contrib.test.nose2 --db-module tests.testmodels --db-url sqlite://:memory:"
     after_success: echo
 dist: xenial
@@ -27,7 +25,7 @@ services:
   - mysql
 cache: pip
 install:
-  - pip install -r requirements-dev.txt
+  - pip install -r tests/requirements.txt
 script:
   - make ci
 after_success:
