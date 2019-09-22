@@ -9,6 +9,7 @@ from tortoise.filters import (
     ends_with,
     insensitive_contains,
     insensitive_ends_with,
+    insensitive_exact,
     insensitive_starts_with,
     starts_with,
 )
@@ -24,6 +25,12 @@ def mysql_starts_with(field, value):
 
 def mysql_ends_with(field, value):
     return functions.Cast(field, SqlTypes.CHAR).like("%{}".format(value))
+
+
+def mysql_insensitive_exact(field, value):
+    return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).eq(
+        functions.Upper("{}".format(value))
+    )
 
 
 def mysql_insensitive_contains(field, value):
@@ -49,6 +56,7 @@ class MySQLExecutor(BaseExecutor):
         contains: mysql_contains,
         starts_with: mysql_starts_with,
         ends_with: mysql_ends_with,
+        insensitive_exact: mysql_insensitive_exact,
         insensitive_contains: mysql_insensitive_contains,
         insensitive_starts_with: mysql_insensitive_starts_with,
         insensitive_ends_with: mysql_insensitive_ends_with,

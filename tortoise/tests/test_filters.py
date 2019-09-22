@@ -127,8 +127,7 @@ class TestCharFieldFilters(test.TestCase):
 
     async def test_iexact(self):
         self.assertSetEqual(
-            set(await CharFields.filter(char__iexact="MoO").values_list("char", flat=True)),
-            {"moo"},
+            set(await CharFields.filter(char__iexact="MoO").values_list("char", flat=True)), {"moo"}
         )
 
     async def test_istartswith(self):
