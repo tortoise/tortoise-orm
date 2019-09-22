@@ -49,10 +49,12 @@ endif
 test: deps
 	-$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: py.test -q
 
-testall: deps
+_testall:
 	-$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: py.test -q --cov-report=
 	-python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_\{\} py.test -q --cov-append --cov-report=
 	-$(py_warn) TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_\{\}" py.test -q --cov-append
+
+testall: deps _testall
 
 ci: check testall
 
