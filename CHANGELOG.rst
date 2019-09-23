@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.13.7
+------
+- ``iexact`` filter modifier was implemented. Queries like ``«queryset».filter(name__iexact=...)`` will perform case-insensitive search.
+
 0.13.6
 ------
 - Fix minor bug in ``Model.__init__`` where we raise the wrong error on setting RFK/M2M values directly.
