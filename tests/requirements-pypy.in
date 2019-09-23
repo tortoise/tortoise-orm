@@ -1,0 +1,16 @@
+-r ../requirements.txt
+
+# Optional dependencies
+pyyaml>=4.2b1
+
+## Database Drivers
+aiomysql
+
+# Dev Tools
+
+## Test tools
+asynctest
+pytest
+pytest-xdist
+pytest-cov
+coveralls
