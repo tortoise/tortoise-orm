@@ -124,7 +124,7 @@ def finalizer() -> None:
     loop.run_until_complete(Tortoise._drop_databases())
 
 
-def env_initializer() -> None:
+def env_initializer() -> None:  # pragma: nocoverage
     """
     Calls ``initializer()`` with parameters mapped from environment variables.
 
@@ -133,7 +133,7 @@ def env_initializer() -> None:
     ``TORTOISE_TEST_DB``:
         The db_url of the test db. *(optional*)
     """
-    modules = str(_os.environ.get("TORTOISE_TEST_MODULES", "tortoise.tests.testmodels")).split(",")
+    modules = str(_os.environ.get("TORTOISE_TEST_MODULES", "tests.testmodels")).split(",")
     db_url = _os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
     if not modules:  # pragma: nocoverage
         raise Exception("TORTOISE_TEST_MODULES envvar not defined")
