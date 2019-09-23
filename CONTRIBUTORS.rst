@@ -17,6 +17,7 @@ Contributors
 * Terra Brown ``@superloach``
 * Nguyễn Hồng Quân ``@hongquan``
 * Mateusz Bocian ``@mrstork``
+* Vladimir Urushev ``@pilat``
 
 Special Thanks
 ==============
