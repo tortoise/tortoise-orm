@@ -52,7 +52,7 @@ On the DB_URL it should follow the following standard:
     TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_{}
 
 
-The ``{}`` is a string-replacement parameter, that will create a randomised database name.
+The ``{}`` is a string-replacement parameter, that will create a randomized database name.
 This is currently required for ``test.IsolatedTestCase`` to function.
 If you don't use ``test.IsolatedTestCase`` then you can give an absolute address.
 The SQLite in-memory ``:memory:`` database will always work, and is the default.
@@ -74,7 +74,7 @@ In your ``.green`` file:
 
 And then define the ``TORTOISE_TEST_MODULES`` environment variable with a comma separated list of module paths.
 
-Furthermore, you mayset the database configuration parameter as an environment variable (defaults to ``sqlite://:memory:``):
+Furthermore, you may set the database configuration parameter as an environment variable (defaults to ``sqlite://:memory:``):
 
     TORTOISE_TEST_DB=sqlite:///tmp/test-{}.sqlite
     TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_{}
@@ -87,13 +87,15 @@ Run the initializer and finalizer in your ``conftest.py`` file:
 
 .. code-block:: python3
 
+    import os
+    import pytest
     from tortoise.contrib.test import finalizer, initializer
 
-    def pytest_runtest_setup(item):
-        initializer(['tortoise.tests.testmodels'], db_url='sqlite://:memory:')
-
-    def pytest_runtest_teardown(item, nextitem):
-        finalizer()
+    @pytest.fixture(scope="session", autouse=True)
+    def initialize_tests(request):
+        db_url = os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
+        initializer(["tests.testmodels"], db_url=db_url)
+        request.addfinalizer(finalizer)
 
 
 Nose2
@@ -113,7 +115,7 @@ Or via the config file:
     [tortoise]
     # Must specify at least one module path
     db-module =
-        tortoise.tests.testmodels
+        tests.testmodels
     # You can optionally override the db_url here
     db-url = sqlite://testdb-{}.sqlite
 

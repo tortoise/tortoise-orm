@@ -81,7 +81,7 @@ Primary Keys
 
 In Tortoise ORM we require that a model has a primary key.
 
-That primary key will be accesible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
+That primary key will be accessible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
 That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc…
 
 We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
@@ -112,7 +112,7 @@ Inheritence
 -----------
 
 When defining models in Tortoise ORM, you can save a lot of
-repetitive work by leveraging from inheritence.
+repetitive work by leveraging from inheritance.
 
 You can define fields in more generic classes and they are
 automatically available in derived classes. Base classes are
@@ -245,7 +245,7 @@ Sync usage requires that you call `fetch_related` before the time, and then you 
     firstevent = tournament.events[0]
 
 
-To get the reverse fk, e.g. an `event.tournament` we currently only support the sync interface.
+To get the Reverse-FK, e.g. an `event.tournament` we currently only support the sync interface.
 
 .. code-block:: python3
 
