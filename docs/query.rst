@@ -33,7 +33,7 @@ Also instance of model itself has these methods:
 
 - ``save()`` - update instance, or insert it, if it was never saved before
 - ``delete()`` - delete instance from db
-- ``fetch_related(*args)`` - fetches objects related to instance. It can fetch fk relation, backward fk realtion and m2m relation. It also can fetch variable depth of related objects like this: ``await team.fetch_related('events__tournament')`` - this will fetch all events for team, and for each of this events their tournament will be prefetched too. After fetching objects they should be available normally like this: ``team.events[0].tournament.name``
+- ``fetch_related(*args)`` - fetches objects related to instance. It can fetch FK relation, Backward-FK relations and M2M relations. It also can fetch variable depth of related objects like this: ``await team.fetch_related('events__tournament')`` - this will fetch all events for team, and for each of this events their tournament will be prefetched too. After fetching objects they should be available normally like this: ``team.events[0].tournament.name``
 
 Another approach to work with related objects on instance is to query them explicitly in ``async for``:
 
@@ -140,7 +140,7 @@ Check `examples <https://github.com/tortoise/tortoise-orm/tree/master/examples>`
 Many to Many
 ============
 
-Tortoise ORM provides api for working with M2M relations
+Tortoise ORM provides an API for working with M2M relations
 
 - ``add(*args)`` - adds instances to relation
 - ``remove(*args)`` - removes instances from relation
@@ -198,6 +198,7 @@ When using ``.filter()`` method you can use number of modifiers to field names t
 - ``istartswith`` - case insensitive ``startswith``
 - ``endswith`` - if field ends with value
 - ``iendswith`` - case insensitive ``endswith``
+- ``iequals`` - case insensitive equals
 
 
 Complex prefetch

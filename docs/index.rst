@@ -39,12 +39,12 @@ It also performs well when compared to other Python ORMs, only losing to Pony OR
 How is an ORM useful?
 ---------------------
 
-When you build an application or service that uses a relational database, there is a point when you can't just get away with just using parameterized queries or even query builder, you just keep repeating yourself, writing slightly different code for each entity.
+When you build an application or service that uses a relational database, there is a point when you can't just get away with just using parametrized queries or even query builder, you just keep repeating yourself, writing slightly different code for each entity.
 Code has no idea about relations between data, so you end up concatenating your data almost manually.
 It is also easy to make a mistake in how you access your database, making it easy for SQL-injection attacks to occur.
 Your data rules are also distributed, increasing the complexity of managing your data, and even worse, is applied inconsistently.
 
-An ORM (Object Relational Mapper) is desgined to address these issues, by centralising your data model and data rules, ensuring that your data is managed safely (providing immunity to SQL-injection) and keeps track of relationships so you don't have to.
+An ORM (Object Relational Mapper) is designed to address these issues, by centralizing your data model and data rules, ensuring that your data is managed safely (providing immunity to SQL-injection) and keeps track of relationships so you don't have to.
 
 Features
 ========

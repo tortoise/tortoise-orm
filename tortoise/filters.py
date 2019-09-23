@@ -65,6 +65,12 @@ def ends_with(field, value):
     return functions.Cast(field, SqlTypes.VARCHAR).like(f"%{value}")
 
 
+def insensitive_exact(field, value):
+    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).eq(
+        functions.Upper("{}".format(value))
+    )
+
+
 def insensitive_contains(field, value):
     return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
         functions.Upper(f"%{value}%")
@@ -232,6 +238,12 @@ def get_filters_for_field(
             "field": actual_field_name,
             "source_field": source_field,
             "operator": ends_with,
+            "value_encoder": string_encoder,
+        },
+        "{}__iexact".format(field_name): {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": insensitive_exact,
             "value_encoder": string_encoder,
         },
         f"{field_name}__icontains": {

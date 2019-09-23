@@ -45,6 +45,10 @@ class TestFiltering(test.TestCase):
         self.assertEqual(len(teams), 1)
         self.assertEqual(teams[0].name, "Second")
 
+        teams = await Team.filter(name__iexact="SeCoNd")
+        self.assertEqual(len(teams), 1)
+        self.assertEqual(teams[0].name, "Second")
+
         tournaments = await Tournament.filter(events__participants__name__startswith="Fir")
         self.assertEqual(len(tournaments), 1)
         self.assertEqual(tournaments[0], tournament)

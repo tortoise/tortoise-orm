@@ -51,7 +51,7 @@ Here we have all the features that is slightly further out, in no particular ord
     * Provide sane default schema generators
     * Make default serializers support some validation
     * Make default serializers support data conversion
-    * Make default serializers somewhat customizable
+    * Make default serializers somewhat customisable
     * Provide clean way to replace serializers with custom solution
     * Define strategy to work with ``ManyToMany`` relationships
 
