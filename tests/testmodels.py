@@ -353,23 +353,23 @@ class Employee(Model):
     def __str__(self):
         return self.name
 
-    # async def full_hierarchy__async_for(self, level=0):
-    #     """
-    #     Demonstrates ``async for` to fetch relations
-    #
-    #     An async iterator will fetch the relationship on-demand.
-    #     """
-    #     text = [
-    #         "{}{} (to: {}) (from: {})".format(
-    #             level * "  ",
-    #             self,
-    #             ", ".join(sorted([str(val) async for val in self.talks_to])),
-    #             ", ".join(sorted([str(val) async for val in self.gets_talked_to])),
-    #         )
-    #     ]
-    #     async for member in self.team_members:
-    #         text.append(await member.full_hierarchy__async_for(level + 1))
-    #     return "\n".join(text)
+    async def full_hierarchy__async_for(self, level=0):
+        """
+        Demonstrates ``async for` to fetch relations
+
+        An async iterator will fetch the relationship on-demand.
+        """
+        text = [
+            "{}{} (to: {}) (from: {})".format(
+                level * "  ",
+                self,
+                ", ".join(sorted([str(val) async for val in self.talks_to])),
+                ", ".join(sorted([str(val) async for val in self.gets_talked_to])),
+            )
+        ]
+        async for member in self.team_members:
+            text.append(await member.full_hierarchy__async_for(level + 1))
+        return "\n".join(text)
 
     async def full_hierarchy__fetch_related(self, level=0):
         """

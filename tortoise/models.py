@@ -1,6 +1,6 @@
 from copy import copy, deepcopy
 from functools import partial
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from pypika import Query
 
@@ -22,7 +22,7 @@ MODEL_TYPE = TypeVar("MODEL_TYPE", bound="Model")
 
 
 def get_unique_together(meta) -> Tuple[Tuple[str, ...], ...]:
-    unique_together = getattr(meta, "unique_together", None)
+    unique_together = getattr(meta, "unique_together", ())
 
     if isinstance(unique_together, (list, tuple)):
         if unique_together and isinstance(unique_together[0], str):
@@ -84,39 +84,44 @@ class MetaInfo:
         "table_description",
         "pk",
         "db_pk_field",
+        "db_native_fields",
+        "db_default_fields",
+        "db_complex_fields",
     )
 
     def __init__(self, meta) -> None:
-        self.abstract = getattr(meta, "abstract", False)  # type: bool
-        self.table = getattr(meta, "table", "")  # type: str
-        self.app = getattr(meta, "app", None)  # type: Optional[str]
-        self.unique_together = get_unique_together(meta)  # type: Union[Tuple, List]
-        self.fields = set()  # type: Set[str]
-        self.db_fields = set()  # type: Set[str]
-        self.m2m_fields = set()  # type: Set[str]
-        self.fk_fields = set()  # type: Set[str]
-        self.backward_fk_fields = set()  # type: Set[str]
-        self.fetch_fields = set()  # type: Set[str]
-        self.fields_db_projection = {}  # type: Dict[str,str]
-        self.fields_db_projection_reverse = {}  # type: Dict[str,str]
-        self._filters = {}  # type: Dict[str, Dict[str, dict]]
-        self.filters = {}  # type: Dict[str, dict]
-        self.fields_map = {}  # type: Dict[str, fields.Field]
-        self._inited = False  # type: bool
-        self.default_connection = None  # type: Optional[str]
-        self.basequery = Query()  # type: Query
-        self.basequery_all_fields = Query()  # type: Query
-        self.pk_attr = getattr(meta, "pk_attr", "")  # type: str
-        self.generated_db_fields = None  # type: Tuple[str]  # type: ignore
-        self._model = None  # type: "Model"  # type: ignore
-        self.table_description = getattr(meta, "table_description", "")  # type: str
-        self.pk = None  # type: fields.Field  # type: ignore
-        self.db_pk_field = ""  # type: str
+        self.abstract: bool = getattr(meta, "abstract", False)
+        self.table: str = getattr(meta, "table", "")
+        self.app: Optional[str] = getattr(meta, "app", None)
+        self.unique_together: Tuple[Tuple[str, ...], ...] = get_unique_together(meta)
+        self.fields: Set[str] = set()
+        self.db_fields: Set[str] = set()
+        self.m2m_fields: Set[str] = set()
+        self.fk_fields: Set[str] = set()
+        self.backward_fk_fields: Set[str] = set()
+        self.fetch_fields: Set[str] = set()
+        self.fields_db_projection: Dict[str, str] = {}
+        self.fields_db_projection_reverse: Dict[str, str] = {}
+        self._filters: Dict[str, Dict[str, dict]] = {}
+        self.filters: Dict[str, dict] = {}
+        self.fields_map: Dict[str, fields.Field] = {}
+        self._inited: bool = False
+        self.default_connection: Optional[str] = None
+        self.basequery: Query = Query()
+        self.basequery_all_fields: Query = Query()
+        self.pk_attr: str = getattr(meta, "pk_attr", "")
+        self.generated_db_fields: Tuple[str] = None  # type: ignore
+        self._model: "Model" = None  # type: ignore
+        self.table_description: str = getattr(meta, "table_description", "")
+        self.pk: fields.Field = None  # type: ignore
+        self.db_pk_field: str = ""
+        self.db_native_fields: List[Tuple[str, str, fields.Field]] = []
+        self.db_default_fields: List[Tuple[str, str, fields.Field]] = []
+        self.db_complex_fields: List[Tuple[str, str, fields.Field]] = []
 
     def add_field(self, name: str, value: Field):
         if name in self.fields_map:
-            raise ConfigurationError("Field {} already present in meta".format(name))
-        setattr(self._model, name, value)
+            raise ConfigurationError(f"Field {name} already present in meta")
         value.model = self._model
         self.fields_map[name] = value
 
@@ -154,6 +159,8 @@ class MetaInfo:
         """
         self.finalise_fields()
         self._generate_filters()
+        self._generate_lazy_fk_m2m_fields()
+        self._generate_db_fields()
 
     def finalise_fields(self) -> None:
         self.db_fields = set(self.fields_db_projection.values())
@@ -170,9 +177,10 @@ class MetaInfo:
             generated_fields.append(field.source_field or field.model_field_name)
         self.generated_db_fields = tuple(generated_fields)  # type: ignore
 
+    def _generate_lazy_fk_m2m_fields(self) -> None:
         # Create lazy FK fields on model.
         for key in self.fk_fields:
-            _key = "_{}".format(key)
+            _key = f"_{key}"
             relation_field = self.fields_map[key].source_field
             setattr(
                 self._model,
@@ -186,8 +194,8 @@ class MetaInfo:
 
         # Create lazy reverse FK fields on model.
         for key in self.backward_fk_fields:
-            _key = "_{}".format(key)
-            field_object = self.fields_map[key]  # type: fields.BackwardFKRelation  # type: ignore
+            _key = f"_{key}"
+            field_object: fields.BackwardFKRelation = self.fields_map[key]  # type: ignore
             setattr(
                 self._model,
                 key,
@@ -203,12 +211,25 @@ class MetaInfo:
 
         # Create lazy M2M fields on model.
         for key in self.m2m_fields:
-            _key = "_{}".format(key)
+            _key = f"_{key}"
             setattr(
                 self._model,
                 key,
                 property(partial(_m2m_getter, _key=_key, field_object=self.fields_map[key])),
             )
+
+    def _generate_db_fields(self) -> None:
+        for key in self.db_fields:
+            model_field = self.fields_db_projection_reverse[key]
+            field = self.fields_map[model_field]
+
+            default_converter = field.__class__.to_python_value is fields.Field.to_python_value
+            if not default_converter:
+                self.db_complex_fields.append((key, model_field, field))
+            elif field.type in self.db.executor_class.DB_NATIVE:
+                self.db_native_fields.append((key, model_field, field))
+            else:
+                self.db_default_fields.append((key, model_field, field))
 
     def _generate_filters(self) -> None:
         get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
@@ -226,29 +247,29 @@ class ModelMeta(type):
     __slots__ = ()
 
     def __new__(mcs, name: str, bases, attrs: dict, *args, **kwargs):
-        fields_db_projection = {}  # type: Dict[str,str]
-        fields_map = {}  # type: Dict[str, fields.Field]
-        filters = {}  # type: Dict[str, Dict[str, dict]]
-        fk_fields = set()  # type: Set[str]
-        m2m_fields = set()  # type: Set[str]
+        fields_db_projection: Dict[str, str] = {}
+        fields_map: Dict[str, fields.Field] = {}
+        filters: Dict[str, Dict[str, dict]] = {}
+        fk_fields: Set[str] = set()
+        m2m_fields: Set[str] = set()
         meta_class = attrs.get("Meta", type("Meta", (), {}))
-        pk_attr = "id"
+        pk_attr: str = "id"
 
-        # Searching for Field attributes in the class hierarchie
+        # Searching for Field attributes in the class hierarchy
         def __search_for_field_attributes(base, attrs: dict):
             """
             Searching for class attributes of type fields.Field
             in the given class.
 
             If an attribute of the class is an instance of fields.Field,
-            then it will be added to the attrs dict. But only, if the
+            then it will be added to the fields dict. But only, if the
             key is not already in the dict. So derived classes have a higher
-            precedence. Multiple Inheritence is supported from left to right.
+            precedence. Multiple Inheritance is supported from left to right.
 
             After checking the given class, the function will look into
-            the classes according to the mro (method resolution order).
+            the classes according to the MRO (method resolution order).
 
-            The mro is 'natural' order, in wich python traverses methods and
+            The MRO is 'natural' order, in which python traverses methods and
             fields. For more information on the magic behind check out:
             `The Python 2.3 Method Resolution Order
             <https://www.python.org/download/releases/2.3/mro/>`_.
@@ -270,8 +291,8 @@ class ModelMeta(type):
                     if value.pk:
                         if custom_pk_present:
                             raise ConfigurationError(
-                                "Can't create model {} with two primary keys, "
-                                "only single pk are supported".format(name)
+                                f"Can't create model {name} with two primary keys,"
+                                " only single pk are supported"
                             )
                         if value.generated and not isinstance(
                             value, (fields.SmallIntField, fields.IntField, fields.BigIntField)
@@ -288,8 +309,8 @@ class ModelMeta(type):
 
                 if not isinstance(attrs["id"], fields.Field) or not attrs["id"].pk:
                     raise ConfigurationError(
-                        "Can't create model {} without explicit primary key "
-                        "if field 'id' already present".format(name)
+                        f"Can't create model {name} without explicit primary key if field 'id'"
+                        " already present"
                     )
 
             for key, value in attrs.items():
@@ -322,6 +343,9 @@ class ModelMeta(type):
                                 )
                             )
 
+        # Clean the class attributes
+        for slot in fields_map.keys():
+            attrs.pop(slot, None)
         attrs["_meta"] = meta = MetaInfo(meta_class)
 
         meta.fields_map = fields_map
@@ -336,7 +360,7 @@ class ModelMeta(type):
         if not fields_map:
             meta.abstract = True
 
-        new_class = super().__new__(mcs, name, bases, attrs)  # type: "Model"  # type: ignore
+        new_class: "Model" = super().__new__(mcs, name, bases, attrs)  # type: ignore
         for field in meta.fields_map.values():
             field.model = new_class
 
@@ -346,7 +370,7 @@ class ModelMeta(type):
 
 
 class Model(metaclass=ModelMeta):
-    # I don' like this here, but it makes autocompletion and static analysis much happier
+    # I don' like this here, but it makes auto completion and static analysis much happier
     _meta = MetaInfo(None)
 
     def __init__(self, *args, **kwargs) -> None:
@@ -355,9 +379,7 @@ class Model(metaclass=ModelMeta):
         self._saved_in_db = meta.pk_attr in kwargs and meta.pk.generated
 
         # Assign values and do type conversions
-        passed_fields = {*kwargs.keys()}
-        passed_fields.update(meta.fetch_fields)
-        passed_fields |= self._set_field_values(kwargs)
+        passed_fields = self._set_field_values(kwargs) | meta.fetch_fields | {*kwargs.keys()}
 
         # Assign defaults for missing fields
         for key in meta.fields.difference(passed_fields):
@@ -374,10 +396,13 @@ class Model(metaclass=ModelMeta):
 
         meta = self._meta
 
-        for key, value in kwargs.items():
-            model_field = meta.fields_db_projection_reverse.get(key)
-            if model_field:
-                setattr(self, model_field, meta.fields_map[model_field].to_python_value(value))
+        for key, model_field, field in meta.db_native_fields:
+            setattr(self, model_field, kwargs[key])
+        for key, model_field, field in meta.db_default_fields:
+            value = kwargs[key]
+            setattr(self, model_field, None if value is None else field.type(value))
+        for key, model_field, field in meta.db_complex_fields:
+            setattr(self, model_field, field.to_python_value(kwargs[key]))
 
         return self
 
@@ -393,21 +418,14 @@ class Model(metaclass=ModelMeta):
             if key in meta.fk_fields:
                 if value and not value._saved_in_db:
                     raise OperationalError(
-                        "You should first call .save() on {} before referring to it".format(value)
+                        f"You should first call .save() on {value} before referring to it"
                     )
-                field_object = meta.fields_map[key]
-                relation_field = field_object.source_field  # type: str  # type: ignore
                 setattr(self, key, value)
-                passed_fields.add(relation_field)
+                passed_fields.add(meta.fields_map[key].source_field)
             elif key in meta.fields_db_projection:
                 field_object = meta.fields_map[key]
                 if value is None and not field_object.null:
-                    raise ValueError("{} is non nullable field, but null was passed".format(key))
-                setattr(self, key, field_object.to_python_value(value))
-            elif key in meta.db_fields:
-                field_object = meta.fields_map[meta.fields_db_projection_reverse[key]]
-                if value is None and not field_object.null:
-                    raise ValueError("{} is non nullable field, but null was passed".format(key))
+                    raise ValueError(f"{key} is non nullable field, but null was passed")
                 setattr(self, key, field_object.to_python_value(value))
             elif key in meta.backward_fk_fields:
                 raise ConfigurationError(
@@ -418,15 +436,15 @@ class Model(metaclass=ModelMeta):
                     "You can't set m2m relations through init, use m2m_manager instead"
                 )
 
-        return passed_fields
+        return passed_fields  # type: ignore
 
     def __str__(self) -> str:
-        return "<{}>".format(self.__class__.__name__)
+        return f"<{self.__class__.__name__}>"
 
     def __repr__(self) -> str:
         if self.pk:
-            return "<{}: {}>".format(self.__class__.__name__, self.pk)
-        return "<{}>".format(self.__class__.__name__)
+            return f"<{self.__class__.__name__}: {self.pk}>"
+        return f"<{self.__class__.__name__}>"
 
     def __hash__(self) -> int:
         if not self.pk:
@@ -538,7 +556,7 @@ class Model(metaclass=ModelMeta):
             created in the DB has all the defaults and generated fields set,
             but may be incomplete reference in Python.
 
-            e.g. ``IntField`` primary keys will not be poplulated.
+            e.g. ``IntField`` primary keys will not be populated.
 
         This is recommend only for throw away inserts where you want to ensure optimal
         insert performance.
@@ -618,20 +636,15 @@ class Model(metaclass=ModelMeta):
     @classmethod
     def _check_unique_together(cls) -> None:
         """Check the value of "unique_together" option."""
-        if cls._meta.unique_together is None:
-            return
-
         if not isinstance(cls._meta.unique_together, (tuple, list)):
-            raise ConfigurationError(
-                "'{}.unique_together' must be a list or tuple.".format(cls.__name__)
-            )
+            raise ConfigurationError(f"'{cls.__name__}.unique_together' must be a list or tuple.")
 
         if any(
             not isinstance(unique_fields, (tuple, list))
             for unique_fields in cls._meta.unique_together
         ):
             raise ConfigurationError(
-                "All '{}.unique_together' elements must be lists or tuples.".format(cls.__name__)
+                f"All '{cls.__name__}.unique_together' elements must be lists or tuples."
             )
 
         for fields_tuple in cls._meta.unique_together:
@@ -640,19 +653,18 @@ class Model(metaclass=ModelMeta):
 
                 if not field:
                     raise ConfigurationError(
-                        "'{}.unique_together' has no '{}' "
-                        "field.".format(cls.__name__, field_name)
+                        f"'{cls.__name__}.unique_together' has no '{field_name}' field."
                     )
 
                 if isinstance(field, ManyToManyField):
                     raise ConfigurationError(
-                        "'{}.unique_together' '{}' field refers "
-                        "to ManyToMany field.".format(cls.__name__, field_name)
+                        f"'{cls.__name__}.unique_together' '{field_name}' field refers"
+                        " to ManyToMany field."
                     )
 
     class Meta:
         """
-        The ``Meta`` class is used to configure metadate for the Model.
+        The ``Meta`` class is used to configure metadata for the Model.
 
         Usage:
 

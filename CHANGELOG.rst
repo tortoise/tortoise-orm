@@ -2,6 +2,20 @@
 
 Changelog
 =========
+0.14.0
+------
+.. warning::
+   **This release drops support of Python 3.5:**
+
+   Tortoise ORM now requires a minimum of CPython 3.6 or PyPy3.6-7.1
+
+New Features:
+^^^^^^^^^^^^^
+- Fetching records from the DB is now up to 25% faster.
+
+Bugfixes:
+^^^^^^^^^
+
 
 0.13.7
 ------

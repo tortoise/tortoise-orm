@@ -1,6 +1,5 @@
 # pylint: disable=C0301
 import re
-import sys
 import warnings
 
 from asynctest.mock import CoroutineMock, patch
@@ -92,7 +91,7 @@ class TestGenerateSchema(test.SimpleTestCase):
     def continue_if_safe_indexes(supported: bool):
         db = Tortoise.get_connection("default")
         if db.capabilities.safe_indexes != supported:
-            raise test.SkipTest("safe_indexes != {}".format(supported))
+            raise test.SkipTest(f"safe_indexes != {supported}")
 
     async def test_create_index(self):
         await self.init_for("tests.testmodels")
@@ -142,7 +141,6 @@ class TestGenerateSchema(test.SimpleTestCase):
         self.assertRegex(sql, r".*\\n.*")
         self.assertIn("\\/", sql)
 
-    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.models_schema_create")
@@ -193,7 +191,6 @@ CREATE TABLE "teamevents" (
 """.strip(),  # noqa
         )
 
-    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.models_schema_create")
@@ -301,7 +298,6 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
         self.assertRegex(sql, r".*\\n.*")
         self.assertRegex(sql, r".*it\\'s.*")
 
-    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.models_schema_create")
@@ -352,7 +348,6 @@ CREATE TABLE `teamevents` (
 """.strip(),  # noqa
         )
 
-    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.models_schema_create")
@@ -465,7 +460,6 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
         )
         self.assertIn("COMMENT ON COLUMN comments.multiline_comment IS 'Some \\n comment'", sql)
 
-    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.models_schema_create")
@@ -526,7 +520,6 @@ COMMENT ON TABLE teamevents IS 'How participants relate';
 """.strip(),
         )
 
-    @test.skipIf(sys.version_info < (3, 6), "Dict not sorted in 3.5")
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.models_schema_create")

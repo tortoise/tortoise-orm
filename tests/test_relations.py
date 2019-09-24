@@ -13,7 +13,7 @@ class TestRelations(test.TestCase):
         await event.save()
         participants = []
         for i in range(2):
-            team = Team(name="Team {}".format(i + 1))
+            team = Team(name=f"Team {(i + 1)}")
             await team.save()
             participants.append(team)
         await event.participants.add(participants[0], participants[1])
@@ -25,6 +25,8 @@ class TestRelations(test.TestCase):
         teamids = []
         async for team in event.participants:
             teamids.append(team.id)
+        self.assertEqual(teamids, [participants[0].id, participants[1].id])
+        teamids = [team.id async for team in event.participants]
         self.assertEqual(teamids, [participants[0].id, participants[1].id])
 
         self.assertEqual(
@@ -61,7 +63,7 @@ class TestRelations(test.TestCase):
         event = await Event.create(name="Test", tournament_id=tournament.id)
         participants = []
         for i in range(2):
-            team = await Team.create(name="Team {}".format(i + 1))
+            team = await Team.create(name=f"Team {(i + 1)}")
             participants.append(team)
         await event.participants.add(*participants)
         queryset = Event.all().annotate(count=Count("participants"))
@@ -167,17 +169,17 @@ class TestRelations(test.TestCase):
     2.2. Third H2 (to: 2.1. Second H2) (from: )"""
 
         # Evaluated off creation objects
-        # self.assertEqual(await loose.full_hierarchy__async_for(), LOOSE_TEXT)
+        self.assertEqual(await loose.full_hierarchy__async_for(), LOOSE_TEXT)
         self.assertEqual(await loose.full_hierarchy__fetch_related(), LOOSE_TEXT)
-        # self.assertEqual(await root.full_hierarchy__async_for(), ROOT_TEXT)
+        self.assertEqual(await root.full_hierarchy__async_for(), ROOT_TEXT)
         self.assertEqual(await root.full_hierarchy__fetch_related(), ROOT_TEXT)
 
         # Evaluated off new objects → Result is identical
         root2 = await Employee.get(name="Root")
         loose2 = await Employee.get(name="Loose")
-        # self.assertEqual(await loose2.full_hierarchy__async_for(), LOOSE_TEXT)
+        self.assertEqual(await loose2.full_hierarchy__async_for(), LOOSE_TEXT)
         self.assertEqual(await loose2.full_hierarchy__fetch_related(), LOOSE_TEXT)
-        # self.assertEqual(await root2.full_hierarchy__async_for(), ROOT_TEXT)
+        self.assertEqual(await root2.full_hierarchy__async_for(), ROOT_TEXT)
         self.assertEqual(await root2.full_hierarchy__fetch_related(), ROOT_TEXT)
 
     async def test_prefetch_related_fk(self):

@@ -1,5 +1,6 @@
+import asyncio
 import logging
-from typing import Any, Optional, Sequence
+from typing import Any, Optional, Sequence, Type
 
 from pypika import Query
 
@@ -37,7 +38,7 @@ class Capabilities:
         # Deficiencies to work around:
         safe_indexes: bool = True,
         requires_limit: bool = False,
-        inline_comment: bool = False
+        inline_comment: bool = False,
     ) -> None:
         super().__setattr__("_mutable", True)
 
@@ -59,10 +60,10 @@ class Capabilities:
 
 
 class BaseDBAsyncClient:
-    query_class = Query
-    executor_class = BaseExecutor
-    schema_generator = BaseSchemaGenerator
-    capabilities = Capabilities("")
+    query_class: Type[Query] = Query
+    executor_class: Type[BaseExecutor] = BaseExecutor
+    schema_generator: Type[BaseSchemaGenerator] = BaseSchemaGenerator
+    capabilities: Capabilities = Capabilities("")
 
     def __init__(self, connection_name: str, fetch_inserted: bool = True, **kwargs) -> None:
         self.log = logging.getLogger("db_client")
@@ -103,9 +104,9 @@ class BaseDBAsyncClient:
 class ConnectionWrapper:
     __slots__ = ("connection", "lock")
 
-    def __init__(self, connection, lock) -> None:
+    def __init__(self, connection, lock: asyncio.Lock) -> None:
         self.connection = connection
-        self.lock = lock
+        self.lock: asyncio.Lock = lock
 
     async def __aenter__(self):
         await self.lock.acquire()

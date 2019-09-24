@@ -10,7 +10,6 @@ import ciso8601
 from pypika import Table
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
-from tortoise.utils import QueryAsyncIterator
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -59,7 +58,7 @@ class Field:
         reference: Optional[str] = None,
         model: "Optional[Model]" = None,
         description: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         self.type = type
         self.source_field = source_field
@@ -69,7 +68,7 @@ class Field:
         self.null = null
         self.unique = unique
         self.index = index
-        self.model_field_name = ""  # type: str
+        self.model_field_name = ""
         self.model = model
         self.reference = reference
         self.description = description
@@ -382,7 +381,7 @@ class ForeignKeyField(Field):
         self, model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs
     ) -> None:
         super().__init__(**kwargs)
-        if isinstance(model_name, str) and len(model_name.split(".")) != 2:
+        if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name = model_name
         self.related_name = related_name
@@ -436,14 +435,14 @@ class ManyToManyField(Field):
         forward_key: Optional[str] = None,
         backward_key: str = "",
         related_name: str = "",
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name = model_name
         self.related_name = related_name
-        self.forward_key = forward_key or "{}_id".format(model_name.split(".")[1].lower())
+        self.forward_key = forward_key or f"{model_name.split('.')[1].lower()}_id"
         self.backward_key = backward_key
         self.through = through
         self._generated = False
@@ -485,7 +484,7 @@ class RelationQueryContainer:
         self.instance = instance
         self._fetched = False
         self._custom_query = False
-        self.related_objects = []  # type: list
+        self.related_objects: list = []
 
     @property
     def _query(self):
@@ -533,12 +532,13 @@ class RelationQueryContainer:
     def __await__(self):
         return self._query.__await__()
 
-    def __aiter__(self) -> QueryAsyncIterator:
-        async def fetched_callback(iterator_wrapper):
+    async def __aiter__(self):
+        if not self._fetched:
+            self.related_objects = await self
             self._fetched = True
-            self.related_objects = iterator_wrapper.sequence
 
-        return QueryAsyncIterator(self._query, callback=fetched_callback)
+        for val in self.related_objects:
+            yield val
 
     def filter(self, *args, **kwargs):
         """
@@ -597,9 +597,7 @@ class ManyToManyRelationManager(RelationQueryContainer):
         if not instances:
             return
         if not self.instance._saved_in_db:
-            raise OperationalError(
-                "You should first call .save() on {model}".format(model=self.instance)
-            )
+            raise OperationalError(f"You should first call .save() on {self.instance}")
         db = using_db if using_db else self.model._meta.db
         pk_formatting_func = type(self.instance)._meta.pk.to_db_value
         related_pk_formatting_func = type(instances[0])._meta.pk.to_db_value
@@ -642,9 +640,7 @@ class ManyToManyRelationManager(RelationQueryContainer):
         insert_is_required = False
         for instance_to_add in instances:
             if not instance_to_add._saved_in_db:
-                raise OperationalError(
-                    "You should first call .save() on {model}".format(model=instance_to_add)
-                )
+                raise OperationalError(f"You should first call .save() on {instance_to_add}")
             pk_f = related_pk_formatting_func(instance_to_add.pk, instance_to_add)
             pk_b = pk_formatting_func(self.instance.pk, self.instance)
             if (pk_b, pk_f) in already_existing_relations:

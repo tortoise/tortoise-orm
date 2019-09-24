@@ -3,7 +3,7 @@ import logging
 import os
 import sqlite3
 from functools import wraps
-from typing import List, Optional  # noqa
+from typing import List, Optional
 
 import aiosqlite
 
@@ -48,7 +48,7 @@ class SqliteClient(BaseDBAsyncClient):
         self._transaction_class = type(
             "TransactionWrapper", (TransactionWrapper, self.__class__), {}
         )
-        self._connection = None  # type: Optional[aiosqlite.Connection]
+        self._connection: Optional[aiosqlite.Connection] = None
         self._lock = asyncio.Lock()
 
     async def create_connection(self, with_db: bool) -> None:
@@ -58,13 +58,13 @@ class SqliteClient(BaseDBAsyncClient):
             await self._connection._connect()
             self._connection._conn.row_factory = sqlite3.Row
             for pragma, val in self.pragmas.items():
-                cursor = await self._connection.execute("PRAGMA {}={}".format(pragma, val))
+                cursor = await self._connection.execute(f"PRAGMA {pragma}={val}")
                 await cursor.close()
             self.log.debug(
                 "Created connection %s with params: filename=%s %s",
                 self._connection,
                 self.filename,
-                " ".join(["{}={}".format(k, v) for k, v in self.pragmas.items()]),
+                " ".join([f"{k}={v}" for k, v in self.pragmas.items()]),
             )
 
     async def close(self) -> None:
@@ -74,7 +74,7 @@ class SqliteClient(BaseDBAsyncClient):
                 "Closed connection %s with params: filename=%s %s",
                 self._connection,
                 self.filename,
-                " ".join(["{}={}".format(k, v) for k, v in self.pragmas.items()]),
+                " ".join([f"{k}={v}" for k, v in self.pragmas.items()]),
             )
             self._connection = None
 
@@ -131,7 +131,7 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         self, connection_name: str, connection: aiosqlite.Connection, lock, fetch_inserted
     ) -> None:
         self.connection_name = connection_name
-        self._connection = connection  # type: aiosqlite.Connection
+        self._connection: aiosqlite.Connection = connection
         self._lock = lock
         self.log = logging.getLogger("db_client")
         self._transaction_class = self.__class__

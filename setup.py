@@ -1,15 +1,11 @@
 # coding: utf8
 import re
 import sys
-import warnings
 
 from setuptools import find_packages, setup
 
-if sys.version_info < (3, 5, 3):
-    raise RuntimeError("tortoise requires Python 3.5.3+")
-
 if sys.version_info < (3, 6):
-    warnings.warn("Tortoise-ORM is soon going to require Python 3.6", DeprecationWarning)
+    raise RuntimeError("Tortoise-ORM requires Python >= 3.6")
 
 
 def version() -> str:
@@ -51,7 +47,6 @@ setup(
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: Implementation :: CPython",

@@ -92,7 +92,7 @@ class TestInitErrors(test.SimpleTestCase):
         with self.assertRaisesRegex(
             ConfigurationError, 'You must specify "db_url" and "modules" together'
         ):
-            await Tortoise.init(db_url="sqlite://{}".format(":memory:"))
+            await Tortoise.init(db_url=f"sqlite://{':memory:'}")
 
     async def test_default_connection_init(self):
         await Tortoise.init(
@@ -112,7 +112,7 @@ class TestInitErrors(test.SimpleTestCase):
     async def test_db_url_init(self):
         await Tortoise.init(
             {
-                "connections": {"default": "sqlite://{}".format(":memory:")},
+                "connections": {"default": f"sqlite://{':memory:'}"},
                 "apps": {
                     "models": {"models": ["tests.testmodels"], "default_connection": "default"}
                 },
@@ -123,7 +123,7 @@ class TestInitErrors(test.SimpleTestCase):
 
     async def test_shorthand_init(self):
         await Tortoise.init(
-            db_url="sqlite://{}".format(":memory:"), modules={"models": ["tests.testmodels"]}
+            db_url=f"sqlite://{':memory:'}", modules={"models": ["tests.testmodels"]}
         )
         self.assertIn("models", Tortoise.apps)
         self.assertIsNotNone(Tortoise.get_connection("default"))

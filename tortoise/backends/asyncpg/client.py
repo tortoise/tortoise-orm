@@ -1,9 +1,10 @@
 import asyncio
 import logging
 from functools import wraps
-from typing import List, Optional, SupportsInt  # noqa
+from typing import List, Optional, SupportsInt
 
 import asyncpg
+from asyncpg.transaction import Transaction
 from pypika import PostgreSQLQuery
 
 from tortoise.backends.asyncpg.executor import AsyncpgExecutor
@@ -46,7 +47,7 @@ def retry_connection(func):
                 await self.create_connection(with_db=True)
                 logging.info("Reconnected")
             except Exception as e:
-                raise DBConnectionError("Failed to reconnect: {}".format(str(e)))
+                raise DBConnectionError(f"Failed to reconnect: {str(e)}")
             finally:
                 self._lock.release()
 
@@ -92,8 +93,8 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self.extra.pop("loop", None)
         self.extra.pop("connection_class", None)
 
-        self._template = {}  # type: dict
-        self._connection = None  # Type: Optional[asyncpg.Connection]
+        self._template: dict = {}
+        self._connection: Optional[asyncpg.Connection] = None
         self._lock = asyncio.Lock()
 
         self._transaction_class = type(
@@ -114,12 +115,10 @@ class AsyncpgDBClient(BaseDBAsyncClient):
                 "Created connection %s with params: %s", self._connection, self._template
             )
         except asyncpg.InvalidCatalogNameError:
-            raise DBConnectionError(
-                "Can't establish connection to database {}".format(self.database)
-            )
+            raise DBConnectionError(f"Can't establish connection to database {self.database}")
         # Set post-connection variables
         if self.schema:
-            await self.execute_script("SET search_path TO {}".format(self.schema))
+            await self.execute_script(f"SET search_path TO {self.schema}")
 
     async def _close(self) -> None:
         if self._connection:  # pragma: nobranch
@@ -133,15 +132,13 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
     async def db_create(self) -> None:
         await self.create_connection(with_db=False)
-        await self.execute_script(
-            'CREATE DATABASE "{}" OWNER "{}"'.format(self.database, self.user)
-        )
+        await self.execute_script(f'CREATE DATABASE "{self.database}" OWNER "{self.user}"')
         await self.close()
 
     async def db_delete(self) -> None:
         await self.create_connection(with_db=False)
         try:
-            await self.execute_script('DROP DATABASE "{}"'.format(self.database))
+            await self.execute_script(f'DROP DATABASE "{self.database}"')
         except asyncpg.InvalidCatalogNameError:  # pragma: nocoverage
             pass
         await self.close()
@@ -189,14 +186,14 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
-    def __init__(self, connection) -> None:
-        self._connection = connection._connection
+    def __init__(self, connection: AsyncpgDBClient) -> None:
+        self._connection: asyncpg.Connection = connection._connection
         self._lock = connection._lock
         self.log = logging.getLogger("db_client")
         self._transaction_class = self.__class__
         self._old_context_value = None
         self.connection_name = connection.connection_name
-        self.transaction = None
+        self.transaction: Transaction = None
         self._finalized = False
         self._parent = connection
 
@@ -209,7 +206,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         self._connection = self._parent._connection
 
     @retry_connection
-    async def start(self):
+    async def start(self) -> None:
         self.transaction = self._connection.transaction()
         await self.transaction.start()
         current_transaction = current_transaction_map[self.connection_name]
@@ -220,13 +217,13 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         self._finalized = True
         current_transaction_map[self.connection_name].set(self._old_context_value)
 
-    async def commit(self):
+    async def commit(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self.transaction.commit()
         self.release()
 
-    async def rollback(self):
+    async def rollback(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self.transaction.rollback()

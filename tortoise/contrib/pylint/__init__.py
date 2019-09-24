@@ -7,8 +7,8 @@ from astroid import MANAGER, inference_tip, nodes, scoped_nodes
 from astroid.node_classes import Assign
 from astroid.nodes import ClassDef
 
-MODELS = {}  # type: dict
-FUTURE_RELATIONS = {}  # type: dict
+MODELS: dict = {}
+FUTURE_RELATIONS: dict = {}
 
 
 def register(linter) -> None:
@@ -43,7 +43,7 @@ def transform_model(cls) -> None:
                         if attr.targets[0].name == "app":
                             appname = attr.value.value
 
-        mname = "{}.{}".format(appname, cls.name)
+        mname = f"{appname}.{cls.name}"
         MODELS[mname] = cls
 
         for relname, relval in FUTURE_RELATIONS.get(mname, []):

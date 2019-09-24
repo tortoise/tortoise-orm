@@ -28,24 +28,18 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         self, field_object: fields.Field, field_name: str, comment: str
     ) -> Optional[str]:
         if isinstance(field_object, fields.SmallIntField):
-            return "`{}` SMALLINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT{}".format(
-                field_name, comment
-            )
+            return f"`{field_name}` SMALLINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT{comment}"
         if isinstance(field_object, fields.IntField):
-            return "`{}` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT{}".format(
-                field_name, comment
-            )
+            return f"`{field_name}` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT{comment}"
         if isinstance(field_object, fields.BigIntField):
-            return "`{}` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT{}".format(
-                field_name, comment
-            )
+            return f"`{field_name}` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT{comment}"
         return None
 
     def _table_generate_extra(self, table: str) -> str:
-        return " CHARACTER SET {}".format(self.client.charset) if self.client.charset else ""
+        return f" CHARACTER SET {self.client.charset}" if self.client.charset else ""
 
     def _table_comment_generator(self, table: str, comment: str) -> str:
-        return " COMMENT='{}'".format(self._escape_comment(comment))
+        return f" COMMENT='{self._escape_comment(comment)}'"
 
     def _column_comment_generator(self, table: str, column: str, comment: str) -> str:
-        return " COMMENT '{}'".format(self._escape_comment(comment))
+        return f" COMMENT '{self._escape_comment(comment)}'"

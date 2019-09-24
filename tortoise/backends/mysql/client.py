@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from functools import wraps
-from typing import List, Optional, SupportsInt  # noqa
+from typing import List, Optional, SupportsInt
 
 import aiomysql
 import pymysql
@@ -99,8 +99,8 @@ class MySQLClient(BaseDBAsyncClient):
         self.extra.pop("autocommit", None)
         self.charset = self.extra.pop("charset", "")
 
-        self._template = {}  # type: dict
-        self._connection = None  # Type: Optional[aiomysql.Connection]
+        self._template: dict = {}
+        self._connection: Optional[aiomysql.Connection] = None
         self._lock = asyncio.Lock()
 
         self._transaction_class = type(
@@ -123,9 +123,7 @@ class MySQLClient(BaseDBAsyncClient):
                 "Created connection %s with params: %s", self._connection, self._template
             )
         except pymysql.err.OperationalError:
-            raise DBConnectionError(
-                "Can't connect to MySQL server: {template}".format(template=self._template)
-            )
+            raise DBConnectionError(f"Can't connect to MySQL server: {self._template}")
 
     async def _close(self) -> None:
         if self._connection:  # pragma: nobranch
@@ -139,13 +137,13 @@ class MySQLClient(BaseDBAsyncClient):
 
     async def db_create(self) -> None:
         await self.create_connection(with_db=False)
-        await self.execute_script("CREATE DATABASE {}".format(self.database))
+        await self.execute_script(f"CREATE DATABASE {self.database}")
         await self.close()
 
     async def db_delete(self) -> None:
         await self.create_connection(with_db=False)
         try:
-            await self.execute_script("DROP DATABASE {}".format(self.database))
+            await self.execute_script(f"DROP DATABASE {self.database}")
         except pymysql.err.DatabaseError:  # pragma: nocoverage
             pass
         await self.close()
@@ -196,11 +194,11 @@ class MySQLClient(BaseDBAsyncClient):
 class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
     def __init__(self, connection):
         self.connection_name = connection.connection_name
-        self._connection = connection._connection  # type: aiomysql.Connection
+        self._connection: aiomysql.Connection = connection._connection
         self._lock = connection._lock
         self.log = logging.getLogger("db_client")
         self._transaction_class = self.__class__
-        self._finalized = None  # type: Optional[bool]
+        self._finalized: Optional[bool] = None
         self._old_context_value = None
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
@@ -214,7 +212,7 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         self._connection = self._parent._connection
 
     @retry_connection
-    async def start(self):
+    async def start(self) -> None:
         await self._connection.begin()
         self._finalized = False
         current_transaction = current_transaction_map[self.connection_name]

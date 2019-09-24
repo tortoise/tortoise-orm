@@ -1,6 +1,6 @@
 import logging
 import warnings
-from typing import List, Optional, Set  # noqa
+from typing import List, Optional, Set
 
 from tortoise import fields
 from tortoise.exceptions import ConfigurationError
@@ -94,7 +94,7 @@ class BaseSchemaGenerator:
     @staticmethod
     def _make_hash(*args: str, length: int) -> str:
         # Hash a set of string values and get a digest of the given length.
-        letters = []  # type: List[str]
+        letters: List[str] = []
         for i_th_letters in zip(*args):
             letters.extend(i_th_letters)
         return "".join([str(ord(letter)) for letter in letters])[:length]
@@ -104,10 +104,8 @@ class BaseSchemaGenerator:
         # characters (Oracle limit).
         # That's why we slice some of the strings here.
         table_name = model._meta.table
-        index_name = "{t}_{f}_{h}_idx".format(
-            t=table_name[:11],
-            f=field_names[0][:7],
-            h=self._make_hash(table_name, *field_names, length=6),
+        index_name = "{}_{}_{}_idx".format(
+            table_name[:11], field_names[0][:7], self._make_hash(table_name, *field_names, length=6)
         )
         return index_name
 
@@ -199,7 +197,7 @@ class BaseSchemaGenerator:
             if field_object.index:
                 fields_with_index.append(db_field)
 
-        if model._meta.unique_together is not None:
+        if model._meta.unique_together:
             unique_together_sqls = []
 
             for unique_together_list in model._meta.unique_together:
@@ -242,10 +240,9 @@ class BaseSchemaGenerator:
         ]
         if safe and not self.client.capabilities.safe_indexes:
             warnings.warn(
-                "Skipping creation of field indexes: safe index creation is not supported yet for "
-                "{dialect}. Please find the SQL queries to create the indexes in the logs.".format(
-                    dialect=self.client.capabilities.dialect
-                )
+                f"Skipping creation of field indexes: safe index creation is not supported"
+                f" yet for {self.client.capabilities.dialect}. Please find the SQL queries"
+                f" to create the indexes in the logs."
             )
             for fis in field_indexes_sqls:
                 logger.warning(fis)
@@ -297,7 +294,7 @@ class BaseSchemaGenerator:
                     models_to_create.append(model)
 
     def get_create_schema_sql(self, safe=True) -> str:
-        models_to_create = []  # type: List
+        models_to_create: list = []
 
         self._get_models_to_create(models_to_create)
 
@@ -307,9 +304,9 @@ class BaseSchemaGenerator:
 
         tables_to_create_count = len(tables_to_create)
 
-        created_tables = set()  # type: Set[dict]
-        ordered_tables_for_create = []
-        m2m_tables_to_create = []  # type: List[str]
+        created_tables: Set[dict] = set()
+        ordered_tables_for_create: List[str] = []
+        m2m_tables_to_create: List[str] = []
         while True:
             if len(created_tables) == tables_to_create_count:
                 break

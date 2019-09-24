@@ -16,15 +16,15 @@ from tortoise.filters import (
 
 
 def mysql_contains(field, value):
-    return functions.Cast(field, SqlTypes.CHAR).like("%{}%".format(value))
+    return functions.Cast(field, SqlTypes.CHAR).like(f"%{value}%")
 
 
 def mysql_starts_with(field, value):
-    return functions.Cast(field, SqlTypes.CHAR).like("{}%".format(value))
+    return functions.Cast(field, SqlTypes.CHAR).like(f"{value}%")
 
 
 def mysql_ends_with(field, value):
-    return functions.Cast(field, SqlTypes.CHAR).like("%{}".format(value))
+    return functions.Cast(field, SqlTypes.CHAR).like(f"%{value}")
 
 
 def mysql_insensitive_exact(field, value):
@@ -34,21 +34,15 @@ def mysql_insensitive_exact(field, value):
 
 
 def mysql_insensitive_contains(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).like(
-        functions.Upper("%{}%".format(value))
-    )
+    return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).like(functions.Upper(f"%{value}%"))
 
 
 def mysql_insensitive_starts_with(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).like(
-        functions.Upper("{}%".format(value))
-    )
+    return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).like(functions.Upper(f"{value}%"))
 
 
 def mysql_insensitive_ends_with(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).like(
-        functions.Upper("%{}".format(value))
-    )
+    return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).like(functions.Upper(f"%{value}"))
 
 
 class MySQLExecutor(BaseExecutor):

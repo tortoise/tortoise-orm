@@ -20,7 +20,7 @@ class Aggregate:
     def _resolve_field_for_model(self, field: str, model) -> dict:
         field_split = field.split("__")
         if not field_split[1:]:
-            aggregation_joins = []  # type: list
+            aggregation_joins: list = []
             if field_split[0] in model._meta.fetch_fields:
                 related_field = model._meta.fields_map[field_split[0]]
                 join = (Table(model._meta.table), field_split[0], related_field)
@@ -33,7 +33,7 @@ class Aggregate:
             return {"joins": aggregation_joins, "field": aggregation_field}
 
         if field_split[0] not in model._meta.fetch_fields:
-            raise ConfigurationError("{} not resolvable".format(field))
+            raise ConfigurationError(f"{field} not resolvable")
         related_field = model._meta.fields_map[field_split[0]]
         join = (Table(model._meta.table), field_split[0], related_field)
         aggregation = self._resolve_field_for_model("__".join(field_split[1:]), related_field.type)

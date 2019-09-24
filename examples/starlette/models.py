@@ -6,4 +6,4 @@ class Users(models.Model):
     username = fields.CharField(max_length=20)
 
     def __str__(self) -> str:
-        return "User {}: {}".format(self.id, self.username)
+        return f"User {self.id}: {self.username}"

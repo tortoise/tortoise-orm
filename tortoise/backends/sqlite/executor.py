@@ -21,7 +21,7 @@ def to_db_decimal(self, value, instance) -> Optional[str]:
     if self.decimal_places == 0:
         quant = "1"
     else:
-        quant = "1.{}".format("0" * self.decimal_places)
+        quant = f"1.{('0' * self.decimal_places)}"
     return str(Decimal(value).quantize(Decimal(quant)).normalize())
 
 
@@ -46,6 +46,7 @@ class SqliteExecutor(BaseExecutor):
         fields.DatetimeField: to_db_datetime,
     }
     EXPLAIN_PREFIX = "EXPLAIN QUERY PLAN"
+    DB_NATIVE = {str, int, bool, float}
 
     def Parameter(self, pos: int) -> Parameter:
         return Parameter("?")

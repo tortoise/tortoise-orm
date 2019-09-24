@@ -38,12 +38,12 @@ Mark test as expecting failiure.
 On success it will be marked as unexpected success.
 """
 
-_CONFIG = {}  # type: dict
-_CONNECTIONS = {}  # type: dict
+_CONFIG: dict = {}
+_CONNECTIONS: dict = {}
 _SELECTOR = None
-_LOOP = None  # type: BaseSelectorEventLoop
-_MODULES = []  # type: List[str]
-_CONN_MAP = {}  # type: dict
+_LOOP: BaseSelectorEventLoop = None
+_MODULES: List[str] = []
+_CONN_MAP: dict = {}
 
 
 def getDBConfig(app_label: str, modules: List[str]) -> dict:
@@ -254,9 +254,7 @@ class TruncationTestCase(SimpleTestCase):
         # TODO: This is a naïve implementation: Will fail to clear M2M and non-cascade foreign keys
         for app in Tortoise.apps.values():
             for model in app.values():
-                await model._meta.db.execute_script(
-                    "DELETE FROM {}".format(model._meta.table)  # nosec
-                )
+                await model._meta.db.execute_script(f"DELETE FROM {model._meta.table}")  # nosec
 
 
 class TestCase(SimpleTestCase):
@@ -301,7 +299,7 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
             db = Tortoise.get_connection(connection_name)
             for key, val in conditions.items():
                 if getattr(db.capabilities, key) != val:
-                    raise SkipTest("Capability {key} != {val}".format(key=key, val=val))
+                    raise SkipTest(f"Capability {key} != {val}")
             return test_item(*args, **kwargs)
 
         return skip_wrapper

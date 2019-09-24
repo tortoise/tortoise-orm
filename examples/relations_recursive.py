@@ -20,23 +20,23 @@ class Employee(Model):
     def __str__(self):
         return self.name
 
-    # async def full_hierarchy__async_for(self, level=0):
-    #     """
-    #     Demonstrates ``async for` to fetch relations
-    #
-    #     An async iterator will fetch the relationship on-demand.
-    #     """
-    #     text = [
-    #         "{}{} (to: {}) (from: {})".format(
-    #             level * "  ",
-    #             self,
-    #             ", ".join([str(val) async for val in self.talks_to]),
-    #             ", ".join([str(val) async for val in self.gets_talked_to]),
-    #         )
-    #     ]
-    #     async for member in self.team_members:
-    #         text.append(await member.full_hierarchy__async_for(level + 1))
-    #     return "\n".join(text)
+    async def full_hierarchy__async_for(self, level=0):
+        """
+        Demonstrates ``async for` to fetch relations
+
+        An async iterator will fetch the relationship on-demand.
+        """
+        text = [
+            "{}{} (to: {}) (from: {})".format(
+                level * "  ",
+                self,
+                ", ".join([str(val) async for val in self.talks_to]),
+                ", ".join([str(val) async for val in self.gets_talked_to]),
+            )
+        ]
+        async for member in self.team_members:
+            text.append(await member.full_hierarchy__async_for(level + 1))
+        return "\n".join(text)
 
     async def full_hierarchy__fetch_related(self, level=0):
         """
@@ -44,7 +44,7 @@ class Employee(Model):
 
         On prefetching the data, the relationship files will contain a regular list.
 
-        This is how one would get relations working on sync serialisation/templating frameworks.
+        This is how one would get relations working on sync serialization/templating frameworks.
         """
         await self.fetch_related("team_members", "talks_to", "gets_talked_to")
         text = [
@@ -78,14 +78,14 @@ async def run():
 
     # Evaluated off creation objects
     print(await loose.full_hierarchy__fetch_related())
-    # print(await root.full_hierarchy__async_for())
+    print(await root.full_hierarchy__async_for())
     print(await root.full_hierarchy__fetch_related())
 
     # Evaluated off new objects → Result is identical
     root2 = await Employee.get(name="Root")
     loose2 = await Employee.get(name="Loose")
     print(await loose2.full_hierarchy__fetch_related())
-    # print(await root2.full_hierarchy__async_for())
+    print(await root2.full_hierarchy__async_for())
     print(await root2.full_hierarchy__fetch_related())
 
 

@@ -1,5 +1,5 @@
 from copy import copy
-from typing import Any, List, Mapping, Optional, Tuple  # noqa
+from typing import Any, Dict, List, Optional, Tuple
 
 from pypika import Table
 from pypika.terms import Criterion
@@ -12,8 +12,8 @@ def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[
     join = None
     table = Table(model._meta.table)
 
-    if value is None and "{}__isnull".format(key) in model._meta.filters:
-        param = model._meta.get_filter("{}__isnull".format(key))
+    if value is None and f"{key}__isnull" in model._meta.filters:
+        param = model._meta.get_filter(f"{key}__isnull")
         value = True
     else:
         param = model._meta.get_filter(key)
@@ -76,7 +76,7 @@ def _get_joins_for_related_field(
             (
                 related_table,
                 getattr(related_table, related_table_pk)
-                == getattr(table, "{}_id".format(related_field_name)),
+                == getattr(table, f"{related_field_name}_id"),
             )
         )
     return required_joins
@@ -173,14 +173,14 @@ class Q:  # pylint: disable=C0103
             raise OperationalError("You can pass only Q nodes or filter kwargs in one Q node")
         if not all(isinstance(node, Q) for node in args):
             raise OperationalError("All ordered arguments must be Q nodes")
-        self.children = args  # type: Tuple[Q, ...]
-        self.filters = kwargs  # type: Mapping[str, Any]
+        self.children: Tuple[Q, ...] = args
+        self.filters: Dict[str, Any] = kwargs
         if join_type not in {self.AND, self.OR}:
             raise OperationalError("join_type must be AND or OR")
         self.join_type = join_type
         self._is_negated = False
-        self._annotations = {}  # type: Mapping[str, Any]
-        self._custom_filters = {}  # type: Mapping[str, Mapping[str, Any]]
+        self._annotations: Dict[str, Any] = {}
+        self._custom_filters: Dict[str, Dict[str, Any]] = {}
 
     def __and__(self, other) -> "Q":
         if not isinstance(other, Q):
@@ -260,9 +260,7 @@ class Q:  # pylint: disable=C0103
             allowed = sorted(
                 list(model._meta.fields | model._meta.fetch_fields | set(self._custom_filters))
             )
-            raise FieldError(
-                "Unknown filter param '{}'. Allowed base values are {}".format(key, allowed)
-            )
+            raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
         return filter_key, filter_value
 
     def _resolve_kwargs(self, model) -> QueryModifier:
@@ -316,7 +314,7 @@ class Prefetch:
         first_level_field = relation_split[0]
         if first_level_field not in queryset.model._meta.fetch_fields:
             raise OperationalError(
-                "relation {} for {} not found".format(first_level_field, queryset.model._meta.table)
+                f"relation {first_level_field} for {queryset.model._meta.table} not found"
             )
         forwarded_prefetch = "__".join(relation_split[1:])
         if forwarded_prefetch:

@@ -3,8 +3,6 @@ import importlib
 import json
 import logging
 import os
-import sys
-import warnings
 from copy import deepcopy
 from inspect import isclass
 from typing import Any, Coroutine, Dict, List, Optional, Tuple, Type, Union, cast
@@ -27,14 +25,11 @@ except ImportError:  # pragma: nocoverage
 
 logger = logging.getLogger("tortoise")
 
-if sys.version_info < (3, 6):  # pragma: nocoverage
-    warnings.warn("Tortoise-ORM is soon going to require Python 3.6", DeprecationWarning)
-
 
 class Tortoise:
-    apps = {}  # type: Dict[str, Dict[str, Type[Model]]]
-    _connections = {}  # type: Dict[str, BaseDBAsyncClient]
-    _inited = False  # type: bool
+    apps: Dict[str, Dict[str, Type[Model]]] = {}
+    _connections: Dict[str, BaseDBAsyncClient] = {}
+    _inited: bool = False
 
     @classmethod
     def get_connection(cls, connection_name: str) -> BaseDBAsyncClient:
@@ -116,7 +111,7 @@ class Tortoise:
         def _type_name(typ) -> str:
             if typ.__module__ == "builtins":
                 return typ.__name__
-            return "{}.{}".format(typ.__module__, typ.__name__)
+            return f"{typ.__module__}.{typ.__name__}"
 
         def model_name(typ: Type[Model]) -> str:
             name = typ._meta.table
@@ -124,7 +119,7 @@ class Tortoise:
                 for _name, _model in app.items():  # pragma: nobranch
                     if typ == _model:
                         name = _name
-            return "{}.{}".format(typ._meta.app, name)
+            return f"{typ._meta.app}.{name}"
 
         def type_name(typ: Any) -> Union[str, List[str]]:
             try:
@@ -141,7 +136,7 @@ class Tortoise:
             if isinstance(default, (int, float, str, bool, type(None))):
                 return default
             if callable(default):
-                return "<function {}.{}>".format(default.__module__, default.__name__)
+                return f"<function {default.__module__}.{default.__name__}>"
             return str(default)
 
         def describe_field(name: str) -> dict:
@@ -239,7 +234,7 @@ class Tortoise:
                     models.append(model)
 
         return {
-            "{}.{}".format(model._meta.app, model.__name__): cls.describe_model(model, serializable)
+            f"{model._meta.app}.{model.__name__}": cls.describe_model(model, serializable)
             for model in models
         }
 
@@ -254,13 +249,10 @@ class Tortoise:
                 return cls.apps[related_app_name][related_model_name]
             except KeyError:
                 if related_app_name not in cls.apps:
-                    raise ConfigurationError(
-                        "No app with name '{}' registered.".format(related_app_name)
-                    )
+                    raise ConfigurationError(f"No app with name '{related_app_name}' registered.")
                 raise ConfigurationError(
-                    "No model with name '{}' registered in app '{}'.".format(
-                        related_model_name, related_app_name
-                    )
+                    f"No model with name '{related_model_name}' registered in"
+                    f" app '{related_app_name}'."
                 )
 
         def split_reference(reference: str) -> Tuple[str, str]:
@@ -296,7 +288,7 @@ class Tortoise:
                     related_app_name, related_model_name = split_reference(reference)
                     related_model = get_related_model(related_app_name, related_model_name)
 
-                    key_field = "{}_id".format(field)
+                    key_field = f"{field}_id"
                     key_fk_object = deepcopy(related_model._meta.pk)
                     key_fk_object.pk = False
                     key_fk_object.index = fk_object.index
@@ -316,15 +308,14 @@ class Tortoise:
                     fk_object.type = related_model
                     backward_relation_name = fk_object.related_name
                     if not backward_relation_name:
-                        backward_relation_name = "{}s".format(model._meta.table)
+                        backward_relation_name = f"{model._meta.table}s"
                     if backward_relation_name in related_model._meta.fields:
                         raise ConfigurationError(
-                            'backward relation "{}" duplicates in model {}'.format(
-                                backward_relation_name, related_model_name
-                            )
+                            f'backward relation "{backward_relation_name}" duplicates in'
+                            f" model {related_model_name}"
                         )
                     fk_relation = fields.BackwardFKRelation(
-                        model, "{}_id".format(field), fk_object.null, fk_object.description
+                        model, f"{field}_id", fk_object.null, fk_object.description
                     )
                     related_model._meta.add_field(backward_relation_name, fk_relation)
 
@@ -335,9 +326,9 @@ class Tortoise:
 
                     backward_key = m2m_object.backward_key
                     if not backward_key:
-                        backward_key = "{}_id".format(model._meta.table)
+                        backward_key = f"{model._meta.table}_id"
                         if backward_key == m2m_object.forward_key:
-                            backward_key = "{}_rel_id".format(model._meta.table)
+                            backward_key = f"{model._meta.table}_rel_id"
                         m2m_object.backward_key = backward_key
 
                     reference = m2m_object.model_name
@@ -348,14 +339,13 @@ class Tortoise:
 
                     backward_relation_name = m2m_object.related_name
                     if not backward_relation_name:
-                        backward_relation_name = m2m_object.related_name = "{}_through".format(
-                            model._meta.table
-                        )
+                        backward_relation_name = (
+                            m2m_object.related_name
+                        ) = f"{model._meta.table}_through"
                     if backward_relation_name in related_model._meta.fields:
                         raise ConfigurationError(
-                            'backward relation "{}" duplicates in model {}'.format(
-                                backward_relation_name, related_model_name
-                            )
+                            f'backward relation "{backward_relation_name}" duplicates in'
+                            f" model {related_model_name}"
                         )
 
                     if not m2m_object.through:
@@ -365,12 +355,10 @@ class Tortoise:
                             else related_model.__name__.lower()
                         )
 
-                        m2m_object.through = "{}_{}".format(
-                            model._meta.table, related_model_table_name
-                        )
+                        m2m_object.through = f"{model._meta.table}_{related_model_table_name}"
 
                     m2m_relation = fields.ManyToManyField(
-                        "{}.{}".format(app_name, model_name),
+                        f"{app_name}.{model_name}",
                         m2m_object.through,
                         forward_key=m2m_object.backward_key,
                         backward_key=m2m_object.forward_key,
@@ -390,9 +378,7 @@ class Tortoise:
         try:
             client_class = engine_module.client_class  # type: ignore
         except AttributeError:
-            raise ConfigurationError(
-                'Backend for engine "{}" does not implement db client'.format(engine)
-            )
+            raise ConfigurationError(f'Backend for engine "{engine}" does not implement db client')
         return client_class
 
     @classmethod
@@ -400,7 +386,7 @@ class Tortoise:
         try:
             module = importlib.import_module(models_path)
         except ImportError:
-            raise ConfigurationError('Module "{}" not found'.format(models_path))
+            raise ConfigurationError(f'Module "{models_path}" not found')
         discovered_models = []
         possible_models = getattr(module, "__models__", None)
         try:
@@ -444,7 +430,7 @@ class Tortoise:
                         info.get("default_connection", "default"), name
                     )
                 )
-            app_models = []  # type: List[Type[Model]]
+            app_models: List[Type[Model]] = []
             for module in info["models"]:
                 app_models += cls._discover_models(module, name)
 
@@ -472,7 +458,7 @@ class Tortoise:
                 config = json.load(f)
         else:
             raise ConfigurationError(
-                "Unknown config extension {}, only .yml and .json are supported".format(extension)
+                f"Unknown config extension {extension}, only .yml and .json are supported"
             )
         return config
 
@@ -670,4 +656,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.13.7"
+__version__ = "0.14.0dev"
