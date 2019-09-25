@@ -320,7 +320,7 @@ CREATE TABLE `sometable` (
 ) CHARACTER SET utf8mb4;
 CREATE INDEX `sometable_some_ch_115115_idx` ON `sometable` (some_chars_table);
 CREATE TABLE `team` (
-    `name` VARCHAR(50) NOT NULL  COMMENT 'The TEAM name (and PK)',
+    `name` VARCHAR(50) NOT NULL  PRIMARY KEY COMMENT 'The TEAM name (and PK)',
     `manager_id` VARCHAR(50) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE `tournament` (
@@ -391,7 +391,7 @@ CREATE TABLE IF NOT EXISTS `sometable` (
     `fk_sometable` INT REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `team` (
-    `name` VARCHAR(50) NOT NULL  COMMENT 'The TEAM name (and PK)',
+    `name` VARCHAR(50) NOT NULL  PRIMARY KEY COMMENT 'The TEAM name (and PK)',
     `manager_id` VARCHAR(50) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE IF NOT EXISTS `tournament` (

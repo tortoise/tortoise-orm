@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.13.8
+------
+- Fixed bug in schema creation for MySQL where non-int PK did not get declared properly (#195)
+
 0.13.7
 ------
 - ``iexact`` filter modifier was implemented. Queries like ``«queryset».filter(name__iexact=...)`` will perform case-insensitive search.

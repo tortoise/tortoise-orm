@@ -7,7 +7,7 @@ from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 class MySQLSchemaGenerator(BaseSchemaGenerator):
     TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({fields}){extra}{comment};"
     INDEX_CREATE_TEMPLATE = "CREATE INDEX `{index_name}` ON `{table_name}` ({fields});"
-    FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{comment}"
+    FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{primary}{comment}"
     FK_TEMPLATE = "{comment} REFERENCES `{table}` (`{field}`) ON DELETE {on_delete}"
     M2M_TABLE_TEMPLATE = (
         "CREATE TABLE {exists}`{table_name}` (\n"
