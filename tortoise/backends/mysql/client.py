@@ -124,7 +124,9 @@ class MySQLClient(BaseDBAsyncClient):
             if isinstance(self._connection, aiomysql.Connection):
                 async with self._connection.cursor() as cursor:
                     if self.storage_engine:
-                        await cursor.execute("SET default_storage_engine='{}';".format(self.storage_engine))
+                        await cursor.execute(
+                            "SET default_storage_engine='{}';".format(self.storage_engine)
+                        )
                         if self.storage_engine.lower() != "innodb":
                             self.capabilities.__dict__["supports_transactions"] = False
 
