@@ -251,7 +251,7 @@ class TruncationTestCase(SimpleTestCase):
 
     async def _tearDownDB(self) -> None:
         _restore_default()
-        # TODO: This is a naïve implementation: Will fail to clear M2M and non-cascade foreign keys
+        # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys
         for app in Tortoise.apps.values():
             for model in app.values():
                 await model._meta.db.execute_script(
@@ -259,7 +259,7 @@ class TruncationTestCase(SimpleTestCase):
                 )
 
 
-class TestCase(SimpleTestCase):
+class TestCase(TruncationTestCase):
     """
     An asyncio capable test class that will ensure that each test will be run at
     separate transaction that will rollback on finish.
@@ -269,11 +269,16 @@ class TestCase(SimpleTestCase):
 
     async def _setUpDB(self) -> None:
         _restore_default()
-        self.transaction = await start_transaction()  # pylint: disable=W0201
+        self.__db__ = Tortoise.get_connection("models")
+        if self.__db__.capabilities.supports_transactions:
+            self.__transaction__ = await start_transaction()  # pylint: disable=W0201
 
     async def _tearDownDB(self) -> None:
-        _restore_default()
-        await self.transaction.rollback()
+        if self.__db__.capabilities.supports_transactions:
+            _restore_default()
+            await self.__transaction__.rollback()
+        else:
+            await super()._tearDownDB()
 
 
 def requireCapability(connection_name: str = "models", **conditions: Any):
@@ -291,19 +296,44 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
         async def test_run_sqlite_only(self):
             ...
 
+    Or to conditionally skip a class:
+
+    .. code-block:: python3
+
+        @requireCapability(dialect='sqlite')
+        class TestSqlite(test.TestCase):
+            ...
+
     :param connection_name: name of the connection to retrieve capabilities from.
     :param conditions: capability tests which must all pass for the test to run.
     """
 
     def decorator(test_item):
-        @wraps(test_item)
-        def skip_wrapper(*args, **kwargs):
-            db = Tortoise.get_connection(connection_name)
-            for key, val in conditions.items():
-                if getattr(db.capabilities, key) != val:
-                    raise SkipTest("Capability {key} != {val}".format(key=key, val=val))
-            return test_item(*args, **kwargs)
+        if not isinstance(test_item, type):
 
-        return skip_wrapper
+            @wraps(test_item)
+            def skip_wrapper(*args, **kwargs):
+                db = Tortoise.get_connection(connection_name)
+                for key, val in conditions.items():
+                    if getattr(db.capabilities, key) != val:
+                        raise SkipTest("Capability {key} != {val}".format(key=key, val=val))
+                return test_item(*args, **kwargs)
+
+            return skip_wrapper
+
+        # Assume a class is decorated
+        funcs = {
+            var: getattr(test_item, var)
+            for var in dir(test_item)
+            if var.startswith("test_") and callable(getattr(test_item, var))
+        }
+        for name, func in funcs.items():
+            setattr(
+                test_item,
+                name,
+                requireCapability(connection_name=connection_name, **conditions)(func),
+            )
+
+        return test_item
 
     return decorator

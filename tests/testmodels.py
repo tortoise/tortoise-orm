@@ -395,8 +395,8 @@ class Employee(Model):
 
 class StraightFields(Model):
     id = fields.IntField(pk=True, description="Da PK")
-    chars = fields.CharField(max_length=255, index=True, description="Some chars")
-    blip = fields.CharField(max_length=255, default="BLIP")
+    chars = fields.CharField(max_length=50, index=True, description="Some chars")
+    blip = fields.CharField(max_length=50, default="BLIP")
     fk = fields.ForeignKeyField(
         "models.StraightFields", related_name="fkrev", null=True, description="Tree!"
     )
@@ -412,9 +412,9 @@ class StraightFields(Model):
 class SourceFields(Model):
     id = fields.IntField(pk=True, source_field="sometable_id", description="Da PK")
     chars = fields.CharField(
-        max_length=255, source_field="some_chars_table", index=True, description="Some chars"
+        max_length=50, source_field="some_chars_table", index=True, description="Some chars"
     )
-    blip = fields.CharField(max_length=255, default="BLIP", source_field="da_blip")
+    blip = fields.CharField(max_length=50, default="BLIP", source_field="da_blip")
     fk = fields.ForeignKeyField(
         "models.SourceFields",
         related_name="fkrev",

@@ -276,7 +276,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
         await self.init_for("tests.testmodels")
         sql = self.get_sql("`noid`")
         self.assertIn("`name` VARCHAR(255)", sql)
-        self.assertIn("`id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT", sql)
+        self.assertIn("`id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT", sql)
 
     async def test_minrelation(self):
         await self.init_for("tests.testmodels")
@@ -310,11 +310,11 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
             sql.strip(),
             """
 CREATE TABLE `defaultpk` (
-    `id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `val` INT NOT NULL
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `sometable` (
-    `sometable_id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `sometable_id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `some_chars_table` VARCHAR(255) NOT NULL,
     `fk_sometable` INT REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
@@ -324,13 +324,13 @@ CREATE TABLE `team` (
     `manager_id` VARCHAR(50) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE `tournament` (
-    `tid` SMALLINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` TEXT NOT NULL  COMMENT 'Tournament name',
     `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime'
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
 CREATE INDEX `tournament_name_116110_idx` ON `tournament` (name);
 CREATE TABLE `event` (
-    `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
+    `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
     `name` TEXT NOT NULL UNIQUE,
     `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
@@ -382,11 +382,11 @@ CREATE TABLE `teamevents` (
             sql.strip(),
             """
 CREATE TABLE IF NOT EXISTS `defaultpk` (
-    `id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `val` INT NOT NULL
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `sometable` (
-    `sometable_id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `sometable_id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `some_chars_table` VARCHAR(255) NOT NULL,
     `fk_sometable` INT REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
@@ -395,12 +395,12 @@ CREATE TABLE IF NOT EXISTS `team` (
     `manager_id` VARCHAR(50) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE IF NOT EXISTS `tournament` (
-    `tid` SMALLINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` TEXT NOT NULL  COMMENT 'Tournament name',
     `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime'
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
 CREATE TABLE IF NOT EXISTS `event` (
-    `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
+    `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
     `name` TEXT NOT NULL UNIQUE,
     `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),

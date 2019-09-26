@@ -37,7 +37,8 @@ class Capabilities:
         # Deficiencies to work around:
         safe_indexes: bool = True,
         requires_limit: bool = False,
-        inline_comment: bool = False
+        inline_comment: bool = False,
+        supports_transactions: bool = True
     ) -> None:
         super().__setattr__("_mutable", True)
 
@@ -46,6 +47,7 @@ class Capabilities:
         self.requires_limit = requires_limit
         self.safe_indexes = safe_indexes
         self.inline_comment = inline_comment
+        self.supports_transactions = supports_transactions
 
         super().__setattr__("_mutable", False)
 

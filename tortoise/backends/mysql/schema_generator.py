@@ -28,17 +28,11 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         self, field_object: fields.Field, field_name: str, comment: str
     ) -> Optional[str]:
         if isinstance(field_object, fields.SmallIntField):
-            return "`{}` SMALLINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT{}".format(
-                field_name, comment
-            )
+            return "`{}` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT{}".format(field_name, comment)
         if isinstance(field_object, fields.IntField):
-            return "`{}` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT{}".format(
-                field_name, comment
-            )
+            return "`{}` INT NOT NULL PRIMARY KEY AUTO_INCREMENT{}".format(field_name, comment)
         if isinstance(field_object, fields.BigIntField):
-            return "`{}` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT{}".format(
-                field_name, comment
-            )
+            return "`{}` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT{}".format(field_name, comment)
         return None
 
     def _table_generate_extra(self, table: str) -> str:
