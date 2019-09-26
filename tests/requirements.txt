@@ -105,7 +105,7 @@ testfixtures==6.10.0      # via flake8-isort
 toml==0.10.0              # via black, hypercorn, tox
 tox==3.14.0
 tqdm==4.36.1              # via twine
-twine==2.0.0
+twine==1.15.0
 typed-ast==1.4.0          # via astroid, mypy
 typing-extensions==3.7.4  # via hypercorn, mypy
 ujson==1.35               # via sanic
