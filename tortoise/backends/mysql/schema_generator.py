@@ -11,10 +11,12 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     FK_TEMPLATE = "{comment} REFERENCES `{table}` (`{field}`) ON DELETE {on_delete}"
     M2M_TABLE_TEMPLATE = (
         "CREATE TABLE {exists}`{table_name}` (\n"
-        "    `{backward_key}` {backward_type} NOT NULL REFERENCES `{backward_table}`"
-        " (`{backward_field}`) ON DELETE CASCADE,\n"
-        "    `{forward_key}` {forward_type} NOT NULL REFERENCES `{forward_table}`"
-        " (`{forward_field}`) ON DELETE CASCADE\n"
+        "    `{backward_key}` {backward_type} NOT NULL,\n"
+        "    `{forward_key}` {forward_type} NOT NULL,\n"
+        "    FOREIGN KEY (`{backward_key}`) REFERENCES `{backward_table}` (`{backward_field}`)"
+        " ON DELETE CASCADE,\n"
+        "    FOREIGN KEY (`{forward_key}`) REFERENCES `{forward_table}` (`{forward_field}`)"
+        " ON DELETE CASCADE\n"
         "){extra}{comment};"
     )
     FIELD_TYPE_MAP = {

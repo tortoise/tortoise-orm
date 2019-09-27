@@ -288,10 +288,12 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
         self.assertNotIn("participants", sql)
 
         sql = self.get_sql("`minrelation_team`")
+        self.assertIn("`minrelation_id` INT NOT NULL", sql)
         self.assertIn(
-            "`minrelation_id` INT NOT NULL REFERENCES `minrelation` (`id`) ON DELETE CASCADE", sql
+            "FOREIGN KEY (`minrelation_id`) REFERENCES `minrelation` (`id`) ON DELETE CASCADE", sql
         )
-        self.assertIn("`team_id` INT NOT NULL REFERENCES `team` (`id`) ON DELETE CASCADE", sql)
+        self.assertIn("`team_id` INT NOT NULL", sql)
+        self.assertIn("FOREIGN KEY (`team_id`) REFERENCES `team` (`id`) ON DELETE CASCADE", sql)
 
     async def test_table_and_row_comment_generation(self):
         await self.init_for("tests.testmodels")
@@ -338,16 +340,22 @@ CREATE TABLE `event` (
     `tournament_id` SMALLINT NOT NULL COMMENT 'FK to tournament' REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
 CREATE TABLE `sometable_self` (
-    `backward_sts` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
-    `sts_forward` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
+    `backward_sts` INT NOT NULL,
+    `sts_forward` INT NOT NULL,
+    FOREIGN KEY (`backward_sts`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`sts_forward`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `team_team` (
-    `team_rel_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE,
-    `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
+    `team_rel_id` VARCHAR(50) NOT NULL,
+    `team_id` VARCHAR(50) NOT NULL,
+    FOREIGN KEY (`team_rel_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
+    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `teamevents` (
-    `event_id` BIGINT NOT NULL REFERENCES `event` (`id`) ON DELETE CASCADE,
-    `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
+    `event_id` BIGINT NOT NULL,
+    `team_id` VARCHAR(50) NOT NULL,
+    FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
 """.strip(),  # noqa
         )
@@ -408,17 +416,24 @@ CREATE TABLE IF NOT EXISTS `event` (
     `tournament_id` SMALLINT NOT NULL COMMENT 'FK to tournament' REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
 CREATE TABLE IF NOT EXISTS `sometable_self` (
-    `backward_sts` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
-    `sts_forward` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
+    `backward_sts` INT NOT NULL,
+    `sts_forward` INT NOT NULL,
+    FOREIGN KEY (`backward_sts`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`sts_forward`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `team_team` (
-    `team_rel_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE,
-    `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
+    `team_rel_id` VARCHAR(50) NOT NULL,
+    `team_id` VARCHAR(50) NOT NULL,
+    FOREIGN KEY (`team_rel_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
+    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `teamevents` (
-    `event_id` BIGINT NOT NULL REFERENCES `event` (`id`) ON DELETE CASCADE,
-    `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
+    `event_id` BIGINT NOT NULL,
+    `team_id` VARCHAR(50) NOT NULL,
+    FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
+
 """.strip(),  # noqa
         )
 
