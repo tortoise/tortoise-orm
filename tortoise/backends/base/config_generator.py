@@ -46,7 +46,7 @@ DB_LOOKUP = {
             "username": "user",
             "password": "password",
         },
-        "defaults": {"port": 3306, "charset": "utf8mb4"},  # "sql_mode": "STRICT_TRANS_TABLES"},
+        "defaults": {"port": 3306, "charset": "utf8mb4", "sql_mode": "STRICT_TRANS_TABLES"},
         "cast": {
             "minsize": int,
             "maxsize": int,
