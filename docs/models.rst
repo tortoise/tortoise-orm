@@ -108,7 +108,7 @@ Any of these are valid primary key definitions in a Model:
     guid = fields.UUIDField(pk=True)
 
 
-Inheritence
+Inheritance
 -----------
 
 When defining models in Tortoise ORM, you can save a lot of
