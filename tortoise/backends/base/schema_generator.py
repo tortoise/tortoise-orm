@@ -1,5 +1,4 @@
 import logging
-import warnings
 from typing import List, Optional, Set  # noqa
 
 from tortoise import fields
@@ -46,9 +45,9 @@ class BaseSchemaGenerator:
     def _create_string(
         self, db_field: str, field_type: str, nullable: str, unique: str, is_pk: bool, comment: str
     ) -> str:
-        # children can override this function to customize thier sql queries
+        # children can override this function to customize their sql queries
 
-        field_creation_string = self.FIELD_TEMPLATE.format(
+        return self.FIELD_TEMPLATE.format(
             name=db_field,
             type=field_type,
             nullable=nullable,
@@ -57,7 +56,12 @@ class BaseSchemaGenerator:
             primary=" PRIMARY KEY" if is_pk else "",
         ).strip()
 
-        return field_creation_string
+    def _create_fk_string(
+        self, db_field: str, table: str, field: str, on_delete: str, comment: str
+    ) -> str:
+        return self.FK_TEMPLATE.format(
+            db_field=db_field, table=table, field=field, on_delete=on_delete, comment=comment
+        )
 
     def _get_primary_key_create_string(
         self, field_object: fields.Field, field_name: str, comment: str
@@ -177,7 +181,8 @@ class BaseSchemaGenerator:
                     unique=unique,
                     is_pk=field_object.pk,
                     comment="",
-                ) + self.FK_TEMPLATE.format(
+                ) + self._create_fk_string(
+                    db_field=db_field,
                     table=field_object.reference.type._meta.table,
                     field=field_object.reference.type._meta.db_pk_field,
                     on_delete=field_object.reference.on_delete,
@@ -238,19 +243,14 @@ class BaseSchemaGenerator:
 
         # Indexes.
         field_indexes_sqls = [
-            self._get_index_sql(model, [field_name], safe=safe) for field_name in fields_with_index
+            val
+            for val in [
+                self._get_index_sql(model, [field_name], safe=safe)
+                for field_name in fields_with_index
+            ]
+            if val
         ]
-        if safe and not self.client.capabilities.safe_indexes:
-            warnings.warn(
-                "Skipping creation of field indexes: safe index creation is not supported yet for "
-                "{dialect}. Please find the SQL queries to create the indexes in the logs.".format(
-                    dialect=self.client.capabilities.dialect
-                )
-            )
-            for fis in field_indexes_sqls:
-                logger.warning(fis)
-        else:
-            table_create_string = "\n".join([table_create_string, *field_indexes_sqls])
+        table_create_string = "\n".join([table_create_string, *field_indexes_sqls])
 
         table_create_string += self._post_table_hook()
 

@@ -42,7 +42,7 @@ class TestManyToManyUUIDField(test.TestCase):
         two1 = await self.UUIDM2MRelatedModel.create()
         two2 = await self.UUIDM2MRelatedModel.create()
         await one.peers.add(two1, two2)
-        self.assertEqual(await one.peers, [two1, two2])
+        self.assertEqual(set(await one.peers), {two1, two2})
         self.assertEqual(await two1.models, [one])
         self.assertEqual(await two2.models, [one])
 
@@ -53,10 +53,10 @@ class TestManyToManyUUIDField(test.TestCase):
         two2 = await self.UUIDM2MRelatedModel.create()
         await one1.peers.add(two1, two2)
         await one2.peers.add(two1, two2)
-        self.assertEqual(await one1.peers, [two1, two2])
-        self.assertEqual(await one2.peers, [two1, two2])
-        self.assertEqual(await two1.models, [one1, one2])
-        self.assertEqual(await two2.models, [one1, one2])
+        self.assertEqual(set(await one1.peers), {two1, two2})
+        self.assertEqual(set(await one2.peers), {two1, two2})
+        self.assertEqual(set(await two1.models), {one1, one2})
+        self.assertEqual(set(await two2.models), {one1, one2})
 
     async def test__remove(self):
         one = await self.UUIDPkModel.create()
