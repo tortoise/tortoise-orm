@@ -3,6 +3,11 @@
 Changelog
 =========
 
+0.13.9
+------
+- Foreign keys and indexes are now defined correctly in MySQL so that they take effect as expected
+- MySQL now doesn't warn of unsafe index creation anymore
+
 0.13.8
 ------
 - Fixed bug in schema creation for MySQL where non-int PK did not get declared properly (#195)

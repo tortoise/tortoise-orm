@@ -5,9 +5,7 @@ from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
 class MySQLSchemaGenerator(BaseSchemaGenerator):
-    TABLE_CREATE_TEMPLATE = (
-        "CREATE TABLE {exists}`{table_name}` ({fields}__TAIL_STATEMENTS__){extra}{comment};"
-    )
+    TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({fields}){extra}{comment};"
     INDEX_CREATE_TEMPLATE = "KEY `{index_name}` ({fields})"
     FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{primary}{comment}"
     FK_TEMPLATE = (
@@ -77,17 +75,8 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         )
         return comment
 
-    def _get_table_sql(self, model, safe=True) -> dict:
-        res = super()._get_table_sql(model, safe)
+    def _get_inner_statements(self) -> List[str]:
         extra = self._foreign_keys + self._field_indexes
-        if extra:
-            table_fields_string = ",\n    " + ",\n    ".join(extra) + "\n"
-        else:
-            table_fields_string = "\n"
-
-        res["table_creation_string"] = res["table_creation_string"].replace(
-            "\n__TAIL_STATEMENTS__", table_fields_string
-        )
         self._field_indexes.clear()
         self._foreign_keys.clear()
-        return res
+        return extra

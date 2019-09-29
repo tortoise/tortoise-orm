@@ -95,6 +95,9 @@ class BaseSchemaGenerator:
     def _table_generate_extra(self, table: str) -> str:  # pylint: disable=R0201
         return ""
 
+    def _get_inner_statements(self) -> List[str]:
+        return []
+
     @staticmethod
     def _make_hash(*args: str, length: int) -> str:
         # Hash a set of string values and get a digest of the given length.
@@ -224,6 +227,18 @@ class BaseSchemaGenerator:
 
             fields_to_create.extend(unique_together_sqls)
 
+        # Indexes.
+        field_indexes_sqls = [
+            val
+            for val in [
+                self._get_index_sql(model, [field_name], safe=safe)
+                for field_name in fields_with_index
+            ]
+            if val
+        ]
+
+        fields_to_create.extend(self._get_inner_statements())
+
         table_fields_string = "\n    {}\n".format(",\n    ".join(fields_to_create))
         table_comment = (
             self._table_comment_generator(
@@ -241,15 +256,6 @@ class BaseSchemaGenerator:
             extra=self._table_generate_extra(table=model._meta.table),
         )
 
-        # Indexes.
-        field_indexes_sqls = [
-            val
-            for val in [
-                self._get_index_sql(model, [field_name], safe=safe)
-                for field_name in fields_with_index
-            ]
-            if val
-        ]
         table_create_string = "\n".join([table_create_string, *field_indexes_sqls])
 
         table_create_string += self._post_table_hook()
