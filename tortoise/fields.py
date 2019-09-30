@@ -15,6 +15,7 @@ from tortoise.utils import QueryAsyncIterator
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
+
 CASCADE = "CASCADE"
 RESTRICT = "RESTRICT"
 SET_NULL = "SET NULL"
@@ -25,13 +26,26 @@ JSON_DUMPS = functools.partial(json.dumps, separators=(",", ":"))
 JSON_LOADS = json.loads
 
 
-class Field:
+class _FieldMeta(type):
+    def __new__(mcs, name, bases, attrs):
+        if len(bases) > 1:
+            # Instantiate class with only the 1st base class (should be Field)
+            cls = type.__new__(mcs, name, (bases[0],), attrs)
+            # All other base classes are our meta types, we store them in class attributes
+            cls.type = bases[1] if len(bases) == 2 else bases[1:]
+            return cls
+        else:
+            return type.__new__(mcs, name, bases, attrs)
+
+
+class Field(metaclass=_FieldMeta):
     """
     Base Field type.
     """
 
+    type = None  # Type is a readonly property for the instance, it is set by _FieldMeta
+
     __slots__ = (
-        "type",
         "source_field",
         "generated",
         "pk",
@@ -48,7 +62,6 @@ class Field:
 
     def __init__(
         self,
-        type=None,  # pylint: disable=W0622
         source_field: Optional[str] = None,
         generated: bool = False,
         pk: bool = False,
@@ -61,7 +74,6 @@ class Field:
         description: Optional[str] = None,
         **kwargs
     ) -> None:
-        self.type = type
         self.source_field = source_field
         self.generated = generated
         self.pk = pk
@@ -89,7 +101,7 @@ class Field:
         return self.default is None and not self.null and not self.generated
 
 
-class IntField(Field):
+class IntField(Field, int):
     """
     Integer field. (32-bit signed)
 
@@ -100,10 +112,10 @@ class IntField(Field):
     def __init__(self, pk: bool = False, **kwargs) -> None:
         if pk:
             kwargs["generated"] = bool(kwargs.get("generated", True))
-        super().__init__(int, pk=pk, **kwargs)
+        Field.__init__(self, pk=pk, **kwargs)
 
 
-class BigIntField(Field):
+class BigIntField(Field, int):
     """
     Big integer field. (64-bit signed)
 
@@ -114,10 +126,10 @@ class BigIntField(Field):
     def __init__(self, pk: bool = False, **kwargs) -> None:
         if pk:
             kwargs["generated"] = bool(kwargs.get("generated", True))
-        super().__init__(int, pk=pk, **kwargs)
+        super().__init__(pk=pk, **kwargs)
 
 
-class SmallIntField(Field):
+class SmallIntField(Field, int):
     """
     Small integer field. (16-bit signed)
 
@@ -130,10 +142,10 @@ class SmallIntField(Field):
     def __init__(self, pk: bool = False, **kwargs) -> None:
         if pk:
             kwargs["generated"] = bool(kwargs.get("generated", True))
-        super().__init__(int, pk=pk, **kwargs)
+        super().__init__(pk=pk, **kwargs)
 
 
-class CharField(Field):
+class CharField(Field, str):
     """
     Character field.
 
@@ -149,32 +161,26 @@ class CharField(Field):
         if int(max_length) < 1:
             raise ConfigurationError("'max_length' must be >= 1")
         self.max_length = int(max_length)
-        super().__init__(str, **kwargs)
+        super().__init__(**kwargs)
 
 
-class TextField(Field):
+class TextField(Field, str):
     """
     Large Text field.
     """
 
     __slots__ = ()
 
-    def __init__(self, **kwargs) -> None:
-        super().__init__(str, **kwargs)
 
-
-class BooleanField(Field):
+class BooleanField(Field, bool):
     """
     Boolean field.
     """
 
     __slots__ = ()
 
-    def __init__(self, **kwargs) -> None:
-        super().__init__(bool, **kwargs)
 
-
-class DecimalField(Field):
+class DecimalField(Field, Decimal):
     """
     Accurate decimal field.
 
@@ -188,17 +194,21 @@ class DecimalField(Field):
 
     __slots__ = ("max_digits", "decimal_places")
 
+    # This method is just to make IDE happy
+    def __new__(cls, *args, **kwargs):
+        return super().__new__(cls)
+
     def __init__(self, max_digits: int, decimal_places: int, **kwargs) -> None:
         if int(max_digits) < 1:
             raise ConfigurationError("'max_digits' must be >= 1")
         if int(decimal_places) < 0:
             raise ConfigurationError("'decimal_places' must be >= 0")
-        super().__init__(Decimal, **kwargs)
+        super().__init__(**kwargs)
         self.max_digits = max_digits
         self.decimal_places = decimal_places
 
 
-class DatetimeField(Field):
+class DatetimeField(Field, datetime.datetime):
     """
     Datetime field.
 
@@ -216,7 +226,7 @@ class DatetimeField(Field):
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs) -> None:
         if auto_now_add and auto_now:
             raise ConfigurationError("You can choose only 'auto_now' or 'auto_now_add'")
-        super().__init__(datetime.datetime, **kwargs)
+        super().__init__(**kwargs)
         self.auto_now = auto_now
         self.auto_now_add = auto_now | auto_now_add
 
@@ -239,15 +249,12 @@ class DatetimeField(Field):
         return value
 
 
-class DateField(Field):
+class DateField(Field, datetime.date):
     """
     Date field.
     """
 
     __slots__ = ()
-
-    def __init__(self, **kwargs) -> None:
-        super().__init__(datetime.date, **kwargs)
 
     def to_python_value(self, value: Any) -> Optional[datetime.date]:
         if value is None or isinstance(value, datetime.date):
@@ -255,15 +262,12 @@ class DateField(Field):
         return ciso8601.parse_datetime(value).date()
 
 
-class TimeDeltaField(Field):
+class TimeDeltaField(Field, datetime.timedelta):
     """
     A field for storing time differences.
     """
 
     __slots__ = ()
-
-    def __init__(self, **kwargs) -> None:
-        super().__init__(datetime.timedelta, **kwargs)
 
     def to_python_value(self, value: Any) -> Optional[datetime.timedelta]:
         if value is None or isinstance(value, datetime.timedelta):
@@ -276,7 +280,7 @@ class TimeDeltaField(Field):
         return (value.days * 86400000000) + (value.seconds * 1000000) + value.microseconds
 
 
-class FloatField(Field):
+class FloatField(Field, float):
     """
     Float (double) field.
     """
@@ -284,10 +288,10 @@ class FloatField(Field):
     __slots__ = ()
 
     def __init__(self, **kwargs) -> None:
-        super().__init__(float, **kwargs)
+        super().__init__(**kwargs)
 
 
-class JSONField(Field):
+class JSONField(Field, dict, list):
     """
     JSON field.
 
@@ -302,7 +306,7 @@ class JSONField(Field):
     __slots__ = ("encoder", "decoder")
 
     def __init__(self, encoder=JSON_DUMPS, decoder=JSON_LOADS, **kwargs) -> None:
-        super().__init__(type=(dict, list), **kwargs)
+        super().__init__(**kwargs)
         self.encoder = encoder
         self.decoder = decoder
 
@@ -319,7 +323,7 @@ class JSONField(Field):
         return self.decoder(value)
 
 
-class UUIDField(Field):
+class UUIDField(Field, UUID):
     """
     UUID Field
 
@@ -332,7 +336,7 @@ class UUIDField(Field):
         if kwargs.get("pk", False):
             if "default" not in kwargs:
                 kwargs["default"] = uuid.uuid4
-        super().__init__(type=UUID, **kwargs)
+        super().__init__(**kwargs)
 
     def to_db_value(self, value: Any, instance) -> Optional[str]:
         if value is None:
@@ -375,7 +379,8 @@ class ForeignKeyField(Field):
                 Can only be set is field has a ``default`` set.
     """
 
-    __slots__ = ("model_name", "related_name", "on_delete")
+    # Here type will be set later, so we need a slot to be able to write it
+    __slots__ = ("type", "model_name", "related_name", "on_delete")
     has_db_field = False
 
     def __init__(
@@ -460,7 +465,8 @@ class BackwardFKRelation(Field):
         null: bool,
         description: Optional[str],
     ) -> None:
-        super().__init__(type=type, null=null)
+        super().__init__(null=null)
+        self.type = type
         self.relation_field = relation_field
         self.description = description
 
