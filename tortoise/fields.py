@@ -34,8 +34,7 @@ class _FieldMeta(type):
             # All other base classes are our meta types, we store them in class attributes
             cls.type = bases[1] if len(bases) == 2 else bases[1:]
             return cls
-        else:
-            return type.__new__(mcs, name, bases, attrs)
+        return type.__new__(mcs, name, bases, attrs)
 
 
 class Field(metaclass=_FieldMeta):
@@ -43,7 +42,8 @@ class Field(metaclass=_FieldMeta):
     Base Field type.
     """
 
-    type = None  # Type is a readonly property for the instance, it is set by _FieldMeta
+    # Type is a readonly property for the instance, it is set by _FieldMeta
+    type = None
 
     __slots__ = (
         "source_field",
@@ -89,12 +89,12 @@ class Field(metaclass=_FieldMeta):
     def to_db_value(self, value: Any, instance) -> Any:
         if value is None or type(value) == self.type:  # pylint: disable=C0123
             return value
-        return self.type(value)
+        return self.type(value)  # pylint: disable=E1102
 
     def to_python_value(self, value: Any) -> Any:
         if value is None or isinstance(value, self.type):
             return value
-        return self.type(value)
+        return self.type(value)  # pylint: disable=E1102
 
     @property
     def required(self):
@@ -112,7 +112,7 @@ class IntField(Field, int):
     def __init__(self, pk: bool = False, **kwargs) -> None:
         if pk:
             kwargs["generated"] = bool(kwargs.get("generated", True))
-        Field.__init__(self, pk=pk, **kwargs)
+        super().__init__(pk=pk, **kwargs)
 
 
 class BigIntField(Field, int):
@@ -382,8 +382,12 @@ class ForeignKeyField(Field):
                 Can only be set is field has a ``default`` set.
     """
 
-    # Here type will be set later, so we need a slot to be able to write it
-    __slots__ = ("type", "model_name", "related_name", "on_delete")
+    __slots__ = (
+        "type",  # type will be set later, so we need a slot to be able to write it
+        "model_name",
+        "related_name",
+        "on_delete",
+    )
     has_db_field = False
 
     def __init__(
@@ -428,6 +432,7 @@ class ManyToManyField(Field):
     """
 
     __slots__ = (
+        "type",  # Here we need type to be able to set dyamically
         "model_name",
         "related_name",
         "forward_key",
@@ -444,9 +449,11 @@ class ManyToManyField(Field):
         forward_key: Optional[str] = None,
         backward_key: str = "",
         related_name: str = "",
+        type: Optional[Field] = None,  # pylint: disable=W0622
         **kwargs
     ) -> None:
         super().__init__(**kwargs)
+        self.type = type
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name = model_name
@@ -458,7 +465,7 @@ class ManyToManyField(Field):
 
 
 class BackwardFKRelation(Field):
-    __slots__ = ("type", "relation_field")
+    __slots__ = ("type", "relation_field")  # Here we need type to be able to set dyamically
     has_db_field = False
 
     def __init__(
