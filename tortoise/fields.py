@@ -172,12 +172,15 @@ class TextField(Field, str):
     __slots__ = ()
 
 
-class BooleanField(Field, bool):  # pylint: disable=E0239  # It is intentiona to sublass bool
+class BooleanField(Field):
     """
     Boolean field.
     """
 
     __slots__ = ()
+
+    # Bool is not subclassable, so we specify type here
+    type = bool
 
 
 class DecimalField(Field, Decimal):
