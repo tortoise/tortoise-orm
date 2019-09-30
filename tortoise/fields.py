@@ -3,7 +3,7 @@ import functools
 import json
 import uuid
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Type, Union
 from uuid import UUID
 
 import ciso8601
@@ -30,7 +30,7 @@ class _FieldMeta(type):
     def __new__(mcs, name, bases, attrs):
         if len(bases) > 1:
             # Instantiate class with only the 1st base class (should be Field)
-            cls = type.__new__(mcs, name, (bases[0],), attrs)
+            cls = type.__new__(mcs, name, (bases[0],), attrs)  # type: Type[Field]
             # All other base classes are our meta types, we store them in class attributes
             cls.type = bases[1] if len(bases) == 2 else bases[1:]
             return cls
@@ -43,7 +43,7 @@ class Field(metaclass=_FieldMeta):
     """
 
     # Type is a readonly property for the instance, it is set by _FieldMeta
-    type = None
+    type = None  # type: Type[Any]
 
     __slots__ = (
         "source_field",
@@ -59,6 +59,10 @@ class Field(metaclass=_FieldMeta):
         "description",
     )
     has_db_field = True
+
+    # This method is just to make IDE happy
+    def __new__(cls, *args, **kwargs):
+        return super().__new__(cls)
 
     def __init__(
         self,
@@ -145,7 +149,7 @@ class SmallIntField(Field, int):
         super().__init__(pk=pk, **kwargs)
 
 
-class CharField(Field, str):
+class CharField(Field, str):  # type: ignore[misc]  # noqa
     """
     Character field.
 
@@ -164,7 +168,7 @@ class CharField(Field, str):
         super().__init__(**kwargs)
 
 
-class TextField(Field, str):
+class TextField(Field, str):  # type: ignore[misc]  # noqa
     """
     Large Text field.
     """
@@ -196,10 +200,6 @@ class DecimalField(Field, Decimal):
     """
 
     __slots__ = ("max_digits", "decimal_places")
-
-    # This method is just to make IDE happy
-    def __new__(cls, *args, **kwargs):
-        return super().__new__(cls)
 
     def __init__(self, max_digits: int, decimal_places: int, **kwargs) -> None:
         if int(max_digits) < 1:
@@ -294,7 +294,7 @@ class FloatField(Field, float):
         super().__init__(**kwargs)
 
 
-class JSONField(Field, dict, list):
+class JSONField(Field, dict, list):  # type: ignore[misc]  # noqa
     """
     JSON field.
 
@@ -321,7 +321,7 @@ class JSONField(Field, dict, list):
     def to_python_value(
         self, value: Optional[Union[str, dict, list]]
     ) -> Optional[Union[dict, list]]:
-        if value is None or isinstance(value, self.type):
+        if value is None or isinstance(value, (dict, list)):
             return value
         return self.decoder(value)
 
@@ -449,7 +449,7 @@ class ManyToManyField(Field):
         forward_key: Optional[str] = None,
         backward_key: str = "",
         related_name: str = "",
-        type: Optional[Field] = None,  # pylint: disable=W0622
+        type=None,  # pylint: disable=W0622
         **kwargs
     ) -> None:
         super().__init__(**kwargs)

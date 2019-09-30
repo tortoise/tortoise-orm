@@ -4,6 +4,7 @@ Changelog
 =========
 
 0.13.9
+------
 - Fields can have 2nd base class which makes IDEs know python type (str, int, datetime...) of the field.
 - The ``type`` parameter of ``Field.__init__`` is removed, instead we use the 2nd base class
 
