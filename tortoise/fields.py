@@ -172,7 +172,7 @@ class TextField(Field, str):
     __slots__ = ()
 
 
-class BooleanField(Field, bool):
+class BooleanField(Field, bool):  # pylint: disable=E0239  # It is intentiona to sublass bool
     """
     Boolean field.
     """
