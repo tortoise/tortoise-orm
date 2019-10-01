@@ -157,7 +157,7 @@ class TestForeignKeyField(test.TestCase):
         tour = await testmodels.Tournament.create(name="Team1")
         rel = await testmodels.MinRelation.create(tournament=tour)
         await tour.fetch_related("minrelations")
-        self.assertEqual([obj for obj in tour.minrelations], [rel])
+        self.assertEqual(list(tour.minrelations), [rel])
 
     async def test_minimal__fetched_len(self):
         tour = await testmodels.Tournament.create(name="Team1")

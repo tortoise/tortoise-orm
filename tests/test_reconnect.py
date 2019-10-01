@@ -5,8 +5,8 @@ from tortoise.exceptions import DBConnectionError, TransactionManagementError
 from tortoise.transactions import in_transaction
 
 
+@test.requireCapability(daemon=True)
 class TestQueryset(test.IsolatedTestCase):
-    @test.requireCapability(daemon=True)
     async def test_reconnect(self):
         await Tournament.create(name="1")
 
@@ -20,7 +20,6 @@ class TestQueryset(test.IsolatedTestCase):
             ["{}:{}".format(a.id, a.name) for a in await Tournament.all()], ["1:1", "2:2"]
         )
 
-    @test.requireCapability(daemon=True)
     async def test_reconnect_fail(self):
         await Tournament.create(name="1")
 
@@ -33,7 +32,7 @@ class TestQueryset(test.IsolatedTestCase):
 
         Tortoise._connections["models"].port = realport
 
-    @test.requireCapability(daemon=True)
+    @test.requireCapability(supports_transactions=True)
     async def test_reconnect_transaction_start(self):
         async with in_transaction():
             await Tournament.create(name="1")
@@ -50,7 +49,7 @@ class TestQueryset(test.IsolatedTestCase):
                 ["{}:{}".format(a.id, a.name) for a in await Tournament.all()], ["1:1", "2:2"]
             )
 
-    @test.requireCapability(daemon=True)
+    @test.requireCapability(supports_transactions=True)
     async def test_reconnect_during_transaction_fails(self):
         await Tournament.create(name="1")
 

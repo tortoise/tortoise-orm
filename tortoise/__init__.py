@@ -285,8 +285,7 @@ class Tortoise:
             for model_name, model in app.items():
                 if model._meta._inited:
                     continue
-                else:
-                    model._meta._inited = True
+                model._meta._inited = True
                 if not model._meta.table:
                     model._meta.table = model.__name__.lower()
 
@@ -463,7 +462,7 @@ class Tortoise:
     def _get_config_from_config_file(cls, config_file: str) -> dict:
         _, extension = os.path.splitext(config_file)
         if extension in (".yml", ".yaml"):
-            import yaml
+            import yaml  # pylint: disable=C0415
 
             with open(config_file, "r") as f:
                 config = yaml.safe_load(f)
@@ -670,4 +669,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.13.8"
+__version__ = "0.13.9"

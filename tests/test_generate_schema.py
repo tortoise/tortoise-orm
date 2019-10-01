@@ -1,7 +1,6 @@
 # pylint: disable=C0301
 import re
 import sys
-import warnings
 
 from asynctest.mock import CoroutineMock, patch
 
@@ -276,22 +275,29 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
         await self.init_for("tests.testmodels")
         sql = self.get_sql("`noid`")
         self.assertIn("`name` VARCHAR(255)", sql)
-        self.assertIn("`id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT", sql)
+        self.assertIn("`id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT", sql)
+
+    async def test_create_index(self):
+        await self.init_for("tests.testmodels")
+        sql = self.get_sql("KEY")
+        self.assertIsNotNone(re.search(r"tournament_created_\w+_idx", sql))
 
     async def test_minrelation(self):
         await self.init_for("tests.testmodels")
         sql = self.get_sql("`minrelation`")
+        self.assertIn("`tournament_id` SMALLINT NOT NULL,", sql)
         self.assertIn(
-            "`tournament_id` SMALLINT NOT NULL REFERENCES `tournament` (`id`) ON DELETE CASCADE",
-            sql,
+            "FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`id`) ON DELETE CASCADE", sql
         )
         self.assertNotIn("participants", sql)
 
         sql = self.get_sql("`minrelation_team`")
+        self.assertIn("`minrelation_id` INT NOT NULL", sql)
         self.assertIn(
-            "`minrelation_id` INT NOT NULL REFERENCES `minrelation` (`id`) ON DELETE CASCADE", sql
+            "FOREIGN KEY (`minrelation_id`) REFERENCES `minrelation` (`id`) ON DELETE CASCADE", sql
         )
-        self.assertIn("`team_id` INT NOT NULL REFERENCES `team` (`id`) ON DELETE CASCADE", sql)
+        self.assertIn("`team_id` INT NOT NULL", sql)
+        self.assertIn("FOREIGN KEY (`team_id`) REFERENCES `team` (`id`) ON DELETE CASCADE", sql)
 
     async def test_table_and_row_comment_generation(self):
         await self.init_for("tests.testmodels")
@@ -310,44 +316,53 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
             sql.strip(),
             """
 CREATE TABLE `defaultpk` (
-    `id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `val` INT NOT NULL
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `sometable` (
-    `sometable_id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `sometable_id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `some_chars_table` VARCHAR(255) NOT NULL,
-    `fk_sometable` INT REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
+    `fk_sometable` INT,
+    FOREIGN KEY (`fk_sometable`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
+    KEY `sometable_some_ch_115115_idx` (`some_chars_table`)
 ) CHARACTER SET utf8mb4;
-CREATE INDEX `sometable_some_ch_115115_idx` ON `sometable` (some_chars_table);
 CREATE TABLE `team` (
     `name` VARCHAR(50) NOT NULL  PRIMARY KEY COMMENT 'The TEAM name (and PK)',
-    `manager_id` VARCHAR(50) REFERENCES `team` (`name`) ON DELETE CASCADE
+    `manager_id` VARCHAR(50),
+    FOREIGN KEY (`manager_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE `tournament` (
-    `tid` SMALLINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` TEXT NOT NULL  COMMENT 'Tournament name',
-    `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime'
+    `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime',
+    KEY `tournament_name_116110_idx` (`name`)
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
-CREATE INDEX `tournament_name_116110_idx` ON `tournament` (name);
 CREATE TABLE `event` (
-    `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
+    `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
     `name` TEXT NOT NULL UNIQUE,
     `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
-    `tournament_id` SMALLINT NOT NULL COMMENT 'FK to tournament' REFERENCES `tournament` (`tid`) ON DELETE CASCADE
+    `tournament_id` SMALLINT NOT NULL COMMENT 'FK to tournament',
+    FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
 CREATE TABLE `sometable_self` (
-    `backward_sts` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
-    `sts_forward` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
+    `backward_sts` INT NOT NULL,
+    `sts_forward` INT NOT NULL,
+    FOREIGN KEY (`backward_sts`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`sts_forward`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `team_team` (
-    `team_rel_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE,
-    `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
+    `team_rel_id` VARCHAR(50) NOT NULL,
+    `team_id` VARCHAR(50) NOT NULL,
+    FOREIGN KEY (`team_rel_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
+    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `teamevents` (
-    `event_id` BIGINT NOT NULL REFERENCES `event` (`id`) ON DELETE CASCADE,
-    `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
+    `event_id` BIGINT NOT NULL,
+    `team_id` VARCHAR(50) NOT NULL,
+    FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
 """.strip(),  # noqa
         )
@@ -356,69 +371,61 @@ CREATE TABLE `teamevents` (
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.models_schema_create")
-        with warnings.catch_warnings(record=True) as w:
-            with self.assertLogs("tortoise", level="WARNING") as cm:
-                sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
-
-        self.assertEqual(
-            cm.output,
-            [
-                "WARNING:tortoise:CREATE INDEX `sometable_some_ch_115115_idx` ON `sometable`"
-                " (some_chars_table);",
-                "WARNING:tortoise:CREATE INDEX `tournament_name_116110_idx` ON `tournament`"
-                " (name);",
-            ],
-        )
-
-        self.assertEqual(len(w), 1)
-        self.assertEqual(w[0].category, UserWarning)
-        self.assertEqual(
-            str(w[0].message),
-            "Skipping creation of field indexes: safe index creation is not supported yet for"
-            " mysql. Please find the SQL queries to create the indexes in the logs.",
-        )
+        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
 
         self.assertEqual(
             sql.strip(),
             """
 CREATE TABLE IF NOT EXISTS `defaultpk` (
-    `id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `val` INT NOT NULL
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `sometable` (
-    `sometable_id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `sometable_id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `some_chars_table` VARCHAR(255) NOT NULL,
-    `fk_sometable` INT REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
+    `fk_sometable` INT,
+    FOREIGN KEY (`fk_sometable`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
+    KEY `sometable_some_ch_115115_idx` (`some_chars_table`)
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `team` (
     `name` VARCHAR(50) NOT NULL  PRIMARY KEY COMMENT 'The TEAM name (and PK)',
-    `manager_id` VARCHAR(50) REFERENCES `team` (`name`) ON DELETE CASCADE
+    `manager_id` VARCHAR(50),
+    FOREIGN KEY (`manager_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE IF NOT EXISTS `tournament` (
-    `tid` SMALLINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` TEXT NOT NULL  COMMENT 'Tournament name',
-    `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime'
+    `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime',
+    KEY `tournament_name_116110_idx` (`name`)
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
 CREATE TABLE IF NOT EXISTS `event` (
-    `id` BIGINT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
+    `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
     `name` TEXT NOT NULL UNIQUE,
     `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
-    `tournament_id` SMALLINT NOT NULL COMMENT 'FK to tournament' REFERENCES `tournament` (`tid`) ON DELETE CASCADE
+    `tournament_id` SMALLINT NOT NULL COMMENT 'FK to tournament',
+    FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
 CREATE TABLE IF NOT EXISTS `sometable_self` (
-    `backward_sts` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
-    `sts_forward` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
+    `backward_sts` INT NOT NULL,
+    `sts_forward` INT NOT NULL,
+    FOREIGN KEY (`backward_sts`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
+    FOREIGN KEY (`sts_forward`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `team_team` (
-    `team_rel_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE,
-    `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
+    `team_rel_id` VARCHAR(50) NOT NULL,
+    `team_id` VARCHAR(50) NOT NULL,
+    FOREIGN KEY (`team_rel_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
+    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `teamevents` (
-    `event_id` BIGINT NOT NULL REFERENCES `event` (`id`) ON DELETE CASCADE,
-    `team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE
+    `event_id` BIGINT NOT NULL,
+    `team_id` VARCHAR(50) NOT NULL,
+    FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
+
 """.strip(),  # noqa
         )
 

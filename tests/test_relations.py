@@ -25,13 +25,13 @@ class TestRelations(test.TestCase):
         teamids = []
         async for team in event.participants:
             teamids.append(team.id)
-        self.assertEqual(teamids, [participants[0].id, participants[1].id])
+        self.assertEqual(set(teamids), {participants[0].id, participants[1].id})
 
         self.assertEqual(
-            [team.id for team in event.participants], [participants[0].id, participants[1].id]
+            set([team.id for team in event.participants]), {participants[0].id, participants[1].id}
         )
 
-        self.assertEqual(event.participants[0].id, participants[0].id)
+        self.assertIn(event.participants[0].id, {participants[0].id, participants[1].id})
 
         selected_events = await Event.filter(participants=participants[0].id).prefetch_related(
             "participants", "tournament"
