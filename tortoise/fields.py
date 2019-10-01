@@ -448,7 +448,7 @@ class ManyToManyField(Field):
         forward_key: Optional[str] = None,
         backward_key: str = "",
         related_name: str = "",
-        type=None,
+        type=None,  # pylint: disable=W0622
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
