@@ -131,10 +131,13 @@ class BaseSchemaGenerator:
 
     def _get_field_type(self, field_object) -> str:
         field_object_type = type(field_object)
-        while field_object_type.__bases__ and field_object_type not in self.FIELD_TYPE_MAP:
+        while (
+            field_object_type.__bases__
+            and field_object_type not in self.FIELD_TYPE_MAP  # type: ignore
+        ):
             field_object_type = field_object_type.__bases__[0]
 
-        field_type = self.FIELD_TYPE_MAP[field_object_type]
+        field_type = self.FIELD_TYPE_MAP[field_object_type]  # type: ignore
 
         if isinstance(field_object, fields.DecimalField):
             field_type = field_type.format(field_object.max_digits, field_object.decimal_places)

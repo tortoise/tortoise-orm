@@ -5,6 +5,8 @@ Changelog
 
 0.13.9
 ------
+- Fields can have 2nd base class which makes IDEs know python type (str, int, datetime...) of the field.
+- The ``type`` parameter of ``Field.__init__`` is removed, instead we use the 2nd base class
 - Foreign keys and indexes are now defined correctly in MySQL so that they take effect as expected
 - MySQL now doesn't warn of unsafe index creation anymore
 
