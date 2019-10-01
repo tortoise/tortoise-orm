@@ -163,13 +163,13 @@ CREATE TABLE "team" (
 ) /* The TEAMS! */;
 CREATE TABLE "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    "name" TEXT NOT NULL  /* Tournament name */,
+    "name" VARCHAR(100) NOT NULL  /* Tournament name */,
     "created" TIMESTAMP NOT NULL  /* Created *\\/'`\\/* datetime */
 ) /* What Tournaments *\\/'`\\/* we have */;
 CREATE INDEX "tournament_name_116110_idx" ON "tournament" (name);
 CREATE TABLE "event" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,
-    "name" TEXT NOT NULL UNIQUE,
+    "name" TEXT NOT NULL,
     "modified" TIMESTAMP NOT NULL,
     "prize" VARCHAR(40),
     "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
@@ -213,13 +213,13 @@ CREATE TABLE IF NOT EXISTS "team" (
 ) /* The TEAMS! */;
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    "name" TEXT NOT NULL  /* Tournament name */,
+    "name" VARCHAR(100) NOT NULL  /* Tournament name */,
     "created" TIMESTAMP NOT NULL  /* Created *\\/'`\\/* datetime */
 ) /* What Tournaments *\\/'`\\/* we have */;
 CREATE INDEX IF NOT EXISTS "tournament_name_116110_idx" ON "tournament" (name);
 CREATE TABLE IF NOT EXISTS "event" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,
-    "name" TEXT NOT NULL UNIQUE,
+    "name" TEXT NOT NULL,
     "modified" TIMESTAMP NOT NULL,
     "prize" VARCHAR(40),
     "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
@@ -319,28 +319,28 @@ CREATE TABLE `sometable` (
     `sometable_id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `some_chars_table` VARCHAR(255) NOT NULL,
     `fk_sometable` INT,
-    FOREIGN KEY (`fk_sometable`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_sometabl_sometabl_6efae9bd` FOREIGN KEY (`fk_sometable`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
     KEY `sometable_some_ch_115115_idx` (`some_chars_table`)
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `team` (
     `name` VARCHAR(50) NOT NULL  PRIMARY KEY COMMENT 'The TEAM name (and PK)',
     `manager_id` VARCHAR(50),
-    FOREIGN KEY (`manager_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
+    CONSTRAINT `fk_team_team_9c77cd8f` FOREIGN KEY (`manager_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `name` TEXT NOT NULL  COMMENT 'Tournament name',
+    `name` VARCHAR(100) NOT NULL  COMMENT 'Tournament name',
     `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime',
     KEY `tournament_name_116110_idx` (`name`)
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
 CREATE TABLE `event` (
     `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
-    `name` TEXT NOT NULL UNIQUE,
+    `name` TEXT NOT NULL,
     `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
     `tournament_id` SMALLINT NOT NULL COMMENT 'FK to tournament',
-    FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`tid`) ON DELETE CASCADE
+    CONSTRAINT `fk_event_tourname_51c2b82d` FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
 CREATE TABLE `sometable_self` (
     `backward_sts` INT NOT NULL,
@@ -379,28 +379,28 @@ CREATE TABLE IF NOT EXISTS `sometable` (
     `sometable_id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `some_chars_table` VARCHAR(255) NOT NULL,
     `fk_sometable` INT,
-    FOREIGN KEY (`fk_sometable`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
+    CONSTRAINT `fk_sometabl_sometabl_6efae9bd` FOREIGN KEY (`fk_sometable`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
     KEY `sometable_some_ch_115115_idx` (`some_chars_table`)
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `team` (
     `name` VARCHAR(50) NOT NULL  PRIMARY KEY COMMENT 'The TEAM name (and PK)',
     `manager_id` VARCHAR(50),
-    FOREIGN KEY (`manager_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
+    CONSTRAINT `fk_team_team_9c77cd8f` FOREIGN KEY (`manager_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE IF NOT EXISTS `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
-    `name` TEXT NOT NULL  COMMENT 'Tournament name',
+    `name` VARCHAR(100) NOT NULL  COMMENT 'Tournament name',
     `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime',
     KEY `tournament_name_116110_idx` (`name`)
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
 CREATE TABLE IF NOT EXISTS `event` (
     `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
-    `name` TEXT NOT NULL UNIQUE,
+    `name` TEXT NOT NULL,
     `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
     `tournament_id` SMALLINT NOT NULL COMMENT 'FK to tournament',
-    FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`tid`) ON DELETE CASCADE
+    CONSTRAINT `fk_event_tourname_51c2b82d` FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
 CREATE TABLE IF NOT EXISTS `sometable_self` (
     `backward_sts` INT NOT NULL,
@@ -420,7 +420,6 @@ CREATE TABLE IF NOT EXISTS `teamevents` (
     FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
-
 """.strip(),  # noqa
         )
 
@@ -492,7 +491,7 @@ COMMENT ON COLUMN team.name IS 'The TEAM name (and PK)';
 COMMENT ON TABLE team IS 'The TEAMS!';
 CREATE TABLE "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
-    "name" TEXT NOT NULL,
+    "name" VARCHAR(100) NOT NULL,
     "created" TIMESTAMP NOT NULL
 );
 CREATE INDEX "tournament_name_116110_idx" ON "tournament" (name);
@@ -501,7 +500,7 @@ COMMENT ON COLUMN tournament.created IS 'Created */''`/* datetime';
 COMMENT ON TABLE tournament IS 'What Tournaments */''`/* we have';
 CREATE TABLE "event" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
-    "name" TEXT NOT NULL UNIQUE,
+    "name" TEXT NOT NULL,
     "modified" TIMESTAMP NOT NULL,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
@@ -552,7 +551,7 @@ COMMENT ON COLUMN team.name IS 'The TEAM name (and PK)';
 COMMENT ON TABLE team IS 'The TEAMS!';
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
-    "name" TEXT NOT NULL,
+    "name" VARCHAR(100) NOT NULL,
     "created" TIMESTAMP NOT NULL
 );
 CREATE INDEX IF NOT EXISTS "tournament_name_116110_idx" ON "tournament" (name);
@@ -561,7 +560,7 @@ COMMENT ON COLUMN tournament.created IS 'Created */''`/* datetime';
 COMMENT ON TABLE tournament IS 'What Tournaments */''`/* we have';
 CREATE TABLE IF NOT EXISTS "event" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
-    "name" TEXT NOT NULL UNIQUE,
+    "name" TEXT NOT NULL,
     "modified" TIMESTAMP NOT NULL,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,

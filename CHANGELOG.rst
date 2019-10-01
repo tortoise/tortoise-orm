@@ -17,6 +17,10 @@ Bugfixes:
 ^^^^^^^^^
 
 
+0.13.10
+-------
+- Names ForeignKey constraints in a consistent way
+
 0.13.9
 ------
 - Fields can have 2nd base class which makes IDEs know python type (str, int, datetime...) of the field.

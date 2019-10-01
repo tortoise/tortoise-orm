@@ -174,6 +174,11 @@ class TextField(Field, str):  # type: ignore[misc]  # noqa
 
     __slots__ = ()
 
+    def __init__(self, **kwargs) -> None:
+        if kwargs.pop("unique", None) or kwargs.pop("index", None):
+            raise ConfigurationError("TextField can't be indexed")
+        super().__init__(**kwargs)
+
 
 class BooleanField(Field):
     """
@@ -308,6 +313,8 @@ class JSONField(Field, dict, list):  # type: ignore[misc]  # noqa
     __slots__ = ("encoder", "decoder")
 
     def __init__(self, encoder=JSON_DUMPS, decoder=JSON_LOADS, **kwargs) -> None:
+        if kwargs.pop("unique", None) or kwargs.pop("index", None):
+            raise ConfigurationError("JSONField can't be indexed")
         super().__init__(**kwargs)
         self.encoder = encoder
         self.decoder = decoder
