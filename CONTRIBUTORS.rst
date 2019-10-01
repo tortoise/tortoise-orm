@@ -18,6 +18,7 @@ Contributors
 * Nguyễn Hồng Quân ``@hongquan``
 * Mateusz Bocian ``@mrstork``
 * Vladimir Urushev ``@pilat``
+* Adam Wallner ``@wallneradam``
 
 Special Thanks
 ==============
