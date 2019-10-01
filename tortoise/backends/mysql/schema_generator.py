@@ -9,7 +9,8 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     INDEX_CREATE_TEMPLATE = "KEY `{index_name}` ({fields})"
     FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{primary}{comment}"
     FK_TEMPLATE = (
-        "FOREIGN KEY (`{db_field}`) REFERENCES `{table}` (`{field}`) ON DELETE {on_delete}"
+        "CONSTRAINT `{constraint_name}` FOREIGN KEY (`{db_field}`)"
+        " REFERENCES `{table}` (`{field}`) ON DELETE {on_delete}"
     )
     M2M_TABLE_TEMPLATE = (
         "CREATE TABLE {exists}`{table_name}` (\n"
@@ -66,11 +67,21 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         return ""
 
     def _create_fk_string(
-        self, db_field: str, table: str, field: str, on_delete: str, comment: str
+        self,
+        constraint_name: str,
+        db_field: str,
+        table: str,
+        field: str,
+        on_delete: str,
+        comment: str,
     ) -> str:
         self._foreign_keys.append(
             self.FK_TEMPLATE.format(
-                db_field=db_field, table=table, field=field, on_delete=on_delete
+                constraint_name=constraint_name,
+                db_field=db_field,
+                table=table,
+                field=field,
+                on_delete=on_delete,
             )
         )
         return comment

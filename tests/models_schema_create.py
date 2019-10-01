@@ -7,7 +7,7 @@ from tortoise.models import Model
 
 class Tournament(Model):
     tid = fields.SmallIntField(pk=True)
-    name = fields.TextField(description="Tournament name", index=True)
+    name = fields.CharField(max_length=100, description="Tournament name", index=True)
     created = fields.DatetimeField(auto_now_add=True, description="Created */'`/* datetime")
 
     class Meta:
@@ -16,7 +16,7 @@ class Tournament(Model):
 
 class Event(Model):
     id = fields.BigIntField(pk=True, description="Event ID")
-    name = fields.TextField(unique=True)
+    name = fields.TextField()
     tournament = fields.ForeignKeyField(
         "models.Tournament", related_name="events", description="FK to tournament"
     )

@@ -2,6 +2,9 @@
 
 Changelog
 =========
+0.13.10
+-------
+- Names ForeignKey constraints in a consistent way
 
 0.13.9
 ------
