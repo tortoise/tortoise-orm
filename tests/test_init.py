@@ -72,6 +72,72 @@ class TestInitErrors(test.SimpleTestCase):
                 }
             )
 
+    async def test_generated_nonint(self):
+        with self.assertRaisesRegex(
+            ConfigurationError, "Generated primary key allowed only for IntField and BigIntField"
+        ):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "credentials": {"file_path": ":memory:"},
+                        }
+                    },
+                    "apps": {
+                        "models": {
+                            "models": ["tests.model_generated_nonint"],
+                            "default_connection": "default",
+                        }
+                    },
+                }
+            )
+
+    async def test_multiple_pk(self):
+        with self.assertRaisesRegex(
+            ConfigurationError,
+            "Can't create model Tournament with two primary keys, only single pk are supported",
+        ):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "credentials": {"file_path": ":memory:"},
+                        }
+                    },
+                    "apps": {
+                        "models": {
+                            "models": ["tests.model_multiple_pk"],
+                            "default_connection": "default",
+                        }
+                    },
+                }
+            )
+
+    async def test_nonpk_id(self):
+        with self.assertRaisesRegex(
+            ConfigurationError,
+            "Can't create model Tournament without explicit primary key if"
+            " field 'id' already present",
+        ):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "credentials": {"file_path": ":memory:"},
+                        }
+                    },
+                    "apps": {
+                        "models": {
+                            "models": ["tests.model_nonpk_id"],
+                            "default_connection": "default",
+                        }
+                    },
+                }
+            )
+
     async def test_unknown_connection(self):
         with self.assertRaisesRegex(ConfigurationError, 'Unknown connection "fioop"'):
             await Tortoise.init(

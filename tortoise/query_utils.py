@@ -116,9 +116,9 @@ class QueryModifier:
         joins: Optional[List[Tuple[Criterion, Criterion]]] = None,
         having_criterion: Optional[Criterion] = None,
     ):
-        self.where_criterion = where_criterion if where_criterion else EmptyCriterion()
+        self.where_criterion = where_criterion or EmptyCriterion()
         self.joins = joins if joins else []
-        self.having_criterion = having_criterion if having_criterion else EmptyCriterion()
+        self.having_criterion = having_criterion or EmptyCriterion()
 
     def __and__(self, other: "QueryModifier") -> "QueryModifier":
         return QueryModifier(

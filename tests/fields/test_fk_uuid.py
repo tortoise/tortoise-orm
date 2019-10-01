@@ -159,7 +159,7 @@ class TestForeignKeyUUIDField(test.TestCase):
         tour = await self.UUIDPkModel.create()
         rel = await self.UUIDFkRelatedModel.create(model=tour)
         await tour.fetch_related("children")
-        self.assertEqual([obj for obj in tour.children], [rel])
+        self.assertEqual(list(tour.children), [rel])
 
     async def test_minimal__fetched_len(self):
         tour = await self.UUIDPkModel.create()

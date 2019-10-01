@@ -234,8 +234,8 @@ class MetaInfo:
     def _generate_filters(self) -> None:
         get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
         for key, filter_info in self._filters.items():
-            overridden_operator = get_overridden_filter_func(  # type: ignore
-                filter_func=filter_info["operator"]
+            overridden_operator = get_overridden_filter_func(
+                filter_func=filter_info["operator"]  # type: ignore
             )
             if overridden_operator:
                 filter_info = copy(filter_info)

@@ -408,10 +408,9 @@ class QuerySet(AwaitableQuery):
                     raise FieldError(
                         f"Field {first_level_field} on {self.model._meta.table} is not a relation"
                     )
-                else:
-                    raise FieldError(
-                        f"Relation {first_level_field} for {self.model._meta.table} not found"
-                    )
+                raise FieldError(
+                    f"Relation {first_level_field} for {self.model._meta.table} not found"
+                )
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()
             forwarded_prefetch = "__".join(relation_split[1:])

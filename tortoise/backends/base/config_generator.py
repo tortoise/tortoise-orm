@@ -46,7 +46,7 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
             "username": "user",
             "password": "password",
         },
-        "defaults": {"port": 3306, "charset": "utf8mb4"},
+        "defaults": {"port": 3306, "charset": "utf8mb4", "sql_mode": "STRICT_TRANS_TABLES"},
         "cast": {
             "minsize": int,
             "maxsize": int,

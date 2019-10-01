@@ -1,4 +1,4 @@
-checkfiles = tortoise/ examples/ tests/ setup.py conftest.py
+checkfiles = tortoise/ examples/ tests/ conftest.py
 black_opts = -l 100 -t py36
 py_warn = PYTHONWARNINGS=default PYTHONASYNCIODEBUG=1 PYTHONDEBUG=x PYTHONDEVMODE=dev
 
@@ -52,6 +52,7 @@ test: deps
 _testall:
 	-$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: py.test -q --cov-report=
 	-python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB=postgres://postgres:@127.0.0.1:5432/test_\{\} py.test -q --cov-append --cov-report=
+	-$(py_warn) TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_\{\}?storage_engine=MYISAM" py.test -q --cov-append --cov-report=
 	-$(py_warn) TORTOISE_TEST_DB="mysql://root:@127.0.0.1:3306/test_\{\}" py.test -q --cov-append
 
 testall: deps _testall

@@ -17,6 +17,7 @@ async def atomic_decorated_func():
     return tournament
 
 
+@test.requireCapability(supports_transactions=True)
 class TestTransactions(test.TruncationTestCase):
     async def test_transactions(self):
         with self.assertRaises(SomeException):

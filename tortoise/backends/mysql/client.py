@@ -93,6 +93,7 @@ class MySQLClient(BaseDBAsyncClient):
         self.host = host
         self.port = int(port)  # make sure port is int type
         self.extra = kwargs.copy()
+        self.storage_engine = self.extra.pop("storage_engine", "")
         self.extra.pop("connection_name", None)
         self.extra.pop("fetch_inserted", None)
         self.extra.pop("db", None)
@@ -119,6 +120,16 @@ class MySQLClient(BaseDBAsyncClient):
         }
         try:
             self._connection = await aiomysql.connect(password=self.password, **self._template)
+
+            if isinstance(self._connection, aiomysql.Connection):
+                async with self._connection.cursor() as cursor:
+                    if self.storage_engine:
+                        await cursor.execute(
+                            "SET default_storage_engine='{}';".format(self.storage_engine)
+                        )
+                        if self.storage_engine.lower() != "innodb":
+                            self.capabilities.__dict__["supports_transactions"] = False
+
             self.log.debug(
                 "Created connection %s with params: %s", self._connection, self._template
             )

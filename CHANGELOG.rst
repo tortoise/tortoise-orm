@@ -17,6 +17,17 @@ Bugfixes:
 ^^^^^^^^^
 
 
+0.13.9
+------
+- Fields can have 2nd base class which makes IDEs know python type (str, int, datetime...) of the field.
+- The ``type`` parameter of ``Field.__init__`` is removed, instead we use the 2nd base class
+- Foreign keys and indexes are now defined correctly in MySQL so that they take effect as expected
+- MySQL now doesn't warn of unsafe index creation anymore
+
+0.13.8
+------
+- Fixed bug in schema creation for MySQL where non-int PK did not get declared properly (#195)
+
 0.13.7
 ------
 - ``iexact`` filter modifier was implemented. Queries like ``«queryset».filter(name__iexact=...)`` will perform case-insensitive search.

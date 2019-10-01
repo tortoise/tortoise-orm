@@ -194,6 +194,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                     "port": 33060,
                     "user": "root",
                     "charset": "utf8mb4",
+                    "sql_mode": "STRICT_TRANS_TABLES",
                 },
             },
         )
@@ -211,6 +212,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                     "port": 33060,
                     "user": "root",
                     "charset": "utf8mb4",
+                    "sql_mode": "STRICT_TRANS_TABLES",
                 },
             },
         )
@@ -228,6 +230,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                     "port": 3306,
                     "user": "root",
                     "charset": "utf8mb4",
+                    "sql_mode": "STRICT_TRANS_TABLES",
                 },
             },
         )
@@ -251,6 +254,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                     "port": 3306,
                     "user": "root",
                     "charset": "utf8mb4",
+                    "sql_mode": "STRICT_TRANS_TABLES",
                 },
             },
         )
@@ -277,6 +281,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                     "connect_timeout": 1.5,
                     "echo": True,
                     "charset": "utf8mb4",
+                    "sql_mode": "STRICT_TRANS_TABLES",
                 },
             },
         )
