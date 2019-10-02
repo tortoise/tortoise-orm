@@ -66,9 +66,7 @@ def ends_with(field, value):
 
 
 def insensitive_exact(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).eq(
-        functions.Upper("{}".format(value))
-    )
+    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).eq(functions.Upper(f"{value}"))
 
 
 def insensitive_contains(field, value):
@@ -90,7 +88,7 @@ def insensitive_ends_with(field, value):
 
 
 def get_m2m_filters(field_name: str, field: fields.ManyToManyField) -> Dict[str, dict]:
-    target_table_pk = field.type._meta.pk
+    target_table_pk = field.field_type._meta.pk
     return {
         field_name: {
             "field": field.forward_key,
@@ -124,34 +122,34 @@ def get_m2m_filters(field_name: str, field: fields.ManyToManyField) -> Dict[str,
 
 
 def get_backward_fk_filters(field_name: str, field: fields.BackwardFKRelation) -> Dict[str, dict]:
-    target_table_pk = field.type._meta.pk
+    target_table_pk = field.field_type._meta.pk
     return {
         field_name: {
             "field": "id",
             "backward_key": field.relation_field,
             "operator": operator.eq,
-            "table": Table(field.type._meta.table),
+            "table": Table(field.field_type._meta.table),
             "value_encoder": target_table_pk.to_db_value,
         },
         f"{field_name}__not": {
             "field": "id",
             "backward_key": field.relation_field,
             "operator": not_equal,
-            "table": Table(field.type._meta.table),
+            "table": Table(field.field_type._meta.table),
             "value_encoder": target_table_pk.to_db_value,
         },
         f"{field_name}__in": {
             "field": "id",
             "backward_key": field.relation_field,
             "operator": is_in,
-            "table": Table(field.type._meta.table),
+            "table": Table(field.field_type._meta.table),
             "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
         f"{field_name}__not_in": {
             "field": "id",
             "backward_key": field.relation_field,
             "operator": not_in,
-            "table": Table(field.type._meta.table),
+            "table": Table(field.field_type._meta.table),
             "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
     }
@@ -240,7 +238,7 @@ def get_filters_for_field(
             "operator": ends_with,
             "value_encoder": string_encoder,
         },
-        "{}__iexact".format(field_name): {
+        f"{field_name}__iexact": {
             "field": actual_field_name,
             "source_field": source_field,
             "operator": insensitive_exact,

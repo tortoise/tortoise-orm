@@ -230,7 +230,7 @@ class ContactTypeEnum(IntEnum):
 
 class Contact(Model):
     id = fields.IntField(pk=True)
-    type = fields.IntField(default=ContactTypeEnum.other)
+    type = EnumField(ContactTypeEnum, default=ContactTypeEnum.other)
 
 
 class ImplicitPkModel(Model):

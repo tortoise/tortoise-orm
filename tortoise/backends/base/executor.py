@@ -259,7 +259,7 @@ class BaseExecutor:
         relations = {
             (
                 self.model._meta.pk.to_python_value(e["_backward_relation_key"]),
-                field_object.type._meta.pk.to_python_value(e[related_pk_field]),
+                field_object.field_type._meta.pk.to_python_value(e[related_pk_field]),
             )
             for e in raw_results
         }
@@ -303,7 +303,7 @@ class BaseExecutor:
                 related_query = self._prefetch_queries.get(field)
             else:
                 related_model_field = self.model._meta.fields_map[field]
-                related_model = related_model_field.type
+                related_model = related_model_field.field_type
                 related_query = related_model.all().using_db(self.db)
                 related_query.query = copy(related_query.model._meta.basequery)
             if forwarded_prefetches:

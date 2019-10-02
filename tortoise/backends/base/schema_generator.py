@@ -6,6 +6,8 @@ from tortoise import fields
 from tortoise.exceptions import ConfigurationError
 from tortoise.utils import get_escape_translation_table
 
+# pylint: disable=R0201
+
 logger = logging.getLogger("tortoise")
 
 
@@ -87,19 +89,19 @@ class BaseSchemaGenerator:
         # needs to be implemented for each supported client
         raise NotImplementedError()  # pragma: nocoverage
 
-    def _post_table_hook(self) -> str:  # pylint: disable=R0201
+    def _post_table_hook(self) -> str:
         # This method provides a mechanism where you can perform a set of
         # operation on the database table after  it's initialized. This method
         # by default does nothing. If need be, it can be over-written
         return ""
 
-    def _escape_comment(self, comment: str) -> str:  # pylint: disable=R0201
+    def _escape_comment(self, comment: str) -> str:
         # This method provides a default method to escape comment strings as per
         # default standard as applied under mysql like database. This can be
         # overwritten if required to match the database specific escaping.
         return comment.translate(get_escape_translation_table())
 
-    def _table_generate_extra(self, table: str) -> str:  # pylint: disable=R0201
+    def _table_generate_extra(self, table: str) -> str:
         return ""
 
     def _get_inner_statements(self) -> List[str]:
@@ -204,16 +206,16 @@ class BaseSchemaGenerator:
                     constraint_name=self._generate_fk_name(
                         model._meta.table,
                         db_field,
-                        field_object.reference.type._meta.table,
-                        field_object.reference.type._meta.db_pk_field,
+                        field_object.reference.field_type._meta.table,
+                        field_object.reference.field_type._meta.db_pk_field,
                     ),
                     db_field=db_field,
-                    table=field_object.reference.type._meta.table,
-                    field=field_object.reference.type._meta.db_pk_field,
+                    table=field_object.reference.field_type._meta.table,
+                    field=field_object.reference.field_type._meta.db_pk_field,
                     on_delete=field_object.reference.on_delete,
                     comment=comment,
                 )
-                references.add(field_object.reference.type._meta.table)
+                references.add(field_object.reference.field_type._meta.table)
             else:
                 field_creation_string = self._create_string(
                     db_field=db_field,
@@ -290,13 +292,13 @@ class BaseSchemaGenerator:
                 exists="IF NOT EXISTS " if safe else "",
                 table_name=field_object.through,
                 backward_table=model._meta.table,
-                forward_table=field_object.type._meta.table,
+                forward_table=field_object.field_type._meta.table,
                 backward_field=model._meta.db_pk_field,
-                forward_field=field_object.type._meta.db_pk_field,
+                forward_field=field_object.field_type._meta.db_pk_field,
                 backward_key=field_object.backward_key,
                 backward_type=self._get_field_type(model._meta.pk),
                 forward_key=field_object.forward_key,
-                forward_type=self._get_field_type(field_object.type._meta.pk),
+                forward_type=self._get_field_type(field_object.field_type._meta.pk),
                 extra=self._table_generate_extra(table=field_object.through),
                 comment=self._table_comment_generator(
                     table=field_object.through, comment=field_object.description

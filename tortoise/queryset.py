@@ -58,7 +58,9 @@ class AwaitableQuery:
                 related_field = model._meta.fields_map[related_field_name]
                 self._join_table_by_field(table, related_field_name, related_field)
                 self.resolve_ordering(
-                    related_field.type, [("__".join(field_name.split("__")[1:]), ordering[1])], {}
+                    related_field.field_type,
+                    [("__".join(field_name.split("__")[1:]), ordering[1])],
+                    {},
                 )
             elif field_name in annotations:
                 aggregation = annotations[field_name]
@@ -259,9 +261,7 @@ class QuerySet(AwaitableQuery):
             queryset._custom_filters.update(get_filters_for_field(key, None, key))
         return queryset
 
-    def values_list(
-        self, *fields_: str, flat: bool = False
-    ) -> "ValuesListQuery":  # pylint: disable=W0621
+    def values_list(self, *fields_: str, flat: bool = False) -> "ValuesListQuery":
         """
         Make QuerySet returns list of tuples for given args instead of objects.
 
@@ -620,7 +620,7 @@ class FieldSelectQuery(AwaitableQuery):
         forwarded_fields_split = forwarded_fields.split("__")
 
         return self._join_table_with_forwarded_fields(
-            model=field_object.type,
+            model=field_object.field_type,
             field=forwarded_fields_split[0],
             forwarded_fields="__".join(forwarded_fields_split[1:]),
         )
@@ -658,7 +658,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         field_split = field.split("__")
         if field_split[0] in model._meta.fetch_fields:
-            new_model = model._meta.fields_map[field_split[0]].type
+            new_model = model._meta.fields_map[field_split[0]].field_type
             return self.resolve_to_python_value(new_model, "__".join(field_split[1:]))
 
         raise FieldError(f'Unknown field "{field}" for model "{model}"')

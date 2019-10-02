@@ -52,7 +52,7 @@ def _rfk_getter(self, _key, ftype, frelfield):
 def _m2m_getter(self, _key, field_object):
     val = getattr(self, _key, None)
     if val is None:
-        val = ManyToManyRelationManager(field_object.type, self, field_object)
+        val = ManyToManyRelationManager(field_object.field_type, self, field_object)
         setattr(self, _key, val)
     return val
 
@@ -203,7 +203,7 @@ class MetaInfo:
                     partial(
                         _rfk_getter,
                         _key=_key,
-                        ftype=field_object.type,
+                        ftype=field_object.field_type,
                         frelfield=field_object.relation_field,
                     )
                 ),
@@ -226,7 +226,7 @@ class MetaInfo:
             default_converter = field.__class__.to_python_value is fields.Field.to_python_value
             if not default_converter:
                 self.db_complex_fields.append((key, model_field, field))
-            elif field.type in self.db.executor_class.DB_NATIVE:
+            elif field.field_type in self.db.executor_class.DB_NATIVE:
                 self.db_native_fields.append((key, model_field, field))
             else:
                 self.db_default_fields.append((key, model_field, field))
@@ -344,7 +344,7 @@ class ModelMeta(type):
                             )
 
         # Clean the class attributes
-        for slot in fields_map.keys():
+        for slot in fields_map:
             attrs.pop(slot, None)
         attrs["_meta"] = meta = MetaInfo(meta_class)
 
@@ -400,7 +400,7 @@ class Model(metaclass=ModelMeta):
             setattr(self, model_field, kwargs[key])
         for key, model_field, field in meta.db_default_fields:
             value = kwargs[key]
-            setattr(self, model_field, None if value is None else field.type(value))
+            setattr(self, model_field, None if value is None else field.field_type(value))
         for key, model_field, field in meta.db_complex_fields:
             setattr(self, model_field, field.to_python_value(kwargs[key]))
 
@@ -452,10 +452,7 @@ class Model(metaclass=ModelMeta):
         return hash(self.pk)
 
     def __eq__(self, other) -> bool:
-        # pylint: disable=C0123
-        if type(self) == type(other) and self.pk == other.pk:
-            return True
-        return False
+        return type(other) is type(self) and self.pk == other.pk
 
     def _get_pk_val(self):
         return getattr(self, self._meta.pk_attr)

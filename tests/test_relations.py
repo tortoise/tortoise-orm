@@ -30,7 +30,7 @@ class TestRelations(test.TestCase):
         self.assertEqual(set(teamids), {participants[0].id, participants[1].id})
 
         self.assertEqual(
-            set([team.id for team in event.participants]), {participants[0].id, participants[1].id}
+            {team.id for team in event.participants}, {participants[0].id, participants[1].id}
         )
 
         self.assertIn(event.participants[0].id, {participants[0].id, participants[1].id})
