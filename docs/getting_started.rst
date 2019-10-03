@@ -117,7 +117,7 @@ After that you can start using your models:
     event = await Event.create(name='Test', tournament=tournament)
     participants = []
     for i in range(2):
-        team = Team.create(name='Team {}'.format(i + 1))
+        team = await Team.create(name='Team {}'.format(i + 1))
         participants.append(team)
 
     # M2M Relationship management is quite straightforward
