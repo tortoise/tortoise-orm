@@ -6,7 +6,7 @@ import os
 import uuid
 from enum import Enum, IntEnum
 
-from tests.testfields import EnumField
+from tests.testfields import EnumField, IntEnumField
 from tortoise import fields
 from tortoise.models import Model
 
@@ -230,7 +230,7 @@ class ContactTypeEnum(IntEnum):
 
 class Contact(Model):
     id = fields.IntField(pk=True)
-    type = EnumField(ContactTypeEnum, default=ContactTypeEnum.other)
+    type = IntEnumField(ContactTypeEnum, default=ContactTypeEnum.other)
 
 
 class ImplicitPkModel(Model):
