@@ -156,9 +156,3 @@ ManyToManyField
 
 .. autoclass:: tortoise.fields.ManyToManyField
     :exclude-members: to_db_value, to_python_value
-
-On instantiation, a ``ManyToManyField`` appears as so:
-
-.. autoclass:: tortoise.fields.ManyToManyRelationManager
-    :members:
-    :inherited-members:

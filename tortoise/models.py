@@ -14,10 +14,10 @@ from tortoise.fields import (
     RelationQueryContainer,
 )
 from tortoise.filters import get_filters_for_field
-from tortoise.queryset import QuerySet
+from tortoise.queryset import QuerySet, QuerySetSingle
 from tortoise.transactions import current_transaction_map
 
-MODEL_TYPE = TypeVar("MODEL_TYPE", bound="Model")
+MODEL = TypeVar("MODEL", bound="Model")
 # TODO: Define Filter type object. Possibly tuple?
 
 
@@ -373,7 +373,7 @@ class Model(metaclass=ModelMeta):
     # I don' like this here, but it makes auto completion and static analysis much happier
     _meta = MetaInfo(None)
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, **kwargs) -> None:
         # self._meta is a very common attribute lookup, lets cache it.
         meta = self._meta
         self._saved_in_db = meta.pk_attr in kwargs and meta.pk.generated
@@ -390,7 +390,7 @@ class Model(metaclass=ModelMeta):
                 setattr(self, key, field_object.default)
 
     @classmethod
-    def _init_from_db(cls, **kwargs) -> MODEL_TYPE:
+    def _init_from_db(cls: Type[MODEL], **kwargs) -> MODEL:
         self = cls.__new__(cls)
         self._saved_in_db = True
 
@@ -466,7 +466,11 @@ class Model(metaclass=ModelMeta):
     Can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc...
     """
 
-    async def save(self, using_db=None, update_fields=None) -> None:
+    async def save(
+        self,
+        using_db: Optional[BaseDBAsyncClient] = None,
+        update_fields: Optional[List[str]] = None,
+    ) -> None:
         """
         Creates/Updates the current model object.
 
@@ -493,7 +497,7 @@ class Model(metaclass=ModelMeta):
             raise OperationalError("Can't delete unpersisted record")
         await db.executor_class(model=self.__class__, db=db).execute_delete(self)
 
-    async def fetch_related(self, *args, using_db=None) -> None:
+    async def fetch_related(self, *args, using_db: Optional[BaseDBAsyncClient] = None) -> None:
         """
         Fetch related fields.
 
@@ -508,8 +512,11 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def get_or_create(
-        cls: Type[MODEL_TYPE], using_db=None, defaults=None, **kwargs
-    ) -> Tuple[MODEL_TYPE, bool]:
+        cls: Type[MODEL],
+        using_db: Optional[BaseDBAsyncClient] = None,
+        defaults: Optional[dict] = None,
+        **kwargs,
+    ) -> Tuple[MODEL, bool]:
         """
         Fetches the object if exists (filtering on the provided parameters),
         else creates an instance with any unspecified parameters as default values.
@@ -522,7 +529,7 @@ class Model(metaclass=ModelMeta):
         return await cls.create(**defaults, **kwargs, using_db=using_db), True
 
     @classmethod
-    async def create(cls: Type[MODEL_TYPE], **kwargs) -> MODEL_TYPE:
+    async def create(cls: Type[MODEL], **kwargs) -> MODEL:
         """
         Create a record in the DB and returns the object.
 
@@ -544,7 +551,9 @@ class Model(metaclass=ModelMeta):
         return instance
 
     @classmethod
-    async def bulk_create(cls: Type[MODEL_TYPE], objects: List[MODEL_TYPE], using_db=None) -> None:
+    async def bulk_create(
+        cls: Type[MODEL], objects: List[MODEL], using_db: Optional[BaseDBAsyncClient] = None
+    ) -> None:
         """
         Bulk insert operation:
 
@@ -568,42 +577,42 @@ class Model(metaclass=ModelMeta):
         :param objects: List of objects to bulk create
         """
         db = using_db or cls._meta.db
-        await db.executor_class(model=cls, db=db).execute_bulk_insert(objects)
+        await db.executor_class(model=cls, db=db).execute_bulk_insert(objects)  # type: ignore
 
     @classmethod
-    def first(cls) -> QuerySet:
+    def first(cls: Type[MODEL]) -> QuerySetSingle[Optional[MODEL]]:
         """
         Generates a QuerySet that returns the first record.
         """
         return QuerySet(cls).first()
 
     @classmethod
-    def filter(cls, *args, **kwargs) -> QuerySet:
+    def filter(cls: Type[MODEL], *args, **kwargs) -> QuerySet[MODEL]:
         """
         Generates a QuerySet with the filter applied.
         """
         return QuerySet(cls).filter(*args, **kwargs)
 
     @classmethod
-    def exclude(cls, *args, **kwargs) -> QuerySet:
+    def exclude(cls: Type[MODEL], *args, **kwargs) -> QuerySet[MODEL]:
         """
         Generates a QuerySet with the exclude applied.
         """
         return QuerySet(cls).exclude(*args, **kwargs)
 
     @classmethod
-    def annotate(cls, **kwargs) -> QuerySet:
+    def annotate(cls: Type[MODEL], **kwargs) -> QuerySet[MODEL]:
         return QuerySet(cls).annotate(**kwargs)
 
     @classmethod
-    def all(cls) -> QuerySet:
+    def all(cls: Type[MODEL]) -> QuerySet[MODEL]:
         """
         Returns the complete QuerySet.
         """
         return QuerySet(cls)
 
     @classmethod
-    def get(cls, *args, **kwargs) -> QuerySet:
+    def get(cls: Type[MODEL], *args, **kwargs) -> QuerySetSingle[MODEL]:
         """
         Fetches a single record for a Model type using the provided filter parameters.
 
@@ -617,7 +626,9 @@ class Model(metaclass=ModelMeta):
         return QuerySet(cls).get(*args, **kwargs)
 
     @classmethod
-    async def fetch_for_list(cls, instance_list, *args, using_db=None):
+    async def fetch_for_list(
+        cls, instance_list: List[MODEL], *args, using_db: Optional[BaseDBAsyncClient] = None
+    ) -> None:
         db = using_db or cls._meta.db
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
 

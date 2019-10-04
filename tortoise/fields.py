@@ -414,6 +414,8 @@ class ManyToManyField(Field):
 
     This field represents a many-to-many between this model and another model.
 
+    See :ref:`many_to_many` for usage information.
+
     You must provide the following:
 
     ``model_name``:

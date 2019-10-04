@@ -1,8 +1,23 @@
 from copy import copy
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    AsyncIterator,
+    Callable,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 from pypika import JoinType, Order, Query, Table  # noqa
 from pypika.functions import Count
+from typing_extensions import Protocol
 
 from tortoise import fields
 from tortoise.aggregation import Aggregate
@@ -13,8 +28,23 @@ from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_rela
 # Empty placeholder - Should never be edited.
 QUERY = Query()
 
+if TYPE_CHECKING:
+    from tortoise.models import Model
 
-class AwaitableQuery:
+MODEL = TypeVar("MODEL", bound="Model")
+T_co = TypeVar("T_co", covariant=True)
+
+
+class QuerySetIterable(Protocol[T_co]):
+    ...
+
+
+class QuerySetSingle(Protocol[T_co]):
+    def __await__(self) -> Generator[Any, None, T_co]:
+        ...
+
+
+class AwaitableQuery(QuerySetIterable[MODEL]):
     __slots__ = ("_joined_tables", "query", "model", "_db", "capabilities")
 
     def __init__(self, model) -> None:
@@ -76,21 +106,11 @@ class AwaitableQuery:
     def _make_query(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    def __await__(self):
-        if self._db is None:
-            self._db = self.model._meta.db
-        self._make_query()
-        return self._execute().__await__()
-
-    async def __aiter__(self):
-        for val in await self:
-            yield val
-
     async def _execute(self):
         raise NotImplementedError()  # pragma: nocoverage
 
 
-class QuerySet(AwaitableQuery):
+class QuerySet(AwaitableQuery[MODEL]):
     __slots__ = (
         "fields",
         "_prefetch_map",
@@ -110,7 +130,7 @@ class QuerySet(AwaitableQuery):
         "_custom_filters",
     )
 
-    def __init__(self, model) -> None:
+    def __init__(self, model: Type[MODEL]) -> None:
         super().__init__(model)
         self.fields = model._meta.db_fields
 
@@ -129,7 +149,7 @@ class QuerySet(AwaitableQuery):
         self._having: Dict[str, Any] = {}
         self._custom_filters: Dict[str, dict] = {}
 
-    def _clone(self) -> "QuerySet":
+    def _clone(self) -> "QuerySet[MODEL]":
         queryset = QuerySet.__new__(QuerySet)
         queryset.fields = self.fields
         queryset.model = self.model
@@ -171,7 +191,7 @@ class QuerySet(AwaitableQuery):
 
         return queryset
 
-    def filter(self, *args, **kwargs) -> "QuerySet":
+    def filter(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
         Filters QuerySet by given kwargs. You can filter by related objects like this:
 
@@ -183,13 +203,13 @@ class QuerySet(AwaitableQuery):
         """
         return self._filter_or_exclude(negate=False, *args, **kwargs)
 
-    def exclude(self, *args, **kwargs) -> "QuerySet":
+    def exclude(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
         Same as .filter(), but with appends all args with NOT
         """
         return self._filter_or_exclude(negate=True, *args, **kwargs)
 
-    def order_by(self, *orderings: str) -> "QuerySet":
+    def order_by(self, *orderings: str) -> "QuerySet[MODEL]":
         """
         Accept args to filter by in format like this:
 
@@ -218,7 +238,7 @@ class QuerySet(AwaitableQuery):
         queryset._orderings = new_ordering
         return queryset
 
-    def limit(self, limit: int) -> "QuerySet":
+    def limit(self, limit: int) -> "QuerySet[MODEL]":
         """
         Limits QuerySet to given length.
         """
@@ -226,7 +246,7 @@ class QuerySet(AwaitableQuery):
         queryset._limit = limit
         return queryset
 
-    def offset(self, offset: int) -> "QuerySet":
+    def offset(self, offset: int) -> "QuerySet[MODEL]":
         """
         Query offset for QuerySet.
         """
@@ -236,7 +256,7 @@ class QuerySet(AwaitableQuery):
             queryset._limit = 1000000
         return queryset
 
-    def distinct(self) -> "QuerySet":
+    def distinct(self) -> "QuerySet[MODEL]":
         """
         Make QuerySet distinct.
 
@@ -247,7 +267,7 @@ class QuerySet(AwaitableQuery):
         queryset._distinct = True
         return queryset
 
-    def annotate(self, **kwargs) -> "QuerySet":
+    def annotate(self, **kwargs) -> "QuerySet[MODEL]":
         """
         Annotate result with aggregation result.
         """
@@ -365,32 +385,32 @@ class QuerySet(AwaitableQuery):
             custom_filters=self._custom_filters,
         )
 
-    def all(self) -> "QuerySet":
+    def all(self) -> "QuerySet[MODEL]":
         """
         Return the whole QuerySet.
         Essentially a no-op except as the only operation.
         """
         return self._clone()
 
-    def first(self) -> "QuerySet":
+    def first(self) -> QuerySetSingle[Optional[MODEL]]:
         """
         Limit queryset to one object and return one object instead of list.
         """
         queryset = self._clone()
         queryset._limit = 1
         queryset._single = True
-        return queryset
+        return queryset  # type: ignore
 
-    def get(self, *args, **kwargs) -> "QuerySet":
+    def get(self, *args, **kwargs) -> QuerySetSingle[MODEL]:
         """
         Fetch exactly one object matching the parameters.
         """
         queryset = self.filter(*args, **kwargs)
         queryset._limit = 2
         queryset._get = True
-        return queryset
+        return queryset  # type: ignore
 
-    def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySet":
+    def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySet[MODEL]":
         """
         Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
         """
@@ -440,7 +460,7 @@ class QuerySet(AwaitableQuery):
             self.query
         )
 
-    def using_db(self, _db: BaseDBAsyncClient) -> "QuerySet":
+    def using_db(self, _db: BaseDBAsyncClient) -> "QuerySet[MODEL]":
         """
         Executes query in provided db client.
         Useful for transactions workaround.
@@ -477,7 +497,17 @@ class QuerySet(AwaitableQuery):
             self.query._distinct = True
         self.resolve_ordering(self.model, self._orderings, self._annotations)
 
-    async def _execute(self):
+    def __await__(self) -> Generator[Any, None, List[MODEL]]:
+        if self._db is None:
+            self._db = self.model._meta.db  # type: ignore
+        self._make_query()
+        return self._execute().__await__()
+
+    async def __aiter__(self) -> AsyncIterator[MODEL]:
+        for val in await self:
+            yield val
+
+    async def _execute(self) -> List[MODEL]:
         instance_list = await self._db.executor_class(
             model=self.model,
             db=self._db,
@@ -492,7 +522,7 @@ class QuerySet(AwaitableQuery):
             raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
         if self._single:
             if not instance_list:
-                return None
+                return None  # type: ignore
             return instance_list[0]
         return instance_list
 
@@ -527,9 +557,9 @@ class UpdateQuery(AwaitableQuery):
             if field_object.pk:
                 raise IntegrityError(f"Field {key} is PK and can not be updated")
             if isinstance(field_object, fields.ForeignKeyField):
-                fk_field = field_object.source_field
+                fk_field: str = field_object.source_field  # type: ignore
                 db_field = self.model._meta.fields_map[fk_field].source_field
-                value = executor.column_map[fk_field](value.pk, None)  # type: ignore
+                value = executor.column_map[fk_field](value.pk, None)
             else:
                 try:
                     db_field = self.model._meta.fields_db_projection[key]
@@ -539,7 +569,13 @@ class UpdateQuery(AwaitableQuery):
 
             self.query = self.query.set(db_field, value)
 
-    async def _execute(self):
+    def __await__(self) -> Generator[Any, None, None]:
+        if self._db is None:
+            self._db = self.model._meta.db  # type: ignore
+        self._make_query()
+        return self._execute().__await__()
+
+    async def _execute(self) -> None:
         await self._db.execute_query(str(self.query))
 
 
@@ -563,7 +599,13 @@ class DeleteQuery(AwaitableQuery):
         )
         self.query._delete_from = True
 
-    async def _execute(self):
+    def __await__(self) -> Generator[Any, None, None]:
+        if self._db is None:
+            self._db = self.model._meta.db  # type: ignore
+        self._make_query()
+        return self._execute().__await__()
+
+    async def _execute(self) -> None:
         await self._db.execute_query(str(self.query))
 
 
@@ -587,7 +629,13 @@ class CountQuery(AwaitableQuery):
         )
         self.query._select_other(Count("*"))
 
-    async def _execute(self):
+    def __await__(self) -> Generator[Any, None, int]:
+        if self._db is None:
+            self._db = self.model._meta.db  # type: ignore
+        self._make_query()
+        return self._execute().__await__()
+
+    async def _execute(self) -> int:
         result = await self._db.execute_query(str(self.query))
         return list(dict(result[0]).values())[0]
 
@@ -648,7 +696,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')
 
-    def resolve_to_python_value(self, model, field):
+    def resolve_to_python_value(self, model: "Model", field: str) -> Callable:
         if field in model._meta.fetch_fields:
             # return as is to get whole model objects
             return lambda x: x
@@ -658,7 +706,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         field_split = field.split("__")
         if field_split[0] in model._meta.fetch_fields:
-            new_model = model._meta.fields_map[field_split[0]].field_type
+            new_model: "Model" = model._meta.fields_map[field_split[0]].field_type  # type: ignore
             return self.resolve_to_python_value(new_model, "__".join(field_split[1:]))
 
         raise FieldError(f'Unknown field "{field}" for model "{model}"')
@@ -728,7 +776,17 @@ class ValuesListQuery(FieldSelectQuery):
             self.query._distinct = True
         self.resolve_ordering(self.model, self.orderings, self.annotations)
 
-    async def _execute(self):
+    def __await__(self) -> Generator[Any, None, List[Any]]:
+        if self._db is None:
+            self._db = self.model._meta.db  # type: ignore
+        self._make_query()
+        return self._execute().__await__()
+
+    async def __aiter__(self) -> AsyncIterator[Any]:
+        for val in await self:
+            yield val
+
+    async def _execute(self) -> List[Any]:
         result = await self._db.execute_query(str(self.query))
         columns = [
             (key, self.resolve_to_python_value(self.model, name))
@@ -795,7 +853,17 @@ class ValuesQuery(FieldSelectQuery):
             self.query._distinct = True
         self.resolve_ordering(self.model, self.orderings, self.annotations)
 
-    async def _execute(self):
+    def __await__(self) -> Generator[Any, None, List[dict]]:
+        if self._db is None:
+            self._db = self.model._meta.db  # type: ignore
+        self._make_query()
+        return self._execute().__await__()
+
+    async def __aiter__(self) -> AsyncIterator[dict]:
+        for val in await self:
+            yield val
+
+    async def _execute(self) -> List[dict]:
         result = await self._db.execute_query(str(self.query))
         columns = [
             (alias, self.resolve_to_python_value(self.model, field_name))

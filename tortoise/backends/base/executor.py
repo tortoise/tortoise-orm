@@ -121,7 +121,7 @@ class BaseExecutor:
     def Parameter(self, pos: int) -> Parameter:
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def execute_insert(self, instance):
+    async def execute_insert(self, instance: "Model") -> None:
         values = [
             self.column_map[column](getattr(instance, column), instance)
             for column in self.regular_columns
@@ -129,7 +129,7 @@ class BaseExecutor:
         insert_result = await self.db.execute_insert(self.insert_query, values)
         await self._process_insert_result(instance, insert_result)
 
-    async def execute_bulk_insert(self, instances):
+    async def execute_bulk_insert(self, instances: "List[Model]") -> None:
         values_lists = [
             [
                 self.column_map[column](getattr(instance, column), instance)
