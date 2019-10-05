@@ -23,10 +23,13 @@ class Capabilities:
 
     ``dialect``:
         Dialect name of the DB Client driver.
-    ``safe_indexes``:
-        Indicates that this DB supports optional index creation using ``IF NOT EXISTS``.
     ``requires_limit``:
         Indicates that this DB requires a ``LIMIT`` statement for an ``OFFSET`` statement to work.
+    ``inline_comment``:
+        Indicates that comments should be rendered in line with the DDL statement,
+        and not as a separate statement.
+    ``supports_transactions``:
+        Indicates that this DB supports transactions.
     """
 
     def __init__(
@@ -36,7 +39,6 @@ class Capabilities:
         # Is the connection a Daemon?
         daemon: bool = True,
         # Deficiencies to work around:
-        safe_indexes: bool = True,
         requires_limit: bool = False,
         inline_comment: bool = False,
         supports_transactions: bool = True,
@@ -46,7 +48,6 @@ class Capabilities:
         self.dialect = dialect
         self.daemon = daemon
         self.requires_limit = requires_limit
-        self.safe_indexes = safe_indexes
         self.inline_comment = inline_comment
         self.supports_transactions = supports_transactions
 
@@ -101,9 +102,6 @@ class BaseDBAsyncClient:
 
     async def execute_many(self, query: str, values: List[list]) -> None:
         raise NotImplementedError()  # pragma: nocoverage
-
-    # async def execute_explain(self, query: str) -> Sequence[dict]:
-    #     raise NotImplementedError()  # pragma: nocoverage
 
 
 class ConnectionWrapper:

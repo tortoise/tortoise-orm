@@ -86,28 +86,10 @@ class TestGenerateSchema(test.SimpleTestCase):
         ):
             await self.init_for("tests.models_cyclic")
 
-    @staticmethod
-    def continue_if_safe_indexes(supported: bool):
-        db = Tortoise.get_connection("default")
-        if db.capabilities.safe_indexes != supported:
-            raise test.SkipTest(f"safe_indexes != {supported}")
-
     async def test_create_index(self):
         await self.init_for("tests.testmodels")
         sql = self.get_sql("CREATE INDEX")
         self.assertIsNotNone(re.search(r"idx_tournament_created_\w+", sql))
-
-    async def test_index_safe(self):
-        await self.init_for("tests.testmodels", safe=True)
-        self.continue_if_safe_indexes(supported=True)
-        sql = self.get_sql("CREATE INDEX")
-        self.assertIn("IF NOT EXISTS", sql)
-
-    async def test_safe_index_not_created_if_not_supported(self):
-        await self.init_for("tests.testmodels", safe=True)
-        self.continue_if_safe_indexes(supported=False)
-        sql = self.get_sql("")
-        self.assertNotIn("CREATE INDEX", sql)
 
     async def test_fk_bad_model_name(self):
         with self.assertRaisesRegex(

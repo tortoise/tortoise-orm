@@ -9,12 +9,15 @@ Changelog
 
    Tortoise ORM now requires a minimum of CPython 3.6 or PyPy3.6-7.1
 
-New Features:
+Enhancements:
 ^^^^^^^^^^^^^
+- Models, Fields & QuerySets have significant type annotation improvements,
+  leading to better IDE integration and more comprehensive static analysis.
 - Fetching records from the DB is now up to 25% faster.
 
 Bugfixes:
 ^^^^^^^^^
+- The generated index name now has significantly lower chance of collision.
 
 Breaking Changes:
 ^^^^^^^^^^^^^^^^^

@@ -10,7 +10,7 @@ apipkg==1.5               # via execnet
 asn1crypto==1.0.0         # via cryptography
 asynctest==0.13.0
 atomicwrites==1.3.0       # via pytest
-attrs==19.2.0             # via pytest
+attrs==19.1.0             # via pytest
 certifi==2019.9.11        # via requests
 cffi==1.12.3              # via cryptography
 chardet==3.0.4            # via requests
