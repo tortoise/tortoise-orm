@@ -16,6 +16,7 @@ from tests.testmodels import (
 )
 from tortoise import Tortoise, fields
 from tortoise.contrib import test
+from tortoise.fields.relational import BackwardFKRelation
 
 
 class TestBasic(test.TestCase):
@@ -235,7 +236,7 @@ class TestBasic(test.TestCase):
                 "backward_fk_fields": [
                     {
                         "name": "fkrev",
-                        "field_type": fields.BackwardFKRelation,
+                        "field_type": BackwardFKRelation,
                         "python_type": StraightFields,
                         "generated": False,
                         "nullable": True,
@@ -467,7 +468,7 @@ class TestBasic(test.TestCase):
                 "backward_fk_fields": [
                     {
                         "name": "fkrev",
-                        "field_type": fields.BackwardFKRelation,
+                        "field_type": BackwardFKRelation,
                         "python_type": SourceFields,
                         "generated": False,
                         "nullable": True,
@@ -599,7 +600,7 @@ class TestBasic(test.TestCase):
                 "backward_fk_fields": [
                     {
                         "name": "children",
-                        "field_type": fields.BackwardFKRelation,
+                        "field_type": BackwardFKRelation,
                         "python_type": UUIDFkRelatedModel,
                         "generated": False,
                         "nullable": False,
@@ -610,7 +611,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "children_null",
-                        "field_type": fields.BackwardFKRelation,
+                        "field_type": BackwardFKRelation,
                         "python_type": UUIDFkRelatedNullModel,
                         "generated": False,
                         "nullable": True,

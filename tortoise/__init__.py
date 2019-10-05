@@ -7,11 +7,11 @@ from copy import deepcopy
 from inspect import isclass
 from typing import Any, Coroutine, Dict, List, Optional, Tuple, Type, Union, cast
 
-from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
 from tortoise.exceptions import ConfigurationError  # noqa
-from tortoise.fields import ManyToManyRelationManager  # noqa
+from tortoise.fields.relational import ManyToManyRelationManager  # noqa
+from tortoise.fields.relational import BackwardFKRelation, ForeignKeyField, ManyToManyField
 from tortoise.filters import get_m2m_filters
 from tortoise.models import Model
 from tortoise.queryset import QuerySet  # noqa
@@ -158,14 +158,14 @@ class Tortoise:
             }
 
             # Foreign Keys have
-            if isinstance(field, fields.ForeignKeyField):
+            if isinstance(field, ForeignKeyField):
                 del desc["db_column"]
                 desc["raw_field"] = field.source_field
             else:
                 del desc["raw_field"]
 
             # These fields are entierly "virtual", so no direct DB representation
-            if isinstance(field, (fields.ManyToManyField, fields.BackwardFKRelation)):
+            if isinstance(field, (ManyToManyField, BackwardFKRelation)):
                 del desc["db_column"]
 
             return desc
@@ -282,7 +282,7 @@ class Tortoise:
                     model._meta.table = model.__name__.lower()
 
                 for field in model._meta.fk_fields:
-                    fk_object = cast(fields.ForeignKeyField, model._meta.fields_map[field])
+                    fk_object = cast(ForeignKeyField, model._meta.fields_map[field])
                     reference = fk_object.model_name
                     related_app_name, related_model_name = split_reference(reference)
                     related_model = get_related_model(related_app_name, related_model_name)
@@ -313,13 +313,13 @@ class Tortoise:
                             f'backward relation "{backward_relation_name}" duplicates in'
                             f" model {related_model_name}"
                         )
-                    fk_relation = fields.BackwardFKRelation(
+                    fk_relation = BackwardFKRelation(
                         model, f"{field}_id", fk_object.null, fk_object.description
                     )
                     related_model._meta.add_field(backward_relation_name, fk_relation)
 
                 for field in list(model._meta.m2m_fields):
-                    m2m_object = cast(fields.ManyToManyField, model._meta.fields_map[field])
+                    m2m_object = cast(ManyToManyField, model._meta.fields_map[field])
                     if m2m_object._generated:
                         continue
 
@@ -356,7 +356,7 @@ class Tortoise:
 
                         m2m_object.through = f"{model._meta.table}_{related_model_table_name}"
 
-                    m2m_relation = fields.ManyToManyField(
+                    m2m_relation = ManyToManyField(
                         f"{app_name}.{model_name}",
                         m2m_object.through,
                         forward_key=m2m_object.backward_key,

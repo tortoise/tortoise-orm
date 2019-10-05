@@ -58,60 +58,15 @@ Here is the list of fields available at the moment with custom options of these 
 Data Fields
 -----------
 
-.. autoclass:: tortoise.fields.IntField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.BigIntField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.SmallIntField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.CharField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.TextField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.BooleanField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.DecimalField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.DatetimeField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.DateField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.TimeDeltaField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.FloatField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.JSONField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.UUIDField
-    :exclude-members: to_db_value, to_python_value
-
-ForeignKeyField
----------------
-
-.. autoclass:: tortoise.fields.ForeignKeyField
-    :exclude-members: to_db_value, to_python_value
-
-On instantiation, a ``ForeignKeyField`` appears as so:
-
-.. autoclass:: tortoise.fields.RelationQueryContainer
+.. automodule:: tortoise.fields.data
     :members:
+    :exclude-members: to_db_value, to_python_value
 
-ManyToManyField
----------------
+Relational Fields
+-----------------
 
-.. autoclass:: tortoise.fields.ManyToManyField
+.. automodule:: tortoise.fields.relational
+    :members:
     :exclude-members: to_db_value, to_python_value
 
 

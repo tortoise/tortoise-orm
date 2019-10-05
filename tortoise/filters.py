@@ -7,6 +7,7 @@ from pypika.enums import SqlTypes
 
 from tortoise import fields
 from tortoise.fields import Field
+from tortoise.fields.relational import BackwardFKRelation
 
 
 def list_encoder(values, instance, field: Field):
@@ -121,7 +122,7 @@ def get_m2m_filters(field_name: str, field: fields.ManyToManyField) -> Dict[str,
     }
 
 
-def get_backward_fk_filters(field_name: str, field: fields.BackwardFKRelation) -> Dict[str, dict]:
+def get_backward_fk_filters(field_name: str, field: BackwardFKRelation) -> Dict[str, dict]:
     target_table_pk = field.field_type._meta.pk
     return {
         field_name: {
@@ -160,7 +161,7 @@ def get_filters_for_field(
 ) -> Dict[str, dict]:
     if isinstance(field, fields.ManyToManyField):
         return get_m2m_filters(field_name, field)
-    if isinstance(field, fields.BackwardFKRelation):
+    if isinstance(field, BackwardFKRelation):
         return get_backward_fk_filters(field_name, field)
     actual_field_name = field_name
     if field_name == "pk" and field:

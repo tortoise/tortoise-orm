@@ -4,11 +4,13 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from pypika import Query
 
-from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient  # noqa
 from tortoise.exceptions import ConfigurationError, OperationalError
-from tortoise.fields import (
-    Field,
+from tortoise.fields.base import Field
+from tortoise.fields.data import BigIntField, IntField, SmallIntField
+from tortoise.fields.relational import (
+    BackwardFKRelation,
+    ForeignKeyField,
     ManyToManyField,
     ManyToManyRelationManager,
     RelationQueryContainer,
@@ -104,7 +106,7 @@ class MetaInfo:
         self.fields_db_projection_reverse: Dict[str, str] = {}
         self._filters: Dict[str, Dict[str, dict]] = {}
         self.filters: Dict[str, dict] = {}
-        self.fields_map: Dict[str, fields.Field] = {}
+        self.fields_map: Dict[str, Field] = {}
         self._inited: bool = False
         self.default_connection: Optional[str] = None
         self.basequery: Query = Query()
@@ -113,11 +115,11 @@ class MetaInfo:
         self.generated_db_fields: Tuple[str] = None  # type: ignore
         self._model: "Model" = None  # type: ignore
         self.table_description: str = getattr(meta, "table_description", "")
-        self.pk: fields.Field = None  # type: ignore
+        self.pk: Field = None  # type: ignore
         self.db_pk_field: str = ""
-        self.db_native_fields: List[Tuple[str, str, fields.Field]] = []
-        self.db_default_fields: List[Tuple[str, str, fields.Field]] = []
-        self.db_complex_fields: List[Tuple[str, str, fields.Field]] = []
+        self.db_native_fields: List[Tuple[str, str, Field]] = []
+        self.db_default_fields: List[Tuple[str, str, Field]] = []
+        self.db_complex_fields: List[Tuple[str, str, Field]] = []
 
     def add_field(self, name: str, value: Field):
         if name in self.fields_map:
@@ -128,9 +130,9 @@ class MetaInfo:
         if value.has_db_field:
             self.fields_db_projection[name] = value.source_field or name
 
-        if isinstance(value, fields.ManyToManyField):
+        if isinstance(value, ManyToManyField):
             self.m2m_fields.add(name)
-        elif isinstance(value, fields.BackwardFKRelation):
+        elif isinstance(value, BackwardFKRelation):
             self.backward_fk_fields.add(name)
 
         field_filters = get_filters_for_field(
@@ -195,7 +197,7 @@ class MetaInfo:
         # Create lazy reverse FK fields on model.
         for key in self.backward_fk_fields:
             _key = f"_{key}"
-            field_object: fields.BackwardFKRelation = self.fields_map[key]  # type: ignore
+            field_object: BackwardFKRelation = self.fields_map[key]  # type: ignore
             setattr(
                 self._model,
                 key,
@@ -223,7 +225,7 @@ class MetaInfo:
             model_field = self.fields_db_projection_reverse[key]
             field = self.fields_map[model_field]
 
-            default_converter = field.__class__.to_python_value is fields.Field.to_python_value
+            default_converter = field.__class__.to_python_value is Field.to_python_value
             if not default_converter:
                 self.db_complex_fields.append((key, model_field, field))
             elif field.field_type in self.db.executor_class.DB_NATIVE:
@@ -248,7 +250,7 @@ class ModelMeta(type):
 
     def __new__(mcs, name: str, bases, attrs: dict, *args, **kwargs):
         fields_db_projection: Dict[str, str] = {}
-        fields_map: Dict[str, fields.Field] = {}
+        fields_map: Dict[str, Field] = {}
         filters: Dict[str, Dict[str, dict]] = {}
         fk_fields: Set[str] = set()
         m2m_fields: Set[str] = set()
@@ -275,7 +277,7 @@ class ModelMeta(type):
             <https://www.python.org/download/releases/2.3/mro/>`_.
             """
             for key, value in base.__dict__.items():
-                if isinstance(value, fields.Field) and key not in attrs:
+                if isinstance(value, Field) and key not in attrs:
                     attrs[key] = value
                     for parent in base.__mro__[1:]:
                         __search_for_field_attributes(parent, attrs)
@@ -287,7 +289,7 @@ class ModelMeta(type):
         if name != "Model":
             custom_pk_present = False
             for key, value in attrs.items():
-                if isinstance(value, fields.Field):
+                if isinstance(value, Field):
                     if value.pk:
                         if custom_pk_present:
                             raise ConfigurationError(
@@ -295,7 +297,7 @@ class ModelMeta(type):
                                 " only single pk are supported"
                             )
                         if value.generated and not isinstance(
-                            value, (fields.SmallIntField, fields.IntField, fields.BigIntField)
+                            value, (SmallIntField, IntField, BigIntField)
                         ):
                             raise ConfigurationError(
                                 "Generated primary key allowed only for IntField and BigIntField"
@@ -305,25 +307,25 @@ class ModelMeta(type):
 
             if not custom_pk_present:
                 if "id" not in attrs:
-                    attrs = {"id": fields.IntField(pk=True), **attrs}
+                    attrs = {"id": IntField(pk=True), **attrs}
 
-                if not isinstance(attrs["id"], fields.Field) or not attrs["id"].pk:
+                if not isinstance(attrs["id"], Field) or not attrs["id"].pk:
                     raise ConfigurationError(
                         f"Can't create model {name} without explicit primary key if field 'id'"
                         " already present"
                     )
 
             for key, value in attrs.items():
-                if isinstance(value, fields.Field):
+                if isinstance(value, Field):
                     if getattr(meta_class, "abstract", None):
                         value = deepcopy(value)
 
                     fields_map[key] = value
                     value.model_field_name = key
 
-                    if isinstance(value, fields.ForeignKeyField):
+                    if isinstance(value, ForeignKeyField):
                         fk_fields.add(key)
-                    elif isinstance(value, fields.ManyToManyField):
+                    elif isinstance(value, ManyToManyField):
                         m2m_fields.add(key)
                     else:
                         fields_db_projection[key] = value.source_field or key
