@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Type
+from typing import TYPE_CHECKING, Optional
 
 from pypika import Table
 
@@ -6,6 +6,7 @@ from tortoise.exceptions import ConfigurationError, NoValuesFetched, Operational
 from tortoise.fields.base import CASCADE, RESTRICT, SET_NULL, Field
 
 if TYPE_CHECKING:  # pragma: nocoverage
+    from typing import Type
     from tortoise.models import Model
     from tortoise.queryset import QuerySet
 
@@ -236,6 +237,7 @@ class ManyToManyRelationManager(RelationQueryContainer):
         await db.execute_query(str(query))
 
 
+# TODO: Set FK-field-type to an awaitable FK property type
 class ForeignKeyField(Field):
     """
     ForeignKey relation field.
@@ -285,7 +287,7 @@ class ForeignKeyField(Field):
         self.on_delete = on_delete
 
 
-class BackwardFKRelation(Field):
+class BackwardFKRelation(Field, RelationQueryContainer):
     has_db_field = False
 
     def __init__(

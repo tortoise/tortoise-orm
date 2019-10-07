@@ -74,7 +74,7 @@ class SmallIntField(Field, int):
         super().__init__(pk=pk, **kwargs)
 
 
-class CharField(Field, str):  # type: ignore[misc]  # noqa
+class CharField(Field, str):  # type: ignore
     """
     Character field.
 
@@ -91,7 +91,7 @@ class CharField(Field, str):  # type: ignore[misc]  # noqa
         super().__init__(**kwargs)
 
 
-class TextField(Field, str):  # type: ignore[misc]  # noqa
+class TextField(Field, str):  # type: ignore
     """
     Large Text field.
     """
@@ -202,7 +202,7 @@ class FloatField(Field, float):
     """
 
 
-class JSONField(Field, dict, list):  # type: ignore[misc]  # noqa
+class JSONField(Field, dict, list):  # type: ignore
     """
     JSON field.
 

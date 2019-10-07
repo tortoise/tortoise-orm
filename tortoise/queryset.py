@@ -15,18 +15,19 @@ from typing import (
     Union,
 )
 
-from pypika import JoinType, Order, Query, Table  # noqa
+from pypika import JoinType, Order, Table
 from pypika.functions import Count
+from pypika.queries import QueryBuilder
 from typing_extensions import Protocol
 
 from tortoise import fields
 from tortoise.aggregation import Aggregate
-from tortoise.backends.base.client import BaseDBAsyncClient
+from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
 from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
 
 # Empty placeholder - Should never be edited.
-QUERY = Query()
+QUERY: QueryBuilder = QueryBuilder()
 
 if TYPE_CHECKING:
     from tortoise.models import Model
@@ -47,12 +48,12 @@ class QuerySetSingle(Protocol[T_co]):
 class AwaitableQuery(QuerySetIterable[MODEL]):
     __slots__ = ("_joined_tables", "query", "model", "_db", "capabilities")
 
-    def __init__(self, model) -> None:
+    def __init__(self, model: Type[MODEL]) -> None:
         self._joined_tables: List[Table] = []
-        self.model = model
-        self.query: Query = QUERY
+        self.query: QueryBuilder = QUERY
+        self.model: "Type[Model]" = model
         self._db: BaseDBAsyncClient = None  # type: ignore
-        self.capabilities = model._meta.db.capabilities
+        self.capabilities: Capabilities = model._meta.db.capabilities
 
     def resolve_filters(self, model, q_objects, annotations, custom_filters) -> None:
         modifier = QueryModifier()
@@ -111,6 +112,7 @@ class AwaitableQuery(QuerySetIterable[MODEL]):
 
 
 class QuerySet(AwaitableQuery[MODEL]):
+    # pylint: disable=W0201
     __slots__ = (
         "fields",
         "_prefetch_map",
@@ -696,7 +698,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')
 
-    def resolve_to_python_value(self, model: "Model", field: str) -> Callable:
+    def resolve_to_python_value(self, model: "Type[Model]", field: str) -> Callable:
         if field in model._meta.fetch_fields:
             # return as is to get whole model objects
             return lambda x: x
@@ -706,7 +708,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         field_split = field.split("__")
         if field_split[0] in model._meta.fetch_fields:
-            new_model: "Model" = model._meta.fields_map[field_split[0]].field_type  # type: ignore
+            new_model: "Type[Model]" = model._meta.fields_map[field_split[0]].field_type
             return self.resolve_to_python_value(new_model, "__".join(field_split[1:]))
 
         raise FieldError(f'Unknown field "{field}" for model "{model}"')

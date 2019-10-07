@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from pypika import Query
 
-from tortoise.backends.base.client import BaseDBAsyncClient  # noqa
+from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields.base import Field
 from tortoise.fields.data import BigIntField, IntField, SmallIntField

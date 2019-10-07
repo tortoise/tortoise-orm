@@ -1,35 +1,33 @@
 """
 Tortoise PyLint plugin
 """
-from typing import Iterator
+from typing import Dict, Iterator, List
 
 from astroid import MANAGER, inference_tip, nodes, scoped_nodes
 from astroid.node_classes import Assign
 from astroid.nodes import ClassDef
+from pylint.lint import PyLinter
 
-MODELS: dict = {}
-FUTURE_RELATIONS: dict = {}
+MODELS: Dict[str, ClassDef] = {}
+FUTURE_RELATIONS: Dict[str, list] = {}
 
 
-def register(linter) -> None:
+def register(linter: PyLinter) -> None:
     """
     Reset state every time this is called, since we now get new AST to transform.
     """
-    # pylint: disable=W0603
-    global MODELS
-    global FUTURE_RELATIONS
-    MODELS = {}
-    FUTURE_RELATIONS = {}
+    MODELS.clear()
+    FUTURE_RELATIONS.clear()
 
 
-def is_model(cls) -> bool:
+def is_model(cls: ClassDef) -> bool:
     """
     Guard to apply this transform to Models only
     """
     return cls.metaclass() and cls.metaclass().qname() == "tortoise.models.ModelMeta"
 
 
-def transform_model(cls) -> None:
+def transform_model(cls: ClassDef) -> None:
     """
     Anything that uses the ModelMeta needs _meta and id.
     Also keep track of relationships and make them in the related model class.
@@ -71,14 +69,16 @@ def transform_model(cls) -> None:
                         if attrname == "ManyToManyField":
                             relval = [
                                 attr.value.func,
-                                MANAGER.ast_from_module_name("tortoise.fields").lookup(
+                                MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
                                     "ManyToManyRelationManager"
                                 )[1][0],
                             ]
                         else:
                             relval = [
-                                attr.value.func,
-                                MANAGER.ast_from_module_name("tortoise.fields").lookup(
+                                MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
+                                    "BackwardFKRelation"
+                                )[1][0],
+                                MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
                                     "RelationQueryContainer"
                                 )[1][0],
                             ]
@@ -95,41 +95,30 @@ def transform_model(cls) -> None:
         cls.locals["id"] = [nodes.ClassDef("id", None)]
 
 
-def is_model_field(cls) -> bool:
+def is_model_field(cls: ClassDef) -> bool:
     """
     Guard to apply this transform to Model Fields only
     """
-    return cls.qname().startswith("tortoise.fields")
+    type_name = "tortoise.fields.base.Field"
+    return cls.is_subtype_of(type_name) and cls.qname() != type_name
 
 
-def apply_type_shim(cls, _context=None) -> Iterator:
+def apply_type_shim(cls: ClassDef, _context=None) -> Iterator[ClassDef]:
     """
     Morphs model fields to representative type
     """
-    if cls.name in ["IntField", "SmallIntField"]:
-        base_nodes = scoped_nodes.builtin_lookup("int")
-    elif cls.name in ["CharField", "TextField"]:
-        base_nodes = scoped_nodes.builtin_lookup("str")
-    elif cls.name == "BooleanField":
-        base_nodes = scoped_nodes.builtin_lookup("bool")
-    elif cls.name == "FloatField":
-        base_nodes = scoped_nodes.builtin_lookup("float")
-    elif cls.name == "DecimalField":
-        base_nodes = MANAGER.ast_from_module_name("decimal").lookup("Decimal")
-    elif cls.name == "DatetimeField":
-        base_nodes = MANAGER.ast_from_module_name("datetime").lookup("datetime")
-    elif cls.name == "DateField":
-        base_nodes = MANAGER.ast_from_module_name("datetime").lookup("date")
-    elif cls.name == "ForeignKeyField":
-        base_nodes = MANAGER.ast_from_module_name("tortoise.fields").lookup("BackwardFKRelation")
-    elif cls.name == "ManyToManyField":
-        base_nodes = MANAGER.ast_from_module_name("tortoise.fields").lookup(
-            "ManyToManyRelationManager"
-        )
-    else:
-        return iter([cls])
+    base_nodes: List[ClassDef] = []
 
-    return iter([cls] + base_nodes[1])
+    # Use the type inference standard
+    ancestors = list(cls.ancestors())[2:]
+    if ancestors:
+        base_nodes = ancestors
+
+    # Special types that can't use inference
+    if cls.name == "BooleanField":
+        base_nodes = scoped_nodes.builtin_lookup("bool")[1]
+
+    return iter([cls] + base_nodes)
 
 
 MANAGER.register_transform(nodes.ClassDef, inference_tip(apply_type_shim), is_model_field)

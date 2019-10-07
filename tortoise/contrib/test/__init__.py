@@ -3,7 +3,7 @@ import os as _os
 from asyncio.selector_events import BaseSelectorEventLoop
 from functools import wraps
 from typing import Any, List, Optional
-from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless  # noqa
+from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 
 from asynctest import TestCase as _TestCase
 from asynctest import _fail_on

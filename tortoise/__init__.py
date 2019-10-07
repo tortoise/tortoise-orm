@@ -9,12 +9,16 @@ from typing import Any, Coroutine, Dict, List, Optional, Tuple, Type, Union, cas
 
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
-from tortoise.exceptions import ConfigurationError  # noqa
-from tortoise.fields.relational import ManyToManyRelationManager  # noqa
-from tortoise.fields.relational import BackwardFKRelation, ForeignKeyField, ManyToManyField
+from tortoise.exceptions import ConfigurationError
+from tortoise.fields.relational import (
+    BackwardFKRelation,
+    ForeignKeyField,
+    ManyToManyField,
+    ManyToManyRelationManager,
+)
 from tortoise.filters import get_m2m_filters
 from tortoise.models import Model
-from tortoise.queryset import QuerySet  # noqa
+from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
 from tortoise.utils import generate_schema_for_client
 

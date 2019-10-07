@@ -169,7 +169,7 @@ CREATE TABLE "teamevents" (
     "event_id" BIGINT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
 ) /* How participants relate */;
-""".strip(),  # noqa
+""".strip(),
         )
 
     async def test_schema_safe(self):
@@ -219,7 +219,7 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
     "event_id" BIGINT NOT NULL REFERENCES "event" (id) ON DELETE CASCADE,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" (name) ON DELETE CASCADE
 ) /* How participants relate */;
-""".strip(),  # noqa
+""".strip(),
         )
 
 
@@ -342,7 +342,7 @@ CREATE TABLE `teamevents` (
     FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
-""".strip(),  # noqa
+""".strip(),
         )
 
     async def test_schema_safe(self):
@@ -402,7 +402,7 @@ CREATE TABLE IF NOT EXISTS `teamevents` (
     FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
-""".strip(),  # noqa
+""".strip(),
         )
 
 
