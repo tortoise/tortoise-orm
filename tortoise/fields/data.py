@@ -40,6 +40,8 @@ class IntField(Field, int):
         True if field is Primary Key.
     """
 
+    SQL_TYPE = "INT"
+
     def __init__(self, pk: bool = False, **kwargs) -> None:
         if pk:
             kwargs["generated"] = bool(kwargs.get("generated", True))
@@ -54,6 +56,8 @@ class BigIntField(Field, int):
         True if field is Primary Key.
     """
 
+    SQL_TYPE = "BIGINT"
+
     def __init__(self, pk: bool = False, **kwargs) -> None:
         if pk:
             kwargs["generated"] = bool(kwargs.get("generated", True))
@@ -67,6 +71,8 @@ class SmallIntField(Field, int):
     ``pk`` (bool):
         True if field is Primary Key.
     """
+
+    SQL_TYPE = "SMALLINT"
 
     def __init__(self, pk: bool = False, **kwargs) -> None:
         if pk:
@@ -90,6 +96,10 @@ class CharField(Field, str):  # type: ignore
         self.max_length = int(max_length)
         super().__init__(**kwargs)
 
+    @property
+    def SQL_TYPE(self) -> str:
+        return f"VARCHAR({self.max_length})"
+
 
 class TextField(Field, str):  # type: ignore
     """
@@ -97,6 +107,7 @@ class TextField(Field, str):  # type: ignore
     """
 
     indexable = False
+    SQL_TYPE = "TEXT"
 
 
 class BooleanField(Field):
@@ -106,6 +117,10 @@ class BooleanField(Field):
 
     # Bool is not subclassable, so we specify type here
     field_type = bool
+    SQL_TYPE = "BOOL"
+
+    class _db_sqlite:
+        SQL_TYPE = "INT"
 
 
 class DecimalField(Field, Decimal):
@@ -129,6 +144,13 @@ class DecimalField(Field, Decimal):
         self.max_digits = max_digits
         self.decimal_places = decimal_places
 
+    @property
+    def SQL_TYPE(self) -> str:
+        return f"DECIMAL({self.max_digits},{self.decimal_places})"
+
+    class _db_sqlite:
+        SQL_TYPE = "VARCHAR(40)"
+
 
 class DatetimeField(Field, datetime.datetime):
     """
@@ -142,6 +164,11 @@ class DatetimeField(Field, datetime.datetime):
     ``auto_now_add`` (bool):
         Set to ``datetime.utcnow()`` on first save only.
     """
+
+    SQL_TYPE = "TIMESTAMP"
+
+    class _db_mysql:
+        SQL_TYPE = "DATETIME(6)"
 
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs) -> None:
         if auto_now_add and auto_now:
@@ -174,6 +201,8 @@ class DateField(Field, datetime.date):
     Date field.
     """
 
+    SQL_TYPE = "DATE"
+
     def to_python_value(self, value: Any) -> Optional[datetime.date]:
         if value is None or isinstance(value, datetime.date):
             return value
@@ -184,6 +213,8 @@ class TimeDeltaField(Field, datetime.timedelta):
     """
     A field for storing time differences.
     """
+
+    SQL_TYPE = "BIGINT"
 
     def to_python_value(self, value: Any) -> Optional[datetime.timedelta]:
         if value is None or isinstance(value, datetime.timedelta):
@@ -201,6 +232,14 @@ class FloatField(Field, float):
     Float (double) field.
     """
 
+    SQL_TYPE = "DOUBLE PRECISON"
+
+    class _db_sqlite:
+        SQL_TYPE = "REAL"
+
+    class _db_mysql:
+        SQL_TYPE = "DOUBLE"
+
 
 class JSONField(Field, dict, list):  # type: ignore
     """
@@ -214,7 +253,11 @@ class JSONField(Field, dict, list):  # type: ignore
         The JSON decoder. The default is recommended.
     """
 
+    SQL_TYPE = "TEXT"
     indexable = False
+
+    class _db_postgres:
+        SQL_TYPE = "JSONB"
 
     def __init__(self, encoder=JSON_DUMPS, decoder=JSON_LOADS, **kwargs) -> None:
         super().__init__(**kwargs)
@@ -242,6 +285,11 @@ class UUIDField(Field, UUID):
 
     If used as a primary key, it will auto-generate a UUID4 by default.
     """
+
+    SQL_TYPE = "CHAR(36)"
+
+    class _db_postgres:
+        SQL_TYPE = "UUID"
 
     def __init__(self, **kwargs) -> None:
         if kwargs.get("pk", False):

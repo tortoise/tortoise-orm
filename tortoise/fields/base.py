@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from tortoise.exceptions import ConfigurationError
 
@@ -81,3 +81,25 @@ class Field(metaclass=_FieldMeta):
     @property
     def required(self):
         return self.default is None and not self.null and not self.generated
+
+    def _get_dialects(self) -> Dict[str, dict]:
+        return {
+            dialect[4:]: {
+                key: val
+                for key, val in getattr(self, dialect).__dict__.items()
+                if not key.startswith("_")
+            }
+            for dialect in [key for key in dir(self) if key.startswith("_db_")]
+        }
+
+    def get_db_field_types(self) -> Optional[Dict[str, str]]:
+        if not self.has_db_field:
+            return None
+        return {
+            "": getattr(self, "SQL_TYPE"),
+            **{
+                dialect: _db["SQL_TYPE"]
+                for dialect, _db in self._get_dialects().items()
+                if "SQL_TYPE" in _db
+            },
+        }

@@ -151,7 +151,7 @@ class Tortoise:
                 "field_type": field.__class__.__name__ if serializable else field.__class__,
                 "db_column": field.source_field or name,
                 "raw_field": None,
-                # "db_type": db_type,
+                "db_field_types": field.get_db_field_types(),
                 "python_type": type_name(field.field_type) if serializable else field.field_type,
                 "generated": field.generated,
                 "nullable": field.null,
@@ -160,6 +160,10 @@ class Tortoise:
                 "default": default_name(field.default) if serializable else field.default,
                 "description": field.description,
             }
+
+            # Delete db fields for non-db fields
+            if not desc["db_field_types"]:
+                del desc["db_field_types"]
 
             # Foreign Keys have
             if isinstance(field, ForeignKeyField):

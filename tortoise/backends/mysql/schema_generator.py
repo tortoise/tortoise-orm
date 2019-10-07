@@ -26,7 +26,6 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         **BaseSchemaGenerator.FIELD_TYPE_MAP,
         fields.FloatField: "DOUBLE",
         fields.DatetimeField: "DATETIME(6)",
-        fields.TextField: "TEXT",
     }
 
     def __init__(self, client) -> None:
