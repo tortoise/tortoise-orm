@@ -29,11 +29,12 @@ JSON_LOADS = json.loads
 class _FieldMeta(type):
     def __new__(mcs, name, bases, attrs):
         if len(bases) > 1:
-            # Instantiate class with only the 1st base class (should be Field)
-            cls = type.__new__(mcs, name, (bases[0],), attrs)  # type: Type[Field]
-            # All other base classes are our meta types, we store them in class attributes
-            cls.type = bases[1] if len(bases) == 2 else bases[1:]
-            return cls
+            if bases[0] == Field:
+                # Instantiate class with only the 1st base class (should be Field)
+                cls = type.__new__(mcs, name, (bases[0],), attrs)  # type: Type[Field]
+                # All other base classes are our meta types, we store them in class attributes
+                cls.type = bases[1] if len(bases) == 2 else bases[1:]
+                return cls
         return type.__new__(mcs, name, bases, attrs)
 
 
@@ -89,6 +90,7 @@ class Field(metaclass=_FieldMeta):
         self.model = model
         self.reference = reference
         self.description = description
+        super().__init__(**kwargs)  # type: ignore # mypy issue 4335
 
     def to_db_value(self, value: Any, instance) -> Any:
         if value is None or type(value) == self.type:  # pylint: disable=C0123
