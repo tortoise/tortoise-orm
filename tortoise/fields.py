@@ -91,7 +91,7 @@ class Field(metaclass=_FieldMeta):
         self.model = model
         self.reference = reference
         self.description = description
-        super().__init__(**kwargs)  # type: ignore # mypy issue 4335
+        # super().__init__(**kwargs)  # type: ignore # mypy issue 4335
 
     def to_db_value(self, value: Any, instance) -> Any:
         if value is None or isinstance(value, self.field_type):
