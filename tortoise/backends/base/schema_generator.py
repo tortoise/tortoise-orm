@@ -108,16 +108,6 @@ class BaseSchemaGenerator:
     @staticmethod
     def _make_hash(*args: str, length: int) -> str:
         # Hash a set of string values and get a digest of the given length.
-        # TODO: This is super-bad from a cryptographic POV.
-        #  Replace in a major version to minimise unexpected breakages.
-        letters: List[str] = []
-        for i_th_letters in zip(*args):
-            letters.extend(i_th_letters)
-        return "".join([str(ord(letter)) for letter in letters])[:length]
-
-    @staticmethod
-    def _make_hash2(*args: str, length: int) -> str:
-        # Hash a set of string values and get a digest of the given length.
         return sha256(";".join(args).encode("utf-8")).hexdigest()[:length]
 
     def _generate_index_name(self, model, field_names: List[str]) -> str:
@@ -125,7 +115,7 @@ class BaseSchemaGenerator:
         # characters (Oracle limit).
         # That's why we slice some of the strings here.
         table_name = model._meta.table
-        index_name = "{}_{}_{}_idx".format(
+        index_name = "idx_{}_{}_{}".format(
             table_name[:11], field_names[0][:7], self._make_hash(table_name, *field_names, length=6)
         )
         return index_name
@@ -137,7 +127,7 @@ class BaseSchemaGenerator:
         index_name = "fk_{f}_{t}_{h}".format(
             f=from_table[:8],
             t=to_table[:8],
-            h=self._make_hash2(from_table, from_field, to_table, to_field, length=8),
+            h=self._make_hash(from_table, from_field, to_table, to_field, length=8),
         )
         return index_name
 

@@ -95,7 +95,7 @@ class TestGenerateSchema(test.SimpleTestCase):
     async def test_create_index(self):
         await self.init_for("tests.testmodels")
         sql = self.get_sql("CREATE INDEX")
-        self.assertIsNotNone(re.search(r"tournament_created_\w+_idx", sql))
+        self.assertIsNotNone(re.search(r"idx_tournament_created_\w+", sql))
 
     async def test_index_safe(self):
         await self.init_for("tests.testmodels", safe=True)
@@ -156,7 +156,7 @@ CREATE TABLE "sometable" (
     "some_chars_table" VARCHAR(255) NOT NULL,
     "fk_sometable" INT REFERENCES "sometable" (sometable_id) ON DELETE CASCADE
 );
-CREATE INDEX "sometable_some_ch_115115_idx" ON "sometable" (some_chars_table);
+CREATE INDEX "idx_sometable_some_ch_3d69eb" ON "sometable" (some_chars_table);
 CREATE TABLE "team" (
     "name" VARCHAR(50) NOT NULL  PRIMARY KEY /* The TEAM name (and PK) */,
     "manager_id" VARCHAR(50) REFERENCES "team" (name) ON DELETE CASCADE
@@ -166,7 +166,7 @@ CREATE TABLE "tournament" (
     "name" VARCHAR(100) NOT NULL  /* Tournament name */,
     "created" TIMESTAMP NOT NULL  /* Created *\\/'`\\/* datetime */
 ) /* What Tournaments *\\/'`\\/* we have */;
-CREATE INDEX "tournament_name_116110_idx" ON "tournament" (name);
+CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" (name);
 CREATE TABLE "event" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,
     "name" TEXT NOT NULL,
@@ -206,7 +206,7 @@ CREATE TABLE IF NOT EXISTS "sometable" (
     "some_chars_table" VARCHAR(255) NOT NULL,
     "fk_sometable" INT REFERENCES "sometable" (sometable_id) ON DELETE CASCADE
 );
-CREATE INDEX IF NOT EXISTS "sometable_some_ch_115115_idx" ON "sometable" (some_chars_table);
+CREATE INDEX IF NOT EXISTS "idx_sometable_some_ch_3d69eb" ON "sometable" (some_chars_table);
 CREATE TABLE IF NOT EXISTS "team" (
     "name" VARCHAR(50) NOT NULL  PRIMARY KEY /* The TEAM name (and PK) */,
     "manager_id" VARCHAR(50) REFERENCES "team" (name) ON DELETE CASCADE
@@ -216,7 +216,7 @@ CREATE TABLE IF NOT EXISTS "tournament" (
     "name" VARCHAR(100) NOT NULL  /* Tournament name */,
     "created" TIMESTAMP NOT NULL  /* Created *\\/'`\\/* datetime */
 ) /* What Tournaments *\\/'`\\/* we have */;
-CREATE INDEX IF NOT EXISTS "tournament_name_116110_idx" ON "tournament" (name);
+CREATE INDEX IF NOT EXISTS "idx_tournament_name_6fe200" ON "tournament" (name);
 CREATE TABLE IF NOT EXISTS "event" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,
     "name" TEXT NOT NULL,
@@ -277,7 +277,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def test_create_index(self):
         await self.init_for("tests.testmodels")
         sql = self.get_sql("KEY")
-        self.assertIsNotNone(re.search(r"tournament_created_\w+_idx", sql))
+        self.assertIsNotNone(re.search(r"idx_tournament_created_\w+", sql))
 
     async def test_minrelation(self):
         await self.init_for("tests.testmodels")
@@ -320,7 +320,7 @@ CREATE TABLE `sometable` (
     `some_chars_table` VARCHAR(255) NOT NULL,
     `fk_sometable` INT,
     CONSTRAINT `fk_sometabl_sometabl_6efae9bd` FOREIGN KEY (`fk_sometable`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
-    KEY `sometable_some_ch_115115_idx` (`some_chars_table`)
+    KEY `idx_sometable_some_ch_3d69eb` (`some_chars_table`)
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `team` (
     `name` VARCHAR(50) NOT NULL  PRIMARY KEY COMMENT 'The TEAM name (and PK)',
@@ -331,7 +331,7 @@ CREATE TABLE `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL  COMMENT 'Tournament name',
     `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime',
-    KEY `tournament_name_116110_idx` (`name`)
+    KEY `idx_tournament_name_6fe200` (`name`)
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
 CREATE TABLE `event` (
     `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
@@ -380,7 +380,7 @@ CREATE TABLE IF NOT EXISTS `sometable` (
     `some_chars_table` VARCHAR(255) NOT NULL,
     `fk_sometable` INT,
     CONSTRAINT `fk_sometabl_sometabl_6efae9bd` FOREIGN KEY (`fk_sometable`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
-    KEY `sometable_some_ch_115115_idx` (`some_chars_table`)
+    KEY `idx_sometable_some_ch_3d69eb` (`some_chars_table`)
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `team` (
     `name` VARCHAR(50) NOT NULL  PRIMARY KEY COMMENT 'The TEAM name (and PK)',
@@ -391,7 +391,7 @@ CREATE TABLE IF NOT EXISTS `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL  COMMENT 'Tournament name',
     `created` DATETIME(6) NOT NULL  COMMENT 'Created */\\'`/* datetime',
-    KEY `tournament_name_116110_idx` (`name`)
+    KEY `idx_tournament_name_6fe200` (`name`)
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
 CREATE TABLE IF NOT EXISTS `event` (
     `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
@@ -482,7 +482,7 @@ CREATE TABLE "sometable" (
     "some_chars_table" VARCHAR(255) NOT NULL,
     "fk_sometable" INT REFERENCES "sometable" (sometable_id) ON DELETE CASCADE
 );
-CREATE INDEX "sometable_some_ch_115115_idx" ON "sometable" (some_chars_table);
+CREATE INDEX "idx_sometable_some_ch_3d69eb" ON "sometable" (some_chars_table);
 CREATE TABLE "team" (
     "name" VARCHAR(50) NOT NULL  PRIMARY KEY,
     "manager_id" VARCHAR(50) REFERENCES "team" (name) ON DELETE CASCADE
@@ -494,7 +494,7 @@ CREATE TABLE "tournament" (
     "name" VARCHAR(100) NOT NULL,
     "created" TIMESTAMP NOT NULL
 );
-CREATE INDEX "tournament_name_116110_idx" ON "tournament" (name);
+CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" (name);
 COMMENT ON COLUMN tournament.name IS 'Tournament name';
 COMMENT ON COLUMN tournament.created IS 'Created */''`/* datetime';
 COMMENT ON TABLE tournament IS 'What Tournaments */''`/* we have';
@@ -542,7 +542,7 @@ CREATE TABLE IF NOT EXISTS "sometable" (
     "some_chars_table" VARCHAR(255) NOT NULL,
     "fk_sometable" INT REFERENCES "sometable" (sometable_id) ON DELETE CASCADE
 );
-CREATE INDEX IF NOT EXISTS "sometable_some_ch_115115_idx" ON "sometable" (some_chars_table);
+CREATE INDEX IF NOT EXISTS "idx_sometable_some_ch_3d69eb" ON "sometable" (some_chars_table);
 CREATE TABLE IF NOT EXISTS "team" (
     "name" VARCHAR(50) NOT NULL  PRIMARY KEY,
     "manager_id" VARCHAR(50) REFERENCES "team" (name) ON DELETE CASCADE
@@ -554,7 +554,7 @@ CREATE TABLE IF NOT EXISTS "tournament" (
     "name" VARCHAR(100) NOT NULL,
     "created" TIMESTAMP NOT NULL
 );
-CREATE INDEX IF NOT EXISTS "tournament_name_116110_idx" ON "tournament" (name);
+CREATE INDEX IF NOT EXISTS "idx_tournament_name_6fe200" ON "tournament" (name);
 COMMENT ON COLUMN tournament.name IS 'Tournament name';
 COMMENT ON COLUMN tournament.created IS 'Created */''`/* datetime';
 COMMENT ON TABLE tournament IS 'What Tournaments */''`/* we have';

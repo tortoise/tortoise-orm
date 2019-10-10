@@ -23,7 +23,7 @@ up:
 	sed -i "s/^-e .*/-e ./" tests/requirements.txt
 
 deps:
-	@which pip-sync || pip install -q pip-tools
+	@which pip-sync > /dev/null || pip install -q pip-tools
 	@pip-sync tests/requirements.txt
 
 check: deps
