@@ -214,6 +214,4 @@ Sometimes it is required to fetch only certain related records. You can achieve 
         Prefetch('events', queryset=Event.filter(name='First'))
     ).first()
 
-You can view full example here:  ``examples/complex_prefetching.py``
-
-.. literalinclude::  ../examples/complex_prefetching.py
+You can view full example here:  :ref:`example_prefetching`

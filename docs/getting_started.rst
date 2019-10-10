@@ -155,4 +155,4 @@ After that you can start using your models:
 
 .. note::
     You can read more examples (including transactions, several databases and a little more complex querying) in
-    `examples <https://github.com/tortoise/tortoise-orm/tree/master/examples>`_ directory of project
+    :ref:`examples`

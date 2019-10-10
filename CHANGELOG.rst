@@ -4,7 +4,7 @@ Changelog
 =========
 0.14.0
 ------
-.. warning::
+.. caution::
    **This release drops support of Python 3.5:**
 
    Tortoise ORM now requires a minimum of CPython 3.6 or PyPy3.6-7.1

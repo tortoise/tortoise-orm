@@ -36,12 +36,12 @@ T_co = TypeVar("T_co", covariant=True)
 
 
 class QuerySetIterable(Protocol[T_co]):
-    ...
+    ...  # pylint: disable=W0104
 
 
 class QuerySetSingle(Protocol[T_co]):
     def __await__(self) -> Generator[Any, None, T_co]:
-        ...
+        ...  # pylint: disable=W0104
 
 
 class AwaitableQuery(QuerySetIterable[MODEL]):
