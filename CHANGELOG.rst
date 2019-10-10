@@ -2,6 +2,12 @@
 
 Changelog
 =========
+
+0.13.11
+-------
+- Fixed the ``_FieldMeta`` class not to checking if the 1st base class was Field, so would break with mixins.
+- The ``Field`` class now calls ``super().__init__``, so mixins are properly initialised.
+
 0.13.10
 -------
 - Names ForeignKey constraints in a consistent way
