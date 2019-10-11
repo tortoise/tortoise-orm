@@ -44,7 +44,9 @@ Another approach to work with related objects on instance is to query them expli
 
 You also can filter related objects like this:
 
-await team.events.filter(name='First')
+.. code-block:: python3
+
+    await team.events.filter(name='First')
 
 which will return you a QuerySet object with predefined filter
 
@@ -53,8 +55,8 @@ QuerySet
 
 After you obtained queryset from object you can do following operations with it:
 
-.. autoclass:: tortoise.queryset.QuerySet
-    :members:
+.. automodule:: tortoise.queryset
+    :members: QuerySet
     :undoc-members:
 
 QuerySet could be constructed, filtered and passed around without actually hitting database.
@@ -137,21 +139,21 @@ QuerySet also supports aggregation through ``.annotate()`` method
 
 Check `examples <https://github.com/tortoise/tortoise-orm/tree/master/examples>`_ to see it all in work
 
+.. _many_to_many:
+
 Many to Many
 ============
 
 Tortoise ORM provides an API for working with M2M relations
 
-- ``add(*args)`` - adds instances to relation
-- ``remove(*args)`` - removes instances from relation
-- ``clear()`` - removes all objects from relation
+.. autoclass:: tortoise.fields.ManyToManyRelationManager
+    :members:
 
 You can use them like this:
 
 .. code-block:: python3
 
     await event.participants.add(participant_1, participant_2)
-
 
 
 Q objects
@@ -212,4 +214,4 @@ Sometimes it is required to fetch only certain related records. You can achieve 
         Prefetch('events', queryset=Event.filter(name='First'))
     ).first()
 
-You can view full example here: `complex_prefetching <https://github.com/tortoise/tortoise-orm/tree/master/examples/complex_prefetching.py>`_
+You can view full example here:  :ref:`example_prefetching`

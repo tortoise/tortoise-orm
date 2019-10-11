@@ -2,19 +2,20 @@
 Tortoise ORM
 ============
 
-.. image:: https://badges.gitter.im/tortoise/community.svg
+.. image:: https://badges.gitter.im/tortoise/community.png
    :target: https://gitter.im/tortoise/community
+.. image:: https://img.shields.io/pypi/v/tortoise-orm.svg?style=flat
+   :target: https://pypi.python.org/pypi/tortoise-orm
+.. image:: https://readthedocs.org/projects/tortoise-orm/badge/?version=latest
+   :target: http://tortoise-orm.readthedocs.io/en/latest/
+.. image:: https://pepy.tech/badge/tortoise-orm/month
+   :target: https://pepy.tech/project/tortoise-orm/month
 .. image:: https://travis-ci.com/tortoise/tortoise-orm.svg?branch=master
    :target: https://travis-ci.com/tortoise/tortoise-orm
 .. image:: https://coveralls.io/repos/github/tortoise/tortoise-orm/badge.svg
    :target: https://coveralls.io/github/tortoise/tortoise-orm
 .. image:: https://api.codacy.com/project/badge/Grade/b5b77021ba284e4a9e0c033a4611b046
    :target: https://app.codacy.com/app/Tortoise/tortoise-orm
-.. image:: https://readthedocs.org/projects/tortoise-orm/badge/?version=latest
-   :target: http://tortoise-orm.readthedocs.io/en/latest/
-.. image:: https://img.shields.io/pypi/v/tortoise-orm.svg?style=flat
-   :target: https://pypi.python.org/pypi/tortoise-orm
-
 
 Introduction
 ============
@@ -46,7 +47,7 @@ Tortoise ORM is designed to be functional, yet familiar, to ease the migration o
 
 It also performs well when compared to other Python ORMs, only losing to Pony ORM:
 
-.. image:: docs/ORM_Perf.png
+.. image:: https://raw.githubusercontent.com/tortoise/tortoise-orm/develop/docs/ORM_Perf.png
     :target: https://github.com/tortoise/orm-benchmarks
 
 How is an ORM useful?

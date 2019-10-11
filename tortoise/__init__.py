@@ -148,7 +148,7 @@ class Tortoise:
                 "db_column": field.source_field or name,
                 "raw_field": None,
                 # "db_type": db_type,
-                "python_type": type_name(field.type) if serializable else field.type,
+                "python_type": type_name(field.field_type) if serializable else field.field_type,
                 "generated": field.generated,
                 "nullable": field.null,
                 "unique": field.unique,
@@ -304,7 +304,7 @@ class Tortoise:
                         key_fk_object.source_field = key_field
                     model._meta.add_field(key_field, key_fk_object)
 
-                    fk_object.type = related_model
+                    fk_object.field_type = related_model
                     backward_relation_name = fk_object.related_name
                     if not backward_relation_name:
                         backward_relation_name = f"{model._meta.table}s"
@@ -334,7 +334,7 @@ class Tortoise:
                     related_app_name, related_model_name = split_reference(reference)
                     related_model = get_related_model(related_app_name, related_model_name)
 
-                    m2m_object.type = related_model
+                    m2m_object.field_type = related_model
 
                     backward_relation_name = m2m_object.related_name
                     if not backward_relation_name:
@@ -362,7 +362,7 @@ class Tortoise:
                         forward_key=m2m_object.backward_key,
                         backward_key=m2m_object.forward_key,
                         related_name=field,
-                        type=model,
+                        field_type=model,
                         description=m2m_object.description,
                     )
                     m2m_relation._generated = True
@@ -655,4 +655,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.14.0dev"
+__version__ = "0.14.dev0"

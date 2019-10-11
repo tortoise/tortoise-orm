@@ -47,3 +47,4 @@ sanic
 
 # Sample integration - Starlette
 starlette
+uvicorn < 0.9

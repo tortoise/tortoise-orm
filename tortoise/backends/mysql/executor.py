@@ -28,9 +28,7 @@ def mysql_ends_with(field, value):
 
 
 def mysql_insensitive_exact(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).eq(
-        functions.Upper("{}".format(value))
-    )
+    return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).eq(functions.Upper(f"{value}"))
 
 
 def mysql_insensitive_contains(field, value):

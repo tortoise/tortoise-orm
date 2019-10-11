@@ -8,6 +8,8 @@ Table Of Contents
    index
    getting_started
    reference
+   examples
+   contrib
    CHANGELOG
    roadmap
    CONTRIBUTING

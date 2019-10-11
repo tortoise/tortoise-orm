@@ -20,49 +20,6 @@ Fields are defined as properties of a ``Model`` class object:
         name = fields.CharField(max_length=255)
 
 
-Extending A Field
-=================
-
-It is possible to subclass fields allowing use of arbitrary types as long as they can be represented in a
-database compatible format. An example of this would be a simple wrapper around the :class:`~tortoise.fields.CharField`
-to store and query Enum types.
-
-.. code-block:: python3
-
-    from enum import Enum
-    from typing import Type
-
-    from tortoise import ConfigurationError
-    from tortoise.fields import CharField
-
-
-    class EnumField(CharField):
-        """
-        An example extension to CharField that serializes Enums
-        to and from a str representation in the DB.
-        """
-
-        def __init__(self, enum_type: Type[Enum], **kwargs):
-            super().__init__(128, **kwargs)
-            if not issubclass(enum_type, Enum):
-                raise ConfigurationError("{} is not a subclass of Enum!".format(enum_type))
-            self._enum_type = enum_type
-
-        def to_db_value(self, value: Enum, instance) -> str:
-            return value.value
-
-        def to_python_value(self, value: str) -> Enum:
-            try:
-                return self._enum_type(value)
-            except Exception:
-                raise ValueError(
-                    "Database value {} does not exist on Enum {}.".format(value, self._enum_type)
-                )
-
-When subclassing, make sure that the ``to_db_value`` returns the same type as the superclass (in the case of CharField,
-that is a ``str``) and that, naturally, ``to_python_value`` accepts the same type in the value parameter (also ``str``).
-
-
 Reference
 =========
 
@@ -157,8 +114,45 @@ ManyToManyField
 .. autoclass:: tortoise.fields.ManyToManyField
     :exclude-members: to_db_value, to_python_value
 
-On instantiation, a ``ManyToManyField`` appears as so:
 
-.. autoclass:: tortoise.fields.ManyToManyRelationManager
-    :members:
-    :inherited-members:
+Extending A Field
+=================
+
+It is possible to subclass fields allowing use of arbitrary types as long as they can be represented in a
+database compatible format. An example of this would be a simple wrapper around the :class:`~tortoise.fields.CharField`
+to store and query Enum types.
+
+.. code-block:: python3
+
+    from enum import Enum
+    from typing import Type
+
+    from tortoise import ConfigurationError
+    from tortoise.fields import CharField
+
+
+    class EnumField(CharField):
+        """
+        An example extension to CharField that serializes Enums
+        to and from a str representation in the DB.
+        """
+
+        def __init__(self, enum_type: Type[Enum], **kwargs):
+            super().__init__(128, **kwargs)
+            if not issubclass(enum_type, Enum):
+                raise ConfigurationError("{} is not a subclass of Enum!".format(enum_type))
+            self._enum_type = enum_type
+
+        def to_db_value(self, value: Enum, instance) -> str:
+            return value.value
+
+        def to_python_value(self, value: str) -> Enum:
+            try:
+                return self._enum_type(value)
+            except Exception:
+                raise ValueError(
+                    "Database value {} does not exist on Enum {}.".format(value, self._enum_type)
+                )
+
+When subclassing, make sure that the ``to_db_value`` returns the same type as the superclass (in the case of CharField,
+that is a ``str``) and that, naturally, ``to_python_value`` accepts the same type in the value parameter (also ``str``).

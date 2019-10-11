@@ -25,7 +25,9 @@ class Aggregate:
                 related_field = model._meta.fields_map[field_split[0]]
                 join = (Table(model._meta.table), field_split[0], related_field)
                 aggregation_joins.append(join)
-                aggregation_field = self.aggregation_func(Table(related_field.type._meta.table).id)
+                aggregation_field = self.aggregation_func(
+                    Table(related_field.field_type._meta.table).id
+                )
             else:
                 aggregation_field = self.aggregation_func(
                     getattr(Table(model._meta.table), field_split[0])
@@ -36,7 +38,9 @@ class Aggregate:
             raise ConfigurationError(f"{field} not resolvable")
         related_field = model._meta.fields_map[field_split[0]]
         join = (Table(model._meta.table), field_split[0], related_field)
-        aggregation = self._resolve_field_for_model("__".join(field_split[1:]), related_field.type)
+        aggregation = self._resolve_field_for_model(
+            "__".join(field_split[1:]), related_field.field_type
+        )
         aggregation["joins"].append(join)
         return aggregation
 

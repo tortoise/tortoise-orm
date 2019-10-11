@@ -31,7 +31,7 @@ class _FieldMeta(type):
             # Instantiate class with only the 1st base class (should be Field)
             cls = type.__new__(mcs, name, (bases[0],), attrs)  # type: Type[Field]
             # All other base classes are our meta types, we store them in class attributes
-            cls.type = bases[1] if len(bases) == 2 else bases[1:]
+            cls.field_type = bases[1] if len(bases) == 2 else bases[1:]
             return cls
         return type.__new__(mcs, name, bases, attrs)
 
@@ -41,8 +41,9 @@ class Field(metaclass=_FieldMeta):
     Base Field type.
     """
 
-    # Type is a readonly property for the instance, it is set by _FieldMeta
-    type = None  # type: Type[Any]
+    # Field_type is a readonly property for the instance, it is set by _FieldMeta
+    field_type: Type[Any] = None  # type: ignore
+    indexable: bool = True
 
     __slots__ = (
         "source_field",
@@ -59,7 +60,7 @@ class Field(metaclass=_FieldMeta):
     )
     has_db_field = True
 
-    # This method is just to make IDE happy
+    # This method is just to make IDE/Linters happy
     def __new__(cls, *args, **kwargs):
         return super().__new__(cls)
 
@@ -77,6 +78,8 @@ class Field(metaclass=_FieldMeta):
         description: Optional[str] = None,
         **kwargs,
     ) -> None:
+        if not self.indexable and (unique or index):
+            raise ConfigurationError(f"{self.__class__.__name__} can't be indexed")
         self.source_field = source_field
         self.generated = generated
         self.pk = pk
@@ -88,17 +91,17 @@ class Field(metaclass=_FieldMeta):
         self.model = model
         self.reference = reference
         self.description = description
-        super().__init__(**kwargs)  # type: ignore # mypy issue 4335
+        # super().__init__(**kwargs)  # type: ignore # mypy issue 4335
 
     def to_db_value(self, value: Any, instance) -> Any:
-        if value is None or type(value) == self.type:  # pylint: disable=C0123
+        if value is None or isinstance(value, self.field_type):
             return value
-        return self.type(value)  # pylint: disable=E1102
+        return self.field_type(value)  # pylint: disable=E1102
 
     def to_python_value(self, value: Any) -> Any:
-        if value is None or isinstance(value, self.type):
+        if value is None or isinstance(value, self.field_type):
             return value
-        return self.type(value)  # pylint: disable=E1102
+        return self.field_type(value)  # pylint: disable=E1102
 
     @property
     def required(self):
@@ -174,11 +177,7 @@ class TextField(Field, str):  # type: ignore[misc]  # noqa
     """
 
     __slots__ = ()
-
-    def __init__(self, **kwargs) -> None:
-        if kwargs.pop("unique", None) or kwargs.pop("index", None):
-            raise ConfigurationError("TextField can't be indexed")
-        super().__init__(**kwargs)
+    indexable = False
 
 
 class BooleanField(Field):
@@ -189,7 +188,7 @@ class BooleanField(Field):
     __slots__ = ()
 
     # Bool is not subclassable, so we specify type here
-    type = bool
+    field_type = bool
 
 
 class DecimalField(Field, Decimal):
@@ -295,9 +294,6 @@ class FloatField(Field, float):
 
     __slots__ = ()
 
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-
 
 class JSONField(Field, dict, list):  # type: ignore[misc]  # noqa
     """
@@ -312,10 +308,9 @@ class JSONField(Field, dict, list):  # type: ignore[misc]  # noqa
     """
 
     __slots__ = ("encoder", "decoder")
+    indexable = False
 
     def __init__(self, encoder=JSON_DUMPS, decoder=JSON_LOADS, **kwargs) -> None:
-        if kwargs.pop("unique", None) or kwargs.pop("index", None):
-            raise ConfigurationError("JSONField can't be indexed")
         super().__init__(**kwargs)
         self.encoder = encoder
         self.decoder = decoder
@@ -354,7 +349,7 @@ class UUIDField(Field, UUID):
         return str(value)
 
     def to_python_value(self, value: Any) -> Optional[uuid.UUID]:
-        if value is None or isinstance(value, self.type):
+        if value is None or isinstance(value, self.field_type):
             return value
         return uuid.UUID(value)
 
@@ -390,7 +385,7 @@ class ForeignKeyField(Field):
     """
 
     __slots__ = (
-        "type",  # type will be set later, so we need a slot to be able to write it
+        "field_type",  # type will be set later, so we need a slot to be able to write it
         "model_name",
         "related_name",
         "on_delete",
@@ -401,6 +396,7 @@ class ForeignKeyField(Field):
         self, model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs
     ) -> None:
         super().__init__(**kwargs)
+        # self.field_type: "Type[Model]" = None  # type: ignore
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name = model_name
@@ -417,6 +413,8 @@ class ManyToManyField(Field):
     ManyToMany relation field.
 
     This field represents a many-to-many between this model and another model.
+
+    See :ref:`many_to_many` for usage information.
 
     You must provide the following:
 
@@ -439,7 +437,7 @@ class ManyToManyField(Field):
     """
 
     __slots__ = (
-        "type",  # Here we need type to be able to set dyamically
+        "field_type",  # Here we need type to be able to set dyamically
         "model_name",
         "related_name",
         "forward_key",
@@ -449,18 +447,18 @@ class ManyToManyField(Field):
     )
     has_db_field = False
 
-    def __init__(
+    def __init__(  # type: ignore
         self,
         model_name: str,
         through: Optional[str] = None,
         forward_key: Optional[str] = None,
         backward_key: str = "",
         related_name: str = "",
-        type=None,  # pylint: disable=W0622
+        field_type: "Type[Model]" = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
-        self.type = type
+        self.field_type = field_type
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name = model_name
@@ -472,18 +470,14 @@ class ManyToManyField(Field):
 
 
 class BackwardFKRelation(Field):
-    __slots__ = ("type", "relation_field")  # Here we need type to be able to set dyamically
+    __slots__ = ("field_type", "relation_field")  # Here we need type to be able to set dyamically
     has_db_field = False
 
     def __init__(
-        self,
-        type,  # pylint: disable=W0622
-        relation_field: str,
-        null: bool,
-        description: Optional[str],
+        self, field_type: "Type[Model]", relation_field: str, null: bool, description: Optional[str]
     ) -> None:
         super().__init__(null=null)
-        self.type = type
+        self.field_type = field_type
         self.relation_field = relation_field
         self.description = description
 
@@ -609,7 +603,7 @@ class ManyToManyRelationManager(RelationQueryContainer):
     def __init__(self, model, instance, m2m_field: ManyToManyField) -> None:
         super().__init__(model, m2m_field.related_name, instance)
         self.field = m2m_field
-        self.model = m2m_field.type
+        self.model = m2m_field.field_type
         self.instance = instance
 
     async def add(self, *instances, using_db=None) -> None:

@@ -31,6 +31,7 @@ __all__ = (
     "skipUnless",
 )
 _TORTOISE_TEST_DB = "sqlite://:memory:"
+# pylint: disable=W0201
 
 expectedFailure.__doc__ = """
 Mark test as expecting failiure.
@@ -158,7 +159,6 @@ class SimpleTestCase(_TestCase):  # type: ignore
     use_default_loop = True
 
     def _init_loop(self) -> None:
-        # pylint: disable=W0201
         if self.use_default_loop:
             self.loop = _LOOP
             loop = None
@@ -183,7 +183,7 @@ class SimpleTestCase(_TestCase):  # type: ignore
         # initialize post-test checks
         test = getattr(self, self._testMethodName)
         checker = getattr(test, _fail_on._FAIL_ON_ATTR, None)
-        self._checker = checker or _fail_on._fail_on()  # pylint: disable=W0201
+        self._checker = checker or _fail_on._fail_on()
         self._checker.before_test(self)
 
         self.loop.run_until_complete(self._setUpDB())
@@ -223,7 +223,6 @@ class IsolatedTestCase(SimpleTestCase):
     This is obviously slow, but guarantees a fresh DB.
     """
 
-    # pylint: disable=C0103,W0201
     async def _setUpDB(self) -> None:
         config = getDBConfig(app_label="models", modules=_MODULES)
         await Tortoise.init(config, _create_db=True)
@@ -245,7 +244,6 @@ class TruncationTestCase(SimpleTestCase):
     Note that usage of this does not guarantee that auto-number-pks will be reset to 1.
     """
 
-    # pylint: disable=C0103,W0201
     async def _setUpDB(self) -> None:
         _restore_default()
 
@@ -269,7 +267,7 @@ class TestCase(TruncationTestCase):
         _restore_default()
         self.__db__ = Tortoise.get_connection("models")
         if self.__db__.capabilities.supports_transactions:
-            self.__transaction__ = await start_transaction()  # pylint: disable=W0201
+            self.__transaction__ = await start_transaction()
 
     async def _tearDownDB(self) -> None:
         if self.__db__.capabilities.supports_transactions:

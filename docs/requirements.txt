@@ -2,5 +2,4 @@
 
 sphinx < 2
 cloud_sptheme
-sphinx-autodoc-typehints < 1.7
 asynctest

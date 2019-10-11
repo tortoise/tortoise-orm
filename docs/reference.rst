@@ -6,9 +6,8 @@ Reference
 
    setup
    databases
-   transactions
    models
    fields
    query
+   transactions
    exceptions
-   contrib

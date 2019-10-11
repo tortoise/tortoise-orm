@@ -43,9 +43,9 @@ sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 # -- Project information -----------------------------------------------------
 
 
-project = 'Tortoise'
-copyright = '2018, Andrey Bondar'  # pylint: disable=W0622
-author = 'Andrey Bondar'
+project = 'Tortoise ORM'
+copyright = '2018-2019, Andrey Bondar & Nickolas Grigoriadis'  # pylint: disable=W0622
+author = 'Andrey Bondar & Nickolas Grigoriadis'
 
 
 def get_version():

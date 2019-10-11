@@ -5,8 +5,6 @@ from sanic import Sanic  # pylint: disable=E0401
 
 from tortoise import Tortoise
 
-app = Sanic(__name__)
-
 
 def register_tortoise(
     app: Sanic,
