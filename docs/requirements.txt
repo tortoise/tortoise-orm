@@ -1,5 +1,11 @@
--r ../requirements.txt
+-r ./requirements.in
 
-sphinx < 2
-cloud_sptheme
+# Modules that is referenced by code that Sphinx autodocs
+#  so we install them to not cause errors
 asynctest
+pylint
+asyncpg
+aiomysql
+quart
+sanic
+starlette
