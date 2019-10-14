@@ -13,7 +13,7 @@ aiomysql
 pip-tools
 
 ## Documentation tools
--r ../docs/requirements.txt
+-r ../docs/requirements.in
 
 ## Linter tools
 mypy

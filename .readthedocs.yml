@@ -1,6 +1,8 @@
+version: 2
+
 build:
   image: latest
 
 python:
-  version: 3.6
+  version: 3.7
 

@@ -48,7 +48,7 @@ def format_annotation(annotation, fully_qualified=False):
         elif isinstance(annotation, TypeVar):
             bound = annotation.__bound__
             if bound:
-                if str(bound).startswith('ForwardRef('):
+                if 'ForwardRef(' in str(bound):
                     try:
                         bound = bound._evaluate(sys.modules[annotation.__module__].__dict__, None)
                     except:
