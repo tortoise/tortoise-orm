@@ -115,10 +115,10 @@ class QueryModifier:
         where_criterion: Optional[Criterion] = None,
         joins: Optional[List[Tuple[Criterion, Criterion]]] = None,
         having_criterion: Optional[Criterion] = None,
-    ):
-        self.where_criterion = where_criterion or EmptyCriterion()
+    ) -> None:
+        self.where_criterion: Criterion = where_criterion or EmptyCriterion()
         self.joins = joins if joins else []
-        self.having_criterion = having_criterion or EmptyCriterion()
+        self.having_criterion: Criterion = having_criterion or EmptyCriterion()
 
     def __and__(self, other: "QueryModifier") -> "QueryModifier":
         return QueryModifier(
@@ -141,7 +141,7 @@ class QueryModifier:
             joins=self.joins + other.joins,
         )
 
-    def __invert__(self):
+    def __invert__(self) -> "QueryModifier":
         if not self.where_criterion and not self.having_criterion:
             return QueryModifier(joins=self.joins)
         if self.having_criterion:

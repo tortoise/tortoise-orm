@@ -55,6 +55,13 @@ Read-only properties:
 
 Here is the list of fields available at the moment with custom options of these fields:
 
+Base Field
+----------
+
+.. autoclass:: tortoise.fields.Field
+    :members:
+    :undoc-members:
+
 Data Fields
 -----------
 
@@ -103,10 +110,6 @@ ForeignKeyField
 .. autoclass:: tortoise.fields.ForeignKeyField
     :exclude-members: to_db_value, to_python_value
 
-On instantiation, a ``ForeignKeyField`` appears as so:
-
-.. autoclass:: tortoise.fields.RelationQueryContainer
-    :members:
 
 ManyToManyField
 ---------------

@@ -17,6 +17,7 @@ Enhancements:
 - Database functions ``Trim()``, ``Length()``, ``Coalesce()`` added to tortoise.functions module.
 - Annotations can be selected inside ``Queryset.values()`` and ``Queryset.values_list()`` expressions.
 - Added support for Python 3.8
+- The Foreign Key property is now ``await``-able as long as one didn't populate it via ``.prefetch_related()``
 
 Bugfixes:
 ^^^^^^^^^

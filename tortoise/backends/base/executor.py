@@ -288,6 +288,9 @@ class BaseExecutor:
         for instance in instance_list:
             if getattr(instance, relation_key_field):
                 related_objects_for_fetch.add(getattr(instance, relation_key_field))
+            else:
+                setattr(instance, field, None)
+
         if related_objects_for_fetch:
             related_object_list = await related_query.filter(pk__in=list(related_objects_for_fetch))
             related_object_map = {obj.pk: obj for obj in related_object_list}

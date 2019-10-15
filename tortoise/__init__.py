@@ -66,7 +66,7 @@ class Tortoise:
                     "table":                str     # DB table name
                     "abstract":             bool    # Is the model Abstract?
                     "description":          str     # Description of table (nullable)
-                    "unique_together":      [...]   # Lost of List containing field names that
+                    "unique_together":      [...]   # List of List containing field names that
                                                     #  are unique together
                     "pk_field":             {...}   # Primary key field
                     "data_fields":          [...]   # Data fields
@@ -594,7 +594,7 @@ class Tortoise:
         for app in cls.apps.values():
             for model in app.values():
                 model._meta.default_connection = None
-        cls.apps = {}
+        cls.apps.clear()
         current_transaction_map.clear()
 
     @classmethod

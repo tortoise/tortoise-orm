@@ -1,6 +1,6 @@
 from copy import copy, deepcopy
 from functools import partial
-from typing import Dict, List, Optional, Set, Tuple, Type, TypeVar
+from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
 
 from pypika import Query
 
@@ -37,8 +37,11 @@ def _fk_setter(self, value, _key, relation_field):
     setattr(self, _key, value)
 
 
-def _fk_getter(self, _key):
-    return getattr(self, _key, None)
+def _fk_getter(self, _key, ftype, relation_field):
+    try:
+        return getattr(self, _key)
+    except AttributeError:
+        return ftype.filter(pk=getattr(self, relation_field)).first()
 
 
 def _rfk_getter(self, _key, ftype, frelfield):
@@ -186,7 +189,12 @@ class MetaInfo:
                 self._model,
                 key,
                 property(
-                    partial(_fk_getter, _key=_key),
+                    partial(
+                        _fk_getter,
+                        _key=_key,
+                        ftype=self.fields_map[key].field_type,
+                        relation_field=relation_field,
+                    ),
                     partial(_fk_setter, _key=_key, relation_field=relation_field),
                     partial(_fk_setter, value=None, _key=_key, relation_field=relation_field),
                 ),
@@ -659,6 +667,12 @@ class Model(metaclass=ModelMeta):
                         f"'{cls.__name__}.unique_together' '{field_name}' field refers"
                         " to ManyToMany field."
                     )
+
+    def __await__(self: MODEL) -> Generator[Any, None, MODEL]:
+        async def _self() -> MODEL:
+            return self
+
+        return _self().__await__()
 
     class Meta:
         """
