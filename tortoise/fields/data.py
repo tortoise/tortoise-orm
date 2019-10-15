@@ -1,10 +1,9 @@
 import datetime
 import functools
 import json
-import uuid
 from decimal import Decimal
 from typing import Any, Optional, Union
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import ciso8601
 
@@ -185,11 +184,9 @@ class DatetimeField(Field, datetime.datetime):
     def to_db_value(
         self, value: Optional[datetime.datetime], instance
     ) -> Optional[datetime.datetime]:
-        if self.auto_now:
-            value = datetime.datetime.utcnow()
-            setattr(instance, self.model_field_name, value)
-            return value
-        if self.auto_now_add and getattr(instance, self.model_field_name) is None:
+        if self.auto_now or (
+            self.auto_now_add and getattr(instance, self.model_field_name) is None
+        ):
             value = datetime.datetime.utcnow()
             setattr(instance, self.model_field_name, value)
             return value
@@ -265,16 +262,12 @@ class JSONField(Field, dict, list):  # type: ignore
         self.decoder = decoder
 
     def to_db_value(self, value: Optional[Union[dict, list]], instance) -> Optional[str]:
-        if value is None:
-            return None
-        return self.encoder(value)
+        return None if value is None else self.encoder(value)
 
     def to_python_value(
         self, value: Optional[Union[str, dict, list]]
     ) -> Optional[Union[dict, list]]:
-        if value is None or isinstance(value, (dict, list)):
-            return value
-        return self.decoder(value)
+        return self.decoder(value) if isinstance(value, str) else value
 
 
 class UUIDField(Field, UUID):
@@ -294,15 +287,13 @@ class UUIDField(Field, UUID):
     def __init__(self, **kwargs) -> None:
         if kwargs.get("pk", False):
             if "default" not in kwargs:
-                kwargs["default"] = uuid.uuid4
+                kwargs["default"] = uuid4
         super().__init__(**kwargs)
 
     def to_db_value(self, value: Any, instance) -> Optional[str]:
-        if value is None:
-            return None
-        return str(value)
+        return value and str(value)
 
-    def to_python_value(self, value: Any) -> Optional[uuid.UUID]:
-        if value is None or isinstance(value, self.field_type):
+    def to_python_value(self, value: Any) -> Optional[UUID]:
+        if value is None or isinstance(value, UUID):
             return value
-        return uuid.UUID(value)
+        return UUID(value)
