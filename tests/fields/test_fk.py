@@ -1,6 +1,7 @@
 from tests import testmodels
 from tortoise.contrib import test
 from tortoise.exceptions import IntegrityError, NoValuesFetched, OperationalError
+from tortoise.queryset import QuerySet
 
 
 class TestForeignKeyField(test.TestCase):
@@ -21,17 +22,29 @@ class TestForeignKeyField(test.TestCase):
         self.assertEqual(rel.tournament, tour)
         self.assertEqual((await tour.minrelations.all())[0], rel)
 
-    @test.skip("Not yet implemented")
+    async def test_minimal__by_name__created_prefetched(self):
+        tour = await testmodels.Tournament.create(name="Team1")
+        rel = await testmodels.MinRelation.create(tournament=tour)
+        self.assertEqual(rel.tournament, tour)
+        self.assertEqual((await tour.minrelations.all())[0], rel)
+
     async def test_minimal__by_name__unfetched(self):
         tour = await testmodels.Tournament.create(name="Team1")
         rel = await testmodels.MinRelation.create(tournament=tour)
-        with self.assertRaisesRegex(NoValuesFetched, "moo"):
-            rel.tournament  # pylint: disable=W0104
+        rel = await testmodels.MinRelation.get(id=rel.id)
+        self.assertIsInstance(rel.tournament, QuerySet)
 
-    @test.skip("Not yet implemented")
+    async def test_minimal__by_name__re_awaited(self):
+        tour = await testmodels.Tournament.create(name="Team1")
+        rel = await testmodels.MinRelation.create(tournament=tour)
+        await rel.fetch_related("tournament")
+        self.assertEqual(rel.tournament, tour)
+        self.assertEqual(await rel.tournament, tour)
+
     async def test_minimal__by_name__awaited(self):
         tour = await testmodels.Tournament.create(name="Team1")
         rel = await testmodels.MinRelation.create(tournament=tour)
+        rel = await testmodels.MinRelation.get(id=rel.id)
         self.assertEqual(await rel.tournament, tour)
         self.assertEqual((await tour.minrelations.all())[0], rel)
 

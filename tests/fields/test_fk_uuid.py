@@ -1,6 +1,7 @@
 from tests import testmodels
 from tortoise.contrib import test
 from tortoise.exceptions import IntegrityError, NoValuesFetched, OperationalError
+from tortoise.queryset import QuerySet
 
 
 class TestForeignKeyUUIDField(test.TestCase):
@@ -36,17 +37,29 @@ class TestForeignKeyUUIDField(test.TestCase):
         self.assertEqual(rel.model, tour)
         self.assertEqual((await tour.children.all())[0], rel)
 
-    @test.skip("Not yet implemented")
+    async def test_by_name__created_prefetched(self):
+        tour = await self.UUIDPkModel.create()
+        rel = await self.UUIDFkRelatedModel.create(model=tour)
+        self.assertEqual(rel.model, tour)
+        self.assertEqual((await tour.children.all())[0], rel)
+
     async def test_by_name__unfetched(self):
         tour = await self.UUIDPkModel.create()
         rel = await self.UUIDFkRelatedModel.create(model=tour)
-        with self.assertRaisesRegex(NoValuesFetched, "moo"):
-            rel.model  # pylint: disable=W0104
+        rel = await self.UUIDFkRelatedModel.get(id=rel.id)
+        self.assertIsInstance(rel.model, QuerySet)
 
-    @test.skip("Not yet implemented")
+    async def test_by_name__re_awaited(self):
+        tour = await self.UUIDPkModel.create()
+        rel = await self.UUIDFkRelatedModel.create(model=tour)
+        await rel.fetch_related("model")
+        self.assertEqual(rel.model, tour)
+        self.assertEqual(await rel.model, tour)
+
     async def test_by_name__awaited(self):
         tour = await self.UUIDPkModel.create()
         rel = await self.UUIDFkRelatedModel.create(model=tour)
+        rel = await self.UUIDFkRelatedModel.get(id=rel.id)
         self.assertEqual(await rel.model, tour)
         self.assertEqual((await tour.children.all())[0], rel)
 
