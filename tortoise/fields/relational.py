@@ -237,7 +237,6 @@ class ManyToManyRelationManager(RelationQueryContainer):
         await db.execute_query(str(query))
 
 
-# TODO: Set FK-field-type to an awaitable FK property type
 class ForeignKeyField(Field):
     """
     ForeignKey relation field.
@@ -278,8 +277,8 @@ class ForeignKeyField(Field):
         super().__init__(**kwargs)
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
-        self.model_name = model_name
-        self.related_name = related_name
+        self.model_name: str = model_name
+        self.related_name: Optional[str] = related_name
         if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
             raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
         if on_delete == SET_NULL and not bool(kwargs.get("null")):
@@ -294,9 +293,9 @@ class BackwardFKRelation(Field, RelationQueryContainer):
         self, field_type: "Type[Model]", relation_field: str, null: bool, description: Optional[str]
     ) -> None:
         super().__init__(null=null)
-        self.field_type = field_type
-        self.relation_field = relation_field
-        self.description = description
+        self.field_type: "Type[Model]" = field_type
+        self.relation_field: str = relation_field
+        self.description: Optional[str] = description
 
 
 class ManyToManyField(Field, ManyToManyRelationManager):
@@ -329,23 +328,23 @@ class ManyToManyField(Field, ManyToManyRelationManager):
 
     has_db_field = False
 
-    def __init__(  # type: ignore
+    def __init__(
         self,
         model_name: str,
         through: Optional[str] = None,
         forward_key: Optional[str] = None,
         backward_key: str = "",
         related_name: str = "",
-        field_type: "Type[Model]" = None,
+        field_type: "Type[Model]" = None,  # type: ignore
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
-        self.field_type = field_type
+        self.field_type: "Type[Model]" = field_type
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
-        self.model_name = model_name
-        self.related_name = related_name
-        self.forward_key = forward_key or f"{model_name.split('.')[1].lower()}_id"
-        self.backward_key = backward_key
-        self.through = through
-        self._generated = False
+        self.model_name: str = model_name
+        self.related_name: str = related_name
+        self.forward_key: str = forward_key or f"{model_name.split('.')[1].lower()}_id"
+        self.backward_key: str = backward_key
+        self.through: Optional[str] = through
+        self._generated: bool = False

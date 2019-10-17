@@ -55,6 +55,13 @@ Read-only properties:
 
 Here is the list of fields available at the moment with custom options of these fields:
 
+Base Field
+----------
+
+.. automodule:: tortoise.fields.base
+    :members:
+    :undoc-members:
+
 Data Fields
 -----------
 
