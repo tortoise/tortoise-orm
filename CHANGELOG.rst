@@ -14,6 +14,7 @@ Enhancements:
 - Models, Fields & QuerySets have significant type annotation improvements,
   leading to better IDE integration and more comprehensive static analysis.
 - Fetching records from the DB is now up to 25% faster.
+- Database functions added in aggregations ``Trim()``, ``Length()``, ``Coalesce()``.
 
 Bugfixes:
 ^^^^^^^^^
