@@ -1,5 +1,5 @@
-from tests.testmodels import Event, Reporter, Team, Tournament
-from tortoise.aggregation import Count
+from tests.testmodels import Event, IntFields, Reporter, Team, Tournament
+from tortoise.aggregation import Coalesce, Count, Length, Trim
 from tortoise.contrib import test
 from tortoise.query_utils import Q
 
@@ -261,6 +261,47 @@ class TestFiltering(test.TestCase):
         )
         self.assertEqual(len(tournaments), 1)
         self.assertSetEqual({t.name for t in tournaments}, {"1"})
+
+    async def test_filter_by_aggregation_field_trim(self):
+        await Tournament.create(name="  1 ")
+        await Tournament.create(name="2  ")
+
+        tournaments = await Tournament.annotate(trimmed_name=Trim("name")).filter(trimmed_name="1")
+        self.assertEqual(len(tournaments), 1)
+        self.assertSetEqual({(t.name, t.trimmed_name) for t in tournaments}, {("  1 ", "1")})
+
+    async def test_filter_by_aggregation_field_length(self):
+        await Tournament.create(name="12345")
+        await Tournament.create(name="123")
+        await Tournament.create(name="1234")
+
+        tournaments = await Tournament.annotate(name_len=Length("name")).filter(name_len__gte=4)
+        self.assertEqual(len(tournaments), 2)
+        self.assertSetEqual({t.name for t in tournaments}, {"1234", "12345"})
+
+    async def test_filter_by_aggregation_field_coalesce(self):
+        await Tournament.create(name="1", desc="demo")
+        await Tournament.create(name="2")
+
+        tournaments = await Tournament.annotate(clean_desc=Coalesce("desc", "demo")).filter(
+            clean_desc="demo"
+        )
+        self.assertEqual(len(tournaments), 2)
+        self.assertSetEqual(
+            {(t.name, t.clean_desc) for t in tournaments}, {("1", "demo"), ("2", "demo")}
+        )
+
+    async def test_filter_by_aggregation_field_coalesce_numeric(self):
+        await IntFields.create(intnum=1, intnum_null=10)
+        await IntFields.create(intnum=4)
+
+        ints = await IntFields.annotate(clean_intnum_null=Coalesce("intnum_null", 0)).filter(
+            clean_intnum_null__in=(0, 10)
+        )
+        self.assertEqual(len(ints), 2)
+        self.assertSetEqual(
+            {(i.intnum_null, i.clean_intnum_null) for i in ints}, {(None, 0), (10, 10)}
+        )
 
     async def test_values_select_relation(self):
         with self.assertRaises(ValueError):
