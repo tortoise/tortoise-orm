@@ -6,8 +6,8 @@ from tortoise.utils import get_escape_translation_table
 
 
 class AsyncpgSchemaGenerator(BaseSchemaGenerator):
-    TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE {table} IS '{comment}';"
-    COLUMN_COMMNET_TEMPLATE = "COMMENT ON COLUMN {table}.{column} IS '{comment}';"
+    TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE \"{table}\" IS '{comment}';"
+    COLUMN_COMMNET_TEMPLATE = 'COMMENT ON COLUMN "{table}"."{column}" IS \'{comment}\';'
 
     FIELD_TYPE_MAP = {
         **BaseSchemaGenerator.FIELD_TYPE_MAP,

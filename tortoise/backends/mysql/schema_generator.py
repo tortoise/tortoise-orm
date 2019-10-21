@@ -34,6 +34,9 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         self._field_indexes = []  # type: List[str]
         self._foreign_keys = []  # type: List[str]
 
+    def quote(self, val: str) -> str:
+        return f"`{val}`"
+
     def _get_primary_key_create_string(
         self, field_object: fields.Field, field_name: str, comment: str
     ) -> Optional[str]:
@@ -61,7 +64,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
                 exists="IF NOT EXISTS " if safe else "",
                 index_name=self._generate_index_name(model, field_names),
                 table_name=model._meta.table,
-                fields=", ".join(["`" + f + "`" for f in field_names]),
+                fields=", ".join([self.quote(f) for f in field_names]),
             )
         )
         return ""

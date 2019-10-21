@@ -29,18 +29,22 @@ class Event(Model):
     modified = fields.DatetimeField(auto_now=True)
     prize = fields.DecimalField(max_digits=10, decimal_places=2, null=True)
     token = fields.CharField(max_length=100, description="Unique token", unique=True)
+    key = fields.CharField(max_length=100)
 
     class Meta:
         table_description = "This table contains a list of all the events"
+        unique_together = [("name", "prize"), ["tournament", "key"]]
 
 
 class Team(Model):
     name = fields.CharField(max_length=50, pk=True, description="The TEAM name (and PK)")
     manager = fields.ForeignKeyField("models.Team", related_name="team_members", null=True)
+    key = fields.IntField()
     talks_to = fields.ManyToManyField("models.Team", related_name="gets_talked_to")
 
     class Meta:
         table_description = "The TEAMS!"
+        indexes = ("manager", "key")
 
 
 class SourceFields(Model):
