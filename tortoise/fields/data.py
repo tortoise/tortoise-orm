@@ -229,7 +229,7 @@ class FloatField(Field, float):
     Float (double) field.
     """
 
-    SQL_TYPE = "DOUBLE PRECISON"
+    SQL_TYPE = "DOUBLE PRECISION"
 
     class _db_sqlite:
         SQL_TYPE = "REAL"

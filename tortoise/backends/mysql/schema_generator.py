@@ -5,6 +5,7 @@ from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
 class MySQLSchemaGenerator(BaseSchemaGenerator):
+    DIALECT = "mysql"
     TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({fields}){extra}{comment};"
     INDEX_CREATE_TEMPLATE = "KEY `{index_name}` ({fields})"
     FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{primary}{comment}"
@@ -22,11 +23,6 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         " ON DELETE CASCADE\n"
         "){extra}{comment};"
     )
-    FIELD_TYPE_MAP = {
-        **BaseSchemaGenerator.FIELD_TYPE_MAP,
-        fields.FloatField: "DOUBLE",
-        fields.DatetimeField: "DATETIME(6)",
-    }
 
     def __init__(self, client) -> None:
         super().__init__(client)

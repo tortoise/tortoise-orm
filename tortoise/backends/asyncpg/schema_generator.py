@@ -6,14 +6,9 @@ from tortoise.utils import get_escape_translation_table
 
 
 class AsyncpgSchemaGenerator(BaseSchemaGenerator):
+    DIALECT = "postgres"
     TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE {table} IS '{comment}';"
     COLUMN_COMMNET_TEMPLATE = "COMMENT ON COLUMN {table}.{column} IS '{comment}';"
-
-    FIELD_TYPE_MAP = {
-        **BaseSchemaGenerator.FIELD_TYPE_MAP,
-        fields.JSONField: "JSONB",
-        fields.UUIDField: "UUID",
-    }
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)

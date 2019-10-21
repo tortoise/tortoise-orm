@@ -2,8 +2,8 @@ import logging
 from hashlib import sha256
 from typing import List, Optional, Set
 
-from tortoise import fields
 from tortoise.exceptions import ConfigurationError
+from tortoise.fields.base import Field
 from tortoise.utils import get_escape_translation_table
 
 # pylint: disable=R0201
@@ -12,6 +12,7 @@ logger = logging.getLogger("tortoise")
 
 
 class BaseSchemaGenerator:
+    DIALECT = "sql"
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment};'
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
@@ -25,22 +26,6 @@ class BaseSchemaGenerator:
         " ({forward_field}) ON DELETE CASCADE\n"
         "){extra}{comment};"
     )
-
-    FIELD_TYPE_MAP = {
-        fields.BooleanField: "BOOL",
-        fields.IntField: "INT",
-        fields.SmallIntField: "SMALLINT",
-        fields.BigIntField: "BIGINT",
-        fields.TextField: "TEXT",
-        fields.CharField: "VARCHAR({})",
-        fields.DatetimeField: "TIMESTAMP",
-        fields.DecimalField: "DECIMAL({},{})",
-        fields.TimeDeltaField: "BIGINT",
-        fields.DateField: "DATE",
-        fields.FloatField: "DOUBLE PRECISION",
-        fields.JSONField: "TEXT",
-        fields.UUIDField: "CHAR(36)",
-    }
 
     def __init__(self, client) -> None:
         self.client = client
@@ -73,7 +58,7 @@ class BaseSchemaGenerator:
         )
 
     def _get_primary_key_create_string(
-        self, field_object: fields.Field, field_name: str, comment: str
+        self, field_object: Field, field_name: str, comment: str
     ) -> Optional[str]:
         # All databases have their unique way for autoincrement,
         # has to implement in children
@@ -144,22 +129,9 @@ class BaseSchemaGenerator:
     def _get_unique_constraint_sql(self, field_names: List[str]) -> str:
         return self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(fields=", ".join(field_names))
 
-    def _get_field_type(self, field_object) -> str:
-        field_object_type = type(field_object)
-        while (
-            field_object_type.__bases__
-            and field_object_type not in self.FIELD_TYPE_MAP  # type: ignore
-        ):
-            field_object_type = field_object_type.__bases__[0]
-
-        field_type = self.FIELD_TYPE_MAP[field_object_type]  # type: ignore
-
-        if isinstance(field_object, fields.DecimalField):
-            field_type = field_type.format(field_object.max_digits, field_object.decimal_places)
-        elif isinstance(field_object, fields.CharField):
-            field_type = field_type.format(field_object.max_length)
-
-        return field_type
+    def _get_field_type(self, field_object: Field) -> str:
+        types = field_object.get_db_field_types()
+        return types.get(self.DIALECT, types[""])
 
     def _get_table_sql(self, model, safe=True) -> dict:
 

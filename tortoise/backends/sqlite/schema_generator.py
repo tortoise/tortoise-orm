@@ -5,12 +5,7 @@ from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
 class SqliteSchemaGenerator(BaseSchemaGenerator):
-    FIELD_TYPE_MAP = {
-        **BaseSchemaGenerator.FIELD_TYPE_MAP,
-        fields.BooleanField: "INTEGER",
-        fields.FloatField: "REAL",
-        fields.DecimalField: "VARCHAR(40)",
-    }
+    DIALECT = "sqlite"
 
     def _escape_comment(self, comment: str) -> str:  # pylint: disable=R0201
         # This method provides a default method to escape comment strings as per
