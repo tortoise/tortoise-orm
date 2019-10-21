@@ -14,7 +14,7 @@ class StraightFieldTests(test.TestCase):
 
     async def test_get_all(self):
         obj1 = await self.model.create(chars="aaa")
-        self.assertIsNotNone(obj1.id, str(dir(obj1)))
+        self.assertIsNotNone(obj1.eyedee, str(dir(obj1)))
         obj2 = await self.model.create(chars="bbb")
 
         objs = await self.model.all()
@@ -22,7 +22,7 @@ class StraightFieldTests(test.TestCase):
 
     async def test_get_by_pk(self):
         obj = await self.model.create(chars="aaa")
-        obj1 = await self.model.get(id=obj.id)
+        obj1 = await self.model.get(eyedee=obj.eyedee)
 
         self.assertEqual(obj, obj1)
 
@@ -36,7 +36,7 @@ class StraightFieldTests(test.TestCase):
         obj1 = await self.model.create(chars="aaa")
         obj2 = await self.model.create(chars="bbb", fk=obj1)
 
-        obj2a = await self.model.get(id=obj2.id)
+        obj2a = await self.model.get(eyedee=obj2.eyedee)
         await obj2a.fetch_related("fk")
         self.assertEqual(obj2, obj2a)
         self.assertEqual(obj1, obj2a.fk)
@@ -45,7 +45,7 @@ class StraightFieldTests(test.TestCase):
         obj1 = await self.model.create(chars="aaa")
         obj2 = await self.model.create(chars="bbb", fk=obj1)
 
-        obj2a = await self.model.get(id=obj2.id).prefetch_related("fk")
+        obj2a = await self.model.get(eyedee=obj2.eyedee).prefetch_related("fk")
         self.assertEqual(obj2, obj2a)
         self.assertEqual(obj1, obj2a.fk)
 
@@ -54,7 +54,7 @@ class StraightFieldTests(test.TestCase):
         obj2 = await self.model.create(chars="bbb", fk=obj1)
         obj3 = await self.model.create(chars="ccc", fk=obj1)
 
-        obj1a = await self.model.get(id=obj1.id)
+        obj1a = await self.model.get(eyedee=obj1.eyedee)
         self.assertEqual(await obj1a.fkrev, [obj2, obj3])
 
     async def test_get_fk_reverse_filter(self):
@@ -70,7 +70,7 @@ class StraightFieldTests(test.TestCase):
         obj2 = await self.model.create(chars="bbb", fk=obj1)
         obj3 = await self.model.create(chars="ccc", fk=obj1)
 
-        obj1a = await self.model.get(id=obj1.id)
+        obj1a = await self.model.get(eyedee=obj1.eyedee)
         objs = []
         async for obj in obj1a.fkrev:
             objs.append(obj)
@@ -81,7 +81,7 @@ class StraightFieldTests(test.TestCase):
         obj2 = await self.model.create(chars="bbb", fk=obj1)
         obj3 = await self.model.create(chars="ccc", fk=obj1)
 
-        obj1a = await self.model.get(id=obj1.id)
+        obj1a = await self.model.get(eyedee=obj1.eyedee)
         await obj1a.fetch_related("fkrev")
         self.assertEqual(list(obj1a.fkrev), [obj2, obj3])
 
@@ -90,7 +90,7 @@ class StraightFieldTests(test.TestCase):
         obj2 = await self.model.create(chars="bbb", fk=obj1)
         obj3 = await self.model.create(chars="ccc", fk=obj1)
 
-        obj1a = await self.model.get(id=obj1.id).prefetch_related("fkrev")
+        obj1a = await self.model.get(eyedee=obj1.eyedee).prefetch_related("fkrev")
         self.assertEqual(list(obj1a.fkrev), [obj2, obj3])
 
     async def test_get_m2m_forward_await(self):
@@ -98,10 +98,10 @@ class StraightFieldTests(test.TestCase):
         obj2 = await self.model.create(chars="bbb")
         await obj1.rel_to.add(obj2)
 
-        obj2a = await self.model.get(id=obj2.id)
+        obj2a = await self.model.get(eyedee=obj2.eyedee)
         self.assertEqual(await obj2a.rel_from, [obj1])
 
-        obj1a = await self.model.get(id=obj1.id)
+        obj1a = await self.model.get(eyedee=obj1.eyedee)
         self.assertEqual(await obj1a.rel_to, [obj2])
 
     async def test_get_m2m_reverse_await(self):
@@ -109,10 +109,10 @@ class StraightFieldTests(test.TestCase):
         obj2 = await self.model.create(chars="bbb")
         await obj2.rel_from.add(obj1)
 
-        obj2a = await self.model.get(id=obj2.id)
+        obj2a = await self.model.get(pk=obj2.eyedee)
         self.assertEqual(await obj2a.rel_from, [obj1])
 
-        obj1a = await self.model.get(id=obj1.id)
+        obj1a = await self.model.get(eyedee=obj1.pk)
         self.assertEqual(await obj1a.rel_to, [obj2])
 
     async def test_get_m2m_filter(self):
@@ -131,7 +131,7 @@ class StraightFieldTests(test.TestCase):
         obj2 = await self.model.create(chars="bbb")
         await obj1.rel_to.add(obj2)
 
-        obj2a = await self.model.get(id=obj2.id)
+        obj2a = await self.model.get(eyedee=obj2.eyedee)
         await obj2a.fetch_related("rel_from")
         self.assertEqual(list(obj2a.rel_from), [obj1])
 
@@ -140,7 +140,7 @@ class StraightFieldTests(test.TestCase):
         obj2 = await self.model.create(chars="bbb")
         await obj1.rel_to.add(obj2)
 
-        obj1a = await self.model.get(id=obj1.id)
+        obj1a = await self.model.get(eyedee=obj1.eyedee)
         await obj1a.fetch_related("rel_to")
         self.assertEqual(list(obj1a.rel_to), [obj2])
 
@@ -149,7 +149,7 @@ class StraightFieldTests(test.TestCase):
         obj2 = await self.model.create(chars="bbb")
         await obj1.rel_to.add(obj2)
 
-        obj2a = await self.model.get(id=obj2.id).prefetch_related("rel_from")
+        obj2a = await self.model.get(eyedee=obj2.eyedee).prefetch_related("rel_from")
         self.assertEqual(list(obj2a.rel_from), [obj1])
 
     async def test_get_m2m_reverse_prefetch_related(self):
@@ -157,7 +157,7 @@ class StraightFieldTests(test.TestCase):
         obj2 = await self.model.create(chars="bbb")
         await obj1.rel_to.add(obj2)
 
-        obj1a = await self.model.get(id=obj1.id).prefetch_related("rel_to")
+        obj1a = await self.model.get(eyedee=obj1.eyedee).prefetch_related("rel_to")
         self.assertEqual(list(obj1a.rel_to), [obj2])
 
 

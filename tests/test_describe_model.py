@@ -53,9 +53,9 @@ class TestBasic(test.TestCase):
                 "description": "Straight auto-mapped fields",
                 "unique_together": [["chars", "blip"]],
                 "pk_field": {
-                    "name": "id",
+                    "name": "eyedee",
                     "field_type": "IntField",
-                    "db_column": "id",
+                    "db_column": "eyedee",
                     "python_type": "int",
                     "generated": True,
                     "nullable": False,
@@ -169,9 +169,9 @@ class TestBasic(test.TestCase):
                 "description": "Straight auto-mapped fields",
                 "unique_together": [["chars", "blip"]],
                 "pk_field": {
-                    "name": "id",
+                    "name": "eyedee",
                     "field_type": fields.IntField,
-                    "db_column": "id",
+                    "db_column": "eyedee",
                     "python_type": int,
                     "generated": True,
                     "nullable": False,
@@ -285,7 +285,7 @@ class TestBasic(test.TestCase):
                 "description": "Source mapped fields",
                 "unique_together": [["chars", "blip"]],
                 "pk_field": {
-                    "name": "id",
+                    "name": "eyedee",
                     "field_type": "IntField",
                     "db_column": "sometable_id",
                     "python_type": "int",
@@ -401,7 +401,7 @@ class TestBasic(test.TestCase):
                 "description": "Source mapped fields",
                 "unique_together": [["chars", "blip"]],
                 "pk_field": {
-                    "name": "id",
+                    "name": "eyedee",
                     "field_type": fields.IntField,
                     "db_column": "sometable_id",
                     "python_type": int,

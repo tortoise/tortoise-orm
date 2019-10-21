@@ -394,7 +394,7 @@ class Employee(Model):
 
 
 class StraightFields(Model):
-    id = fields.IntField(pk=True, description="Da PK")
+    eyedee = fields.IntField(pk=True, description="Da PK")
     chars = fields.CharField(max_length=50, index=True, description="Some chars")
     blip = fields.CharField(max_length=50, default="BLIP")
     fk = fields.ForeignKeyField(
@@ -410,7 +410,7 @@ class StraightFields(Model):
 
 
 class SourceFields(Model):
-    id = fields.IntField(pk=True, source_field="sometable_id", description="Da PK")
+    eyedee = fields.IntField(pk=True, source_field="sometable_id", description="Da PK")
     chars = fields.CharField(
         max_length=50, source_field="some_chars_table", index=True, description="Some chars"
     )
