@@ -19,6 +19,7 @@ Contributors
 * Mateusz Bocian ``@mrstork``
 * Vladimir Urushev ``@pilat``
 * Adam Wallner ``@wallneradam``
+* Zoltán Szeredi ``@zoliszeredi``
 
 Special Thanks
 ==============

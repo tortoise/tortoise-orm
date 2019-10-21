@@ -644,7 +644,11 @@ class CountQuery(AwaitableQuery):
 
 class FieldSelectQuery(AwaitableQuery):
     # pylint: disable=W0223
-    __slots__ = ()
+    __slots__ = ("annotations",)
+
+    def __init__(self, model, annotations) -> None:
+        super().__init__(model)
+        self.annotations = annotations
 
     def _join_table_with_forwarded_fields(
         self, model, field: str, forwarded_fields: str
@@ -688,6 +692,12 @@ class FieldSelectQuery(AwaitableQuery):
                 "concrete field on related model".format(field)
             )
 
+        if field in self.annotations:
+            aggregate = self.annotations[field]
+            aggregation_info = aggregate.resolve(self.model)
+            self.query._select_other(aggregation_info["field"].as_(return_as))
+            return
+
         field_split = field.split("__")
         if field_split[0] in self.model._meta.fetch_fields:
             related_table, related_db_field = self._join_table_with_forwarded_fields(
@@ -699,7 +709,7 @@ class FieldSelectQuery(AwaitableQuery):
         raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')
 
     def resolve_to_python_value(self, model: "Type[Model]", field: str) -> Callable:
-        if field in model._meta.fetch_fields:
+        if field in model._meta.fetch_fields or field in self.annotations:
             # return as is to get whole model objects
             return lambda x: x
 
@@ -742,7 +752,7 @@ class ValuesListQuery(FieldSelectQuery):
         annotations,
         custom_filters,
     ) -> None:
-        super().__init__(model)
+        super().__init__(model, annotations)
         if flat and (len(fields_for_select_list) != 1):
             raise TypeError("You can flat value_list only if contains one field")
 
@@ -752,7 +762,6 @@ class ValuesListQuery(FieldSelectQuery):
         self.offset = offset
         self.distinct = distinct
         self.orderings = orderings
-        self.annotations = annotations
         self.custom_filters = custom_filters
         self.q_objects = q_objects
         self.fields_for_select_list = fields_for_select_list
@@ -825,13 +834,12 @@ class ValuesQuery(FieldSelectQuery):
         annotations,
         custom_filters,
     ) -> None:
-        super().__init__(model)
+        super().__init__(model, annotations)
         self.fields_for_select = fields_for_select
         self.limit = limit
         self.offset = offset
         self.distinct = distinct
         self.orderings = orderings
-        self.annotations = annotations
         self.custom_filters = custom_filters
         self.q_objects = q_objects
         self._db = db

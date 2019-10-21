@@ -1,4 +1,5 @@
 from tests.testmodels import Event, Team, Tournament
+from tortoise.aggregation import Length, Trim
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError
 
@@ -129,3 +130,45 @@ class TestValues(test.TestCase):
 
         with self.assertRaisesRegex(FieldError, 'Unknown field "neem" for model "Tournament"'):
             await Event.filter(name="Test").values_list("name", "tournament__neem")
+
+    async def test_values_list_annotations_length(self):
+        await Tournament.create(name="Championship")
+        await Tournament.create(name="Super Bowl")
+
+        tournaments = await Tournament.annotate(name_length=Length("name")).values_list(
+            "name", "name_length"
+        )
+        self.assertEqual(tournaments, [("Championship", 12), ("Super Bowl", 10)])
+
+    async def test_values_annotations_length(self):
+        await Tournament.create(name="Championship")
+        await Tournament.create(name="Super Bowl")
+
+        tournaments = await Tournament.annotate(name_slength=Length("name")).values(
+            "name", "name_slength"
+        )
+        self.assertEqual(
+            tournaments,
+            [
+                {"name": "Championship", "name_slength": 12},
+                {"name": "Super Bowl", "name_slength": 10},
+            ],
+        )
+
+    async def test_values_list_annotations_trim(self):
+        await Tournament.create(name="  x")
+        await Tournament.create(name=" y ")
+
+        tournaments = await Tournament.annotate(name_trim=Trim("name")).values_list(
+            "name", "name_trim"
+        )
+        self.assertEqual(tournaments, [("  x", "x"), (" y ", "y")])
+
+    async def test_values_annotations_trim(self):
+        await Tournament.create(name="  x")
+        await Tournament.create(name=" y ")
+
+        tournaments = await Tournament.annotate(name_trim=Trim("name")).values("name", "name_trim")
+        self.assertEqual(
+            tournaments, [{"name": "  x", "name_trim": "x"}, {"name": " y ", "name_trim": "y"}]
+        )

@@ -15,6 +15,8 @@ Enhancements:
   leading to better IDE integration and more comprehensive static analysis.
 - Fetching records from the DB is now up to 25% faster.
 - The Foreign Key property is now ``await``-able as long as one didn't populate it via ``.prefetch_related()``
+- Database functions added in aggregations ``Trim()``, ``Length()``, ``Coalesce()``.
+- Annotations can be selected inside ``Queryset.values()`` and ``Queryset.values_list()`` expressions.
 
 Bugfixes:
 ^^^^^^^^^
