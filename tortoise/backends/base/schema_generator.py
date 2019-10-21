@@ -17,13 +17,13 @@ class BaseSchemaGenerator:
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE ({fields})"
-    FK_TEMPLATE = ' REFERENCES "{table}" ({field}) ON DELETE {on_delete}{comment}'
+    FK_TEMPLATE = ' REFERENCES "{table}" ("{field}") ON DELETE {on_delete}{comment}'
     M2M_TABLE_TEMPLATE = (
         'CREATE TABLE {exists}"{table_name}" (\n'
         '    "{backward_key}" {backward_type} NOT NULL REFERENCES "{backward_table}"'
-        " ({backward_field}) ON DELETE CASCADE,\n"
+        ' ("{backward_field}") ON DELETE CASCADE,\n'
         '    "{forward_key}" {forward_type} NOT NULL REFERENCES "{forward_table}"'
-        " ({forward_field}) ON DELETE CASCADE\n"
+        ' ("{forward_field}") ON DELETE CASCADE\n'
         "){extra}{comment};"
     )
 
@@ -92,6 +92,9 @@ class BaseSchemaGenerator:
     def _get_inner_statements(self) -> List[str]:
         return []
 
+    def quote(self, val: str) -> str:
+        return f'"{val}"'
+
     @staticmethod
     def _make_hash(*args: str, length: int) -> str:
         # Hash a set of string values and get a digest of the given length.
@@ -123,7 +126,7 @@ class BaseSchemaGenerator:
             exists="IF NOT EXISTS " if safe else "",
             index_name=self._generate_index_name(model, field_names),
             table_name=model._meta.table,
-            fields=", ".join(field_names),
+            fields=", ".join([self.quote(f) for f in field_names]),
         )
 
     def _get_unique_constraint_sql(self, field_names: List[str]) -> str:
@@ -131,7 +134,7 @@ class BaseSchemaGenerator:
 
     def _get_field_type(self, field_object: Field) -> str:
         types = field_object.get_db_field_types()
-        return types.get(self.DIALECT, types[""])
+        return types.get(self.DIALECT, types[""])  # type: ignore
 
     def _get_table_sql(self, model, safe=True) -> dict:
 
@@ -149,6 +152,7 @@ class BaseSchemaGenerator:
                 if field_object.description
                 else ""
             )
+            # TODO: PK generation needs to move out of schema generator.
             if field_object.pk:
                 pk_string = self._get_primary_key_create_string(field_object, db_field, comment)
                 if pk_string:
@@ -204,8 +208,6 @@ class BaseSchemaGenerator:
                 fields_with_index.append(db_field)
 
         if model._meta.unique_together:
-            unique_together_sqls = []
-
             for unique_together_list in model._meta.unique_together:
                 unique_together_to_create = []
 
@@ -213,25 +215,20 @@ class BaseSchemaGenerator:
                     field_object = model._meta.fields_map[field]
 
                     if field_object.source_field:
-                        unique_together_to_create.append(field_object.source_field)
+                        unique_together_to_create.append(self.quote(field_object.source_field))
                     else:
-                        unique_together_to_create.append(field)
+                        unique_together_to_create.append(self.quote(field))
 
-                unique_together_sqls.append(
-                    self._get_unique_constraint_sql(unique_together_to_create)
-                )
-
-            fields_to_create.extend(unique_together_sqls)
+                fields_to_create.append(self._get_unique_constraint_sql(unique_together_to_create))
 
         # Indexes.
-        field_indexes_sqls = [
-            val
-            for val in [
-                self._get_index_sql(model, [field_name], safe=safe)
-                for field_name in fields_with_index
-            ]
-            if val
+        _indexes = [
+            self._get_index_sql(model, [field_name], safe=safe) for field_name in fields_with_index
+        ] + [
+            self._get_index_sql(model, field_names, safe=safe)
+            for field_names in model._meta.indexes
         ]
+        field_indexes_sqls = [val for val in _indexes if val]
 
         fields_to_create.extend(self._get_inner_statements())
 

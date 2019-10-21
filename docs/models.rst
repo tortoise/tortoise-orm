@@ -199,6 +199,19 @@ The ``Meta`` class
             unique_together=(("field_a", "field_b"), )
             unique_together=(("field_a", "field_b"), ("field_c", "field_d", "field_e")
 
+    .. attribute:: indexes
+        :annotation: = None
+
+        Specify ``indexes`` to set up compound non-unique indexes for sets of columns.
+
+        It should be a tuple of tuples (lists are fine) in the format of:
+
+        .. code-block:: python3
+
+            indexes=("field_a", "field_b")
+            indexes=(("field_a", "field_b"), )
+            indexes=(("field_a", "field_b"), ("field_c", "field_d", "field_e")
+
 ``ForeignKeyField``
 -------------------
 

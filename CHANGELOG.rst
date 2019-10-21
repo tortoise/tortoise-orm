@@ -14,13 +14,19 @@ Enhancements:
 - Models, Fields & QuerySets have significant type annotation improvements,
   leading to better IDE integration and more comprehensive static analysis.
 - Fetching records from the DB is now up to 25% faster.
-- The Foreign Key property is now ``await``-able as long as one didn't populate it via ``.prefetch_related()``
+- The Foreign Key property is now ``await``-able as long as one didn't populate it via ``.prefetch_related()``.
 - Database functions added in aggregations ``Trim()``, ``Length()``, ``Coalesce()``.
 - Annotations can be selected inside ``Queryset.values()`` and ``Queryset.values_list()`` expressions.
+- One can now specify compound indexes in the ``Meta:`` class using ``indexes``. It works just like ``unique_toghether``.
+- ``unique_together`` and ``indexes`` will correctly map the foreign key if referenced by name.
 
 Bugfixes:
 ^^^^^^^^^
 - The generated index name now has significantly lower chance of collision.
+- Fields for FK relations are quoted properly.
+- Fields are quoted properly in ``UNIQUE`` statements.
+- Fields are quoted properly in ``KEY`` statements.
+- Comment Fields are quoted properly in PostgreSQL dialect.
 
 Breaking Changes:
 ^^^^^^^^^^^^^^^^^

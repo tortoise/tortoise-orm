@@ -23,15 +23,15 @@ MODEL = TypeVar("MODEL", bound="Model")
 # TODO: Define Filter type object. Possibly tuple?
 
 
-def get_unique_together(meta) -> Tuple[Tuple[str, ...], ...]:
-    unique_together = getattr(meta, "unique_together", ())
+def get_together(meta, together: str) -> Tuple[Tuple[str, ...], ...]:
+    _together = getattr(meta, together, ())
 
-    if isinstance(unique_together, (list, tuple)):
-        if unique_together and isinstance(unique_together[0], str):
-            unique_together = (unique_together,)
+    if isinstance(_together, (list, tuple)):
+        if _together and isinstance(_together[0], str):
+            _together = (_together,)
 
     # return without validation, validation will be done further in the code
-    return unique_together
+    return _together
 
 
 def _fk_setter(self, value, _key, relation_field):
@@ -83,6 +83,7 @@ class MetaInfo:
         "basequery_all_fields",
         "_filters",
         "unique_together",
+        "indexes",
         "pk_attr",
         "generated_db_fields",
         "_model",
@@ -98,7 +99,8 @@ class MetaInfo:
         self.abstract: bool = getattr(meta, "abstract", False)
         self.table: str = getattr(meta, "table", "")
         self.app: Optional[str] = getattr(meta, "app", None)
-        self.unique_together: Tuple[Tuple[str, ...], ...] = get_unique_together(meta)
+        self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
+        self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
         self.fields: Set[str] = set()
         self.db_fields: Set[str] = set()
         self.m2m_fields: Set[str] = set()
@@ -639,34 +641,33 @@ class Model(metaclass=ModelMeta):
 
         :raises ConfigurationError: If the model has not been configured correctly.
         """
-        cls._check_unique_together()
+        cls._check_together("unique_together")
+        cls._check_together("indexes")
 
     @classmethod
-    def _check_unique_together(cls) -> None:
+    def _check_together(cls, together: str) -> None:
         """Check the value of "unique_together" option."""
-        if not isinstance(cls._meta.unique_together, (tuple, list)):
-            raise ConfigurationError(f"'{cls.__name__}.unique_together' must be a list or tuple.")
+        _together = getattr(cls._meta, together)
+        if not isinstance(_together, (tuple, list)):
+            raise ConfigurationError(f"'{cls.__name__}.{together}' must be a list or tuple.")
 
-        if any(
-            not isinstance(unique_fields, (tuple, list))
-            for unique_fields in cls._meta.unique_together
-        ):
+        if any(not isinstance(unique_fields, (tuple, list)) for unique_fields in _together):
             raise ConfigurationError(
-                f"All '{cls.__name__}.unique_together' elements must be lists or tuples."
+                f"All '{cls.__name__}.{together}' elements must be lists or tuples."
             )
 
-        for fields_tuple in cls._meta.unique_together:
+        for fields_tuple in _together:
             for field_name in fields_tuple:
                 field = cls._meta.fields_map.get(field_name)
 
                 if not field:
                     raise ConfigurationError(
-                        f"'{cls.__name__}.unique_together' has no '{field_name}' field."
+                        f"'{cls.__name__}.{together}' has no '{field_name}' field."
                     )
 
                 if isinstance(field, ManyToManyField):
                     raise ConfigurationError(
-                        f"'{cls.__name__}.unique_together' '{field_name}' field refers"
+                        f"'{cls.__name__}.{together}' '{field_name}' field refers"
                         " to ManyToMany field."
                     )
 
