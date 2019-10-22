@@ -93,9 +93,12 @@ We currently support single (non-composite) primary keys of any indexable field 
     CharField
     UUIDField
 
-One must define a primary key by setting a ``pk`` parameter to ``True``. If this is used on a ``IntField`` this will also set ``generated`` to ``False`` unless you explicitly pass ``generated=False`` as well. If ``generated`` is ``True`` any value you parse for this field is silently ignored and it will let the database assign an value instead.
-
+One must define a primary key by setting a ``pk`` parameter to ``True``. 
 If you don't define a primary key, we will create a primary key of type ``IntField`` with name of ``id`` for you.
+
+.. note::
+   If this is used on an Integer Field, ``generated`` will be set to ``True`` unless you explicitly pass ``generated=False`` as well.
+   If ``generated`` is ``True`` any value you parse for this field is silently ignored and it will let the database assign an value instead.
 
 Any of these are valid primary key definitions in a Model:
 
