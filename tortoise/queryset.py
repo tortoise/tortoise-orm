@@ -20,7 +20,7 @@ from pypika.functions import Count
 from typing_extensions import Protocol
 
 from tortoise import fields
-from tortoise.aggregation import Aggregate
+from tortoise.aggregation import Function
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
 from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
@@ -93,9 +93,9 @@ class AwaitableQuery(QuerySetIterable[MODEL]):
                     {},
                 )
             elif field_name in annotations:
-                aggregation = annotations[field_name]
-                aggregation_info = aggregation.resolve(self.model)
-                self.query = self.query.orderby(aggregation_info["field"], order=ordering[1])
+                annotation = annotations[field_name]
+                annotation_info = annotation.resolve(self.model)
+                self.query = self.query.orderby(annotation_info["field"], order=ordering[1])
             else:
                 field_object = self.model._meta.fields_map.get(field_name)
                 if not field_object:
@@ -145,7 +145,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._orderings: List[Tuple[str, Any]] = []
         self._q_objects: List[Q] = []
         self._distinct: bool = False
-        self._annotations: Dict[str, Aggregate] = {}
+        self._annotations: Dict[str, Function] = {}
         self._having: Dict[str, Any] = {}
         self._custom_filters: Dict[str, dict] = {}
 
@@ -269,13 +269,13 @@ class QuerySet(AwaitableQuery[MODEL]):
 
     def annotate(self, **kwargs) -> "QuerySet[MODEL]":
         """
-        Annotate result with aggregation result.
+        Annotate result with aggregation or function result.
         """
         queryset = self._clone()
-        for key, aggregation in kwargs.items():
-            if not isinstance(aggregation, Aggregate):
-                raise TypeError("value is expected to be Aggregate instance")
-            queryset._annotations[key] = aggregation
+        for key, annotation in kwargs.items():
+            if not isinstance(annotation, Function):
+                raise TypeError("value is expected to be Function instance")
+            queryset._annotations[key] = annotation
             from tortoise.models import get_filters_for_field
 
             queryset._custom_filters.update(get_filters_for_field(key, None, key))
@@ -473,12 +473,16 @@ class QuerySet(AwaitableQuery[MODEL]):
         if not self._annotations:
             return
         table = Table(self.model._meta.table)
-        self.query = self.query.groupby(table.id)
-        for key, aggregate in self._annotations.items():
-            aggregation_info = aggregate.resolve(self.model)
-            for join in aggregation_info["joins"]:
+        if any(
+            annotation.resolve(self.model)["field"].is_aggregate
+            for annotation in self._annotations.values()
+        ):
+            self.query = self.query.groupby(table.id)
+        for key, annotation in self._annotations.items():
+            annotation_info = annotation.resolve(self.model)
+            for join in annotation_info["joins"]:
                 self._join_table_by_field(*join)
-            self.query._select_other(aggregation_info["field"].as_(key))
+            self.query._select_other(annotation_info["field"].as_(key))
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery_all_fields)
@@ -691,9 +695,9 @@ class FieldSelectQuery(AwaitableQuery):
             )
 
         if field in self.annotations:
-            aggregate = self.annotations[field]
-            aggregation_info = aggregate.resolve(self.model)
-            self.query._select_other(aggregation_info["field"].as_(return_as))
+            annotation = self.annotations[field]
+            annotation_info = annotation.resolve(self.model)
+            self.query._select_other(annotation_info["field"].as_(return_as))
             return
 
         field_split = field.split("__")

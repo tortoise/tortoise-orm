@@ -8,14 +8,15 @@ from pypika.functions import Min as PypikaMin
 from pypika.functions import Sum as PypikaSum
 from pypika.functions import Trim as PypikaTrim
 from pypika.terms import AggregateFunction
+from pypika.terms import Function as BaseFunction
 
 from tortoise.exceptions import ConfigurationError
 
 
-class Aggregate:
+class Function:
     __slots__ = ("field", "default_values")
 
-    aggregation_func = AggregateFunction
+    database_func = BaseFunction
 
     def __init__(self, field, *default_values) -> None:
         self.field = field
@@ -24,63 +25,67 @@ class Aggregate:
     def _resolve_field_for_model(self, model, field: str, *default_values) -> dict:
         field_split = field.split("__")
         if not field_split[1:]:
-            aggregation_joins: list = []
+            function_joins: list = []
             if field_split[0] in model._meta.fetch_fields:
                 related_field = model._meta.fields_map[field_split[0]]
                 join = (Table(model._meta.table), field_split[0], related_field)
-                aggregation_joins.append(join)
-                aggregation_field = self.aggregation_func(
+                function_joins.append(join)
+                function_field = self.database_func(
                     Table(related_field.field_type._meta.table).id, *default_values
                 )
             else:
-                aggregation_field = self.aggregation_func(
+                function_field = self.database_func(
                     getattr(Table(model._meta.table), field_split[0]), *default_values
                 )
-            return {"joins": aggregation_joins, "field": aggregation_field}
+            return {"joins": function_joins, "field": function_field}
 
         if field_split[0] not in model._meta.fetch_fields:
             raise ConfigurationError(f"{field} not resolvable")
         related_field = model._meta.fields_map[field_split[0]]
         join = (Table(model._meta.table), field_split[0], related_field)
-        aggregation = self._resolve_field_for_model(
+        function = self._resolve_field_for_model(
             related_field.field_type, "__".join(field_split[1:]), *default_values
         )
-        aggregation["joins"].append(join)
-        return aggregation
+        function["joins"].append(join)
+        return function
 
     def resolve(self, model) -> dict:
-        aggregation = self._resolve_field_for_model(model, self.field, *self.default_values)
-        aggregation["joins"] = reversed(aggregation["joins"])
-        return aggregation
+        function = self._resolve_field_for_model(model, self.field, *self.default_values)
+        function["joins"] = reversed(function["joins"])
+        return function
+
+
+class Aggregate(Function):
+    database_func = AggregateFunction
 
 
 class Count(Aggregate):
-    aggregation_func = PypikaCount
+    database_func = PypikaCount
 
 
 class Sum(Aggregate):
-    aggregation_func = PypikaSum
+    database_func = PypikaSum
 
 
 class Max(Aggregate):
-    aggregation_func = PypikaMax
+    database_func = PypikaMax
 
 
 class Min(Aggregate):
-    aggregation_func = PypikaMin
+    database_func = PypikaMin
 
 
-class Avg(Aggregate):
-    aggregation_func = PypikaAvg
+class Avg(Function):
+    database_func = PypikaAvg
 
 
-class Trim(Aggregate):
-    aggregation_func = PypikaTrim
+class Trim(Function):
+    database_func = PypikaTrim
 
 
-class Length(Aggregate):
-    aggregation_func = PypikaLength
+class Length(Function):
+    database_func = PypikaLength
 
 
-class Coalesce(Aggregate):
-    aggregation_func = PypikaCoalesce
+class Coalesce(Function):
+    database_func = PypikaCoalesce
