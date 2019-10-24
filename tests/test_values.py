@@ -1,7 +1,7 @@
 from tests.testmodels import Event, Team, Tournament
-from tortoise.aggregation import Length, Trim
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError
+from tortoise.functions import Length, Trim
 
 
 class TestValues(test.TestCase):

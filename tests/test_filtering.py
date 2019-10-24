@@ -1,6 +1,7 @@
 from tests.testmodels import Event, IntFields, Reporter, Team, Tournament
-from tortoise.aggregation import Coalesce, Count, Length, Trim
+from tortoise.aggregation import Count
 from tortoise.contrib import test
+from tortoise.functions import Coalesce, Length, Trim
 from tortoise.query_utils import Q
 
 
