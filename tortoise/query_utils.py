@@ -216,15 +216,19 @@ class Q:
 
     def _resolve_custom_kwarg(self, model, key, value) -> QueryModifier:
         having_info = self._custom_filters[key]
-        aggregation = self._annotations[having_info["field"]]
-        aggregation_info = aggregation.resolve(model)
+        annotation = self._annotations[having_info["field"]]
+        annotation_info = annotation.resolve(model)
         operator = having_info["operator"]
         overridden_operator = model._meta.db.executor_class.get_overridden_filter_func(
             filter_func=operator
         )
         if overridden_operator:
             operator = overridden_operator
-        return QueryModifier(having_criterion=operator(aggregation_info["field"], value))
+        if annotation_info["field"].is_aggregate:
+            modifier = QueryModifier(having_criterion=operator(annotation_info["field"], value))
+        else:
+            modifier = QueryModifier(where_criterion=operator(annotation_info["field"], value))
+        return modifier
 
     def _resolve_regular_kwarg(self, model, key, value) -> QueryModifier:
         if key not in model._meta.filters and key.split("__")[0] in model._meta.fetch_fields:

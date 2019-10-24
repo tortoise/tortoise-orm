@@ -14,12 +14,13 @@ Enhancements:
 - Models, Fields & QuerySets have significant type annotation improvements,
   leading to better IDE integration and more comprehensive static analysis.
 - Fetching records from the DB is now up to 25% faster.
-- Database functions added in aggregations ``Trim()``, ``Length()``, ``Coalesce()``.
+- Database functions ``Trim()``, ``Length()``, ``Coalesce()`` added to tortoise.functions module.
 - Annotations can be selected inside ``Queryset.values()`` and ``Queryset.values_list()`` expressions.
 
 Bugfixes:
 ^^^^^^^^^
 - The generated index name now has significantly lower chance of collision.
+- The compiled SQL query contains HAVING and GROUP BY only for aggragation functions.
 
 Breaking Changes:
 ^^^^^^^^^^^^^^^^^
