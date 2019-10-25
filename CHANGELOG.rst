@@ -14,6 +14,7 @@ Enhancements:
 - Models, Fields & QuerySets have significant type annotation improvements,
   leading to better IDE integration and more comprehensive static analysis.
 - Fetching records from the DB is now up to 25% faster.
+- Database functions ``Trim()``, ``Length()``, ``Coalesce()`` added to tortoise.functions module.
 - The Foreign Key property is now ``await``-able as long as one didn't populate it via ``.prefetch_related()``.
 - Database functions added in aggregations ``Trim()``, ``Length()``, ``Coalesce()``.
 - Annotations can be selected inside ``Queryset.values()`` and ``Queryset.values_list()`` expressions.
@@ -23,6 +24,7 @@ Enhancements:
 Bugfixes:
 ^^^^^^^^^
 - The generated index name now has significantly lower chance of collision.
+- The compiled SQL query contains HAVING and GROUP BY only for aggragation functions.
 - Fields for FK relations are quoted properly.
 - Fields are quoted properly in ``UNIQUE`` statements.
 - Fields are quoted properly in ``KEY`` statements.
@@ -34,6 +36,11 @@ Breaking Changes:
   The old algorithm had a very high chance of collisions,
   the new hash algorithm is much better in this regard.
 
+
+0.13.12
+-------
+- Reverted "The ``Field`` class now calls ``super().__init__``, so mixins are properly initialised."
+  as it was causing issues on Python 3.6.
 
 0.13.11
 -------

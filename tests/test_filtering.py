@@ -1,6 +1,7 @@
 from tests.testmodels import Event, IntFields, Reporter, Team, Tournament
-from tortoise.aggregation import Coalesce, Count, Length, Trim
+from tortoise.aggregation import Count
 from tortoise.contrib import test
+from tortoise.functions import Coalesce, Length, Trim
 from tortoise.query_utils import Q
 
 
@@ -302,6 +303,33 @@ class TestFiltering(test.TestCase):
         self.assertSetEqual(
             {(i.intnum_null, i.clean_intnum_null) for i in ints}, {(None, 0), (10, 10)}
         )
+
+    async def test_filter_by_aggregation_field_comparison_coalesce_numeric(self):
+        await IntFields.create(intnum=3, intnum_null=10)
+        await IntFields.create(intnum=1, intnum_null=4)
+        await IntFields.create(intnum=2)
+
+        ints = await IntFields.annotate(clean_intnum_null=Coalesce("intnum_null", 0)).filter(
+            clean_intnum_null__gt=0
+        )
+        self.assertEqual(len(ints), 2)
+        self.assertSetEqual({i.clean_intnum_null for i in ints}, {10, 4})
+
+    async def test_filter_by_aggregation_field_comparison_length(self):
+        t1 = await Tournament.create(name="Tournament")
+        await Event.create(name="event1", tournament=t1)
+        await Event.create(name="event2", tournament=t1)
+        t2 = await Tournament.create(name="contest")
+        await Event.create(name="event3", tournament=t2)
+        await Tournament.create(name="Championship")
+        t4 = await Tournament.create(name="local")
+        await Event.create(name="event4", tournament=t4)
+        await Event.create(name="event5", tournament=t4)
+        tournaments = await Tournament.annotate(
+            name_len=Length("name"), event_count=Count("events")
+        ).filter(name_len__gt=5, event_count=2)
+        self.assertEqual(len(tournaments), 1)
+        self.assertSetEqual({t.name for t in tournaments}, {"Tournament"})
 
     async def test_values_select_relation(self):
         with self.assertRaises(ValueError):
