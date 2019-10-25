@@ -38,6 +38,48 @@ class _FieldMeta(type):
 class Field(metaclass=_FieldMeta):
     """
     Base Field type.
+
+    :param source_field:
+        Name of the field in the database schema.
+
+        Defaults to ``None``, which makes Tortoise
+        use the same name as the attribute the field is assigned to.
+    :param generated:
+        A flag indicating that this field is read-only and its value is generated in database.
+
+        You typically don’t need to specify this if you created the schema through Tortoise.
+
+        Defaults to ``False``, except for integer Primary Keys.
+    :param pk:
+        ``True`` if field is Primary Key.
+
+        Defaults to ``False``.
+    :param null:
+        Whether the field is nullable.
+
+        Defaults to ``False``.
+    :param default:
+        A default value for the field.
+
+        This can also be a callable for lazy or mutable defaults.
+
+        Defaults to ``None``, which has no effect unless the field is nullable.
+    :param unique:
+        Require that values for the field are unique.
+
+        Defaults to ``False``, except for Primary Keys.
+    :param index:
+        Set to ``True`` to create a B-Tree index for this field.
+
+        Defaults to ``False``, except for Primary Keys.
+    :param description:
+        Human readable description of the field.
+
+        This field is leveraged to generate comment messages for each database columns.
+        This also allows consumers to build automated documentation tooling based on the
+        declarative model api.
+
+        Defaults to ``None``.
     """
 
     # Field_type is a readonly property for the instance, it is set by _FieldMeta
@@ -72,13 +114,14 @@ class Field(metaclass=_FieldMeta):
         default: Any = None,
         unique: bool = False,
         index: bool = False,
+        description: Optional[str] = None,
         reference: Optional[str] = None,
         model: "Optional[Model]" = None,
-        description: Optional[str] = None,
         **kwargs,
     ) -> None:
         if not self.indexable and (unique or index):
             raise ConfigurationError(f"{self.__class__.__name__} can't be indexed")
+
         self.source_field = source_field
         self.generated = generated
         self.pk = pk
@@ -86,10 +129,11 @@ class Field(metaclass=_FieldMeta):
         self.null = null
         self.unique = unique
         self.index = index
+        self.description = description
+
         self.model_field_name = ""
         self.model = model
         self.reference = reference
-        self.description = description
 
     def to_db_value(self, value: Any, instance) -> Any:
         if value is None or isinstance(value, self.field_type):
@@ -102,7 +146,13 @@ class Field(metaclass=_FieldMeta):
         return self.field_type(value)  # pylint: disable=E1102
 
     @property
-    def required(self):
+    def required(self) -> bool:
+        """
+        Should a value be provided for this field when building model instances?
+
+        For reference, this is only True if the field has no default value,
+        is not nullable and is not generated.
+        """
         return self.default is None and not self.null and not self.generated
 
 
