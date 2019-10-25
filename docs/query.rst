@@ -139,6 +139,17 @@ QuerySet also supports aggregation through ``.annotate()`` method
 
 Check `examples <https://github.com/tortoise/tortoise-orm/tree/master/examples>`_ to see it all in work
 
+.. _foreign_key:
+
+Foreign Key
+===========
+
+Tortoise ORM provides an API for working with FK relations
+
+.. autoclass:: tortoise.fields.RelationQueryContainer
+    :members:
+
+
 .. _many_to_many:
 
 Many to Many
@@ -148,6 +159,7 @@ Tortoise ORM provides an API for working with M2M relations
 
 .. autoclass:: tortoise.fields.ManyToManyRelationManager
     :members:
+    :inherited-members:
 
 You can use them like this:
 

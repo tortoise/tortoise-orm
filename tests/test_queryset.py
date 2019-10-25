@@ -184,7 +184,7 @@ class TestQueryset(test.TestCase):
 
     async def test_async_iter(self):
         counter = 0
-        async for _ in IntFields.all():  # noqa
+        async for _ in IntFields.all():
             counter += 1
 
         self.assertEqual(await IntFields.all().count(), counter)

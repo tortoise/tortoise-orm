@@ -1,35 +1,33 @@
 """
 Tortoise PyLint plugin
 """
-from typing import Iterator
+from typing import Dict, Iterator
 
 from astroid import MANAGER, inference_tip, nodes, scoped_nodes
 from astroid.node_classes import Assign
 from astroid.nodes import ClassDef
+from pylint.lint import PyLinter
 
-MODELS: dict = {}
-FUTURE_RELATIONS: dict = {}
+MODELS: Dict[str, ClassDef] = {}
+FUTURE_RELATIONS: Dict[str, list] = {}
 
 
-def register(linter) -> None:
+def register(linter: PyLinter) -> None:
     """
     Reset state every time this is called, since we now get new AST to transform.
     """
-    # pylint: disable=W0603
-    global MODELS
-    global FUTURE_RELATIONS
-    MODELS = {}
-    FUTURE_RELATIONS = {}
+    MODELS.clear()
+    FUTURE_RELATIONS.clear()
 
 
-def is_model(cls) -> bool:
+def is_model(cls: ClassDef) -> bool:
     """
     Guard to apply this transform to Models only
     """
     return cls.metaclass() and cls.metaclass().qname() == "tortoise.models.ModelMeta"
 
 
-def transform_model(cls) -> None:
+def transform_model(cls: ClassDef) -> None:
     """
     Anything that uses the ModelMeta needs _meta and id.
     Also keep track of relationships and make them in the related model class.
@@ -95,14 +93,15 @@ def transform_model(cls) -> None:
         cls.locals["id"] = [nodes.ClassDef("id", None)]
 
 
-def is_model_field(cls) -> bool:
+def is_model_field(cls: ClassDef) -> bool:
     """
     Guard to apply this transform to Model Fields only
     """
-    return cls.qname().startswith("tortoise.fields")
+    type_name = "tortoise.fields.Field"
+    return cls.is_subtype_of(type_name) and cls.qname() != type_name
 
 
-def apply_type_shim(cls, _context=None) -> Iterator:
+def apply_type_shim(cls: ClassDef, _context=None) -> Iterator[ClassDef]:
     """
     Morphs model fields to representative type
     """

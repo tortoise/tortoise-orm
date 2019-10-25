@@ -10,11 +10,11 @@ from typing import Any, Coroutine, Dict, List, Optional, Tuple, Type, Union, cas
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
-from tortoise.exceptions import ConfigurationError  # noqa
-from tortoise.fields import ManyToManyRelationManager  # noqa
+from tortoise.exceptions import ConfigurationError
+from tortoise.fields import ManyToManyRelationManager
 from tortoise.filters import get_m2m_filters
 from tortoise.models import Model
-from tortoise.queryset import QuerySet  # noqa
+from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
 from tortoise.utils import generate_schema_for_client
 

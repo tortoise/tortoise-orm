@@ -1,11 +1,11 @@
 from copy import copy, deepcopy
 from functools import partial
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
+from typing import Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from pypika import Query
 
 from tortoise import fields
-from tortoise.backends.base.client import BaseDBAsyncClient  # noqa
+from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields import (
     Field,
@@ -379,7 +379,29 @@ class Model(metaclass=ModelMeta):
         self._saved_in_db = meta.pk_attr in kwargs and meta.pk.generated
 
         # Assign values and do type conversions
-        passed_fields = self._set_field_values(kwargs) | meta.fetch_fields | {*kwargs.keys()}
+        passed_fields = {*kwargs.keys()} | meta.fetch_fields
+
+        for key, value in kwargs.items():
+            if key in meta.fk_fields:
+                if value and not value._saved_in_db:
+                    raise OperationalError(
+                        f"You should first call .save() on {value} before referring to it"
+                    )
+                setattr(self, key, value)
+                passed_fields.add(meta.fields_map[key].source_field)  # type: ignore
+            elif key in meta.fields_db_projection:
+                field_object = meta.fields_map[key]
+                if value is None and not field_object.null:
+                    raise ValueError(f"{key} is non nullable field, but null was passed")
+                setattr(self, key, field_object.to_python_value(value))
+            elif key in meta.backward_fk_fields:
+                raise ConfigurationError(
+                    "You can't set backward relations through init, change related model instead"
+                )
+            elif key in meta.m2m_fields:
+                raise ConfigurationError(
+                    "You can't set m2m relations through init, use m2m_manager instead"
+                )
 
         # Assign defaults for missing fields
         for key in meta.fields.difference(passed_fields):
@@ -405,38 +427,6 @@ class Model(metaclass=ModelMeta):
             setattr(self, model_field, field.to_python_value(kwargs[key]))
 
         return self
-
-    def _set_field_values(self, values_map: Dict[str, Any]) -> Set[str]:
-        """
-        Sets values for fields honoring type transformations and
-        return list of fields that were set additionally
-        """
-        meta = self._meta
-        passed_fields = set()
-
-        for key, value in values_map.items():
-            if key in meta.fk_fields:
-                if value and not value._saved_in_db:
-                    raise OperationalError(
-                        f"You should first call .save() on {value} before referring to it"
-                    )
-                setattr(self, key, value)
-                passed_fields.add(meta.fields_map[key].source_field)
-            elif key in meta.fields_db_projection:
-                field_object = meta.fields_map[key]
-                if value is None and not field_object.null:
-                    raise ValueError(f"{key} is non nullable field, but null was passed")
-                setattr(self, key, field_object.to_python_value(value))
-            elif key in meta.backward_fk_fields:
-                raise ConfigurationError(
-                    "You can't set backward relations through init, change related model instead"
-                )
-            elif key in meta.m2m_fields:
-                raise ConfigurationError(
-                    "You can't set m2m relations through init, use m2m_manager instead"
-                )
-
-        return passed_fields  # type: ignore
 
     def __str__(self) -> str:
         return f"<{self.__class__.__name__}>"

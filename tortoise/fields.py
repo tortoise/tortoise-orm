@@ -1,10 +1,9 @@
 import datetime
 import functools
 import json
-import uuid
 from decimal import Decimal
 from typing import TYPE_CHECKING, Any, Optional, Type, Union
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import ciso8601
 from pypika import Table
@@ -151,7 +150,7 @@ class SmallIntField(Field, int):
         super().__init__(pk=pk, **kwargs)
 
 
-class CharField(Field, str):  # type: ignore[misc]  # noqa
+class CharField(Field, str):  # type: ignore
     """
     Character field.
 
@@ -170,7 +169,7 @@ class CharField(Field, str):  # type: ignore[misc]  # noqa
         super().__init__(**kwargs)
 
 
-class TextField(Field, str):  # type: ignore[misc]  # noqa
+class TextField(Field, str):  # type: ignore
     """
     Large Text field.
     """
@@ -294,7 +293,7 @@ class FloatField(Field, float):
     __slots__ = ()
 
 
-class JSONField(Field, dict, list):  # type: ignore[misc]  # noqa
+class JSONField(Field, dict, list):  # type: ignore
     """
     JSON field.
 
@@ -339,7 +338,7 @@ class UUIDField(Field, UUID):
     def __init__(self, **kwargs) -> None:
         if kwargs.get("pk", False):
             if "default" not in kwargs:
-                kwargs["default"] = uuid.uuid4
+                kwargs["default"] = uuid4
         super().__init__(**kwargs)
 
     def to_db_value(self, value: Any, instance) -> Optional[str]:
@@ -347,10 +346,10 @@ class UUIDField(Field, UUID):
             return None
         return str(value)
 
-    def to_python_value(self, value: Any) -> Optional[uuid.UUID]:
-        if value is None or isinstance(value, self.field_type):
+    def to_python_value(self, value: Any) -> Optional[UUID]:
+        if value is None or isinstance(value, UUID):
             return value
-        return uuid.UUID(value)
+        return UUID(value)
 
 
 class ForeignKeyField(Field):
