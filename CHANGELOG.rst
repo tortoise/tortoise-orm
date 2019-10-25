@@ -16,6 +16,7 @@ Enhancements:
 - Fetching records from the DB is now up to 25% faster.
 - Database functions ``Trim()``, ``Length()``, ``Coalesce()`` added to tortoise.functions module.
 - Annotations can be selected inside ``Queryset.values()`` and ``Queryset.values_list()`` expressions.
+- Added support for Python 3.8
 
 Bugfixes:
 ^^^^^^^^^
