@@ -1,7 +1,7 @@
 from tests.testmodels import Event, Team, Tournament
-from tortoise.aggregation import Count
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError, OperationalError
+from tortoise.functions import Count
 from tortoise.query_utils import Prefetch
 
 

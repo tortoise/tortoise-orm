@@ -20,13 +20,18 @@ Enhancements:
 Bugfixes:
 ^^^^^^^^^
 - The generated index name now has significantly lower chance of collision.
-- The compiled SQL query contains HAVING and GROUP BY only for aggragation functions.
+- The compiled SQL query contains HAVING and GROUP BY only for aggregation functions.
+
+Deprecations:
+^^^^^^^^^^^^^
+- ``import from tortoise.aggregation`` is deprecated, please do ``import from tortoise.functions`` instead.
 
 Breaking Changes:
 ^^^^^^^^^^^^^^^^^
 - The hash used to make generated indexes unique has changed.
   The old algorithm had a very high chance of collisions,
   the new hash algorithm is much better in this regard.
+- Dropped support for Python 3.5
 
 
 0.13.12

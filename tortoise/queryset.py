@@ -15,14 +15,14 @@ from typing import (
     Union,
 )
 
-from pypika import JoinType, Order, Query, Table  # noqa
+from pypika import JoinType, Order, Query, Table
 from pypika.functions import Count
 from typing_extensions import Protocol
 
 from tortoise import fields
-from tortoise.aggregation import Function
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
+from tortoise.functions import Function
 from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
 
 # Empty placeholder - Should never be edited.

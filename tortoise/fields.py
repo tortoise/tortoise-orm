@@ -446,14 +446,14 @@ class ManyToManyField(Field):
     )
     has_db_field = False
 
-    def __init__(  # type: ignore
+    def __init__(
         self,
         model_name: str,
         through: Optional[str] = None,
         forward_key: Optional[str] = None,
         backward_key: str = "",
         related_name: str = "",
-        field_type: "Type[Model]" = None,
+        field_type: "Type[Model]" = None,  # type: ignore
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)

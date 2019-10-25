@@ -82,7 +82,7 @@ def _get_joins_for_related_field(
     return required_joins
 
 
-class EmptyCriterion:
+class EmptyCriterion(Criterion):  # type: ignore
     def __or__(self, other):
         if other:
             return other

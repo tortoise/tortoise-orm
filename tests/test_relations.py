@@ -1,7 +1,7 @@
 from tests.testmodels import Employee, Event, Team, Tournament
-from tortoise.aggregation import Count
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError, NoValuesFetched
+from tortoise.functions import Count
 
 
 class TestRelations(test.TestCase):
