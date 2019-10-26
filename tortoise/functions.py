@@ -3,10 +3,12 @@ from pypika.functions import Avg as PypikaAvg
 from pypika.functions import Coalesce as PypikaCoalesce
 from pypika.functions import Count as PypikaCount
 from pypika.functions import Length as PypikaLength
+from pypika.functions import Lower as PypikaLower
 from pypika.functions import Max as PypikaMax
 from pypika.functions import Min as PypikaMin
 from pypika.functions import Sum as PypikaSum
 from pypika.functions import Trim as PypikaTrim
+from pypika.functions import Upper as PypikaUpper
 from pypika.terms import AggregateFunction
 from pypika.terms import Function as BaseFunction
 
@@ -78,6 +80,14 @@ class Length(Function):
 
 class Coalesce(Function):
     database_func = PypikaCoalesce
+
+
+class Lower(Function):
+    database_func = PypikaLower
+
+
+class Upper(Function):
+    database_func = PypikaUpper
 
 
 ##############################################################################

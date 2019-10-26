@@ -14,7 +14,7 @@ Enhancements:
 - Models, Fields & QuerySets have significant type annotation improvements,
   leading to better IDE integration and more comprehensive static analysis.
 - Fetching records from the DB is now up to 25% faster.
-- Database functions ``Trim()``, ``Length()``, ``Coalesce()`` added to tortoise.functions module.
+- Database functions ``Trim()``, ``Length()``, ``Coalesce()``, ``Lower()``, ``Upper()`` added to tortoise.functions module.
 - Annotations can be selected inside ``Queryset.values()`` and ``Queryset.values_list()`` expressions.
 - Added support for Python 3.8
 - The Foreign Key property is now ``await``-able as long as one didn't populate it via ``.prefetch_related()``
