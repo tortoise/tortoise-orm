@@ -42,11 +42,11 @@ Transactions
 
 .. rst-class:: html-toggle
 
-.. _example_aggregation:
+.. _example_functions:
 
-Aggregation
-===========
-.. literalinclude::  ../../examples/aggregation.py
+Functions
+=========
+.. literalinclude::  ../../examples/functions.py
 
 
 .. rst-class:: html-toggle
