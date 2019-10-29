@@ -15,15 +15,15 @@ from typing import (
     Union,
 )
 
-from pypika import JoinType, Order, Query, Table
+from pypika import JoinType, Order, Table
 from pypika.functions import Count
 from pypika.queries import QueryBuilder
 from typing_extensions import Protocol
 
 from tortoise import fields
-from tortoise.aggregation import Function
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
+from tortoise.functions import Function
 from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
 
 # Empty placeholder - Should never be edited.
@@ -50,8 +50,8 @@ class AwaitableQuery(QuerySetIterable[MODEL]):
 
     def __init__(self, model: Type[MODEL]) -> None:
         self._joined_tables: List[Table] = []
-        self.query: QueryBuilder = QUERY
         self.model: "Type[Model]" = model
+        self.query: QueryBuilder = QUERY
         self._db: BaseDBAsyncClient = None  # type: ignore
         self.capabilities: Capabilities = model._meta.db.capabilities
 
@@ -112,7 +112,6 @@ class AwaitableQuery(QuerySetIterable[MODEL]):
 
 
 class QuerySet(AwaitableQuery[MODEL]):
-    # pylint: disable=W0201
     __slots__ = (
         "fields",
         "_prefetch_map",

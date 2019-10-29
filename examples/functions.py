@@ -1,11 +1,12 @@
 from tortoise import Tortoise, fields, run_async
-from tortoise.aggregation import Count, Min, Sum
+from tortoise.functions import Coalesce, Count, Length, Lower, Min, Sum, Trim, Upper
 from tortoise.models import Model
 
 
 class Tournament(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
+    desc = fields.TextField(null=True)
 
     def __str__(self):
         return self.name
@@ -34,9 +35,10 @@ class Team(Model):
 async def run():
     await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
     await Tortoise.generate_schemas()
-    tournament = await Tournament.create(name="New Tournament")
+    tournament = await Tournament.create(name="New Tournament", desc="great")
     await tournament.save()
     await Tournament.create(name="Second tournament")
+    await Tournament.create(name=" final tournament ")
     await Event(name="Without participants", tournament_id=tournament.id).save()
     event = Event(name="Test", tournament_id=tournament.id)
     await event.save()
@@ -55,6 +57,21 @@ async def run():
     print(await Tournament.all().annotate(events_count=Count("events")).order_by("events_count"))
 
     print(await Event.all().annotate(tournament_test_id=Sum("tournament__id")).first())
+
+    print(await Tournament.annotate(clean_desciption=Coalesce("desc")).filter(clean_desciption=""))
+
+    print(
+        await Tournament.annotate(trimmed_name=Trim("name")).filter(trimmed_name="final tournament")
+    )
+
+    print(
+        await Tournament.annotate(name_len=Length("name")).filter(
+            name_len__gt=len("New Tournament")
+        )
+    )
+
+    print(await Tournament.annotate(name_lo=Lower("name")).filter(name_lo="new tournament"))
+    print(await Tournament.annotate(name_lo=Upper("name")).filter(name_lo="NEW TOURNAMENT"))
 
 
 if __name__ == "__main__":

@@ -14,27 +14,32 @@ Enhancements:
 - Models, Fields & QuerySets have significant type annotation improvements,
   leading to better IDE integration and more comprehensive static analysis.
 - Fetching records from the DB is now up to 25% faster.
-- Database functions ``Trim()``, ``Length()``, ``Coalesce()`` added to tortoise.functions module.
-- The Foreign Key property is now ``await``-able as long as one didn't populate it via ``.prefetch_related()``.
-- Database functions added in aggregations ``Trim()``, ``Length()``, ``Coalesce()``.
+- Database functions ``Trim()``, ``Length()``, ``Coalesce()``, ``Lower()``, ``Upper()`` added to tortoise.functions module.
 - Annotations can be selected inside ``Queryset.values()`` and ``Queryset.values_list()`` expressions.
+- Added support for Python 3.8
+- The Foreign Key property is now ``await``-able as long as one didn't populate it via ``.prefetch_related()``
 - One can now specify compound indexes in the ``Meta:`` class using ``indexes``. It works just like ``unique_toghether``.
-- ``unique_together`` and ``indexes`` will correctly map the foreign key if referenced by name.
 
 Bugfixes:
 ^^^^^^^^^
 - The generated index name now has significantly lower chance of collision.
-- The compiled SQL query contains HAVING and GROUP BY only for aggragation functions.
+- The compiled SQL query contains HAVING and GROUP BY only for aggregation functions.
 - Fields for FK relations are quoted properly.
 - Fields are quoted properly in ``UNIQUE`` statements.
 - Fields are quoted properly in ``KEY`` statements.
 - Comment Fields are quoted properly in PostgreSQL dialect.
+- ``unique_together`` and ``indexes`` will correctly map the foreign key if referenced by name.
+
+Deprecations:
+^^^^^^^^^^^^^
+- ``import from tortoise.aggregation`` is deprecated, please do ``import from tortoise.functions`` instead.
 
 Breaking Changes:
 ^^^^^^^^^^^^^^^^^
 - The hash used to make generated indexes unique has changed.
   The old algorithm had a very high chance of collisions,
   the new hash algorithm is much better in this regard.
+- Dropped support for Python 3.5
 
 
 0.13.12

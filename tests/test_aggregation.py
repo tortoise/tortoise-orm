@@ -1,7 +1,7 @@
 from tests.testmodels import Event, Team, Tournament
-from tortoise.aggregation import Count, Min, Sum
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
+from tortoise.functions import Count, Min, Sum
 
 
 class TestAggregation(test.TestCase):

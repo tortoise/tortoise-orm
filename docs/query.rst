@@ -127,15 +127,19 @@ In cases like this you could use ``values()`` or ``values_list()`` to produce mo
     # And it will be done in one query
     events = await Event.filter(id__in=[1,2,3]).values('id', 'name', tournament_name='tournament__name')
 
-QuerySet also supports aggregation through ``.annotate()`` method
+QuerySet also supports aggregation and database functions through ``.annotate()`` method
 
 .. code-block:: python3
 
-    from tortoise.aggregation import Count
+    from tortoise.functions import Count, Trim, Lower, Upper, Coalesce
 
     # This query will fetch all tournaments with 10 or more events, and will
     # populate filed `.events_count` on instances with corresponding value
     await Tournament.annotate(events_count=Count('events')).filter(events_count__gte=10)
+    await Tournament.annotate(clean_name=Trim('name'))).filter(clean_name='tournament')
+    await Tournament.annotate(name_upper=Upper('name'))).filter(name_upper='TOURNAMENT')
+    await Tournament.annotate(name_lower=Lower('name'))).filter(name_lower='tournament')
+    await Tournament.annotate(desc_clean=Coalesce('desc', ''))).filter(desc_clean='')
 
 Check `examples <https://github.com/tortoise/tortoise-orm/tree/master/examples>`_ to see it all in work
 
@@ -148,6 +152,7 @@ Tortoise ORM provides an API for working with FK relations
 
 .. autoclass:: tortoise.fields.relational.RelationQueryContainer
     :members:
+
 
 .. _many_to_many:
 

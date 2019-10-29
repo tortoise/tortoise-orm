@@ -1,7 +1,6 @@
 from tests.testmodels import Event, IntFields, Reporter, Team, Tournament
-from tortoise.aggregation import Count
 from tortoise.contrib import test
-from tortoise.functions import Coalesce, Length, Trim
+from tortoise.functions import Coalesce, Count, Length, Lower, Trim, Upper
 from tortoise.query_utils import Q
 
 
@@ -330,6 +329,20 @@ class TestFiltering(test.TestCase):
         ).filter(name_len__gt=5, event_count=2)
         self.assertEqual(len(tournaments), 1)
         self.assertSetEqual({t.name for t in tournaments}, {"Tournament"})
+
+    async def test_filter_by_annotation_lower(self):
+        await Tournament.create(name="Tournament")
+        await Tournament.create(name="NEW Tournament")
+        tournaments = await Tournament.annotate(name_lower=Lower("name"))
+        self.assertEqual(len(tournaments), 2)
+        self.assertSetEqual({t.name_lower for t in tournaments}, {"tournament", "new tournament"})
+
+    async def test_filter_by_annotation_upper(self):
+        await Tournament.create(name="ToUrnAmEnT")
+        await Tournament.create(name="new TOURnament")
+        tournaments = await Tournament.annotate(name_upper=Upper("name"))
+        self.assertEqual(len(tournaments), 2)
+        self.assertSetEqual({t.name_upper for t in tournaments}, {"TOURNAMENT", "NEW TOURNAMENT"})
 
     async def test_values_select_relation(self):
         with self.assertRaises(ValueError):

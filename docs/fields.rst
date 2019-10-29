@@ -23,35 +23,8 @@ Fields are defined as properties of a ``Model`` class object:
 Reference
 =========
 
-Common parameters for fields:
-
-``source_field`` (str):
-    Name of the field in the database schema. Defaults to ``None``, which makes
-    Tortoise use the same name as the attribute the field is assigned to.
-``null`` (bool):
-    Whether the field is nullable. Defaults to ``False``.
-``default`` (value or callable):
-    A default value for the field. This can also be a callable for lazy or mutable defaults.
-    Defaults to ``None``, which has no effect unless the field is nullable.
-``unique`` (bool):
-    Require that values for the field are unique. Defaults to ``False``.
-``index`` (bool):
-    Set to ``True`` to create a B-Tree index for this field.
-``generated`` (bool):
-    A flag indicating that this field is read-only and its value is generated in database.
-    You typically don't need to use this if you created the schema through Tortoise.
-    Defaults to ``False``.
-``description`` (str):
-    Human readable description of the field. Defaults to ``None``. This allows consumers 
-    to build automated documentation tooling based on the declarative model api. This field is also
-    leveraged to generate comment messages for each database columns.
-
-Read-only properties:
-
-``required`` (bool):
-    An indicator of whether a value should be provided for this field when
-    building model instances. For reference, this is only ``True`` if the field
-    has no default value, is not nullable and is not generated.
+.. autoclass:: tortoise.fields.Field
+    :members:
 
 Here is the list of fields available at the moment with custom options of these fields:
 
@@ -64,6 +37,7 @@ Base Field
 
 Data Fields
 -----------
+=======
 
 .. automodule:: tortoise.fields.data
     :members:

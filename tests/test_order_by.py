@@ -1,7 +1,7 @@
 from tests.testmodels import Event, Tournament
-from tortoise.aggregation import Count
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError
+from tortoise.functions import Count
 
 
 class TestOrderBy(test.TestCase):
