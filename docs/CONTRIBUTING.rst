@@ -102,3 +102,15 @@ Tortoise ORM follows a the following agreed upon style:
 * Please try and provide type annotations where you can, it will improve auto-completion in editors, and better static analysis.
 
 
+Running tests
+================
+Running tests natively on windows isn't supported (yet). Best way to run them atm is by using WSL.
+Postrgress uses the default ``postrgress`` user, mysql uses ``root``. If either of them has a password you can set it with the ``TORTOISE_POSTGRESS_PASS`` and ``TORTOISE_MYSQL_PASS`` env variables respectively.
+
+
+Different types of tests
+-----------------------------
+- ``make test``: most basic quick test. only runs the tests on in an memory sqlite database
+- ``make testall``: runs the tests on all 4 database types: sqlite (in memory), postgress, MySQL-MyISAM and MySQL-InnoDB
+- ``green``: runs the same tests as ``make test``, ensures the green plugin works
+- ``nose2 --plugin tortoise.contrib.test.nose2 --db-module tests.testmodels --db-url sqlite://:memory: ``: same test as ``make test`` , ensures the nose2 plugin works
