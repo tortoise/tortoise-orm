@@ -105,7 +105,7 @@ Tortoise ORM follows a the following agreed upon style:
 Running tests
 ================
 Running tests natively on windows isn't supported (yet). Best way to run them atm is by using WSL.
-Postrgress uses the default ``postrgress`` user, mysql uses ``root``. If either of them has a password you can set it with the ``TORTOISE_POSTGRESS_PASS`` and ``TORTOISE_MYSQL_PASS`` env variables respectively.
+Postgres uses the default ``postgres`` user, mysql uses ``root``. If either of them has a password you can set it with the ``TORTOISE_POSTGRES_PASS`` and ``TORTOISE_MYSQL_PASS`` env variables respectively.
 
 
 Different types of tests
