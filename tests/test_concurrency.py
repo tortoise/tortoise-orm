@@ -22,11 +22,20 @@ class TestConcurrencyIsolated(test.IsolatedTestCase):
             await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
 
     @test.requireCapability(supports_transactions=True)
-    @test.expectedFailure
-    async def test_concurrency_transactions_create(self):
+    async def test_concurrency_transactions_concurrent(self):
         await asyncio.gather(*[self.create_trans_concurrent() for _ in range(10)])
         count = await Tournament.all().count()
-        self.assertEqual(count, 10000)
+        self.assertEqual(count, 1000)
+
+    async def create_trans(self):
+        async with in_transaction():
+            await Tournament.create(name="Test")
+
+    @test.requireCapability(supports_transactions=True)
+    async def test_concurrency_transactions(self):
+        await asyncio.gather(*[self.create_trans() for _ in range(100)])
+        count = await Tournament.all().count()
+        self.assertEqual(count, 100)
 
 
 @test.requireCapability(supports_transactions=True)

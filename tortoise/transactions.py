@@ -1,19 +1,23 @@
 from functools import wraps
-from typing import Callable, Optional
+from typing import Callable, Optional, TYPE_CHECKING
 
-from tortoise.backends.base.client import BaseDBAsyncClient, BaseTransactionWrapper
 from tortoise.exceptions import ParamsError
 
 current_transaction_map: dict = {}
 
+if TYPE_CHECKING:
+    from tortoise.backends.base.client import BaseDBAsyncClient, BaseTransactionWrapper
 
-def _get_connection(connection_name: Optional[str]) -> BaseDBAsyncClient:
+
+def _get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
     from tortoise import Tortoise
 
     if connection_name:
-        connection = Tortoise.get_connection(connection_name)
+        connection = current_transaction_map[connection_name].get()
+        #connection = Tortoise.get_connection(connection_name)
     elif len(Tortoise._connections) == 1:
-        connection = list(Tortoise._connections.values())[0]
+        connection_name = list(Tortoise._connections.keys())[0]
+        connection = current_transaction_map[connection_name].get()
     else:
         raise ParamsError(
             "You are running with multiple databases, so you should specify"
@@ -22,7 +26,7 @@ def _get_connection(connection_name: Optional[str]) -> BaseDBAsyncClient:
     return connection
 
 
-def in_transaction(connection_name: Optional[str] = None) -> BaseTransactionWrapper:
+def in_transaction(connection_name: Optional[str] = None) -> "BaseTransactionWrapper":
     """
     Transaction context manager.
 
@@ -59,7 +63,7 @@ def atomic(connection_name: Optional[str] = None) -> Callable:
     return wrapper
 
 
-async def start_transaction(connection_name: Optional[str] = None) -> BaseTransactionWrapper:
+async def start_transaction(connection_name: Optional[str] = None) -> "BaseTransactionWrapper":
     """
     Function to manually control your transaction.
 
@@ -72,5 +76,7 @@ async def start_transaction(connection_name: Optional[str] = None) -> BaseTransa
     """
     connection = _get_connection(connection_name)
     transaction = connection._in_transaction()
-    await transaction.start()
-    return transaction
+    # current_transaction = current_transaction_map[connection.connection_name]
+    # old_ctx = current_transaction.get()
+    await transaction.connection.start()#old_ctx=old_ctx)
+    return transaction.connection

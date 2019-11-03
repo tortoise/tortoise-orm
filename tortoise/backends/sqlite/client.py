@@ -12,6 +12,9 @@ from tortoise.backends.base.client import (
     BaseTransactionWrapper,
     Capabilities,
     ConnectionWrapper,
+    TransactionContext,
+    NonLockedConnectionWrapper,
+    NestedTransactionContext
 )
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
@@ -45,9 +48,7 @@ class SqliteClient(BaseDBAsyncClient):
         self.pragmas.pop("connection_name", None)
         self.pragmas.pop("fetch_inserted", None)
 
-        self._transaction_class = type(
-            "TransactionWrapper", (TransactionWrapper, self.__class__), {}
-        )
+        self._transaction_class = TransactionWrapper
         self._connection: Optional[aiosqlite.Connection] = None
         self._lock = asyncio.Lock()
 
@@ -91,13 +92,13 @@ class SqliteClient(BaseDBAsyncClient):
     def acquire_connection(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._connection, self._lock)
 
-    def _in_transaction(self) -> "TransactionWrapper":
-        return self._transaction_class(
+    def _in_transaction(self) -> "TransactionContext":
+        return TransactionContext(self._transaction_class(
             connection_name=self.connection_name,
             connection=self._connection,
             lock=self._lock,
             fetch_inserted=self.fetch_inserted,
-        )
+        ))
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
@@ -139,19 +140,21 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         self._finalized = False
         self.fetch_inserted = fetch_inserted
 
+    def acquire_connection(self) -> ConnectionWrapper:
+        return NonLockedConnectionWrapper(self._connection, self._lock)
+
+    def _in_transaction(self) -> "TransactionContext":
+        return NestedTransactionContext(self)
+
     async def start(self) -> None:
         try:
             await self._connection.commit()
             await self._connection.execute("BEGIN")
         except sqlite3.OperationalError as exc:  # pragma: nocoverage
             raise TransactionManagementError(exc)
-        current_transaction = current_transaction_map[self.connection_name]
-        self._old_context_value = current_transaction.get()
-        current_transaction.set(self)
 
     def release(self) -> None:
         self._finalized = True
-        current_transaction_map[self.connection_name].set(self._old_context_value)
 
     async def rollback(self) -> None:
         if self._finalized:

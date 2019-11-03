@@ -12,7 +12,8 @@ from asynctest.case import _Policy
 from tortoise import Tortoise
 from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise.exceptions import DBConnectionError
-from tortoise.transactions import current_transaction_map, start_transaction
+from tortoise.transactions import current_transaction_map, start_transaction, in_transaction, atomic
+from contextvars import copy_context
 
 __all__ = (
     "SimpleTestCase",
@@ -186,11 +187,13 @@ class SimpleTestCase(_TestCase):  # type: ignore
         self._checker = checker or _fail_on._fail_on()
         self._checker.before_test(self)
 
+        self.__context__ = copy_context()
+        #self.loop.call_soon(self.__context__.run, self._setUpDB())
         self.loop.run_until_complete(self._setUpDB())
         if asyncio.iscoroutinefunction(self.setUp):
             self.loop.run_until_complete(self.setUp())
         else:
-            self.setUp()
+            self.__context__.run(self.setUp)
 
         # don't take into account if the loop ran during setUp
         self.loop._asynctest_ran = False
@@ -255,6 +258,24 @@ class TruncationTestCase(SimpleTestCase):
                 await model._meta.db.execute_script(f"DELETE FROM {model._meta.table}")  # nosec
 
 
+class TransactionTestContext:
+    __slots__ = ("connection", "connection_name", "token")
+
+    def __init__(self, connection) -> None:
+        self.connection = connection
+        self.connection_name = connection.connection_name
+
+    async def __aenter__(self):
+        current_transaction = current_transaction_map[self.connection_name]
+        self.token = current_transaction.set(self.connection)
+        await self.connection.start()
+        return self.connection
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        await self.connection.rollback()
+        current_transaction_map[self.connection_name].reset(self.token)
+
+
 class TestCase(TruncationTestCase):
     """
     An asyncio capable test class that will ensure that each test will be run at
@@ -262,17 +283,40 @@ class TestCase(TruncationTestCase):
 
     This is a fast test runner. Don't use it if your test uses transactions.
     """
+    def _run_test_method(self, method):
+        # If the method is a coroutine or returns a coroutine, run it on the
+        # loop
+        if asyncio.iscoroutinefunction(method):
+            async def runit():
+                connection = Tortoise.get_connection("models")._in_transaction().connection
+                async with TransactionTestContext(connection):
+                    await method()
+            self.loop.run_until_complete(runit())
+        else:
+            method()
+        # if asyncio.iscoroutine(result):
+        #     self.loop.run_until_complete(result)
 
     async def _setUpDB(self) -> None:
         _restore_default()
         self.__db__ = Tortoise.get_connection("models")
-        if self.__db__.capabilities.supports_transactions:
-            self.__transaction__ = await start_transaction()
+        # if self.__db__.capabilities.supports_transactions:
+        #     #self.__context__ = copy_context()
+        #     self.__transaction__ = in_transaction()
+        #     current_transaction = current_transaction_map[self.__transaction__.connection_name]
+        #     self.token = current_transaction.set(self.__transaction__.connection)
+        #
+        #     #self.loop.call_soon(self.__transaction__.__aenter__(), context=self.__context__)
+        #     #await self.__context__.run(self.__transaction__.__aenter__())
+        #     # self.__transaction__ = await start_transaction()
 
     async def _tearDownDB(self) -> None:
         if self.__db__.capabilities.supports_transactions:
             _restore_default()
-            await self.__transaction__.rollback()
+            # await self.__transaction__.connection.rollback()
+            # current_transaction_map[self.__transaction__.connection_name].reset(self.token)
+            #await self.__context__.run(self.__transaction__.__aexit__(None, None, None))
+            #await self.__transaction__.__aexit__(None, None, None)
         else:
             await super()._tearDownDB()
 

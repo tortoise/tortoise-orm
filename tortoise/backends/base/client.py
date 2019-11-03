@@ -7,6 +7,7 @@ from pypika import Query
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.exceptions import TransactionManagementError
+from tortoise.transactions import current_transaction_map
 
 
 class Capabilities:
@@ -88,7 +89,7 @@ class BaseDBAsyncClient:
     def acquire_connection(self) -> "ConnectionWrapper":
         raise NotImplementedError()  # pragma: nocoverage
 
-    def _in_transaction(self) -> "BaseTransactionWrapper":
+    def _in_transaction(self) -> "TransactionContext":
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, query: str, values: list) -> Any:
@@ -119,6 +120,56 @@ class ConnectionWrapper:
         self.lock.release()
 
 
+class NonLockedConnectionWrapper(ConnectionWrapper):
+    async def __aenter__(self):
+        return self.connection
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        pass
+
+
+
+class TransactionContext:
+    __slots__ = ("connection", "connection_name", "token", "lock")
+
+    def __init__(self, connection) -> None:
+        self.connection = connection
+        self.connection_name = connection.connection_name
+        self.lock = connection._lock
+
+    async def __aenter__(self):
+        await self.lock.acquire()
+        current_transaction = current_transaction_map[self.connection_name]
+        self.token = current_transaction.set(self.connection)
+        await self.connection.start()
+        return self.connection
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        if not self.connection._finalized:
+            if exc_type:
+                await self.connection.rollback()
+            else:
+                await self.connection.commit()
+        current_transaction_map[self.connection_name].reset(self.token)
+        self.lock.release()
+
+class NestedTransactionContext(TransactionContext):
+    async def __aenter__(self):
+        current_transaction = current_transaction_map[self.connection_name]
+        self.token = current_transaction.set(self.connection)
+        await self.connection.start()
+        return self.connection
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        if not self.connection._finalized:
+            if exc_type:
+                await self.connection.rollback()
+            else:
+                await self.connection.commit()
+        current_transaction_map[self.connection_name].reset(self.token)
+
+
+
 class BaseTransactionWrapper:
     async def start(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
@@ -132,15 +183,15 @@ class BaseTransactionWrapper:
     async def commit(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def __aenter__(self):
-        await self.start()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        if exc_type:
-            if issubclass(exc_type, TransactionManagementError):
-                self.release()
-            else:
-                await self.rollback()
-        else:
-            await self.commit()
+    # async def __aenter__(self):
+    #     await self.start()
+    #     return self
+    #
+    # async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    #     if exc_type:
+    #         if issubclass(exc_type, TransactionManagementError):
+    #             self.release()
+    #         else:
+    #             await self.rollback()
+    #     else:
+    #         await self.commit()
