@@ -259,7 +259,7 @@ class SimpleTestCase(_TestCase):  # type: ignore
             if orig_result is None:
                 stopTestRun = getattr(result, "stopTestRun", None)
                 if stopTestRun is not None:
-                    stopTestRun()
+                    stopTestRun()  # pylint: disable=E1102
 
             # explicitly break reference cycles:
             # outcome.errors -> frame -> outcome -> outcome.errors
@@ -375,7 +375,7 @@ class TestCase(TruncationTestCase):
         pass
 
     async def _tearDownDB(self) -> None:
-        if not self.__db__.capabilities.supports_transactions:
+        if self.__db__.capabilities.supports_transactions:
             _restore_default()
         else:
             await super()._tearDownDB()

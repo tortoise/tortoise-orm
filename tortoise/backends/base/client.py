@@ -180,16 +180,3 @@ class BaseTransactionWrapper:
 
     async def commit(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
-
-    # async def __aenter__(self):
-    #     await self.start()
-    #     return self
-    #
-    # async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-    #     if exc_type:
-    #         if issubclass(exc_type, TransactionManagementError):
-    #             self.release()
-    #         else:
-    #             await self.rollback()
-    #     else:
-    #         await self.commit()
