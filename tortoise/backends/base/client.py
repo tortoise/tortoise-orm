@@ -6,7 +6,6 @@ from pypika import Query
 
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
-from tortoise.exceptions import TransactionManagementError
 from tortoise.transactions import current_transaction_map
 
 
@@ -128,7 +127,6 @@ class NonLockedConnectionWrapper(ConnectionWrapper):
         pass
 
 
-
 class TransactionContext:
     __slots__ = ("connection", "connection_name", "token", "lock")
 
@@ -153,6 +151,7 @@ class TransactionContext:
         current_transaction_map[self.connection_name].reset(self.token)
         self.lock.release()
 
+
 class NestedTransactionContext(TransactionContext):
     async def __aenter__(self):
         current_transaction = current_transaction_map[self.connection_name]
@@ -167,7 +166,6 @@ class NestedTransactionContext(TransactionContext):
             else:
                 await self.connection.commit()
         current_transaction_map[self.connection_name].reset(self.token)
-
 
 
 class BaseTransactionWrapper:

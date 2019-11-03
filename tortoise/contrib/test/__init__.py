@@ -1,5 +1,6 @@
 import asyncio
 import os as _os
+import unittest
 from asyncio.selector_events import BaseSelectorEventLoop
 from functools import wraps
 from typing import Any, List, Optional
@@ -12,8 +13,7 @@ from asynctest.case import _Policy
 from tortoise import Tortoise
 from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise.exceptions import DBConnectionError
-from tortoise.transactions import current_transaction_map, start_transaction, in_transaction, atomic
-from contextvars import copy_context
+from tortoise.transactions import current_transaction_map
 
 __all__ = (
     "SimpleTestCase",
@@ -178,38 +178,115 @@ class SimpleTestCase(_TestCase):  # type: ignore
     async def _tearDownDB(self) -> None:
         pass
 
-    def _setUp(self) -> None:
-        self._init_loop()
-
+    async def _setUp(self) -> None:
         # initialize post-test checks
         test = getattr(self, self._testMethodName)
         checker = getattr(test, _fail_on._FAIL_ON_ATTR, None)
         self._checker = checker or _fail_on._fail_on()
         self._checker.before_test(self)
 
-        self.__context__ = copy_context()
-        #self.loop.call_soon(self.__context__.run, self._setUpDB())
-        self.loop.run_until_complete(self._setUpDB())
+        await self._setUpDB()
         if asyncio.iscoroutinefunction(self.setUp):
-            self.loop.run_until_complete(self.setUp())
+            await self.setUp()
         else:
-            self.__context__.run(self.setUp)
+            self.setUp()
 
         # don't take into account if the loop ran during setUp
         self.loop._asynctest_ran = False
 
-    def _tearDown(self) -> None:
+    async def _tearDown(self) -> None:
         if asyncio.iscoroutinefunction(self.tearDown):
-            self.loop.run_until_complete(self.tearDown())
+            await self.tearDown()
         else:
             self.tearDown()
-        self.loop.run_until_complete(self._tearDownDB())
+        await self._tearDownDB()
         Tortoise.apps = {}
         Tortoise._connections = {}
         Tortoise._inited = False
 
         # post-test checks
         self._checker.check_test(self)
+
+    # Override unittest.TestCase methods which call setUp() and tearDown()
+    def run(self, result=None):
+        orig_result = result
+        if result is None:
+            result = self.defaultTestResult()
+            startTestRun = getattr(result, "startTestRun", None)
+            if startTestRun is not None:
+                startTestRun()
+
+        result.startTest(self)
+
+        testMethod = getattr(self, self._testMethodName)
+        if getattr(self.__class__, "__unittest_skip__", False) or getattr(
+            testMethod, "__unittest_skip__", False
+        ):
+            # If the class or method was skipped.
+            try:
+                skip_why = getattr(self.__class__, "__unittest_skip_why__", "") or getattr(
+                    testMethod, "__unittest_skip_why__", ""
+                )
+                self._addSkip(result, self, skip_why)
+            finally:
+                result.stopTest(self)
+            return
+        expecting_failure = getattr(testMethod, "__unittest_expecting_failure__", False)
+        outcome = unittest.case._Outcome(result)  # type: ignore
+        try:
+            self._outcome = outcome
+
+            self._init_loop()
+
+            self.loop.run_until_complete(self._run_outcome(outcome, expecting_failure, testMethod))
+
+            self.loop.run_until_complete(self.doCleanups())
+            self._unset_loop()
+            for test, reason in outcome.skipped:
+                self._addSkip(result, test, reason)
+            self._feedErrorsToResult(result, outcome.errors)
+            if outcome.success:
+                if expecting_failure:
+                    if outcome.expectedFailure:
+                        self._addExpectedFailure(result, outcome.expectedFailure)
+                    else:
+                        self._addUnexpectedSuccess(result)
+                else:
+                    result.addSuccess(self)
+            return result
+        finally:
+            result.stopTest(self)
+            if orig_result is None:
+                stopTestRun = getattr(result, "stopTestRun", None)
+                if stopTestRun is not None:
+                    stopTestRun()
+
+            # explicitly break reference cycles:
+            # outcome.errors -> frame -> outcome -> outcome.errors
+            # outcome.expectedFailure -> frame -> outcome -> outcome.expectedFailure
+            outcome.errors.clear()
+            outcome.expectedFailure = None
+
+            # clear the outcome, no more needed
+            self._outcome = None
+
+    async def _run_outcome(self, outcome, expecting_failure, testMethod) -> None:
+        with outcome.testPartExecutor(self):
+            await self._setUp()
+        if outcome.success:
+            outcome.expecting_failure = expecting_failure
+            with outcome.testPartExecutor(self, isTest=True):
+                await self._run_test_method(testMethod)
+            outcome.expecting_failure = False
+            with outcome.testPartExecutor(self):
+                await self._tearDown()
+
+    async def _run_test_method(self, method) -> None:
+        # If the method is a coroutine or returns a coroutine, run it on the
+        # loop
+        result = method()
+        if asyncio.iscoroutine(result):
+            await result
 
 
 class IsolatedTestCase(SimpleTestCase):
@@ -283,40 +360,23 @@ class TestCase(TruncationTestCase):
 
     This is a fast test runner. Don't use it if your test uses transactions.
     """
-    def _run_test_method(self, method):
-        # If the method is a coroutine or returns a coroutine, run it on the
-        # loop
-        if asyncio.iscoroutinefunction(method):
-            async def runit():
-                connection = Tortoise.get_connection("models")._in_transaction().connection
-                async with TransactionTestContext(connection):
-                    await method()
-            self.loop.run_until_complete(runit())
-        else:
-            method()
-        # if asyncio.iscoroutine(result):
-        #     self.loop.run_until_complete(result)
 
-    async def _setUpDB(self) -> None:
+    async def _run_outcome(self, outcome, expecting_failure, testMethod) -> None:
         _restore_default()
         self.__db__ = Tortoise.get_connection("models")
-        # if self.__db__.capabilities.supports_transactions:
-        #     #self.__context__ = copy_context()
-        #     self.__transaction__ = in_transaction()
-        #     current_transaction = current_transaction_map[self.__transaction__.connection_name]
-        #     self.token = current_transaction.set(self.__transaction__.connection)
-        #
-        #     #self.loop.call_soon(self.__transaction__.__aenter__(), context=self.__context__)
-        #     #await self.__context__.run(self.__transaction__.__aenter__())
-        #     # self.__transaction__ = await start_transaction()
+        if self.__db__.capabilities.supports_transactions:
+            connection = self.__db__._in_transaction().connection
+            async with TransactionTestContext(connection):
+                await super()._run_outcome(outcome, expecting_failure, testMethod)
+        else:
+            await super()._run_outcome(outcome, expecting_failure, testMethod)
+
+    async def _setUpDB(self) -> None:
+        pass
 
     async def _tearDownDB(self) -> None:
-        if self.__db__.capabilities.supports_transactions:
+        if not self.__db__.capabilities.supports_transactions:
             _restore_default()
-            # await self.__transaction__.connection.rollback()
-            # current_transaction_map[self.__transaction__.connection_name].reset(self.token)
-            #await self.__context__.run(self.__transaction__.__aexit__(None, None, None))
-            #await self.__transaction__.__aexit__(None, None, None)
         else:
             await super()._tearDownDB()
 
