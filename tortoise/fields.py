@@ -2,7 +2,7 @@ import datetime
 import functools
 import json
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Generic, Optional, Type, TypeVar, Union
 from uuid import UUID, uuid4
 
 import ciso8601
@@ -12,7 +12,9 @@ from tortoise.exceptions import ConfigurationError, NoValuesFetched, Operational
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
+    from tortoise.queryset import QuerySet
 
+MODEL = TypeVar("MODEL", bound="Model")
 
 CASCADE = "CASCADE"
 RESTRICT = "RESTRICT"
@@ -455,6 +457,10 @@ class ForeignKeyField(Field):
             raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
         self.on_delete = on_delete
 
+    # we need this for IDEs so that they don't say that the field is not awaitable
+    def __await__(self):
+        ...  # pylint: disable=W0104
+
 
 class ManyToManyField(Field):
     """
@@ -530,7 +536,7 @@ class BackwardFKRelation(Field):
         self.description = description
 
 
-class RelationQueryContainer:
+class RelationQueryContainer(Generic[MODEL]):
     """
     Relation Query container.
     """
@@ -606,31 +612,31 @@ class RelationQueryContainer:
         for val in self.related_objects:
             yield val
 
-    def filter(self, *args, **kwargs):
+    def filter(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
         Returns QuerySet with related elements filtered by args/kwargs.
         """
         return self._query.filter(*args, **kwargs)
 
-    def all(self):
+    def all(self) -> "QuerySet[MODEL]":
         """
         Returns QuerySet with all related elements.
         """
         return self._query
 
-    def order_by(self, *args, **kwargs):
+    def order_by(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
         Returns QuerySet related elements in order.
         """
         return self._query.order_by(*args, **kwargs)
 
-    def limit(self, *args, **kwargs):
+    def limit(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
         Returns a QuerySet with at most «limit» related elements.
         """
         return self._query.limit(*args, **kwargs)
 
-    def offset(self, *args, **kwargs):
+    def offset(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
         Returns aQuerySet with all related elements offset by «offset».
         """
@@ -641,7 +647,7 @@ class RelationQueryContainer:
         self.related_objects = sequence
 
 
-class ManyToManyRelationManager(RelationQueryContainer):
+class ManyToManyRelationManager(RelationQueryContainer[MODEL]):
     """
     Many to many relation Query container.
     """

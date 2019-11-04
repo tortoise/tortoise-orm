@@ -2,6 +2,10 @@
 
 Changelog
 =========
+0.14.1
+-------
+- Improved type hints for relationship managers.
+
 0.14.0
 ------
 .. caution::
