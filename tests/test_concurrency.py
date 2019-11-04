@@ -1,4 +1,5 @@
 import asyncio
+import sys
 
 from tests.testmodels import Tournament
 from tortoise.contrib import test
@@ -21,6 +22,7 @@ class TestConcurrencyIsolated(test.IsolatedTestCase):
         async with in_transaction():
             await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
 
+    @test.skipIf(sys.version_info < (3, 7), "aiocontextvars backport not handling this well")
     @test.requireCapability(supports_transactions=True)
     async def test_concurrency_transactions_concurrent(self):
         await asyncio.gather(*[self.create_trans_concurrent() for _ in range(10)])
@@ -31,6 +33,7 @@ class TestConcurrencyIsolated(test.IsolatedTestCase):
         async with in_transaction():
             await Tournament.create(name="Test")
 
+    @test.skipIf(sys.version_info < (3, 7), "aiocontextvars backport not handling this well")
     @test.requireCapability(supports_transactions=True)
     async def test_concurrency_transactions(self):
         await asyncio.gather(*[self.create_trans() for _ in range(100)])

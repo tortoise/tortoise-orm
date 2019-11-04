@@ -149,18 +149,17 @@ class TransactionContext:
 
 class NestedTransactionContext(TransactionContext):
     async def __aenter__(self):
-        current_transaction = current_transaction_map[self.connection_name]
-        self.token = current_transaction.set(self.connection)
         await self.connection.start()
         return self.connection
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         if not self.connection._finalized:
             if exc_type:
-                await self.connection.rollback()
+                # Can't rollback a transaction that already failed.
+                if exc_type is not TransactionManagementError:
+                    await self.connection.rollback()
             else:
-                await self.connection.commit()
-        current_transaction_map[self.connection_name].reset(self.token)
+                await self.connection.commit(finalize=False)
 
 
 class BaseTransactionWrapper:
@@ -173,5 +172,5 @@ class BaseTransactionWrapper:
     async def rollback(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def commit(self) -> None:
+    async def commit(self, finalize: bool = True) -> None:
         raise NotImplementedError()  # pragma: nocoverage

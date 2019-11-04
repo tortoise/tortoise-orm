@@ -101,8 +101,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self._lock = asyncio.Lock()
         self._trxlock = asyncio.Lock()
 
-        self._transaction_class = TransactionWrapper
-
     async def create_connection(self, with_db: bool) -> None:
         self._template = {
             "host": self.host,
@@ -192,9 +190,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         self._connection: asyncpg.Connection = connection._connection
         self._lock = connection._lock
         self._trxlock = connection._trxlock
-        self.log = logging.getLogger("db_client")
-        self._transaction_class = self.__class__
-        self._old_context_value = None
+        self.log = connection.log
         self.connection_name = connection.connection_name
         self.transaction: Transaction = None
         self._finalized = False
@@ -216,17 +212,15 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         self.transaction = self._connection.transaction()
         await self.transaction.start()
 
-    def release(self) -> None:
-        self._finalized = True
-
-    async def commit(self) -> None:
+    async def commit(self, finalize: bool = True) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self.transaction.commit()
-        self.release()
+        if finalize:
+            self._finalized = True
 
     async def rollback(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self.transaction.rollback()
-        self.release()
+        self._finalized = True

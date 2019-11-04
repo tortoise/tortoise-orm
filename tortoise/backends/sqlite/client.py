@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import os
 import sqlite3
 from functools import wraps
@@ -126,8 +125,7 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         self._connection: aiosqlite.Connection = connection._connection
         self._lock = connection._lock
         self._trxlock = connection._trxlock
-        self.log = logging.getLogger("db_client")
-        self._old_context_value = None
+        self.log = connection.log
         self._finalized = False
         self.fetch_inserted = connection.fetch_inserted
 
@@ -141,17 +139,15 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         except sqlite3.OperationalError as exc:  # pragma: nocoverage
             raise TransactionManagementError(exc)
 
-    def release(self) -> None:
-        self._finalized = True
-
     async def rollback(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.rollback()
-        self.release()
+        self._finalized = True
 
-    async def commit(self) -> None:
+    async def commit(self, finalize: bool = True) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.commit()
-        self.release()
+        if finalize:
+            self._finalized = True

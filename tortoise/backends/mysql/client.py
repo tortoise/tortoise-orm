@@ -202,9 +202,8 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         self._connection: aiomysql.Connection = connection._connection
         self._lock = connection._lock
         self._trxlock = connection._trxlock
-        self.log = logging.getLogger("db_client")
+        self.log = connection.log
         self._finalized: Optional[bool] = None
-        self._old_context_value = None
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 
@@ -224,17 +223,15 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         await self._connection.begin()
         self._finalized = False
 
-    def release(self) -> None:
-        self._finalized = True
-
-    async def commit(self) -> None:
+    async def commit(self, finalize: bool = True) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.commit()
-        self.release()
+        if finalize:
+            self._finalized = True
 
     async def rollback(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.rollback()
-        self.release()
+        self._finalized = True
