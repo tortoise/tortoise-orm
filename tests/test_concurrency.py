@@ -21,7 +21,6 @@ class TestConcurrencyIsolated(test.IsolatedTestCase):
         async with in_transaction():
             await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
 
-    @test.skip("HANGS")
     @test.requireCapability(supports_transactions=True)
     async def test_concurrency_transactions_concurrent(self):
         await asyncio.gather(*[self.create_trans_concurrent() for _ in range(10)])
@@ -39,7 +38,6 @@ class TestConcurrencyIsolated(test.IsolatedTestCase):
         self.assertEqual(count, 100)
 
 
-@test.skip("BLOWS UP")
 @test.requireCapability(supports_transactions=True)
 class TestConcurrencyTransactioned(test.TestCase):
     async def test_concurrency_read(self):

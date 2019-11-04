@@ -15,7 +15,6 @@ from tortoise.backends.base.client import (
     Capabilities,
     ConnectionWrapper,
     NestedTransactionContext,
-    NonLockedConnectionWrapper,
     TransactionContext,
 )
 from tortoise.exceptions import (
@@ -100,6 +99,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self._template: dict = {}
         self._connection: Optional[asyncpg.Connection] = None
         self._lock = asyncio.Lock()
+        self._trxlock = asyncio.Lock()
 
         self._transaction_class = TransactionWrapper
 
@@ -149,7 +149,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         return ConnectionWrapper(self._connection, self._lock)
 
     def _in_transaction(self) -> "TransactionContext":
-        return TransactionContext(self._transaction_class(self))
+        return TransactionContext(TransactionWrapper(self))
 
     @translate_exceptions
     @retry_connection
@@ -191,6 +191,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     def __init__(self, connection: AsyncpgDBClient) -> None:
         self._connection: asyncpg.Connection = connection._connection
         self._lock = connection._lock
+        self._trxlock = connection._trxlock
         self.log = logging.getLogger("db_client")
         self._transaction_class = self.__class__
         self._old_context_value = None
@@ -198,9 +199,6 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         self.transaction: Transaction = None
         self._finalized = False
         self._parent = connection
-
-    def acquire_connection(self) -> ConnectionWrapper:
-        return NonLockedConnectionWrapper(self._connection, self._lock)
 
     def _in_transaction(self) -> "TransactionContext":
         return NestedTransactionContext(self)

@@ -13,7 +13,6 @@ from tortoise.backends.base.client import (
     Capabilities,
     ConnectionWrapper,
     NestedTransactionContext,
-    NonLockedConnectionWrapper,
     TransactionContext,
 )
 from tortoise.backends.mysql.executor import MySQLExecutor
@@ -103,8 +102,7 @@ class MySQLClient(BaseDBAsyncClient):
         self._template: dict = {}
         self._connection: Optional[aiomysql.Connection] = None
         self._lock = asyncio.Lock()
-
-        self._transaction_class = TransactionWrapper
+        self._trxlock = asyncio.Lock()
 
     async def create_connection(self, with_db: bool) -> None:
         self._template = {
@@ -159,7 +157,7 @@ class MySQLClient(BaseDBAsyncClient):
         return ConnectionWrapper(self._connection, self._lock)
 
     def _in_transaction(self) -> "TransactionContext":
-        return TransactionContext(self._transaction_class(self))
+        return TransactionContext(TransactionWrapper(self))
 
     @translate_exceptions
     @retry_connection
@@ -203,15 +201,12 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         self.connection_name = connection.connection_name
         self._connection: aiomysql.Connection = connection._connection
         self._lock = connection._lock
+        self._trxlock = connection._trxlock
         self.log = logging.getLogger("db_client")
-        self._transaction_class = self.__class__
         self._finalized: Optional[bool] = None
         self._old_context_value = None
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
-
-    def acquire_connection(self) -> ConnectionWrapper:
-        return NonLockedConnectionWrapper(self._connection, self._lock)
 
     def _in_transaction(self) -> "TransactionContext":
         return NestedTransactionContext(self)

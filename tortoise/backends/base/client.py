@@ -6,6 +6,7 @@ from pypika import Query
 
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
+from tortoise.exceptions import TransactionManagementError
 from tortoise.transactions import current_transaction_map
 
 
@@ -119,21 +120,13 @@ class ConnectionWrapper:
         self.lock.release()
 
 
-class NonLockedConnectionWrapper(ConnectionWrapper):
-    async def __aenter__(self):
-        return self.connection
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        pass
-
-
 class TransactionContext:
     __slots__ = ("connection", "connection_name", "token", "lock")
 
     def __init__(self, connection) -> None:
         self.connection = connection
         self.connection_name = connection.connection_name
-        self.lock = connection._lock
+        self.lock = connection._trxlock
 
     async def __aenter__(self):
         await self.lock.acquire()
@@ -145,7 +138,9 @@ class TransactionContext:
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         if not self.connection._finalized:
             if exc_type:
-                await self.connection.rollback()
+                # Can't rollback a transaction that already failed.
+                if exc_type is not TransactionManagementError:
+                    await self.connection.rollback()
             else:
                 await self.connection.commit()
         current_transaction_map[self.connection_name].reset(self.token)

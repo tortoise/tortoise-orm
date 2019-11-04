@@ -13,7 +13,6 @@ from tortoise.backends.base.client import (
     Capabilities,
     ConnectionWrapper,
     NestedTransactionContext,
-    NonLockedConnectionWrapper,
     TransactionContext,
 )
 from tortoise.backends.sqlite.executor import SqliteExecutor
@@ -47,9 +46,9 @@ class SqliteClient(BaseDBAsyncClient):
         self.pragmas.pop("connection_name", None)
         self.pragmas.pop("fetch_inserted", None)
 
-        self._transaction_class = TransactionWrapper
         self._connection: Optional[aiosqlite.Connection] = None
         self._lock = asyncio.Lock()
+        self._trxlock = asyncio.Lock()
 
     async def create_connection(self, with_db: bool) -> None:
         if not self._connection:  # pragma: no branch
@@ -92,14 +91,7 @@ class SqliteClient(BaseDBAsyncClient):
         return ConnectionWrapper(self._connection, self._lock)
 
     def _in_transaction(self) -> "TransactionContext":
-        return TransactionContext(
-            self._transaction_class(
-                connection_name=self.connection_name,
-                connection=self._connection,
-                lock=self._lock,
-                fetch_inserted=self.fetch_inserted,
-            )
-        )
+        return TransactionContext(TransactionWrapper(self))
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
@@ -129,20 +121,15 @@ class SqliteClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
-    def __init__(
-        self, connection_name: str, connection: aiosqlite.Connection, lock, fetch_inserted
-    ) -> None:
-        self.connection_name = connection_name
-        self._connection: aiosqlite.Connection = connection
-        self._lock = lock
+    def __init__(self, connection: SqliteClient) -> None:
+        self.connection_name = connection.connection_name
+        self._connection: aiosqlite.Connection = connection._connection
+        self._lock = connection._lock
+        self._trxlock = connection._trxlock
         self.log = logging.getLogger("db_client")
-        self._transaction_class = self.__class__
         self._old_context_value = None
         self._finalized = False
-        self.fetch_inserted = fetch_inserted
-
-    def acquire_connection(self) -> ConnectionWrapper:
-        return NonLockedConnectionWrapper(self._connection, self._lock)
+        self.fetch_inserted = connection.fetch_inserted
 
     def _in_transaction(self) -> "TransactionContext":
         return NestedTransactionContext(self)
