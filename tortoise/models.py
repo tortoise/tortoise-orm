@@ -9,7 +9,7 @@ from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields import (
     Field,
-    ManyToManyField,
+    ManyToManyFieldInstance,
     ManyToManyRelationManager,
     RelationQueryContainer,
 )
@@ -133,7 +133,7 @@ class MetaInfo:
         if value.has_db_field:
             self.fields_db_projection[name] = value.source_field or name
 
-        if isinstance(value, fields.ManyToManyField):
+        if isinstance(value, fields.ManyToManyFieldInstance):
             self.m2m_fields.add(name)
         elif isinstance(value, fields.BackwardFKRelation):
             self.backward_fk_fields.add(name)
@@ -333,7 +333,7 @@ class ModelMeta(type):
 
                     if isinstance(value, fields.ForeignKeyField):
                         fk_fields.add(key)
-                    elif isinstance(value, fields.ManyToManyField):
+                    elif isinstance(value, fields.ManyToManyFieldInstance):
                         m2m_fields.add(key)
                     else:
                         fields_db_projection[key] = value.source_field or key
@@ -663,7 +663,7 @@ class Model(metaclass=ModelMeta):
                         f"'{cls.__name__}.{together}' has no '{field_name}' field."
                     )
 
-                if isinstance(field, ManyToManyField):
+                if isinstance(field, ManyToManyFieldInstance):
                     raise ConfigurationError(
                         f"'{cls.__name__}.{together}' '{field_name}' field refers"
                         " to ManyToMany field."

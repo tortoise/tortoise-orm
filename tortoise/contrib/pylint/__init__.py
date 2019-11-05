@@ -54,7 +54,7 @@ def transform_model(cls: ClassDef) -> None:
                 except AttributeError:
                     pass
                 else:
-                    if attrname in ["ForeignKeyField", "ManyToManyField"]:
+                    if attrname in ["ForeignKeyField", "ManyToManyFieldInstance"]:
                         tomodel = attr.value.args[0].value
                         relname = ""
                         if attr.value.keywords:
@@ -66,7 +66,7 @@ def transform_model(cls: ClassDef) -> None:
                             relname = cls.name.lower() + "s"
 
                         # Injected model attributes need to also have the relation manager
-                        if attrname == "ManyToManyField":
+                        if attrname == "ManyToManyFieldInstance":
                             relval = [
                                 attr.value.func,
                                 MANAGER.ast_from_module_name("tortoise.fields").lookup(
@@ -121,7 +121,7 @@ def apply_type_shim(cls: ClassDef, _context=None) -> Iterator[ClassDef]:
         base_nodes = MANAGER.ast_from_module_name("datetime").lookup("date")
     elif cls.name == "ForeignKeyField":
         base_nodes = MANAGER.ast_from_module_name("tortoise.fields").lookup("BackwardFKRelation")
-    elif cls.name == "ManyToManyField":
+    elif cls.name == "ManyToManyFieldInstance":
         base_nodes = MANAGER.ast_from_module_name("tortoise.fields").lookup(
             "ManyToManyRelationManager"
         )

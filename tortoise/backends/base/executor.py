@@ -209,7 +209,9 @@ class BaseExecutor:
             for instance in instance_list
         }
 
-        field_object: fields.ManyToManyField = self.model._meta.fields_map[field]  # type: ignore
+        field_object: fields.ManyToManyFieldInstance = self.model._meta.fields_map[  # type: ignore
+            field
+        ]
 
         through_table = Table(field_object.through)
 

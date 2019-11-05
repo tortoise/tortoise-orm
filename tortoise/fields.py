@@ -467,7 +467,7 @@ class ForeignKeyField(Field):
         ...  # pylint: disable=W0104
 
 
-class ManyToManyField(Field):
+class ManyToManyFieldInstance(Field):
     """
     ManyToMany relation field.
 
@@ -526,6 +526,20 @@ class ManyToManyField(Field):
         self.backward_key = backward_key
         self.through = through
         self._generated = False
+
+
+def ManyToManyField(
+    model_name: str,
+    through: Optional[str] = None,
+    forward_key: Optional[str] = None,
+    backward_key: str = "",
+    related_name: str = "",
+    field_type: "Type[Model]" = None,  # type: ignore
+    **kwargs,
+) -> "ManyToManyRelationManager":
+    return ManyToManyFieldInstance(  # type: ignore
+        model_name, through, forward_key, backward_key, related_name, field_type, **kwargs
+    )
 
 
 class BackwardFKRelation(Field):
@@ -659,7 +673,7 @@ class ManyToManyRelationManager(RelationQueryContainer[MODEL]):
 
     __slots__ = ("field", "model", "instance")
 
-    def __init__(self, model, instance, m2m_field: ManyToManyField) -> None:
+    def __init__(self, model, instance, m2m_field: ManyToManyFieldInstance) -> None:
         super().__init__(model, m2m_field.related_name, instance)
         self.field = m2m_field
         self.model = m2m_field.field_type
