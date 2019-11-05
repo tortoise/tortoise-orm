@@ -10,8 +10,6 @@ class Tournament(Model):
     name = fields.CharField(max_length=100, description="Tournament name", index=True)
     created = fields.DatetimeField(auto_now_add=True, description="Created */'`/* datetime")
 
-    events: fields.RelationQueryContainer["Event"]
-
     class Meta:
         table_description = "What Tournaments */'`/* we have"
 
@@ -19,10 +17,10 @@ class Tournament(Model):
 class Event(Model):
     id = fields.BigIntField(pk=True, description="Event ID")
     name = fields.TextField()
-    tournament: fields.ForeignKey[Tournament] = fields.ForeignKeyField(
+    tournament = fields.ForeignKeyField(
         "models.Tournament", related_name="events", description="FK to tournament"
     )
-    participants: fields.ManyToManyRelationManager["Team"] = fields.ManyToManyField(
+    participants = fields.ManyToManyField(
         "models.Team",
         related_name="events",
         through="teamevents",
@@ -41,18 +39,8 @@ class Event(Model):
 class Team(Model):
     name = fields.CharField(max_length=50, pk=True, description="The TEAM name (and PK)")
     key = fields.IntField()
-
-    manager: fields.ForeignKeyNullable["Team"] = fields.ForeignKeyField(
-        "models.Team", related_name="team_members", null=True
-    )
-    team_members: fields.RelationQueryContainer["Team"]
-
-    talks_to: fields.ManyToManyRelationManager["Team"] = fields.ManyToManyField(
-        "models.Team", related_name="gets_talked_to"
-    )
-    gets_talked_to: fields.ManyToManyRelationManager["Team"]
-
-    events: fields.ManyToManyRelationManager[Event]
+    manager = fields.ForeignKeyField("models.Team", related_name="team_members", null=True)
+    talks_to = fields.ManyToManyField("models.Team", related_name="gets_talked_to")
 
     class Meta:
         table_description = "The TEAMS!"
@@ -63,19 +51,17 @@ class SourceFields(Model):
     id = fields.IntField(pk=True, source_field="sometable_id")
     chars = fields.CharField(max_length=255, source_field="some_chars_table", index=True)
 
-    fk: fields.ForeignKeyNullable["SourceFields"] = fields.ForeignKeyField(
+    fk = fields.ForeignKeyField(
         "models.SourceFields", related_name="team_members", null=True, source_field="fk_sometable"
     )
-    team_members: fields.RelationQueryContainer["SourceFields"]
 
-    rel_to: fields.ManyToManyRelationManager["SourceFields"] = fields.ManyToManyField(
+    rel_to = fields.ManyToManyField(
         "models.SourceFields",
         related_name="rel_from",
         through="sometable_self",
         forward_key="sts_forward",
         backward_key="backward_sts",
     )
-    rel_from: fields.ManyToManyRelationManager["SourceFields"]
 
     class Meta:
         table = "sometable"

@@ -293,10 +293,6 @@ class UUIDM2MRelatedModel(Model):
 class UUIDPkSourceModel(Model):
     id = fields.UUIDField(pk=True, source_field="a")
 
-    children: fields.RelationQueryContainer["UUIDFkRelatedSourceModel"]
-    children_null: fields.RelationQueryContainer["UUIDFkRelatedNullSourceModel"]
-    peers: fields.ManyToManyRelationManager["UUIDM2MRelatedSourceModel"]
-
     class Meta:
         table = "upsm"
 
@@ -304,7 +300,7 @@ class UUIDPkSourceModel(Model):
 class UUIDFkRelatedSourceModel(Model):
     id = fields.UUIDField(pk=True, source_field="b")
     name = fields.CharField(max_length=50, null=True, source_field="c")
-    model: fields.ForeignKey[UUIDPkSourceModel] = fields.ForeignKeyField(
+    model = fields.ForeignKeyField(
         "models.UUIDPkSourceModel", related_name="children", source_field="d"
     )
 
@@ -315,7 +311,7 @@ class UUIDFkRelatedSourceModel(Model):
 class UUIDFkRelatedNullSourceModel(Model):
     id = fields.UUIDField(pk=True, source_field="i")
     name = fields.CharField(max_length=50, null=True, source_field="j")
-    model: fields.ForeignKeyNullable[UUIDPkSourceModel] = fields.ForeignKeyField(
+    model = fields.ForeignKeyField(
         "models.UUIDPkSourceModel", related_name="children_null", source_field="k", null=True
     )
 
@@ -326,7 +322,7 @@ class UUIDFkRelatedNullSourceModel(Model):
 class UUIDM2MRelatedSourceModel(Model):
     id = fields.UUIDField(pk=True, source_field="e")
     value = fields.TextField(default="test", source_field="f")
-    models: fields.ManyToManyRelationManager[UUIDPkSourceModel] = fields.ManyToManyField(
+    models = fields.ManyToManyField(
         "models.UUIDPkSourceModel", related_name="peers", forward_key="e", backward_key="h"
     )
 
@@ -337,21 +333,14 @@ class UUIDM2MRelatedSourceModel(Model):
 class CharPkModel(Model):
     id = fields.CharField(max_length=64, pk=True)
 
-    children: fields.RelationQueryContainer["CharFkRelatedModel"]
-    peers: fields.ManyToManyRelationManager["CharM2MRelatedModel"]
-
 
 class CharFkRelatedModel(Model):
-    model: fields.ForeignKey[CharPkModel] = fields.ForeignKeyField(
-        "models.CharPkModel", related_name="children"
-    )
+    model = fields.ForeignKeyField("models.CharPkModel", related_name="children")
 
 
 class CharM2MRelatedModel(Model):
     value = fields.TextField(default="test")
-    models: fields.ManyToManyRelationManager[CharPkModel] = fields.ManyToManyField(
-        "models.CharPkModel", related_name="peers"
-    )
+    models = fields.ManyToManyField("models.CharPkModel", related_name="peers")
 
 
 class TimestampMixin:

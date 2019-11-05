@@ -6,4 +6,4 @@ from tortoise.models import Model
 
 
 class One(Model):
-    tournament: fields.ManyToManyRelationManager = fields.ManyToManyField("Two")
+    tournament = fields.ManyToManyField("Two")
