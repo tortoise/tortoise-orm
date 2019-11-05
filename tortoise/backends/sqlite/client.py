@@ -47,7 +47,6 @@ class SqliteClient(BaseDBAsyncClient):
 
         self._connection: Optional[aiosqlite.Connection] = None
         self._lock = asyncio.Lock()
-        self._trxlock = asyncio.Lock()
 
     async def create_connection(self, with_db: bool) -> None:
         if not self._connection:  # pragma: no branch
@@ -123,8 +122,8 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
     def __init__(self, connection: SqliteClient) -> None:
         self.connection_name = connection.connection_name
         self._connection: aiosqlite.Connection = connection._connection
-        self._lock = connection._lock
-        self._trxlock = connection._trxlock
+        self._lock = asyncio.Lock()
+        self._trxlock = connection._lock
         self.log = connection.log
         self._finalized = False
         self.fetch_inserted = connection.fetch_inserted

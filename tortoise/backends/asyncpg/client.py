@@ -99,7 +99,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self._template: dict = {}
         self._connection: Optional[asyncpg.Connection] = None
         self._lock = asyncio.Lock()
-        self._trxlock = asyncio.Lock()
 
     async def create_connection(self, with_db: bool) -> None:
         self._template = {
@@ -188,8 +187,8 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     def __init__(self, connection: AsyncpgDBClient) -> None:
         self._connection: asyncpg.Connection = connection._connection
-        self._lock = connection._lock
-        self._trxlock = connection._trxlock
+        self._lock = asyncio.Lock()
+        self._trxlock = connection._lock
         self.log = connection.log
         self.connection_name = connection.connection_name
         self.transaction: Transaction = None
