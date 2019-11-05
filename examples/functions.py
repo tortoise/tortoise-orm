@@ -8,6 +8,8 @@ class Tournament(Model):
     name = fields.TextField()
     desc = fields.TextField(null=True)
 
+    events: fields.RelationQueryContainer["Event"]
+
     def __str__(self):
         return self.name
 
@@ -15,8 +17,10 @@ class Tournament(Model):
 class Event(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
-    tournament = fields.ForeignKeyField("models.Tournament", related_name="events")
-    participants = fields.ManyToManyField(
+    tournament: fields.ForeignKey[Tournament] = fields.ForeignKeyField(
+        "models.Tournament", related_name="events"
+    )
+    participants: fields.ManyToManyRelationManager["Team"] = fields.ManyToManyField(
         "models.Team", related_name="events", through="event_team"
     )
 
@@ -27,6 +31,8 @@ class Event(Model):
 class Team(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
+
+    events: fields.ManyToManyRelationManager[Event]
 
     def __str__(self):
         return self.name
