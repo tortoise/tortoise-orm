@@ -2,7 +2,7 @@ import datetime
 import functools
 import json
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, Generic, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Awaitable, Generic, Optional, Type, TypeVar, Union
 from uuid import UUID, uuid4
 
 import ciso8601
@@ -404,6 +404,10 @@ class UUIDField(Field, UUID):
         return UUID(value)
 
 
+ForeignKeyNullable = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
+ForeignKey = Union[Awaitable[MODEL], MODEL]
+
+
 class ForeignKeyField(Field):
     """
     ForeignKey relation field.
@@ -435,7 +439,8 @@ class ForeignKeyField(Field):
     """
 
     __slots__ = (
-        "field_type",  # type will be set later, so we need a slot to be able to write it
+        "field_type",
+        # type will be set later, so we need a slot to be able to write it
         "model_name",
         "related_name",
         "on_delete",
