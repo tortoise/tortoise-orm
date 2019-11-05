@@ -6,4 +6,4 @@ from tortoise.models import Model
 
 
 class One(Model):
-    tournament = fields.ForeignKeyField("models.Two", on_delete="WABOOM")
+    tournament: fields.ForeignKey = fields.ForeignKeyField("models.Two", on_delete="WABOOM")

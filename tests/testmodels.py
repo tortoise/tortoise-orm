@@ -21,6 +21,10 @@ class Tournament(Model):
     desc = fields.TextField(null=True)
     created = fields.DatetimeField(auto_now_add=True, index=True)
 
+    events: fields.RelationQueryContainer["Event"]
+    minrelations: fields.RelationQueryContainer["MinRelation"]
+    uniquetogetherfieldswithfks: fields.RelationQueryContainer["UniqueTogetherFieldsWithFK"]
+
     def __str__(self):
         return self.name
 
@@ -28,6 +32,8 @@ class Tournament(Model):
 class Reporter(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
+
+    events: fields.RelationQueryContainer["Event"]
 
     class Meta:
         table = "re_port_er"
@@ -39,9 +45,13 @@ class Reporter(Model):
 class Event(Model):
     id = fields.BigIntField(pk=True)
     name = fields.TextField()
-    tournament = fields.ForeignKeyField("models.Tournament", related_name="events")
-    reporter = fields.ForeignKeyField("models.Reporter", null=True)
-    participants = fields.ManyToManyField(
+    tournament: fields.ForeignKey["Tournament"] = fields.ForeignKeyField(
+        "models.Tournament", related_name="events"
+    )
+    reporter: fields.ForeignKeyNullable[Reporter] = fields.ForeignKeyField(
+        "models.Reporter", null=True
+    )
+    participants: fields.ManyToManyRelationManager["Team"] = fields.ManyToManyField(
         "models.Team", related_name="events", through="event_team", backward_key="idEvent"
     )
     modified = fields.DatetimeField(auto_now=True)
@@ -55,6 +65,9 @@ class Team(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
 
+    events: fields.ManyToManyRelationManager[Event]
+    minrelation_through: fields.ManyToManyRelationManager["MinRelation"]
+
     def __str__(self):
         return self.name
 
@@ -64,7 +77,9 @@ class EventTwo(Model):
     name = fields.TextField()
     tournament_id = fields.IntField()
     # Here we make link to events.Team, not models.Team
-    participants = fields.ManyToManyField("events.TeamTwo")
+    participants: fields.ManyToManyRelationManager["TeamTwo"] = fields.ManyToManyField(
+        "events.TeamTwo"
+    )
 
     class Meta:
         app = "events"
@@ -76,6 +91,8 @@ class EventTwo(Model):
 class TeamTwo(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
+
+    eventtwo_through: fields.ManyToManyRelationManager[EventTwo]
 
     class Meta:
         app = "events"
@@ -169,19 +186,23 @@ class UUIDFields(Model):
 
 class MinRelation(Model):
     id = fields.IntField(pk=True)
-    tournament = fields.ForeignKeyField("models.Tournament")
-    participants = fields.ManyToManyField("models.Team")
+    tournament: fields.ForeignKey[Tournament] = fields.ForeignKeyField("models.Tournament")
+    participants: fields.ManyToManyRelationManager[Team] = fields.ManyToManyField("models.Team")
 
 
 class M2MOne(Model):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=255, null=True)
-    two = fields.ManyToManyField("models.M2MTwo", related_name="one")
+    two: fields.ManyToManyRelationManager["M2MTwo"] = fields.ManyToManyField(
+        "models.M2MTwo", related_name="one"
+    )
 
 
 class M2MTwo(Model):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=255, null=True)
+
+    one: fields.ManyToManyRelationManager[M2MOne]
 
 
 class NoID(Model):
@@ -216,7 +237,7 @@ class UniqueTogetherFields(Model):
 class UniqueTogetherFieldsWithFK(Model):
     id = fields.IntField(pk=True)
     text = fields.CharField(max_length=64)
-    tournament = fields.ForeignKeyField("models.Tournament")
+    tournament: fields.ForeignKey[Tournament] = fields.ForeignKeyField("models.Tournament")
 
     class Meta:
         unique_together = ("text", "tournament")
@@ -240,27 +261,41 @@ class ImplicitPkModel(Model):
 class UUIDPkModel(Model):
     id = fields.UUIDField(pk=True)
 
+    children: fields.RelationQueryContainer["UUIDFkRelatedModel"]
+    children_null: fields.RelationQueryContainer["UUIDFkRelatedNullModel"]
+    peers: fields.ManyToManyRelationManager["UUIDM2MRelatedModel"]
+
 
 class UUIDFkRelatedModel(Model):
     id = fields.UUIDField(pk=True)
     name = fields.CharField(max_length=50, null=True)
-    model = fields.ForeignKeyField("models.UUIDPkModel", related_name="children")
+    model: fields.ForeignKey[UUIDPkModel] = fields.ForeignKeyField(
+        "models.UUIDPkModel", related_name="children"
+    )
 
 
 class UUIDFkRelatedNullModel(Model):
     id = fields.UUIDField(pk=True)
     name = fields.CharField(max_length=50, null=True)
-    model = fields.ForeignKeyField("models.UUIDPkModel", related_name="children_null", null=True)
+    model: fields.ForeignKeyNullable[UUIDPkModel] = fields.ForeignKeyField(
+        "models.UUIDPkModel", related_name="children_null", null=True
+    )
 
 
 class UUIDM2MRelatedModel(Model):
     id = fields.UUIDField(pk=True)
     value = fields.TextField(default="test")
-    models = fields.ManyToManyField("models.UUIDPkModel", related_name="peers")
+    models: fields.ManyToManyRelationManager[UUIDPkModel] = fields.ManyToManyField(
+        "models.UUIDPkModel", related_name="peers"
+    )
 
 
 class UUIDPkSourceModel(Model):
     id = fields.UUIDField(pk=True, source_field="a")
+
+    children: fields.RelationQueryContainer["UUIDFkRelatedSourceModel"]
+    children_null: fields.RelationQueryContainer["UUIDFkRelatedNullSourceModel"]
+    peers: fields.ManyToManyRelationManager["UUIDM2MRelatedSourceModel"]
 
     class Meta:
         table = "upsm"
@@ -269,7 +304,7 @@ class UUIDPkSourceModel(Model):
 class UUIDFkRelatedSourceModel(Model):
     id = fields.UUIDField(pk=True, source_field="b")
     name = fields.CharField(max_length=50, null=True, source_field="c")
-    model = fields.ForeignKeyField(
+    model: fields.ForeignKey[UUIDPkSourceModel] = fields.ForeignKeyField(
         "models.UUIDPkSourceModel", related_name="children", source_field="d"
     )
 
@@ -280,7 +315,7 @@ class UUIDFkRelatedSourceModel(Model):
 class UUIDFkRelatedNullSourceModel(Model):
     id = fields.UUIDField(pk=True, source_field="i")
     name = fields.CharField(max_length=50, null=True, source_field="j")
-    model = fields.ForeignKeyField(
+    model: fields.ForeignKeyNullable[UUIDPkSourceModel] = fields.ForeignKeyField(
         "models.UUIDPkSourceModel", related_name="children_null", source_field="k", null=True
     )
 
@@ -291,7 +326,7 @@ class UUIDFkRelatedNullSourceModel(Model):
 class UUIDM2MRelatedSourceModel(Model):
     id = fields.UUIDField(pk=True, source_field="e")
     value = fields.TextField(default="test", source_field="f")
-    models = fields.ManyToManyField(
+    models: fields.ManyToManyRelationManager[UUIDPkSourceModel] = fields.ManyToManyField(
         "models.UUIDPkSourceModel", related_name="peers", forward_key="e", backward_key="h"
     )
 
@@ -302,14 +337,21 @@ class UUIDM2MRelatedSourceModel(Model):
 class CharPkModel(Model):
     id = fields.CharField(max_length=64, pk=True)
 
+    children: fields.RelationQueryContainer["CharFkRelatedModel"]
+    peers: fields.ManyToManyRelationManager["CharM2MRelatedModel"]
+
 
 class CharFkRelatedModel(Model):
-    model = fields.ForeignKeyField("models.CharPkModel", related_name="children")
+    model: fields.ForeignKey[CharPkModel] = fields.ForeignKeyField(
+        "models.CharPkModel", related_name="children"
+    )
 
 
 class CharM2MRelatedModel(Model):
     value = fields.TextField(default="test")
-    models = fields.ManyToManyField("models.CharPkModel", related_name="peers")
+    models: fields.ManyToManyRelationManager[CharPkModel] = fields.ManyToManyField(
+        "models.CharPkModel", related_name="peers"
+    )
 
 
 class TimestampMixin:
@@ -347,8 +389,16 @@ class CommentModel(Model):
 
 class Employee(Model):
     name = fields.CharField(max_length=50)
-    manager = fields.ForeignKeyField("models.Employee", related_name="team_members", null=True)
-    talks_to = fields.ManyToManyField("models.Employee", related_name="gets_talked_to")
+
+    manager: fields.ForeignKeyNullable["Employee"] = fields.ForeignKeyField(
+        "models.Employee", related_name="team_members", null=True
+    )
+    team_members: fields.RelationQueryContainer["Employee"]
+
+    talks_to: fields.ManyToManyRelationManager["Employee"] = fields.ManyToManyField(
+        "models.Employee", related_name="gets_talked_to"
+    )
+    gets_talked_to: fields.ManyToManyRelationManager["Employee"]
 
     def __str__(self):
         return self.name
@@ -397,12 +447,16 @@ class StraightFields(Model):
     eyedee = fields.IntField(pk=True, description="Da PK")
     chars = fields.CharField(max_length=50, index=True, description="Some chars")
     blip = fields.CharField(max_length=50, default="BLIP")
-    fk = fields.ForeignKeyField(
+
+    fk: fields.ForeignKeyNullable["StraightFields"] = fields.ForeignKeyField(
         "models.StraightFields", related_name="fkrev", null=True, description="Tree!"
     )
-    rel_to = fields.ManyToManyField(
+    fkrev: fields.RelationQueryContainer["StraightFields"]
+
+    rel_to: fields.ManyToManyRelationManager["StraightFields"] = fields.ManyToManyField(
         "models.StraightFields", related_name="rel_from", description="M2M to myself"
     )
+    rel_from: fields.ManyToManyRelationManager["StraightFields"]
 
     class Meta:
         unique_together = [["chars", "blip"]]
@@ -415,14 +469,17 @@ class SourceFields(Model):
         max_length=50, source_field="some_chars_table", index=True, description="Some chars"
     )
     blip = fields.CharField(max_length=50, default="BLIP", source_field="da_blip")
-    fk = fields.ForeignKeyField(
+
+    fk: fields.ForeignKeyNullable["SourceFields"] = fields.ForeignKeyField(
         "models.SourceFields",
         related_name="fkrev",
         null=True,
         source_field="fk_sometable",
         description="Tree!",
     )
-    rel_to = fields.ManyToManyField(
+    fkrev: fields.RelationQueryContainer["SourceFields"]
+
+    rel_to: fields.ManyToManyRelationManager["SourceFields"] = fields.ManyToManyField(
         "models.SourceFields",
         related_name="rel_from",
         through="sometable_self",
@@ -430,6 +487,7 @@ class SourceFields(Model):
         backward_key="backward_sts",
         description="M2M to myself",
     )
+    rel_from: fields.ManyToManyRelationManager["SourceFields"]
 
     class Meta:
         table = "sometable"
