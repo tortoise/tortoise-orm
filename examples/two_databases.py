@@ -29,7 +29,7 @@ class Event(Model):
     name = fields.TextField()
     tournament_id = fields.IntField()
     # Here we make link to events.Team, not models.Team
-    participants: fields.ManyToManyRelationManager["Team"] = fields.ManyToManyField(
+    participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "events.Team", related_name="events", through="event_team"
     )
 
@@ -44,7 +44,7 @@ class Team(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
 
-    event_team: fields.ManyToManyRelationManager[Event]
+    event_team: fields.ManyToManyRelation[Event]
 
     def __str__(self):
         return self.name

@@ -11,7 +11,7 @@ from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
 from tortoise.exceptions import ConfigurationError
-from tortoise.fields import ManyToManyRelationManager
+from tortoise.fields import ManyToManyRelation
 from tortoise.filters import get_m2m_filters
 from tortoise.models import Model
 from tortoise.queryset import QuerySet

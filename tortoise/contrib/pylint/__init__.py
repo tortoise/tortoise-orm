@@ -70,14 +70,14 @@ def transform_model(cls: ClassDef) -> None:
                             relval = [
                                 attr.value.func,
                                 MANAGER.ast_from_module_name("tortoise.fields").lookup(
-                                    "ManyToManyRelationManager"
+                                    "ManyToManyRelation"
                                 )[1][0],
                             ]
                         else:
                             relval = [
                                 attr.value.func,
                                 MANAGER.ast_from_module_name("tortoise.fields").lookup(
-                                    "RelationQueryContainer"
+                                    "ReverseRelation"
                                 )[1][0],
                             ]
 
@@ -122,9 +122,7 @@ def apply_type_shim(cls: ClassDef, _context=None) -> Iterator[ClassDef]:
     elif cls.name == "ForeignKeyField":
         base_nodes = MANAGER.ast_from_module_name("tortoise.fields").lookup("BackwardFKRelation")
     elif cls.name == "ManyToManyFieldInstance":
-        base_nodes = MANAGER.ast_from_module_name("tortoise.fields").lookup(
-            "ManyToManyRelationManager"
-        )
+        base_nodes = MANAGER.ast_from_module_name("tortoise.fields").lookup("ManyToManyRelation")
     else:
         return iter([cls])
 

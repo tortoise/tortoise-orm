@@ -7,12 +7,7 @@ from pypika import Query
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import ConfigurationError, OperationalError
-from tortoise.fields import (
-    Field,
-    ManyToManyFieldInstance,
-    ManyToManyRelationManager,
-    RelationQueryContainer,
-)
+from tortoise.fields import Field, ManyToManyFieldInstance, ManyToManyRelation, ReverseRelation
 from tortoise.filters import get_filters_for_field
 from tortoise.queryset import QuerySet, QuerySetSingle
 from tortoise.transactions import current_transaction_map
@@ -47,7 +42,7 @@ def _fk_getter(self, _key, ftype, relation_field):
 def _rfk_getter(self, _key, ftype, frelfield):
     val = getattr(self, _key, None)
     if val is None:
-        val = RelationQueryContainer(ftype, frelfield, self)
+        val = ReverseRelation(ftype, frelfield, self)
         setattr(self, _key, val)
     return val
 
@@ -55,7 +50,7 @@ def _rfk_getter(self, _key, ftype, frelfield):
 def _m2m_getter(self, _key, field_object):
     val = getattr(self, _key, None)
     if val is None:
-        val = ManyToManyRelationManager(field_object.field_type, self, field_object)
+        val = ManyToManyRelation(field_object.field_type, self, field_object)
         setattr(self, _key, val)
     return val
 

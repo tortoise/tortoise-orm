@@ -21,9 +21,9 @@ class Tournament(Model):
     desc = fields.TextField(null=True)
     created = fields.DatetimeField(auto_now_add=True, index=True)
 
-    events: fields.RelationQueryContainer["Event"]
-    minrelations: fields.RelationQueryContainer["MinRelation"]
-    uniquetogetherfieldswithfks: fields.RelationQueryContainer["UniqueTogetherFieldsWithFK"]
+    events: fields.ReverseRelation["Event"]
+    minrelations: fields.ReverseRelation["MinRelation"]
+    uniquetogetherfieldswithfks: fields.ReverseRelation["UniqueTogetherFieldsWithFK"]
 
     def __str__(self):
         return self.name
@@ -33,7 +33,7 @@ class Reporter(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
 
-    events: fields.RelationQueryContainer["Event"]
+    events: fields.ReverseRelation["Event"]
 
     class Meta:
         table = "re_port_er"
@@ -51,7 +51,7 @@ class Event(Model):
     reporter: fields.ForeignKeyNullable[Reporter] = fields.ForeignKeyField(
         "models.Reporter", null=True
     )
-    participants: fields.ManyToManyRelationManager["Team"] = fields.ManyToManyField(
+    participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team", related_name="events", through="event_team", backward_key="idEvent"
     )
     modified = fields.DatetimeField(auto_now=True)
@@ -65,8 +65,8 @@ class Team(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
 
-    events: fields.ManyToManyRelationManager[Event]
-    minrelation_through: fields.ManyToManyRelationManager["MinRelation"]
+    events: fields.ManyToManyRelation[Event]
+    minrelation_through: fields.ManyToManyRelation["MinRelation"]
 
     def __str__(self):
         return self.name
@@ -77,9 +77,7 @@ class EventTwo(Model):
     name = fields.TextField()
     tournament_id = fields.IntField()
     # Here we make link to events.Team, not models.Team
-    participants: fields.ManyToManyRelationManager["TeamTwo"] = fields.ManyToManyField(
-        "events.TeamTwo"
-    )
+    participants: fields.ManyToManyRelation["TeamTwo"] = fields.ManyToManyField("events.TeamTwo")
 
     class Meta:
         app = "events"
@@ -92,7 +90,7 @@ class TeamTwo(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
 
-    eventtwo_through: fields.ManyToManyRelationManager[EventTwo]
+    eventtwo_through: fields.ManyToManyRelation[EventTwo]
 
     class Meta:
         app = "events"
@@ -187,13 +185,13 @@ class UUIDFields(Model):
 class MinRelation(Model):
     id = fields.IntField(pk=True)
     tournament: fields.ForeignKey[Tournament] = fields.ForeignKeyField("models.Tournament")
-    participants: fields.ManyToManyRelationManager[Team] = fields.ManyToManyField("models.Team")
+    participants: fields.ManyToManyRelation[Team] = fields.ManyToManyField("models.Team")
 
 
 class M2MOne(Model):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=255, null=True)
-    two: fields.ManyToManyRelationManager["M2MTwo"] = fields.ManyToManyField(
+    two: fields.ManyToManyRelation["M2MTwo"] = fields.ManyToManyField(
         "models.M2MTwo", related_name="one"
     )
 
@@ -202,7 +200,7 @@ class M2MTwo(Model):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=255, null=True)
 
-    one: fields.ManyToManyRelationManager[M2MOne]
+    one: fields.ManyToManyRelation[M2MOne]
 
 
 class NoID(Model):
@@ -261,9 +259,9 @@ class ImplicitPkModel(Model):
 class UUIDPkModel(Model):
     id = fields.UUIDField(pk=True)
 
-    children: fields.RelationQueryContainer["UUIDFkRelatedModel"]
-    children_null: fields.RelationQueryContainer["UUIDFkRelatedNullModel"]
-    peers: fields.ManyToManyRelationManager["UUIDM2MRelatedModel"]
+    children: fields.ReverseRelation["UUIDFkRelatedModel"]
+    children_null: fields.ReverseRelation["UUIDFkRelatedNullModel"]
+    peers: fields.ManyToManyRelation["UUIDM2MRelatedModel"]
 
 
 class UUIDFkRelatedModel(Model):
@@ -285,7 +283,7 @@ class UUIDFkRelatedNullModel(Model):
 class UUIDM2MRelatedModel(Model):
     id = fields.UUIDField(pk=True)
     value = fields.TextField(default="test")
-    models: fields.ManyToManyRelationManager[UUIDPkModel] = fields.ManyToManyField(
+    models: fields.ManyToManyRelation[UUIDPkModel] = fields.ManyToManyField(
         "models.UUIDPkModel", related_name="peers"
     )
 
@@ -382,12 +380,12 @@ class Employee(Model):
     manager: fields.ForeignKeyNullable["Employee"] = fields.ForeignKeyField(
         "models.Employee", related_name="team_members", null=True
     )
-    team_members: fields.RelationQueryContainer["Employee"]
+    team_members: fields.ReverseRelation["Employee"]
 
-    talks_to: fields.ManyToManyRelationManager["Employee"] = fields.ManyToManyField(
+    talks_to: fields.ManyToManyRelation["Employee"] = fields.ManyToManyField(
         "models.Employee", related_name="gets_talked_to"
     )
-    gets_talked_to: fields.ManyToManyRelationManager["Employee"]
+    gets_talked_to: fields.ManyToManyRelation["Employee"]
 
     def __str__(self):
         return self.name
@@ -440,12 +438,12 @@ class StraightFields(Model):
     fk: fields.ForeignKeyNullable["StraightFields"] = fields.ForeignKeyField(
         "models.StraightFields", related_name="fkrev", null=True, description="Tree!"
     )
-    fkrev: fields.RelationQueryContainer["StraightFields"]
+    fkrev: fields.ReverseRelation["StraightFields"]
 
-    rel_to: fields.ManyToManyRelationManager["StraightFields"] = fields.ManyToManyField(
+    rel_to: fields.ManyToManyRelation["StraightFields"] = fields.ManyToManyField(
         "models.StraightFields", related_name="rel_from", description="M2M to myself"
     )
-    rel_from: fields.ManyToManyRelationManager["StraightFields"]
+    rel_from: fields.ManyToManyRelation["StraightFields"]
 
     class Meta:
         unique_together = [["chars", "blip"]]
@@ -466,9 +464,9 @@ class SourceFields(Model):
         source_field="fk_sometable",
         description="Tree!",
     )
-    fkrev: fields.RelationQueryContainer["SourceFields"]
+    fkrev: fields.ReverseRelation["SourceFields"]
 
-    rel_to: fields.ManyToManyRelationManager["SourceFields"] = fields.ManyToManyField(
+    rel_to: fields.ManyToManyRelation["SourceFields"] = fields.ManyToManyField(
         "models.SourceFields",
         related_name="rel_from",
         through="sometable_self",
@@ -476,7 +474,7 @@ class SourceFields(Model):
         backward_key="backward_sts",
         description="M2M to myself",
     )
-    rel_from: fields.ManyToManyRelationManager["SourceFields"]
+    rel_from: fields.ManyToManyRelation["SourceFields"]
 
     class Meta:
         table = "sometable"

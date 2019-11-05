@@ -535,7 +535,7 @@ def ManyToManyField(
     backward_key: str = "",
     related_name: str = "",
     **kwargs,
-) -> "ManyToManyRelationManager":
+) -> "ManyToManyRelation":
     return ManyToManyFieldInstance(  # type: ignore
         model_name, through, forward_key, backward_key, related_name, **kwargs
     )
@@ -554,7 +554,7 @@ class BackwardFKRelation(Field):
         self.description = description
 
 
-class RelationQueryContainer(Generic[MODEL]):
+class ReverseRelation(Generic[MODEL]):
     """
     Relation Query container.
     """
@@ -665,7 +665,7 @@ class RelationQueryContainer(Generic[MODEL]):
         self.related_objects = sequence
 
 
-class ManyToManyRelationManager(RelationQueryContainer[MODEL]):
+class ManyToManyRelation(ReverseRelation[MODEL]):
     """
     Many to many relation Query container.
     """

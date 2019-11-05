@@ -18,12 +18,12 @@ class Employee(Model):
     manager: fields.ForeignKeyNullable["Employee"] = fields.ForeignKeyField(
         "models.Employee", related_name="team_members", null=True
     )
-    team_members: fields.RelationQueryContainer["Employee"]
+    team_members: fields.ReverseRelation["Employee"]
 
-    talks_to: fields.ManyToManyRelationManager["Employee"] = fields.ManyToManyField(
+    talks_to: fields.ManyToManyRelation["Employee"] = fields.ManyToManyField(
         "models.Employee", related_name="gets_talked_to"
     )
-    gets_talked_to: fields.ManyToManyRelationManager["Employee"]
+    gets_talked_to: fields.ManyToManyRelation["Employee"]
 
     def __str__(self):
         return self.name
