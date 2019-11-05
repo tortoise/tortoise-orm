@@ -534,11 +534,10 @@ def ManyToManyField(
     forward_key: Optional[str] = None,
     backward_key: str = "",
     related_name: str = "",
-    field_type: "Type[Model]" = None,  # type: ignore
     **kwargs,
 ) -> "ManyToManyRelationManager":
     return ManyToManyFieldInstance(  # type: ignore
-        model_name, through, forward_key, backward_key, related_name, field_type, **kwargs
+        model_name, through, forward_key, backward_key, related_name, **kwargs
     )
 
 
