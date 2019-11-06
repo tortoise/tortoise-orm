@@ -2,7 +2,7 @@ from tests.testmodels import Event, EventTwo, TeamTwo, Tournament
 from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import OperationalError, ParamsError
-from tortoise.transactions import in_transaction, start_transaction
+from tortoise.transactions import in_transaction
 
 
 class TestTwoDatabases(test.SimpleTestCase):
