@@ -110,14 +110,14 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             "max_size": self.pool_maxsize,
             **self.extra,
         }
+        if self.schema:
+            self._template["server_settings"] = {"search_path": self.schema}
         try:
             self._pool = await asyncpg.create_pool(None, password=self.password, **self._template)
             self.log.debug("Created connection pool %s with params: %s", self._pool, self._template)
         except asyncpg.InvalidCatalogNameError:
             raise DBConnectionError(f"Can't establish connection to database {self.database}")
         # Set post-connection variables
-        if self.schema:
-            await self.execute_script(f"SET search_path TO {self.schema}")
 
     async def _close(self) -> None:
         if self._pool:  # pragma: nobranch

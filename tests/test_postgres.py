@@ -19,7 +19,6 @@ class TestTwoDatabases(test.SimpleTestCase):
         if Tortoise._inited:
             await Tortoise._drop_databases()
 
-    @test.skip("somehow doesn't work with pools?")
     async def test_schema(self):
         from asyncpg.exceptions import InvalidSchemaNameError
 
