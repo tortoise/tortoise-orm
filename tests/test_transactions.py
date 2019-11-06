@@ -125,27 +125,13 @@ class TestTransactions(test.TruncationTestCase):
             team = await Team.create(name="Test team")
             await event.participants.add(team)
 
-    @test.skip("start_transaction is dodgy")
     async def test_transaction_exception_1(self):
-        connection = await start_transaction()
-        await connection.rollback()
-        with self.assertRaises(TransactionManagementError):
-            await connection.rollback()
-
-    async def test_transaction_exception_2(self):
         with self.assertRaises(TransactionManagementError):
             async with in_transaction() as connection:
                 await connection.rollback()
                 await connection.rollback()
 
-    @test.skip("start_transaction is dodgy")
-    async def test_transaction_exception_3(self):
-        connection = await start_transaction()
-        await connection.commit()
-        with self.assertRaises(TransactionManagementError):
-            await connection.commit()
-
-    async def test_transaction_exception_4(self):
+    async def test_transaction_exception_2(self):
         with self.assertRaises(TransactionManagementError):
             async with in_transaction() as connection:
                 await connection.commit()

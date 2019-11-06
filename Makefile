@@ -46,6 +46,8 @@ endif
 	bandit -r $(checkfiles)
 	python setup.py check -mrs
 
+test: test_sqlite
+
 test_sqlite: deps
 	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: py.test --cov-report=
 

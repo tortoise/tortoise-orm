@@ -75,10 +75,10 @@ class TestTwoDatabases(test.SimpleTestCase):
         saved_event = await EventTwo.filter(tournament_id=tournament.id).first()
         self.assertEqual(event.id, saved_event.id)
 
-    @test.skip("start_transaction is dodgy")
     async def test_two_databases_transaction_paramerror(self):
         with self.assertRaisesRegex(
             ParamsError,
             "You are running with multiple databases, so you should specify connection_name",
         ):
-            await start_transaction()
+            async with in_transaction():
+                pass

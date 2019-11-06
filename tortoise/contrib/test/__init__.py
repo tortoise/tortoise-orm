@@ -180,7 +180,6 @@ class SimpleTestCase(_TestCase):  # type: ignore
 
     async def _setUp(self) -> None:
 
-
         # initialize post-test checks
         test = getattr(self, self._testMethodName)
         checker = getattr(test, _fail_on._FAIL_ON_ATTR, None)
