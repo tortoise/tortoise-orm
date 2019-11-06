@@ -46,14 +46,19 @@ endif
 	bandit -r $(checkfiles)
 	python setup.py check -mrs
 
-test: deps
-	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: py.test
-
-_testall:
+test_sqlite: deps
 	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: py.test --cov-report=
-	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB=postgres://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\} py.test --cov-append --cov-report=
-	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}?storage_engine=MYISAM" py.test --cov-append --cov-report=
-	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}" py.test --cov-append
+
+test_postgres: deps
+	$(py_warn) TORTOISE_TEST_DB="postgres://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}?minsize=1&maxsize=20" py.test
+
+test_mysql_myisam: deps
+	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}?minsize=10&maxsize=10&storage_engine=MYISAM" py.test --cov-append --cov-report=
+
+test_mysql: deps
+	$(py_warn) TORTOISE_TEST_DB="mysql:$(TORTOISE_MYSQL_PASS)//root:@127.0.0.1:3306/test_\{\}?minsize=1&maxsize=10" py.test --cov-append
+
+_testall: test_sqlite test_postgres test_mysql_myisam test_mysql
 
 testall: deps _testall
 

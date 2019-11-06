@@ -178,7 +178,9 @@ class SimpleTestCase(_TestCase):  # type: ignore
     async def _tearDownDB(self) -> None:
         pass
 
-    async def _setUp(self) -> None:
+    def _setUp(self) -> None:
+        self._init_loop()
+
         # initialize post-test checks
         test = getattr(self, self._testMethodName)
         checker = getattr(test, _fail_on._FAIL_ON_ATTR, None)
@@ -345,11 +347,15 @@ class TransactionTestContext:
     async def __aenter__(self):
         current_transaction = current_transaction_map[self.connection_name]
         self.token = current_transaction.set(self.connection)
+        if hasattr(self.connection, "_parent"):
+            self.connection._connection = await self.connection._parent._pool.acquire()
         await self.connection.start()
         return self.connection
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.connection.rollback()
+        if hasattr(self.connection, "_parent"):
+            await self.connection._parent._pool.release(self.connection._connection)
         current_transaction_map[self.connection_name].reset(self.token)
 
 
