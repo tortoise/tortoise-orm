@@ -178,8 +178,8 @@ class SimpleTestCase(_TestCase):  # type: ignore
     async def _tearDownDB(self) -> None:
         pass
 
-    def _setUp(self) -> None:
-        self._init_loop()
+    async def _setUp(self) -> None:
+
 
         # initialize post-test checks
         test = getattr(self, self._testMethodName)
