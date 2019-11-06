@@ -102,7 +102,6 @@ class MySQLClient(BaseDBAsyncClient):
 
         self._template: dict = {}
         self._pool: Optional[aiomysql.Pool] = None
-        self._lock = asyncio.Lock()
         self._connection = None
 
     async def create_connection(self, with_db: bool) -> None:
@@ -205,7 +204,7 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
     def __init__(self, connection) -> None:
         self.connection_name = connection.connection_name
         self._connection: aiomysql.Connection = connection._connection
-        self._lock = connection._lock
+        self._lock = asyncio.Lock()
         self.log = connection.log
         self._finalized: Optional[bool] = None
         self.fetch_inserted = connection.fetch_inserted
@@ -219,9 +218,6 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
 
     def acquire_connection(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._connection, self._lock)
-
-    async def close(self) -> None:
-        await self._parent.close()
 
     @retry_connection
     async def start(self) -> None:
