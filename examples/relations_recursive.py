@@ -15,7 +15,7 @@ from tortoise.models import Model
 class Employee(Model):
     name = fields.CharField(max_length=50)
 
-    manager: fields.ForeignKeyNullable["Employee"] = fields.ForeignKeyField(
+    manager: fields.ForeignKeyNullableRelation["Employee"] = fields.ForeignKeyField(
         "models.Employee", related_name="team_members", null=True
     )
     team_members: fields.ReverseRelation["Employee"]

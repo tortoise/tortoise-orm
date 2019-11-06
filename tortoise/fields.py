@@ -404,8 +404,8 @@ class UUIDField(Field, UUID):
         return UUID(value)
 
 
-ForeignKeyNullable = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
-ForeignKey = Union[Awaitable[MODEL], MODEL]
+ForeignKeyNullableRelation = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
+ForeignKeyRelation = Union[Awaitable[MODEL], MODEL]
 
 
 class ForeignKeyField(Field):

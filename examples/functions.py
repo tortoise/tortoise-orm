@@ -17,7 +17,7 @@ class Tournament(Model):
 class Event(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
-    tournament: fields.ForeignKey[Tournament] = fields.ForeignKeyField(
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
         "models.Tournament", related_name="events"
     )
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(

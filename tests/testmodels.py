@@ -45,10 +45,10 @@ class Reporter(Model):
 class Event(Model):
     id = fields.BigIntField(pk=True)
     name = fields.TextField()
-    tournament: fields.ForeignKey["Tournament"] = fields.ForeignKeyField(
+    tournament: fields.ForeignKeyRelation["Tournament"] = fields.ForeignKeyField(
         "models.Tournament", related_name="events"
     )
-    reporter: fields.ForeignKeyNullable[Reporter] = fields.ForeignKeyField(
+    reporter: fields.ForeignKeyNullableRelation[Reporter] = fields.ForeignKeyField(
         "models.Reporter", null=True
     )
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
@@ -184,7 +184,7 @@ class UUIDFields(Model):
 
 class MinRelation(Model):
     id = fields.IntField(pk=True)
-    tournament: fields.ForeignKey[Tournament] = fields.ForeignKeyField("models.Tournament")
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField("models.Tournament")
     participants: fields.ManyToManyRelation[Team] = fields.ManyToManyField("models.Team")
 
 
@@ -235,7 +235,7 @@ class UniqueTogetherFields(Model):
 class UniqueTogetherFieldsWithFK(Model):
     id = fields.IntField(pk=True)
     text = fields.CharField(max_length=64)
-    tournament: fields.ForeignKey[Tournament] = fields.ForeignKeyField("models.Tournament")
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField("models.Tournament")
 
     class Meta:
         unique_together = ("text", "tournament")
@@ -267,7 +267,7 @@ class UUIDPkModel(Model):
 class UUIDFkRelatedModel(Model):
     id = fields.UUIDField(pk=True)
     name = fields.CharField(max_length=50, null=True)
-    model: fields.ForeignKey[UUIDPkModel] = fields.ForeignKeyField(
+    model: fields.ForeignKeyRelation[UUIDPkModel] = fields.ForeignKeyField(
         "models.UUIDPkModel", related_name="children"
     )
 
@@ -275,7 +275,7 @@ class UUIDFkRelatedModel(Model):
 class UUIDFkRelatedNullModel(Model):
     id = fields.UUIDField(pk=True)
     name = fields.CharField(max_length=50, null=True)
-    model: fields.ForeignKeyNullable[UUIDPkModel] = fields.ForeignKeyField(
+    model: fields.ForeignKeyNullableRelation[UUIDPkModel] = fields.ForeignKeyField(
         "models.UUIDPkModel", related_name="children_null", null=True
     )
 
@@ -377,7 +377,7 @@ class CommentModel(Model):
 class Employee(Model):
     name = fields.CharField(max_length=50)
 
-    manager: fields.ForeignKeyNullable["Employee"] = fields.ForeignKeyField(
+    manager: fields.ForeignKeyNullableRelation["Employee"] = fields.ForeignKeyField(
         "models.Employee", related_name="team_members", null=True
     )
     team_members: fields.ReverseRelation["Employee"]
@@ -435,7 +435,7 @@ class StraightFields(Model):
     chars = fields.CharField(max_length=50, index=True, description="Some chars")
     blip = fields.CharField(max_length=50, default="BLIP")
 
-    fk: fields.ForeignKeyNullable["StraightFields"] = fields.ForeignKeyField(
+    fk: fields.ForeignKeyNullableRelation["StraightFields"] = fields.ForeignKeyField(
         "models.StraightFields", related_name="fkrev", null=True, description="Tree!"
     )
     fkrev: fields.ReverseRelation["StraightFields"]
@@ -457,7 +457,7 @@ class SourceFields(Model):
     )
     blip = fields.CharField(max_length=50, default="BLIP", source_field="da_blip")
 
-    fk: fields.ForeignKeyNullable["SourceFields"] = fields.ForeignKeyField(
+    fk: fields.ForeignKeyNullableRelation["SourceFields"] = fields.ForeignKeyField(
         "models.SourceFields",
         related_name="fkrev",
         null=True,
