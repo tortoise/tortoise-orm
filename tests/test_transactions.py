@@ -132,6 +132,7 @@ class TestTransactions(test.TruncationTestCase):
         with self.assertRaises(TransactionManagementError):
             async with in_transaction() as connection:
                 await connection.rollback()
+                await connection.rollback()
 
     async def test_transaction_exception_3(self):
         connection = await start_transaction()
@@ -142,6 +143,7 @@ class TestTransactions(test.TruncationTestCase):
     async def test_transaction_exception_4(self):
         with self.assertRaises(TransactionManagementError):
             async with in_transaction() as connection:
+                await connection.commit()
                 await connection.commit()
 
     async def test_insert_await_across_transaction_fail(self):

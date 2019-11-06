@@ -14,6 +14,8 @@ from tortoise.backends.base.client import (
     BaseTransactionWrapper,
     Capabilities,
     ConnectionWrapper,
+    NestedTransactionContext,
+    TransactionContext,
 )
 from tortoise.exceptions import (
     DBConnectionError,
@@ -21,7 +23,6 @@ from tortoise.exceptions import (
     OperationalError,
     TransactionManagementError,
 )
-from tortoise.transactions import current_transaction_map
 
 
 def retry_connection(func):
@@ -65,6 +66,8 @@ def translate_exceptions(func):
             raise OperationalError(exc)
         except asyncpg.IntegrityConstraintViolationError as exc:
             raise IntegrityError(exc)
+        except asyncpg.InvalidTransactionStateError as exc:
+            raise TransactionManagementError(exc)
 
     return translate_exceptions_
 
@@ -96,10 +99,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self._template: dict = {}
         self._connection: Optional[asyncpg.Connection] = None
         self._lock = asyncio.Lock()
-
-        self._transaction_class = type(
-            "TransactionWrapper", (TransactionWrapper, self.__class__), {}
-        )
 
     async def create_connection(self, with_db: bool) -> None:
         self._template = {
@@ -146,8 +145,8 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     def acquire_connection(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._connection, self._lock)
 
-    def _in_transaction(self) -> "TransactionWrapper":
-        return self._transaction_class(self)
+    def _in_transaction(self) -> "TransactionContext":
+        return TransactionContext(TransactionWrapper(self))
 
     @translate_exceptions
     @retry_connection
@@ -188,14 +187,16 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     def __init__(self, connection: AsyncpgDBClient) -> None:
         self._connection: asyncpg.Connection = connection._connection
-        self._lock = connection._lock
-        self.log = logging.getLogger("db_client")
-        self._transaction_class = self.__class__
-        self._old_context_value = None
+        self._lock = asyncio.Lock()
+        self._trxlock = connection._lock
+        self.log = connection.log
         self.connection_name = connection.connection_name
         self.transaction: Transaction = None
         self._finalized = False
         self._parent = connection
+
+    def _in_transaction(self) -> "TransactionContext":
+        return NestedTransactionContext(self)
 
     async def create_connection(self, with_db: bool) -> None:
         await self._parent.create_connection(with_db)
@@ -209,22 +210,16 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     async def start(self) -> None:
         self.transaction = self._connection.transaction()
         await self.transaction.start()
-        current_transaction = current_transaction_map[self.connection_name]
-        self._old_context_value = current_transaction.get()
-        current_transaction.set(self)
 
-    def release(self) -> None:
-        self._finalized = True
-        current_transaction_map[self.connection_name].set(self._old_context_value)
-
-    async def commit(self) -> None:
+    async def commit(self, finalize: bool = True) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self.transaction.commit()
-        self.release()
+        if finalize:
+            self._finalized = True
 
     async def rollback(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self.transaction.rollback()
-        self.release()
+        self._finalized = True

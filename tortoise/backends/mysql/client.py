@@ -12,6 +12,8 @@ from tortoise.backends.base.client import (
     BaseTransactionWrapper,
     Capabilities,
     ConnectionWrapper,
+    NestedTransactionContext,
+    TransactionContext,
 )
 from tortoise.backends.mysql.executor import MySQLExecutor
 from tortoise.backends.mysql.schema_generator import MySQLSchemaGenerator
@@ -21,7 +23,6 @@ from tortoise.exceptions import (
     OperationalError,
     TransactionManagementError,
 )
-from tortoise.transactions import current_transaction_map
 
 
 def retry_connection(func):
@@ -102,10 +103,6 @@ class MySQLClient(BaseDBAsyncClient):
         self._connection: Optional[aiomysql.Connection] = None
         self._lock = asyncio.Lock()
 
-        self._transaction_class = type(
-            "TransactionWrapper", (TransactionWrapper, self.__class__), {}
-        )
-
     async def create_connection(self, with_db: bool) -> None:
         self._template = {
             "host": self.host,
@@ -158,8 +155,8 @@ class MySQLClient(BaseDBAsyncClient):
     def acquire_connection(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._connection, self._lock)
 
-    def _in_transaction(self):
-        return self._transaction_class(self)
+    def _in_transaction(self) -> "TransactionContext":
+        return TransactionContext(TransactionWrapper(self))
 
     @translate_exceptions
     @retry_connection
@@ -199,16 +196,18 @@ class MySQLClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
-    def __init__(self, connection):
+    def __init__(self, connection) -> None:
         self.connection_name = connection.connection_name
         self._connection: aiomysql.Connection = connection._connection
-        self._lock = connection._lock
-        self.log = logging.getLogger("db_client")
-        self._transaction_class = self.__class__
+        self._lock = asyncio.Lock()
+        self._trxlock = connection._lock
+        self.log = connection.log
         self._finalized: Optional[bool] = None
-        self._old_context_value = None
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
+
+    def _in_transaction(self) -> "TransactionContext":
+        return NestedTransactionContext(self)
 
     async def create_connection(self, with_db: bool) -> None:
         await self._parent.create_connection(with_db)
@@ -222,22 +221,16 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
     async def start(self) -> None:
         await self._connection.begin()
         self._finalized = False
-        current_transaction = current_transaction_map[self.connection_name]
-        self._old_context_value = current_transaction.get()
-        current_transaction.set(self)
 
-    def release(self) -> None:
-        self._finalized = True
-        current_transaction_map[self.connection_name].set(self._old_context_value)
-
-    async def commit(self) -> None:
+    async def commit(self, finalize: bool = True) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.commit()
-        self.release()
+        if finalize:
+            self._finalized = True
 
     async def rollback(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.rollback()
-        self.release()
+        self._finalized = True
