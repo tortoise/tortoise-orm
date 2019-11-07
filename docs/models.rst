@@ -306,6 +306,58 @@ Sync usage requires that you call `fetch_related` before the time, and then you 
 
 The reverse lookup of ``team.event_team`` works exactly the same way.
 
+``Improving relational type hinting``
+-------------------------------------
+
+Since Tortoise ORM is still a young project, it does not have such widespread support by
+various editors who help you writing code using good autocomplete for models and
+different relations between them.
+However, you can get such autocomplete by doing a little work yourself.
+All you need to do is add a few annotations to your models for fields that are responsible
+for the relations.
+
+Here is an updated example from :ref:`getting_started`, that will add autocomplete for
+all models including fields for the relations between models.
+
+.. code-block:: python3
+
+    from tortoise.models import Model
+    from tortoise import fields
+
+
+    class Tournament(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=255)
+
+        events: fields.ReverseRelation["Event"]
+
+        def __str__(self):
+            return self.name
+
+
+    class Event(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=255)
+        tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
+            "models.Tournament", related_name="events"
+        )
+        participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
+            "models.Team", related_name="events", through="event_team"
+        )
+
+        def __str__(self):
+            return self.name
+
+
+    class Team(Model):
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=255)
+
+        events: fields.ManyToManyRelation[Event]
+
+        def __str__(self):
+            return self.name
+
 
 Reference
 =========

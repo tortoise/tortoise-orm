@@ -405,7 +405,15 @@ class UUIDField(Field, UUID):
 
 
 ForeignKeyNullableRelation = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
+"""
+Type hint for the result of accessing the :class:`.ForeignKeyField` field in the model
+when obtained model can be nullable.
+"""
+
 ForeignKeyRelation = Union[Awaitable[MODEL], MODEL]
+"""
+Type hint for the result of accessing the :class:`.ForeignKeyField` field in the model.
+"""
 
 
 class ForeignKeyField(Field):
@@ -468,33 +476,6 @@ class ForeignKeyField(Field):
 
 
 class ManyToManyFieldInstance(Field):
-    """
-    ManyToMany relation field.
-
-    This field represents a many-to-many between this model and another model.
-
-    See :ref:`many_to_many` for usage information.
-
-    You must provide the following:
-
-    ``model_name``:
-        The name of the related model in a :samp:`'{app}.{model}'` format.
-
-    The following is optional:
-
-    ``through``:
-        The DB table that represents the trough table.
-        The default is normally safe.
-    ``forward_key``:
-        The forward lookup key on the through table.
-        The default is normally safe.
-    ``backward_key``:
-        The backward lookup key on the through table.
-        The default is normally safe.
-    ``related_name``:
-        The attribute name on the related model to reverse resolve the many to many.
-    """
-
     __slots__ = (
         "field_type",  # Here we need type to be able to set dyamically
         "model_name",
@@ -536,6 +517,33 @@ def ManyToManyField(
     related_name: str = "",
     **kwargs,
 ) -> "ManyToManyRelation":
+    """
+        ManyToMany relation field.
+
+        This field represents a many-to-many between this model and another model.
+
+        See :ref:`many_to_many` for usage information.
+
+        You must provide the following:
+
+        ``model_name``:
+            The name of the related model in a :samp:`'{app}.{model}'` format.
+
+        The following is optional:
+
+        ``through``:
+            The DB table that represents the trough table.
+            The default is normally safe.
+        ``forward_key``:
+            The forward lookup key on the through table.
+            The default is normally safe.
+        ``backward_key``:
+            The backward lookup key on the through table.
+            The default is normally safe.
+        ``related_name``:
+            The attribute name on the related model to reverse resolve the many to many.
+        """
+
     return ManyToManyFieldInstance(  # type: ignore
         model_name, through, forward_key, backward_key, related_name, **kwargs
     )
@@ -556,7 +564,7 @@ class BackwardFKRelation(Field):
 
 class ReverseRelation(Generic[MODEL]):
     """
-    Relation Query container.
+    Relation container for :class:`.ForeignKeyField`.
     """
 
     __slots__ = (
@@ -667,7 +675,7 @@ class ReverseRelation(Generic[MODEL]):
 
 class ManyToManyRelation(ReverseRelation[MODEL]):
     """
-    Many to many relation Query container.
+    Many to many relation container for :class:`.ManyToManyField`.
     """
 
     __slots__ = ("field", "model", "instance")

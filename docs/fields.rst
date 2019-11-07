@@ -77,9 +77,11 @@ Relational Fields
 .. autoclass:: tortoise.fields.ForeignKeyField
     :exclude-members: to_db_value, to_python_value
 
-.. autoclass:: tortoise.fields.ManyToManyField
-    :exclude-members: to_db_value, to_python_value
+.. autofunction:: tortoise.fields.ManyToManyField
 
+.. autodata:: tortoise.fields.ForeignKeyRelation
+
+.. autodata:: tortoise.fields.ForeignKeyNullableRelation
 
 Extending A Field
 =================
