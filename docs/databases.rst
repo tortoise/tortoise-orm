@@ -76,12 +76,12 @@ Parameters
     Network port that database is available at. (defaults to ``5432``)
 ``database``:
     Database to use.
-``min_size``:
-    Minimum connection pool size (not used right now)
-``max_size``:
-    Maximum connection pool size (not used right now)
+``minsize``:
+    Minimum connection pool size (defaults to ``1``)
+``maxsize``:
+    Maximum connection pool size (defaults to ``5``)
 ``max_queries``:
-    Maximum no of queries to allow before forcing a re-connect.
+    Maximum no of queries before a connection is closed and replaced. (defaults to ``50000``)
 ``max_inactive_connection_lifetime``:
     Duration of inactive connection before assuming that it has gone stale, and force a re-connect.
 ``schema``:
@@ -109,9 +109,9 @@ Parameters
 ``database``:
     Database to use.
 ``minsize``:
-    Minimum connection pool size (not used right now)
+    Minimum connection pool size (defaults to ``1``)
 ``maxsize``:
-    Maximum connection pool size (not used right now)
+    Maximum connection pool size (defaults to ``5``)
 ``connect_timeout``:
     Duration to wait for connection before throwing error.
 ``echo``:
