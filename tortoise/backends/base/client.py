@@ -126,10 +126,11 @@ class TransactionContext:
     def __init__(self, connection) -> None:
         self.connection = connection
         self.connection_name = connection.connection_name
-        self.lock = connection._trxlock
+        self.lock = getattr(connection, "_trxlock", None)
 
     async def __aenter__(self):
-        await self.lock.acquire()
+        if self.lock:
+            await self.lock.acquire()
         current_transaction = current_transaction_map[self.connection_name]
         self.token = current_transaction.set(self.connection)
         await self.connection.start()
@@ -144,7 +145,8 @@ class TransactionContext:
             else:
                 await self.connection.commit()
         current_transaction_map[self.connection_name].reset(self.token)
-        self.lock.release()
+        if self.lock:
+            self.lock.release()
 
 
 class TransactionContextPooled(TransactionContext):

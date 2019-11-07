@@ -32,7 +32,6 @@ class TestTransactions(test.TruncationTestCase):
         saved_event = await Tournament.filter(name="Updated name").first()
         self.assertIsNone(saved_event)
 
-    @test.skip("logically flawwed")
     async def test_nested_transactions(self):
         async with in_transaction():
             tournament = Tournament(name="Test")
@@ -47,8 +46,9 @@ class TestTransactions(test.TruncationTestCase):
                     self.assertEqual(tournament.id, saved_tournament.id)
                     raise SomeException("Some error")
 
-        saved_event = await Tournament.filter(name="Updated name").first()
-        self.assertIsNotNone(saved_event)
+        #TODO: reactive once savepoints are implemented
+        # saved_event = await Tournament.filter(name="Updated name").first()
+        # self.assertIsNotNone(saved_event)
         not_saved_event = await Tournament.filter(name="Nested").first()
         self.assertIsNone(not_saved_event)
 
