@@ -53,7 +53,7 @@ _testall:
 	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: py.test --cov-report=
 	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB=postgres://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\} py.test --cov-append --cov-report=
 	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}?storage_engine=MYISAM" py.test --cov-append --cov-report=
-	$(py_warn) TORTOISE_TEST_DB="mysql:$(TORTOISE_MYSQL_PASS)//root:@127.0.0.1:3306/test_\{\}" py.test --cov-append
+	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}" py.test --cov-append
 
 testall: deps _testall
 

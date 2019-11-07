@@ -212,8 +212,8 @@ def get_all_type_hints(obj, name):
         pass
     except NameError as exc:
         try:
-            rv = get_type_hints(obj, sys.modules['tortoise'].__dict__)
-        except:
+            rv = get_type_hints(obj, localns=sys.modules['tortoise'].__dict__)
+        except Exception as exc:
             logger.warning('Cannot resolve forward reference in type annotations of "%s": %s',
                            name, exc)
             rv = obj.__annotations__
@@ -233,9 +233,12 @@ def get_all_type_hints(obj, name):
     except (AttributeError, TypeError):
         pass
     except NameError as exc:
-        logger.warning('Cannot resolve forward reference in type annotations of "%s": %s',
-                       name, exc)
-        rv = obj.__annotations__
+        try:
+            rv = get_type_hints(obj, localns=sys.modules['tortoise'].__dict__)
+        except:
+            logger.warning('Cannot resolve forward reference in type annotations of "%s": %s',
+                           name, exc)
+            rv = obj.__annotations__
 
     return rv
 

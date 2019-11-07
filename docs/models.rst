@@ -306,8 +306,8 @@ Sync usage requires that you call `fetch_related` before the time, and then you 
 
 The reverse lookup of ``team.event_team`` works exactly the same way.
 
-``Improving relational type hinting``
--------------------------------------
+Improving relational type hinting
+=================================
 
 Since Tortoise ORM is still a young project, it does not have such widespread support by
 various editors who help you writing code using good autocomplete for models and
