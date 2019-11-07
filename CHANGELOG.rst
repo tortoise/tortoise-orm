@@ -2,6 +2,11 @@
 
 Changelog
 =========
+0.14.1
+-------
+- `ManyToManyField` is now a function instead of a class.
+- Added section on adding better autocomplete for relations in editors.
+
 0.14.0
 ------
 .. caution::

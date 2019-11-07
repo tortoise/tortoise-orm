@@ -2,7 +2,7 @@ import datetime
 import functools
 import json
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Awaitable, Generic, Optional, Type, TypeVar, Union
 from uuid import UUID, uuid4
 
 import ciso8601
@@ -12,7 +12,9 @@ from tortoise.exceptions import ConfigurationError, NoValuesFetched, Operational
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
+    from tortoise.queryset import QuerySet
 
+MODEL = TypeVar("MODEL", bound="Model")
 
 CASCADE = "CASCADE"
 RESTRICT = "RESTRICT"
@@ -402,6 +404,18 @@ class UUIDField(Field, UUID):
         return UUID(value)
 
 
+ForeignKeyNullableRelation = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
+"""
+Type hint for the result of accessing the :class:`.ForeignKeyField` field in the model
+when obtained model can be nullable.
+"""
+
+ForeignKeyRelation = Union[Awaitable[MODEL], MODEL]
+"""
+Type hint for the result of accessing the :class:`.ForeignKeyField` field in the model.
+"""
+
+
 class ForeignKeyField(Field):
     """
     ForeignKey relation field.
@@ -433,7 +447,8 @@ class ForeignKeyField(Field):
     """
 
     __slots__ = (
-        "field_type",  # type will be set later, so we need a slot to be able to write it
+        "field_type",
+        # type will be set later, so we need a slot to be able to write it
         "model_name",
         "related_name",
         "on_delete",
@@ -455,35 +470,12 @@ class ForeignKeyField(Field):
             raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
         self.on_delete = on_delete
 
+    # we need this for IDEs so that they don't say that the field is not awaitable
+    def __await__(self):
+        ...  # pylint: disable=W0104
 
-class ManyToManyField(Field):
-    """
-    ManyToMany relation field.
 
-    This field represents a many-to-many between this model and another model.
-
-    See :ref:`many_to_many` for usage information.
-
-    You must provide the following:
-
-    ``model_name``:
-        The name of the related model in a :samp:`'{app}.{model}'` format.
-
-    The following is optional:
-
-    ``through``:
-        The DB table that represents the trough table.
-        The default is normally safe.
-    ``forward_key``:
-        The forward lookup key on the through table.
-        The default is normally safe.
-    ``backward_key``:
-        The backward lookup key on the through table.
-        The default is normally safe.
-    ``related_name``:
-        The attribute name on the related model to reverse resolve the many to many.
-    """
-
+class ManyToManyFieldInstance(Field):
     __slots__ = (
         "field_type",  # Here we need type to be able to set dyamically
         "model_name",
@@ -517,6 +509,46 @@ class ManyToManyField(Field):
         self._generated = False
 
 
+def ManyToManyField(
+    model_name: str,
+    through: Optional[str] = None,
+    forward_key: Optional[str] = None,
+    backward_key: str = "",
+    related_name: str = "",
+    **kwargs,
+) -> "ManyToManyRelation":
+    """
+        ManyToMany relation field.
+
+        This field represents a many-to-many between this model and another model.
+
+        See :ref:`many_to_many` for usage information.
+
+        You must provide the following:
+
+        ``model_name``:
+            The name of the related model in a :samp:`'{app}.{model}'` format.
+
+        The following is optional:
+
+        ``through``:
+            The DB table that represents the trough table.
+            The default is normally safe.
+        ``forward_key``:
+            The forward lookup key on the through table.
+            The default is normally safe.
+        ``backward_key``:
+            The backward lookup key on the through table.
+            The default is normally safe.
+        ``related_name``:
+            The attribute name on the related model to reverse resolve the many to many.
+        """
+
+    return ManyToManyFieldInstance(  # type: ignore
+        model_name, through, forward_key, backward_key, related_name, **kwargs
+    )
+
+
 class BackwardFKRelation(Field):
     __slots__ = ("field_type", "relation_field")  # Here we need type to be able to set dyamically
     has_db_field = False
@@ -530,9 +562,9 @@ class BackwardFKRelation(Field):
         self.description = description
 
 
-class RelationQueryContainer:
+class ReverseRelation(Generic[MODEL]):
     """
-    Relation Query container.
+    Relation container for :class:`.ForeignKeyField`.
     """
 
     __slots__ = (
@@ -606,31 +638,31 @@ class RelationQueryContainer:
         for val in self.related_objects:
             yield val
 
-    def filter(self, *args, **kwargs):
+    def filter(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
         Returns QuerySet with related elements filtered by args/kwargs.
         """
         return self._query.filter(*args, **kwargs)
 
-    def all(self):
+    def all(self) -> "QuerySet[MODEL]":
         """
         Returns QuerySet with all related elements.
         """
         return self._query
 
-    def order_by(self, *args, **kwargs):
+    def order_by(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
         Returns QuerySet related elements in order.
         """
         return self._query.order_by(*args, **kwargs)
 
-    def limit(self, *args, **kwargs):
+    def limit(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
         Returns a QuerySet with at most «limit» related elements.
         """
         return self._query.limit(*args, **kwargs)
 
-    def offset(self, *args, **kwargs):
+    def offset(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
         Returns aQuerySet with all related elements offset by «offset».
         """
@@ -641,14 +673,14 @@ class RelationQueryContainer:
         self.related_objects = sequence
 
 
-class ManyToManyRelationManager(RelationQueryContainer):
+class ManyToManyRelation(ReverseRelation[MODEL]):
     """
-    Many to many relation Query container.
+    Many to many relation container for :class:`.ManyToManyField`.
     """
 
     __slots__ = ("field", "model", "instance")
 
-    def __init__(self, model, instance, m2m_field: ManyToManyField) -> None:
+    def __init__(self, model, instance, m2m_field: ManyToManyFieldInstance) -> None:
         super().__init__(model, m2m_field.related_name, instance)
         self.field = m2m_field
         self.model = m2m_field.field_type
