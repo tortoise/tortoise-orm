@@ -46,7 +46,7 @@ class TestTransactions(test.TruncationTestCase):
                     self.assertEqual(tournament.id, saved_tournament.id)
                     raise SomeException("Some error")
 
-        #TODO: reactive once savepoints are implemented
+        # TODO: reactive once savepoints are implemented
         # saved_event = await Tournament.filter(name="Updated name").first()
         # self.assertIsNotNone(saved_event)
         not_saved_event = await Tournament.filter(name="Nested").first()
