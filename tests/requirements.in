@@ -44,7 +44,8 @@ quart;python_version>="3.7"
 
 # Sample integration - Sanic
 sanic
+uvloop>=0.12.0; sys_platform != "win32" and implementation_name == "cpython"
 
 # Sample integration - Starlette
 starlette
-uvicorn < 0.9
+uvicorn

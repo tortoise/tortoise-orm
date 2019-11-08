@@ -11,6 +11,8 @@ class Tournament(Model):
     name = fields.CharField(max_length=255, description="Tournament name", index=True)
     created = fields.DatetimeField(auto_now_add=True, description="Created datetime")
 
+    events: fields.ReverseRelation["Event"]
+
     class Meta:
         table_description = "What Tournaments we have"
 
@@ -18,10 +20,10 @@ class Tournament(Model):
 class Event(Model):
     id = fields.IntField(pk=True, description="Event ID")
     name = fields.CharField(max_length=255, unique=True)
-    tournament = fields.ForeignKeyField(
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
         "models.Tournament", related_name="events", description="FK to tournament"
     )
-    participants = fields.ManyToManyField(
+    participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team",
         related_name="events",
         through="event_team",
@@ -37,6 +39,8 @@ class Event(Model):
 
 class Team(Model):
     name = fields.CharField(max_length=50, pk=True, description="The TEAM name (and PK)")
+
+    events: fields.ManyToManyRelation[Event]
 
     class Meta:
         table_description = "The TEAMS!"

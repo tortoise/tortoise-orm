@@ -15,6 +15,13 @@ Deprecations:
 ^^^^^^^^^^^^^
 - ``start_transaction`` is deprecated, please use ``@atomic()`` or ``async with in_transaction():`` instead.
 
+
+0.14.1
+-------
+- ``ManyToManyField`` is now a function that has the type of the relation for autocomplete,
+  this allows for better type hinting at less effort.
+- Added section on adding better autocomplete for relations in editors.
+
 0.14.0
 ------
 .. caution::

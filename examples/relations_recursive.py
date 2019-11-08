@@ -14,8 +14,16 @@ from tortoise.models import Model
 
 class Employee(Model):
     name = fields.CharField(max_length=50)
-    manager = fields.ForeignKeyField("models.Employee", related_name="team_members", null=True)
-    talks_to = fields.ManyToManyField("models.Employee", related_name="gets_talked_to")
+
+    manager: fields.ForeignKeyNullableRelation["Employee"] = fields.ForeignKeyField(
+        "models.Employee", related_name="team_members", null=True
+    )
+    team_members: fields.ReverseRelation["Employee"]
+
+    talks_to: fields.ManyToManyRelation["Employee"] = fields.ManyToManyField(
+        "models.Employee", related_name="gets_talked_to"
+    )
+    gets_talked_to: fields.ManyToManyRelation["Employee"]
 
     def __str__(self):
         return self.name

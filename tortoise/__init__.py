@@ -11,7 +11,7 @@ from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
 from tortoise.exceptions import ConfigurationError
-from tortoise.fields import ManyToManyRelationManager
+from tortoise.fields import ManyToManyRelation
 from tortoise.filters import get_m2m_filters
 from tortoise.models import Model
 from tortoise.queryset import QuerySet
@@ -165,7 +165,7 @@ class Tortoise:
                 del desc["raw_field"]
 
             # These fields are entierly "virtual", so no direct DB representation
-            if isinstance(field, (fields.ManyToManyField, fields.BackwardFKRelation)):
+            if isinstance(field, (fields.ManyToManyFieldInstance, fields.BackwardFKRelation)):
                 del desc["db_column"]
 
             return desc
@@ -319,7 +319,7 @@ class Tortoise:
                     related_model._meta.add_field(backward_relation_name, fk_relation)
 
                 for field in list(model._meta.m2m_fields):
-                    m2m_object = cast(fields.ManyToManyField, model._meta.fields_map[field])
+                    m2m_object = cast(fields.ManyToManyFieldInstance, model._meta.fields_map[field])
                     if m2m_object._generated:
                         continue
 
@@ -356,7 +356,7 @@ class Tortoise:
 
                         m2m_object.through = f"{model._meta.table}_{related_model_table_name}"
 
-                    m2m_relation = fields.ManyToManyField(
+                    m2m_relation = fields.ManyToManyFieldInstance(
                         f"{app_name}.{model_name}",
                         m2m_object.through,
                         forward_key=m2m_object.backward_key,
@@ -655,4 +655,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.15.0"
+__version__ = "0.15.0a0"
