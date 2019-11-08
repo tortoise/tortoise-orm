@@ -62,9 +62,9 @@ test_mysql:
 	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}" py.test --cov-append --cov-report=
 
 _testall: test_sqlite test_postgres test_mysql_myisam test_mysql
-	coverage report
 
 testall: deps _testall
+	coverage report
 
 ci: check testall
 
