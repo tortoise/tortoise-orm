@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any, List, Optional, Sequence, Type
+from typing import Any, List, Optional, Sequence, Type, Union
 
 from pypika import Query
 
@@ -86,7 +86,7 @@ class BaseDBAsyncClient:
     async def db_delete(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    def acquire_connection(self) -> "ConnectionWrapper":
+    def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
         raise NotImplementedError()  # pragma: nocoverage
 
     def _in_transaction(self) -> "TransactionContext":
@@ -126,10 +126,11 @@ class TransactionContext:
     def __init__(self, connection) -> None:
         self.connection = connection
         self.connection_name = connection.connection_name
-        self.lock = connection._trxlock
+        self.lock = getattr(connection, "_trxlock", None)
 
     async def __aenter__(self):
-        await self.lock.acquire()
+        if self.lock:
+            await self.lock.acquire()
         current_transaction = current_transaction_map[self.connection_name]
         self.token = current_transaction.set(self.connection)
         await self.connection.start()
@@ -144,7 +145,35 @@ class TransactionContext:
             else:
                 await self.connection.commit()
         current_transaction_map[self.connection_name].reset(self.token)
-        self.lock.release()
+        if self.lock:
+            self.lock.release()
+
+
+class TransactionContextPooled(TransactionContext):
+    __slots__ = ("connection", "connection_name", "token")
+
+    def __init__(self, connection) -> None:
+        self.connection = connection
+        self.connection_name = connection.connection_name
+
+    async def __aenter__(self):
+        current_transaction = current_transaction_map[self.connection_name]
+        self.token = current_transaction.set(self.connection)
+        self.connection._connection = await self.connection._parent._pool.acquire()
+        await self.connection.start()
+        return self.connection
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        if not self.connection._finalized:
+            if exc_type:
+                # Can't rollback a transaction that already failed.
+                if exc_type is not TransactionManagementError:
+                    await self.connection.rollback()
+            else:
+                await self.connection.commit()
+        current_transaction_map[self.connection_name].reset(self.token)
+        if self.connection._parent._pool:
+            await self.connection._parent._pool.release(self.connection._connection)
 
 
 class NestedTransactionContext(TransactionContext):
@@ -160,6 +189,21 @@ class NestedTransactionContext(TransactionContext):
                     await self.connection.rollback()
             else:
                 await self.connection.commit(finalize=False)
+
+
+class PoolConnectionWrapper:
+    def __init__(self, pool) -> None:
+        self.pool = pool
+        self.connection = None
+
+    async def __aenter__(self):
+        # get first available connection
+        self.connection = await self.pool.acquire()
+        return self.connection
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        # release the connection back to the pool
+        await self.pool.release(self.connection)
 
 
 class BaseTransactionWrapper:

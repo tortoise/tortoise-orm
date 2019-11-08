@@ -6,7 +6,7 @@ from tortoise.contrib import test
 
 class TestConnectionParams(test.TestCase):
     async def test_mysql_connection_params(self):
-        with patch("aiomysql.connect", new=CoroutineMock()) as mysql_connect:
+        with patch("aiomysql.create_pool", new=CoroutineMock()) as mysql_connect:
             await Tortoise._init_connections(
                 {
                     "models": {
@@ -34,11 +34,13 @@ class TestConnectionParams(test.TestCase):
                 password="foomip",
                 port=3306,
                 user="root",
+                maxsize=5,
+                minsize=1,
             )
 
     async def test_postres_connection_params(self):
         try:
-            with patch("asyncpg.connect", new=CoroutineMock()) as asyncpg_connect:
+            with patch("asyncpg.create_pool", new=CoroutineMock()) as asyncpg_connect:
                 await Tortoise._init_connections(
                     {
                         "models": {
@@ -66,6 +68,8 @@ class TestConnectionParams(test.TestCase):
                     ssl=True,
                     timeout=30,
                     user="root",
+                    max_size=5,
+                    min_size=1,
                 )
         except ImportError:
             self.skipTest("asyncpg not installed")

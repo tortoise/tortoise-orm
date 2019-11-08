@@ -2,6 +2,19 @@
 
 Changelog
 =========
+0.15.0
+-------
+New features:
+^^^^^^^^^^^^^
+- Pooling has been implemented, allowing for multiple concurrent databases and all the benefits that comes with it.
+    - Enabled by default for databases that support it (mysql and postgres) with a minimum pool size of 1, and a maximum of 5
+    - Not supported by sqlite
+    - Can be changed by passing the ``minsize`` and ``maxsize`` connection parameters
+
+Deprecations:
+^^^^^^^^^^^^^
+- ``start_transaction`` is deprecated, please use ``@atomic()`` or ``async with in_transaction():`` instead.
+
 0.14.0
 ------
 .. caution::

@@ -237,7 +237,7 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
 class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
         try:
-            with patch("aiomysql.connect", new=CoroutineMock()):
+            with patch("aiomysql.create_pool", new=CoroutineMock()):
                 await Tortoise.init(
                     {
                         "connections": {
@@ -430,7 +430,7 @@ CREATE TABLE IF NOT EXISTS `teamevents` (
 class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
         try:
-            with patch("asyncpg.connect", new=CoroutineMock()):
+            with patch("asyncpg.create_pool", new=CoroutineMock()):
                 await Tortoise.init(
                     {
                         "connections": {
