@@ -136,7 +136,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
     def __init__(self, model, instance, m2m_field: "ManyToManyFieldInstance") -> None:
         super().__init__(model, m2m_field.related_name, instance)
         self.field = m2m_field
-        self.model = m2m_field.field_type
+        self.model = m2m_field.model_class
         self.instance = instance
 
     async def add(self, *instances, using_db=None) -> None:
@@ -250,7 +250,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         await db.execute_query(str(query))
 
 
-class ForeignKeyField(Field):
+class ForeignKeyFieldInstance(Field):
     """
     ForeignKey relation field.
 
@@ -290,6 +290,7 @@ class ForeignKeyField(Field):
         super().__init__(**kwargs)
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
+        self.model_class: "Type[Model]" = None  # type: ignore
         self.model_name: str = model_name
         self.related_name: Optional[str] = related_name
         if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
@@ -298,25 +299,59 @@ class ForeignKeyField(Field):
             raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
         self.on_delete = on_delete
 
-    # we need this for IDEs so that they don't say that the field is not awaitable
-    def __await__(self):
-        ...  # pylint: disable=W0104
+
+def ForeignKeyField(
+    model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs,
+) -> ForeignKeyRelation:
+    """
+    ForeignKey relation field.
+
+    This field represents a foreign key relation to another model.
+
+    See :ref:`foreign_key` for usage information.
+
+    You must provide the following:
+
+    ``model_name``:
+        The name of the related model in a :samp:`'{app}.{model}'` format.
+
+    The following is optional:
+
+    ``related_name``:
+        The attribute name on the related model to reverse resolve the foreign key.
+    ``on_delete``:
+        One of:
+            ``field.CASCADE``:
+                Indicate that the model should be cascade deleted if related model gets deleted.
+            ``field.RESTRICT``:
+                Indicate that the related model delete will be restricted as long as a
+                foreign key points to it.
+            ``field.SET_NULL``:
+                Resets the field to NULL in case the related model gets deleted.
+                Can only be set if field has ``null=True`` set.
+            ``field.SET_DEFAULT``:
+                Resets the field to ``default`` value in case the related model gets deleted.
+                Can only be set is field has a ``default`` set.
+    """
+
+    return ForeignKeyFieldInstance(model_name, related_name, on_delete, **kwargs)
 
 
-class BackwardFKRelation(Field, ReverseRelation):
+class BackwardFKRelation(Field):
     has_db_field = False
 
     def __init__(
         self, field_type: "Type[Model]", relation_field: str, null: bool, description: Optional[str]
     ) -> None:
         super().__init__(null=null)
-        self.field_type: "Type[Model]" = field_type
+        self.model_class: "Type[Model]" = field_type
         self.relation_field: str = relation_field
         self.description: Optional[str] = description
 
 
-class ManyToManyFieldInstance(Field, ManyToManyRelation):
+class ManyToManyFieldInstance(Field):
     has_db_field = False
+    field_type = ManyToManyRelation
 
     def __init__(
         self,
@@ -329,7 +364,7 @@ class ManyToManyFieldInstance(Field, ManyToManyRelation):
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
-        self.field_type: "Type[Model]" = field_type
+        self.model_class: "Type[Model]" = field_type
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name: str = model_name
@@ -375,6 +410,6 @@ def ManyToManyField(
         The attribute name on the related model to reverse resolve the many to many.
     """
 
-    return ManyToManyFieldInstance(
+    return ManyToManyFieldInstance(  # type: ignore
         model_name, through, forward_key, backward_key, related_name, **kwargs
     )

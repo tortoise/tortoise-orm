@@ -12,9 +12,8 @@ from tortoise.backends.base.config_generator import expand_db_url, generate_conf
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields.relational import (
     BackwardFKRelation,
-    ForeignKeyField,
+    ForeignKeyFieldInstance,
     ManyToManyFieldInstance,
-    ManyToManyRelation,
 )
 from tortoise.filters import get_m2m_filters
 from tortoise.models import Model
@@ -147,13 +146,14 @@ class Tortoise:
         def describe_field(name: str) -> dict:
             # TODO: db_type
             field = model._meta.fields_map[name]
+            field_type = getattr(field, "model_class", field.field_type)
             desc = {
                 "name": name,
                 "field_type": field.__class__.__name__ if serializable else field.__class__,
                 "db_column": field.source_field or name,
                 "raw_field": None,
                 "db_field_types": field.get_db_field_types(),
-                "python_type": type_name(field.field_type) if serializable else field.field_type,
+                "python_type": type_name(field_type) if serializable else field_type,
                 "generated": field.generated,
                 "nullable": field.null,
                 "unique": field.unique,
@@ -167,7 +167,7 @@ class Tortoise:
                 del desc["db_field_types"]
 
             # Foreign Keys have
-            if isinstance(field, ForeignKeyField):
+            if isinstance(field, ForeignKeyFieldInstance):
                 del desc["db_column"]
                 desc["raw_field"] = field.source_field
             else:
@@ -291,7 +291,7 @@ class Tortoise:
                     model._meta.table = model.__name__.lower()
 
                 for field in model._meta.fk_fields:
-                    fk_object = cast(ForeignKeyField, model._meta.fields_map[field])
+                    fk_object = cast(ForeignKeyFieldInstance, model._meta.fields_map[field])
                     reference = fk_object.model_name
                     related_app_name, related_model_name = split_reference(reference)
                     related_model = get_related_model(related_app_name, related_model_name)
@@ -313,7 +313,7 @@ class Tortoise:
                         key_fk_object.source_field = key_field
                     model._meta.add_field(key_field, key_fk_object)
 
-                    fk_object.field_type = related_model
+                    fk_object.model_class = related_model
                     backward_relation_name = fk_object.related_name
                     if not backward_relation_name:
                         backward_relation_name = f"{model._meta.table}s"
@@ -343,7 +343,7 @@ class Tortoise:
                     related_app_name, related_model_name = split_reference(reference)
                     related_model = get_related_model(related_app_name, related_model_name)
 
-                    m2m_object.field_type = related_model
+                    m2m_object.model_class = related_model
 
                     backward_relation_name = m2m_object.related_name
                     if not backward_relation_name:

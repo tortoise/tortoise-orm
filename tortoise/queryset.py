@@ -89,7 +89,7 @@ class AwaitableQuery(QuerySetIterable[MODEL]):
                 related_field = model._meta.fields_map[related_field_name]
                 self._join_table_by_field(table, related_field_name, related_field)
                 self.resolve_ordering(
-                    related_field.field_type,
+                    related_field.model_class,
                     [("__".join(field_name.split("__")[1:]), ordering[1])],
                     {},
                 )
@@ -561,7 +561,7 @@ class UpdateQuery(AwaitableQuery):
                 raise FieldError(f"Unknown keyword argument {key} for model {self.model}")
             if field_object.pk:
                 raise IntegrityError(f"Field {key} is PK and can not be updated")
-            if isinstance(field_object, fields.ForeignKeyField):
+            if isinstance(field_object, fields.ForeignKeyFieldInstance):
                 fk_field: str = field_object.source_field  # type: ignore
                 db_field = self.model._meta.fields_map[fk_field].source_field
                 value = executor.column_map[fk_field](value.pk, None)
@@ -677,7 +677,7 @@ class FieldSelectQuery(AwaitableQuery):
         forwarded_fields_split = forwarded_fields.split("__")
 
         return self._join_table_with_forwarded_fields(
-            model=field_object.field_type,
+            model=field_object.model_class,
             field=forwarded_fields_split[0],
             forwarded_fields="__".join(forwarded_fields_split[1:]),
         )
@@ -721,7 +721,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         field_split = field.split("__")
         if field_split[0] in model._meta.fetch_fields:
-            new_model: "Type[Model]" = model._meta.fields_map[field_split[0]].field_type
+            new_model = model._meta.fields_map[field_split[0]].model_class  # type: ignore
             return self.resolve_to_python_value(new_model, "__".join(field_split[1:]))
 
         raise FieldError(f'Unknown field "{field}" for model "{model}"')

@@ -110,7 +110,7 @@ class TestBasic(test.TestCase):
                 "fk_fields": [
                     {
                         "name": "fk",
-                        "field_type": "ForeignKeyField",
+                        "field_type": "ForeignKeyFieldInstance",
                         "raw_field": "fk_id",
                         "python_type": "models.StraightFields",
                         "generated": False,
@@ -230,7 +230,7 @@ class TestBasic(test.TestCase):
                 "fk_fields": [
                     {
                         "name": "fk",
-                        "field_type": fields.ForeignKeyField,
+                        "field_type": fields.ForeignKeyFieldInstance,
                         "raw_field": "fk_id",
                         "python_type": StraightFields,
                         "generated": False,
@@ -350,7 +350,7 @@ class TestBasic(test.TestCase):
                 "fk_fields": [
                     {
                         "name": "fk",
-                        "field_type": "ForeignKeyField",
+                        "field_type": "ForeignKeyFieldInstance",
                         "raw_field": "fk_id",
                         "python_type": "models.SourceFields",
                         "generated": False,
@@ -470,7 +470,7 @@ class TestBasic(test.TestCase):
                 "fk_fields": [
                     {
                         "name": "fk",
-                        "field_type": fields.ForeignKeyField,
+                        "field_type": fields.ForeignKeyFieldInstance,
                         "raw_field": "fk_id",
                         "python_type": SourceFields,
                         "generated": False,

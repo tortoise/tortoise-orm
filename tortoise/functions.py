@@ -37,7 +37,7 @@ class Function:
                 join = (Table(model._meta.table), field_split[0], related_field)
                 function_joins.append(join)
                 function_field = self.database_func(
-                    Table(related_field.field_type._meta.table).id, *default_values
+                    Table(related_field.model_class._meta.table).id, *default_values
                 )
             else:
                 function_field = self.database_func(
@@ -50,7 +50,7 @@ class Function:
         related_field = model._meta.fields_map[field_split[0]]
         join = (Table(model._meta.table), field_split[0], related_field)
         function = self._resolve_field_for_model(
-            related_field.field_type, "__".join(field_split[1:]), *default_values
+            related_field.model_class, "__".join(field_split[1:]), *default_values
         )
         function["joins"].append(join)
         return function

@@ -44,10 +44,10 @@ def _get_joins_for_related_field(
     required_joins = []
 
     table_pk = related_field.model._meta.db_pk_field
-    related_table_pk = related_field.field_type._meta.db_pk_field
+    related_table_pk = related_field.model_class._meta.db_pk_field
 
     if isinstance(related_field, ManyToManyFieldInstance):
-        related_table = Table(related_field.field_type._meta.table)
+        related_table = Table(related_field.model_class._meta.table)
         through_table = Table(related_field.through)
         required_joins.append(
             (
@@ -63,7 +63,7 @@ def _get_joins_for_related_field(
             )
         )
     elif isinstance(related_field, BackwardFKRelation):
-        related_table = Table(related_field.field_type._meta.table)
+        related_table = Table(related_field.model_class._meta.table)
         required_joins.append(
             (
                 related_table,
@@ -71,7 +71,7 @@ def _get_joins_for_related_field(
             )
         )
     else:
-        related_table = Table(related_field.field_type._meta.table)
+        related_table = Table(related_field.model_class._meta.table)
         required_joins.append(
             (
                 related_table,
@@ -207,7 +207,7 @@ class Q:
         related_field = model._meta.fields_map[related_field_name]
         required_joins = _get_joins_for_related_field(table, related_field, related_field_name)
         modifier = Q(**{"__".join(key.split("__")[1:]): value}).resolve(
-            model=related_field.field_type,
+            model=related_field.model_class,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
         )

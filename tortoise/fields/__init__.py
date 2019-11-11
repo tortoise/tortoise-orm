@@ -16,6 +16,7 @@ from tortoise.fields.data import (
 )
 from tortoise.fields.relational import (
     ForeignKeyField,
+    ForeignKeyFieldInstance,
     ForeignKeyNullableRelation,
     ForeignKeyRelation,
     ManyToManyField,

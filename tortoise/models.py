@@ -10,7 +10,7 @@ from tortoise.fields.base import Field
 from tortoise.fields.data import BigIntField, IntField, SmallIntField
 from tortoise.fields.relational import (
     BackwardFKRelation,
-    ForeignKeyField,
+    ForeignKeyFieldInstance,
     ManyToManyFieldInstance,
     ManyToManyRelation,
     ReverseRelation,
@@ -57,7 +57,7 @@ def _rfk_getter(self, _key, ftype, frelfield):
 def _m2m_getter(self, _key, field_object):
     val = getattr(self, _key, None)
     if val is None:
-        val = ManyToManyRelation(field_object.field_type, self, field_object)
+        val = ManyToManyRelation(field_object.model_class, self, field_object)
         setattr(self, _key, val)
     return val
 
@@ -196,7 +196,7 @@ class MetaInfo:
                     partial(
                         _fk_getter,
                         _key=_key,
-                        ftype=self.fields_map[key].field_type,
+                        ftype=self.fields_map[key].model_class,  # type: ignore
                         relation_field=relation_field,
                     ),
                     partial(_fk_setter, _key=_key, relation_field=relation_field),
@@ -215,7 +215,7 @@ class MetaInfo:
                     partial(
                         _rfk_getter,
                         _key=_key,
-                        ftype=field_object.field_type,
+                        ftype=field_object.model_class,
                         frelfield=field_object.relation_field,
                     )
                 ),
@@ -344,7 +344,7 @@ class ModelMeta(type):
                     fields_map[key] = value
                     value.model_field_name = key
 
-                    if isinstance(value, ForeignKeyField):
+                    if isinstance(value, ForeignKeyFieldInstance):
                         fk_fields.add(key)
                     elif isinstance(value, ManyToManyFieldInstance):
                         m2m_fields.add(key)

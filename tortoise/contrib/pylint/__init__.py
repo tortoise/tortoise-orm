@@ -3,8 +3,9 @@ Tortoise PyLint plugin
 """
 from typing import Dict, Iterator, List
 
-from astroid import MANAGER, inference_tip, nodes, scoped_nodes
-from astroid.node_classes import Assign
+from astroid import MANAGER, inference_tip, nodes
+from astroid.exceptions import AstroidError
+from astroid.node_classes import AnnAssign, Assign
 from astroid.nodes import ClassDef
 from pylint.lint import PyLinter
 
@@ -48,13 +49,13 @@ def transform_model(cls: ClassDef) -> None:
             cls.locals[relname] = relval
 
         for attr in cls.get_children():
-            if isinstance(attr, Assign):
+            if isinstance(attr, (Assign, AnnAssign)):
                 try:
                     attrname = attr.value.func.attrname
                 except AttributeError:
                     pass
                 else:
-                    if attrname in ["ForeignKeyField", "ManyToManyFieldInstance"]:
+                    if attrname in ["ForeignKeyField", "ManyToManyField"]:
                         tomodel = attr.value.args[0].value
                         relname = ""
                         if attr.value.keywords:
@@ -66,9 +67,12 @@ def transform_model(cls: ClassDef) -> None:
                             relname = cls.name.lower() + "s"
 
                         # Injected model attributes need to also have the relation manager
-                        if attrname == "ManyToManyFieldInstance":
+                        if attrname == "ManyToManyField":
                             relval = [
-                                attr.value.func,
+                                # attr.value.func,
+                                MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
+                                    "ManyToManyFieldInstance"
+                                )[1][0],
                                 MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
                                     "ManyToManyRelation"
                                 )[1][0],
@@ -76,7 +80,7 @@ def transform_model(cls: ClassDef) -> None:
                         else:
                             relval = [
                                 MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
-                                    "BackwardFKRelation"
+                                    "ForeignKeyFieldInstance"
                                 )[1][0],
                                 MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
                                     "ReverseRelation"
@@ -107,18 +111,15 @@ def apply_type_shim(cls: ClassDef, _context=None) -> Iterator[ClassDef]:
     """
     Morphs model fields to representative type
     """
-    base_nodes: List[ClassDef] = []
+    base_nodes: List[ClassDef] = [cls]
 
     # Use the type inference standard
-    ancestors = list(cls.ancestors())[2:]
-    if ancestors:
-        base_nodes = ancestors
+    try:
+        base_nodes.extend(list(cls.getattr("field_type")[0].infer()))
+    except AstroidError:
+        pass
 
-    # Special types that can't use inference
-    if cls.name == "BooleanField":
-        base_nodes = scoped_nodes.builtin_lookup("bool")[1]
-
-    return iter([cls] + base_nodes)
+    return iter(base_nodes)
 
 
 MANAGER.register_transform(nodes.ClassDef, inference_tip(apply_type_shim), is_model_field)
