@@ -279,15 +279,26 @@ class ModelMeta(type):
             `The Python 2.3 Method Resolution Order
             <https://www.python.org/download/releases/2.3/mro/>`_.
             """
-            for key, value in base.__dict__.items():
-                if isinstance(value, fields.Field) and key not in attrs:
+            for parent in base.__mro__[1:]:
+                __search_for_field_attributes(parent, attrs)
+            meta = getattr(base, "_meta", None)
+            if meta:
+                # For abstract classes
+                for key, value in meta.fields_map.items():
                     attrs[key] = value
-                    for parent in base.__mro__[1:]:
-                        __search_for_field_attributes(parent, attrs)
+            else:
+                # For mixin classes
+                for key, value in base.__dict__.items():
+                    if isinstance(value, fields.Field) and key not in attrs:
+                        attrs[key] = value
 
         # Start searching for fields in the base classes.
+        inherited_attrs: dict = {}
         for base in bases:
-            __search_for_field_attributes(base, attrs)
+            __search_for_field_attributes(base, inherited_attrs)
+        if inherited_attrs:
+            # Ensure that the inherited fields are before the defined ones.
+            attrs = {**inherited_attrs, **attrs}
 
         if name != "Model":
             custom_pk_present = False
@@ -308,7 +319,7 @@ class ModelMeta(type):
                         custom_pk_present = True
                         pk_attr = key
 
-            if not custom_pk_present:
+            if not custom_pk_present and not getattr(meta_class, "abstract", None):
                 if "id" not in attrs:
                     attrs = {"id": fields.IntField(pk=True), **attrs}
 
