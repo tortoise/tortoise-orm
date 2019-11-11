@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Awaitable, Generic, Optional, TypeVar, Union
 
 from pypika import Table
 
@@ -12,10 +12,23 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 __all__ = ("ForeignKeyField", "ManyToManyField")
 
+MODEL = TypeVar("MODEL", bound="Model")
 
-class RelationQueryContainer:
+ForeignKeyNullableRelation = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
+"""
+Type hint for the result of accessing the :class:`.ForeignKeyField` field in the model
+when obtained model can be nullable.
+"""
+
+ForeignKeyRelation = Union[Awaitable[MODEL], MODEL]
+"""
+Type hint for the result of accessing the :class:`.ForeignKeyField` field in the model.
+"""
+
+
+class ReverseRelation(Generic[MODEL]):
     """
-    Relation Query container.
+    Relation container for :class:`.ForeignKeyField`.
     """
 
     def __init__(self, model, relation_field: str, instance) -> None:
@@ -80,31 +93,31 @@ class RelationQueryContainer:
         for val in self.related_objects:
             yield val
 
-    def filter(self, *args, **kwargs) -> "QuerySet":
+    def filter(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
         Returns QuerySet with related elements filtered by args/kwargs.
         """
         return self._query.filter(*args, **kwargs)
 
-    def all(self) -> "QuerySet":
+    def all(self) -> "QuerySet[MODEL]":
         """
         Returns QuerySet with all related elements.
         """
         return self._query
 
-    def order_by(self, *args, **kwargs) -> "QuerySet":
+    def order_by(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
         Returns QuerySet related elements in order.
         """
         return self._query.order_by(*args, **kwargs)
 
-    def limit(self, *args, **kwargs) -> "QuerySet":
+    def limit(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
         Returns a QuerySet with at most «limit» related elements.
         """
         return self._query.limit(*args, **kwargs)
 
-    def offset(self, *args, **kwargs) -> "QuerySet":
+    def offset(self, *args, **kwargs) -> "QuerySet[MODEL]":
         """
         Returns aQuerySet with all related elements offset by «offset».
         """
@@ -115,12 +128,12 @@ class RelationQueryContainer:
         self.related_objects = sequence
 
 
-class ManyToManyRelationManager(RelationQueryContainer):
+class ManyToManyRelation(ReverseRelation[MODEL]):
     """
-    Many to many relation Query container.
+    Many to many relation container for :class:`.ManyToManyField`.
     """
 
-    def __init__(self, model, instance, m2m_field: "ManyToManyField") -> None:
+    def __init__(self, model, instance, m2m_field: "ManyToManyFieldInstance") -> None:
         super().__init__(model, m2m_field.related_name, instance)
         self.field = m2m_field
         self.model = m2m_field.field_type
@@ -285,8 +298,12 @@ class ForeignKeyField(Field):
             raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
         self.on_delete = on_delete
 
+    # we need this for IDEs so that they don't say that the field is not awaitable
+    def __await__(self):
+        ...  # pylint: disable=W0104
 
-class BackwardFKRelation(Field, RelationQueryContainer):
+
+class BackwardFKRelation(Field, ReverseRelation):
     has_db_field = False
 
     def __init__(
@@ -298,7 +315,39 @@ class BackwardFKRelation(Field, RelationQueryContainer):
         self.description: Optional[str] = description
 
 
-class ManyToManyField(Field, ManyToManyRelationManager):
+class ManyToManyFieldInstance(Field, ManyToManyRelation):
+    has_db_field = False
+
+    def __init__(
+        self,
+        model_name: str,
+        through: Optional[str] = None,
+        forward_key: Optional[str] = None,
+        backward_key: str = "",
+        related_name: str = "",
+        field_type: "Type[Model]" = None,  # type: ignore
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.field_type: "Type[Model]" = field_type
+        if len(model_name.split(".")) != 2:
+            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
+        self.model_name: str = model_name
+        self.related_name: str = related_name
+        self.forward_key: str = forward_key or f"{model_name.split('.')[1].lower()}_id"
+        self.backward_key: str = backward_key
+        self.through: Optional[str] = through
+        self._generated: bool = False
+
+
+def ManyToManyField(
+    model_name: str,
+    through: Optional[str] = None,
+    forward_key: Optional[str] = None,
+    backward_key: str = "",
+    related_name: str = "",
+    **kwargs,
+) -> "ManyToManyRelation":
     """
     ManyToMany relation field.
 
@@ -326,25 +375,6 @@ class ManyToManyField(Field, ManyToManyRelationManager):
         The attribute name on the related model to reverse resolve the many to many.
     """
 
-    has_db_field = False
-
-    def __init__(
-        self,
-        model_name: str,
-        through: Optional[str] = None,
-        forward_key: Optional[str] = None,
-        backward_key: str = "",
-        related_name: str = "",
-        field_type: "Type[Model]" = None,  # type: ignore
-        **kwargs,
-    ) -> None:
-        super().__init__(**kwargs)
-        self.field_type: "Type[Model]" = field_type
-        if len(model_name.split(".")) != 2:
-            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
-        self.model_name: str = model_name
-        self.related_name: str = related_name
-        self.forward_key: str = forward_key or f"{model_name.split('.')[1].lower()}_id"
-        self.backward_key: str = backward_key
-        self.through: Optional[str] = through
-        self._generated: bool = False
+    return ManyToManyFieldInstance(
+        model_name, through, forward_key, backward_key, related_name, **kwargs
+    )

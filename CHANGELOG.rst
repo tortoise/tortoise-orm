@@ -2,6 +2,32 @@
 
 Changelog
 =========
+0.15.0
+-------
+New features:
+^^^^^^^^^^^^^
+- Pooling has been implemented, allowing for multiple concurrent databases and all the benefits that comes with it.
+    - Enabled by default for databases that support it (mysql and postgres) with a minimum pool size of 1, and a maximum of 5
+    - Not supported by sqlite
+    - Can be changed by passing the ``minsize`` and ``maxsize`` connection parameters
+
+Deprecations:
+^^^^^^^^^^^^^
+- ``start_transaction`` is deprecated, please use ``@atomic()`` or ``async with in_transaction():`` instead.
+
+
+0.14.2
+------
+- A Field name of ``alias`` is now no longer reserved.
+- Restored support for inheriting from Abstract classes. Order is now also deterministic,
+  with the inherited classes' fields being placed before the current.
+
+0.14.1
+-------
+- ``ManyToManyField`` is now a function that has the type of the relation for autocomplete,
+  this allows for better type hinting at less effort.
+- Added section on adding better autocomplete for relations in editors.
+
 0.14.0
 ------
 .. caution::

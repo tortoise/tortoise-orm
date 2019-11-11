@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from functools import wraps
-from typing import List, Optional, SupportsInt
+from typing import List, Optional, SupportsInt, Union
 
 import aiomysql
 import pymysql
@@ -12,6 +12,10 @@ from tortoise.backends.base.client import (
     BaseTransactionWrapper,
     Capabilities,
     ConnectionWrapper,
+    NestedTransactionContext,
+    PoolConnectionWrapper,
+    TransactionContext,
+    TransactionContextPooled,
 )
 from tortoise.backends.mysql.executor import MySQLExecutor
 from tortoise.backends.mysql.schema_generator import MySQLSchemaGenerator
@@ -21,7 +25,6 @@ from tortoise.exceptions import (
     OperationalError,
     TransactionManagementError,
 )
-from tortoise.transactions import current_transaction_map
 
 
 def retry_connection(func):
@@ -39,16 +42,13 @@ def retry_connection(func):
             # Re-create connection and re-try the function call once only.
             if getattr(self, "_finalized", None) is False:
                 raise TransactionManagementError("Connection gone away during transaction")
-            await self._lock.acquire()
             logging.info("Attempting reconnect")
             try:
-                await self._close()
-                await self.create_connection(with_db=True)
-                logging.info("Reconnected")
+                async with self.acquire_connection() as connection:
+                    await connection.ping()
+                    logging.info("Reconnected")
             except Exception as e:
                 raise DBConnectionError("Failed to reconnect: %s", str(e))
-            finally:
-                self._lock.release()
 
             return await func(self, *args)
 
@@ -97,14 +97,12 @@ class MySQLClient(BaseDBAsyncClient):
         self.extra.pop("db", None)
         self.extra.pop("autocommit", None)
         self.charset = self.extra.pop("charset", "")
+        self.pool_minsize = int(self.extra.pop("minsize", 1))
+        self.pool_maxsize = int(self.extra.pop("maxsize", 5))
 
         self._template: dict = {}
-        self._connection: Optional[aiomysql.Connection] = None
-        self._lock = asyncio.Lock()
-
-        self._transaction_class = type(
-            "TransactionWrapper", (TransactionWrapper, self.__class__), {}
-        )
+        self._pool: Optional[aiomysql.Pool] = None
+        self._connection = None
 
     async def create_connection(self, with_db: bool) -> None:
         self._template = {
@@ -114,33 +112,37 @@ class MySQLClient(BaseDBAsyncClient):
             "db": self.database if with_db else None,
             "autocommit": True,
             "charset": self.charset,
+            "minsize": self.pool_minsize,
+            "maxsize": self.pool_maxsize,
             **self.extra,
         }
         try:
-            self._connection = await aiomysql.connect(password=self.password, **self._template)
+            self._pool = await aiomysql.create_pool(password=self.password, **self._template)
 
-            if isinstance(self._connection, aiomysql.Connection):
-                async with self._connection.cursor() as cursor:
-                    if self.storage_engine:
-                        await cursor.execute(f"SET default_storage_engine='{self.storage_engine}';")
-                        if self.storage_engine.lower() != "innodb":
-                            self.capabilities.__dict__["supports_transactions"] = False
+            if isinstance(self._pool, aiomysql.Pool):
+                async with self.acquire_connection() as connection:
+                    async with connection.cursor() as cursor:
+                        if self.storage_engine:
+                            await cursor.execute(
+                                f"SET default_storage_engine='{self.storage_engine}';"
+                            )
+                            if self.storage_engine.lower() != "innodb":
+                                self.capabilities.__dict__["supports_transactions"] = False
 
-            self.log.debug(
-                "Created connection %s with params: %s", self._connection, self._template
-            )
+            self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
         except pymysql.err.OperationalError:
             raise DBConnectionError(f"Can't connect to MySQL server: {self._template}")
 
     async def _close(self) -> None:
-        if self._connection:  # pragma: nobranch
-            self._connection.close()
+        if self._pool:  # pragma: nobranch
+            self._pool.close()
+            await self._pool.wait_closed()
             self.log.debug("Closed connection %s with params: %s", self._connection, self._template)
-            self._template.clear()
+            self._pool = None
 
     async def close(self) -> None:
         await self._close()
-        self._connection = None
+        self._template.clear()
 
     async def db_create(self) -> None:
         await self.create_connection(with_db=False)
@@ -155,11 +157,11 @@ class MySQLClient(BaseDBAsyncClient):
             pass
         await self.close()
 
-    def acquire_connection(self) -> ConnectionWrapper:
-        return ConnectionWrapper(self._connection, self._lock)
+    def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
+        return PoolConnectionWrapper(self._pool)
 
-    def _in_transaction(self):
-        return self._transaction_class(self)
+    def _in_transaction(self) -> "TransactionContext":
+        return TransactionContextPooled(TransactionWrapper(self))
 
     @translate_exceptions
     @retry_connection
@@ -199,45 +201,38 @@ class MySQLClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
-    def __init__(self, connection):
+    def __init__(self, connection) -> None:
         self.connection_name = connection.connection_name
         self._connection: aiomysql.Connection = connection._connection
-        self._lock = connection._lock
-        self.log = logging.getLogger("db_client")
-        self._transaction_class = self.__class__
+        self._lock = asyncio.Lock()
+        self.log = connection.log
         self._finalized: Optional[bool] = None
-        self._old_context_value = None
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 
+    def _in_transaction(self) -> "TransactionContext":
+        return NestedTransactionContext(self)
+
     async def create_connection(self, with_db: bool) -> None:
         await self._parent.create_connection(with_db)
-        self._connection = self._parent._connection
 
-    async def _close(self) -> None:
-        await self._parent._close()
-        self._connection = self._parent._connection
+    def acquire_connection(self) -> ConnectionWrapper:
+        return ConnectionWrapper(self._connection, self._lock)
 
     @retry_connection
     async def start(self) -> None:
         await self._connection.begin()
         self._finalized = False
-        current_transaction = current_transaction_map[self.connection_name]
-        self._old_context_value = current_transaction.get()
-        current_transaction.set(self)
 
-    def release(self) -> None:
-        self._finalized = True
-        current_transaction_map[self.connection_name].set(self._old_context_value)
-
-    async def commit(self) -> None:
+    async def commit(self, finalize: bool = True) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.commit()
-        self.release()
+        if finalize:
+            self._finalized = True
 
     async def rollback(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.rollback()
-        self.release()
+        self._finalized = True

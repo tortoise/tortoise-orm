@@ -14,4 +14,12 @@ from tortoise.fields.data import (
     TimeDeltaField,
     UUIDField,
 )
-from tortoise.fields.relational import ForeignKeyField, ManyToManyField
+from tortoise.fields.relational import (
+    ForeignKeyField,
+    ForeignKeyNullableRelation,
+    ForeignKeyRelation,
+    ManyToManyField,
+    ManyToManyFieldInstance,
+    ManyToManyRelation,
+    ReverseRelation,
+)

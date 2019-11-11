@@ -37,7 +37,6 @@ Base Field
 
 Data Fields
 -----------
-=======
 
 .. automodule:: tortoise.fields.data
     :members:
@@ -50,6 +49,9 @@ Relational Fields
     :members:
     :exclude-members: to_db_value, to_python_value
 
+.. autodata:: tortoise.fields.ForeignKeyRelation
+
+.. autodata:: tortoise.fields.ForeignKeyNullableRelation
 
 Extending A Field
 =================

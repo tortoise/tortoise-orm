@@ -54,7 +54,7 @@ def transform_model(cls: ClassDef) -> None:
                 except AttributeError:
                     pass
                 else:
-                    if attrname in ["ForeignKeyField", "ManyToManyField"]:
+                    if attrname in ["ForeignKeyField", "ManyToManyFieldInstance"]:
                         tomodel = attr.value.args[0].value
                         relname = ""
                         if attr.value.keywords:
@@ -66,11 +66,11 @@ def transform_model(cls: ClassDef) -> None:
                             relname = cls.name.lower() + "s"
 
                         # Injected model attributes need to also have the relation manager
-                        if attrname == "ManyToManyField":
+                        if attrname == "ManyToManyFieldInstance":
                             relval = [
                                 attr.value.func,
                                 MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
-                                    "ManyToManyRelationManager"
+                                    "ManyToManyRelation"
                                 )[1][0],
                             ]
                         else:
@@ -79,7 +79,7 @@ def transform_model(cls: ClassDef) -> None:
                                     "BackwardFKRelation"
                                 )[1][0],
                                 MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
-                                    "RelationQueryContainer"
+                                    "ReverseRelation"
                                 )[1][0],
                             ]
 

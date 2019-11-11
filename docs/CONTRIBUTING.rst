@@ -102,3 +102,34 @@ Tortoise ORM follows a the following agreed upon style:
 * Please try and provide type annotations where you can, it will improve auto-completion in editors, and better static analysis.
 
 
+Running tests
+================
+Running tests natively on windows isn't supported (yet). Best way to run them atm is by using WSL.
+Postgres uses the default ``postgres`` user, mysql uses ``root``. If either of them has a password you can set it with the ``TORTOISE_POSTGRES_PASS`` and ``TORTOISE_MYSQL_PASS`` env variables respectively.
+
+
+
+Different types of tests
+-----------------------------
+- ``make test``: most basic quick test. only runs the tests on in an memory sqlite database without generating a coverage report.
+- ``make test_sqlite``: Runs the tests on a sqlite in memory database
+- ``make test_postgres``: Runs the tests on the postgres database
+- ``make test_mysql_myisam``: Runs the tests on the mysql database using the ``MYISAM`` storage engine (no transactions)
+- ``make test_mysql``: Runs the tests on the mysql database
+- ``make testall``: runs the tests on all 4 database types: sqlite (in memory), postgress, MySQL-MyISAM and MySQL-InnoDB
+- ``green``: runs the same tests as ``make test``, ensures the green plugin works
+- ``nose2 --plugin tortoise.contrib.test.nose2 --db-module tests.testmodels --db-url sqlite://:memory: ``: same test as ``make test`` , ensures the nose2 plugin works
+
+
+Things to be aware of when running the test suite
+---------------------------------------------------
+- Some tests always run regardless of what test suite you are running (the connection tests for mysql and postgres for example, you don't need a database running as it doesn't actually connect though)
+- Some tests use hardcoded databases (usually sqlite) for testing, regardless of what DB url you specified.
+- The postgres driver does not work under Pypy so those tests will be skipped if you are running under pypy
+- You can run only specific tests by running `` py.test <testfiles>`` or ``green -s 1 <testfile>``
+- If you want a peek under the hood of test that hang to debug try running them with ``green -s 1 -vv -d -a <test>``
+    - ``-s 1`` means it only runs one test at a time
+    - ``-vv`` very verbose output
+    - ``-d`` log debug output
+    - ``-a`` don't capture stdout but just let it output
+- Mysql tends to be relatively slow but there are some settings you can tweak to make it faster, however this also means less redundant. Use at own risk: http://www.tocker.ca/2013/11/04/reducing-mysql-durability-for-testing.html

@@ -38,8 +38,8 @@ class Event(Model):
 
 class Team(Model):
     name = fields.CharField(max_length=50, pk=True, description="The TEAM name (and PK)")
-    manager = fields.ForeignKeyField("models.Team", related_name="team_members", null=True)
     key = fields.IntField()
+    manager = fields.ForeignKeyField("models.Team", related_name="team_members", null=True)
     talks_to = fields.ManyToManyField("models.Team", related_name="gets_talked_to")
 
     class Meta:
@@ -50,9 +50,11 @@ class Team(Model):
 class SourceFields(Model):
     id = fields.IntField(pk=True, source_field="sometable_id")
     chars = fields.CharField(max_length=255, source_field="some_chars_table", index=True)
+
     fk = fields.ForeignKeyField(
         "models.SourceFields", related_name="team_members", null=True, source_field="fk_sometable"
     )
+
     rel_to = fields.ManyToManyField(
         "models.SourceFields",
         related_name="rel_from",
@@ -67,3 +69,26 @@ class SourceFields(Model):
 
 class DefaultPK(Model):
     val = fields.IntField()
+
+
+class ZeroMixin:
+    zero = fields.IntField()
+
+
+class OneMixin(ZeroMixin):
+    one = fields.CharField(40, null=True)
+
+
+class TwoMixin:
+    two = fields.CharField(40)
+
+
+class AbstractModel(Model, OneMixin):
+    new_field = fields.CharField(max_length=100)
+
+    class Meta:
+        abstract = True
+
+
+class InheritedModel(AbstractModel, TwoMixin):
+    name = fields.TextField()

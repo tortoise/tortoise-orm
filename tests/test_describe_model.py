@@ -137,7 +137,7 @@ class TestBasic(test.TestCase):
                 "m2m_fields": [
                     {
                         "name": "rel_to",
-                        "field_type": "ManyToManyField",
+                        "field_type": "ManyToManyFieldInstance",
                         "python_type": "models.StraightFields",
                         "generated": False,
                         "nullable": False,
@@ -148,7 +148,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "rel_from",
-                        "field_type": "ManyToManyField",
+                        "field_type": "ManyToManyFieldInstance",
                         "python_type": "models.StraightFields",
                         "generated": False,
                         "nullable": False,
@@ -257,7 +257,7 @@ class TestBasic(test.TestCase):
                 "m2m_fields": [
                     {
                         "name": "rel_to",
-                        "field_type": fields.ManyToManyField,
+                        "field_type": fields.ManyToManyFieldInstance,
                         "python_type": StraightFields,
                         "generated": False,
                         "nullable": False,
@@ -268,7 +268,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "rel_from",
-                        "field_type": fields.ManyToManyField,
+                        "field_type": fields.ManyToManyFieldInstance,
                         "python_type": StraightFields,
                         "generated": False,
                         "nullable": False,
@@ -377,7 +377,7 @@ class TestBasic(test.TestCase):
                 "m2m_fields": [
                     {
                         "name": "rel_to",
-                        "field_type": "ManyToManyField",
+                        "field_type": "ManyToManyFieldInstance",
                         "python_type": "models.SourceFields",
                         "generated": False,
                         "nullable": False,
@@ -388,7 +388,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "rel_from",
-                        "field_type": "ManyToManyField",
+                        "field_type": "ManyToManyFieldInstance",
                         "python_type": "models.SourceFields",
                         "generated": False,
                         "nullable": False,
@@ -497,7 +497,7 @@ class TestBasic(test.TestCase):
                 "m2m_fields": [
                     {
                         "name": "rel_to",
-                        "field_type": fields.ManyToManyField,
+                        "field_type": fields.ManyToManyFieldInstance,
                         "python_type": SourceFields,
                         "generated": False,
                         "nullable": False,
@@ -508,7 +508,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "rel_from",
-                        "field_type": fields.ManyToManyField,
+                        "field_type": fields.ManyToManyFieldInstance,
                         "python_type": SourceFields,
                         "generated": False,
                         "nullable": False,
@@ -575,7 +575,7 @@ class TestBasic(test.TestCase):
                 "m2m_fields": [
                     {
                         "name": "peers",
-                        "field_type": "ManyToManyField",
+                        "field_type": "ManyToManyFieldInstance",
                         "python_type": "models.UUIDM2MRelatedModel",
                         "generated": False,
                         "nullable": False,
@@ -642,7 +642,7 @@ class TestBasic(test.TestCase):
                 "m2m_fields": [
                     {
                         "name": "peers",
-                        "field_type": fields.ManyToManyField,
+                        "field_type": fields.ManyToManyFieldInstance,
                         "python_type": UUIDM2MRelatedModel,
                         "generated": False,
                         "nullable": False,

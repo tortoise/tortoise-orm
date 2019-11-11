@@ -11,9 +11,9 @@ from tortoise.fields.data import BigIntField, IntField, SmallIntField
 from tortoise.fields.relational import (
     BackwardFKRelation,
     ForeignKeyField,
-    ManyToManyField,
-    ManyToManyRelationManager,
-    RelationQueryContainer,
+    ManyToManyFieldInstance,
+    ManyToManyRelation,
+    ReverseRelation,
 )
 from tortoise.filters import get_filters_for_field
 from tortoise.queryset import QuerySet, QuerySetSingle
@@ -49,7 +49,7 @@ def _fk_getter(self, _key, ftype, relation_field):
 def _rfk_getter(self, _key, ftype, frelfield):
     val = getattr(self, _key, None)
     if val is None:
-        val = RelationQueryContainer(ftype, frelfield, self)
+        val = ReverseRelation(ftype, frelfield, self)
         setattr(self, _key, val)
     return val
 
@@ -57,7 +57,7 @@ def _rfk_getter(self, _key, ftype, frelfield):
 def _m2m_getter(self, _key, field_object):
     val = getattr(self, _key, None)
     if val is None:
-        val = ManyToManyRelationManager(field_object.field_type, self, field_object)
+        val = ManyToManyRelation(field_object.field_type, self, field_object)
         setattr(self, _key, val)
     return val
 
@@ -135,7 +135,7 @@ class MetaInfo:
         if value.has_db_field:
             self.fields_db_projection[name] = value.source_field or name
 
-        if isinstance(value, ManyToManyField):
+        if isinstance(value, ManyToManyFieldInstance):
             self.m2m_fields.add(name)
         elif isinstance(value, BackwardFKRelation):
             self.backward_fk_fields.add(name)
@@ -286,15 +286,26 @@ class ModelMeta(type):
             `The Python 2.3 Method Resolution Order
             <https://www.python.org/download/releases/2.3/mro/>`_.
             """
-            for key, value in base.__dict__.items():
-                if isinstance(value, Field) and key not in attrs:
+            for parent in base.__mro__[1:]:
+                __search_for_field_attributes(parent, attrs)
+            meta = getattr(base, "_meta", None)
+            if meta:
+                # For abstract classes
+                for key, value in meta.fields_map.items():
                     attrs[key] = value
-                    for parent in base.__mro__[1:]:
-                        __search_for_field_attributes(parent, attrs)
+            else:
+                # For mixin classes
+                for key, value in base.__dict__.items():
+                    if isinstance(value, Field) and key not in attrs:
+                        attrs[key] = value
 
         # Start searching for fields in the base classes.
+        inherited_attrs: dict = {}
         for base in bases:
-            __search_for_field_attributes(base, attrs)
+            __search_for_field_attributes(base, inherited_attrs)
+        if inherited_attrs:
+            # Ensure that the inherited fields are before the defined ones.
+            attrs = {**inherited_attrs, **attrs}
 
         if name != "Model":
             custom_pk_present = False
@@ -315,7 +326,7 @@ class ModelMeta(type):
                         custom_pk_present = True
                         pk_attr = key
 
-            if not custom_pk_present:
+            if not custom_pk_present and not getattr(meta_class, "abstract", None):
                 if "id" not in attrs:
                     attrs = {"id": IntField(pk=True), **attrs}
 
@@ -335,7 +346,7 @@ class ModelMeta(type):
 
                     if isinstance(value, ForeignKeyField):
                         fk_fields.add(key)
-                    elif isinstance(value, ManyToManyField):
+                    elif isinstance(value, ManyToManyFieldInstance):
                         m2m_fields.add(key)
                     else:
                         fields_db_projection[key] = value.source_field or key
@@ -665,7 +676,7 @@ class Model(metaclass=ModelMeta):
                         f"'{cls.__name__}.{together}' has no '{field_name}' field."
                     )
 
-                if isinstance(field, ManyToManyField):
+                if isinstance(field, ManyToManyFieldInstance):
                     raise ConfigurationError(
                         f"'{cls.__name__}.{together}' '{field_name}' field refers"
                         " to ManyToMany field."

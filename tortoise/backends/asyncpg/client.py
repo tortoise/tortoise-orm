@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from functools import wraps
-from typing import List, Optional, SupportsInt
+from typing import List, Optional, SupportsInt, Union
 
 import asyncpg
 from asyncpg.transaction import Transaction
@@ -14,6 +14,10 @@ from tortoise.backends.base.client import (
     BaseTransactionWrapper,
     Capabilities,
     ConnectionWrapper,
+    NestedTransactionContext,
+    PoolConnectionWrapper,
+    TransactionContext,
+    TransactionContextPooled,
 )
 from tortoise.exceptions import (
     DBConnectionError,
@@ -21,7 +25,6 @@ from tortoise.exceptions import (
     OperationalError,
     TransactionManagementError,
 )
-from tortoise.transactions import current_transaction_map
 
 
 def retry_connection(func):
@@ -40,16 +43,12 @@ def retry_connection(func):
             if getattr(self, "transaction", None):
                 self._finalized = True
                 raise TransactionManagementError("Connection gone away during transaction")
-            await self._lock.acquire()
             logging.info("Attempting reconnect")
             try:
-                await self._close()
-                await self.create_connection(with_db=True)
-                logging.info("Reconnected")
+                async with self.acquire_connection():
+                    logging.info("Reconnected")
             except Exception as e:
                 raise DBConnectionError(f"Failed to reconnect: {str(e)}")
-            finally:
-                self._lock.release()
 
             return await func(self, *args)
 
@@ -65,6 +64,8 @@ def translate_exceptions(func):
             raise OperationalError(exc)
         except asyncpg.IntegrityConstraintViolationError as exc:
             raise IntegrityError(exc)
+        except asyncpg.InvalidTransactionStateError as exc:
+            raise TransactionManagementError(exc)
 
     return translate_exceptions_
 
@@ -92,14 +93,12 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self.extra.pop("fetch_inserted", None)
         self.extra.pop("loop", None)
         self.extra.pop("connection_class", None)
+        self.pool_minsize = int(self.extra.pop("minsize", 1))
+        self.pool_maxsize = int(self.extra.pop("maxsize", 5))
 
         self._template: dict = {}
-        self._connection: Optional[asyncpg.Connection] = None
-        self._lock = asyncio.Lock()
-
-        self._transaction_class = type(
-            "TransactionWrapper", (TransactionWrapper, self.__class__), {}
-        )
+        self._pool: Optional[asyncpg.pool] = None
+        self._connection = None
 
     async def create_connection(self, with_db: bool) -> None:
         self._template = {
@@ -107,28 +106,31 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             "port": self.port,
             "user": self.user,
             "database": self.database if with_db else None,
+            "min_size": self.pool_minsize,
+            "max_size": self.pool_maxsize,
             **self.extra,
         }
+        if self.schema:
+            self._template["server_settings"] = {"search_path": self.schema}
         try:
-            self._connection = await asyncpg.connect(None, password=self.password, **self._template)
-            self.log.debug(
-                "Created connection %s with params: %s", self._connection, self._template
-            )
+            self._pool = await asyncpg.create_pool(None, password=self.password, **self._template)
+            self.log.debug("Created connection pool %s with params: %s", self._pool, self._template)
         except asyncpg.InvalidCatalogNameError:
             raise DBConnectionError(f"Can't establish connection to database {self.database}")
         # Set post-connection variables
-        if self.schema:
-            await self.execute_script(f"SET search_path TO {self.schema}")
 
     async def _close(self) -> None:
-        if self._connection:  # pragma: nobranch
-            await self._connection.close()
-            self.log.debug("Closed connection %s with params: %s", self._connection, self._template)
-            self._template.clear()
+        if self._pool:  # pragma: nobranch
+            try:
+                await asyncio.wait_for(self._pool.close(), 10)
+            except asyncio.TimeoutError:
+                self._pool.terminate()
+            self._pool = None
+            self.log.debug("Closed connection pool %s with params: %s", self._pool, self._template)
 
     async def close(self) -> None:
         await self._close()
-        self._connection = None
+        self._template.clear()
 
     async def db_create(self) -> None:
         await self.create_connection(with_db=False)
@@ -143,11 +145,11 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             pass
         await self.close()
 
-    def acquire_connection(self) -> ConnectionWrapper:
-        return ConnectionWrapper(self._connection, self._lock)
+    def acquire_connection(self) -> Union["PoolConnectionWrapper", "ConnectionWrapper"]:
+        return PoolConnectionWrapper(self._pool)
 
-    def _in_transaction(self) -> "TransactionWrapper":
-        return self._transaction_class(self)
+    def _in_transaction(self) -> "TransactionContext":
+        return TransactionContextPooled(TransactionWrapper(self))
 
     @translate_exceptions
     @retry_connection
@@ -188,43 +190,36 @@ class AsyncpgDBClient(BaseDBAsyncClient):
 class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     def __init__(self, connection: AsyncpgDBClient) -> None:
         self._connection: asyncpg.Connection = connection._connection
-        self._lock = connection._lock
-        self.log = logging.getLogger("db_client")
-        self._transaction_class = self.__class__
-        self._old_context_value = None
+        self._lock = asyncio.Lock()
+        self.log = connection.log
         self.connection_name = connection.connection_name
         self.transaction: Transaction = None
         self._finalized = False
         self._parent = connection
 
+    def _in_transaction(self) -> "TransactionContext":
+        return NestedTransactionContext(self)
+
     async def create_connection(self, with_db: bool) -> None:
         await self._parent.create_connection(with_db)
-        self._connection = self._parent._connection
 
-    async def _close(self) -> None:
-        await self._parent._close()
-        self._connection = self._parent._connection
+    def acquire_connection(self) -> "ConnectionWrapper":
+        return ConnectionWrapper(self._connection, self._lock)
 
     @retry_connection
     async def start(self) -> None:
         self.transaction = self._connection.transaction()
         await self.transaction.start()
-        current_transaction = current_transaction_map[self.connection_name]
-        self._old_context_value = current_transaction.get()
-        current_transaction.set(self)
 
-    def release(self) -> None:
-        self._finalized = True
-        current_transaction_map[self.connection_name].set(self._old_context_value)
-
-    async def commit(self) -> None:
+    async def commit(self, finalize: bool = True) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self.transaction.commit()
-        self.release()
+        if finalize:
+            self._finalized = True
 
     async def rollback(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self.transaction.rollback()
-        self.release()
+        self._finalized = True

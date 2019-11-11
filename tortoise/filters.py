@@ -88,7 +88,7 @@ def insensitive_ends_with(field, value):
     )
 
 
-def get_m2m_filters(field_name: str, field: fields.ManyToManyField) -> Dict[str, dict]:
+def get_m2m_filters(field_name: str, field: fields.ManyToManyFieldInstance) -> Dict[str, dict]:
     target_table_pk = field.field_type._meta.pk
     return {
         field_name: {
@@ -159,7 +159,7 @@ def get_backward_fk_filters(field_name: str, field: BackwardFKRelation) -> Dict[
 def get_filters_for_field(
     field_name: str, field: Optional[fields.Field], source_field: str
 ) -> Dict[str, dict]:
-    if isinstance(field, fields.ManyToManyField):
+    if isinstance(field, fields.ManyToManyFieldInstance):
         return get_m2m_filters(field_name, field)
     if isinstance(field, BackwardFKRelation):
         return get_backward_fk_filters(field_name, field)

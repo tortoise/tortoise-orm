@@ -13,8 +13,8 @@ from tortoise.exceptions import ConfigurationError
 from tortoise.fields.relational import (
     BackwardFKRelation,
     ForeignKeyField,
-    ManyToManyField,
-    ManyToManyRelationManager,
+    ManyToManyFieldInstance,
+    ManyToManyRelation,
 )
 from tortoise.filters import get_m2m_filters
 from tortoise.models import Model
@@ -174,7 +174,7 @@ class Tortoise:
                 del desc["raw_field"]
 
             # These fields are entierly "virtual", so no direct DB representation
-            if isinstance(field, (ManyToManyField, BackwardFKRelation)):
+            if isinstance(field, (ManyToManyFieldInstance, BackwardFKRelation)):
                 del desc["db_column"]
 
             return desc
@@ -328,7 +328,7 @@ class Tortoise:
                     related_model._meta.add_field(backward_relation_name, fk_relation)
 
                 for field in list(model._meta.m2m_fields):
-                    m2m_object = cast(ManyToManyField, model._meta.fields_map[field])
+                    m2m_object = cast(ManyToManyFieldInstance, model._meta.fields_map[field])
                     if m2m_object._generated:
                         continue
 
@@ -365,7 +365,7 @@ class Tortoise:
 
                         m2m_object.through = f"{model._meta.table}_{related_model_table_name}"
 
-                    m2m_relation = ManyToManyField(
+                    m2m_relation = ManyToManyFieldInstance(
                         f"{app_name}.{model_name}",
                         m2m_object.through,
                         forward_key=m2m_object.backward_key,
@@ -664,4 +664,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.14.0"
+__version__ = "0.15.0a0"
