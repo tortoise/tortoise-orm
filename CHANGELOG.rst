@@ -2,6 +2,11 @@
 
 Changelog
 =========
+
+0.14.2
+------
+- A Field name of `alias` is now no longer reserved.
+
 0.14.1
 -------
 - ``ManyToManyField`` is now a function that has the type of the relation for autocomplete,

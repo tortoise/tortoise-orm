@@ -56,6 +56,7 @@ class Event(Model):
     )
     modified = fields.DatetimeField(auto_now=True)
     token = fields.TextField(default=generate_token)
+    alias = fields.IntField(null=True)
 
     def __str__(self):
         return self.name
@@ -67,6 +68,7 @@ class Team(Model):
 
     events: fields.ManyToManyRelation[Event]
     minrelation_through: fields.ManyToManyRelation["MinRelation"]
+    alias = fields.IntField(null=True)
 
     def __str__(self):
         return self.name
