@@ -69,3 +69,26 @@ class SourceFields(Model):
 
 class DefaultPK(Model):
     val = fields.IntField()
+
+
+class ZeroMixin:
+    zero = fields.IntField()
+
+
+class OneMixin(ZeroMixin):
+    one = fields.CharField(40, null=True)
+
+
+class TwoMixin:
+    two = fields.CharField(40)
+
+
+class AbstractModel(Model, OneMixin):
+    new_field = fields.CharField(max_length=100)
+
+    class Meta:
+        abstract = True
+
+
+class InheritedModel(AbstractModel, TwoMixin):
+    name = fields.TextField()

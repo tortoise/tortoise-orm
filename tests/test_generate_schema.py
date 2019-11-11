@@ -134,6 +134,14 @@ CREATE TABLE "defaultpk" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "val" INT NOT NULL
 );
+CREATE TABLE "inheritedmodel" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "zero" INT NOT NULL,
+    "one" VARCHAR(40),
+    "new_field" VARCHAR(100) NOT NULL,
+    "two" VARCHAR(40) NOT NULL,
+    "name" TEXT NOT NULL
+);
 CREATE TABLE "sometable" (
     "sometable_id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "some_chars_table" VARCHAR(255) NOT NULL,
@@ -188,6 +196,14 @@ CREATE TABLE "teamevents" (
 CREATE TABLE IF NOT EXISTS "defaultpk" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "val" INT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS "inheritedmodel" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "zero" INT NOT NULL,
+    "one" VARCHAR(40),
+    "new_field" VARCHAR(100) NOT NULL,
+    "two" VARCHAR(40) NOT NULL,
+    "name" TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS "sometable" (
     "sometable_id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -308,6 +324,14 @@ CREATE TABLE `defaultpk` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `val` INT NOT NULL
 ) CHARACTER SET utf8mb4;
+CREATE TABLE `inheritedmodel` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `zero` INT NOT NULL,
+    `one` VARCHAR(40),
+    `new_field` VARCHAR(100) NOT NULL,
+    `two` VARCHAR(40) NOT NULL,
+    `name` TEXT NOT NULL
+) CHARACTER SET utf8mb4;
 CREATE TABLE `sometable` (
     `sometable_id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `some_chars_table` VARCHAR(255) NOT NULL,
@@ -372,6 +396,14 @@ CREATE TABLE `teamevents` (
 CREATE TABLE IF NOT EXISTS `defaultpk` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `val` INT NOT NULL
+) CHARACTER SET utf8mb4;
+CREATE TABLE IF NOT EXISTS `inheritedmodel` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `zero` INT NOT NULL,
+    `one` VARCHAR(40),
+    `new_field` VARCHAR(100) NOT NULL,
+    `two` VARCHAR(40) NOT NULL,
+    `name` TEXT NOT NULL
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `sometable` (
     `sometable_id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -482,6 +514,14 @@ CREATE TABLE "defaultpk" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "val" INT NOT NULL
 );
+CREATE TABLE "inheritedmodel" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "zero" INT NOT NULL,
+    "one" VARCHAR(40),
+    "new_field" VARCHAR(100) NOT NULL,
+    "two" VARCHAR(40) NOT NULL,
+    "name" TEXT NOT NULL
+);
 CREATE TABLE "sometable" (
     "sometable_id" SERIAL NOT NULL PRIMARY KEY,
     "some_chars_table" VARCHAR(255) NOT NULL,
@@ -546,6 +586,14 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';
 CREATE TABLE IF NOT EXISTS "defaultpk" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "val" INT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS "inheritedmodel" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "zero" INT NOT NULL,
+    "one" VARCHAR(40),
+    "new_field" VARCHAR(100) NOT NULL,
+    "two" VARCHAR(40) NOT NULL,
+    "name" TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS "sometable" (
     "sometable_id" SERIAL NOT NULL PRIMARY KEY,

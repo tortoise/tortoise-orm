@@ -6,6 +6,8 @@ Changelog
 0.14.2
 ------
 - A Field name of `alias` is now no longer reserved.
+- Restored support for inheriting from Abstract classes. Order is now also deterministic,
+  with the inherited classes' fields being placed before the current.
 
 0.14.1
 -------
