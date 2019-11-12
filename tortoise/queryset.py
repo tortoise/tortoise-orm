@@ -716,6 +716,9 @@ class FieldSelectQuery(AwaitableQuery):
             # return as is to get whole model objects
             return lambda x: x
 
+        if field in [x[1] for x in model._meta.db_native_fields]:
+            return lambda x: x
+
         if field in model._meta.fields_map:
             return model._meta.fields_map[field].to_python_value
 
@@ -794,7 +797,7 @@ class ValuesListQuery(FieldSelectQuery):
         if self._db is None:
             self._db = self.model._meta.db  # type: ignore
         self._make_query()
-        return self._execute().__await__()
+        return self._execute().__await__()  # pylint: disable=E1101
 
     async def __aiter__(self) -> AsyncIterator[Any]:
         for val in await self:
@@ -808,8 +811,11 @@ class ValuesListQuery(FieldSelectQuery):
         ]
         if self.flat:
             func = columns[0][1]
-            return [func(entry["0"]) for entry in result]
-        return [tuple(func(entry[column]) for column, func in columns) for entry in result]
+            flatmap = lambda entry: func(entry["0"])  # noqa
+            return list(map(flatmap, result))
+
+        listmap = lambda entry: tuple(func(entry[column]) for column, func in columns)  # noqa
+        return list(map(listmap, result))
 
 
 class ValuesQuery(FieldSelectQuery):
@@ -870,7 +876,7 @@ class ValuesQuery(FieldSelectQuery):
         if self._db is None:
             self._db = self.model._meta.db  # type: ignore
         self._make_query()
-        return self._execute().__await__()
+        return self._execute().__await__()  # pylint: disable=E1101
 
     async def __aiter__(self) -> AsyncIterator[dict]:
         for val in await self:
@@ -882,4 +888,6 @@ class ValuesQuery(FieldSelectQuery):
             (alias, self.resolve_to_python_value(self.model, field_name))
             for alias, field_name in self.fields_for_select.items()
         ]
-        return [{key: func(entry[key]) for key, func in columns} for entry in result]
+
+        dictmap = lambda entry: {key: func(entry[key]) for key, func in columns}  # noqa
+        return list(map(dictmap, result))

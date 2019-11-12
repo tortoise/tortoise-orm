@@ -178,7 +178,17 @@ class MySQLClient(BaseDBAsyncClient):
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
-                await cursor.executemany(query, values)
+                if self.capabilities.supports_transactions:
+                    await connection.begin()
+                    try:
+                        await cursor.executemany(query, values)
+                    except Exception:
+                        await connection.rollback()
+                        raise
+                    else:
+                        await connection.commit()
+                else:
+                    await cursor.executemany(query, values)
 
     @translate_exceptions
     @retry_connection
@@ -218,6 +228,14 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
 
     def acquire_connection(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._connection, self._lock)
+
+    @translate_exceptions
+    @retry_connection
+    async def execute_many(self, query: str, values: list) -> None:
+        async with self.acquire_connection() as connection:
+            self.log.debug("%s: %s", query, values)
+            async with connection.cursor() as cursor:
+                await cursor.executemany(query, values)
 
     @retry_connection
     async def start(self) -> None:

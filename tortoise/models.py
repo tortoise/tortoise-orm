@@ -224,6 +224,10 @@ class MetaInfo:
             )
 
     def _generate_db_fields(self) -> None:
+        self.db_default_fields.clear()
+        self.db_complex_fields.clear()
+        self.db_native_fields.clear()
+
         for key in self.db_fields:
             model_field = self.fields_db_projection_reverse[key]
             field = self.fields_map[model_field]

@@ -166,7 +166,15 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             # TODO: Consider using copy_records_to_table instead
-            await connection.executemany(query, values)
+            transaction = connection.transaction()
+            await transaction.start()
+            try:
+                await connection.executemany(query, values)
+            except Exception:
+                await transaction.rollback()
+                raise
+            else:
+                await transaction.commit()
 
     @translate_exceptions
     @retry_connection
@@ -205,6 +213,14 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
 
     def acquire_connection(self) -> "ConnectionWrapper":
         return ConnectionWrapper(self._connection, self._lock)
+
+    @translate_exceptions
+    @retry_connection
+    async def execute_many(self, query: str, values: list) -> None:
+        async with self.acquire_connection() as connection:
+            self.log.debug("%s: %s", query, values)
+            # TODO: Consider using copy_records_to_table instead
+            await connection.executemany(query, values)
 
     @retry_connection
     async def start(self) -> None:
