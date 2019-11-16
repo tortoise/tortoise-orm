@@ -234,7 +234,7 @@ class MetaInfo:
                 ),
             )
 
-        # Create lazy FK fields on model.
+        # Create lazy one to one fields on model.
         for key in self.o2o_fields:
             _key = f"_{key}"
             relation_field = self.fields_map[key].source_field
@@ -253,6 +253,7 @@ class MetaInfo:
                 ),
             )
 
+        # Create lazy reverse one to one fields on model.
         for key in self.backward_o2o_fields:
             _key = f"_{key}"
             field_object: fields.BackwardOneToOneRelation = self.fields_map[key]  # type: ignore
