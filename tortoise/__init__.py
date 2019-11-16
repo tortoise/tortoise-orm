@@ -165,7 +165,11 @@ class Tortoise:
                 del desc["raw_field"]
 
             # These fields are entierly "virtual", so no direct DB representation
-            if isinstance(field, (fields.ManyToManyFieldInstance, fields.BackwardFKRelation, fields.BackwardOneToOneRelation)):
+            if isinstance(field, (
+                fields.ManyToManyFieldInstance,
+                fields.BackwardFKRelation,
+                fields.BackwardOneToOneRelation
+            )):
                 del desc["db_column"]
 
             return desc

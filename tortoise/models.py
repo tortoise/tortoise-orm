@@ -466,7 +466,8 @@ class Model(metaclass=ModelMeta):
                 )
             elif key in meta.backward_o2o_fields:
                 raise ConfigurationError(
-                    "You can't set backward one to one relations through init, change related model instead"
+                    "You can't set backward one to one relations through init,"
+                    " change related model instead"
                 )
             elif key in meta.m2m_fields:
                 raise ConfigurationError(
