@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import decimal
 from copy import copy
@@ -355,8 +356,12 @@ class BaseExecutor:
     async def _execute_prefetch_queries(self, instance_list: list) -> list:
         if instance_list and (self.prefetch_map or self._prefetch_queries):
             self._make_prefetch_queries()
-            for field, related_query in self._prefetch_queries.items():
-                await self._do_prefetch(instance_list, field, related_query)
+            prefetch_tasks = [
+                self._do_prefetch(instance_list, field, related_query)
+                for field, related_query in self._prefetch_queries.items()
+            ]
+            await asyncio.gather(*prefetch_tasks)
+
         return instance_list
 
     async def fetch_for_list(self, instance_list: list, *args) -> list:
