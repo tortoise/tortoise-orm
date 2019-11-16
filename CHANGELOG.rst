@@ -16,6 +16,12 @@ Deprecations:
 - ``start_transaction`` is deprecated, please use ``@atomic()`` or ``async with in_transaction():`` instead.
 
 
+0.14.2
+------
+- A Field name of ``alias`` is now no longer reserved.
+- Restored support for inheriting from Abstract classes. Order is now also deterministic,
+  with the inherited classes' fields being placed before the current.
+
 0.14.1
 -------
 - ``ManyToManyField`` is now a function that has the type of the relation for autocomplete,

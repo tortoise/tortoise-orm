@@ -53,7 +53,7 @@ class BaseExecutor:
             table = Table(self.model._meta.table)
             self.delete_query = str(
                 self.model._meta.basequery.where(
-                    getattr(table, self.model._meta.db_pk_field) == self.Parameter(0)
+                    table[self.model._meta.db_pk_field] == self.Parameter(0)
                 ).delete()
             )
             self.update_cache: Dict[str, str] = {}
@@ -158,7 +158,7 @@ class BaseExecutor:
                 query = query.set(db_field, self.Parameter(count))
                 count += 1
 
-        query = query.where(getattr(table, self.model._meta.db_pk_field) == self.Parameter(count))
+        query = query.where(table[self.model._meta.db_pk_field] == self.Parameter(count))
 
         sql = self.update_cache[key] = query.get_sql()
         return sql
@@ -244,20 +244,20 @@ class BaseExecutor:
         subquery = (
             self.db.query_class.from_(through_table)
             .select(
-                getattr(through_table, field_object.backward_key).as_("_backward_relation_key"),
-                getattr(through_table, field_object.forward_key).as_("_forward_relation_key"),
+                through_table[field_object.backward_key].as_("_backward_relation_key"),
+                through_table[field_object.forward_key].as_("_forward_relation_key"),
             )
-            .where(getattr(through_table, field_object.backward_key).isin(instance_id_set))
+            .where(through_table[field_object.backward_key].isin(instance_id_set))
         )
 
         related_query_table = Table(related_query.model._meta.table)
         related_pk_field = related_query.model._meta.db_pk_field
         query = (
             related_query.query.join(subquery)
-            .on(subquery._forward_relation_key == getattr(related_query_table, related_pk_field))
+            .on(subquery._forward_relation_key == related_query_table[related_pk_field])
             .select(
                 subquery._backward_relation_key.as_("_backward_relation_key"),
-                *[getattr(related_query_table, field).as_(field) for field in related_query.fields],
+                *[related_query_table[field].as_(field) for field in related_query.fields],
             )
         )
 
