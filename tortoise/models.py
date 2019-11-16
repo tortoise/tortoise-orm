@@ -187,8 +187,13 @@ class MetaInfo:
         self.fields_db_projection_reverse = {
             value: key for key, value in self.fields_db_projection.items()
         }
-        self.fetch_fields = self.m2m_fields | self.backward_fk_fields | self.fk_fields | \
-            self.backward_o2o_fields | self.o2o_fields
+        self.fetch_fields = (
+            self.m2m_fields
+            | self.backward_fk_fields
+            | self.fk_fields
+            | self.backward_o2o_fields
+            | self.o2o_fields
+        )
 
         generated_fields = []
         for field in self.fields_map.values():
@@ -267,7 +272,7 @@ class MetaInfo:
                         ftype=field_object.field_type,
                         frelfield=field_object.relation_field,
                     ),
-                    partial(_ro2o_setter, _key=_key)
+                    partial(_ro2o_setter, _key=_key),
                 ),
             )
 

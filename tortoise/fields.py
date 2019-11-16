@@ -588,7 +588,7 @@ def ManyToManyField(
     backward_key: str = "",
     related_name: str = "",
     **kwargs,
-) -> Field:
+) -> "ManyToManyRelation":
     """
         ManyToMany relation field.
 

@@ -217,7 +217,7 @@ class BaseExecutor:
             **{f"{relation_field}__in": list(instance_id_set)}
         )
 
-        related_object_map = {}
+        related_object_map: dict = {}
         for entry in related_object_list:
             object_id = getattr(entry, relation_field)
             if object_id in related_object_map:
