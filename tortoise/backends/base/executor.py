@@ -203,6 +203,32 @@ class BaseExecutor:
             relation_container._set_result_for_query(related_object_map.get(instance.pk, []))
         return instance_list
 
+    async def _prefetch_reverse_o2o_relation(
+        self, instance_list: list, field: str, related_query
+    ) -> list:
+        instance_id_set: set = {
+            self._field_to_db(instance._meta.pk, instance.pk, instance)
+            for instance in instance_list
+        }
+        relation_field = self.model._meta.fields_map[field].relation_field  # type: ignore
+
+        related_object_list = await related_query.filter(
+            **{f"{relation_field}__in": list(instance_id_set)}
+        )
+
+        related_object_map = {}
+        for entry in related_object_list:
+            object_id = getattr(entry, relation_field)
+            if object_id in related_object_map:
+                raise Exception("More than one related object in One To One relation")
+
+            related_object_map[object_id] = entry
+
+        for instance in instance_list:
+            setattr(instance, field, related_object_map.get(instance.pk, None))
+
+        return instance_list
+
     async def _prefetch_m2m_relation(self, instance_list: list, field: str, related_query) -> list:
         instance_id_set: set = {
             self._field_to_db(instance._meta.pk, instance.pk, instance)
@@ -318,6 +344,10 @@ class BaseExecutor:
     async def _do_prefetch(self, instance_id_list: list, field: str, related_query) -> list:
         if field in self.model._meta.backward_fk_fields:
             return await self._prefetch_reverse_relation(instance_id_list, field, related_query)
+
+        if field in self.model._meta.backward_o2o_fields:
+            return await self._prefetch_reverse_o2o_relation(instance_id_list, field, related_query)
+
         if field in self.model._meta.m2m_fields:
             return await self._prefetch_m2m_relation(instance_id_list, field, related_query)
         return await self._prefetch_direct_relation(instance_id_list, field, related_query)

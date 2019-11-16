@@ -47,6 +47,19 @@ def _rfk_getter(self, _key, ftype, frelfield):
     return val
 
 
+def _ro2o_getter(self, _key, ftype, frelfield):
+    if hasattr(self, _key):
+        return getattr(self, _key)
+
+    val = ftype.filter(**{frelfield: self.pk}).first()
+    setattr(self, _key, val)
+    return val
+
+
+def _ro2o_setter(self, value, _key):
+    setattr(self, _key, value)
+
+
 def _m2m_getter(self, _key, field_object):
     val = getattr(self, _key, None)
     if val is None:
@@ -63,6 +76,8 @@ class MetaInfo:
         "fields",
         "db_fields",
         "m2m_fields",
+        "o2o_fields",
+        "backward_o2o_fields",
         "fk_fields",
         "backward_fk_fields",
         "fetch_fields",
@@ -98,7 +113,9 @@ class MetaInfo:
         self.db_fields: Set[str] = set()
         self.m2m_fields: Set[str] = set()
         self.fk_fields: Set[str] = set()
+        self.o2o_fields: Set[str] = set()
         self.backward_fk_fields: Set[str] = set()
+        self.backward_o2o_fields: Set[str] = set()
         self.fetch_fields: Set[str] = set()
         self.fields_db_projection: Dict[str, str] = {}
         self.fields_db_projection_reverse: Dict[str, str] = {}
@@ -130,6 +147,8 @@ class MetaInfo:
 
         if isinstance(value, fields.ManyToManyFieldInstance):
             self.m2m_fields.add(name)
+        elif isinstance(value, fields.BackwardOneToOneRelation):
+            self.backward_o2o_fields.add(name)
         elif isinstance(value, fields.BackwardFKRelation):
             self.backward_fk_fields.add(name)
 
@@ -168,7 +187,8 @@ class MetaInfo:
         self.fields_db_projection_reverse = {
             value: key for key, value in self.fields_db_projection.items()
         }
-        self.fetch_fields = self.m2m_fields | self.backward_fk_fields | self.fk_fields
+        self.fetch_fields = self.m2m_fields | self.backward_fk_fields | self.fk_fields | \
+            self.backward_o2o_fields | self.o2o_fields
 
         generated_fields = []
         for field in self.fields_map.values():
@@ -211,6 +231,42 @@ class MetaInfo:
                         ftype=field_object.field_type,
                         frelfield=field_object.relation_field,
                     )
+                ),
+            )
+
+        # Create lazy FK fields on model.
+        for key in self.o2o_fields:
+            _key = f"_{key}"
+            relation_field = self.fields_map[key].source_field
+            setattr(
+                self._model,
+                key,
+                property(
+                    partial(
+                        _fk_getter,
+                        _key=_key,
+                        ftype=self.fields_map[key].field_type,
+                        relation_field=relation_field,
+                    ),
+                    partial(_fk_setter, _key=_key, relation_field=relation_field),
+                    partial(_fk_setter, value=None, _key=_key, relation_field=relation_field),
+                ),
+            )
+
+        for key in self.backward_o2o_fields:
+            _key = f"_{key}"
+            field_object: fields.BackwardOneToOneRelation = self.fields_map[key]  # type: ignore
+            setattr(
+                self._model,
+                key,
+                property(
+                    partial(
+                        _ro2o_getter,
+                        _key=_key,
+                        ftype=field_object.field_type,
+                        frelfield=field_object.relation_field,
+                    ),
+                    partial(_ro2o_setter, _key=_key)
                 ),
             )
 
@@ -257,6 +313,7 @@ class ModelMeta(type):
         filters: Dict[str, Dict[str, dict]] = {}
         fk_fields: Set[str] = set()
         m2m_fields: Set[str] = set()
+        o2o_fields: Set[str] = set()
         meta_class = attrs.get("Meta", type("Meta", (), {}))
         pk_attr: str = "id"
 
@@ -328,6 +385,8 @@ class ModelMeta(type):
 
                     if isinstance(value, fields.ForeignKeyField):
                         fk_fields.add(key)
+                    elif isinstance(value, fields.OneToOneField):
+                        o2o_fields.add(key)
                     elif isinstance(value, fields.ManyToManyFieldInstance):
                         m2m_fields.add(key)
                     else:
@@ -358,6 +417,8 @@ class ModelMeta(type):
         meta._filters = filters
         meta.fk_fields = fk_fields
         meta.backward_fk_fields = set()
+        meta.o2o_fields = o2o_fields
+        meta.backward_o2o_fields = set()
         meta.m2m_fields = m2m_fields
         meta.default_connection = None
         meta.pk_attr = pk_attr
@@ -402,6 +463,10 @@ class Model(metaclass=ModelMeta):
             elif key in meta.backward_fk_fields:
                 raise ConfigurationError(
                     "You can't set backward relations through init, change related model instead"
+                )
+            elif key in meta.backward_o2o_fields:
+                raise ConfigurationError(
+                    "You can't set backward one to one relations through init, change related model instead"
                 )
             elif key in meta.m2m_fields:
                 raise ConfigurationError(

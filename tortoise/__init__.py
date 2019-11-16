@@ -158,14 +158,14 @@ class Tortoise:
             }
 
             # Foreign Keys have
-            if isinstance(field, fields.ForeignKeyField):
+            if isinstance(field, (fields.ForeignKeyField, fields.OneToOneField)):
                 del desc["db_column"]
                 desc["raw_field"] = field.source_field
             else:
                 del desc["raw_field"]
 
             # These fields are entierly "virtual", so no direct DB representation
-            if isinstance(field, (fields.ManyToManyFieldInstance, fields.BackwardFKRelation)):
+            if isinstance(field, (fields.ManyToManyFieldInstance, fields.BackwardFKRelation, fields.BackwardOneToOneRelation)):
                 del desc["db_column"]
 
             return desc
@@ -317,6 +317,43 @@ class Tortoise:
                         model, f"{field}_id", fk_object.null, fk_object.description
                     )
                     related_model._meta.add_field(backward_relation_name, fk_relation)
+
+                for field in model._meta.o2o_fields:
+                    o2o_object = cast(fields.OneToOneField, model._meta.fields_map[field])
+                    reference = o2o_object.model_name
+                    related_app_name, related_model_name = split_reference(reference)
+                    related_model = get_related_model(related_app_name, related_model_name)
+
+                    key_field = f"{field}_id"
+                    key_o2o_object = deepcopy(related_model._meta.pk)
+                    key_o2o_object.pk = False
+                    key_o2o_object.index = o2o_object.index
+                    key_o2o_object.default = o2o_object.default
+                    key_o2o_object.null = o2o_object.null
+                    key_o2o_object.generated = o2o_object.generated
+                    key_o2o_object.reference = o2o_object
+                    key_o2o_object.description = o2o_object.description
+                    if o2o_object.source_field:
+                        key_o2o_object.source_field = o2o_object.source_field
+                        o2o_object.source_field = key_field
+                    else:
+                        o2o_object.source_field = key_field
+                        key_o2o_object.source_field = key_field
+                    model._meta.add_field(key_field, key_o2o_object)
+
+                    o2o_object.field_type = related_model
+                    backward_relation_name = o2o_object.related_name
+                    if not backward_relation_name:
+                        backward_relation_name = f"{model._meta.table}"
+                    if backward_relation_name in related_model._meta.fields:
+                        raise ConfigurationError(
+                            f'backward relation "{backward_relation_name}" duplicates in'
+                            f" model {related_model_name}"
+                        )
+                    o2o_relation = fields.BackwardOneToOneRelation(
+                        model, f"{field}_id", o2o_object.null, o2o_object.description
+                    )
+                    related_model._meta.add_field(backward_relation_name, o2o_relation)
 
                 for field in list(model._meta.m2m_fields):
                     m2m_object = cast(fields.ManyToManyFieldInstance, model._meta.fields_map[field])
