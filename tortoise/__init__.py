@@ -333,7 +333,7 @@ class Tortoise:
 
                     key_field = f"{field}_id"
                     key_o2o_object = deepcopy(related_model._meta.pk)
-                    key_o2o_object.pk = True
+                    key_o2o_object.pk = o2o_object.pk
                     key_o2o_object.index = o2o_object.index
                     key_o2o_object.default = o2o_object.default
                     key_o2o_object.null = o2o_object.null

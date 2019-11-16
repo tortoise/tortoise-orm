@@ -529,7 +529,6 @@ class OneToOneField(Field):
     def __init__(
         self, model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs
     ) -> None:
-        kwargs["pk"] = True
         super().__init__(**kwargs)
         # self.field_type: "Type[Model]" = None  # type: ignore
         if len(model_name.split(".")) != 2:
