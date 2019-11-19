@@ -181,14 +181,16 @@ class MySQLClient(BaseDBAsyncClient):
                     await cursor.executemany(query, values)
 
     @retry_connection
-    async def execute_query(
-        self, query: str, values: Optional[list] = None
-    ) -> List[aiomysql.DictCursor]:
+    async def execute_query(self, query: str, values: Optional[list] = None) -> List[dict]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            async with connection.cursor(aiomysql.DictCursor) as cursor:
+            async with connection.cursor() as cursor:
                 await cursor.execute(query, values)
-                return await cursor.fetchall()
+                rows = await cursor.fetchall()
+                if rows:
+                    fields = [f.name for f in cursor._result.fields]
+                    return [dict(zip(fields, row)) for row in rows]
+                return []
 
     @retry_connection
     async def execute_script(self, query: str) -> None:
