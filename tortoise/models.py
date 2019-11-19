@@ -465,7 +465,7 @@ class Model(metaclass=ModelMeta):
         passed_fields = {*kwargs.keys()} | meta.fetch_fields
 
         for key, value in kwargs.items():
-            if key in meta.fk_fields:
+            if key in meta.fk_fields or key in meta.o2o_fields:
                 if value and not value._saved_in_db:
                     raise OperationalError(
                         f"You should first call .save() on {value} before referring to it"

@@ -288,6 +288,8 @@ class Tortoise:
                 if not model._meta.table:
                     model._meta.table = model.__name__.lower()
 
+                pk_attr_changed = False
+
                 for field in model._meta.fk_fields:
                     fk_object = cast(fields.ForeignKeyField, model._meta.fields_map[field])
                     reference = fk_object.model_name
@@ -362,6 +364,10 @@ class Tortoise:
                     )
                     related_model._meta.add_field(backward_relation_name, o2o_relation)
 
+                    if o2o_object.pk:
+                        pk_attr_changed = True
+                        model._meta.pk_attr = key_field
+
                 for field in list(model._meta.m2m_fields):
                     m2m_object = cast(fields.ManyToManyFieldInstance, model._meta.fields_map[field])
                     if m2m_object._generated:
@@ -412,6 +418,9 @@ class Tortoise:
                     m2m_relation._generated = True
                     model._meta.filters.update(get_m2m_filters(field, m2m_object))
                     related_model._meta.add_field(backward_relation_name, m2m_relation)
+
+                if pk_attr_changed:
+                    model._meta.finalise_pk()
 
     @classmethod
     def _discover_client_class(cls, engine: str) -> BaseDBAsyncClient:
