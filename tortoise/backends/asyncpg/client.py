@@ -31,35 +31,27 @@ def retry_connection(func):
     @wraps(func)
     async def retry_connection_(self, *args):
         try:
-            return await func(self, *args)
-        except (
-            asyncpg.PostgresConnectionError,
-            asyncpg.ConnectionDoesNotExistError,
-            asyncpg.ConnectionFailureError,
-            asyncpg.InterfaceError,
-        ):
-            # Here we assume that a connection error has happened
-            # Re-create connection and re-try the function call once only.
-            if getattr(self, "transaction", None):
-                self._finalized = True
-                raise TransactionManagementError("Connection gone away during transaction")
-            logging.info("Attempting reconnect")
             try:
-                async with self.acquire_connection():
-                    logging.info("Reconnected")
-            except Exception as e:
-                raise DBConnectionError(f"Failed to reconnect: {str(e)}")
+                return await func(self, *args)
+            except (
+                asyncpg.PostgresConnectionError,
+                asyncpg.ConnectionDoesNotExistError,
+                asyncpg.ConnectionFailureError,
+                asyncpg.InterfaceError,
+            ):
+                # Here we assume that a connection error has happened
+                # Re-create connection and re-try the function call once only.
+                if getattr(self, "transaction", None):
+                    self._finalized = True
+                    raise TransactionManagementError("Connection gone away during transaction")
+                logging.info("Attempting reconnect")
+                try:
+                    async with self.acquire_connection():
+                        logging.info("Reconnected")
+                except Exception as e:
+                    raise DBConnectionError(f"Failed to reconnect: {str(e)}")
 
-            return await func(self, *args)
-
-    return retry_connection_
-
-
-def translate_exceptions(func):
-    @wraps(func)
-    async def translate_exceptions_(self, *args):
-        try:
-            return await func(self, *args)
+                return await func(self, *args)
         except asyncpg.SyntaxOrAccessError as exc:
             raise OperationalError(exc)
         except asyncpg.IntegrityConstraintViolationError as exc:
@@ -67,7 +59,7 @@ def translate_exceptions(func):
         except asyncpg.InvalidTransactionStateError as exc:
             raise TransactionManagementError(exc)
 
-    return translate_exceptions_
+    return retry_connection_
 
 
 class AsyncpgDBClient(BaseDBAsyncClient):
@@ -151,7 +143,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     def _in_transaction(self) -> "TransactionContext":
         return TransactionContextPooled(TransactionWrapper(self))
 
-    @translate_exceptions
     @retry_connection
     async def execute_insert(self, query: str, values: list) -> Optional[asyncpg.Record]:
         async with self.acquire_connection() as connection:
@@ -160,7 +151,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             stmt = await connection.prepare(query)
             return await stmt.fetchrow(*values)
 
-    @translate_exceptions
     @retry_connection
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
@@ -176,7 +166,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             else:
                 await transaction.commit()
 
-    @translate_exceptions
     @retry_connection
     async def execute_query(self, query: str, values: Optional[list] = None) -> List[dict]:
         async with self.acquire_connection() as connection:
@@ -187,7 +176,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
                 return await stmt.fetch(*values)
             return await connection.fetch(query)
 
-    @translate_exceptions
     @retry_connection
     async def execute_script(self, query: str) -> None:
         async with self.acquire_connection() as connection:
@@ -214,7 +202,6 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     def acquire_connection(self) -> "ConnectionWrapper":
         return ConnectionWrapper(self._connection, self._lock)
 
-    @translate_exceptions
     @retry_connection
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
