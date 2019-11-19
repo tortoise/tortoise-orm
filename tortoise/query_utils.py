@@ -10,7 +10,7 @@ from tortoise.exceptions import FieldError, OperationalError
 
 def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[Table, Criterion]]]:
     join = None
-    table = Table(model._meta.table)
+    table = model._meta.basetable
 
     if value is None and f"{key}__isnull" in model._meta.filters:
         param = model._meta.get_filter(f"{key}__isnull")
@@ -22,7 +22,7 @@ def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[
     if param.get("table"):
         join = (
             param["table"],
-            getattr(table, pk_db_field) == getattr(param["table"], param["backward_key"]),
+            table[pk_db_field] == getattr(param["table"], param["backward_key"]),
         )
         if param.get("value_encoder"):
             value = param["value_encoder"](value, model)
@@ -34,7 +34,7 @@ def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[
             if param.get("value_encoder")
             else model._meta.db.executor_class._field_to_db(field_object, value, model)
         )
-        criterion = param["operator"](getattr(table, param["source_field"]), encoded_value)
+        criterion = param["operator"](table[param["source_field"]], encoded_value)
     return criterion, join
 
 
@@ -47,7 +47,7 @@ def _get_joins_for_related_field(
     related_table_pk = related_field.field_type._meta.db_pk_field
 
     if isinstance(related_field, fields.ManyToManyFieldInstance):
-        related_table = Table(related_field.field_type._meta.table)
+        related_table = related_field.field_type._meta.basetable
         through_table = Table(related_field.through)
         required_joins.append(
             (
@@ -63,7 +63,7 @@ def _get_joins_for_related_field(
             )
         )
     elif isinstance(related_field, fields.BackwardFKRelation):
-        related_table = Table(related_field.field_type._meta.table)
+        related_table = related_field.field_type._meta.basetable
         required_joins.append(
             (
                 related_table,
@@ -71,7 +71,7 @@ def _get_joins_for_related_field(
             )
         )
     else:
-        related_table = Table(related_field.field_type._meta.table)
+        related_table = related_field.field_type._meta.basetable
         required_joins.append(
             (
                 related_table,
@@ -201,7 +201,7 @@ class Q:
         self._is_negated = not self._is_negated
 
     def _resolve_nested_filter(self, model, key, value) -> QueryModifier:
-        table = Table(model._meta.table)
+        table = model._meta.basetable
 
         related_field_name = key.split("__")[0]
         related_field = model._meta.fields_map[related_field_name]

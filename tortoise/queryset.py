@@ -77,7 +77,7 @@ class AwaitableQuery(QuerySetIterable[MODEL]):
                 self._joined_tables.append(join[0])
 
     def resolve_ordering(self, model, orderings, annotations) -> None:
-        table = Table(model._meta.table)
+        table = model._meta.basetable
         for ordering in orderings:
             field_name = ordering[0]
             if field_name in model._meta.fetch_fields:
@@ -473,7 +473,7 @@ class QuerySet(AwaitableQuery[MODEL]):
     def _resolve_annotate(self) -> None:
         if not self._annotations:
             return
-        table = Table(self.model._meta.table)
+        table = self.model._meta.basetable
         if any(
             annotation.resolve(self.model)["field"].is_aggregate
             for annotation in self._annotations.values()
@@ -544,7 +544,7 @@ class UpdateQuery(AwaitableQuery):
         self._db = db
 
     def _make_query(self) -> None:
-        table = Table(self.model._meta.table)
+        table = self.model._meta.basetable
         self.query = self._db.query_class.update(table)
         self.resolve_filters(
             model=self.model,
@@ -656,7 +656,7 @@ class FieldSelectQuery(AwaitableQuery):
     def _join_table_with_forwarded_fields(
         self, model, field: str, forwarded_fields: str
     ) -> Tuple[Table, str]:
-        table = Table(model._meta.table)
+        table = model._meta.basetable
         if field in model._meta.fields_db_projection and not forwarded_fields:
             return table, model._meta.fields_db_projection[field]
 
@@ -683,7 +683,7 @@ class FieldSelectQuery(AwaitableQuery):
         )
 
     def add_field_to_select_query(self, field, return_as) -> None:
-        table = Table(self.model._meta.table)
+        table = self.model._meta.basetable
         if field in self.model._meta.fields_db_projection:
             db_field = self.model._meta.fields_db_projection[field]
             self.query._select_field(getattr(table, db_field).as_(return_as))

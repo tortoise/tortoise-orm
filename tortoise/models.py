@@ -2,7 +2,7 @@ from copy import copy, deepcopy
 from functools import partial
 from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
 
-from pypika import Query
+from pypika import Query, Table
 
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
@@ -74,6 +74,7 @@ class MetaInfo:
         "default_connection",
         "basequery",
         "basequery_all_fields",
+        "basetable",
         "_filters",
         "unique_together",
         "indexes",
@@ -109,6 +110,7 @@ class MetaInfo:
         self.default_connection: Optional[str] = None
         self.basequery: Query = Query()
         self.basequery_all_fields: Query = Query()
+        self.basetable: Table = Table("")
         self.pk_attr: str = getattr(meta, "pk_attr", "")
         self.generated_db_fields: Tuple[str] = None  # type: ignore
         self._model: "Model" = None  # type: ignore
