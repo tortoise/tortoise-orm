@@ -10,7 +10,9 @@ New features:
     - Enabled by default for databases that support it (mysql and postgres) with a minimum pool size of 1, and a maximum of 5
     - Not supported by sqlite
     - Can be changed by passing the ``minsize`` and ``maxsize`` connection parameters
-- Many small performance tweaks reducing overhead by about ~6%
+- Many small performance tweaks reducing filter query generation overhead by about ~5%
+- Bulk inserts are ensured to be wrapped in a transaction for >50% speedup
+- PostgreSQL prepared queries now use a LRU cache for significant >2x speedup on inserts/updates/deletes
 
 Deprecations:
 ^^^^^^^^^^^^^

@@ -148,8 +148,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             # TODO: Cache prepared statement
-            stmt = await connection.prepare(query)
-            return await stmt.fetchrow(*values)
+            return await connection.fetchrow(query, *values)
 
     @retry_connection
     async def execute_many(self, query: str, values: list) -> None:
@@ -172,8 +171,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             self.log.debug("%s: %s", query, values)
             if values:
                 # TODO: Cache prepared statement
-                stmt = await connection.prepare(query)
-                return await stmt.fetch(*values)
+                return await connection.fetch(query, *values)
             return await connection.fetch(query)
 
     @retry_connection
