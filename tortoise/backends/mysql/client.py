@@ -31,35 +31,27 @@ def retry_connection(func):
     @wraps(func)
     async def retry_connection_(self, *args):
         try:
-            return await func(self, *args)
-        except (
-            RuntimeError,
-            pymysql.err.OperationalError,
-            pymysql.err.InternalError,
-            pymysql.err.InterfaceError,
-        ):
-            # Here we assume that a connection error has happened
-            # Re-create connection and re-try the function call once only.
-            if getattr(self, "_finalized", None) is False:
-                raise TransactionManagementError("Connection gone away during transaction")
-            logging.info("Attempting reconnect")
             try:
-                async with self.acquire_connection() as connection:
-                    await connection.ping()
-                    logging.info("Reconnected")
-            except Exception as e:
-                raise DBConnectionError("Failed to reconnect: %s", str(e))
+                return await func(self, *args)
+            except (
+                RuntimeError,
+                pymysql.err.OperationalError,
+                pymysql.err.InternalError,
+                pymysql.err.InterfaceError,
+            ):
+                # Here we assume that a connection error has happened
+                # Re-create connection and re-try the function call once only.
+                if getattr(self, "_finalized", None) is False:
+                    raise TransactionManagementError("Connection gone away during transaction")
+                logging.info("Attempting reconnect")
+                try:
+                    async with self.acquire_connection() as connection:
+                        await connection.ping()
+                        logging.info("Reconnected")
+                except Exception as e:
+                    raise DBConnectionError("Failed to reconnect: %s", str(e))
 
-            return await func(self, *args)
-
-    return retry_connection_
-
-
-def translate_exceptions(func):
-    @wraps(func)
-    async def translate_exceptions_(self, *args):
-        try:
-            return await func(self, *args)
+                return await func(self, *args)
         except (
             pymysql.err.OperationalError,
             pymysql.err.ProgrammingError,
@@ -71,7 +63,7 @@ def translate_exceptions(func):
         except pymysql.err.IntegrityError as exc:
             raise IntegrityError(exc)
 
-    return translate_exceptions_
+    return retry_connection_
 
 
 class MySQLClient(BaseDBAsyncClient):
@@ -163,7 +155,6 @@ class MySQLClient(BaseDBAsyncClient):
     def _in_transaction(self) -> "TransactionContext":
         return TransactionContextPooled(TransactionWrapper(self))
 
-    @translate_exceptions
     @retry_connection
     async def execute_insert(self, query: str, values: list) -> int:
         async with self.acquire_connection() as connection:
@@ -172,26 +163,35 @@ class MySQLClient(BaseDBAsyncClient):
                 await cursor.execute(query, values)
                 return cursor.lastrowid  # return auto-generated id
 
-    @translate_exceptions
     @retry_connection
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
-                await cursor.executemany(query, values)
+                if self.capabilities.supports_transactions:
+                    await connection.begin()
+                    try:
+                        await cursor.executemany(query, values)
+                    except Exception:
+                        await connection.rollback()
+                        raise
+                    else:
+                        await connection.commit()
+                else:
+                    await cursor.executemany(query, values)
 
-    @translate_exceptions
     @retry_connection
-    async def execute_query(
-        self, query: str, values: Optional[list] = None
-    ) -> List[aiomysql.DictCursor]:
+    async def execute_query(self, query: str, values: Optional[list] = None) -> List[dict]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            async with connection.cursor(aiomysql.DictCursor) as cursor:
+            async with connection.cursor() as cursor:
                 await cursor.execute(query, values)
-                return await cursor.fetchall()
+                rows = await cursor.fetchall()
+                if rows:
+                    fields = [f.name for f in cursor._result.fields]
+                    return [dict(zip(fields, row)) for row in rows]
+                return []
 
-    @translate_exceptions
     @retry_connection
     async def execute_script(self, query: str) -> None:
         async with self.acquire_connection() as connection:
@@ -218,6 +218,13 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
 
     def acquire_connection(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._connection, self._lock)
+
+    @retry_connection
+    async def execute_many(self, query: str, values: list) -> None:
+        async with self.acquire_connection() as connection:
+            self.log.debug("%s: %s", query, values)
+            async with connection.cursor() as cursor:
+                await cursor.executemany(query, values)
 
     @retry_connection
     async def start(self) -> None:
