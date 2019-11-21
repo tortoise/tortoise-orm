@@ -188,7 +188,7 @@ class NestedTransactionContext(TransactionContext):
                 if exc_type is not TransactionManagementError:
                     await self.connection.rollback()
             else:
-                await self.connection.commit(finalize=False)
+                await self.connection.commit()
 
 
 class PoolConnectionWrapper:
@@ -216,5 +216,5 @@ class BaseTransactionWrapper:
     async def rollback(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def commit(self, finalize: bool = True) -> None:
+    async def commit(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage

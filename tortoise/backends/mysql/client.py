@@ -231,12 +231,11 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         await self._connection.begin()
         self._finalized = False
 
-    async def commit(self, finalize: bool = True) -> None:
+    async def commit(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.commit()
-        if finalize:
-            self._finalized = True
+        self._finalized = True
 
     async def rollback(self) -> None:
         if self._finalized:
