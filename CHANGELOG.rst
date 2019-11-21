@@ -25,6 +25,10 @@ Deprecations:
 
   There is a known context confusion, specifically regarding nested transactions.
 
+Bugfixes:
+^^^^^^^^^
+- ``indexes`` will correctly map the foreign key if referenced by name.
+
 0.14.2
 ------
 - A Field name of ``alias`` is now no longer reserved.
@@ -63,7 +67,7 @@ Bugfixes:
 - Fields are quoted properly in ``UNIQUE`` statements.
 - Fields are quoted properly in ``KEY`` statements.
 - Comment Fields are quoted properly in PostgreSQL dialect.
-- ``unique_together`` and ``indexes`` will correctly map the foreign key if referenced by name.
+- ``unique_together`` will correctly map the foreign key if referenced by name.
 
 Deprecations:
 ^^^^^^^^^^^^^

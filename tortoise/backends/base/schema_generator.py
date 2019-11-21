@@ -241,21 +241,24 @@ class BaseSchemaGenerator:
 
                 for field in unique_together_list:
                     field_object = model._meta.fields_map[field]
-
-                    if field_object.source_field:
-                        unique_together_to_create.append(self.quote(field_object.source_field))
-                    else:
-                        unique_together_to_create.append(self.quote(field))
+                    unique_together_to_create.append(self.quote(field_object.source_field or field))
 
                 fields_to_create.append(self._get_unique_constraint_sql(unique_together_to_create))
 
         # Indexes.
         _indexes = [
             self._get_index_sql(model, [field_name], safe=safe) for field_name in fields_with_index
-        ] + [
-            self._get_index_sql(model, field_names, safe=safe)
-            for field_names in model._meta.indexes
         ]
+
+        if model._meta.indexes:
+            for indexes_list in model._meta.indexes:
+                indexes_to_create = []
+                for field in indexes_list:
+                    field_object = model._meta.fields_map[field]
+                    indexes_to_create.append(field_object.source_field or field)
+
+                _indexes.append(self._get_index_sql(model, indexes_to_create, safe=safe))
+
         field_indexes_sqls = [val for val in _indexes if val]
 
         fields_to_create.extend(self._get_inner_statements())
