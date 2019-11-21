@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from functools import wraps
 from typing import List, Optional, SupportsInt, Union
 
@@ -27,31 +26,11 @@ from tortoise.exceptions import (
 )
 
 
-def retry_connection(func):
+def translate_exceptions(func):
     @wraps(func)
-    async def retry_connection_(self, *args):
+    async def translate_exceptions_(self, *args):
         try:
-            try:
-                return await func(self, *args)
-            except (
-                asyncpg.PostgresConnectionError,
-                asyncpg.ConnectionDoesNotExistError,
-                asyncpg.ConnectionFailureError,
-                asyncpg.InterfaceError,
-            ):
-                # Here we assume that a connection error has happened
-                # Re-create connection and re-try the function call once only.
-                if getattr(self, "transaction", None):
-                    self._finalized = True
-                    raise TransactionManagementError("Connection gone away during transaction")
-                logging.info("Attempting reconnect")
-                try:
-                    async with self.acquire_connection():
-                        logging.info("Reconnected")
-                except Exception as e:
-                    raise DBConnectionError(f"Failed to reconnect: {str(e)}")
-
-                return await func(self, *args)
+            return await func(self, *args)
         except asyncpg.SyntaxOrAccessError as exc:
             raise OperationalError(exc)
         except asyncpg.IntegrityConstraintViolationError as exc:
@@ -59,7 +38,7 @@ def retry_connection(func):
         except asyncpg.InvalidTransactionStateError as exc:
             raise TransactionManagementError(exc)
 
-    return retry_connection_
+    return translate_exceptions_
 
 
 class AsyncpgDBClient(BaseDBAsyncClient):
@@ -111,6 +90,10 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             raise DBConnectionError(f"Can't establish connection to database {self.database}")
         # Set post-connection variables
 
+    async def _expire_connections(self) -> None:
+        if self._pool:  # pragma: nobranch
+            await self._pool.expire_connections()
+
     async def _close(self) -> None:
         if self._pool:  # pragma: nobranch
             try:
@@ -143,14 +126,14 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     def _in_transaction(self) -> "TransactionContext":
         return TransactionContextPooled(TransactionWrapper(self))
 
-    @retry_connection
+    @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> Optional[asyncpg.Record]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             # TODO: Cache prepared statement
             return await connection.fetchrow(query, *values)
 
-    @retry_connection
+    @translate_exceptions
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
@@ -165,7 +148,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             else:
                 await transaction.commit()
 
-    @retry_connection
+    @translate_exceptions
     async def execute_query(self, query: str, values: Optional[list] = None) -> List[dict]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
@@ -174,7 +157,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
                 return await connection.fetch(query, *values)
             return await connection.fetch(query)
 
-    @retry_connection
+    @translate_exceptions
     async def execute_script(self, query: str) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug(query)
@@ -194,20 +177,17 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     def _in_transaction(self) -> "TransactionContext":
         return NestedTransactionContext(self)
 
-    async def create_connection(self, with_db: bool) -> None:
-        await self._parent.create_connection(with_db)
-
     def acquire_connection(self) -> "ConnectionWrapper":
         return ConnectionWrapper(self._connection, self._lock)
 
-    @retry_connection
+    @translate_exceptions
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             # TODO: Consider using copy_records_to_table instead
             await connection.executemany(query, values)
 
-    @retry_connection
+    @translate_exceptions
     async def start(self) -> None:
         self.transaction = self._connection.transaction()
         await self.transaction.start()
