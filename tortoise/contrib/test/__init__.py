@@ -211,7 +211,7 @@ class SimpleTestCase(_TestCase):  # type: ignore
     # Override unittest.TestCase methods which call setUp() and tearDown()
     def run(self, result=None):
         orig_result = result
-        if result is None:
+        if result is None:  # pragma: nocoverage
             result = self.defaultTestResult()
             startTestRun = getattr(result, "startTestRun", None)
             if startTestRun is not None:
@@ -250,14 +250,14 @@ class SimpleTestCase(_TestCase):  # type: ignore
                 if expecting_failure:
                     if outcome.expectedFailure:
                         self._addExpectedFailure(result, outcome.expectedFailure)
-                    else:
+                    else:  # pragma: nocoverage
                         self._addUnexpectedSuccess(result)
                 else:
                     result.addSuccess(self)
             return result
         finally:
             result.stopTest(self)
-            if orig_result is None:
+            if orig_result is None:  # pragma: nocoverage
                 stopTestRun = getattr(result, "stopTestRun", None)
                 if stopTestRun is not None:
                     stopTestRun()  # pylint: disable=E1102

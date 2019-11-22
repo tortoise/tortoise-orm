@@ -210,6 +210,10 @@ class NoID(Model):
     desc = fields.TextField(null=True)
 
 
+class UniqueName(Model):
+    name = fields.CharField(max_length=20, null=True, unique=True)
+
+
 class RacePlacingEnum(Enum):
     FIRST = "first"
     SECOND = "second"

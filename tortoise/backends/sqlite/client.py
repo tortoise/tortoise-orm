@@ -102,15 +102,21 @@ class SqliteClient(BaseDBAsyncClient):
     async def execute_many(self, query: str, values: List[list]) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            # TODO: Ensure that this is wrapped by a transaction, will provide a big speedup
-            await connection.executemany(query, values)
+            # This code is only ever called in AUTOCOMMIT mode
+            await connection.execute("BEGIN")
+            try:
+                await connection.executemany(query, values)
+            except Exception:
+                await connection.rollback()
+                raise
+            else:
+                await connection.commit()
 
     @translate_exceptions
     async def execute_query(self, query: str, values: Optional[list] = None) -> List[dict]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            res = [dict(row) for row in await connection.execute_fetchall(query, values)]
-            return res
+            return await connection.execute_fetchall(query, values)
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:
@@ -132,6 +138,13 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
     def _in_transaction(self) -> "TransactionContext":
         return NestedTransactionContext(self)
 
+    @translate_exceptions
+    async def execute_many(self, query: str, values: List[list]) -> None:
+        async with self.acquire_connection() as connection:
+            self.log.debug("%s: %s", query, values)
+            # Already within transaction, so ideal for performance
+            await connection.executemany(query, values)
+
     async def start(self) -> None:
         try:
             await self._connection.commit()
@@ -145,9 +158,8 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         await self._connection.rollback()
         self._finalized = True
 
-    async def commit(self, finalize: bool = True) -> None:
+    async def commit(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.commit()
-        if finalize:
-            self._finalized = True
+        self._finalized = True

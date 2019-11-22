@@ -2,7 +2,7 @@ import uuid
 from typing import List, Optional
 
 import asyncpg
-from pypika import Parameter, Table
+from pypika import Parameter
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
@@ -17,7 +17,7 @@ class AsyncpgExecutor(BaseExecutor):
 
     def _prepare_insert_statement(self, columns: List[str]) -> str:
         query = (
-            self.db.query_class.into(Table(self.model._meta.table))
+            self.db.query_class.into(self.model._meta.basetable)
             .columns(*columns)
             .insert(*[self.Parameter(i) for i in range(len(columns))])
         )

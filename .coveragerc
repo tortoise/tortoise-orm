@@ -3,6 +3,7 @@ branch = True
 source =
     tortoise
 omit =
+    tortoise/aggregation.py
     tortoise/contrib/pylint/*
     tortoise/contrib/test/nose2.py
     tortoise/contrib/quart/*

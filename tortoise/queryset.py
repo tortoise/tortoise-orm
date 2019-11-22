@@ -77,7 +77,7 @@ class AwaitableQuery(QuerySetIterable[MODEL]):
                 self._joined_tables.append(join[0])
 
     def resolve_ordering(self, model, orderings, annotations) -> None:
-        table = Table(model._meta.table)
+        table = model._meta.basetable
         for ordering in orderings:
             field_name = ordering[0]
             if field_name in model._meta.fetch_fields:
@@ -473,7 +473,7 @@ class QuerySet(AwaitableQuery[MODEL]):
     def _resolve_annotate(self) -> None:
         if not self._annotations:
             return
-        table = Table(self.model._meta.table)
+        table = self.model._meta.basetable
         if any(
             annotation.resolve(self.model)["field"].is_aggregate
             for annotation in self._annotations.values()
@@ -544,7 +544,7 @@ class UpdateQuery(AwaitableQuery):
         self._db = db
 
     def _make_query(self) -> None:
-        table = Table(self.model._meta.table)
+        table = self.model._meta.basetable
         self.query = self._db.query_class.update(table)
         self.resolve_filters(
             model=self.model,
@@ -656,7 +656,7 @@ class FieldSelectQuery(AwaitableQuery):
     def _join_table_with_forwarded_fields(
         self, model, field: str, forwarded_fields: str
     ) -> Tuple[Table, str]:
-        table = Table(model._meta.table)
+        table = model._meta.basetable
         if field in model._meta.fields_db_projection and not forwarded_fields:
             return table, model._meta.fields_db_projection[field]
 
@@ -683,7 +683,7 @@ class FieldSelectQuery(AwaitableQuery):
         )
 
     def add_field_to_select_query(self, field, return_as) -> None:
-        table = Table(self.model._meta.table)
+        table = self.model._meta.basetable
         if field in self.model._meta.fields_db_projection:
             db_field = self.model._meta.fields_db_projection[field]
             self.query._select_field(getattr(table, db_field).as_(return_as))
@@ -714,6 +714,9 @@ class FieldSelectQuery(AwaitableQuery):
     def resolve_to_python_value(self, model: "Type[Model]", field: str) -> Callable:
         if field in model._meta.fetch_fields or field in self.annotations:
             # return as is to get whole model objects
+            return lambda x: x
+
+        if field in [x[1] for x in model._meta.db_native_fields]:
             return lambda x: x
 
         if field in model._meta.fields_map:
@@ -794,7 +797,7 @@ class ValuesListQuery(FieldSelectQuery):
         if self._db is None:
             self._db = self.model._meta.db  # type: ignore
         self._make_query()
-        return self._execute().__await__()
+        return self._execute().__await__()  # pylint: disable=E1101
 
     async def __aiter__(self) -> AsyncIterator[Any]:
         for val in await self:
@@ -808,8 +811,11 @@ class ValuesListQuery(FieldSelectQuery):
         ]
         if self.flat:
             func = columns[0][1]
-            return [func(entry["0"]) for entry in result]
-        return [tuple(func(entry[column]) for column, func in columns) for entry in result]
+            flatmap = lambda entry: func(entry["0"])  # noqa
+            return list(map(flatmap, result))
+
+        listmap = lambda entry: tuple(func(entry[column]) for column, func in columns)  # noqa
+        return list(map(listmap, result))
 
 
 class ValuesQuery(FieldSelectQuery):
@@ -870,7 +876,7 @@ class ValuesQuery(FieldSelectQuery):
         if self._db is None:
             self._db = self.model._meta.db  # type: ignore
         self._make_query()
-        return self._execute().__await__()
+        return self._execute().__await__()  # pylint: disable=E1101
 
     async def __aiter__(self) -> AsyncIterator[dict]:
         for val in await self:
@@ -882,4 +888,6 @@ class ValuesQuery(FieldSelectQuery):
             (alias, self.resolve_to_python_value(self.model, field_name))
             for alias, field_name in self.fields_for_select.items()
         ]
-        return [{key: func(entry[key]) for key, func in columns} for entry in result]
+
+        dictmap = lambda entry: {key: func(entry[key]) for key, func in columns}  # noqa
+        return list(map(dictmap, result))

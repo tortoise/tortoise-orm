@@ -44,7 +44,7 @@ class Team(Model):
 
     class Meta:
         table_description = "The TEAMS!"
-        indexes = ("manager", "key")
+        indexes = [("manager", "key"), ["manager_id", "name"]]
 
 
 class SourceFields(Model):

@@ -51,7 +51,7 @@ class BaseExecutor:
                 else:
                     self.column_map[column] = field_object.to_db_value
 
-            table = Table(self.model._meta.table)
+            table = self.model._meta.basetable
             self.delete_query = str(
                 self.model._meta.basequery.where(
                     table[self.model._meta.db_pk_field] == self.Parameter(0)
@@ -111,7 +111,7 @@ class BaseExecutor:
         # Each db has it's own methods for it, so each implementation should
         # go to descendant executors
         return str(
-            self.db.query_class.into(Table(self.model._meta.table))
+            self.db.query_class.into(self.model._meta.basetable)
             .columns(*columns)
             .insert(*[self.Parameter(i) for i in range(len(columns))])
         )
@@ -149,7 +149,7 @@ class BaseExecutor:
         if key in self.update_cache:
             return self.update_cache[key]
 
-        table = Table(self.model._meta.table)
+        table = self.model._meta.basetable
         query = self.db.query_class.update(table)
         count = 0
         for field in update_fields or self.model._meta.fields_db_projection.keys():
@@ -251,7 +251,7 @@ class BaseExecutor:
             .where(through_table[field_object.backward_key].isin(instance_id_set))
         )
 
-        related_query_table = Table(related_query.model._meta.table)
+        related_query_table = related_query.model._meta.basetable
         related_pk_field = related_query.model._meta.db_pk_field
         query = (
             related_query.query.join(subquery)

@@ -7,6 +7,8 @@ from copy import deepcopy
 from inspect import isclass
 from typing import Any, Coroutine, Dict, List, Optional, Tuple, Type, Union, cast
 
+from pypika import Table
+
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
@@ -519,6 +521,7 @@ class Tortoise:
         for app in cls.apps.values():
             for model in app.values():
                 model._meta.finalise_model()
+                model._meta.basetable = Table(model._meta.table)
                 model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
                 model._meta.basequery_all_fields = model._meta.basequery.select(
                     *model._meta.db_fields

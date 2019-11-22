@@ -153,7 +153,8 @@ CREATE TABLE "team" (
     "key" INT NOT NULL,
     "manager_id" VARCHAR(50) REFERENCES "team" ("name") ON DELETE CASCADE
 ) /* The TEAMS! */;
-CREATE INDEX "idx_team_manager_4afe4a" ON "team" ("manager", "key");
+CREATE INDEX "idx_team_manager_676134" ON "team" ("manager_id", "key");
+CREATE INDEX "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
 CREATE TABLE "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL  /* Tournament name */,
@@ -216,7 +217,8 @@ CREATE TABLE IF NOT EXISTS "team" (
     "key" INT NOT NULL,
     "manager_id" VARCHAR(50) REFERENCES "team" ("name") ON DELETE CASCADE
 ) /* The TEAMS! */;
-CREATE INDEX IF NOT EXISTS "idx_team_manager_4afe4a" ON "team" ("manager", "key");
+CREATE INDEX IF NOT EXISTS "idx_team_manager_676134" ON "team" ("manager_id", "key");
+CREATE INDEX IF NOT EXISTS "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL  /* Tournament name */,
@@ -344,7 +346,8 @@ CREATE TABLE `team` (
     `key` INT NOT NULL,
     `manager_id` VARCHAR(50),
     CONSTRAINT `fk_team_team_9c77cd8f` FOREIGN KEY (`manager_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
-    KEY `idx_team_manager_4afe4a` (`manager`, `key`)
+    KEY `idx_team_manager_676134` (`manager_id`, `key`),
+    KEY `idx_team_manager_ef8f69` (`manager_id`, `name`)
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -417,7 +420,8 @@ CREATE TABLE IF NOT EXISTS `team` (
     `key` INT NOT NULL,
     `manager_id` VARCHAR(50),
     CONSTRAINT `fk_team_team_9c77cd8f` FOREIGN KEY (`manager_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
-    KEY `idx_team_manager_4afe4a` (`manager`, `key`)
+    KEY `idx_team_manager_676134` (`manager_id`, `key`),
+    KEY `idx_team_manager_ef8f69` (`manager_id`, `name`)
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
 CREATE TABLE IF NOT EXISTS `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -533,7 +537,8 @@ CREATE TABLE "team" (
     "key" INT NOT NULL,
     "manager_id" VARCHAR(50) REFERENCES "team" ("name") ON DELETE CASCADE
 );
-CREATE INDEX "idx_team_manager_4afe4a" ON "team" ("manager", "key");
+CREATE INDEX "idx_team_manager_676134" ON "team" ("manager_id", "key");
+CREATE INDEX "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
 COMMENT ON COLUMN "team"."name" IS 'The TEAM name (and PK)';
 COMMENT ON TABLE "team" IS 'The TEAMS!';
 CREATE TABLE "tournament" (
@@ -606,7 +611,8 @@ CREATE TABLE IF NOT EXISTS "team" (
     "key" INT NOT NULL,
     "manager_id" VARCHAR(50) REFERENCES "team" ("name") ON DELETE CASCADE
 );
-CREATE INDEX IF NOT EXISTS "idx_team_manager_4afe4a" ON "team" ("manager", "key");
+CREATE INDEX IF NOT EXISTS "idx_team_manager_676134" ON "team" ("manager_id", "key");
+CREATE INDEX IF NOT EXISTS "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
 COMMENT ON COLUMN "team"."name" IS 'The TEAM name (and PK)';
 COMMENT ON TABLE "team" IS 'The TEAMS!';
 CREATE TABLE IF NOT EXISTS "tournament" (

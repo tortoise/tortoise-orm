@@ -6,7 +6,7 @@ from tortoise.exceptions import ParamsError
 
 current_transaction_map: dict = {}
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import (
         BaseDBAsyncClient,
         BaseTransactionWrapper,
@@ -67,7 +67,9 @@ def atomic(connection_name: Optional[str] = None) -> Callable:
     return wrapper
 
 
-async def start_transaction(connection_name: Optional[str] = None) -> "BaseTransactionWrapper":
+async def start_transaction(
+    connection_name: Optional[str] = None,
+) -> "BaseTransactionWrapper":  # pragma: nocoverage
     """
     Function to manually control your transaction.
 
