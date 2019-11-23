@@ -446,6 +446,11 @@ class StraightFields(Model):
     )
     fkrev: fields.ReverseRelation["StraightFields"]
 
+    o2o: fields.OneToOneNullableRelation["StraightFields"] = fields.OneToOneField(
+        "models.StraightFields", related_name="o2o_rev", null=True, description="Line"
+    )
+    o2o_rev: fields.Field
+
     rel_to: fields.ManyToManyRelation["StraightFields"] = fields.ManyToManyField(
         "models.StraightFields", related_name="rel_from", description="M2M to myself"
     )
@@ -471,6 +476,15 @@ class SourceFields(Model):
         description="Tree!",
     )
     fkrev: fields.ReverseRelation["SourceFields"]
+
+    o2o: fields.OneToOneNullableRelation["SourceFields"] = fields.OneToOneField(
+        "models.SourceFields",
+        related_name="o2o_rev",
+        null=True,
+        source_field="o2o_sometable",
+        description="Line",
+    )
+    o2o_rev: fields.Field
 
     rel_to: fields.ManyToManyRelation["SourceFields"] = fields.ManyToManyField(
         "models.SourceFields",

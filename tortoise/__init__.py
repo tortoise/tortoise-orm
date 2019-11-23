@@ -74,6 +74,8 @@ class Tortoise:
                     "data_fields":          [...]   # Data fields
                     "fk_fields":            [...]   # Foreign Key fields FROM this model
                     "backward_fk_fields":   [...]   # Foreign Key fields TO this model
+                    "o2o_fields":           [...]  # OneToOne fields FROM this model
+                    "backward_o2o_fields":  [...]  # OneToOne fields TO this model
                     "m2m_fields":           [...]   # Many-to-Many fields
                 }
 
@@ -202,6 +204,16 @@ class Tortoise:
                 describe_field(name)
                 for name in model._meta.fields_map.keys()
                 if name in model._meta.backward_fk_fields
+            ],
+            "o2o_fields": [
+                describe_field(name)
+                for name in model._meta.fields_map.keys()
+                if name in model._meta.o2o_fields
+            ],
+            "backward_o2o_fields": [
+                describe_field(name)
+                for name in model._meta.fields_map.keys()
+                if name in model._meta.backward_o2o_fields
             ],
             "m2m_fields": [
                 describe_field(name)
