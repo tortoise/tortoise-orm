@@ -170,7 +170,9 @@ class Q:
 
     def __init__(self, *args: "Q", join_type=AND, **kwargs) -> None:
         if args and kwargs:
-            raise OperationalError("You can pass only Q nodes or filter kwargs in one Q node")
+            newarg = Q(join_type=join_type, **kwargs)
+            args = (newarg,) + args
+            kwargs = {}
         if not all(isinstance(node, Q) for node in args):
             raise OperationalError("All ordered arguments must be Q nodes")
         self.children: Tuple[Q, ...] = args

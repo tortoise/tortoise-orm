@@ -72,12 +72,6 @@ class TestQ(_TestCase):
         with self.assertRaisesRegex(OperationalError, "AND operation requires a Q node"):
             Q() & 2  # pylint: disable=W0106
 
-    def test_q_both(self):
-        with self.assertRaisesRegex(
-            OperationalError, "You can pass only Q nodes or filter kwargs in one Q node"
-        ):
-            Q(Q(), moo="cow")
-
     def test_q_notq(self):
         with self.assertRaisesRegex(OperationalError, "All ordered arguments must be Q nodes"):
             Q(Q(), 1)
@@ -145,6 +139,11 @@ class TestQCall(TestCase):
         r = q.resolve(IntFields, {}, {})
         self.assertEqual(r.where_criterion.get_sql(), '"intnum"=80 AND ("id"<5 OR "id">50)')
 
+    def test_q_complex_int3(self):
+        q = Q(Q(id__lt=5, id__gt=50, join_type="OR"), join_type="AND", intnum=80)
+        r = q.resolve(IntFields, {}, {})
+        self.assertEqual(r.where_criterion.get_sql(), '"intnum"=80 AND ("id"<5 OR "id">50)')
+
     def test_q_complex_char(self):
         q = Q(Q(char_null=80), ~Q(char__lt=5, char__gt=50, join_type="OR"), join_type="AND")
         r = q.resolve(CharFields, {}, {})
@@ -159,6 +158,14 @@ class TestQCall(TestCase):
             ~Q(Q(char__lt="5"), Q(char__gt="50"), join_type="OR"),
             join_type="AND",
         )
+        r = q.resolve(CharFields, {}, {})
+        self.assertEqual(
+            r.where_criterion.get_sql(),
+            "\"char_null\"='80' AND NOT (\"char\"<'5' OR \"char\">'50')",
+        )
+
+    def test_q_complex_char3(self):
+        q = Q(~Q(char__lt=5, char__gt=50, join_type="OR"), join_type="AND", char_null=80)
         r = q.resolve(CharFields, {}, {})
         self.assertEqual(
             r.where_criterion.get_sql(),

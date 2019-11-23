@@ -16,6 +16,7 @@ New features:
     - PostgreSQL prepared queries now use a LRU cache for significant >2x speedup on inserts/updates/deletes
 - ``DateField`` & ``DatetimeField`` deserializes faster on PostgreSQL & MySQL.
 - Optimized ``.values()`` to do less copying, resulting in a slight speedup.
+- One can now pass kwargs and ``Q()`` objects as parameters to ``Q()`` objects simultaneously.
 
 Deprecations:
 ^^^^^^^^^^^^^
