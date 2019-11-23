@@ -235,7 +235,12 @@ class MetaInfo:
             field = self.fields_map[model_field]
 
             default_converter = field.__class__.to_python_value is fields.Field.to_python_value
-            if not default_converter:
+            if (
+                field.skip_to_python_if_native
+                and field.field_type in self.db.executor_class.DB_NATIVE
+            ):
+                self.db_native_fields.append((key, model_field, field))
+            elif not default_converter:
                 self.db_complex_fields.append((key, model_field, field))
             elif field.field_type in self.db.executor_class.DB_NATIVE:
                 self.db_native_fields.append((key, model_field, field))

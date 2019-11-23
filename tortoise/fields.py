@@ -87,6 +87,7 @@ class Field(metaclass=_FieldMeta):
     # Field_type is a readonly property for the instance, it is set by _FieldMeta
     field_type: Type[Any] = None  # type: ignore
     indexable: bool = True
+    skip_to_python_if_native = False
 
     __slots__ = (
         "source_field",
@@ -279,6 +280,7 @@ class DatetimeField(Field, datetime.datetime):
     """
 
     __slots__ = ("auto_now", "auto_now_add")
+    skip_to_python_if_native = True
 
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs) -> None:
         if auto_now_add and auto_now:
@@ -312,6 +314,7 @@ class DateField(Field, datetime.date):
     """
 
     __slots__ = ()
+    skip_to_python_if_native = True
 
     def to_python_value(self, value: Any) -> Optional[datetime.date]:
         if value is None or isinstance(value, datetime.date):

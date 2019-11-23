@@ -1,3 +1,4 @@
+import types
 from copy import copy
 from typing import (
     TYPE_CHECKING,
@@ -883,11 +884,19 @@ class ValuesQuery(FieldSelectQuery):
             yield val
 
     async def _execute(self) -> List[dict]:
-        result = await self._db.execute_query(str(self.query))
+        result = await self._db.execute_query_dict(str(self.query))
         columns = [
-            (alias, self.resolve_to_python_value(self.model, field_name))
-            for alias, field_name in self.fields_for_select.items()
+            val
+            for val in [
+                (alias, self.resolve_to_python_value(self.model, field_name))
+                for alias, field_name in self.fields_for_select.items()
+            ]
+            if not isinstance(val[1], types.LambdaType)
         ]
 
-        dictmap = lambda entry: {key: func(entry[key]) for key, func in columns}  # noqa
-        return list(map(dictmap, result))
+        if columns:
+            for row in result:
+                for col, func in columns:
+                    row[col] = func(row[col])
+
+        return result
