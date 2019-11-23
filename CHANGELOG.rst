@@ -30,6 +30,7 @@ Deprecations:
 Bugfixes:
 ^^^^^^^^^
 - ``indexes`` will correctly map the foreign key if referenced by name.
+- Setting DB generated PK in constructor/create generates exception instead of silently being ignored.
 
 0.14.2
 ------

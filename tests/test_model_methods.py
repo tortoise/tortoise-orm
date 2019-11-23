@@ -19,6 +19,14 @@ class TestModelMethods(test.TestCase):
         await self.mdl.save()
         self.assertEqual(self.mdl.id, oldid)
 
+    def test_construct_custom_id(self):
+        with self.assertRaisesRegex(ValueError, "id is DB generated"):
+            self.cls(id=218028, name="Test")
+
+    async def test_save_custom_id(self):
+        with self.assertRaisesRegex(ValueError, "id is DB generated"):
+            await self.cls.create(id=218028, name="Test")
+
     async def test_save_full(self):
         self.mdl.name = "TestS"
         self.mdl.desc = "Something"

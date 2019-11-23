@@ -418,6 +418,8 @@ class Model(metaclass=ModelMeta):
                 passed_fields.add(meta.fields_map[key].source_field)  # type: ignore
             elif key in meta.fields_db_projection:
                 field_object = meta.fields_map[key]
+                if field_object.generated:
+                    raise ValueError(f"{key} is DB generated, and can't be set from constructor.")
                 if value is None and not field_object.null:
                     raise ValueError(f"{key} is non nullable field, but null was passed")
                 setattr(self, key, field_object.to_python_value(value))
