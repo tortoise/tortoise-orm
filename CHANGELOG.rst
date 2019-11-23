@@ -18,6 +18,11 @@ New features:
 - Optimized ``.values()`` to do less copying, resulting in a slight speedup.
 - One can now pass kwargs and ``Q()`` objects as parameters to ``Q()`` objects simultaneously.
 
+Bugfixes:
+^^^^^^^^^
+- ``indexes`` will correctly map the foreign key if referenced by name.
+- Setting DB generated PK in constructor/create generates exception instead of silently being ignored.
+
 Deprecations:
 ^^^^^^^^^^^^^
 - ``start_transaction`` is deprecated, please use ``@atomic()`` or ``async with in_transaction():`` instead.
@@ -27,11 +32,6 @@ Deprecations:
   in comparison to the built-in in Python 3.7+.
 
   There is a known context confusion, specifically regarding nested transactions.
-
-Bugfixes:
-^^^^^^^^^
-- ``indexes`` will correctly map the foreign key if referenced by name.
-- Setting DB generated PK in constructor/create generates exception instead of silently being ignored.
 
 0.14.2
 ------
