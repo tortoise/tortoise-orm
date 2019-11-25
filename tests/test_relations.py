@@ -138,7 +138,7 @@ class TestRelations(test.TestCase):
     async def test_o2o_lazy(self):
         tournament = await Tournament.create(name="tournament")
         event = await Event.create(name="First", tournament=tournament)
-        address = await Address.create(city="Santa Monica", street="Ocean", event=event)
+        await Address.create(city="Santa Monica", street="Ocean", event=event)
 
         fetched_address = await event.address
         self.assertEqual(fetched_address.city, "Santa Monica")

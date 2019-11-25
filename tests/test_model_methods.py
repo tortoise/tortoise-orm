@@ -147,7 +147,8 @@ class TestModelConstructor(test.TestCase):
 
     async def test_rev_o2o(self):
         with self.assertRaisesRegex(
-            ConfigurationError, "You can't set backward one to one relations through init, change related model instead"
+            ConfigurationError, "You can't set backward one to one relations through init, "
+                                "change related model instead"
         ):
             address = await Address.create(city="Santa Monica", street="Ocean")
             await Event(name="a", address=address)

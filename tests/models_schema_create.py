@@ -51,7 +51,11 @@ class TeamAddress(Model):
     city = fields.CharField(max_length=50, description="City")
     country = fields.CharField(max_length=50, description="Country")
     street = fields.CharField(max_length=128, description="Street Address")
-    team = fields.OneToOneField("models.Team", related_name="address", on_delete=fields.CASCADE, pk=True)
+    team = fields.OneToOneField(
+        "models.Team",
+        related_name="address",
+        on_delete=fields.CASCADE, pk=True
+    )
 
 
 class VenueInformation(Model):

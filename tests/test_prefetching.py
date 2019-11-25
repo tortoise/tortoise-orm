@@ -55,7 +55,7 @@ class TestPrefetching(test.TestCase):
     async def test_prefetch_o2o(self):
         tournament = await Tournament.create(name="tournament")
         event = await Event.create(name="First", tournament=tournament)
-        address = await Address.create(city="Santa Monica", street="Ocean", event=event)
+        await Address.create(city="Santa Monica", street="Ocean", event=event)
 
         fetched_events = (
             await Event.all().prefetch_related("address").first()
