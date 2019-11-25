@@ -98,3 +98,24 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
                     },
                 }
             )
+
+    async def test_no_app_in_o2o_reference_init(self):
+        with self.assertRaisesRegex(
+            ConfigurationError, 'OneToOneField accepts model name in format "app.Model"'
+        ):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "credentials": {"file_path": ":memory:"},
+                        }
+                    },
+                    "apps": {
+                        "models": {
+                            "models": ["tests.model_bad_rel5"],
+                            "default_connection": "default",
+                        }
+                    },
+                }
+            )

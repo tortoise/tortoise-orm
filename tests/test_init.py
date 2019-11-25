@@ -72,6 +72,24 @@ class TestInitErrors(test.SimpleTestCase):
                 }
             )
 
+    async def test_dup3_init(self):
+        with self.assertRaisesRegex(
+            ConfigurationError, 'backward relation "event" duplicates in model Tournament'
+        ):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "credentials": {"file_path": ":memory:"},
+                        }
+                    },
+                    "apps": {
+                        "models": {"models": ["tests.models_dup3"], "default_connection": "default"}
+                    },
+                }
+            )
+
     async def test_generated_nonint(self):
         with self.assertRaisesRegex(
             ConfigurationError, "Generated primary key allowed only for IntField and BigIntField"
