@@ -2,6 +2,7 @@ import datetime
 import functools
 import json
 from decimal import Decimal
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Awaitable, Generic, Optional, Type, TypeVar, Union
 from uuid import UUID, uuid4
 
@@ -405,6 +406,76 @@ class UUIDField(Field, UUID):
         if value is None or isinstance(value, UUID):
             return value
         return UUID(value)
+
+
+class EnumField(fields.SmallIntField):
+    """
+    Enum Field
+
+    A field representing an integer enumeration.
+
+    The description of the field is set automatically if not specified to a multiline list of
+    "name: value" pairs.
+
+    ``enum_type``:
+        The enum class
+    """
+    __slots__ = ('enum_type',)
+
+    def __init__(self, enum_type: Type[Enum], description: str = None, **kwargs) -> None:
+        try:
+            if description is None:
+                # Check and create description
+                description = "\n".join([f"{e.name}: {int(e.value)}" for e in enum_type])[:2048]
+            else:
+                # Just check if it is numeric enum
+                [int(e.value) for e in enum_type]
+        except ValueError:
+            raise ValueError("EnumField only supports integer enums!")
+        super().__init__(description=description, **kwargs)
+        self.enum_type = enum_type
+
+    def to_python_value(self, value: int) -> Enum:
+        return self.enum_type(value) if value is not None else None
+
+    def to_db_value(self, value: Enum, instance) -> int:
+        return int(value.value) if value is not None else None
+
+
+class CharEnumField(fields.CharField):
+    """
+    Char Enum Field
+
+    A field representing a character enumeration.
+
+    The description of the field is set automatically if not specified to a multiline list of
+    "name: value" pairs.
+
+    ``enum_type``:
+        The enum class
+    """
+    __slots__ = ('enum_type',)
+
+    def __init__(self, enum_type: Type[Enum], description: str = None,
+                 max_length=0, **kwargs) -> None:
+        if description is None:
+            # Check and create description
+            description = "\n".join([f"{e.name}: {str(e.value)}" for e in enum_type])[:2048]
+
+        if max_length == 0:
+            for e in enum_type:
+                el = len(str(e.value))
+                if el > max_length:
+                    max_length = el
+
+        super().__init__(description=description, max_length=max_length, **kwargs)
+        self.enum_type = enum_type
+
+    def to_python_value(self, value: int) -> Enum:
+        return self.enum_type(value) if value is not None else None
+
+    def to_db_value(self, value: Enum, instance) -> str:
+        return str(value.value) if value is not None else None
 
 
 ForeignKeyNullableRelation = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
