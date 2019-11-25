@@ -429,7 +429,7 @@ class EnumField(fields.SmallIntField):
                 description = "\n".join([f"{e.name}: {int(e.value)}" for e in enum_type])[:2048]
             else:
                 # Just check if it is numeric enum
-                [int(e.value) for e in enum_type]
+                assert [int(e.value) for e in enum_type]
         except ValueError:
             raise ValueError("EnumField only supports integer enums!")
         super().__init__(description=description, **kwargs)
