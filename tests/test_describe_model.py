@@ -107,11 +107,11 @@ class TestBasic(test.TestCase):
                         'description': 'Line',
                         'field_type': 'IntField',
                         'generated': False,
-                        'indexed': False,
+                        'indexed': True,
                         'name': 'o2o_id',
                         'nullable': True,
                         'python_type': 'int',
-                        'unique': False
+                        'unique': True
                     }
                 ],
                 "fk_fields": [
@@ -147,12 +147,12 @@ class TestBasic(test.TestCase):
                         'description': 'Line',
                         'field_type': 'OneToOneField',
                         'generated': False,
-                        'indexed': False,
+                        'indexed': True,
                         'name': 'o2o',
                         'nullable': True,
                         'python_type': 'models.StraightFields',
                         'raw_field': 'o2o_id',
-                        'unique': False
+                        'unique': True
                     }
                 ],
                 'backward_o2o_fields': [
@@ -263,8 +263,8 @@ class TestBasic(test.TestCase):
                         'python_type': int,
                         'generated': False,
                         'nullable': True,
-                        'unique': False,
-                        'indexed': False,
+                        'unique': True,
+                        'indexed': True,
                         'default': None,
                         'description': 'Line',
                     },
@@ -302,12 +302,12 @@ class TestBasic(test.TestCase):
                         'description': 'Line',
                         'field_type': fields.OneToOneField,
                         'generated': False,
-                        'indexed': False,
+                        'indexed': True,
                         'name': 'o2o',
                         'nullable': True,
                         'python_type': StraightFields,
                         'raw_field': 'o2o_id',
-                        'unique': False
+                        'unique': True
                     },
                 ],
                 'backward_o2o_fields': [
@@ -418,8 +418,8 @@ class TestBasic(test.TestCase):
                         'python_type': 'int',
                         'generated': False,
                         'nullable': True,
-                        'unique': False,
-                        'indexed': False,
+                        'unique': True,
+                        'indexed': True,
                         'default': None,
                         'description': 'Line',
                     },
@@ -457,12 +457,12 @@ class TestBasic(test.TestCase):
                         'description': 'Line',
                         'field_type': 'OneToOneField',
                         'generated': False,
-                        'indexed': False,
+                        'indexed': True,
                         'name': 'o2o',
                         'nullable': True,
                         'python_type': 'models.SourceFields',
                         'raw_field': 'o2o_id',
-                        'unique': False
+                        'unique': True
                     }
                 ],
                 'backward_o2o_fields': [
@@ -572,8 +572,8 @@ class TestBasic(test.TestCase):
                         'python_type': int,
                         'generated': False,
                         'nullable': True,
-                        'unique': False,
-                        'indexed': False,
+                        'unique': True,
+                        'indexed': True,
                         'default': None,
                         'description': 'Line',
                     }
@@ -611,12 +611,12 @@ class TestBasic(test.TestCase):
                         'description': 'Line',
                         'field_type': fields.OneToOneField,
                         'generated': False,
-                        'indexed': False,
+                        'indexed': True,
                         'name': 'o2o',
                         'nullable': True,
                         'python_type': SourceFields,
                         'raw_field': 'o2o_id',
-                        'unique': False
+                        'unique': True
                     }
                 ],
                 'backward_o2o_fields': [

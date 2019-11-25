@@ -142,6 +142,11 @@ CREATE TABLE "inheritedmodel" (
     "two" VARCHAR(40) NOT NULL,
     "name" TEXT NOT NULL
 );
+CREATE TABLE "locationinformation" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "capacity" INT NOT NULL,
+    "rent" REAL NOT NULL
+);
 CREATE TABLE "sometable" (
     "sometable_id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "some_chars_table" VARCHAR(255) NOT NULL,
@@ -155,6 +160,13 @@ CREATE TABLE "team" (
 ) /* The TEAMS! */;
 CREATE INDEX "idx_team_manager_676134" ON "team" ("manager_id", "key");
 CREATE INDEX "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
+CREATE TABLE "teamaddress" (
+    "city" VARCHAR(50) NOT NULL  /* City */,
+    "country" VARCHAR(50) NOT NULL  /* Country */,
+    "street" VARCHAR(128) NOT NULL  /* Street Address */,
+    "information_id" INT  UNIQUE REFERENCES "locationinformation" ("id") ON DELETE SET NULL,
+    "team_id" VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+);
 CREATE TABLE "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL  /* Tournament name */,
@@ -206,6 +218,11 @@ CREATE TABLE IF NOT EXISTS "inheritedmodel" (
     "two" VARCHAR(40) NOT NULL,
     "name" TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS "locationinformation" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "capacity" INT NOT NULL,
+    "rent" REAL NOT NULL
+);
 CREATE TABLE IF NOT EXISTS "sometable" (
     "sometable_id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "some_chars_table" VARCHAR(255) NOT NULL,
@@ -219,6 +236,13 @@ CREATE TABLE IF NOT EXISTS "team" (
 ) /* The TEAMS! */;
 CREATE INDEX IF NOT EXISTS "idx_team_manager_676134" ON "team" ("manager_id", "key");
 CREATE INDEX IF NOT EXISTS "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
+CREATE TABLE IF NOT EXISTS "teamaddress" (
+    "city" VARCHAR(50) NOT NULL  /* City */,
+    "country" VARCHAR(50) NOT NULL  /* Country */,
+    "street" VARCHAR(128) NOT NULL  /* Street Address */,
+    "team_id" VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE,
+    "information_id" INT  UNIQUE REFERENCES "locationinformation" ("id") ON DELETE SET NULL
+);
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL  /* Tournament name */,
@@ -334,6 +358,11 @@ CREATE TABLE `inheritedmodel` (
     `two` VARCHAR(40) NOT NULL,
     `name` TEXT NOT NULL
 ) CHARACTER SET utf8mb4;
+CREATE TABLE `locationinformation` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `capacity` INT NOT NULL,
+    `rent` DOUBLE NOT NULL
+) CHARACTER SET utf8mb4;
 CREATE TABLE `sometable` (
     `sometable_id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `some_chars_table` VARCHAR(255) NOT NULL,
@@ -349,6 +378,15 @@ CREATE TABLE `team` (
     KEY `idx_team_manager_676134` (`manager_id`, `key`),
     KEY `idx_team_manager_ef8f69` (`manager_id`, `name`)
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
+CREATE TABLE `teamaddress` (
+    `city` VARCHAR(50) NOT NULL  COMMENT 'City',
+    `country` VARCHAR(50) NOT NULL  COMMENT 'Country',
+    `street` VARCHAR(128) NOT NULL  COMMENT 'Street Address',
+    `team_id` VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY,
+    `information_id` INT  UNIQUE,
+    CONSTRAINT `fk_teamaddr_team_1c78d737` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
+    CONSTRAINT `fk_teamaddr_location_2d414c63` FOREIGN KEY (`information_id`) REFERENCES `locationinformation` (`id`) ON DELETE SET NULL
+) CHARACTER SET utf8mb4;
 CREATE TABLE `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL  COMMENT 'Tournament name',
@@ -408,6 +446,11 @@ CREATE TABLE IF NOT EXISTS `inheritedmodel` (
     `two` VARCHAR(40) NOT NULL,
     `name` TEXT NOT NULL
 ) CHARACTER SET utf8mb4;
+CREATE TABLE IF NOT EXISTS `locationinformation` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `capacity` INT NOT NULL,
+    `rent` DOUBLE NOT NULL
+) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `sometable` (
     `sometable_id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `some_chars_table` VARCHAR(255) NOT NULL,
@@ -423,6 +466,15 @@ CREATE TABLE IF NOT EXISTS `team` (
     KEY `idx_team_manager_676134` (`manager_id`, `key`),
     KEY `idx_team_manager_ef8f69` (`manager_id`, `name`)
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
+CREATE TABLE IF NOT EXISTS `teamaddress` (
+    `city` VARCHAR(50) NOT NULL  COMMENT 'City',
+    `country` VARCHAR(50) NOT NULL  COMMENT 'Country',
+    `street` VARCHAR(128) NOT NULL  COMMENT 'Street Address',
+    `team_id` VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY,
+    `information_id` INT  UNIQUE,
+    CONSTRAINT `fk_teamaddr_team_1c78d737` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
+    CONSTRAINT `fk_teamaddr_location_2d414c63` FOREIGN KEY (`information_id`) REFERENCES `locationinformation` (`id`) ON DELETE SET NULL
+) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL  COMMENT 'Tournament name',
@@ -526,6 +578,11 @@ CREATE TABLE "inheritedmodel" (
     "two" VARCHAR(40) NOT NULL,
     "name" TEXT NOT NULL
 );
+CREATE TABLE "locationinformation" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "capacity" INT NOT NULL,
+    "rent" DOUBLE PRECISION NOT NULL
+);
 CREATE TABLE "sometable" (
     "sometable_id" SERIAL NOT NULL PRIMARY KEY,
     "some_chars_table" VARCHAR(255) NOT NULL,
@@ -541,6 +598,16 @@ CREATE INDEX "idx_team_manager_676134" ON "team" ("manager_id", "key");
 CREATE INDEX "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
 COMMENT ON COLUMN "team"."name" IS 'The TEAM name (and PK)';
 COMMENT ON TABLE "team" IS 'The TEAMS!';
+CREATE TABLE "teamaddress" (
+    "city" VARCHAR(50) NOT NULL,
+    "country" VARCHAR(50) NOT NULL,
+    "street" VARCHAR(128) NOT NULL,
+    "team_id" VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE,
+    "information_id" INT  UNIQUE REFERENCES "locationinformation" ("id") ON DELETE SET NULL
+);
+COMMENT ON COLUMN "teamaddress"."city" IS 'City';
+COMMENT ON COLUMN "teamaddress"."country" IS 'Country';
+COMMENT ON COLUMN "teamaddress"."street" IS 'Street Address';
 CREATE TABLE "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
@@ -600,6 +667,11 @@ CREATE TABLE IF NOT EXISTS "inheritedmodel" (
     "two" VARCHAR(40) NOT NULL,
     "name" TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS "locationinformation" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "capacity" INT NOT NULL,
+    "rent" DOUBLE PRECISION NOT NULL
+);
 CREATE TABLE IF NOT EXISTS "sometable" (
     "sometable_id" SERIAL NOT NULL PRIMARY KEY,
     "some_chars_table" VARCHAR(255) NOT NULL,
@@ -620,6 +692,16 @@ CREATE TABLE IF NOT EXISTS "tournament" (
     "name" VARCHAR(100) NOT NULL,
     "created" TIMESTAMP NOT NULL
 );
+CREATE TABLE IF NOT EXISTS "teamaddress" (
+    "city" VARCHAR(50) NOT NULL,
+    "country" VARCHAR(50) NOT NULL,
+    "street" VARCHAR(128) NOT NULL,
+    "team_id" VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE,
+    "information_id" INT  UNIQUE REFERENCES "locationinformation" ("id") ON DELETE SET NULL
+);
+COMMENT ON COLUMN "teamaddress"."city" IS 'City';
+COMMENT ON COLUMN "teamaddress"."country" IS 'Country';
+COMMENT ON COLUMN "teamaddress"."street" IS 'Street Address';
 CREATE INDEX IF NOT EXISTS "idx_tournament_name_6fe200" ON "tournament" ("name");
 COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
 COMMENT ON COLUMN "tournament"."created" IS 'Created */''`/* datetime';

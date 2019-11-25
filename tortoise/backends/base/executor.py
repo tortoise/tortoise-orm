@@ -220,9 +220,6 @@ class BaseExecutor:
         related_object_map: dict = {}
         for entry in related_object_list:
             object_id = getattr(entry, relation_field)
-            if object_id in related_object_map:
-                raise Exception("More than one related object in One To One relation")
-
             related_object_map[object_id] = entry
 
         for instance in instance_list:

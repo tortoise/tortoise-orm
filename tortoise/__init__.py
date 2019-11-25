@@ -353,6 +353,7 @@ class Tortoise:
                     key_o2o_object.index = o2o_object.index
                     key_o2o_object.default = o2o_object.default
                     key_o2o_object.null = o2o_object.null
+                    key_o2o_object.unique = o2o_object.unique
                     key_o2o_object.generated = o2o_object.generated
                     key_o2o_object.reference = o2o_object
                     key_o2o_object.description = o2o_object.description
@@ -374,7 +375,7 @@ class Tortoise:
                             f" model {related_model_name}"
                         )
                     o2o_relation = fields.BackwardOneToOneRelation(
-                        model, f"{field}_id", o2o_object.null, o2o_object.description
+                        model, f"{field}_id", null=True, description=o2o_object.description
                     )
                     related_model._meta.add_field(backward_relation_name, o2o_relation)
 
@@ -404,7 +405,7 @@ class Tortoise:
                     if not backward_relation_name:
                         backward_relation_name = (
                             m2m_object.related_name
-                        ) = f"{model._meta.table}_through"
+                        ) = f"{model._meta.table}s"
                     if backward_relation_name in related_model._meta.fields:
                         raise ConfigurationError(
                             f'backward relation "{backward_relation_name}" duplicates in'
