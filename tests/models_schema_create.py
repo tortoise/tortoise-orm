@@ -52,9 +52,7 @@ class TeamAddress(Model):
     country = fields.CharField(max_length=50, description="Country")
     street = fields.CharField(max_length=128, description="Street Address")
     team = fields.OneToOneField(
-        "models.Team",
-        related_name="address",
-        on_delete=fields.CASCADE, pk=True
+        "models.Team", related_name="address", on_delete=fields.CASCADE, pk=True
     )
 
 

@@ -67,7 +67,8 @@ class Address(Model):
     street = fields.CharField(max_length=128)
 
     event: fields.OneToOneRelation[Event] = fields.OneToOneField(
-        "models.Event", on_delete=fields.CASCADE, related_name="address", null=True)
+        "models.Event", on_delete=fields.CASCADE, related_name="address", null=True
+    )
 
 
 class Team(Model):

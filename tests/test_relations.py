@@ -1,4 +1,4 @@
-from tests.testmodels import Employee, Event, Team, Tournament, Address
+from tests.testmodels import Address, Employee, Event, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError, NoValuesFetched
 from tortoise.functions import Count

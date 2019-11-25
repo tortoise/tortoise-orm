@@ -102,17 +102,17 @@ class TestBasic(test.TestCase):
                         "description": "Tree!",
                     },
                     {
-                        'db_column': 'o2o_id',
-                        'default': None,
-                        'description': 'Line',
-                        'field_type': 'IntField',
-                        'generated': False,
-                        'indexed': True,
-                        'name': 'o2o_id',
-                        'nullable': True,
-                        'python_type': 'int',
-                        'unique': True
-                    }
+                        "db_column": "o2o_id",
+                        "default": None,
+                        "description": "Line",
+                        "field_type": "IntField",
+                        "generated": False,
+                        "indexed": True,
+                        "name": "o2o_id",
+                        "nullable": True,
+                        "python_type": "int",
+                        "unique": True,
+                    },
                 ],
                 "fk_fields": [
                     {
@@ -141,31 +141,31 @@ class TestBasic(test.TestCase):
                         "description": "Tree!",
                     }
                 ],
-                'o2o_fields': [
+                "o2o_fields": [
                     {
-                        'default': None,
-                        'description': 'Line',
-                        'field_type': 'OneToOneField',
-                        'generated': False,
-                        'indexed': True,
-                        'name': 'o2o',
-                        'nullable': True,
-                        'python_type': 'models.StraightFields',
-                        'raw_field': 'o2o_id',
-                        'unique': True
+                        "default": None,
+                        "description": "Line",
+                        "field_type": "OneToOneField",
+                        "generated": False,
+                        "indexed": True,
+                        "name": "o2o",
+                        "nullable": True,
+                        "python_type": "models.StraightFields",
+                        "raw_field": "o2o_id",
+                        "unique": True,
                     }
                 ],
-                'backward_o2o_fields': [
+                "backward_o2o_fields": [
                     {
-                        'default': None,
-                        'description': 'Line',
-                        'field_type': 'BackwardOneToOneRelation',
-                        'generated': False,
-                        'indexed': False,
-                        'name': 'o2o_rev',
-                        'nullable': True,
-                        'python_type': 'models.StraightFields',
-                        'unique': False
+                        "default": None,
+                        "description": "Line",
+                        "field_type": "BackwardOneToOneRelation",
+                        "generated": False,
+                        "indexed": False,
+                        "name": "o2o_rev",
+                        "nullable": True,
+                        "python_type": "models.StraightFields",
+                        "unique": False,
                     }
                 ],
                 "m2m_fields": [
@@ -257,16 +257,16 @@ class TestBasic(test.TestCase):
                         "description": "Tree!",
                     },
                     {
-                        'name': 'o2o_id',
-                        'field_type': fields.IntField,
-                        'db_column': 'o2o_id',
-                        'python_type': int,
-                        'generated': False,
-                        'nullable': True,
-                        'unique': True,
-                        'indexed': True,
-                        'default': None,
-                        'description': 'Line',
+                        "name": "o2o_id",
+                        "field_type": fields.IntField,
+                        "db_column": "o2o_id",
+                        "python_type": int,
+                        "generated": False,
+                        "nullable": True,
+                        "unique": True,
+                        "indexed": True,
+                        "default": None,
+                        "description": "Line",
                     },
                 ],
                 "fk_fields": [
@@ -296,31 +296,31 @@ class TestBasic(test.TestCase):
                         "description": "Tree!",
                     }
                 ],
-                'o2o_fields': [
+                "o2o_fields": [
                     {
-                        'default': None,
-                        'description': 'Line',
-                        'field_type': fields.OneToOneField,
-                        'generated': False,
-                        'indexed': True,
-                        'name': 'o2o',
-                        'nullable': True,
-                        'python_type': StraightFields,
-                        'raw_field': 'o2o_id',
-                        'unique': True
+                        "default": None,
+                        "description": "Line",
+                        "field_type": fields.OneToOneField,
+                        "generated": False,
+                        "indexed": True,
+                        "name": "o2o",
+                        "nullable": True,
+                        "python_type": StraightFields,
+                        "raw_field": "o2o_id",
+                        "unique": True,
                     },
                 ],
-                'backward_o2o_fields': [
+                "backward_o2o_fields": [
                     {
-                        'default': None,
-                        'description': 'Line',
-                        'field_type': fields.BackwardOneToOneRelation,
-                        'generated': False,
-                        'indexed': False,
-                        'name': 'o2o_rev',
-                        'nullable': True,
-                        'python_type': StraightFields,
-                        'unique': False
+                        "default": None,
+                        "description": "Line",
+                        "field_type": fields.BackwardOneToOneRelation,
+                        "generated": False,
+                        "indexed": False,
+                        "name": "o2o_rev",
+                        "nullable": True,
+                        "python_type": StraightFields,
+                        "unique": False,
                     },
                 ],
                 "m2m_fields": [
@@ -412,16 +412,16 @@ class TestBasic(test.TestCase):
                         "description": "Tree!",
                     },
                     {
-                        'name': 'o2o_id',
-                        'field_type': 'IntField',
-                        'db_column': 'o2o_sometable',
-                        'python_type': 'int',
-                        'generated': False,
-                        'nullable': True,
-                        'unique': True,
-                        'indexed': True,
-                        'default': None,
-                        'description': 'Line',
+                        "name": "o2o_id",
+                        "field_type": "IntField",
+                        "db_column": "o2o_sometable",
+                        "python_type": "int",
+                        "generated": False,
+                        "nullable": True,
+                        "unique": True,
+                        "indexed": True,
+                        "default": None,
+                        "description": "Line",
                     },
                 ],
                 "fk_fields": [
@@ -451,30 +451,31 @@ class TestBasic(test.TestCase):
                         "description": "Tree!",
                     }
                 ],
-                'o2o_fields': [
+                "o2o_fields": [
                     {
-                        'default': None,
-                        'description': 'Line',
-                        'field_type': 'OneToOneField',
-                        'generated': False,
-                        'indexed': True,
-                        'name': 'o2o',
-                        'nullable': True,
-                        'python_type': 'models.SourceFields',
-                        'raw_field': 'o2o_id',
-                        'unique': True
+                        "default": None,
+                        "description": "Line",
+                        "field_type": "OneToOneField",
+                        "generated": False,
+                        "indexed": True,
+                        "name": "o2o",
+                        "nullable": True,
+                        "python_type": "models.SourceFields",
+                        "raw_field": "o2o_id",
+                        "unique": True,
                     }
                 ],
-                'backward_o2o_fields': [
-                    {'default': None,
-                        'description': 'Line',
-                        'field_type': 'BackwardOneToOneRelation',
-                        'generated': False,
-                        'indexed': False,
-                        'name': 'o2o_rev',
-                        'nullable': True,
-                        'python_type': 'models.SourceFields',
-                        'unique': False
+                "backward_o2o_fields": [
+                    {
+                        "default": None,
+                        "description": "Line",
+                        "field_type": "BackwardOneToOneRelation",
+                        "generated": False,
+                        "indexed": False,
+                        "name": "o2o_rev",
+                        "nullable": True,
+                        "python_type": "models.SourceFields",
+                        "unique": False,
                     }
                 ],
                 "m2m_fields": [
@@ -566,17 +567,17 @@ class TestBasic(test.TestCase):
                         "description": "Tree!",
                     },
                     {
-                        'name': 'o2o_id',
-                        'field_type': fields.IntField,
-                        'db_column': 'o2o_sometable',
-                        'python_type': int,
-                        'generated': False,
-                        'nullable': True,
-                        'unique': True,
-                        'indexed': True,
-                        'default': None,
-                        'description': 'Line',
-                    }
+                        "name": "o2o_id",
+                        "field_type": fields.IntField,
+                        "db_column": "o2o_sometable",
+                        "python_type": int,
+                        "generated": False,
+                        "nullable": True,
+                        "unique": True,
+                        "indexed": True,
+                        "default": None,
+                        "description": "Line",
+                    },
                 ],
                 "fk_fields": [
                     {
@@ -605,31 +606,31 @@ class TestBasic(test.TestCase):
                         "description": "Tree!",
                     }
                 ],
-                'o2o_fields': [
+                "o2o_fields": [
                     {
-                        'default': None,
-                        'description': 'Line',
-                        'field_type': fields.OneToOneField,
-                        'generated': False,
-                        'indexed': True,
-                        'name': 'o2o',
-                        'nullable': True,
-                        'python_type': SourceFields,
-                        'raw_field': 'o2o_id',
-                        'unique': True
+                        "default": None,
+                        "description": "Line",
+                        "field_type": fields.OneToOneField,
+                        "generated": False,
+                        "indexed": True,
+                        "name": "o2o",
+                        "nullable": True,
+                        "python_type": SourceFields,
+                        "raw_field": "o2o_id",
+                        "unique": True,
                     }
                 ],
-                'backward_o2o_fields': [
+                "backward_o2o_fields": [
                     {
-                        'default': None,
-                        'description': 'Line',
-                        'field_type': fields.BackwardOneToOneRelation,
-                        'generated': False,
-                        'indexed': False,
-                        'name': 'o2o_rev',
-                        'nullable': True,
-                        'python_type': SourceFields,
-                        'unique': False,
+                        "default": None,
+                        "description": "Line",
+                        "field_type": fields.BackwardOneToOneRelation,
+                        "generated": False,
+                        "indexed": False,
+                        "name": "o2o_rev",
+                        "nullable": True,
+                        "python_type": SourceFields,
+                        "unique": False,
                     }
                 ],
                 "m2m_fields": [
@@ -709,8 +710,8 @@ class TestBasic(test.TestCase):
                         "description": None,
                     },
                 ],
-                'o2o_fields': [],
-                'backward_o2o_fields': [],
+                "o2o_fields": [],
+                "backward_o2o_fields": [],
                 "m2m_fields": [
                     {
                         "name": "peers",
@@ -777,8 +778,8 @@ class TestBasic(test.TestCase):
                         "description": None,
                     },
                 ],
-                'o2o_fields': [],
-                'backward_o2o_fields': [],
+                "o2o_fields": [],
+                "backward_o2o_fields": [],
                 "m2m_fields": [
                     {
                         "name": "peers",
@@ -859,8 +860,8 @@ class TestBasic(test.TestCase):
                 ],
                 "fk_fields": [],
                 "backward_fk_fields": [],
-                'o2o_fields': [],
-                'backward_o2o_fields': [],
+                "o2o_fields": [],
+                "backward_o2o_fields": [],
                 "m2m_fields": [],
             },
         )
@@ -929,8 +930,8 @@ class TestBasic(test.TestCase):
                 ],
                 "fk_fields": [],
                 "backward_fk_fields": [],
-                'o2o_fields': [],
-                'backward_o2o_fields': [],
+                "o2o_fields": [],
+                "backward_o2o_fields": [],
                 "m2m_fields": [],
             },
         )
