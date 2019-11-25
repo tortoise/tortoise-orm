@@ -2,6 +2,10 @@
 
 Changelog
 =========
+0.15.1
+------
+- Handle OR'ing a blank ``Q()`` correctly (#240)
+
 0.15.0
 -------
 New features:
