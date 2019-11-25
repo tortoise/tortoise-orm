@@ -62,6 +62,14 @@ class Event(Model):
         return self.name
 
 
+class Address(Model):
+    city = fields.CharField(max_length=64)
+    street = fields.CharField(max_length=128)
+
+    event: fields.OneToOneRelation[Event] = fields.OneToOneField(
+        "models.Event", on_delete=fields.CASCADE, related_name="address", null=True)
+
+
 class Team(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()

@@ -1,4 +1,4 @@
-from tests.testmodels import Employee, Event, Team, Tournament
+from tests.testmodels import Employee, Event, Team, Tournament, Address
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError, NoValuesFetched
 from tortoise.functions import Count
@@ -134,6 +134,14 @@ class TestRelations(test.TestCase):
         await event.participants.remove(team)
         fetched_event = await Event.first().prefetch_related("participants")
         self.assertEqual(len(fetched_event.participants), 1)
+
+    async def test_o2o_lazy(self):
+        tournament = await Tournament.create(name="tournament")
+        event = await Event.create(name="First", tournament=tournament)
+        address = await Address.create(city="Santa Monica", street="Ocean", event=event)
+
+        fetched_address = await event.address
+        self.assertEqual(fetched_address.city, "Santa Monica")
 
     async def test_m2m_remove_two(self):
         tournament = await Tournament.create(name="tournament")
