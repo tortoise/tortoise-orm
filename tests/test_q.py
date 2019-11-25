@@ -171,3 +171,33 @@ class TestQCall(TestCase):
             r.where_criterion.get_sql(),
             "\"char_null\"='80' AND NOT (\"char\"<'5' OR \"char\">'50')",
         )
+
+    def test_q_with_blank_and(self):
+        q = Q(Q(id__gt=5), Q(), join_type=Q.AND)
+        r = q.resolve(CharFields, {}, {})
+        self.assertEqual(r.where_criterion.get_sql(), '"id">5')
+
+    def test_q_with_blank_or(self):
+        q = Q(Q(id__gt=5), Q(), join_type=Q.OR)
+        r = q.resolve(CharFields, {}, {})
+        self.assertEqual(r.where_criterion.get_sql(), '"id">5')
+
+    def test_q_with_blank_and2(self):
+        q = Q(id__gt=5) & Q()
+        r = q.resolve(CharFields, {}, {})
+        self.assertEqual(r.where_criterion.get_sql(), '"id">5')
+
+    def test_q_with_blank_or2(self):
+        q = Q(id__gt=5) | Q()
+        r = q.resolve(CharFields, {}, {})
+        self.assertEqual(r.where_criterion.get_sql(), '"id">5')
+
+    def test_q_with_blank_and3(self):
+        q = Q() & Q(id__gt=5)
+        r = q.resolve(CharFields, {}, {})
+        self.assertEqual(r.where_criterion.get_sql(), '"id">5')
+
+    def test_q_with_blank_or3(self):
+        q = Q() | Q(id__gt=5)
+        r = q.resolve(CharFields, {}, {})
+        self.assertEqual(r.where_criterion.get_sql(), '"id">5')

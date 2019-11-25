@@ -30,7 +30,7 @@ from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_rela
 # Empty placeholder - Should never be edited.
 QUERY: QueryBuilder = QueryBuilder()
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 MODEL = TypeVar("MODEL", bound="Model")
@@ -42,7 +42,7 @@ class QuerySetIterable(Protocol[T_co]):
 
 
 class QuerySetSingle(Protocol[T_co]):
-    def __await__(self) -> Generator[Any, None, T_co]:
+    def __await__(self) -> Generator[Any, None, T_co]:  # pragma: nocoverage
         ...  # pylint: disable=W0104
 
 

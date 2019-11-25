@@ -97,7 +97,7 @@ class MySQLClient(BaseDBAsyncClient):
                             await cursor.execute(
                                 f"SET default_storage_engine='{self.storage_engine}';"
                             )
-                            if self.storage_engine.lower() != "innodb":
+                            if self.storage_engine.lower() != "innodb":  # pragma: nobranch
                                 self.capabilities.__dict__["supports_transactions"] = False
 
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)

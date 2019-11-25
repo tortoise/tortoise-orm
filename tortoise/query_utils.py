@@ -129,6 +129,7 @@ class QueryModifier:
 
     def __or__(self, other: "QueryModifier") -> "QueryModifier":
         if self.having_criterion or other.having_criterion:
+            # TODO: This could be optimized?
             result_having_criterion = _or(
                 _and(self.where_criterion, self.having_criterion),
                 _and(other.where_criterion, other.having_criterion),
@@ -136,15 +137,22 @@ class QueryModifier:
             return QueryModifier(
                 joins=self.joins + other.joins, having_criterion=result_having_criterion
             )
-        return QueryModifier(
-            where_criterion=self.where_criterion | other.where_criterion,
-            joins=self.joins + other.joins,
-        )
+        if self.where_criterion and other.where_criterion:
+            return QueryModifier(
+                where_criterion=self.where_criterion | other.where_criterion,
+                joins=self.joins + other.joins,
+            )
+        else:
+            return QueryModifier(
+                where_criterion=self.where_criterion or other.where_criterion,
+                joins=self.joins + other.joins,
+            )
 
     def __invert__(self) -> "QueryModifier":
         if not self.where_criterion and not self.having_criterion:
             return QueryModifier(joins=self.joins)
         if self.having_criterion:
+            # TODO: This could be optimized?
             return QueryModifier(
                 joins=self.joins,
                 having_criterion=_and(self.where_criterion, self.having_criterion).negate(),
