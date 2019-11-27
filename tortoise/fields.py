@@ -297,14 +297,14 @@ class DatetimeField(Field, datetime.datetime):
     def to_db_value(
         self, value: Optional[datetime.datetime], instance
     ) -> Optional[datetime.datetime]:
-        if self.auto_now:
-            value = datetime.datetime.utcnow()
-            setattr(instance, self.model_field_name, value)
-            return value
-        if self.auto_now_add and getattr(instance, self.model_field_name) is None:
-            value = datetime.datetime.utcnow()
-            setattr(instance, self.model_field_name, value)
-            return value
+        if hasattr(instance, "_saved_in_db"):
+            # Only do this if it is a Model instance, not class. Test for guaranteed instance var
+            if self.auto_now:
+                value = datetime.datetime.utcnow()
+                setattr(instance, self.model_field_name, value)
+            if self.auto_now_add and getattr(instance, self.model_field_name) is None:
+                value = datetime.datetime.utcnow()
+                setattr(instance, self.model_field_name, value)
         return value
 
 

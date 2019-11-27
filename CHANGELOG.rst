@@ -6,6 +6,7 @@ Changelog
 ------
 - The ``auto_now_add`` argument of ``DatetimeField`` is handled correctly in the SQLite backend.
 - ``unique_together`` now creates named constrains, to prevent the DB from auto-assigning a potentially non-unique constraint name.
+- Filtering by an ``auto_now`` field doesn't replace the filter value with ``now()`` anymore.
 
 0.15.1
 ------
