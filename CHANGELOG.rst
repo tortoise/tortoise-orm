@@ -2,6 +2,10 @@
 
 Changelog
 =========
+0.15.2
+------
+- The ``auto_now_add`` argument of ``DatetimeField`` is handled correctly in the SQLite backend.
+
 0.15.1
 ------
 - Handle OR'ing a blank ``Q()`` correctly (#240)

@@ -30,7 +30,7 @@ def to_db_datetime(self, value: Optional[datetime.datetime], instance) -> Option
         value = datetime.datetime.utcnow()
         setattr(instance, self.model_field_name, value)
         return value.isoformat(" ")
-    if self.auto_now_add and getattr(instance, self.model_field_name) is None:
+    if self.auto_now_add and getattr(instance, self.model_field_name, None) is None:
         value = datetime.datetime.utcnow()
         setattr(instance, self.model_field_name, value)
         return value.isoformat(" ")

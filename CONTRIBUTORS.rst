@@ -20,6 +20,7 @@ Contributors
 * Vladimir Urushev ``@pilat``
 * Adam Wallner ``@wallneradam``
 * Zoltán Szeredi ``@zoliszeredi``
+* Rebecca Klauser ``@svms1``
 
 Special Thanks
 ==============
