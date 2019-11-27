@@ -223,7 +223,7 @@ class BaseExecutor:
             related_object_map[object_id] = entry
 
         for instance in instance_list:
-            setattr(instance, field, related_object_map.get(instance.pk, None))
+            setattr(instance, f"_{field}", related_object_map.get(instance.pk, None))
 
         return instance_list
 

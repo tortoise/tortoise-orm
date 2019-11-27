@@ -56,10 +56,6 @@ def _ro2o_getter(self, _key, ftype, frelfield):
     return val
 
 
-def _ro2o_setter(self, value, _key):
-    setattr(self, _key, value)
-
-
 def _m2m_getter(self, _key, field_object):
     val = getattr(self, _key, None)
     if val is None:
@@ -274,7 +270,6 @@ class MetaInfo:
                         ftype=field_object.field_type,
                         frelfield=field_object.relation_field,
                     ),
-                    partial(_ro2o_setter, _key=_key),
                 ),
             )
 
