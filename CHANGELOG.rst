@@ -5,6 +5,7 @@ Changelog
 0.15.2
 ------
 - The ``auto_now_add`` argument of ``DatetimeField`` is handled correctly in the SQLite backend.
+- ``unique_together`` now creates named constrains, to prevent the DB from auto-assigning a potentially non-unique constraint name.
 
 0.15.1
 ------

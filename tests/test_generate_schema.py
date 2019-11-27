@@ -169,8 +169,8 @@ CREATE TABLE "event" (
     "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
     "key" VARCHAR(100) NOT NULL,
     "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("tid") ON DELETE CASCADE /* FK to tournament */,
-    UNIQUE ("name", "prize"),
-    UNIQUE ("tournament_id", "key")
+    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
+    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
 ) /* This table contains a list of all the events */;
 CREATE TABLE "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
@@ -233,8 +233,8 @@ CREATE TABLE IF NOT EXISTS "event" (
     "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
     "key" VARCHAR(100) NOT NULL,
     "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("tid") ON DELETE CASCADE /* FK to tournament */,
-    UNIQUE ("name", "prize"),
-    UNIQUE ("tournament_id", "key")
+    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
+    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
 ) /* This table contains a list of all the events */;
 CREATE TABLE IF NOT EXISTS "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
@@ -363,8 +363,8 @@ CREATE TABLE `event` (
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
     `key` VARCHAR(100) NOT NULL,
     `tournament_id` SMALLINT NOT NULL COMMENT 'FK to tournament',
-    UNIQUE (`name`, `prize`),
-    UNIQUE (`tournament_id`, `key`),
+    UNIQUE KEY `uid_event_name_c6f89f` (`name`, `prize`),
+    UNIQUE KEY `uid_event_tournam_a5b730` (`tournament_id`, `key`),
     CONSTRAINT `fk_event_tourname_51c2b82d` FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
 CREATE TABLE `sometable_self` (
@@ -437,8 +437,8 @@ CREATE TABLE IF NOT EXISTS `event` (
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
     `key` VARCHAR(100) NOT NULL,
     `tournament_id` SMALLINT NOT NULL COMMENT 'FK to tournament',
-    UNIQUE (`name`, `prize`),
-    UNIQUE (`tournament_id`, `key`),
+    UNIQUE KEY `uid_event_name_c6f89f` (`name`, `prize`),
+    UNIQUE KEY `uid_event_tournam_a5b730` (`tournament_id`, `key`),
     CONSTRAINT `fk_event_tourname_51c2b82d` FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
 CREATE TABLE IF NOT EXISTS `sometable_self` (
@@ -558,8 +558,8 @@ CREATE TABLE "event" (
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "key" VARCHAR(100) NOT NULL,
     "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("tid") ON DELETE CASCADE,
-    UNIQUE ("name", "prize"),
-    UNIQUE ("tournament_id", "key")
+    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
+    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
 );
 COMMENT ON COLUMN "event"."id" IS 'Event ID';
 COMMENT ON COLUMN "event"."token" IS 'Unique token';
@@ -632,8 +632,8 @@ CREATE TABLE IF NOT EXISTS "event" (
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "key" VARCHAR(100) NOT NULL,
     "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("tid") ON DELETE CASCADE,
-    UNIQUE ("name", "prize"),
-    UNIQUE ("tournament_id", "key")
+    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
+    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
 );
 COMMENT ON COLUMN "event"."id" IS 'Event ID';
 COMMENT ON COLUMN "event"."token" IS 'Unique token';
