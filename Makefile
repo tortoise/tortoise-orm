@@ -64,7 +64,7 @@ test_mysql:
 _testall: test_sqlite test_postgres test_mysql_myisam test_mysql
 
 testall: deps _testall
-	coverage html
+	coverage report
 
 ci: check testall
 
