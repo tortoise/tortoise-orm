@@ -2,13 +2,31 @@
 
 Changelog
 =========
+0.15.3
+------
+* Added ``OneToOneField`` implementation:
+
+  ``OneToOneField`` describes a one to one relation between two models.
+  It can be set from the primary side only, but resolved from both sides in the same way.
+
+  ``describe_model(...)`` now also reports OneToOne relations in both directions.
+
+  Usage example:
+
+  .. code-block:: python3
+
+     event: fields.OneToOneRelation[Event] = fields.OneToOneField(
+         "models.Event", on_delete=fields.CASCADE, related_name="address"
+     )
+
+- Prefetching is done concurrently now, sending all prefetch requests at the same time instead of in sequence.
+- Enabe foreign key enforcement on SQLite for builds where it was optional.
+
 0.15.2
 ------
 - The ``auto_now_add`` argument of ``DatetimeField`` is handled correctly in the SQLite backend.
 - ``unique_together`` now creates named constrains, to prevent the DB from auto-assigning a potentially non-unique constraint name.
 - Filtering by an ``auto_now`` field doesn't replace the filter value with ``now()`` anymore.
-- Implemented ``OneToOneField``, one to one relation between two models.
-- Prefetching is done asynchronously now, sending all prefetch request at the same time instead of in sequence.
 
 0.15.1
 ------
