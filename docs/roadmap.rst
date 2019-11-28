@@ -10,10 +10,7 @@ Our short term goal is to ship the current implementation as MVP, just somewhat 
 For ``v1.0`` that involves:
 
 * Timezone support
-* DB transaction isolation
-* Connection pooling
 * Change to all-parametrized queries for safety
-* Clear and concise examples
 
 Mid-term
 ========
@@ -22,6 +19,7 @@ Here we have all the features that is slightly further out, in no particular ord
 
 * Performance work:
     * Sub queries
+    * Faster MySQL driver (possibly based on mysqlclient)
     * Consider using Cython to accelerate critical loops
 
 * Convenience/Ease-Of-Use work:

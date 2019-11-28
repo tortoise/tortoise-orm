@@ -98,7 +98,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         if self._pool:  # pragma: nobranch
             try:
                 await asyncio.wait_for(self._pool.close(), 10)
-            except asyncio.TimeoutError:
+            except asyncio.TimeoutError:  # pragma: nocoverage
                 self._pool.terminate()
             self._pool = None
             self.log.debug("Closed connection pool %s with params: %s", self._pool, self._template)
@@ -156,6 +156,15 @@ class AsyncpgDBClient(BaseDBAsyncClient):
                 # TODO: Cache prepared statement
                 return await connection.fetch(query, *values)
             return await connection.fetch(query)
+
+    @translate_exceptions
+    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+        async with self.acquire_connection() as connection:
+            self.log.debug("%s: %s", query, values)
+            if values:
+                # TODO: Cache prepared statement
+                return list(map(dict, await connection.fetch(query, *values)))
+            return list(map(dict, await connection.fetch(query)))
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:

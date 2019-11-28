@@ -97,7 +97,7 @@ class MySQLClient(BaseDBAsyncClient):
                             await cursor.execute(
                                 f"SET default_storage_engine='{self.storage_engine}';"
                             )
-                            if self.storage_engine.lower() != "innodb":
+                            if self.storage_engine.lower() != "innodb":  # pragma: nobranch
                                 self.capabilities.__dict__["supports_transactions"] = False
 
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
@@ -175,6 +175,9 @@ class MySQLClient(BaseDBAsyncClient):
                     fields = [f.name for f in cursor._result.fields]
                     return [dict(zip(fields, row)) for row in rows]
                 return []
+
+    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+        return await self.execute_query(query, values)
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:

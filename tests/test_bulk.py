@@ -9,9 +9,9 @@ from tortoise.transactions import in_transaction
 class TestBulk(test.TruncationTestCase):
     async def test_bulk_create(self):
         await UniqueName.bulk_create([UniqueName() for _ in range(1000)])
-        all = await UniqueName.all().values("id", "name")
-        inc = all[0]["id"]
-        self.assertEqual(all, [{"id": val + inc, "name": None} for val in range(1000)])
+        all_ = await UniqueName.all().values("id", "name")
+        inc = all_[0]["id"]
+        self.assertEqual(all_, [{"id": val + inc, "name": None} for val in range(1000)])
 
     async def test_bulk_create_uuidpk(self):
         await UUIDPkModel.bulk_create([UUIDPkModel() for _ in range(1000)])
@@ -23,9 +23,9 @@ class TestBulk(test.TruncationTestCase):
     async def test_bulk_create_in_transaction(self):
         async with in_transaction():
             await UniqueName.bulk_create([UniqueName() for _ in range(1000)])
-        all = await UniqueName.all().values("id", "name")
-        inc = all[0]["id"]
-        self.assertEqual(all, [{"id": val + inc, "name": None} for val in range(1000)])
+        all_ = await UniqueName.all().values("id", "name")
+        inc = all_[0]["id"]
+        self.assertEqual(all_, [{"id": val + inc, "name": None} for val in range(1000)])
 
     @test.requireCapability(supports_transactions=True)
     async def test_bulk_create_uuidpk_in_transaction(self):

@@ -292,7 +292,12 @@ class MetaInfo:
             field = self.fields_map[model_field]
 
             default_converter = field.__class__.to_python_value is fields.Field.to_python_value
-            if not default_converter:
+            if (
+                field.skip_to_python_if_native
+                and field.field_type in self.db.executor_class.DB_NATIVE
+            ):
+                self.db_native_fields.append((key, model_field, field))
+            elif not default_converter:
                 self.db_complex_fields.append((key, model_field, field))
             elif field.field_type in self.db.executor_class.DB_NATIVE:
                 self.db_native_fields.append((key, model_field, field))
@@ -475,6 +480,8 @@ class Model(metaclass=ModelMeta):
                 passed_fields.add(meta.fields_map[key].source_field)  # type: ignore
             elif key in meta.fields_db_projection:
                 field_object = meta.fields_map[key]
+                if field_object.generated:
+                    raise ValueError(f"{key} is DB generated, and can't be set from constructor.")
                 if value is None and not field_object.null:
                     raise ValueError(f"{key} is non nullable field, but null was passed")
                 setattr(self, key, field_object.to_python_value(value))

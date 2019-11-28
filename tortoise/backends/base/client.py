@@ -104,6 +104,9 @@ class BaseDBAsyncClient:
     async def execute_many(self, query: str, values: List[list]) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
+    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+        raise NotImplementedError()  # pragma: nocoverage
+
 
 class ConnectionWrapper:
     __slots__ = ("connection", "lock")

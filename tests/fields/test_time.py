@@ -77,6 +77,17 @@ class TestDatetimeFields(test.TestCase):
         obj = await testmodels.DatetimeFields.get(datetime=now)
         self.assertEqual(obj.datetime, now)
 
+    async def test_count(self):
+        now = datetime.now()
+        obj = await testmodels.DatetimeFields.create(datetime=now)
+        self.assertEqual(await testmodels.DatetimeFields.filter(datetime=obj.datetime).count(), 1)
+        self.assertEqual(
+            await testmodels.DatetimeFields.filter(datetime_auto=obj.datetime_auto).count(), 1
+        )
+        self.assertEqual(
+            await testmodels.DatetimeFields.filter(datetime_add=obj.datetime_add).count(), 1
+        )
+
 
 class TestDateFields(test.TestCase):
     async def test_empty(self):

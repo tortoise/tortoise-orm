@@ -87,6 +87,7 @@ class Field(metaclass=_FieldMeta):
     # Field_type is a readonly property for the instance, it is set by _FieldMeta
     field_type: Type[Any] = None  # type: ignore
     indexable: bool = True
+    skip_to_python_if_native = False
 
     __slots__ = (
         "source_field",
@@ -279,6 +280,7 @@ class DatetimeField(Field, datetime.datetime):
     """
 
     __slots__ = ("auto_now", "auto_now_add")
+    skip_to_python_if_native = True
 
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs) -> None:
         if auto_now_add and auto_now:
@@ -295,14 +297,14 @@ class DatetimeField(Field, datetime.datetime):
     def to_db_value(
         self, value: Optional[datetime.datetime], instance
     ) -> Optional[datetime.datetime]:
-        if self.auto_now:
-            value = datetime.datetime.utcnow()
-            setattr(instance, self.model_field_name, value)
-            return value
-        if self.auto_now_add and getattr(instance, self.model_field_name) is None:
-            value = datetime.datetime.utcnow()
-            setattr(instance, self.model_field_name, value)
-            return value
+        if hasattr(instance, "_saved_in_db"):
+            # Only do this if it is a Model instance, not class. Test for guaranteed instance var
+            if self.auto_now:
+                value = datetime.datetime.utcnow()
+                setattr(instance, self.model_field_name, value)
+            if self.auto_now_add and getattr(instance, self.model_field_name) is None:
+                value = datetime.datetime.utcnow()
+                setattr(instance, self.model_field_name, value)
         return value
 
 
@@ -312,6 +314,7 @@ class DateField(Field, datetime.date):
     """
 
     __slots__ = ()
+    skip_to_python_if_native = True
 
     def to_python_value(self, value: Any) -> Optional[datetime.date]:
         if value is None or isinstance(value, datetime.date):
@@ -471,7 +474,7 @@ class ForeignKeyField(Field):
         self.on_delete = on_delete
 
     # we need this for IDEs so that they don't say that the field is not awaitable
-    def __await__(self):
+    def __await__(self):  # pragma: nocoverage
         ...  # pylint: disable=W0104
 
 

@@ -7,6 +7,7 @@ from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 class MySQLSchemaGenerator(BaseSchemaGenerator):
     TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({fields}){extra}{comment};"
     INDEX_CREATE_TEMPLATE = "KEY `{index_name}` ({fields})"
+    UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE KEY `{index_name}` ({fields})"
     FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{primary}{comment}"
     FK_TEMPLATE = (
         "CONSTRAINT `{constraint_name}` FOREIGN KEY (`{db_field}`)"
@@ -62,7 +63,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         self._field_indexes.append(
             self.INDEX_CREATE_TEMPLATE.format(
                 exists="IF NOT EXISTS " if safe else "",
-                index_name=self._generate_index_name(model, field_names),
+                index_name=self._generate_index_name("idx", model, field_names),
                 table_name=model._meta.table,
                 fields=", ".join([self.quote(f) for f in field_names]),
             )

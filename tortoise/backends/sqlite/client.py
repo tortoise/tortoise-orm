@@ -2,7 +2,7 @@ import asyncio
 import os
 import sqlite3
 from functools import wraps
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 import aiosqlite
 
@@ -113,10 +113,16 @@ class SqliteClient(BaseDBAsyncClient):
                 await connection.commit()
 
     @translate_exceptions
-    async def execute_query(self, query: str, values: Optional[list] = None) -> List[dict]:
+    async def execute_query(self, query: str, values: Optional[list] = None) -> Sequence[dict]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             return await connection.execute_fetchall(query, values)
+
+    @translate_exceptions
+    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+        async with self.acquire_connection() as connection:
+            self.log.debug("%s: %s", query, values)
+            return list(map(dict, await connection.execute_fetchall(query, values)))
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:

@@ -2,6 +2,16 @@
 
 Changelog
 =========
+0.15.2
+------
+- The ``auto_now_add`` argument of ``DatetimeField`` is handled correctly in the SQLite backend.
+- ``unique_together`` now creates named constrains, to prevent the DB from auto-assigning a potentially non-unique constraint name.
+- Filtering by an ``auto_now`` field doesn't replace the filter value with ``now()`` anymore.
+
+0.15.1
+------
+- Handle OR'ing a blank ``Q()`` correctly (#240)
+
 0.15.0
 -------
 New features:
@@ -14,6 +24,14 @@ New features:
     - Overhead of query generation has been reduced by about 6%
     - Bulk inserts are ensured to be wrapped in a transaction for >50% speedup
     - PostgreSQL prepared queries now use a LRU cache for significant >2x speedup on inserts/updates/deletes
+- ``DateField`` & ``DatetimeField`` deserializes faster on PostgreSQL & MySQL.
+- Optimized ``.values()`` to do less copying, resulting in a slight speedup.
+- One can now pass kwargs and ``Q()`` objects as parameters to ``Q()`` objects simultaneously.
+
+Bugfixes:
+^^^^^^^^^
+- ``indexes`` will correctly map the foreign key if referenced by name.
+- Setting DB generated PK in constructor/create generates exception instead of silently being ignored.
 
 Deprecations:
 ^^^^^^^^^^^^^
@@ -24,10 +42,6 @@ Deprecations:
   in comparison to the built-in in Python 3.7+.
 
   There is a known context confusion, specifically regarding nested transactions.
-
-Bugfixes:
-^^^^^^^^^
-- ``indexes`` will correctly map the foreign key if referenced by name.
 
 0.14.2
 ------
