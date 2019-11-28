@@ -175,7 +175,7 @@ You can use them like this:
 Q objects
 =========
 
-Sometimes you need to do more complicated queries then the simple AND ``<model>.filter()`` provides. Luckily we have Q objects to spice things up and help you find what you need. These Q-objects can then be used as argument to ``<model>.filter()`` instead.
+Sometimes you need to do more complicated queries than the simple AND ``<model>.filter()`` provides. Luckily we have Q objects to spice things up and help you find what you need. These Q-objects can then be used as argument to ``<model>.filter()`` instead.
 
 Q objects are extremely versatile, some example use cases:
  - creating an OR filter
