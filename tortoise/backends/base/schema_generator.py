@@ -4,6 +4,7 @@ from typing import List, Optional, Set
 
 from tortoise import fields
 from tortoise.exceptions import ConfigurationError
+from tortoise.fields import OneToOneField
 from tortoise.utils import get_escape_translation_table
 
 # pylint: disable=R0201
@@ -187,11 +188,12 @@ class BaseSchemaGenerator:
                 else ""
             )
             # TODO: PK generation needs to move out of schema generator.
-            if field_object.pk:
+            if field_object.pk and not isinstance(field_object.reference, OneToOneField):
                 pk_string = self._get_primary_key_create_string(field_object, db_field, comment)
                 if pk_string:
                     fields_to_create.append(pk_string)
                     continue
+
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
 

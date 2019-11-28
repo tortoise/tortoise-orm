@@ -1,4 +1,4 @@
-from tests.testmodels import Event, Team, Tournament
+from tests.testmodels import Address, Event, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError, OperationalError
 from tortoise.functions import Count
@@ -51,6 +51,15 @@ class TestPrefetching(test.TestCase):
             .first()
         )
         self.assertEqual(len(fetched_events.participants), 1)
+
+    async def test_prefetch_o2o(self):
+        tournament = await Tournament.create(name="tournament")
+        event = await Event.create(name="First", tournament=tournament)
+        await Address.create(city="Santa Monica", street="Ocean", event=event)
+
+        fetched_events = await Event.all().prefetch_related("address").first()
+
+        self.assertEqual(fetched_events.address.city, "Santa Monica")
 
     async def test_prefetch_nested(self):
         tournament = await Tournament.create(name="tournament")

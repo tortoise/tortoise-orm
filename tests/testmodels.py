@@ -62,6 +62,15 @@ class Event(Model):
         return self.name
 
 
+class Address(Model):
+    city = fields.CharField(max_length=64)
+    street = fields.CharField(max_length=128)
+
+    event: fields.OneToOneRelation[Event] = fields.OneToOneField(
+        "models.Event", on_delete=fields.CASCADE, related_name="address", null=True
+    )
+
+
 class Team(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
@@ -446,6 +455,11 @@ class StraightFields(Model):
     )
     fkrev: fields.ReverseRelation["StraightFields"]
 
+    o2o: fields.OneToOneNullableRelation["StraightFields"] = fields.OneToOneField(
+        "models.StraightFields", related_name="o2o_rev", null=True, description="Line"
+    )
+    o2o_rev: fields.Field
+
     rel_to: fields.ManyToManyRelation["StraightFields"] = fields.ManyToManyField(
         "models.StraightFields", related_name="rel_from", description="M2M to myself"
     )
@@ -471,6 +485,15 @@ class SourceFields(Model):
         description="Tree!",
     )
     fkrev: fields.ReverseRelation["SourceFields"]
+
+    o2o: fields.OneToOneNullableRelation["SourceFields"] = fields.OneToOneField(
+        "models.SourceFields",
+        related_name="o2o_rev",
+        null=True,
+        source_field="o2o_sometable",
+        description="Line",
+    )
+    o2o_rev: fields.Field
 
     rel_to: fields.ManyToManyRelation["SourceFields"] = fields.ManyToManyField(
         "models.SourceFields",

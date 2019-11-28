@@ -7,6 +7,8 @@ Changelog
 - The ``auto_now_add`` argument of ``DatetimeField`` is handled correctly in the SQLite backend.
 - ``unique_together`` now creates named constrains, to prevent the DB from auto-assigning a potentially non-unique constraint name.
 - Filtering by an ``auto_now`` field doesn't replace the filter value with ``now()`` anymore.
+- Implemented ``OneToOneField``, one to one relation between two models.
+- Prefetching is done asynchronously now, sending all prefetch request at the same time instead of in sequence.
 
 0.15.1
 ------

@@ -110,6 +110,18 @@ class TestGenerateSchema(test.SimpleTestCase):
         ):
             await self.init_for("tests.models_fk_3")
 
+    async def test_o2o_bad_on_delete(self):
+        with self.assertRaisesRegex(
+            ConfigurationError, "on_delete can only be CASCADE, RESTRICT or SET_NULL"
+        ):
+            await self.init_for("tests.models_o2o_2")
+
+    async def test_o2o_bad_null(self):
+        with self.assertRaisesRegex(
+            ConfigurationError, "If on_delete is SET_NULL, then field must have null=True set"
+        ):
+            await self.init_for("tests.models_o2o_3")
+
     async def test_m2m_bad_model_name(self):
         with self.assertRaisesRegex(
             ConfigurationError, 'Foreign key accepts model name in format "app.Model"'
@@ -155,6 +167,12 @@ CREATE TABLE "team" (
 ) /* The TEAMS! */;
 CREATE INDEX "idx_team_manager_676134" ON "team" ("manager_id", "key");
 CREATE INDEX "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
+CREATE TABLE "teamaddress" (
+    "city" VARCHAR(50) NOT NULL  /* City */,
+    "country" VARCHAR(50) NOT NULL  /* Country */,
+    "street" VARCHAR(128) NOT NULL  /* Street Address */,
+    "team_id" VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+);
 CREATE TABLE "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL  /* Tournament name */,
@@ -172,6 +190,13 @@ CREATE TABLE "event" (
     CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
     CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
 ) /* This table contains a list of all the events */;
+CREATE TABLE "venueinformation" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "name" VARCHAR(128) NOT NULL,
+    "capacity" INT NOT NULL,
+    "rent" REAL NOT NULL,
+    "team_id" VARCHAR(50)  UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
+);
 CREATE TABLE "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
     "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
@@ -219,6 +244,12 @@ CREATE TABLE IF NOT EXISTS "team" (
 ) /* The TEAMS! */;
 CREATE INDEX IF NOT EXISTS "idx_team_manager_676134" ON "team" ("manager_id", "key");
 CREATE INDEX IF NOT EXISTS "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
+CREATE TABLE IF NOT EXISTS "teamaddress" (
+    "city" VARCHAR(50) NOT NULL  /* City */,
+    "country" VARCHAR(50) NOT NULL  /* Country */,
+    "street" VARCHAR(128) NOT NULL  /* Street Address */,
+    "team_id" VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+);
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL  /* Tournament name */,
@@ -236,6 +267,13 @@ CREATE TABLE IF NOT EXISTS "event" (
     CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
     CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
 ) /* This table contains a list of all the events */;
+CREATE TABLE IF NOT EXISTS "venueinformation" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "name" VARCHAR(128) NOT NULL,
+    "capacity" INT NOT NULL,
+    "rent" REAL NOT NULL,
+    "team_id" VARCHAR(50)  UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
+);
 CREATE TABLE IF NOT EXISTS "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
     "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
@@ -349,6 +387,13 @@ CREATE TABLE `team` (
     KEY `idx_team_manager_676134` (`manager_id`, `key`),
     KEY `idx_team_manager_ef8f69` (`manager_id`, `name`)
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
+CREATE TABLE `teamaddress` (
+    `city` VARCHAR(50) NOT NULL  COMMENT 'City',
+    `country` VARCHAR(50) NOT NULL  COMMENT 'Country',
+    `street` VARCHAR(128) NOT NULL  COMMENT 'Street Address',
+    `team_id` VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY,
+    CONSTRAINT `fk_teamaddr_team_1c78d737` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
+) CHARACTER SET utf8mb4;
 CREATE TABLE `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL  COMMENT 'Tournament name',
@@ -367,6 +412,14 @@ CREATE TABLE `event` (
     UNIQUE KEY `uid_event_tournam_a5b730` (`tournament_id`, `key`),
     CONSTRAINT `fk_event_tourname_51c2b82d` FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
+CREATE TABLE `venueinformation` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `name` VARCHAR(128) NOT NULL,
+    `capacity` INT NOT NULL,
+    `rent` DOUBLE NOT NULL,
+    `team_id` VARCHAR(50)  UNIQUE,
+    CONSTRAINT `fk_venueinf_team_198af929` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL
+) CHARACTER SET utf8mb4;
 CREATE TABLE `sometable_self` (
     `backward_sts` INT NOT NULL,
     `sts_forward` INT NOT NULL,
@@ -423,6 +476,13 @@ CREATE TABLE IF NOT EXISTS `team` (
     KEY `idx_team_manager_676134` (`manager_id`, `key`),
     KEY `idx_team_manager_ef8f69` (`manager_id`, `name`)
 ) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
+CREATE TABLE IF NOT EXISTS `teamaddress` (
+    `city` VARCHAR(50) NOT NULL  COMMENT 'City',
+    `country` VARCHAR(50) NOT NULL  COMMENT 'Country',
+    `street` VARCHAR(128) NOT NULL  COMMENT 'Street Address',
+    `team_id` VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY,
+    CONSTRAINT `fk_teamaddr_team_1c78d737` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
+) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL  COMMENT 'Tournament name',
@@ -441,6 +501,14 @@ CREATE TABLE IF NOT EXISTS `event` (
     UNIQUE KEY `uid_event_tournam_a5b730` (`tournament_id`, `key`),
     CONSTRAINT `fk_event_tourname_51c2b82d` FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`tid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
+CREATE TABLE IF NOT EXISTS `venueinformation` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `name` VARCHAR(128) NOT NULL,
+    `capacity` INT NOT NULL,
+    `rent` DOUBLE NOT NULL,
+    `team_id` VARCHAR(50)  UNIQUE,
+    CONSTRAINT `fk_venueinf_team_198af929` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL
+) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `sometable_self` (
     `backward_sts` INT NOT NULL,
     `sts_forward` INT NOT NULL,
@@ -541,6 +609,15 @@ CREATE INDEX "idx_team_manager_676134" ON "team" ("manager_id", "key");
 CREATE INDEX "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
 COMMENT ON COLUMN "team"."name" IS 'The TEAM name (and PK)';
 COMMENT ON TABLE "team" IS 'The TEAMS!';
+CREATE TABLE "teamaddress" (
+    "city" VARCHAR(50) NOT NULL,
+    "country" VARCHAR(50) NOT NULL,
+    "street" VARCHAR(128) NOT NULL,
+    "team_id" VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+);
+COMMENT ON COLUMN "teamaddress"."city" IS 'City';
+COMMENT ON COLUMN "teamaddress"."country" IS 'Country';
+COMMENT ON COLUMN "teamaddress"."street" IS 'Street Address';
 CREATE TABLE "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
@@ -565,6 +642,13 @@ COMMENT ON COLUMN "event"."id" IS 'Event ID';
 COMMENT ON COLUMN "event"."token" IS 'Unique token';
 COMMENT ON COLUMN "event"."tournament_id" IS 'FK to tournament';
 COMMENT ON TABLE "event" IS 'This table contains a list of all the events';
+CREATE TABLE "venueinformation" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "name" VARCHAR(128) NOT NULL,
+    "capacity" INT NOT NULL,
+    "rent" DOUBLE PRECISION NOT NULL,
+    "team_id" VARCHAR(50)  UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
+);
 CREATE TABLE "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
     "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
@@ -615,6 +699,15 @@ CREATE INDEX IF NOT EXISTS "idx_team_manager_676134" ON "team" ("manager_id", "k
 CREATE INDEX IF NOT EXISTS "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
 COMMENT ON COLUMN "team"."name" IS 'The TEAM name (and PK)';
 COMMENT ON TABLE "team" IS 'The TEAMS!';
+CREATE TABLE IF NOT EXISTS "teamaddress" (
+    "city" VARCHAR(50) NOT NULL,
+    "country" VARCHAR(50) NOT NULL,
+    "street" VARCHAR(128) NOT NULL,
+    "team_id" VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+);
+COMMENT ON COLUMN "teamaddress"."city" IS 'City';
+COMMENT ON COLUMN "teamaddress"."country" IS 'Country';
+COMMENT ON COLUMN "teamaddress"."street" IS 'Street Address';
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
@@ -639,6 +732,13 @@ COMMENT ON COLUMN "event"."id" IS 'Event ID';
 COMMENT ON COLUMN "event"."token" IS 'Unique token';
 COMMENT ON COLUMN "event"."tournament_id" IS 'FK to tournament';
 COMMENT ON TABLE "event" IS 'This table contains a list of all the events';
+CREATE TABLE IF NOT EXISTS "venueinformation" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "name" VARCHAR(128) NOT NULL,
+    "capacity" INT NOT NULL,
+    "rent" DOUBLE PRECISION NOT NULL,
+    "team_id" VARCHAR(50)  UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
+);
 CREATE TABLE IF NOT EXISTS "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
     "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE

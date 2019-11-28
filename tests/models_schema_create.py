@@ -47,6 +47,22 @@ class Team(Model):
         indexes = [("manager", "key"), ["manager_id", "name"]]
 
 
+class TeamAddress(Model):
+    city = fields.CharField(max_length=50, description="City")
+    country = fields.CharField(max_length=50, description="Country")
+    street = fields.CharField(max_length=128, description="Street Address")
+    team = fields.OneToOneField(
+        "models.Team", related_name="address", on_delete=fields.CASCADE, pk=True
+    )
+
+
+class VenueInformation(Model):
+    name = fields.CharField(max_length=128)
+    capacity = fields.IntField()
+    rent = fields.FloatField()
+    team = fields.OneToOneField("models.Team", on_delete=fields.SET_NULL, null=True)
+
+
 class SourceFields(Model):
     id = fields.IntField(pk=True, source_field="sometable_id")
     chars = fields.CharField(max_length=255, source_field="some_chars_table", index=True)

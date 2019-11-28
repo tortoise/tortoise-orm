@@ -478,6 +478,78 @@ class ForeignKeyField(Field):
         ...  # pylint: disable=W0104
 
 
+OneToOneNullableRelation = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
+"""
+Type hint for the result of accessing the :class:`.OneToOneField` field in the model
+when obtained model can be nullable.
+"""
+
+OneToOneRelation = Union[Awaitable[MODEL], MODEL]
+"""
+Type hint for the result of accessing the :class:`.OneToOneField` field in the model.
+"""
+
+
+class OneToOneField(Field):
+    """
+    OneToOne relation field.
+
+    This field represents a one to one relation to another model.
+
+    You must provide the following:
+
+    ``model_name``:
+        The name of the related model in a :samp:`'{app}.{model}'` format.
+
+    The following is optional:
+
+    ``related_name``:
+        The attribute name on the related model to reverse resolve the one to one relation.
+    ``on_delete``:
+        One of:
+            ``field.CASCADE``:
+                Indicate that the model should be cascade deleted if related model gets deleted.
+            ``field.RESTRICT``:
+                Indicate that the related model delete will be restricted as long as a
+                one to one relation points to it.
+            ``field.SET_NULL``:
+                Resets the field to NULL in case the related model gets deleted.
+                Can only be set if field has ``null=True`` set.
+            ``field.SET_DEFAULT``:
+                Resets the field to ``default`` value in case the related model gets deleted.
+                Can only be set is field has a ``default`` set.
+    """
+
+    __slots__ = (
+        "field_type",
+        # type will be set later, so we need a slot to be able to write it
+        "model_name",
+        "related_name",
+        "on_delete",
+    )
+    has_db_field = False
+
+    def __init__(
+        self, model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs
+    ) -> None:
+        kwargs["unique"] = True
+        super().__init__(**kwargs)
+        # self.field_type: "Type[Model]" = None  # type: ignore
+        if len(model_name.split(".")) != 2:
+            raise ConfigurationError('OneToOneField accepts model name in format "app.Model"')
+        self.model_name = model_name
+        self.related_name = related_name
+        if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
+            raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
+        if on_delete == SET_NULL and not bool(kwargs.get("null")):
+            raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
+        self.on_delete = on_delete
+
+    # we need this for IDEs so that they don't say that the field is not awaitable
+    def __await__(self):
+        ...  # pylint: disable=W0104
+
+
 class ManyToManyFieldInstance(Field):
     __slots__ = (
         "field_type",  # Here we need type to be able to set dyamically
@@ -563,6 +635,10 @@ class BackwardFKRelation(Field):
         self.field_type = field_type
         self.relation_field = relation_field
         self.description = description
+
+
+class BackwardOneToOneRelation(BackwardFKRelation):
+    pass
 
 
 class ReverseRelation(Generic[MODEL]):
