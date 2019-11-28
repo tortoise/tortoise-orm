@@ -250,7 +250,7 @@ class Q:
         return modifier
 
     def _get_actual_filter_params(self, model, key, value) -> Tuple[str, Any]:
-        if key in model._meta.fk_fields:
+        if key in model._meta.fk_fields or key in model._meta.o2o_fields:
             field_object = model._meta.fields_map[key]
             if hasattr(value, "pk"):
                 filter_value = value.pk
