@@ -49,7 +49,10 @@ class TestInitErrors(test.SimpleTestCase):
                         }
                     },
                     "apps": {
-                        "models": {"models": ["tests.models_dup1"], "default_connection": "default"}
+                        "models": {
+                            "models": ["tests.model_setup.models_dup1"],
+                            "default_connection": "default",
+                        }
                     },
                 }
             )
@@ -67,7 +70,10 @@ class TestInitErrors(test.SimpleTestCase):
                         }
                     },
                     "apps": {
-                        "models": {"models": ["tests.models_dup2"], "default_connection": "default"}
+                        "models": {
+                            "models": ["tests.model_setup.models_dup2"],
+                            "default_connection": "default",
+                        }
                     },
                 }
             )
@@ -85,7 +91,10 @@ class TestInitErrors(test.SimpleTestCase):
                         }
                     },
                     "apps": {
-                        "models": {"models": ["tests.models_dup3"], "default_connection": "default"}
+                        "models": {
+                            "models": ["tests.model_setup.models_dup3"],
+                            "default_connection": "default",
+                        }
                     },
                 }
             )
@@ -104,7 +113,7 @@ class TestInitErrors(test.SimpleTestCase):
                     },
                     "apps": {
                         "models": {
-                            "models": ["tests.model_generated_nonint"],
+                            "models": ["tests.model_setup.model_generated_nonint"],
                             "default_connection": "default",
                         }
                     },
@@ -126,7 +135,7 @@ class TestInitErrors(test.SimpleTestCase):
                     },
                     "apps": {
                         "models": {
-                            "models": ["tests.model_multiple_pk"],
+                            "models": ["tests.model_setup.model_multiple_pk"],
                             "default_connection": "default",
                         }
                     },
@@ -149,7 +158,7 @@ class TestInitErrors(test.SimpleTestCase):
                     },
                     "apps": {
                         "models": {
-                            "models": ["tests.model_nonpk_id"],
+                            "models": ["tests.model_setup.model_nonpk_id"],
                             "default_connection": "default",
                         }
                     },

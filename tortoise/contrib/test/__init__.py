@@ -302,10 +302,14 @@ class IsolatedTestCase(SimpleTestCase):
 
     It will create and destroy a new DB instance for every test.
     This is obviously slow, but guarantees a fresh DB.
+
+    If you define a ``tortoise_test_modules`` list, it overrides the DB setup module for the tests.
     """
 
+    tortoise_test_modules: List[str] = []
+
     async def _setUpDB(self) -> None:
-        config = getDBConfig(app_label="models", modules=_MODULES)
+        config = getDBConfig(app_label="models", modules=self.tortoise_test_modules or _MODULES)
         await Tortoise.init(config, _create_db=True)
         await Tortoise.generate_schemas(safe=False)
         self._connections = Tortoise._connections.copy()

@@ -29,7 +29,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
                     },
                     "apps": {
                         "models": {
-                            "models": ["tests.model_bad_rel1"],
+                            "models": ["tests.model_setup.model_bad_rel1"],
                             "default_connection": "default",
                         }
                     },
@@ -50,7 +50,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
                     },
                     "apps": {
                         "models": {
-                            "models": ["tests.model_bad_rel2"],
+                            "models": ["tests.model_setup.model_bad_rel2"],
                             "default_connection": "default",
                         }
                     },
@@ -71,7 +71,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
                     },
                     "apps": {
                         "models": {
-                            "models": ["tests.model_bad_rel3"],
+                            "models": ["tests.model_setup.model_bad_rel3"],
                             "default_connection": "default",
                         }
                     },
@@ -92,7 +92,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
                     },
                     "apps": {
                         "models": {
-                            "models": ["tests.model_bad_rel4"],
+                            "models": ["tests.model_setup.model_bad_rel4"],
                             "default_connection": "default",
                         }
                     },
@@ -113,7 +113,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
                     },
                     "apps": {
                         "models": {
-                            "models": ["tests.model_bad_rel5"],
+                            "models": ["tests.model_setup.model_bad_rel5"],
                             "default_connection": "default",
                         }
                     },

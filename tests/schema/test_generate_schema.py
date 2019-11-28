@@ -85,7 +85,7 @@ class TestGenerateSchema(test.SimpleTestCase):
         with self.assertRaisesRegex(
             ConfigurationError, "Can't create schema due to cyclic fk references"
         ):
-            await self.init_for("tests.models_cyclic")
+            await self.init_for("tests.schema.models_cyclic")
 
     async def test_create_index(self):
         await self.init_for("tests.testmodels")
@@ -96,37 +96,37 @@ class TestGenerateSchema(test.SimpleTestCase):
         with self.assertRaisesRegex(
             ConfigurationError, 'Foreign key accepts model name in format "app.Model"'
         ):
-            await self.init_for("tests.models_fk_1")
+            await self.init_for("tests.schema.models_fk_1")
 
     async def test_fk_bad_on_delete(self):
         with self.assertRaisesRegex(
             ConfigurationError, "on_delete can only be CASCADE, RESTRICT or SET_NULL"
         ):
-            await self.init_for("tests.models_fk_2")
+            await self.init_for("tests.schema.models_fk_2")
 
     async def test_fk_bad_null(self):
         with self.assertRaisesRegex(
             ConfigurationError, "If on_delete is SET_NULL, then field must have null=True set"
         ):
-            await self.init_for("tests.models_fk_3")
+            await self.init_for("tests.schema.models_fk_3")
 
     async def test_o2o_bad_on_delete(self):
         with self.assertRaisesRegex(
             ConfigurationError, "on_delete can only be CASCADE, RESTRICT or SET_NULL"
         ):
-            await self.init_for("tests.models_o2o_2")
+            await self.init_for("tests.schema.models_o2o_2")
 
     async def test_o2o_bad_null(self):
         with self.assertRaisesRegex(
             ConfigurationError, "If on_delete is SET_NULL, then field must have null=True set"
         ):
-            await self.init_for("tests.models_o2o_3")
+            await self.init_for("tests.schema.models_o2o_3")
 
     async def test_m2m_bad_model_name(self):
         with self.assertRaisesRegex(
             ConfigurationError, 'Foreign key accepts model name in format "app.Model"'
         ):
-            await self.init_for("tests.models_m2m_1")
+            await self.init_for("tests.schema.models_m2m_1")
 
     async def test_table_and_row_comment_generation(self):
         await self.init_for("tests.testmodels")
@@ -137,7 +137,7 @@ class TestGenerateSchema(test.SimpleTestCase):
 
     async def test_schema(self):
         self.maxDiff = None
-        await self.init_for("tests.models_schema_create")
+        await self.init_for("tests.schema.models_schema_create")
         sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
         self.assertEqual(
             sql.strip(),
@@ -214,7 +214,7 @@ CREATE TABLE "teamevents" (
 
     async def test_schema_safe(self):
         self.maxDiff = None
-        await self.init_for("tests.models_schema_create")
+        await self.init_for("tests.schema.models_schema_create")
         sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
         self.assertEqual(
             sql.strip(),
@@ -355,7 +355,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
 
     async def test_schema(self):
         self.maxDiff = None
-        await self.init_for("tests.models_schema_create")
+        await self.init_for("tests.schema.models_schema_create")
         sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
         self.assertEqual(
             sql.strip(),
@@ -443,7 +443,7 @@ CREATE TABLE `teamevents` (
 
     async def test_schema_safe(self):
         self.maxDiff = None
-        await self.init_for("tests.models_schema_create")
+        await self.init_for("tests.schema.models_schema_create")
         sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
 
         self.assertEqual(
@@ -577,7 +577,7 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
 
     async def test_schema(self):
         self.maxDiff = None
-        await self.init_for("tests.models_schema_create")
+        await self.init_for("tests.schema.models_schema_create")
         sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
         self.assertEqual(
             sql.strip(),
@@ -667,7 +667,7 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';
 
     async def test_schema_safe(self):
         self.maxDiff = None
-        await self.init_for("tests.models_schema_create")
+        await self.init_for("tests.schema.models_schema_create")
         sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
         self.assertEqual(
             sql.strip(),
