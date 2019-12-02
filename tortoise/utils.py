@@ -13,7 +13,8 @@ async def generate_schema_for_client(client, safe: bool) -> None:
     generator = client.schema_generator(client)
     schema = get_schema_sql(client, safe)
     logger.debug("Creating schema: %s", schema)
-    await generator.generate_from_string(schema)
+    if schema:
+        await generator.generate_from_string(schema)
 
 
 def get_escape_translation_table() -> List[str]:
