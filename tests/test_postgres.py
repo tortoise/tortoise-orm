@@ -1,6 +1,8 @@
 """
 Test some postgres-specific features
 """
+import ssl
+
 from tests.testmodels import Tournament
 from tortoise import Tortoise
 from tortoise.contrib import test
@@ -49,3 +51,17 @@ class TestTwoDatabases(test.SimpleTestCase):
         self.assertEqual(len(res), 1)
         self.assertEqual(tournament.id, res[0][0])
         self.assertEqual(tournament.name, res[0][1])
+
+    async def test_ssl_true(self):
+        self.db_config["connections"]["models"]["credentials"]["ssl"] = True
+        with self.assertRaises(ConnectionError):
+            await Tortoise.init(self.db_config)
+
+    async def test_ssl_custom(self):
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+
+        self.db_config["connections"]["models"]["credentials"]["ssl"] = ctx
+        with self.assertRaises(ConnectionError):
+            await Tortoise.init(self.db_config)

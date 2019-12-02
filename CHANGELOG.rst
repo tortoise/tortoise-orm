@@ -2,6 +2,12 @@
 
 Changelog
 =========
+0.15.4
+------
+- Don't generate a schema if there is no models (#254)
+- Emit a ``RuntimeWarning`` when a module has no models to import (#254)
+- Allow passing in a custom SSL context (#255)
+
 0.15.3
 ------
 * Added ``OneToOneField`` implementation:

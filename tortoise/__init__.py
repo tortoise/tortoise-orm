@@ -3,6 +3,7 @@ import importlib
 import json
 import logging
 import os
+import warnings
 from copy import deepcopy
 from inspect import isclass
 from typing import Any, Coroutine, Dict, List, Optional, Tuple, Type, Union, cast
@@ -473,6 +474,8 @@ class Tortoise:
                 attr._meta.app = app_label
                 attr._meta.finalise_pk()
                 discovered_models.append(attr)
+        if not discovered_models:
+            warnings.warn(f'Module "{models_path}" has no models', RuntimeWarning, stacklevel=4)
         return discovered_models
 
     @classmethod
@@ -481,7 +484,7 @@ class Tortoise:
             if isinstance(info, str):
                 info = expand_db_url(info)
             client_class = cls._discover_client_class(info.get("engine"))
-            db_params = deepcopy(info["credentials"])
+            db_params = info["credentials"].copy()
             db_params.update({"connection_name": name})
             connection = client_class(**db_params)  # type: ignore
             if create_db:
@@ -728,4 +731,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.15.3"
+__version__ = "0.15.4"
