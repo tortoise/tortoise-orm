@@ -23,10 +23,7 @@ Fields are defined as properties of a ``Model`` class object:
 Reference
 =========
 
-.. autoclass:: tortoise.fields.Field
-    :members:
-
-Here is the list of fields available at the moment with custom options of these fields:
+Here is the list of fields available with custom options of these fields:
 
 Base Field
 ----------
@@ -46,14 +43,8 @@ Relational Fields
 -----------------
 
 .. automodule:: tortoise.fields.relational
-    :members:
+    :members: ForeignKeyField, OneToOneField, ManyToManyField
     :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.OneToOneField
-
-.. autodata:: tortoise.fields.ForeignKeyRelation
-
-.. autodata:: tortoise.fields.ForeignKeyNullableRelation
 
 Extending A Field
 =================

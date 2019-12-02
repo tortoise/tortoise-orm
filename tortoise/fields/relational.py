@@ -10,36 +10,34 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
     from tortoise.queryset import QuerySet
 
-__all__ = ("ForeignKeyField", "ManyToManyField")
-
 MODEL = TypeVar("MODEL", bound="Model")
-
-ForeignKeyNullableRelation = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
-"""
-Type hint for the result of accessing the :class:`.ForeignKeyField` field in the model
-when obtained model can be nullable.
-"""
-
-ForeignKeyRelation = Union[Awaitable[MODEL], MODEL]
-"""
-Type hint for the result of accessing the :class:`.ForeignKeyField` field in the model.
-"""
 
 OneToOneNullableRelation = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
 """
-Type hint for the result of accessing the :class:`.OneToOneField` field in the model
+Type hint for the result of accessing the :func:`.OneToOneField` field in the model
 when obtained model can be nullable.
 """
 
 OneToOneRelation = Union[Awaitable[MODEL], MODEL]
 """
-Type hint for the result of accessing the :class:`.OneToOneField` field in the model.
+Type hint for the result of accessing the :func:`.OneToOneField` field in the model.
+"""
+
+ForeignKeyNullableRelation = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
+"""
+Type hint for the result of accessing the :func:`.ForeignKeyField` field in the model
+when obtained model can be nullable.
+"""
+
+ForeignKeyRelation = Union[Awaitable[MODEL], MODEL]
+"""
+Type hint for the result of accessing the :func:`.ForeignKeyField` field in the model.
 """
 
 
 class ReverseRelation(Generic[MODEL]):
     """
-    Relation container for :class:`.ForeignKeyField`.
+    Relation container for :func:`.ForeignKeyField`.
     """
 
     def __init__(self, model, relation_field: str, instance) -> None:
@@ -141,7 +139,7 @@ class ReverseRelation(Generic[MODEL]):
 
 class ManyToManyRelation(ReverseRelation[MODEL]):
     """
-    Many to many relation container for :class:`.ManyToManyField`.
+    Many to many relation container for :func:`.ManyToManyField`.
     """
 
     def __init__(self, model, instance, m2m_field: "ManyToManyFieldInstance") -> None:
@@ -261,31 +259,38 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         await db.execute_query(str(query))
 
 
-class OneToOneFieldInstance(Field):
-    """
-    OneToOne relation field.
-    This field represents a one to one relation to another model.
-    You must provide the following:
-    ``model_name``:
-        The name of the related model in a :samp:`'{app}.{model}'` format.
-    The following is optional:
-    ``related_name``:
-        The attribute name on the related model to reverse resolve the one to one relation.
-    ``on_delete``:
-        One of:
-            ``field.CASCADE``:
-                Indicate that the model should be cascade deleted if related model gets deleted.
-            ``field.RESTRICT``:
-                Indicate that the related model delete will be restricted as long as a
-                one to one relation points to it.
-            ``field.SET_NULL``:
-                Resets the field to NULL in case the related model gets deleted.
-                Can only be set if field has ``null=True`` set.
-            ``field.SET_DEFAULT``:
-                Resets the field to ``default`` value in case the related model gets deleted.
-                Can only be set is field has a ``default`` set.
-    """
+class ForeignKeyFieldInstance(Field):
+    has_db_field = False
 
+    def __init__(
+        self, model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs
+    ) -> None:
+        super().__init__(**kwargs)
+        if len(model_name.split(".")) != 2:
+            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
+        self.model_class: "Type[Model]" = None  # type: ignore
+        self.model_name: str = model_name
+        self.related_name: Optional[str] = related_name
+        if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
+            raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
+        if on_delete == SET_NULL and not bool(kwargs.get("null")):
+            raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
+        self.on_delete = on_delete
+
+
+class BackwardFKRelation(Field):
+    has_db_field = False
+
+    def __init__(
+        self, field_type: "Type[Model]", relation_field: str, null: bool, description: Optional[str]
+    ) -> None:
+        super().__init__(null=null)
+        self.model_class: "Type[Model]" = field_type
+        self.relation_field: str = relation_field
+        self.description: Optional[str] = description
+
+
+class OneToOneFieldInstance(Field):
     has_db_field = False
 
     def __init__(
@@ -304,9 +309,35 @@ class OneToOneFieldInstance(Field):
             raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
         self.on_delete = on_delete
 
-    # we need this for IDEs so that they don't say that the field is not awaitable
-    def __await__(self):  # pragma: nocoverage
-        ...  # pylint: disable=W0104
+
+class BackwardOneToOneRelation(BackwardFKRelation):
+    pass
+
+
+class ManyToManyFieldInstance(Field):
+    has_db_field = False
+    field_type = ManyToManyRelation
+
+    def __init__(
+        self,
+        model_name: str,
+        through: Optional[str] = None,
+        forward_key: Optional[str] = None,
+        backward_key: str = "",
+        related_name: str = "",
+        field_type: "Type[Model]" = None,  # type: ignore
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.model_class: "Type[Model]" = field_type
+        if len(model_name.split(".")) != 2:
+            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
+        self.model_name: str = model_name
+        self.related_name: str = related_name
+        self.forward_key: str = forward_key or f"{model_name.split('.')[1].lower()}_id"
+        self.backward_key: str = backward_key
+        self.through: Optional[str] = through
+        self._generated: bool = False
 
 
 def OneToOneField(
@@ -316,6 +347,8 @@ def OneToOneField(
     OneToOne relation field.
 
     This field represents a foreign key relation to another model.
+
+    See :ref:`one_to_one` for usage information.
 
     You must provide the following:
 
@@ -342,56 +375,6 @@ def OneToOneField(
     """
 
     return OneToOneFieldInstance(model_name, related_name, on_delete, **kwargs)
-
-
-class ForeignKeyFieldInstance(Field):
-    """
-    ForeignKey relation field.
-
-    This field represents a foreign key relation to another model.
-
-    See :ref:`foreign_key` for usage information.
-
-    You must provide the following:
-
-    ``model_name``:
-        The name of the related model in a :samp:`'{app}.{model}'` format.
-
-    The following is optional:
-
-    ``related_name``:
-        The attribute name on the related model to reverse resolve the foreign key.
-    ``on_delete``:
-        One of:
-            ``field.CASCADE``:
-                Indicate that the model should be cascade deleted if related model gets deleted.
-            ``field.RESTRICT``:
-                Indicate that the related model delete will be restricted as long as a
-                foreign key points to it.
-            ``field.SET_NULL``:
-                Resets the field to NULL in case the related model gets deleted.
-                Can only be set if field has ``null=True`` set.
-            ``field.SET_DEFAULT``:
-                Resets the field to ``default`` value in case the related model gets deleted.
-                Can only be set is field has a ``default`` set.
-    """
-
-    has_db_field = False
-
-    def __init__(
-        self, model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs
-    ) -> None:
-        super().__init__(**kwargs)
-        if len(model_name.split(".")) != 2:
-            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
-        self.model_class: "Type[Model]" = None  # type: ignore
-        self.model_name: str = model_name
-        self.related_name: Optional[str] = related_name
-        if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
-            raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
-        if on_delete == SET_NULL and not bool(kwargs.get("null")):
-            raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
-        self.on_delete = on_delete
 
 
 def ForeignKeyField(
@@ -429,48 +412,6 @@ def ForeignKeyField(
     """
 
     return ForeignKeyFieldInstance(model_name, related_name, on_delete, **kwargs)
-
-
-class BackwardFKRelation(Field):
-    has_db_field = False
-
-    def __init__(
-        self, field_type: "Type[Model]", relation_field: str, null: bool, description: Optional[str]
-    ) -> None:
-        super().__init__(null=null)
-        self.model_class: "Type[Model]" = field_type
-        self.relation_field: str = relation_field
-        self.description: Optional[str] = description
-
-
-class BackwardOneToOneRelation(BackwardFKRelation):
-    pass
-
-
-class ManyToManyFieldInstance(Field):
-    has_db_field = False
-    field_type = ManyToManyRelation
-
-    def __init__(
-        self,
-        model_name: str,
-        through: Optional[str] = None,
-        forward_key: Optional[str] = None,
-        backward_key: str = "",
-        related_name: str = "",
-        field_type: "Type[Model]" = None,  # type: ignore
-        **kwargs,
-    ) -> None:
-        super().__init__(**kwargs)
-        self.model_class: "Type[Model]" = field_type
-        if len(model_name.split(".")) != 2:
-            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
-        self.model_name: str = model_name
-        self.related_name: str = related_name
-        self.forward_key: str = forward_key or f"{model_name.split('.')[1].lower()}_id"
-        self.backward_key: str = backward_key
-        self.through: Optional[str] = through
-        self._generated: bool = False
 
 
 def ManyToManyField(
