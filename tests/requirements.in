@@ -22,7 +22,7 @@ pylint
 docutils
 pygments
 bandit
-black;python_version>="3.6"
+black
 
 ## Test tools
 tox

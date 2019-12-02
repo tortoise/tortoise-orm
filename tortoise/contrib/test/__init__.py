@@ -1,7 +1,7 @@
 import asyncio
 import os as _os
 import unittest
-from asyncio.selector_events import BaseSelectorEventLoop
+from asyncio.events import AbstractEventLoop
 from functools import wraps
 from typing import Any, List, Optional
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
@@ -43,7 +43,7 @@ On success it will be marked as unexpected success.
 _CONFIG: dict = {}
 _CONNECTIONS: dict = {}
 _SELECTOR = None
-_LOOP: BaseSelectorEventLoop = None
+_LOOP: AbstractEventLoop = None  # type: ignore
 _MODULES: List[str] = []
 _CONN_MAP: dict = {}
 
@@ -83,7 +83,7 @@ def _restore_default() -> None:
 
 
 def initializer(
-    modules: List[str], db_url: Optional[str] = None, loop: Optional[BaseSelectorEventLoop] = None
+    modules: List[str], db_url: Optional[str] = None, loop: Optional[AbstractEventLoop] = None
 ) -> None:
     """
     Sets up the DB for testing. Must be called as part of test environment setup.
@@ -122,7 +122,7 @@ def finalizer() -> None:
     """
     _restore_default()
     loop = _LOOP
-    loop._selector = _SELECTOR
+    loop._selector = _SELECTOR  # type: ignore
     loop.run_until_complete(Tortoise._drop_databases())
 
 
@@ -193,7 +193,7 @@ class SimpleTestCase(_TestCase):  # type: ignore
             self.setUp()
 
         # don't take into account if the loop ran during setUp
-        self.loop._asynctest_ran = False
+        self.loop._asynctest_ran = False  # type: ignore
 
     async def _tearDown(self) -> None:
         if asyncio.iscoroutinefunction(self.tearDown):

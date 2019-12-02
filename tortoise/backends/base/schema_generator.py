@@ -156,10 +156,7 @@ class BaseSchemaGenerator:
 
     def _get_field_type(self, field_object) -> str:
         field_object_type = type(field_object)
-        while (
-            field_object_type.__bases__
-            and field_object_type not in self.FIELD_TYPE_MAP  # type: ignore
-        ):
+        while field_object_type.__bases__ and field_object_type not in self.FIELD_TYPE_MAP:
             field_object_type = field_object_type.__bases__[0]
 
         field_type = self.FIELD_TYPE_MAP[field_object_type]  # type: ignore

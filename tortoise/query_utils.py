@@ -84,14 +84,10 @@ def _get_joins_for_related_field(
 
 class EmptyCriterion(Criterion):  # type: ignore
     def __or__(self, other):
-        if other:
-            return other
-        return self
+        return other
 
     def __and__(self, other):
-        if other:
-            return other
-        return self
+        return other
 
     def __bool__(self):
         return False

@@ -546,7 +546,7 @@ class OneToOneField(Field):
         self.on_delete = on_delete
 
     # we need this for IDEs so that they don't say that the field is not awaitable
-    def __await__(self):
+    def __await__(self):  # pragma: nocoverage
         ...  # pylint: disable=W0104
 
 
