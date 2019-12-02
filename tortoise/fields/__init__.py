@@ -15,6 +15,7 @@ from tortoise.fields.data import (
     UUIDField,
 )
 from tortoise.fields.relational import (
+    BackwardOneToOneRelation,
     ForeignKeyField,
     ForeignKeyFieldInstance,
     ForeignKeyNullableRelation,
@@ -22,5 +23,9 @@ from tortoise.fields.relational import (
     ManyToManyField,
     ManyToManyFieldInstance,
     ManyToManyRelation,
+    OneToOneField,
+    OneToOneFieldInstance,
+    OneToOneNullableRelation,
+    OneToOneRelation,
     ReverseRelation,
 )

@@ -10,7 +10,7 @@ from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstan
 
 def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[Table, Criterion]]]:
     join = None
-    table = Table(model._meta.table)
+    table = model._meta.basetable
 
     if value is None and f"{key}__isnull" in model._meta.filters:
         param = model._meta.get_filter(f"{key}__isnull")
@@ -22,7 +22,7 @@ def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[
     if param.get("table"):
         join = (
             param["table"],
-            getattr(table, pk_db_field) == getattr(param["table"], param["backward_key"]),
+            table[pk_db_field] == getattr(param["table"], param["backward_key"]),
         )
         if param.get("value_encoder"):
             value = param["value_encoder"](value, model)
@@ -34,7 +34,7 @@ def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[
             if param.get("value_encoder")
             else model._meta.db.executor_class._field_to_db(field_object, value, model)
         )
-        criterion = param["operator"](getattr(table, param["source_field"]), encoded_value)
+        criterion = param["operator"](table[param["source_field"]], encoded_value)
     return criterion, join
 
 
@@ -47,7 +47,7 @@ def _get_joins_for_related_field(
     related_table_pk = related_field.model_class._meta.db_pk_field
 
     if isinstance(related_field, ManyToManyFieldInstance):
-        related_table = Table(related_field.model_class._meta.table)
+        related_table = related_field.model_class._meta.basetable
         through_table = Table(related_field.through)
         required_joins.append(
             (
@@ -63,7 +63,7 @@ def _get_joins_for_related_field(
             )
         )
     elif isinstance(related_field, BackwardFKRelation):
-        related_table = Table(related_field.model_class._meta.table)
+        related_table = related_field.model_class._meta.basetable
         required_joins.append(
             (
                 related_table,
@@ -71,7 +71,7 @@ def _get_joins_for_related_field(
             )
         )
     else:
-        related_table = Table(related_field.model_class._meta.table)
+        related_table = related_field.model_class._meta.basetable
         required_joins.append(
             (
                 related_table,
@@ -84,14 +84,10 @@ def _get_joins_for_related_field(
 
 class EmptyCriterion(Criterion):  # type: ignore
     def __or__(self, other):
-        if other:
-            return other
-        return self
+        return other
 
     def __and__(self, other):
-        if other:
-            return other
-        return self
+        return other
 
     def __bool__(self):
         return False
@@ -129,6 +125,7 @@ class QueryModifier:
 
     def __or__(self, other: "QueryModifier") -> "QueryModifier":
         if self.having_criterion or other.having_criterion:
+            # TODO: This could be optimized?
             result_having_criterion = _or(
                 _and(self.where_criterion, self.having_criterion),
                 _and(other.where_criterion, other.having_criterion),
@@ -136,15 +133,22 @@ class QueryModifier:
             return QueryModifier(
                 joins=self.joins + other.joins, having_criterion=result_having_criterion
             )
-        return QueryModifier(
-            where_criterion=self.where_criterion | other.where_criterion,
-            joins=self.joins + other.joins,
-        )
+        if self.where_criterion and other.where_criterion:
+            return QueryModifier(
+                where_criterion=self.where_criterion | other.where_criterion,
+                joins=self.joins + other.joins,
+            )
+        else:
+            return QueryModifier(
+                where_criterion=self.where_criterion or other.where_criterion,
+                joins=self.joins + other.joins,
+            )
 
     def __invert__(self) -> "QueryModifier":
         if not self.where_criterion and not self.having_criterion:
             return QueryModifier(joins=self.joins)
         if self.having_criterion:
+            # TODO: This could be optimized?
             return QueryModifier(
                 joins=self.joins,
                 having_criterion=_and(self.where_criterion, self.having_criterion).negate(),
@@ -170,7 +174,9 @@ class Q:
 
     def __init__(self, *args: "Q", join_type=AND, **kwargs) -> None:
         if args and kwargs:
-            raise OperationalError("You can pass only Q nodes or filter kwargs in one Q node")
+            newarg = Q(join_type=join_type, **kwargs)
+            args = (newarg,) + args
+            kwargs = {}
         if not all(isinstance(node, Q) for node in args):
             raise OperationalError("All ordered arguments must be Q nodes")
         self.children: Tuple[Q, ...] = args
@@ -201,7 +207,7 @@ class Q:
         self._is_negated = not self._is_negated
 
     def _resolve_nested_filter(self, model, key, value) -> QueryModifier:
-        table = Table(model._meta.table)
+        table = model._meta.basetable
 
         related_field_name = key.split("__")[0]
         related_field = model._meta.fields_map[related_field_name]
@@ -240,7 +246,7 @@ class Q:
         return modifier
 
     def _get_actual_filter_params(self, model, key, value) -> Tuple[str, Any]:
-        if key in model._meta.fk_fields:
+        if key in model._meta.fk_fields or key in model._meta.o2o_fields:
             field_object = model._meta.fields_map[key]
             if hasattr(value, "pk"):
                 filter_value = value.pk

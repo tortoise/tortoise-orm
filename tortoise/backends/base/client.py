@@ -104,6 +104,9 @@ class BaseDBAsyncClient:
     async def execute_many(self, query: str, values: List[list]) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
+    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+        raise NotImplementedError()  # pragma: nocoverage
+
 
 class ConnectionWrapper:
     __slots__ = ("connection", "lock")
@@ -129,8 +132,7 @@ class TransactionContext:
         self.lock = getattr(connection, "_trxlock", None)
 
     async def __aenter__(self):
-        if self.lock:
-            await self.lock.acquire()
+        await self.lock.acquire()
         current_transaction = current_transaction_map[self.connection_name]
         self.token = current_transaction.set(self.connection)
         await self.connection.start()
@@ -145,16 +147,11 @@ class TransactionContext:
             else:
                 await self.connection.commit()
         current_transaction_map[self.connection_name].reset(self.token)
-        if self.lock:
-            self.lock.release()
+        self.lock.release()
 
 
 class TransactionContextPooled(TransactionContext):
     __slots__ = ("connection", "connection_name", "token")
-
-    def __init__(self, connection) -> None:
-        self.connection = connection
-        self.connection_name = connection.connection_name
 
     async def __aenter__(self):
         current_transaction = current_transaction_map[self.connection_name]
@@ -188,7 +185,7 @@ class NestedTransactionContext(TransactionContext):
                 if exc_type is not TransactionManagementError:
                     await self.connection.rollback()
             else:
-                await self.connection.commit(finalize=False)
+                await self.connection.commit()
 
 
 class PoolConnectionWrapper:
@@ -216,5 +213,5 @@ class BaseTransactionWrapper:
     async def rollback(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def commit(self, finalize: bool = True) -> None:
+    async def commit(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage

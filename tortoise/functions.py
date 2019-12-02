@@ -1,4 +1,3 @@
-from pypika import Table
 from pypika.functions import Avg as PypikaAvg
 from pypika.functions import Coalesce as PypikaCoalesce
 from pypika.functions import Count as PypikaCount
@@ -34,21 +33,22 @@ class Function:
             function_joins: list = []
             if field_split[0] in model._meta.fetch_fields:
                 related_field = model._meta.fields_map[field_split[0]]
-                join = (Table(model._meta.table), field_split[0], related_field)
+                related_field_meta = related_field.model_class._meta
+                join = (model._meta.basetable, field_split[0], related_field)
                 function_joins.append(join)
                 function_field = self.database_func(
-                    Table(related_field.model_class._meta.table).id, *default_values
+                    related_field_meta.basetable[related_field_meta.db_pk_field], *default_values
                 )
             else:
                 function_field = self.database_func(
-                    getattr(Table(model._meta.table), field_split[0]), *default_values
+                    model._meta.basetable[field_split[0]], *default_values
                 )
             return {"joins": function_joins, "field": function_field}
 
         if field_split[0] not in model._meta.fetch_fields:
             raise ConfigurationError(f"{field} not resolvable")
         related_field = model._meta.fields_map[field_split[0]]
-        join = (Table(model._meta.table), field_split[0], related_field)
+        join = (model._meta.basetable, field_split[0], related_field)
         function = self._resolve_field_for_model(
             related_field.model_class, "__".join(field_split[1:]), *default_values
         )

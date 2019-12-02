@@ -164,6 +164,7 @@ class DatetimeField(Field, datetime.datetime):
         Set to ``datetime.utcnow()`` on first save only.
     """
 
+    skip_to_python_if_native = True
     SQL_TYPE = "TIMESTAMP"
 
     class _db_mysql:
@@ -184,12 +185,14 @@ class DatetimeField(Field, datetime.datetime):
     def to_db_value(
         self, value: Optional[datetime.datetime], instance
     ) -> Optional[datetime.datetime]:
-        if self.auto_now or (
-            self.auto_now_add and getattr(instance, self.model_field_name) is None
-        ):
-            value = datetime.datetime.utcnow()
-            setattr(instance, self.model_field_name, value)
-            return value
+        if hasattr(instance, "_saved_in_db"):
+            # Only do this if it is a Model instance, not class. Test for guaranteed instance var
+            if self.auto_now or (
+                self.auto_now_add and getattr(instance, self.model_field_name) is None
+            ):
+                value = datetime.datetime.utcnow()
+                setattr(instance, self.model_field_name, value)
+                return value
         return value
 
 
@@ -198,6 +201,7 @@ class DateField(Field, datetime.date):
     Date field.
     """
 
+    skip_to_python_if_native = True
     SQL_TYPE = "DATE"
 
     def to_python_value(self, value: Any) -> Optional[datetime.date]:

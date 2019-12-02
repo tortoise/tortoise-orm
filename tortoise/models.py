@@ -2,7 +2,7 @@ from copy import copy, deepcopy
 from functools import partial
 from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
 
-from pypika import Query
+from pypika import Query, Table
 
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import ConfigurationError, OperationalError
@@ -10,9 +10,11 @@ from tortoise.fields.base import Field
 from tortoise.fields.data import BigIntField, IntField, SmallIntField
 from tortoise.fields.relational import (
     BackwardFKRelation,
+    BackwardOneToOneRelation,
     ForeignKeyFieldInstance,
     ManyToManyFieldInstance,
     ManyToManyRelation,
+    OneToOneFieldInstance,
     ReverseRelation,
 )
 from tortoise.filters import get_filters_for_field
@@ -54,6 +56,15 @@ def _rfk_getter(self, _key, ftype, frelfield):
     return val
 
 
+def _ro2o_getter(self, _key, ftype, frelfield):
+    if hasattr(self, _key):
+        return getattr(self, _key)
+
+    val = ftype.filter(**{frelfield: self.pk}).first()
+    setattr(self, _key, val)
+    return val
+
+
 def _m2m_getter(self, _key, field_object):
     val = getattr(self, _key, None)
     if val is None:
@@ -70,6 +81,8 @@ class MetaInfo:
         "fields",
         "db_fields",
         "m2m_fields",
+        "o2o_fields",
+        "backward_o2o_fields",
         "fk_fields",
         "backward_fk_fields",
         "fetch_fields",
@@ -81,6 +94,7 @@ class MetaInfo:
         "default_connection",
         "basequery",
         "basequery_all_fields",
+        "basetable",
         "_filters",
         "unique_together",
         "indexes",
@@ -105,7 +119,9 @@ class MetaInfo:
         self.db_fields: Set[str] = set()
         self.m2m_fields: Set[str] = set()
         self.fk_fields: Set[str] = set()
+        self.o2o_fields: Set[str] = set()
         self.backward_fk_fields: Set[str] = set()
+        self.backward_o2o_fields: Set[str] = set()
         self.fetch_fields: Set[str] = set()
         self.fields_db_projection: Dict[str, str] = {}
         self.fields_db_projection_reverse: Dict[str, str] = {}
@@ -116,6 +132,7 @@ class MetaInfo:
         self.default_connection: Optional[str] = None
         self.basequery: Query = Query()
         self.basequery_all_fields: Query = Query()
+        self.basetable: Table = Table("")
         self.pk_attr: str = getattr(meta, "pk_attr", "")
         self.generated_db_fields: Tuple[str] = None  # type: ignore
         self._model: "Model" = None  # type: ignore
@@ -137,6 +154,8 @@ class MetaInfo:
 
         if isinstance(value, ManyToManyFieldInstance):
             self.m2m_fields.add(name)
+        elif isinstance(value, BackwardOneToOneRelation):
+            self.backward_o2o_fields.add(name)
         elif isinstance(value, BackwardFKRelation):
             self.backward_fk_fields.add(name)
 
@@ -175,7 +194,13 @@ class MetaInfo:
         self.fields_db_projection_reverse = {
             value: key for key, value in self.fields_db_projection.items()
         }
-        self.fetch_fields = self.m2m_fields | self.backward_fk_fields | self.fk_fields
+        self.fetch_fields = (
+            self.m2m_fields
+            | self.backward_fk_fields
+            | self.fk_fields
+            | self.backward_o2o_fields
+            | self.o2o_fields
+        )
 
         generated_fields = []
         for field in self.fields_map.values():
@@ -221,6 +246,42 @@ class MetaInfo:
                 ),
             )
 
+        # Create lazy one to one fields on model.
+        for key in self.o2o_fields:
+            _key = f"_{key}"
+            relation_field = self.fields_map[key].source_field
+            setattr(
+                self._model,
+                key,
+                property(
+                    partial(
+                        _fk_getter,
+                        _key=_key,
+                        ftype=self.fields_map[key].model_class,  # type: ignore
+                        relation_field=relation_field,
+                    ),
+                    partial(_fk_setter, _key=_key, relation_field=relation_field),
+                    partial(_fk_setter, value=None, _key=_key, relation_field=relation_field),
+                ),
+            )
+
+        # Create lazy reverse one to one fields on model.
+        for key in self.backward_o2o_fields:
+            _key = f"_{key}"
+            field_object: BackwardOneToOneRelation = self.fields_map[key]  # type: ignore
+            setattr(
+                self._model,
+                key,
+                property(
+                    partial(
+                        _ro2o_getter,
+                        _key=_key,
+                        ftype=field_object.model_class,
+                        frelfield=field_object.relation_field,
+                    ),
+                ),
+            )
+
         # Create lazy M2M fields on model.
         for key in self.m2m_fields:
             _key = f"_{key}"
@@ -231,12 +292,21 @@ class MetaInfo:
             )
 
     def _generate_db_fields(self) -> None:
+        self.db_default_fields.clear()
+        self.db_complex_fields.clear()
+        self.db_native_fields.clear()
+
         for key in self.db_fields:
             model_field = self.fields_db_projection_reverse[key]
             field = self.fields_map[model_field]
 
             default_converter = field.__class__.to_python_value is Field.to_python_value
-            if not default_converter:
+            if (
+                field.skip_to_python_if_native
+                and field.field_type in self.db.executor_class.DB_NATIVE
+            ):
+                self.db_native_fields.append((key, model_field, field))
+            elif not default_converter:
                 self.db_complex_fields.append((key, model_field, field))
             elif field.field_type in self.db.executor_class.DB_NATIVE:
                 self.db_native_fields.append((key, model_field, field))
@@ -264,6 +334,7 @@ class ModelMeta(type):
         filters: Dict[str, Dict[str, dict]] = {}
         fk_fields: Set[str] = set()
         m2m_fields: Set[str] = set()
+        o2o_fields: Set[str] = set()
         meta_class = attrs.get("Meta", type("Meta", (), {}))
         pk_attr: str = "id"
 
@@ -346,6 +417,8 @@ class ModelMeta(type):
 
                     if isinstance(value, ForeignKeyFieldInstance):
                         fk_fields.add(key)
+                    elif isinstance(value, OneToOneFieldInstance):
+                        o2o_fields.add(key)
                     elif isinstance(value, ManyToManyFieldInstance):
                         m2m_fields.add(key)
                     else:
@@ -376,6 +449,8 @@ class ModelMeta(type):
         meta._filters = filters
         meta.fk_fields = fk_fields
         meta.backward_fk_fields = set()
+        meta.o2o_fields = o2o_fields
+        meta.backward_o2o_fields = set()
         meta.m2m_fields = m2m_fields
         meta.default_connection = None
         meta.pk_attr = pk_attr
@@ -405,7 +480,7 @@ class Model(metaclass=ModelMeta):
         passed_fields = {*kwargs.keys()} | meta.fetch_fields
 
         for key, value in kwargs.items():
-            if key in meta.fk_fields:
+            if key in meta.fk_fields or key in meta.o2o_fields:
                 if value and not value._saved_in_db:
                     raise OperationalError(
                         f"You should first call .save() on {value} before referring to it"
@@ -414,12 +489,19 @@ class Model(metaclass=ModelMeta):
                 passed_fields.add(meta.fields_map[key].source_field)  # type: ignore
             elif key in meta.fields_db_projection:
                 field_object = meta.fields_map[key]
+                if field_object.generated:
+                    raise ValueError(f"{key} is DB generated, and can't be set from constructor.")
                 if value is None and not field_object.null:
                     raise ValueError(f"{key} is non nullable field, but null was passed")
                 setattr(self, key, field_object.to_python_value(value))
             elif key in meta.backward_fk_fields:
                 raise ConfigurationError(
                     "You can't set backward relations through init, change related model instead"
+                )
+            elif key in meta.backward_o2o_fields:
+                raise ConfigurationError(
+                    "You can't set backward one to one relations through init,"
+                    " change related model instead"
                 )
             elif key in meta.m2m_fields:
                 raise ConfigurationError(

@@ -25,6 +25,17 @@ ForeignKeyRelation = Union[Awaitable[MODEL], MODEL]
 Type hint for the result of accessing the :class:`.ForeignKeyField` field in the model.
 """
 
+OneToOneNullableRelation = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
+"""
+Type hint for the result of accessing the :class:`.OneToOneField` field in the model
+when obtained model can be nullable.
+"""
+
+OneToOneRelation = Union[Awaitable[MODEL], MODEL]
+"""
+Type hint for the result of accessing the :class:`.OneToOneField` field in the model.
+"""
+
 
 class ReverseRelation(Generic[MODEL]):
     """
@@ -250,6 +261,89 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         await db.execute_query(str(query))
 
 
+class OneToOneFieldInstance(Field):
+    """
+    OneToOne relation field.
+    This field represents a one to one relation to another model.
+    You must provide the following:
+    ``model_name``:
+        The name of the related model in a :samp:`'{app}.{model}'` format.
+    The following is optional:
+    ``related_name``:
+        The attribute name on the related model to reverse resolve the one to one relation.
+    ``on_delete``:
+        One of:
+            ``field.CASCADE``:
+                Indicate that the model should be cascade deleted if related model gets deleted.
+            ``field.RESTRICT``:
+                Indicate that the related model delete will be restricted as long as a
+                one to one relation points to it.
+            ``field.SET_NULL``:
+                Resets the field to NULL in case the related model gets deleted.
+                Can only be set if field has ``null=True`` set.
+            ``field.SET_DEFAULT``:
+                Resets the field to ``default`` value in case the related model gets deleted.
+                Can only be set is field has a ``default`` set.
+    """
+
+    has_db_field = False
+
+    def __init__(
+        self, model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs
+    ) -> None:
+        kwargs["unique"] = True
+        super().__init__(**kwargs)
+        if len(model_name.split(".")) != 2:
+            raise ConfigurationError('OneToOneField accepts model name in format "app.Model"')
+        self.model_class: "Type[Model]" = None  # type: ignore
+        self.model_name: str = model_name
+        self.related_name: Optional[str] = related_name
+        if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
+            raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
+        if on_delete == SET_NULL and not bool(kwargs.get("null")):
+            raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
+        self.on_delete = on_delete
+
+    # we need this for IDEs so that they don't say that the field is not awaitable
+    def __await__(self):  # pragma: nocoverage
+        ...  # pylint: disable=W0104
+
+
+def OneToOneField(
+    model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs,
+) -> OneToOneRelation:
+    """
+    OneToOne relation field.
+
+    This field represents a foreign key relation to another model.
+
+    You must provide the following:
+
+    ``model_name``:
+        The name of the related model in a :samp:`'{app}.{model}'` format.
+
+    The following is optional:
+
+    ``related_name``:
+        The attribute name on the related model to reverse resolve the foreign key.
+    ``on_delete``:
+        One of:
+            ``field.CASCADE``:
+                Indicate that the model should be cascade deleted if related model gets deleted.
+            ``field.RESTRICT``:
+                Indicate that the related model delete will be restricted as long as a
+                foreign key points to it.
+            ``field.SET_NULL``:
+                Resets the field to NULL in case the related model gets deleted.
+                Can only be set if field has ``null=True`` set.
+            ``field.SET_DEFAULT``:
+                Resets the field to ``default`` value in case the related model gets deleted.
+                Can only be set is field has a ``default`` set.
+    """
+
+    return OneToOneFieldInstance(model_name, related_name, on_delete, **kwargs)
+
+
 class ForeignKeyFieldInstance(Field):
     """
     ForeignKey relation field.
@@ -347,6 +441,10 @@ class BackwardFKRelation(Field):
         self.model_class: "Type[Model]" = field_type
         self.relation_field: str = relation_field
         self.description: Optional[str] = description
+
+
+class BackwardOneToOneRelation(BackwardFKRelation):
+    pass
 
 
 class ManyToManyFieldInstance(Field):

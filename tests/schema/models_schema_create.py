@@ -44,7 +44,23 @@ class Team(Model):
 
     class Meta:
         table_description = "The TEAMS!"
-        indexes = ("manager", "key")
+        indexes = [("manager", "key"), ["manager_id", "name"]]
+
+
+class TeamAddress(Model):
+    city = fields.CharField(max_length=50, description="City")
+    country = fields.CharField(max_length=50, description="Country")
+    street = fields.CharField(max_length=128, description="Street Address")
+    team = fields.OneToOneField(
+        "models.Team", related_name="address", on_delete=fields.CASCADE, pk=True
+    )
+
+
+class VenueInformation(Model):
+    name = fields.CharField(max_length=128)
+    capacity = fields.IntField()
+    rent = fields.FloatField()
+    team = fields.OneToOneField("models.Team", on_delete=fields.SET_NULL, null=True)
 
 
 class SourceFields(Model):

@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from functools import wraps
 from typing import List, Optional, SupportsInt, Union
 
@@ -25,34 +24,6 @@ from tortoise.exceptions import (
     OperationalError,
     TransactionManagementError,
 )
-
-
-def retry_connection(func):
-    @wraps(func)
-    async def retry_connection_(self, *args):
-        try:
-            return await func(self, *args)
-        except (
-            RuntimeError,
-            pymysql.err.OperationalError,
-            pymysql.err.InternalError,
-            pymysql.err.InterfaceError,
-        ):
-            # Here we assume that a connection error has happened
-            # Re-create connection and re-try the function call once only.
-            if getattr(self, "_finalized", None) is False:
-                raise TransactionManagementError("Connection gone away during transaction")
-            logging.info("Attempting reconnect")
-            try:
-                async with self.acquire_connection() as connection:
-                    await connection.ping()
-                    logging.info("Reconnected")
-            except Exception as e:
-                raise DBConnectionError("Failed to reconnect: %s", str(e))
-
-            return await func(self, *args)
-
-    return retry_connection_
 
 
 def translate_exceptions(func):
@@ -126,12 +97,17 @@ class MySQLClient(BaseDBAsyncClient):
                             await cursor.execute(
                                 f"SET default_storage_engine='{self.storage_engine}';"
                             )
-                            if self.storage_engine.lower() != "innodb":
+                            if self.storage_engine.lower() != "innodb":  # pragma: nobranch
                                 self.capabilities.__dict__["supports_transactions"] = False
 
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
         except pymysql.err.OperationalError:
             raise DBConnectionError(f"Can't connect to MySQL server: {self._template}")
+
+    async def _expire_connections(self) -> None:
+        if self._pool:  # pragma: nobranch
+            for conn in self._pool._free:
+                conn._reader.set_exception(EOFError("EOF"))
 
     async def _close(self) -> None:
         if self._pool:  # pragma: nobranch
@@ -164,7 +140,6 @@ class MySQLClient(BaseDBAsyncClient):
         return TransactionContextPooled(TransactionWrapper(self))
 
     @translate_exceptions
-    @retry_connection
     async def execute_insert(self, query: str, values: list) -> int:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
@@ -173,26 +148,38 @@ class MySQLClient(BaseDBAsyncClient):
                 return cursor.lastrowid  # return auto-generated id
 
     @translate_exceptions
-    @retry_connection
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
-                await cursor.executemany(query, values)
+                if self.capabilities.supports_transactions:
+                    await connection.begin()
+                    try:
+                        await cursor.executemany(query, values)
+                    except Exception:
+                        await connection.rollback()
+                        raise
+                    else:
+                        await connection.commit()
+                else:
+                    await cursor.executemany(query, values)
 
     @translate_exceptions
-    @retry_connection
-    async def execute_query(
-        self, query: str, values: Optional[list] = None
-    ) -> List[aiomysql.DictCursor]:
+    async def execute_query(self, query: str, values: Optional[list] = None) -> List[dict]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            async with connection.cursor(aiomysql.DictCursor) as cursor:
+            async with connection.cursor() as cursor:
                 await cursor.execute(query, values)
-                return await cursor.fetchall()
+                rows = await cursor.fetchall()
+                if rows:
+                    fields = [f.name for f in cursor._result.fields]
+                    return [dict(zip(fields, row)) for row in rows]
+                return []
+
+    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+        return await self.execute_query(query, values)
 
     @translate_exceptions
-    @retry_connection
     async def execute_script(self, query: str) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug(query)
@@ -213,23 +200,26 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
     def _in_transaction(self) -> "TransactionContext":
         return NestedTransactionContext(self)
 
-    async def create_connection(self, with_db: bool) -> None:
-        await self._parent.create_connection(with_db)
-
     def acquire_connection(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._connection, self._lock)
 
-    @retry_connection
+    @translate_exceptions
+    async def execute_many(self, query: str, values: list) -> None:
+        async with self.acquire_connection() as connection:
+            self.log.debug("%s: %s", query, values)
+            async with connection.cursor() as cursor:
+                await cursor.executemany(query, values)
+
+    @translate_exceptions
     async def start(self) -> None:
         await self._connection.begin()
         self._finalized = False
 
-    async def commit(self, finalize: bool = True) -> None:
+    async def commit(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.commit()
-        if finalize:
-            self._finalized = True
+        self._finalized = True
 
     async def rollback(self) -> None:
         if self._finalized:

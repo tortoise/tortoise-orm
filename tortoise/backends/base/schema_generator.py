@@ -16,7 +16,7 @@ class BaseSchemaGenerator:
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment};'
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
-    UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE ({fields})"
+    UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{index_name}" UNIQUE ({fields})'
     FK_TEMPLATE = ' REFERENCES "{table}" ("{field}") ON DELETE {on_delete}{comment}'
     M2M_TABLE_TEMPLATE = (
         'CREATE TABLE {exists}"{table_name}" (\n'
@@ -100,13 +100,16 @@ class BaseSchemaGenerator:
         # Hash a set of string values and get a digest of the given length.
         return sha256(";".join(args).encode("utf-8")).hexdigest()[:length]
 
-    def _generate_index_name(self, model, field_names: List[str]) -> str:
+    def _generate_index_name(self, prefix, model, field_names: List[str]) -> str:
         # NOTE: for compatibility, index name should not be longer than 30
         # characters (Oracle limit).
         # That's why we slice some of the strings here.
         table_name = model._meta.table
-        index_name = "idx_{}_{}_{}".format(
-            table_name[:11], field_names[0][:7], self._make_hash(table_name, *field_names, length=6)
+        index_name = "{}_{}_{}_{}".format(
+            prefix,
+            table_name[:11],
+            field_names[0][:7],
+            self._make_hash(table_name, *field_names, length=6),
         )
         return index_name
 
@@ -124,13 +127,16 @@ class BaseSchemaGenerator:
     def _get_index_sql(self, model, field_names: List[str], safe: bool) -> str:
         return self.INDEX_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
-            index_name=self._generate_index_name(model, field_names),
+            index_name=self._generate_index_name("idx", model, field_names),
             table_name=model._meta.table,
             fields=", ".join([self.quote(f) for f in field_names]),
         )
 
-    def _get_unique_constraint_sql(self, field_names: List[str]) -> str:
-        return self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(fields=", ".join(field_names))
+    def _get_unique_constraint_sql(self, model, field_names: List[str]) -> str:
+        return self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(
+            index_name=self._generate_index_name("uid", model, field_names),
+            fields=", ".join([self.quote(f) for f in field_names]),
+        )
 
     def _get_field_type(self, field_object: Field) -> str:
         types = field_object.get_db_field_types()
@@ -153,11 +159,12 @@ class BaseSchemaGenerator:
                 else ""
             )
             # TODO: PK generation needs to move out of schema generator.
-            if field_object.pk:
+            if field_object.pk:  # and not isinstance(field_object.reference, OneToOneField):
                 pk_string = self._get_primary_key_create_string(field_object, db_field, comment)
                 if pk_string:
                     fields_to_create.append(pk_string)
                     continue
+
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
 
@@ -213,21 +220,26 @@ class BaseSchemaGenerator:
 
                 for field in unique_together_list:
                     field_object = model._meta.fields_map[field]
+                    unique_together_to_create.append(field_object.source_field or field)
 
-                    if field_object.source_field:
-                        unique_together_to_create.append(self.quote(field_object.source_field))
-                    else:
-                        unique_together_to_create.append(self.quote(field))
-
-                fields_to_create.append(self._get_unique_constraint_sql(unique_together_to_create))
+                fields_to_create.append(
+                    self._get_unique_constraint_sql(model, unique_together_to_create)
+                )
 
         # Indexes.
         _indexes = [
             self._get_index_sql(model, [field_name], safe=safe) for field_name in fields_with_index
-        ] + [
-            self._get_index_sql(model, field_names, safe=safe)
-            for field_names in model._meta.indexes
         ]
+
+        if model._meta.indexes:
+            for indexes_list in model._meta.indexes:
+                indexes_to_create = []
+                for field in indexes_list:
+                    field_object = model._meta.fields_map[field]
+                    indexes_to_create.append(field_object.source_field or field)
+
+                _indexes.append(self._get_index_sql(model, indexes_to_create, safe=safe))
+
         field_indexes_sqls = [val for val in _indexes if val]
 
         fields_to_create.extend(self._get_inner_statements())

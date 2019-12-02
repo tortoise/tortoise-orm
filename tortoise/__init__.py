@@ -7,13 +7,17 @@ from copy import deepcopy
 from inspect import isclass
 from typing import Any, Coroutine, Dict, List, Optional, Tuple, Type, Union, cast
 
+from pypika import Table
+
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields.relational import (
     BackwardFKRelation,
+    BackwardOneToOneRelation,
     ForeignKeyFieldInstance,
     ManyToManyFieldInstance,
+    OneToOneFieldInstance,
 )
 from tortoise.filters import get_m2m_filters
 from tortoise.models import Model
@@ -75,6 +79,8 @@ class Tortoise:
                     "data_fields":          [...]   # Data fields
                     "fk_fields":            [...]   # Foreign Key fields FROM this model
                     "backward_fk_fields":   [...]   # Foreign Key fields TO this model
+                    "o2o_fields":           [...]  # OneToOne fields FROM this model
+                    "backward_o2o_fields":  [...]  # OneToOne fields TO this model
                     "m2m_fields":           [...]   # Many-to-Many fields
                 }
 
@@ -167,14 +173,16 @@ class Tortoise:
                 del desc["db_field_types"]
 
             # Foreign Keys have
-            if isinstance(field, ForeignKeyFieldInstance):
+            if isinstance(field, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
                 del desc["db_column"]
                 desc["raw_field"] = field.source_field
             else:
                 del desc["raw_field"]
 
             # These fields are entierly "virtual", so no direct DB representation
-            if isinstance(field, (ManyToManyFieldInstance, BackwardFKRelation)):
+            if isinstance(
+                field, (ManyToManyFieldInstance, BackwardFKRelation, BackwardOneToOneRelation,),
+            ):
                 del desc["db_column"]
 
             return desc
@@ -202,6 +210,16 @@ class Tortoise:
                 describe_field(name)
                 for name in model._meta.fields_map.keys()
                 if name in model._meta.backward_fk_fields
+            ],
+            "o2o_fields": [
+                describe_field(name)
+                for name in model._meta.fields_map.keys()
+                if name in model._meta.o2o_fields
+            ],
+            "backward_o2o_fields": [
+                describe_field(name)
+                for name in model._meta.fields_map.keys()
+                if name in model._meta.backward_o2o_fields
             ],
             "m2m_fields": [
                 describe_field(name)
@@ -290,6 +308,8 @@ class Tortoise:
                 if not model._meta.table:
                     model._meta.table = model.__name__.lower()
 
+                pk_attr_changed = False
+
                 for field in model._meta.fk_fields:
                     fk_object = cast(ForeignKeyFieldInstance, model._meta.fields_map[field])
                     reference = fk_object.model_name
@@ -327,6 +347,48 @@ class Tortoise:
                     )
                     related_model._meta.add_field(backward_relation_name, fk_relation)
 
+                for field in model._meta.o2o_fields:
+                    o2o_object = cast(OneToOneFieldInstance, model._meta.fields_map[field])
+                    reference = o2o_object.model_name
+                    related_app_name, related_model_name = split_reference(reference)
+                    related_model = get_related_model(related_app_name, related_model_name)
+
+                    key_field = f"{field}_id"
+                    key_o2o_object = deepcopy(related_model._meta.pk)
+                    key_o2o_object.pk = o2o_object.pk
+                    key_o2o_object.index = o2o_object.index
+                    key_o2o_object.default = o2o_object.default
+                    key_o2o_object.null = o2o_object.null
+                    key_o2o_object.unique = o2o_object.unique
+                    key_o2o_object.generated = o2o_object.generated
+                    key_o2o_object.reference = o2o_object
+                    key_o2o_object.description = o2o_object.description
+                    if o2o_object.source_field:
+                        key_o2o_object.source_field = o2o_object.source_field
+                        o2o_object.source_field = key_field
+                    else:
+                        o2o_object.source_field = key_field
+                        key_o2o_object.source_field = key_field
+                    model._meta.add_field(key_field, key_o2o_object)
+
+                    o2o_object.model_class = related_model
+                    backward_relation_name = o2o_object.related_name
+                    if not backward_relation_name:
+                        backward_relation_name = f"{model._meta.table}"
+                    if backward_relation_name in related_model._meta.fields:
+                        raise ConfigurationError(
+                            f'backward relation "{backward_relation_name}" duplicates in'
+                            f" model {related_model_name}"
+                        )
+                    o2o_relation = BackwardOneToOneRelation(
+                        model, f"{field}_id", null=True, description=o2o_object.description
+                    )
+                    related_model._meta.add_field(backward_relation_name, o2o_relation)
+
+                    if o2o_object.pk:
+                        pk_attr_changed = True
+                        model._meta.pk_attr = key_field
+
                 for field in list(model._meta.m2m_fields):
                     m2m_object = cast(ManyToManyFieldInstance, model._meta.fields_map[field])
                     if m2m_object._generated:
@@ -347,9 +409,7 @@ class Tortoise:
 
                     backward_relation_name = m2m_object.related_name
                     if not backward_relation_name:
-                        backward_relation_name = (
-                            m2m_object.related_name
-                        ) = f"{model._meta.table}_through"
+                        backward_relation_name = m2m_object.related_name = f"{model._meta.table}s"
                     if backward_relation_name in related_model._meta.fields:
                         raise ConfigurationError(
                             f'backward relation "{backward_relation_name}" duplicates in'
@@ -377,6 +437,9 @@ class Tortoise:
                     m2m_relation._generated = True
                     model._meta.filters.update(get_m2m_filters(field, m2m_object))
                     related_model._meta.add_field(backward_relation_name, m2m_relation)
+
+                if pk_attr_changed:
+                    model._meta.finalise_pk()
 
     @classmethod
     def _discover_client_class(cls, engine: str) -> BaseDBAsyncClient:
@@ -475,6 +538,7 @@ class Tortoise:
         for app in cls.apps.values():
             for model in app.values():
                 model._meta.finalise_model()
+                model._meta.basetable = Table(model._meta.table)
                 model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
                 model._meta.basequery_all_fields = model._meta.basequery.select(
                     *model._meta.db_fields
@@ -664,4 +728,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.15.0a0"
+__version__ = "0.15.3"

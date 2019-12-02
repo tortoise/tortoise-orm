@@ -2,6 +2,36 @@
 
 Changelog
 =========
+0.15.3
+------
+* Added ``OneToOneField`` implementation:
+
+  ``OneToOneField`` describes a one to one relation between two models.
+  It can be set from the primary side only, but resolved from both sides in the same way.
+
+  ``describe_model(...)`` now also reports OneToOne relations in both directions.
+
+  Usage example:
+
+  .. code-block:: python3
+
+     event: fields.OneToOneRelation[Event] = fields.OneToOneField(
+         "models.Event", on_delete=fields.CASCADE, related_name="address"
+     )
+
+- Prefetching is done concurrently now, sending all prefetch requests at the same time instead of in sequence.
+- Enabe foreign key enforcement on SQLite for builds where it was optional.
+
+0.15.2
+------
+- The ``auto_now_add`` argument of ``DatetimeField`` is handled correctly in the SQLite backend.
+- ``unique_together`` now creates named constrains, to prevent the DB from auto-assigning a potentially non-unique constraint name.
+- Filtering by an ``auto_now`` field doesn't replace the filter value with ``now()`` anymore.
+
+0.15.1
+------
+- Handle OR'ing a blank ``Q()`` correctly (#240)
+
 0.15.0
 -------
 New features:
@@ -10,11 +40,28 @@ New features:
     - Enabled by default for databases that support it (mysql and postgres) with a minimum pool size of 1, and a maximum of 5
     - Not supported by sqlite
     - Can be changed by passing the ``minsize`` and ``maxsize`` connection parameters
+- Many small performance tweaks:
+    - Overhead of query generation has been reduced by about 6%
+    - Bulk inserts are ensured to be wrapped in a transaction for >50% speedup
+    - PostgreSQL prepared queries now use a LRU cache for significant >2x speedup on inserts/updates/deletes
+- ``DateField`` & ``DatetimeField`` deserializes faster on PostgreSQL & MySQL.
+- Optimized ``.values()`` to do less copying, resulting in a slight speedup.
+- One can now pass kwargs and ``Q()`` objects as parameters to ``Q()`` objects simultaneously.
+
+Bugfixes:
+^^^^^^^^^
+- ``indexes`` will correctly map the foreign key if referenced by name.
+- Setting DB generated PK in constructor/create generates exception instead of silently being ignored.
 
 Deprecations:
 ^^^^^^^^^^^^^
 - ``start_transaction`` is deprecated, please use ``@atomic()`` or ``async with in_transaction():`` instead.
+- **This release brings with it, deprecation of Python 3.6 / PyPy-3.6:**
 
+  This is due to small differences with how the backported ``aiocontextvars`` behaves
+  in comparison to the built-in in Python 3.7+.
+
+  There is a known context confusion, specifically regarding nested transactions.
 
 0.14.2
 ------
@@ -54,7 +101,7 @@ Bugfixes:
 - Fields are quoted properly in ``UNIQUE`` statements.
 - Fields are quoted properly in ``KEY`` statements.
 - Comment Fields are quoted properly in PostgreSQL dialect.
-- ``unique_together`` and ``indexes`` will correctly map the foreign key if referenced by name.
+- ``unique_together`` will correctly map the foreign key if referenced by name.
 
 Deprecations:
 ^^^^^^^^^^^^^

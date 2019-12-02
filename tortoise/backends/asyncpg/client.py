@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from functools import wraps
 from typing import List, Optional, SupportsInt, Union
 
@@ -25,34 +24,6 @@ from tortoise.exceptions import (
     OperationalError,
     TransactionManagementError,
 )
-
-
-def retry_connection(func):
-    @wraps(func)
-    async def retry_connection_(self, *args):
-        try:
-            return await func(self, *args)
-        except (
-            asyncpg.PostgresConnectionError,
-            asyncpg.ConnectionDoesNotExistError,
-            asyncpg.ConnectionFailureError,
-            asyncpg.InterfaceError,
-        ):
-            # Here we assume that a connection error has happened
-            # Re-create connection and re-try the function call once only.
-            if getattr(self, "transaction", None):
-                self._finalized = True
-                raise TransactionManagementError("Connection gone away during transaction")
-            logging.info("Attempting reconnect")
-            try:
-                async with self.acquire_connection():
-                    logging.info("Reconnected")
-            except Exception as e:
-                raise DBConnectionError(f"Failed to reconnect: {str(e)}")
-
-            return await func(self, *args)
-
-    return retry_connection_
 
 
 def translate_exceptions(func):
@@ -119,11 +90,15 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             raise DBConnectionError(f"Can't establish connection to database {self.database}")
         # Set post-connection variables
 
+    async def _expire_connections(self) -> None:
+        if self._pool:  # pragma: nobranch
+            await self._pool.expire_connections()
+
     async def _close(self) -> None:
         if self._pool:  # pragma: nobranch
             try:
                 await asyncio.wait_for(self._pool.close(), 10)
-            except asyncio.TimeoutError:
+            except asyncio.TimeoutError:  # pragma: nocoverage
                 self._pool.terminate()
             self._pool = None
             self.log.debug("Closed connection pool %s with params: %s", self._pool, self._template)
@@ -152,35 +127,46 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         return TransactionContextPooled(TransactionWrapper(self))
 
     @translate_exceptions
-    @retry_connection
     async def execute_insert(self, query: str, values: list) -> Optional[asyncpg.Record]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             # TODO: Cache prepared statement
-            stmt = await connection.prepare(query)
-            return await stmt.fetchrow(*values)
+            return await connection.fetchrow(query, *values)
 
     @translate_exceptions
-    @retry_connection
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             # TODO: Consider using copy_records_to_table instead
-            await connection.executemany(query, values)
+            transaction = connection.transaction()
+            await transaction.start()
+            try:
+                await connection.executemany(query, values)
+            except Exception:
+                await transaction.rollback()
+                raise
+            else:
+                await transaction.commit()
 
     @translate_exceptions
-    @retry_connection
     async def execute_query(self, query: str, values: Optional[list] = None) -> List[dict]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             if values:
                 # TODO: Cache prepared statement
-                stmt = await connection.prepare(query)
-                return await stmt.fetch(*values)
+                return await connection.fetch(query, *values)
             return await connection.fetch(query)
 
     @translate_exceptions
-    @retry_connection
+    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+        async with self.acquire_connection() as connection:
+            self.log.debug("%s: %s", query, values)
+            if values:
+                # TODO: Cache prepared statement
+                return list(map(dict, await connection.fetch(query, *values)))
+            return list(map(dict, await connection.fetch(query)))
+
+    @translate_exceptions
     async def execute_script(self, query: str) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug(query)
@@ -200,23 +186,26 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     def _in_transaction(self) -> "TransactionContext":
         return NestedTransactionContext(self)
 
-    async def create_connection(self, with_db: bool) -> None:
-        await self._parent.create_connection(with_db)
-
     def acquire_connection(self) -> "ConnectionWrapper":
         return ConnectionWrapper(self._connection, self._lock)
 
-    @retry_connection
+    @translate_exceptions
+    async def execute_many(self, query: str, values: list) -> None:
+        async with self.acquire_connection() as connection:
+            self.log.debug("%s: %s", query, values)
+            # TODO: Consider using copy_records_to_table instead
+            await connection.executemany(query, values)
+
+    @translate_exceptions
     async def start(self) -> None:
         self.transaction = self._connection.transaction()
         await self.transaction.start()
 
-    async def commit(self, finalize: bool = True) -> None:
+    async def commit(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self.transaction.commit()
-        if finalize:
-            self._finalized = True
+        self._finalized = True
 
     async def rollback(self) -> None:
         if self._finalized:

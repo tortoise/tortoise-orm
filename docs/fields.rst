@@ -49,6 +49,8 @@ Relational Fields
     :members:
     :exclude-members: to_db_value, to_python_value
 
+.. autoclass:: tortoise.fields.OneToOneField
+
 .. autodata:: tortoise.fields.ForeignKeyRelation
 
 .. autodata:: tortoise.fields.ForeignKeyNullableRelation

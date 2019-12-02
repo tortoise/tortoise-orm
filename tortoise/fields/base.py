@@ -33,6 +33,7 @@ class Field(metaclass=_FieldMeta):
     field_type: Type[Any] = None  # type: ignore
     indexable: bool = True
     has_db_field = True
+    skip_to_python_if_native = False
 
     # This method is just to make IDE/Linters happy
     def __new__(cls, *args, **kwargs):
