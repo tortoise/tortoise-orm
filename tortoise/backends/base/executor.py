@@ -7,8 +7,9 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Ty
 
 from pypika import JoinType, Parameter, Table
 
-from tortoise import fields
 from tortoise.exceptions import OperationalError
+from tortoise.fields.base import Field
+from tortoise.fields.relational import ManyToManyFieldInstance
 from tortoise.query_utils import QueryModifier
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -19,7 +20,7 @@ EXECUTOR_CACHE: Dict[str, Tuple[list, str, Dict[str, Callable], str, Dict[str, s
 
 
 class BaseExecutor:
-    TO_DB_OVERRIDE: Dict[Type[fields.Field], Callable] = {}
+    TO_DB_OVERRIDE: Dict[Type[Field], Callable] = {}
     FILTER_FUNC_OVERRIDE: Dict[Callable, Callable] = {}
     EXPLAIN_PREFIX: str = "EXPLAIN"
     DB_NATIVE = {str, int, bool, float, decimal.Decimal, datetime.datetime, datetime.date}
@@ -101,7 +102,7 @@ class BaseExecutor:
         return regular_columns, result_columns
 
     @classmethod
-    def _field_to_db(cls, field_object: fields.Field, attr: Any, instance) -> Any:
+    def _field_to_db(cls, field_object: Field, attr: Any, instance) -> Any:
         if field_object.__class__ in cls.TO_DB_OVERRIDE:
             return cls.TO_DB_OVERRIDE[field_object.__class__](field_object, attr, instance)
         return field_object.to_db_value(attr, instance)
@@ -233,7 +234,7 @@ class BaseExecutor:
             for instance in instance_list
         }
 
-        field_object: fields.ManyToManyFieldInstance = self.model._meta.fields_map[  # type: ignore
+        field_object: ManyToManyFieldInstance = self.model._meta.fields_map[  # type: ignore
             field
         ]
 

@@ -5,9 +5,8 @@ from typing import Dict, Optional
 from pypika import Table, functions
 from pypika.enums import SqlTypes
 
-from tortoise import fields
 from tortoise.fields import Field
-from tortoise.fields.relational import BackwardFKRelation
+from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
 
 
 def list_encoder(values, instance, field: Field):
@@ -88,7 +87,7 @@ def insensitive_ends_with(field, value):
     )
 
 
-def get_m2m_filters(field_name: str, field: fields.ManyToManyFieldInstance) -> Dict[str, dict]:
+def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> Dict[str, dict]:
     target_table_pk = field.model_class._meta.pk
     return {
         field_name: {
@@ -157,9 +156,9 @@ def get_backward_fk_filters(field_name: str, field: BackwardFKRelation) -> Dict[
 
 
 def get_filters_for_field(
-    field_name: str, field: Optional[fields.Field], source_field: str
+    field_name: str, field: Optional[Field], source_field: str
 ) -> Dict[str, dict]:
-    if isinstance(field, fields.ManyToManyFieldInstance):
+    if isinstance(field, ManyToManyFieldInstance):
         return get_m2m_filters(field_name, field)
     if isinstance(field, BackwardFKRelation):
         return get_backward_fk_filters(field_name, field)

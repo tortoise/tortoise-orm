@@ -1,6 +1,5 @@
-from typing import List, Optional
+from typing import List
 
-from tortoise import fields
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.utils import get_escape_translation_table
 
@@ -9,21 +8,11 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "postgres"
     TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE \"{table}\" IS '{comment}';"
     COLUMN_COMMNET_TEMPLATE = 'COMMENT ON COLUMN "{table}"."{column}" IS \'{comment}\';'
+    GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}'
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.comments_array: List[str] = []
-
-    def _get_primary_key_create_string(
-        self, field_object: fields.Field, field_name: str, comment: str
-    ) -> Optional[str]:
-        if isinstance(field_object, fields.SmallIntField):
-            return f'"{field_name}" SMALLSERIAL NOT NULL PRIMARY KEY'
-        if isinstance(field_object, fields.IntField):
-            return f'"{field_name}" SERIAL NOT NULL PRIMARY KEY'
-        if isinstance(field_object, fields.BigIntField):
-            return f'"{field_name}" BIGSERIAL NOT NULL PRIMARY KEY'
-        return None
 
     def _escape_comment(self, comment: str) -> str:
         table = get_escape_translation_table()

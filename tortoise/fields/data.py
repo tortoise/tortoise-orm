@@ -14,6 +14,15 @@ from tortoise.fields.base import Field
 JSON_DUMPS = functools.partial(json.dumps, separators=(",", ":"))
 JSON_LOADS = json.loads
 
+try:
+    # Use python-rapidjson as an optional accelerator
+    import rapidjson
+
+    JSON_DUMPS = rapidjson.dumps
+    JSON_LOADS = rapidjson.loads
+except ImportError:
+    pass
+
 
 class IntField(Field, int):
     """
@@ -24,11 +33,21 @@ class IntField(Field, int):
     """
 
     SQL_TYPE = "INT"
+    allows_generated = True
 
     def __init__(self, pk: bool = False, **kwargs) -> None:
         if pk:
             kwargs["generated"] = bool(kwargs.get("generated", True))
         super().__init__(pk=pk, **kwargs)
+
+    class _db_postgres:
+        GENERATED_SQL = "SERIAL NOT NULL PRIMARY KEY"
+
+    class _db_sqlite:
+        GENERATED_SQL = "INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL"
+
+    class _db_mysql:
+        GENERATED_SQL = "INT NOT NULL PRIMARY KEY AUTO_INCREMENT"
 
 
 class BigIntField(Field, int):
@@ -40,11 +59,21 @@ class BigIntField(Field, int):
     """
 
     SQL_TYPE = "BIGINT"
+    allows_generated = True
 
     def __init__(self, pk: bool = False, **kwargs) -> None:
         if pk:
             kwargs["generated"] = bool(kwargs.get("generated", True))
         super().__init__(pk=pk, **kwargs)
+
+    class _db_postgres:
+        GENERATED_SQL = "BIGSERIAL NOT NULL PRIMARY KEY"
+
+    class _db_sqlite:
+        GENERATED_SQL = "INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL"
+
+    class _db_mysql:
+        GENERATED_SQL = "BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT"
 
 
 class SmallIntField(Field, int):
@@ -56,11 +85,21 @@ class SmallIntField(Field, int):
     """
 
     SQL_TYPE = "SMALLINT"
+    allows_generated = True
 
     def __init__(self, pk: bool = False, **kwargs) -> None:
         if pk:
             kwargs["generated"] = bool(kwargs.get("generated", True))
         super().__init__(pk=pk, **kwargs)
+
+    class _db_postgres:
+        GENERATED_SQL = "SMALLSERIAL NOT NULL PRIMARY KEY"
+
+    class _db_sqlite:
+        GENERATED_SQL = "INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL"
+
+    class _db_mysql:
+        GENERATED_SQL = "SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT"
 
 
 class CharField(Field, str):  # type: ignore
@@ -232,10 +271,15 @@ class JSONField(Field, dict, list):  # type: ignore
 
     This field can store dictionaries or lists of any JSON-compliant structure.
 
+    You can specify your own custom JSON encoder/decoder, leaving at the default should work well.
+    If you have ``python-rapidjson`` installed, we default to using that,
+    else the default ``json`` module will be used.
+
     ``encoder``:
-        The JSON encoder. The default is recommended.
+        The custom JSON encoder.
     ``decoder``:
-        The JSON decoder. The default is recommended.
+        The custom JSON decoder.
+
     """
 
     SQL_TYPE = "TEXT"

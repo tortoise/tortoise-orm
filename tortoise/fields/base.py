@@ -32,6 +32,7 @@ class Field(metaclass=_FieldMeta):
     indexable: bool = True
     has_db_field = True
     skip_to_python_if_native = False
+    allows_generated = False
 
     # This method is just to make IDE/Linters happy
     def __new__(cls, *args, **kwargs):
@@ -100,3 +101,7 @@ class Field(metaclass=_FieldMeta):
                 if "SQL_TYPE" in _db
             },
         }
+
+    def get_for_dialect(self, dialect: str, key: str) -> Any:
+        dialect_data = self._get_dialects().get(dialect, {})
+        return dialect_data.get(key, getattr(self, key, None))

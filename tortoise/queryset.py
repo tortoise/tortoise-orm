@@ -7,6 +7,7 @@ from typing import (
     Callable,
     Dict,
     Generator,
+    Generic,
     List,
     Optional,
     Set,
@@ -21,9 +22,9 @@ from pypika.functions import Count
 from pypika.queries import QueryBuilder
 from typing_extensions import Protocol
 
-from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
+from tortoise.fields.relational import ForeignKeyFieldInstance, OneToOneFieldInstance
 from tortoise.functions import Function
 from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
 
@@ -37,16 +38,13 @@ MODEL = TypeVar("MODEL", bound="Model")
 T_co = TypeVar("T_co", covariant=True)
 
 
-class QuerySetIterable(Protocol[T_co]):
-    ...  # pylint: disable=W0104
-
-
 class QuerySetSingle(Protocol[T_co]):
-    def __await__(self) -> Generator[Any, None, T_co]:  # pragma: nocoverage
-        ...  # pylint: disable=W0104
+    # pylint: disable=W0104
+    def __await__(self) -> Generator[Any, None, T_co]:
+        ...  # pragma: nocoverage
 
 
-class AwaitableQuery(QuerySetIterable[MODEL]):
+class AwaitableQuery(Generic[MODEL]):
     __slots__ = ("_joined_tables", "query", "model", "_db", "capabilities")
 
     def __init__(self, model: Type[MODEL]) -> None:
@@ -562,9 +560,7 @@ class UpdateQuery(AwaitableQuery):
                 raise FieldError(f"Unknown keyword argument {key} for model {self.model}")
             if field_object.pk:
                 raise IntegrityError(f"Field {key} is PK and can not be updated")
-            if isinstance(
-                field_object, (fields.ForeignKeyFieldInstance, fields.OneToOneFieldInstance)
-            ):
+            if isinstance(field_object, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
                 fk_field: str = field_object.source_field  # type: ignore
                 db_field = self.model._meta.fields_map[fk_field].source_field
                 value = executor.column_map[fk_field](value.pk, None)

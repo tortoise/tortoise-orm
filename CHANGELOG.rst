@@ -2,6 +2,17 @@
 
 Changelog
 =========
+* Refactored Fields:
+
+  Fields have been refactored, for better maintenance. There should be no change for most users.
+
+  - More accurate auto-completion.
+  - Fields now contain their own SQL schema by dialect, which significantly simpliefies adding field types.
+  - ``describe_model()`` now returns the DB type, and dialect overrides.
+
+- ``JSONField`` will now automatically use ``python-rapidjson`` as an accelerator if it is available.
+
+
 0.15.4
 ------
 - Don't generate a schema if there is no models (#254)

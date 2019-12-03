@@ -7,7 +7,7 @@ from pypika import Query, Table
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields.base import Field
-from tortoise.fields.data import BigIntField, IntField, SmallIntField
+from tortoise.fields.data import IntField
 from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
@@ -388,11 +388,9 @@ class ModelMeta(type):
                                 f"Can't create model {name} with two primary keys,"
                                 " only single pk are supported"
                             )
-                        if value.generated and not isinstance(
-                            value, (SmallIntField, IntField, BigIntField)
-                        ):
+                        if value.generated and not value.allows_generated:
                             raise ConfigurationError(
-                                "Generated primary key allowed only for IntField and BigIntField"
+                                f"Field '{key}' ({value.__class__.__name__}) can't be DB-generated"
                             )
                         custom_pk_present = True
                         pk_attr = key
