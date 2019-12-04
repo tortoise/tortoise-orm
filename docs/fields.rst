@@ -70,6 +70,12 @@ Data Fields
 .. autoclass:: tortoise.fields.UUIDField
     :exclude-members: to_db_value, to_python_value
 
+.. autoclass:: tortoise.fields.IntEnumField
+    :exclude-members: to_db_value, to_python_value
+
+.. autoclass:: tortoise.fields.CharEnumField
+    :exclude-members: to_db_value, to_python_value
+
 
 Relational Fields
 -----------------
