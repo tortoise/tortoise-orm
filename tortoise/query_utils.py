@@ -84,14 +84,10 @@ def _get_joins_for_related_field(
 
 class EmptyCriterion(Criterion):  # type: ignore
     def __or__(self, other):
-        if other:
-            return other
-        return self
+        return other
 
     def __and__(self, other):
-        if other:
-            return other
-        return self
+        return other
 
     def __bool__(self):
         return False
@@ -250,7 +246,7 @@ class Q:
         return modifier
 
     def _get_actual_filter_params(self, model, key, value) -> Tuple[str, Any]:
-        if key in model._meta.fk_fields:
+        if key in model._meta.fk_fields or key in model._meta.o2o_fields:
             field_object = model._meta.fields_map[key]
             if hasattr(value, "pk"):
                 filter_value = value.pk

@@ -54,13 +54,13 @@ class TestGenerateSchema(test.SimpleTestCase):
         return re.sub(r"[ \t\n\r]+", " ", [sql for sql in self.sqls if text in sql][0])
 
     async def test_good(self):
-        await self.init_for("tests.test__models__good")
+        await self.init_for("tests.model_setup.models__models__good")
         self.assertIn("goodtournament", "; ".join(self.sqls))
         self.assertIn("inaclasstournament", "; ".join(self.sqls))
         self.assertNotIn("badtournament", "; ".join(self.sqls))
 
     async def test_bad(self):
-        await self.init_for("tests.test__models__bad")
+        await self.init_for("tests.model_setup.models__models__bad")
         self.assertNotIn("goodtournament", "; ".join(self.sqls))
         self.assertNotIn("inaclasstournament", "; ".join(self.sqls))
         self.assertIn("badtournament", "; ".join(self.sqls))

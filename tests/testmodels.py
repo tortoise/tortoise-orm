@@ -4,9 +4,7 @@ This is the testing Models
 import binascii
 import os
 import uuid
-from enum import Enum, IntEnum
 
-from tests.testfields import EnumField, IntEnumField
 from tortoise import fields
 from tortoise.models import Model
 
@@ -60,6 +58,15 @@ class Event(Model):
 
     def __str__(self):
         return self.name
+
+
+class Address(Model):
+    city = fields.CharField(max_length=64)
+    street = fields.CharField(max_length=128)
+
+    event: fields.OneToOneRelation[Event] = fields.OneToOneField(
+        "models.Event", on_delete=fields.CASCADE, related_name="address", null=True
+    )
 
 
 class Team(Model):
@@ -214,21 +221,6 @@ class UniqueName(Model):
     name = fields.CharField(max_length=20, null=True, unique=True)
 
 
-class RacePlacingEnum(Enum):
-    FIRST = "first"
-    SECOND = "second"
-    THIRD = "third"
-    RUNNER_UP = "runner_up"
-    DNF = "dnf"
-
-
-class RaceParticipant(Model):
-    id = fields.IntField(pk=True)
-    first_name = fields.CharField(max_length=64)
-    place = EnumField(RacePlacingEnum, default=RacePlacingEnum.DNF)
-    predicted_place = EnumField(RacePlacingEnum, null=True)
-
-
 class UniqueTogetherFields(Model):
     id = fields.IntField(pk=True)
     first_name = fields.CharField(max_length=64)
@@ -245,17 +237,6 @@ class UniqueTogetherFieldsWithFK(Model):
 
     class Meta:
         unique_together = ("text", "tournament")
-
-
-class ContactTypeEnum(IntEnum):
-    work = 1
-    home = 2
-    other = 3
-
-
-class Contact(Model):
-    id = fields.IntField(pk=True)
-    type = IntEnumField(ContactTypeEnum, default=ContactTypeEnum.other)
 
 
 class ImplicitPkModel(Model):
@@ -446,6 +427,11 @@ class StraightFields(Model):
     )
     fkrev: fields.ReverseRelation["StraightFields"]
 
+    o2o: fields.OneToOneNullableRelation["StraightFields"] = fields.OneToOneField(
+        "models.StraightFields", related_name="o2o_rev", null=True, description="Line"
+    )
+    o2o_rev: fields.Field
+
     rel_to: fields.ManyToManyRelation["StraightFields"] = fields.ManyToManyField(
         "models.StraightFields", related_name="rel_from", description="M2M to myself"
     )
@@ -471,6 +457,15 @@ class SourceFields(Model):
         description="Tree!",
     )
     fkrev: fields.ReverseRelation["SourceFields"]
+
+    o2o: fields.OneToOneNullableRelation["SourceFields"] = fields.OneToOneField(
+        "models.SourceFields",
+        related_name="o2o_rev",
+        null=True,
+        source_field="o2o_sometable",
+        description="Line",
+    )
+    o2o_rev: fields.Field
 
     rel_to: fields.ManyToManyRelation["SourceFields"] = fields.ManyToManyField(
         "models.SourceFields",

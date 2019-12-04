@@ -34,6 +34,18 @@ class Event(Model):
         return self.name
 
 
+class Address(Model):
+    city = fields.CharField(max_length=64)
+    street = fields.CharField(max_length=128)
+
+    event: fields.OneToOneRelation[Event] = fields.OneToOneField(
+        "models.Event", on_delete=fields.CASCADE, related_name="address", pk=True
+    )
+
+    def __str__(self):
+        return f"Address({self.city}, {self.street})"
+
+
 class Team(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
@@ -53,6 +65,9 @@ async def run():
     await Event(name="Without participants", tournament_id=tournament.id).save()
     event = Event(name="Test", tournament_id=tournament.id)
     await event.save()
+
+    await Address.create(city="Santa Monica", street="Ocean", event=event)
+
     participants = []
     for i in range(2):
         team = Team(name=f"Team {(i + 1)}")
@@ -95,6 +110,14 @@ async def run():
     print(await Event.filter(id=event.id).values("id", "name", tournament="tournament__name"))
 
     print(await Event.filter(id=event.id).values_list("id", "participants__name"))
+
+    print(await Address.filter(event=event).first())
+
+    event_reload1 = await Event.filter(id=event.id).first()
+    print(await event_reload1.address)
+
+    event_reload2 = await Event.filter(id=event.id).prefetch_related("address").first()
+    print(event_reload2.address)
 
 
 if __name__ == "__main__":

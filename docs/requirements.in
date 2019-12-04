@@ -1,4 +1,4 @@
 -r ../requirements.txt
 
-sphinx < 2
-cloud_sptheme
+sphinx<2
+cloud_sptheme>=1.10

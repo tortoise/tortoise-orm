@@ -1,4 +1,4 @@
-from tests.testmodels import Event, NoID, Team, Tournament
+from tests.testmodels import Address, Event, NoID, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import (
     ConfigurationError,
@@ -152,6 +152,15 @@ class TestModelConstructor(test.TestCase):
             ConfigurationError, "You can't set m2m relations through init, use m2m_manager instead"
         ):
             Team(name="a", events=[])
+
+    async def test_rev_o2o(self):
+        with self.assertRaisesRegex(
+            ConfigurationError,
+            "You can't set backward one to one relations through init, "
+            "change related model instead",
+        ):
+            address = await Address.create(city="Santa Monica", street="Ocean")
+            await Event(name="a", address=address)
 
     def test_fk_unsaved(self):
         with self.assertRaisesRegex(OperationalError, "You should first call .save()"):

@@ -1,4 +1,5 @@
 import os
+import warnings
 
 from tortoise import Tortoise
 from tortoise.contrib import test
@@ -36,6 +37,25 @@ class TestInitErrors(test.SimpleTestCase):
         self.assertIn("models", Tortoise.apps)
         self.assertIsNotNone(Tortoise.get_connection("default"))
 
+    async def test_empty_modules_init(self):
+        with warnings.catch_warnings(record=True) as wrn:
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "credentials": {"file_path": ":memory:"},
+                        }
+                    },
+                    "apps": {
+                        "models": {"models": ["tests.model_setup"], "default_connection": "default"}
+                    },
+                }
+            )
+            self.assertEqual(len(wrn), 1)
+            self.assertEqual(wrn[0].category, RuntimeWarning)
+            self.assertEqual(str(wrn[0].message), 'Module "tests.model_setup" has no models')
+
     async def test_dup1_init(self):
         with self.assertRaisesRegex(
             ConfigurationError, 'backward relation "events" duplicates in model Tournament'
@@ -49,7 +69,10 @@ class TestInitErrors(test.SimpleTestCase):
                         }
                     },
                     "apps": {
-                        "models": {"models": ["tests.models_dup1"], "default_connection": "default"}
+                        "models": {
+                            "models": ["tests.model_setup.models_dup1"],
+                            "default_connection": "default",
+                        }
                     },
                 }
             )
@@ -67,7 +90,31 @@ class TestInitErrors(test.SimpleTestCase):
                         }
                     },
                     "apps": {
-                        "models": {"models": ["tests.models_dup2"], "default_connection": "default"}
+                        "models": {
+                            "models": ["tests.model_setup.models_dup2"],
+                            "default_connection": "default",
+                        }
+                    },
+                }
+            )
+
+    async def test_dup3_init(self):
+        with self.assertRaisesRegex(
+            ConfigurationError, 'backward relation "event" duplicates in model Tournament'
+        ):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "credentials": {"file_path": ":memory:"},
+                        }
+                    },
+                    "apps": {
+                        "models": {
+                            "models": ["tests.model_setup.models_dup3"],
+                            "default_connection": "default",
+                        }
                     },
                 }
             )
@@ -86,7 +133,7 @@ class TestInitErrors(test.SimpleTestCase):
                     },
                     "apps": {
                         "models": {
-                            "models": ["tests.model_generated_nonint"],
+                            "models": ["tests.model_setup.model_generated_nonint"],
                             "default_connection": "default",
                         }
                     },
@@ -108,7 +155,7 @@ class TestInitErrors(test.SimpleTestCase):
                     },
                     "apps": {
                         "models": {
-                            "models": ["tests.model_multiple_pk"],
+                            "models": ["tests.model_setup.model_multiple_pk"],
                             "default_connection": "default",
                         }
                     },
@@ -131,7 +178,7 @@ class TestInitErrors(test.SimpleTestCase):
                     },
                     "apps": {
                         "models": {
-                            "models": ["tests.model_nonpk_id"],
+                            "models": ["tests.model_setup.model_nonpk_id"],
                             "default_connection": "default",
                         }
                     },
