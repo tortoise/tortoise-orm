@@ -59,7 +59,7 @@ class TestTwoDatabases(test.SimpleTestCase):
         except (ConnectionError, ssl.SSLError):
             pass
         else:
-            self.assertFalse(True, "Expected ConnectionError or SSLCertVerificationError")
+            self.assertFalse(True, "Expected ConnectionError or SSLError")
 
     async def test_ssl_custom(self):
         # Expect connectionerror or pass
