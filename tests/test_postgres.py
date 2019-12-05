@@ -56,10 +56,10 @@ class TestTwoDatabases(test.SimpleTestCase):
         self.db_config["connections"]["models"]["credentials"]["ssl"] = True
         try:
             await Tortoise.init(self.db_config)
-        except (ConnectionError, ssl.SSLCertVerificationError):
+        except (ConnectionError, ssl.SSLError):
             pass
         else:
-            self.assertFalse(True, "Expected ConnectionError or SSLCertVerificationError")
+            self.assertFalse(True, "Expected ConnectionError or SSLError")
 
     async def test_ssl_custom(self):
         # Expect connectionerror or pass
