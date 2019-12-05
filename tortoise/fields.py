@@ -2,6 +2,7 @@ import datetime
 import functools
 import json
 from decimal import Decimal
+from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Any, Awaitable, Generic, Optional, Type, TypeVar, Union
 from uuid import UUID, uuid4
 
@@ -405,6 +406,100 @@ class UUIDField(Field, UUID):
         if value is None or isinstance(value, UUID):
             return value
         return UUID(value)
+
+
+class IntEnumField(SmallIntField):
+    """
+    Enum Field
+
+    A field representing an integer enumeration.
+
+    The description of the field is set automatically if not specified to a multiline list of
+    "name: value" pairs.
+
+    ``enum_type``:
+        The enum class
+    ``description``:
+        The description of the field. It is set automatically if not specified to a multiline list
+        of "name: value" pairs.
+    """
+
+    __slots__ = ("enum_type",)
+
+    def __init__(
+        self, enum_type: Type[IntEnum], description: Optional[str] = None, **kwargs
+    ) -> None:
+        # Validate values
+        for item in enum_type:
+            try:
+                value = int(item.value)
+            except ValueError:
+                raise ConfigurationError("IntEnumField only supports integer enums!")
+            if not 0 <= value < 32768:
+                raise ConfigurationError("The valid range of IntEnumField's values is 0..32767!")
+
+        # Automatic description for the field if not specified by the user
+        if description is None:
+            description = "\n".join([f"{e.name}: {int(e.value)}" for e in enum_type])[:2048]
+
+        super().__init__(description=description, **kwargs)
+        self.enum_type = enum_type
+
+    def to_python_value(self, value: Union[int, None]) -> Union[IntEnum, None]:
+        return self.enum_type(value) if value is not None else None
+
+    def to_db_value(self, value: Union[IntEnum, None], instance) -> Union[int, None]:
+        return int(value.value) if value is not None else None
+
+
+class CharEnumField(CharField):
+    """
+    Char Enum Field
+
+    A field representing a character enumeration.
+
+    **Warning**: If ``max_length`` is not specified or equals to zero, the size of represented
+    char fields is automatically detected. So if later you update the enum, you need to update your
+    table schema as well.
+
+    ``enum_type``:
+        The enum class
+    ``description``:
+        The description of the field. It is set automatically if not specified to a multiline list
+        of "name: value" pairs.
+    ``max_length``:
+        The length of the created CharField. If it is zero it is automatically detected from
+        enum_type.
+    """
+
+    __slots__ = ("enum_type",)
+
+    def __init__(
+        self,
+        enum_type: Type[Enum],
+        description: Optional[str] = None,
+        max_length: int = 0,
+        **kwargs,
+    ) -> None:
+        # Automatic description for the field if not specified by the user
+        if description is None:
+            description = "\n".join([f"{e.name}: {str(e.value)}" for e in enum_type])[:2048]
+
+        # Automatic CharField max_length
+        if max_length == 0:
+            for item in enum_type:
+                item_len = len(str(item.value))
+                if item_len > max_length:
+                    max_length = item_len
+
+        super().__init__(description=description, max_length=max_length, **kwargs)
+        self.enum_type = enum_type
+
+    def to_python_value(self, value: Union[str, None]) -> Union[Enum, None]:
+        return self.enum_type(value) if value is not None else None
+
+    def to_db_value(self, value: Union[Enum, None], instance) -> Union[str, None]:
+        return str(value.value) if value is not None else None
 
 
 ForeignKeyNullableRelation = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
