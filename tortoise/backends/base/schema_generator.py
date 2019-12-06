@@ -150,7 +150,7 @@ class BaseSchemaGenerator:
             if field_object.pk:
                 if field_object.generated:
                     generated_sql = field_object.get_for_dialect(self.DIALECT, "GENERATED_SQL")
-                    if generated_sql:
+                    if generated_sql:  # pragma: nobranch
                         fields_to_create.append(
                             self.GENERATED_PK_TEMPLATE.format(
                                 field_name=db_field, generated_sql=generated_sql, comment=comment,

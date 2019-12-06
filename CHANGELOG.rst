@@ -11,6 +11,7 @@ Changelog
   - ``describe_model()`` now returns the DB type, and dialect overrides.
 
 - ``JSONField`` will now automatically use ``python-rapidjson`` as an accelerator if it is available.
+- ``DecimalField`` and aggregations on it, now behaves much more like expected on SQLite (#256)
 
 
 0.15.4

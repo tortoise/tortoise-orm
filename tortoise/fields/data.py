@@ -7,6 +7,9 @@ from typing import Any, Optional, Type, Union
 from uuid import UUID, uuid4
 
 import ciso8601
+from pypika import functions
+from pypika.enums import SqlTypes
+from pypika.terms import Term
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields.base import Field
@@ -21,7 +24,7 @@ try:
 
     JSON_DUMPS = rapidjson.dumps
     JSON_LOADS = rapidjson.loads
-except ImportError:
+except ImportError:  # pragma: nocoverage
     pass
 
 
@@ -158,6 +161,8 @@ class DecimalField(Field, Decimal):
         How many of those signifigant digits is after the decimal point.
     """
 
+    skip_to_python_if_native = True
+
     def __init__(self, max_digits: int, decimal_places: int, **kwargs) -> None:
         if int(max_digits) < 1:
             raise ConfigurationError("'max_digits' must be >= 1")
@@ -166,6 +171,12 @@ class DecimalField(Field, Decimal):
         super().__init__(**kwargs)
         self.max_digits = max_digits
         self.decimal_places = decimal_places
+        self.quant = Decimal("1" if decimal_places == 0 else f"1.{('0' * decimal_places)}")
+
+    def to_python_value(self, value: Any) -> Optional[Decimal]:
+        if value is None:
+            return None
+        return Decimal(value).quantize(self.quant).normalize()
 
     @property
     def SQL_TYPE(self) -> str:
@@ -173,6 +184,9 @@ class DecimalField(Field, Decimal):
 
     class _db_sqlite:
         SQL_TYPE = "VARCHAR(40)"
+
+        def function_cast(self, term: Term) -> Term:
+            return functions.Cast(term, SqlTypes.NUMERIC)
 
 
 class DatetimeField(Field, datetime.datetime):

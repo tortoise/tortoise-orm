@@ -18,11 +18,7 @@ def to_db_bool(self, value, instance) -> Optional[int]:
 def to_db_decimal(self, value, instance) -> Optional[str]:
     if value is None:
         return None
-    if self.decimal_places == 0:
-        quant = "1"
-    else:
-        quant = f"1.{('0' * self.decimal_places)}"
-    return str(Decimal(value).quantize(Decimal(quant)).normalize())
+    return str(Decimal(value).quantize(self.quant).normalize())
 
 
 def to_db_datetime(self, value: Optional[datetime.datetime], instance) -> Optional[str]:

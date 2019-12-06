@@ -33,6 +33,7 @@ class Field(metaclass=_FieldMeta):
     has_db_field = True
     skip_to_python_if_native = False
     allows_generated = False
+    function_cast = None
 
     # This method is just to make IDE/Linters happy
     def __new__(cls, *args, **kwargs):

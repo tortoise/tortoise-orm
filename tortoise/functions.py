@@ -1,13 +1,6 @@
-from pypika.functions import Avg as PypikaAvg
-from pypika.functions import Coalesce as PypikaCoalesce
-from pypika.functions import Count as PypikaCount
-from pypika.functions import Length as PypikaLength
-from pypika.functions import Lower as PypikaLower
-from pypika.functions import Max as PypikaMax
-from pypika.functions import Min as PypikaMin
-from pypika.functions import Sum as PypikaSum
-from pypika.functions import Trim as PypikaTrim
-from pypika.functions import Upper as PypikaUpper
+from typing import Any
+
+from pypika import functions
 from pypika.terms import AggregateFunction
 from pypika.terms import Function as BaseFunction
 
@@ -19,12 +12,15 @@ from tortoise.exceptions import ConfigurationError
 
 
 class Function:
-    __slots__ = ("field", "default_values")
+    __slots__ = ("field", "field_object", "default_values")
 
     database_func = BaseFunction
+    #: Enable populate_field_object where we want to try and preserve the field type.
+    populate_field_object = False
 
     def __init__(self, field, *default_values) -> None:
         self.field = field
+        self.field_object: Any = None
         self.default_values = default_values
 
     def _resolve_field_for_model(self, model, field: str, *default_values) -> dict:
@@ -36,13 +32,20 @@ class Function:
                 related_field_meta = related_field.model_class._meta
                 join = (model._meta.basetable, field_split[0], related_field)
                 function_joins.append(join)
-                function_field = self.database_func(
-                    related_field_meta.basetable[related_field_meta.db_pk_field], *default_values
-                )
+                field = related_field_meta.basetable[related_field_meta.db_pk_field]
             else:
-                function_field = self.database_func(
-                    model._meta.basetable[field_split[0]], *default_values
-                )
+                field = model._meta.basetable[field_split[0]]
+
+                if self.populate_field_object:
+                    self.field_object = model._meta.fields_map.get(field_split[0], None)
+                    if self.field_object:
+                        func = self.field_object.get_for_dialect(
+                            model._meta.db.capabilities.dialect, "function_cast"
+                        )
+                        if func:
+                            field = func(self.field_object, field)
+
+            function_field = self.database_func(field, *default_values)
             return {"joins": function_joins, "field": function_field}
 
         if field_split[0] not in model._meta.fetch_fields:
@@ -71,23 +74,23 @@ class Aggregate(Function):
 
 
 class Trim(Function):
-    database_func = PypikaTrim
+    database_func = functions.Trim
 
 
 class Length(Function):
-    database_func = PypikaLength
+    database_func = functions.Length
 
 
 class Coalesce(Function):
-    database_func = PypikaCoalesce
+    database_func = functions.Coalesce
 
 
 class Lower(Function):
-    database_func = PypikaLower
+    database_func = functions.Lower
 
 
 class Upper(Function):
-    database_func = PypikaUpper
+    database_func = functions.Upper
 
 
 ##############################################################################
@@ -96,20 +99,24 @@ class Upper(Function):
 
 
 class Count(Aggregate):
-    database_func = PypikaCount
+    database_func = functions.Count
 
 
 class Sum(Aggregate):
-    database_func = PypikaSum
+    database_func = functions.Sum
+    populate_field_object = True
 
 
 class Max(Aggregate):
-    database_func = PypikaMax
+    database_func = functions.Max
+    populate_field_object = True
 
 
 class Min(Aggregate):
-    database_func = PypikaMin
+    database_func = functions.Min
+    populate_field_object = True
 
 
 class Avg(Aggregate):
-    database_func = PypikaAvg
+    database_func = functions.Avg
+    populate_field_object = True

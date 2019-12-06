@@ -101,7 +101,15 @@ class AwaitableQuery(Generic[MODEL]):
                 if not field_object:
                     raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
                 field_name = field_object.source_field or field_name
-                self.query = self.query.orderby(getattr(table, field_name), order=ordering[1])
+                field = getattr(table, field_name)
+
+                func = field_object.get_for_dialect(
+                    model._meta.db.capabilities.dialect, "function_cast"
+                )
+                if func:
+                    field = func(field_object, field)
+
+                self.query = self.query.orderby(field, order=ordering[1])
 
     def _make_query(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
@@ -711,11 +719,17 @@ class FieldSelectQuery(AwaitableQuery):
         raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')
 
     def resolve_to_python_value(self, model: "Type[Model]", field: str) -> Callable:
-        if field in model._meta.fetch_fields or field in self.annotations:
+        if field in model._meta.fetch_fields:
             # return as is to get whole model objects
             return lambda x: x
 
         if field in [x[1] for x in model._meta.db_native_fields]:
+            return lambda x: x
+
+        if field in self.annotations:
+            field_object = self.annotations[field].field_object
+            if field_object:
+                return field_object.to_python_value
             return lambda x: x
 
         if field in model._meta.fields_map:
