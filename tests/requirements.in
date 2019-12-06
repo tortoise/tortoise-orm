@@ -49,3 +49,6 @@ uvloop>=0.12.0; sys_platform != "win32" and implementation_name == "cpython"
 # Sample integration - Starlette
 starlette
 uvicorn
+
+# Pydantic support
+pydantic
