@@ -2,6 +2,10 @@
 
 Changelog
 =========
+Unreleased
+------
+- Check whether charset name is available
+
 0.15.4
 ------
 - Don't generate a schema if there is no models (#254)
