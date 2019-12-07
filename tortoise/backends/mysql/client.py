@@ -4,6 +4,7 @@ from typing import List, Optional, SupportsInt, Union
 
 import aiomysql
 import pymysql
+from pymysql.charset import charset_by_name
 from pypika import MySQLQuery
 
 from tortoise.backends.base.client import (
@@ -76,6 +77,8 @@ class MySQLClient(BaseDBAsyncClient):
         self._connection = None
 
     async def create_connection(self, with_db: bool) -> None:
+        if charset_by_name(self.charset) is None:  # type: ignore
+            raise DBConnectionError(f"Unknown charset {self.charset}")
         self._template = {
             "host": self.host,
             "port": self.port,

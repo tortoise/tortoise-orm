@@ -22,6 +22,7 @@ Contributors
 * Zoltán Szeredi ``@zoliszeredi``
 * Rebecca Klauser ``@svms1``
 * Sina Sohangir ``@sinaso``
+* Weiming Dong ``@dongweiming``
 
 Special Thanks
 ==============
