@@ -18,21 +18,15 @@ def to_db_bool(self, value, instance) -> Optional[int]:
 def to_db_decimal(self, value, instance) -> Optional[str]:
     if value is None:
         return None
-    if self.decimal_places == 0:
-        quant = "1"
-    else:
-        quant = f"1.{('0' * self.decimal_places)}"
-    return str(Decimal(value).quantize(Decimal(quant)).normalize())
+    return str(Decimal(value).quantize(self.quant).normalize())
 
 
 def to_db_datetime(self, value: Optional[datetime.datetime], instance) -> Optional[str]:
     if hasattr(instance, "_saved_in_db"):
         # Only do this if it is a Model instance, not class. Test for guaranteed instance var
-        if self.auto_now:
-            value = datetime.datetime.utcnow()
-            setattr(instance, self.model_field_name, value)
-            return value.isoformat(" ")
-        if self.auto_now_add and getattr(instance, self.model_field_name, None) is None:
+        if self.auto_now or (
+            self.auto_now_add and getattr(instance, self.model_field_name, None) is None
+        ):
             value = datetime.datetime.utcnow()
             setattr(instance, self.model_field_name, value)
             return value.isoformat(" ")

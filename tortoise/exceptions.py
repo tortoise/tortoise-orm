@@ -72,7 +72,7 @@ class DoesNotExist(OperationalError):
     """
 
 
-class DBConnectionError(BaseORMException):
+class DBConnectionError(BaseORMException, ConnectionError):
     """
     The DBConnectionError is raised when problems with connecting to db occurs
     """

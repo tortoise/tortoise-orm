@@ -150,9 +150,21 @@ Foreign Key
 
 Tortoise ORM provides an API for working with FK relations
 
-.. autoclass:: tortoise.fields.ReverseRelation
+.. autoclass:: tortoise.fields.relational.ReverseRelation
     :members:
 
+.. autodata:: tortoise.fields.relational.ForeignKeyNullableRelation
+
+.. autodata:: tortoise.fields.relational.ForeignKeyRelation
+
+.. _one_to_one:
+
+One to One
+==========
+
+.. autodata:: tortoise.fields.relational.OneToOneNullableRelation
+
+.. autodata:: tortoise.fields.relational.OneToOneRelation
 
 .. _many_to_many:
 
@@ -161,7 +173,7 @@ Many to Many
 
 Tortoise ORM provides an API for working with M2M relations
 
-.. autoclass:: tortoise.fields.ManyToManyRelation
+.. autoclass:: tortoise.fields.relational.ManyToManyRelation
     :members:
     :inherited-members:
 

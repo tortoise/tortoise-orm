@@ -3,8 +3,19 @@
 Changelog
 =========
 Unreleased
-------
-- Check whether charset name is available
+----------
+
+* Refactored Fields:
+
+  Fields have been refactored, for better maintenance. There should be no change for most users.
+
+  - More accurate auto-completion.
+  - Fields now contain their own SQL schema by dialect, which significantly simpliefies adding field types.
+  - ``describe_model()`` now returns the DB type, and dialect overrides.
+
+- ``JSONField`` will now automatically use ``python-rapidjson`` as an accelerator if it is available.
+- ``DecimalField`` and aggregations on it, now behaves much more like expected on SQLite (#256)
+- Check whether charset name is valid for the MySQL connection (#261)
 
 0.15.4
 ------

@@ -1,6 +1,7 @@
 pypika>=0.35.8
 ciso8601>=2.1.1
 aiosqlite>=0.10.0
+typing-extensions>=3.7
+
+# For Python3.6 compatibility
 aiocontextvars>=0.2.2;python_version<"3.7"
-dataclasses>=0.6;python_version<"3.7"
-typing-extensions

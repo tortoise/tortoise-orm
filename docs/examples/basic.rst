@@ -98,7 +98,7 @@ Recursive Relations
 
 .. _example_enum_fields:
 
-===============
+==================
 Enumeration Fields
-===============
+==================
 .. literalinclude::  ../../examples/enum_fields.py

@@ -121,7 +121,7 @@ class TestInitErrors(test.SimpleTestCase):
 
     async def test_generated_nonint(self):
         with self.assertRaisesRegex(
-            ConfigurationError, "Generated primary key allowed only for IntField and BigIntField"
+            ConfigurationError, "Field 'val' \\(CharField\\) can't be DB-generated"
         ):
             await Tortoise.init(
                 {

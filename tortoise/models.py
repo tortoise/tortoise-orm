@@ -4,10 +4,19 @@ from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeV
 
 from pypika import Query, Table
 
-from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import ConfigurationError, OperationalError
-from tortoise.fields import Field, ManyToManyFieldInstance, ManyToManyRelation, ReverseRelation
+from tortoise.fields.base import Field
+from tortoise.fields.data import IntField
+from tortoise.fields.relational import (
+    BackwardFKRelation,
+    BackwardOneToOneRelation,
+    ForeignKeyFieldInstance,
+    ManyToManyFieldInstance,
+    ManyToManyRelation,
+    OneToOneFieldInstance,
+    ReverseRelation,
+)
 from tortoise.filters import get_filters_for_field
 from tortoise.queryset import QuerySet, QuerySetSingle
 from tortoise.transactions import current_transaction_map
@@ -59,7 +68,7 @@ def _ro2o_getter(self, _key, ftype, frelfield):
 def _m2m_getter(self, _key, field_object):
     val = getattr(self, _key, None)
     if val is None:
-        val = ManyToManyRelation(field_object.field_type, self, field_object)
+        val = ManyToManyRelation(field_object.model_class, self, field_object)
         setattr(self, _key, val)
     return val
 
@@ -118,7 +127,7 @@ class MetaInfo:
         self.fields_db_projection_reverse: Dict[str, str] = {}
         self._filters: Dict[str, Dict[str, dict]] = {}
         self.filters: Dict[str, dict] = {}
-        self.fields_map: Dict[str, fields.Field] = {}
+        self.fields_map: Dict[str, Field] = {}
         self._inited: bool = False
         self.default_connection: Optional[str] = None
         self.basequery: Query = Query()
@@ -128,11 +137,11 @@ class MetaInfo:
         self.generated_db_fields: Tuple[str] = None  # type: ignore
         self._model: "Model" = None  # type: ignore
         self.table_description: str = getattr(meta, "table_description", "")
-        self.pk: fields.Field = None  # type: ignore
+        self.pk: Field = None  # type: ignore
         self.db_pk_field: str = ""
-        self.db_native_fields: List[Tuple[str, str, fields.Field]] = []
-        self.db_default_fields: List[Tuple[str, str, fields.Field]] = []
-        self.db_complex_fields: List[Tuple[str, str, fields.Field]] = []
+        self.db_native_fields: List[Tuple[str, str, Field]] = []
+        self.db_default_fields: List[Tuple[str, str, Field]] = []
+        self.db_complex_fields: List[Tuple[str, str, Field]] = []
 
     def add_field(self, name: str, value: Field):
         if name in self.fields_map:
@@ -143,11 +152,11 @@ class MetaInfo:
         if value.has_db_field:
             self.fields_db_projection[name] = value.source_field or name
 
-        if isinstance(value, fields.ManyToManyFieldInstance):
+        if isinstance(value, ManyToManyFieldInstance):
             self.m2m_fields.add(name)
-        elif isinstance(value, fields.BackwardOneToOneRelation):
+        elif isinstance(value, BackwardOneToOneRelation):
             self.backward_o2o_fields.add(name)
-        elif isinstance(value, fields.BackwardFKRelation):
+        elif isinstance(value, BackwardFKRelation):
             self.backward_fk_fields.add(name)
 
         field_filters = get_filters_for_field(
@@ -212,7 +221,7 @@ class MetaInfo:
                     partial(
                         _fk_getter,
                         _key=_key,
-                        ftype=self.fields_map[key].field_type,
+                        ftype=self.fields_map[key].model_class,  # type: ignore
                         relation_field=relation_field,
                     ),
                     partial(_fk_setter, _key=_key, relation_field=relation_field),
@@ -223,7 +232,7 @@ class MetaInfo:
         # Create lazy reverse FK fields on model.
         for key in self.backward_fk_fields:
             _key = f"_{key}"
-            field_object: fields.BackwardFKRelation = self.fields_map[key]  # type: ignore
+            field_object: BackwardFKRelation = self.fields_map[key]  # type: ignore
             setattr(
                 self._model,
                 key,
@@ -231,7 +240,7 @@ class MetaInfo:
                     partial(
                         _rfk_getter,
                         _key=_key,
-                        ftype=field_object.field_type,
+                        ftype=field_object.model_class,
                         frelfield=field_object.relation_field,
                     )
                 ),
@@ -248,7 +257,7 @@ class MetaInfo:
                     partial(
                         _fk_getter,
                         _key=_key,
-                        ftype=self.fields_map[key].field_type,
+                        ftype=self.fields_map[key].model_class,  # type: ignore
                         relation_field=relation_field,
                     ),
                     partial(_fk_setter, _key=_key, relation_field=relation_field),
@@ -259,7 +268,7 @@ class MetaInfo:
         # Create lazy reverse one to one fields on model.
         for key in self.backward_o2o_fields:
             _key = f"_{key}"
-            field_object: fields.BackwardOneToOneRelation = self.fields_map[key]  # type: ignore
+            field_object: BackwardOneToOneRelation = self.fields_map[key]  # type: ignore
             setattr(
                 self._model,
                 key,
@@ -267,7 +276,7 @@ class MetaInfo:
                     partial(
                         _ro2o_getter,
                         _key=_key,
-                        ftype=field_object.field_type,
+                        ftype=field_object.model_class,
                         frelfield=field_object.relation_field,
                     ),
                 ),
@@ -291,7 +300,7 @@ class MetaInfo:
             model_field = self.fields_db_projection_reverse[key]
             field = self.fields_map[model_field]
 
-            default_converter = field.__class__.to_python_value is fields.Field.to_python_value
+            default_converter = field.__class__.to_python_value is Field.to_python_value
             if (
                 field.skip_to_python_if_native
                 and field.field_type in self.db.executor_class.DB_NATIVE
@@ -321,7 +330,7 @@ class ModelMeta(type):
 
     def __new__(mcs, name: str, bases, attrs: dict, *args, **kwargs):
         fields_db_projection: Dict[str, str] = {}
-        fields_map: Dict[str, fields.Field] = {}
+        fields_map: Dict[str, Field] = {}
         filters: Dict[str, Dict[str, dict]] = {}
         fk_fields: Set[str] = set()
         m2m_fields: Set[str] = set()
@@ -358,7 +367,7 @@ class ModelMeta(type):
             else:
                 # For mixin classes
                 for key, value in base.__dict__.items():
-                    if isinstance(value, fields.Field) and key not in attrs:
+                    if isinstance(value, Field) and key not in attrs:
                         attrs[key] = value
 
         # Start searching for fields in the base classes.
@@ -372,45 +381,43 @@ class ModelMeta(type):
         if name != "Model":
             custom_pk_present = False
             for key, value in attrs.items():
-                if isinstance(value, fields.Field):
+                if isinstance(value, Field):
                     if value.pk:
                         if custom_pk_present:
                             raise ConfigurationError(
                                 f"Can't create model {name} with two primary keys,"
                                 " only single pk are supported"
                             )
-                        if value.generated and not isinstance(
-                            value, (fields.SmallIntField, fields.IntField, fields.BigIntField)
-                        ):
+                        if value.generated and not value.allows_generated:
                             raise ConfigurationError(
-                                "Generated primary key allowed only for IntField and BigIntField"
+                                f"Field '{key}' ({value.__class__.__name__}) can't be DB-generated"
                             )
                         custom_pk_present = True
                         pk_attr = key
 
             if not custom_pk_present and not getattr(meta_class, "abstract", None):
                 if "id" not in attrs:
-                    attrs = {"id": fields.IntField(pk=True), **attrs}
+                    attrs = {"id": IntField(pk=True), **attrs}
 
-                if not isinstance(attrs["id"], fields.Field) or not attrs["id"].pk:
+                if not isinstance(attrs["id"], Field) or not attrs["id"].pk:
                     raise ConfigurationError(
                         f"Can't create model {name} without explicit primary key if field 'id'"
                         " already present"
                     )
 
             for key, value in attrs.items():
-                if isinstance(value, fields.Field):
+                if isinstance(value, Field):
                     if getattr(meta_class, "abstract", None):
                         value = deepcopy(value)
 
                     fields_map[key] = value
                     value.model_field_name = key
 
-                    if isinstance(value, fields.ForeignKeyField):
+                    if isinstance(value, ForeignKeyFieldInstance):
                         fk_fields.add(key)
-                    elif isinstance(value, fields.OneToOneField):
+                    elif isinstance(value, OneToOneFieldInstance):
                         o2o_fields.add(key)
-                    elif isinstance(value, fields.ManyToManyFieldInstance):
+                    elif isinstance(value, ManyToManyFieldInstance):
                         m2m_fields.add(key)
                     else:
                         fields_db_projection[key] = value.source_field or key

@@ -1,10 +1,8 @@
 import logging
 from hashlib import sha256
-from typing import List, Optional, Set
+from typing import List, Set
 
-from tortoise import fields
 from tortoise.exceptions import ConfigurationError
-from tortoise.fields import OneToOneField
 from tortoise.utils import get_escape_translation_table
 
 # pylint: disable=R0201
@@ -13,10 +11,12 @@ logger = logging.getLogger("tortoise")
 
 
 class BaseSchemaGenerator:
+    DIALECT = "sql"
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment};'
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{index_name}" UNIQUE ({fields})'
+    GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}{comment}'
     FK_TEMPLATE = ' REFERENCES "{table}" ("{field}") ON DELETE {on_delete}{comment}'
     M2M_TABLE_TEMPLATE = (
         'CREATE TABLE {exists}"{table_name}" (\n'
@@ -26,22 +26,6 @@ class BaseSchemaGenerator:
         ' ("{forward_field}") ON DELETE CASCADE\n'
         "){extra}{comment};"
     )
-
-    FIELD_TYPE_MAP = {
-        fields.BooleanField: "BOOL",
-        fields.IntField: "INT",
-        fields.SmallIntField: "SMALLINT",
-        fields.BigIntField: "BIGINT",
-        fields.TextField: "TEXT",
-        fields.CharField: "VARCHAR({})",
-        fields.DatetimeField: "TIMESTAMP",
-        fields.DecimalField: "DECIMAL({},{})",
-        fields.TimeDeltaField: "BIGINT",
-        fields.DateField: "DATE",
-        fields.FloatField: "DOUBLE PRECISION",
-        fields.JSONField: "TEXT",
-        fields.UUIDField: "CHAR(36)",
-    }
 
     def __init__(self, client) -> None:
         self.client = client
@@ -72,13 +56,6 @@ class BaseSchemaGenerator:
         return self.FK_TEMPLATE.format(
             db_field=db_field, table=table, field=field, on_delete=on_delete, comment=comment
         )
-
-    def _get_primary_key_create_string(
-        self, field_object: fields.Field, field_name: str, comment: str
-    ) -> Optional[str]:
-        # All databases have their unique way for autoincrement,
-        # has to implement in children
-        raise NotImplementedError()  # pragma: nocoverage
 
     def _table_comment_generator(self, table: str, comment: str) -> str:
         # Databases have their own way of supporting comments for table level
@@ -154,22 +131,7 @@ class BaseSchemaGenerator:
             fields=", ".join([self.quote(f) for f in field_names]),
         )
 
-    def _get_field_type(self, field_object) -> str:
-        field_object_type = type(field_object)
-        while field_object_type.__bases__ and field_object_type not in self.FIELD_TYPE_MAP:
-            field_object_type = field_object_type.__bases__[0]
-
-        field_type = self.FIELD_TYPE_MAP[field_object_type]  # type: ignore
-
-        if isinstance(field_object, fields.DecimalField):
-            field_type = field_type.format(field_object.max_digits, field_object.decimal_places)
-        elif isinstance(field_object, fields.CharField):
-            field_type = field_type.format(field_object.max_length)
-
-        return field_type
-
     def _get_table_sql(self, model, safe=True) -> dict:
-
         fields_to_create = []
         fields_with_index = []
         m2m_tables_for_create = []
@@ -185,11 +147,16 @@ class BaseSchemaGenerator:
                 else ""
             )
             # TODO: PK generation needs to move out of schema generator.
-            if field_object.pk and not isinstance(field_object.reference, OneToOneField):
-                pk_string = self._get_primary_key_create_string(field_object, db_field, comment)
-                if pk_string:
-                    fields_to_create.append(pk_string)
-                    continue
+            if field_object.pk:
+                if field_object.generated:
+                    generated_sql = field_object.get_for_dialect(self.DIALECT, "GENERATED_SQL")
+                    if generated_sql:  # pragma: nobranch
+                        fields_to_create.append(
+                            self.GENERATED_PK_TEMPLATE.format(
+                                field_name=db_field, generated_sql=generated_sql, comment=comment,
+                            )
+                        )
+                        continue
 
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
@@ -206,7 +173,7 @@ class BaseSchemaGenerator:
                 )
                 field_creation_string = self._create_string(
                     db_field=db_field,
-                    field_type=self._get_field_type(field_object),
+                    field_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                     nullable=nullable,
                     unique=unique,
                     is_pk=field_object.pk,
@@ -215,20 +182,20 @@ class BaseSchemaGenerator:
                     constraint_name=self._generate_fk_name(
                         model._meta.table,
                         db_field,
-                        field_object.reference.field_type._meta.table,
-                        field_object.reference.field_type._meta.db_pk_field,
+                        field_object.reference.model_class._meta.table,
+                        field_object.reference.model_class._meta.db_pk_field,
                     ),
                     db_field=db_field,
-                    table=field_object.reference.field_type._meta.table,
-                    field=field_object.reference.field_type._meta.db_pk_field,
+                    table=field_object.reference.model_class._meta.table,
+                    field=field_object.reference.model_class._meta.db_pk_field,
                     on_delete=field_object.reference.on_delete,
                     comment=comment,
                 )
-                references.add(field_object.reference.field_type._meta.table)
+                references.add(field_object.reference.model_class._meta.table)
             else:
                 field_creation_string = self._create_string(
                     db_field=db_field,
-                    field_type=self._get_field_type(field_object),
+                    field_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                     nullable=nullable,
                     unique=unique,
                     is_pk=field_object.pk,
@@ -299,13 +266,15 @@ class BaseSchemaGenerator:
                 exists="IF NOT EXISTS " if safe else "",
                 table_name=field_object.through,
                 backward_table=model._meta.table,
-                forward_table=field_object.field_type._meta.table,
+                forward_table=field_object.model_class._meta.table,
                 backward_field=model._meta.db_pk_field,
-                forward_field=field_object.field_type._meta.db_pk_field,
+                forward_field=field_object.model_class._meta.db_pk_field,
                 backward_key=field_object.backward_key,
-                backward_type=self._get_field_type(model._meta.pk),
+                backward_type=model._meta.pk.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                 forward_key=field_object.forward_key,
-                forward_type=self._get_field_type(field_object.field_type._meta.pk),
+                forward_type=field_object.model_class._meta.pk.get_for_dialect(
+                    self.DIALECT, "SQL_TYPE"
+                ),
                 extra=self._table_generate_extra(table=field_object.through),
                 comment=self._table_comment_generator(
                     table=field_object.through, comment=field_object.description

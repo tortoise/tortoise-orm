@@ -23,73 +23,28 @@ Fields are defined as properties of a ``Model`` class object:
 Reference
 =========
 
-.. autoclass:: tortoise.fields.Field
-    :members:
+Here is the list of fields available with custom options of these fields:
 
-Here is the list of fields available at the moment with custom options of these fields:
+Base Field
+----------
+
+.. automodule:: tortoise.fields.base
+    :members:
+    :undoc-members:
 
 Data Fields
 -----------
 
-.. autoclass:: tortoise.fields.IntField
+.. automodule:: tortoise.fields.data
+    :members:
     :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.BigIntField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.SmallIntField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.CharField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.TextField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.BooleanField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.DecimalField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.DatetimeField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.DateField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.TimeDeltaField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.FloatField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.JSONField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.UUIDField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.IntEnumField
-    :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.CharEnumField
-    :exclude-members: to_db_value, to_python_value
-
 
 Relational Fields
 -----------------
 
-.. autoclass:: tortoise.fields.ForeignKeyField
+.. automodule:: tortoise.fields.relational
+    :members: ForeignKeyField, OneToOneField, ManyToManyField
     :exclude-members: to_db_value, to_python_value
-
-.. autoclass:: tortoise.fields.OneToOneField
-
-.. autofunction:: tortoise.fields.ManyToManyField
-
-.. autodata:: tortoise.fields.ForeignKeyRelation
-
-.. autodata:: tortoise.fields.ForeignKeyNullableRelation
 
 Extending A Field
 =================
