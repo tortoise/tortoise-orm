@@ -3,7 +3,8 @@
 Changelog
 =========
 Unreleased
-------
+----------
+
 * Refactored Fields:
 
   Fields have been refactored, for better maintenance. There should be no change for most users.

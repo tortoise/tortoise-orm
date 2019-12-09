@@ -349,14 +349,18 @@ class UUIDField(Field, UUID):
 class IntEnumField(SmallIntField):
     """
     Enum Field
+
     A field representing an integer enumeration.
+
     The description of the field is set automatically if not specified to a multiline list of
     "name: value" pairs.
+
     ``enum_type``:
         The enum class
     ``description``:
         The description of the field. It is set automatically if not specified to a multiline list
         of "name: value" pairs.
+
     """
 
     __slots__ = ("enum_type",)
@@ -390,10 +394,13 @@ class IntEnumField(SmallIntField):
 class CharEnumField(CharField):
     """
     Char Enum Field
+
     A field representing a character enumeration.
+
     **Warning**: If ``max_length`` is not specified or equals to zero, the size of represented
     char fields is automatically detected. So if later you update the enum, you need to update your
     table schema as well.
+
     ``enum_type``:
         The enum class
     ``description``:
