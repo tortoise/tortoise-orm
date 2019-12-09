@@ -2,6 +2,8 @@
 
 Changelog
 =========
+Unreleased
+------
 * Refactored Fields:
 
   Fields have been refactored, for better maintenance. There should be no change for most users.
@@ -12,7 +14,7 @@ Changelog
 
 - ``JSONField`` will now automatically use ``python-rapidjson`` as an accelerator if it is available.
 - ``DecimalField`` and aggregations on it, now behaves much more like expected on SQLite (#256)
-
+- Check whether charset name is valid for the MySQL connection (#261)
 
 0.15.4
 ------
