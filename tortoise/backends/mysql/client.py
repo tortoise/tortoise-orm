@@ -68,7 +68,8 @@ class MySQLClient(BaseDBAsyncClient):
         self.extra.pop("fetch_inserted", None)
         self.extra.pop("db", None)
         self.extra.pop("autocommit", None)
-        self.charset = self.extra.pop("charset", "")
+        self.extra.setdefault("sql_mode", "STRICT_TRANS_TABLES")
+        self.charset = self.extra.pop("charset", "utf8mb4")
         self.pool_minsize = int(self.extra.pop("minsize", 1))
         self.pool_maxsize = int(self.extra.pop("maxsize", 5))
 

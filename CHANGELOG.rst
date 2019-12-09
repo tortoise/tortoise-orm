@@ -16,6 +16,7 @@ Unreleased
 - ``JSONField`` will now automatically use ``python-rapidjson`` as an accelerator if it is available.
 - ``DecimalField`` and aggregations on it, now behaves much more like expected on SQLite (#256)
 - Check whether charset name is valid for the MySQL connection (#261)
+- Default DB driver parameters are now applied consistently, if you use the URI schema or manual.
 
 0.15.4
 ------
