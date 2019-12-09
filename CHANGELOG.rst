@@ -2,15 +2,15 @@
 
 Changelog
 =========
-Unreleased
-----------
+0.15.5
+------
 
 * Refactored Fields:
 
   Fields have been refactored, for better maintenance. There should be no change for most users.
 
   - More accurate auto-completion.
-  - Fields now contain their own SQL schema by dialect, which significantly simpliefies adding field types.
+  - Fields now contain their own SQL schema by dialect, which significantly simplifies adding field types.
   - ``describe_model()`` now returns the DB type, and dialect overrides.
 
 - ``JSONField`` will now automatically use ``python-rapidjson`` as an accelerator if it is available.
