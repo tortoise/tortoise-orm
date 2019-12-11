@@ -23,7 +23,7 @@ class BaseExecutor:
     TO_DB_OVERRIDE: Dict[Type[Field], Callable] = {}
     FILTER_FUNC_OVERRIDE: Dict[Callable, Callable] = {}
     EXPLAIN_PREFIX: str = "EXPLAIN"
-    DB_NATIVE = {str, int, bool, float, decimal.Decimal, datetime.datetime, datetime.date}
+    DB_NATIVE = {bytes, str, int, bool, float, decimal.Decimal, datetime.datetime, datetime.date}
 
     def __init__(
         self,

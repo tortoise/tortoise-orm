@@ -2,6 +2,10 @@
 
 Changelog
 =========
+Unreleased
+----------
+- Added ``BinaryField`` for storing binary objects (``bytes``).
+
 0.15.5
 ------
 

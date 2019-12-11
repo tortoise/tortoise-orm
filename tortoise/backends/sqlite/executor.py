@@ -42,7 +42,7 @@ class SqliteExecutor(BaseExecutor):
         fields.DatetimeField: to_db_datetime,
     }
     EXPLAIN_PREFIX = "EXPLAIN QUERY PLAN"
-    DB_NATIVE = {str, int, bool, float}
+    DB_NATIVE = {bytes, str, int, bool, float}
 
     def Parameter(self, pos: int) -> Parameter:
         return Parameter("?")

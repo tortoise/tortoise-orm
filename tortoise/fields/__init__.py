@@ -1,6 +1,7 @@
 from tortoise.fields.base import CASCADE, RESTRICT, SET_DEFAULT, SET_NULL, Field
 from tortoise.fields.data import (
     BigIntField,
+    BinaryField,
     BooleanField,
     CharEnumField,
     CharField,

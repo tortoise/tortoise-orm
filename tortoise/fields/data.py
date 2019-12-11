@@ -346,6 +346,21 @@ class UUIDField(Field, UUID):
         return UUID(value)
 
 
+class BinaryField(Field, bytes):  # type: ignore
+    """
+    Binary field.
+
+    This is for storing ``bytes`` objects.
+    Note that filter or queryset-update operations are not supported.
+    """
+
+    indexable = False
+    SQL_TYPE = "BLOB"
+
+    class _db_postgres:
+        SQL_TYPE = "BYTEA"
+
+
 class IntEnumField(SmallIntField):
     """
     Enum Field

@@ -146,6 +146,12 @@ class BooleanFields(Model):
     boolean_null = fields.BooleanField(null=True)
 
 
+class BinaryFields(Model):
+    id = fields.IntField(pk=True)
+    binary = fields.BinaryField()
+    binary_null = fields.BinaryField(null=True)
+
+
 class DecimalFields(Model):
     id = fields.IntField(pk=True)
     decimal = fields.DecimalField(max_digits=18, decimal_places=4)
