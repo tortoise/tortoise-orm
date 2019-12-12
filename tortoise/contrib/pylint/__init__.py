@@ -1,10 +1,11 @@
 """
 Tortoise PyLint plugin
 """
-from typing import Dict, Iterator
+from typing import Dict, Iterator, List
 
-from astroid import MANAGER, inference_tip, nodes, scoped_nodes
-from astroid.node_classes import Assign
+from astroid import MANAGER, inference_tip, nodes
+from astroid.exceptions import AstroidError
+from astroid.node_classes import AnnAssign, Assign
 from astroid.nodes import ClassDef
 from pylint.lint import PyLinter
 
@@ -48,13 +49,13 @@ def transform_model(cls: ClassDef) -> None:
             cls.locals[relname] = relval
 
         for attr in cls.get_children():
-            if isinstance(attr, Assign):
+            if isinstance(attr, (Assign, AnnAssign)):
                 try:
                     attrname = attr.value.func.attrname
                 except AttributeError:
                     pass
                 else:
-                    if attrname in ["ForeignKeyField", "ManyToManyFieldInstance"]:
+                    if attrname in ["OneToOneField", "ForeignKeyField", "ManyToManyField"]:
                         tomodel = attr.value.args[0].value
                         relname = ""
                         if attr.value.keywords:
@@ -66,18 +67,32 @@ def transform_model(cls: ClassDef) -> None:
                             relname = cls.name.lower() + "s"
 
                         # Injected model attributes need to also have the relation manager
-                        if attrname == "ManyToManyFieldInstance":
+                        if attrname == "ManyToManyField":
                             relval = [
-                                attr.value.func,
-                                MANAGER.ast_from_module_name("tortoise.fields").lookup(
+                                # attr.value.func,
+                                MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
+                                    "ManyToManyFieldInstance"
+                                )[1][0],
+                                MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
                                     "ManyToManyRelation"
                                 )[1][0],
                             ]
-                        else:
+                        elif attrname == "ForeignKeyField":
                             relval = [
-                                attr.value.func,
-                                MANAGER.ast_from_module_name("tortoise.fields").lookup(
+                                MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
+                                    "ForeignKeyFieldInstance"
+                                )[1][0],
+                                MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
                                     "ReverseRelation"
+                                )[1][0],
+                            ]
+                        elif attrname == "OneToOneField":
+                            relval = [
+                                MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
+                                    "OneToOneFieldInstance"
+                                )[1][0],
+                                MANAGER.ast_from_module_name("tortoise.fields.relational").lookup(
+                                    "OneToOneRelation"
                                 )[1][0],
                             ]
 
@@ -97,7 +112,7 @@ def is_model_field(cls: ClassDef) -> bool:
     """
     Guard to apply this transform to Model Fields only
     """
-    type_name = "tortoise.fields.Field"
+    type_name = "tortoise.fields.base.Field"
     return cls.is_subtype_of(type_name) and cls.qname() != type_name
 
 
@@ -105,28 +120,15 @@ def apply_type_shim(cls: ClassDef, _context=None) -> Iterator[ClassDef]:
     """
     Morphs model fields to representative type
     """
-    if cls.name in ["IntField", "SmallIntField"]:
-        base_nodes = scoped_nodes.builtin_lookup("int")
-    elif cls.name in ["CharField", "TextField"]:
-        base_nodes = scoped_nodes.builtin_lookup("str")
-    elif cls.name == "BooleanField":
-        base_nodes = scoped_nodes.builtin_lookup("bool")
-    elif cls.name == "FloatField":
-        base_nodes = scoped_nodes.builtin_lookup("float")
-    elif cls.name == "DecimalField":
-        base_nodes = MANAGER.ast_from_module_name("decimal").lookup("Decimal")
-    elif cls.name == "DatetimeField":
-        base_nodes = MANAGER.ast_from_module_name("datetime").lookup("datetime")
-    elif cls.name == "DateField":
-        base_nodes = MANAGER.ast_from_module_name("datetime").lookup("date")
-    elif cls.name == "ForeignKeyField":
-        base_nodes = MANAGER.ast_from_module_name("tortoise.fields").lookup("BackwardFKRelation")
-    elif cls.name == "ManyToManyFieldInstance":
-        base_nodes = MANAGER.ast_from_module_name("tortoise.fields").lookup("ManyToManyRelation")
-    else:
-        return iter([cls])
+    base_nodes: List[ClassDef] = [cls]
 
-    return iter([cls] + base_nodes[1])
+    # Use the type inference standard
+    try:
+        base_nodes.extend(list(cls.getattr("field_type")[0].infer()))
+    except AstroidError:
+        pass
+
+    return iter(base_nodes)
 
 
 MANAGER.register_transform(nodes.ClassDef, inference_tip(apply_type_shim), is_model_field)

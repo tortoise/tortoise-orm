@@ -36,6 +36,7 @@ class TestConnectionParams(test.TestCase):
                 user="root",
                 maxsize=5,
                 minsize=1,
+                sql_mode="STRICT_TRANS_TABLES",
             )
 
     async def test_postres_connection_params(self):

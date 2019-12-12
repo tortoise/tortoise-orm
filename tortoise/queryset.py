@@ -7,6 +7,7 @@ from typing import (
     Callable,
     Dict,
     Generator,
+    Generic,
     List,
     Optional,
     Set,
@@ -21,9 +22,9 @@ from pypika.functions import Count
 from pypika.queries import QueryBuilder
 from typing_extensions import Protocol
 
-from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
+from tortoise.fields.relational import ForeignKeyFieldInstance, OneToOneFieldInstance
 from tortoise.functions import Function
 from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
 
@@ -37,16 +38,13 @@ MODEL = TypeVar("MODEL", bound="Model")
 T_co = TypeVar("T_co", covariant=True)
 
 
-class QuerySetIterable(Protocol[T_co]):
-    ...  # pylint: disable=W0104
-
-
 class QuerySetSingle(Protocol[T_co]):
-    def __await__(self) -> Generator[Any, None, T_co]:  # pragma: nocoverage
-        ...  # pylint: disable=W0104
+    # pylint: disable=W0104
+    def __await__(self) -> Generator[Any, None, T_co]:
+        ...  # pragma: nocoverage
 
 
-class AwaitableQuery(QuerySetIterable[MODEL]):
+class AwaitableQuery(Generic[MODEL]):
     __slots__ = ("_joined_tables", "query", "model", "_db", "capabilities")
 
     def __init__(self, model: Type[MODEL]) -> None:
@@ -90,7 +88,7 @@ class AwaitableQuery(QuerySetIterable[MODEL]):
                 related_field = model._meta.fields_map[related_field_name]
                 self._join_table_by_field(table, related_field_name, related_field)
                 self.resolve_ordering(
-                    related_field.field_type,
+                    related_field.model_class,
                     [("__".join(field_name.split("__")[1:]), ordering[1])],
                     {},
                 )
@@ -103,7 +101,15 @@ class AwaitableQuery(QuerySetIterable[MODEL]):
                 if not field_object:
                     raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
                 field_name = field_object.source_field or field_name
-                self.query = self.query.orderby(getattr(table, field_name), order=ordering[1])
+                field = getattr(table, field_name)
+
+                func = field_object.get_for_dialect(
+                    model._meta.db.capabilities.dialect, "function_cast"
+                )
+                if func:
+                    field = func(field_object, field)
+
+                self.query = self.query.orderby(field, order=ordering[1])
 
     def _make_query(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
@@ -562,7 +568,7 @@ class UpdateQuery(AwaitableQuery):
                 raise FieldError(f"Unknown keyword argument {key} for model {self.model}")
             if field_object.pk:
                 raise IntegrityError(f"Field {key} is PK and can not be updated")
-            if isinstance(field_object, (fields.ForeignKeyField, fields.OneToOneField)):
+            if isinstance(field_object, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
                 fk_field: str = field_object.source_field  # type: ignore
                 db_field = self.model._meta.fields_map[fk_field].source_field
                 value = executor.column_map[fk_field](value.pk, None)
@@ -678,7 +684,7 @@ class FieldSelectQuery(AwaitableQuery):
         forwarded_fields_split = forwarded_fields.split("__")
 
         return self._join_table_with_forwarded_fields(
-            model=field_object.field_type,
+            model=field_object.model_class,
             field=forwarded_fields_split[0],
             forwarded_fields="__".join(forwarded_fields_split[1:]),
         )
@@ -713,11 +719,17 @@ class FieldSelectQuery(AwaitableQuery):
         raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')
 
     def resolve_to_python_value(self, model: "Type[Model]", field: str) -> Callable:
-        if field in model._meta.fetch_fields or field in self.annotations:
+        if field in model._meta.fetch_fields:
             # return as is to get whole model objects
             return lambda x: x
 
         if field in [x[1] for x in model._meta.db_native_fields]:
+            return lambda x: x
+
+        if field in self.annotations:
+            field_object = self.annotations[field].field_object
+            if field_object:
+                return field_object.to_python_value
             return lambda x: x
 
         if field in model._meta.fields_map:
@@ -725,7 +737,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         field_split = field.split("__")
         if field_split[0] in model._meta.fetch_fields:
-            new_model: "Type[Model]" = model._meta.fields_map[field_split[0]].field_type
+            new_model = model._meta.fields_map[field_split[0]].model_class  # type: ignore
             return self.resolve_to_python_value(new_model, "__".join(field_split[1:]))
 
         raise FieldError(f'Unknown field "{field}" for model "{model}"')

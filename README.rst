@@ -45,7 +45,7 @@ Hence we started Tortoise ORM.
 
 Tortoise ORM is designed to be functional, yet familiar, to ease the migration of developers wishing to switch to ``asyncio``.
 
-It also performs well when compared to other Python ORMs, only losing to Pony ORM:
+It also performs well when compared to other Python ORMs, trading places with Pony ORM:
 
 .. image:: https://raw.githubusercontent.com/tortoise/tortoise-orm/develop/docs/ORM_Perf.png
     :target: https://github.com/tortoise/orm-benchmarks
@@ -58,7 +58,7 @@ Code has no idea about relations between data, so you end up concatenating your 
 It is also easy to make a mistake in how you access your database, making it easy for SQL-injection attacks to occur.
 Your data rules are also distributed, increasing the complexity of managing your data, and even worse, is applied inconsistently.
 
-An ORM (Object Relational Mapper) is desgined to address these issues, by centralising your data model and data rules, ensuring that your data is managed safely (providing immunity to SQL-injection) and keeps track of relationships so you don't have to.
+An ORM (Object Relational Mapper) is designed to address these issues, by centralising your data model and data rules, ensuring that your data is managed safely (providing immunity to SQL-injection) and keeps track of relationships so you don't have to.
 
 Getting Started
 ===============
@@ -145,7 +145,7 @@ Tortoise ORM currently supports the following databases:
 * MySQL (requires ``aiomysql``)
 
 ``generate_schema`` generates the schema on an empty database. Tortoise generates schemas in safe mode by default which
-includes the `IF NOT EXISTS` clause, so you may include it in your main code.
+includes the ``IF NOT EXISTS`` clause, so you may include it in your main code.
 
 
 After that you can start using your models:

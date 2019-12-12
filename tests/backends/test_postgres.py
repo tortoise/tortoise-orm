@@ -1,5 +1,5 @@
 """
-Test some postgres-specific features
+Test some PostgreSQL-specific features
 """
 import ssl
 
@@ -9,7 +9,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import OperationalError
 
 
-class TestTwoDatabases(test.SimpleTestCase):
+class TestPostgreSQL(test.SimpleTestCase):
     async def setUp(self):
         if Tortoise._inited:
             await self._tearDownDB()

@@ -2,6 +2,26 @@
 
 Changelog
 =========
+Unreleased
+----------
+- Added ``BinaryField`` for storing binary objects (``bytes``).
+
+0.15.5
+------
+
+* Refactored Fields:
+
+  Fields have been refactored, for better maintenance. There should be no change for most users.
+
+  - More accurate auto-completion.
+  - Fields now contain their own SQL schema by dialect, which significantly simplifies adding field types.
+  - ``describe_model()`` now returns the DB type, and dialect overrides.
+
+- ``JSONField`` will now automatically use ``python-rapidjson`` as an accelerator if it is available.
+- ``DecimalField`` and aggregations on it, now behaves much more like expected on SQLite (#256)
+- Check whether charset name is valid for the MySQL connection (#261)
+- Default DB driver parameters are now applied consistently, if you use the URI schema or manual.
+
 0.15.4
 ------
 - Don't generate a schema if there is no models (#254)

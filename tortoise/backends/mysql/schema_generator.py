@@ -1,14 +1,15 @@
-from typing import List, Optional
+from typing import List
 
-from tortoise import fields
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
 class MySQLSchemaGenerator(BaseSchemaGenerator):
+    DIALECT = "mysql"
     TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({fields}){extra}{comment};"
     INDEX_CREATE_TEMPLATE = "KEY `{index_name}` ({fields})"
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE KEY `{index_name}` ({fields})"
     FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{primary}{comment}"
+    GENERATED_PK_TEMPLATE = "`{field_name}` {generated_sql}{comment}"
     FK_TEMPLATE = (
         "CONSTRAINT `{constraint_name}` FOREIGN KEY (`{db_field}`)"
         " REFERENCES `{table}` (`{field}`) ON DELETE {on_delete}"
@@ -23,12 +24,6 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         " ON DELETE CASCADE\n"
         "){extra}{comment};"
     )
-    FIELD_TYPE_MAP = {
-        **BaseSchemaGenerator.FIELD_TYPE_MAP,
-        fields.FloatField: "DOUBLE",
-        fields.DatetimeField: "DATETIME(6)",
-        fields.TextField: "TEXT",
-    }
 
     def __init__(self, client) -> None:
         super().__init__(client)
@@ -37,17 +32,6 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
 
     def quote(self, val: str) -> str:
         return f"`{val}`"
-
-    def _get_primary_key_create_string(
-        self, field_object: fields.Field, field_name: str, comment: str
-    ) -> Optional[str]:
-        if isinstance(field_object, fields.SmallIntField):
-            return f"`{field_name}` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT{comment}"
-        if isinstance(field_object, fields.IntField):
-            return f"`{field_name}` INT NOT NULL PRIMARY KEY AUTO_INCREMENT{comment}"
-        if isinstance(field_object, fields.BigIntField):
-            return f"`{field_name}` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT{comment}"
-        return None
 
     def _table_generate_extra(self, table: str) -> str:
         return f" CHARACTER SET {self.client.charset}" if self.client.charset else ""

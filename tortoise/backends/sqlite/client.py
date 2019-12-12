@@ -44,7 +44,9 @@ class SqliteClient(BaseDBAsyncClient):
         self.pragmas = kwargs.copy()
         self.pragmas.pop("connection_name", None)
         self.pragmas.pop("fetch_inserted", None)
-        self.pragmas["foreign_keys"] = "ON"
+        self.pragmas.setdefault("journal_mode", "WAL")
+        self.pragmas.setdefault("journal_size_limit", 16384)
+        self.pragmas.setdefault("foreign_keys", "ON")
 
         self._connection: Optional[aiosqlite.Connection] = None
         self._lock = asyncio.Lock()

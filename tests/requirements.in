@@ -37,6 +37,10 @@ pytest-cov
 # Pypi
 twine<2.0
 
+# Optional accelerators
+uvloop>=0.12.0; sys_platform != "win32" and implementation_name == "cpython"
+python-rapidjson; implementation_name == "cpython"
+
 # Sample integration - Quart
 wsproto;python_version>="3.7"
 hypercorn;python_version>="3.7"
@@ -44,7 +48,6 @@ quart;python_version>="3.7"
 
 # Sample integration - Sanic
 sanic
-uvloop>=0.12.0; sys_platform != "win32" and implementation_name == "cpython"
 
 # Sample integration - Starlette
 starlette

@@ -16,6 +16,12 @@ from tests.testmodels import (
 )
 from tortoise import Tortoise, fields
 from tortoise.contrib import test
+from tortoise.fields.relational import (
+    BackwardFKRelation,
+    ForeignKeyFieldInstance,
+    ManyToManyFieldInstance,
+    OneToOneFieldInstance,
+)
 
 
 class TestBasic(test.TestCase):
@@ -56,6 +62,7 @@ class TestBasic(test.TestCase):
                     "name": "eyedee",
                     "field_type": "IntField",
                     "db_column": "eyedee",
+                    "db_field_types": {"": "INT"},
                     "python_type": "int",
                     "generated": True,
                     "nullable": False,
@@ -69,6 +76,7 @@ class TestBasic(test.TestCase):
                         "name": "chars",
                         "field_type": "CharField",
                         "db_column": "chars",
+                        "db_field_types": {"": "VARCHAR(50)"},
                         "python_type": "str",
                         "generated": False,
                         "nullable": False,
@@ -81,6 +89,7 @@ class TestBasic(test.TestCase):
                         "name": "blip",
                         "field_type": "CharField",
                         "db_column": "blip",
+                        "db_field_types": {"": "VARCHAR(50)"},
                         "python_type": "str",
                         "generated": False,
                         "nullable": False,
@@ -93,6 +102,7 @@ class TestBasic(test.TestCase):
                         "name": "fk_id",
                         "field_type": "IntField",
                         "db_column": "fk_id",
+                        "db_field_types": {"": "INT"},
                         "python_type": "int",
                         "generated": False,
                         "nullable": True,
@@ -103,6 +113,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "db_column": "o2o_id",
+                        "db_field_types": {"": "INT"},
                         "default": None,
                         "description": "Line",
                         "field_type": "IntField",
@@ -117,7 +128,7 @@ class TestBasic(test.TestCase):
                 "fk_fields": [
                     {
                         "name": "fk",
-                        "field_type": "ForeignKeyField",
+                        "field_type": "ForeignKeyFieldInstance",
                         "raw_field": "fk_id",
                         "python_type": "models.StraightFields",
                         "generated": False,
@@ -145,7 +156,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": "Line",
-                        "field_type": "OneToOneField",
+                        "field_type": "OneToOneFieldInstance",
                         "generated": False,
                         "indexed": True,
                         "name": "o2o",
@@ -211,6 +222,7 @@ class TestBasic(test.TestCase):
                     "name": "eyedee",
                     "field_type": fields.IntField,
                     "db_column": "eyedee",
+                    "db_field_types": {"": "INT"},
                     "python_type": int,
                     "generated": True,
                     "nullable": False,
@@ -224,6 +236,7 @@ class TestBasic(test.TestCase):
                         "name": "chars",
                         "field_type": fields.CharField,
                         "db_column": "chars",
+                        "db_field_types": {"": "VARCHAR(50)"},
                         "python_type": str,
                         "generated": False,
                         "nullable": False,
@@ -236,6 +249,7 @@ class TestBasic(test.TestCase):
                         "name": "blip",
                         "field_type": fields.CharField,
                         "db_column": "blip",
+                        "db_field_types": {"": "VARCHAR(50)"},
                         "python_type": str,
                         "generated": False,
                         "nullable": False,
@@ -248,6 +262,7 @@ class TestBasic(test.TestCase):
                         "name": "fk_id",
                         "field_type": fields.IntField,
                         "db_column": "fk_id",
+                        "db_field_types": {"": "INT"},
                         "python_type": int,
                         "generated": False,
                         "nullable": True,
@@ -260,6 +275,7 @@ class TestBasic(test.TestCase):
                         "name": "o2o_id",
                         "field_type": fields.IntField,
                         "db_column": "o2o_id",
+                        "db_field_types": {"": "INT"},
                         "python_type": int,
                         "generated": False,
                         "nullable": True,
@@ -272,7 +288,7 @@ class TestBasic(test.TestCase):
                 "fk_fields": [
                     {
                         "name": "fk",
-                        "field_type": fields.ForeignKeyField,
+                        "field_type": ForeignKeyFieldInstance,
                         "raw_field": "fk_id",
                         "python_type": StraightFields,
                         "generated": False,
@@ -286,7 +302,7 @@ class TestBasic(test.TestCase):
                 "backward_fk_fields": [
                     {
                         "name": "fkrev",
-                        "field_type": fields.BackwardFKRelation,
+                        "field_type": BackwardFKRelation,
                         "python_type": StraightFields,
                         "generated": False,
                         "nullable": True,
@@ -300,7 +316,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": "Line",
-                        "field_type": fields.OneToOneField,
+                        "field_type": OneToOneFieldInstance,
                         "generated": False,
                         "indexed": True,
                         "name": "o2o",
@@ -326,7 +342,7 @@ class TestBasic(test.TestCase):
                 "m2m_fields": [
                     {
                         "name": "rel_to",
-                        "field_type": fields.ManyToManyFieldInstance,
+                        "field_type": ManyToManyFieldInstance,
                         "python_type": StraightFields,
                         "generated": False,
                         "nullable": False,
@@ -337,7 +353,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "rel_from",
-                        "field_type": fields.ManyToManyFieldInstance,
+                        "field_type": ManyToManyFieldInstance,
                         "python_type": StraightFields,
                         "generated": False,
                         "nullable": False,
@@ -366,6 +382,7 @@ class TestBasic(test.TestCase):
                     "name": "eyedee",
                     "field_type": "IntField",
                     "db_column": "sometable_id",
+                    "db_field_types": {"": "INT"},
                     "python_type": "int",
                     "generated": True,
                     "nullable": False,
@@ -379,6 +396,7 @@ class TestBasic(test.TestCase):
                         "name": "chars",
                         "field_type": "CharField",
                         "db_column": "some_chars_table",
+                        "db_field_types": {"": "VARCHAR(50)"},
                         "python_type": "str",
                         "generated": False,
                         "nullable": False,
@@ -391,6 +409,7 @@ class TestBasic(test.TestCase):
                         "name": "blip",
                         "field_type": "CharField",
                         "db_column": "da_blip",
+                        "db_field_types": {"": "VARCHAR(50)"},
                         "python_type": "str",
                         "generated": False,
                         "nullable": False,
@@ -403,6 +422,7 @@ class TestBasic(test.TestCase):
                         "name": "fk_id",
                         "field_type": "IntField",
                         "db_column": "fk_sometable",
+                        "db_field_types": {"": "INT"},
                         "python_type": "int",
                         "generated": False,
                         "nullable": True,
@@ -415,6 +435,7 @@ class TestBasic(test.TestCase):
                         "name": "o2o_id",
                         "field_type": "IntField",
                         "db_column": "o2o_sometable",
+                        "db_field_types": {"": "INT"},
                         "python_type": "int",
                         "generated": False,
                         "nullable": True,
@@ -427,7 +448,7 @@ class TestBasic(test.TestCase):
                 "fk_fields": [
                     {
                         "name": "fk",
-                        "field_type": "ForeignKeyField",
+                        "field_type": "ForeignKeyFieldInstance",
                         "raw_field": "fk_id",
                         "python_type": "models.SourceFields",
                         "generated": False,
@@ -455,7 +476,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": "Line",
-                        "field_type": "OneToOneField",
+                        "field_type": "OneToOneFieldInstance",
                         "generated": False,
                         "indexed": True,
                         "name": "o2o",
@@ -521,6 +542,7 @@ class TestBasic(test.TestCase):
                     "name": "eyedee",
                     "field_type": fields.IntField,
                     "db_column": "sometable_id",
+                    "db_field_types": {"": "INT"},
                     "python_type": int,
                     "generated": True,
                     "nullable": False,
@@ -534,6 +556,7 @@ class TestBasic(test.TestCase):
                         "name": "chars",
                         "field_type": fields.CharField,
                         "db_column": "some_chars_table",
+                        "db_field_types": {"": "VARCHAR(50)"},
                         "python_type": str,
                         "generated": False,
                         "nullable": False,
@@ -546,6 +569,7 @@ class TestBasic(test.TestCase):
                         "name": "blip",
                         "field_type": fields.CharField,
                         "db_column": "da_blip",
+                        "db_field_types": {"": "VARCHAR(50)"},
                         "python_type": str,
                         "generated": False,
                         "nullable": False,
@@ -558,6 +582,7 @@ class TestBasic(test.TestCase):
                         "name": "fk_id",
                         "field_type": fields.IntField,
                         "db_column": "fk_sometable",
+                        "db_field_types": {"": "INT"},
                         "python_type": int,
                         "generated": False,
                         "nullable": True,
@@ -570,6 +595,7 @@ class TestBasic(test.TestCase):
                         "name": "o2o_id",
                         "field_type": fields.IntField,
                         "db_column": "o2o_sometable",
+                        "db_field_types": {"": "INT"},
                         "python_type": int,
                         "generated": False,
                         "nullable": True,
@@ -582,7 +608,7 @@ class TestBasic(test.TestCase):
                 "fk_fields": [
                     {
                         "name": "fk",
-                        "field_type": fields.ForeignKeyField,
+                        "field_type": ForeignKeyFieldInstance,
                         "raw_field": "fk_id",
                         "python_type": SourceFields,
                         "generated": False,
@@ -596,7 +622,7 @@ class TestBasic(test.TestCase):
                 "backward_fk_fields": [
                     {
                         "name": "fkrev",
-                        "field_type": fields.BackwardFKRelation,
+                        "field_type": BackwardFKRelation,
                         "python_type": SourceFields,
                         "generated": False,
                         "nullable": True,
@@ -610,7 +636,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": "Line",
-                        "field_type": fields.OneToOneField,
+                        "field_type": OneToOneFieldInstance,
                         "generated": False,
                         "indexed": True,
                         "name": "o2o",
@@ -636,7 +662,7 @@ class TestBasic(test.TestCase):
                 "m2m_fields": [
                     {
                         "name": "rel_to",
-                        "field_type": fields.ManyToManyFieldInstance,
+                        "field_type": ManyToManyFieldInstance,
                         "python_type": SourceFields,
                         "generated": False,
                         "nullable": False,
@@ -647,7 +673,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "rel_from",
-                        "field_type": fields.ManyToManyFieldInstance,
+                        "field_type": ManyToManyFieldInstance,
                         "python_type": SourceFields,
                         "generated": False,
                         "nullable": False,
@@ -676,6 +702,7 @@ class TestBasic(test.TestCase):
                     "name": "id",
                     "field_type": "UUIDField",
                     "db_column": "id",
+                    "db_field_types": {"": "CHAR(36)", "postgres": "UUID"},
                     "python_type": "uuid.UUID",
                     "generated": False,
                     "nullable": False,
@@ -744,6 +771,7 @@ class TestBasic(test.TestCase):
                     "name": "id",
                     "field_type": fields.UUIDField,
                     "db_column": "id",
+                    "db_field_types": {"": "CHAR(36)", "postgres": "UUID"},
                     "python_type": uuid.UUID,
                     "generated": False,
                     "nullable": False,
@@ -757,7 +785,7 @@ class TestBasic(test.TestCase):
                 "backward_fk_fields": [
                     {
                         "name": "children",
-                        "field_type": fields.BackwardFKRelation,
+                        "field_type": BackwardFKRelation,
                         "python_type": UUIDFkRelatedModel,
                         "generated": False,
                         "nullable": False,
@@ -768,7 +796,7 @@ class TestBasic(test.TestCase):
                     },
                     {
                         "name": "children_null",
-                        "field_type": fields.BackwardFKRelation,
+                        "field_type": BackwardFKRelation,
                         "python_type": UUIDFkRelatedNullModel,
                         "generated": False,
                         "nullable": True,
@@ -783,7 +811,7 @@ class TestBasic(test.TestCase):
                 "m2m_fields": [
                     {
                         "name": "peers",
-                        "field_type": fields.ManyToManyFieldInstance,
+                        "field_type": ManyToManyFieldInstance,
                         "python_type": UUIDM2MRelatedModel,
                         "generated": False,
                         "nullable": False,
@@ -812,6 +840,7 @@ class TestBasic(test.TestCase):
                     "name": "id",
                     "field_type": "IntField",
                     "db_column": "id",
+                    "db_field_types": {"": "INT"},
                     "python_type": "int",
                     "generated": True,
                     "nullable": False,
@@ -825,6 +854,7 @@ class TestBasic(test.TestCase):
                         "name": "data",
                         "field_type": "JSONField",
                         "db_column": "data",
+                        "db_field_types": {"": "TEXT", "postgres": "JSONB"},
                         "python_type": ["dict", "list"],
                         "generated": False,
                         "nullable": False,
@@ -837,6 +867,7 @@ class TestBasic(test.TestCase):
                         "name": "data_null",
                         "field_type": "JSONField",
                         "db_column": "data_null",
+                        "db_field_types": {"": "TEXT", "postgres": "JSONB"},
                         "python_type": ["dict", "list"],
                         "generated": False,
                         "nullable": True,
@@ -849,6 +880,7 @@ class TestBasic(test.TestCase):
                         "name": "data_default",
                         "field_type": "JSONField",
                         "db_column": "data_default",
+                        "db_field_types": {"": "TEXT", "postgres": "JSONB"},
                         "python_type": ["dict", "list"],
                         "generated": False,
                         "nullable": False,
@@ -882,6 +914,7 @@ class TestBasic(test.TestCase):
                     "name": "id",
                     "field_type": fields.IntField,
                     "db_column": "id",
+                    "db_field_types": {"": "INT"},
                     "python_type": int,
                     "generated": True,
                     "nullable": False,
@@ -895,6 +928,7 @@ class TestBasic(test.TestCase):
                         "name": "data",
                         "field_type": fields.JSONField,
                         "db_column": "data",
+                        "db_field_types": {"": "TEXT", "postgres": "JSONB"},
                         "python_type": (dict, list),
                         "generated": False,
                         "nullable": False,
@@ -907,6 +941,7 @@ class TestBasic(test.TestCase):
                         "name": "data_null",
                         "field_type": fields.JSONField,
                         "db_column": "data_null",
+                        "db_field_types": {"": "TEXT", "postgres": "JSONB"},
                         "python_type": (dict, list),
                         "generated": False,
                         "nullable": True,
@@ -919,6 +954,7 @@ class TestBasic(test.TestCase):
                         "name": "data_default",
                         "field_type": fields.JSONField,
                         "db_column": "data_default",
+                        "db_field_types": {"": "TEXT", "postgres": "JSONB"},
                         "python_type": (dict, list),
                         "generated": False,
                         "nullable": False,

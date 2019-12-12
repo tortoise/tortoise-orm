@@ -4,6 +4,7 @@ from tests import testmodels
 from tortoise import fields
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError, IntegrityError
+from tortoise.functions import Avg, Max, Sum
 
 
 class TestDecimalFields(test.TestCase):
@@ -62,3 +63,53 @@ class TestDecimalFields(test.TestCase):
             "decimal", "decimal_nodec"
         )
         self.assertEqual(list(values[0]), [Decimal("1.2346"), 19])
+
+    async def test_order_by(self):
+        await testmodels.DecimalFields.create(decimal=Decimal("0"), decimal_nodec=1)
+        await testmodels.DecimalFields.create(decimal=Decimal("9.99"), decimal_nodec=1)
+        await testmodels.DecimalFields.create(decimal=Decimal("27.27"), decimal_nodec=1)
+        values = (
+            await testmodels.DecimalFields.all()
+            .order_by("decimal")
+            .values_list("decimal", flat=True)
+        )
+        self.assertEqual(values, [Decimal("0"), Decimal("9.99"), Decimal("27.27")])
+
+    async def test_aggregate_sum(self):
+        await testmodels.DecimalFields.create(decimal=Decimal("0"), decimal_nodec=1)
+        await testmodels.DecimalFields.create(decimal=Decimal("9.99"), decimal_nodec=1)
+        await testmodels.DecimalFields.create(decimal=Decimal("27.27"), decimal_nodec=1)
+        values = (
+            await testmodels.DecimalFields.all()
+            .annotate(sum_decimal=Sum("decimal"))
+            .values("sum_decimal")
+        )
+        self.assertEqual(
+            values[0], {"sum_decimal": Decimal("37.26")},
+        )
+
+    async def test_aggregate_avg(self):
+        await testmodels.DecimalFields.create(decimal=Decimal("0"), decimal_nodec=1)
+        await testmodels.DecimalFields.create(decimal=Decimal("9.99"), decimal_nodec=1)
+        await testmodels.DecimalFields.create(decimal=Decimal("27.27"), decimal_nodec=1)
+        values = (
+            await testmodels.DecimalFields.all()
+            .annotate(avg_decimal=Avg("decimal"))
+            .values("avg_decimal")
+        )
+        self.assertEqual(
+            values[0], {"avg_decimal": Decimal("12.42")},
+        )
+
+    async def test_aggregate_max(self):
+        await testmodels.DecimalFields.create(decimal=Decimal("0"), decimal_nodec=1)
+        await testmodels.DecimalFields.create(decimal=Decimal("9.99"), decimal_nodec=1)
+        await testmodels.DecimalFields.create(decimal=Decimal("27.27"), decimal_nodec=1)
+        values = (
+            await testmodels.DecimalFields.all()
+            .annotate(max_decimal=Max("decimal"))
+            .values("max_decimal")
+        )
+        self.assertEqual(
+            values[0], {"max_decimal": Decimal("27.27")},
+        )

@@ -5,8 +5,8 @@ from typing import Dict, Optional
 from pypika import Table, functions
 from pypika.enums import SqlTypes
 
-from tortoise import fields
 from tortoise.fields import Field
+from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
 
 
 def list_encoder(values, instance, field: Field):
@@ -87,8 +87,8 @@ def insensitive_ends_with(field, value):
     )
 
 
-def get_m2m_filters(field_name: str, field: fields.ManyToManyFieldInstance) -> Dict[str, dict]:
-    target_table_pk = field.field_type._meta.pk
+def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> Dict[str, dict]:
+    target_table_pk = field.model_class._meta.pk
     return {
         field_name: {
             "field": field.forward_key,
@@ -121,46 +121,46 @@ def get_m2m_filters(field_name: str, field: fields.ManyToManyFieldInstance) -> D
     }
 
 
-def get_backward_fk_filters(field_name: str, field: fields.BackwardFKRelation) -> Dict[str, dict]:
-    target_table_pk = field.field_type._meta.pk
+def get_backward_fk_filters(field_name: str, field: BackwardFKRelation) -> Dict[str, dict]:
+    target_table_pk = field.model_class._meta.pk
     return {
         field_name: {
             "field": "id",
             "backward_key": field.relation_field,
             "operator": operator.eq,
-            "table": Table(field.field_type._meta.table),
+            "table": Table(field.model_class._meta.table),
             "value_encoder": target_table_pk.to_db_value,
         },
         f"{field_name}__not": {
             "field": "id",
             "backward_key": field.relation_field,
             "operator": not_equal,
-            "table": Table(field.field_type._meta.table),
+            "table": Table(field.model_class._meta.table),
             "value_encoder": target_table_pk.to_db_value,
         },
         f"{field_name}__in": {
             "field": "id",
             "backward_key": field.relation_field,
             "operator": is_in,
-            "table": Table(field.field_type._meta.table),
+            "table": Table(field.model_class._meta.table),
             "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
         f"{field_name}__not_in": {
             "field": "id",
             "backward_key": field.relation_field,
             "operator": not_in,
-            "table": Table(field.field_type._meta.table),
+            "table": Table(field.model_class._meta.table),
             "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
     }
 
 
 def get_filters_for_field(
-    field_name: str, field: Optional[fields.Field], source_field: str
+    field_name: str, field: Optional[Field], source_field: str
 ) -> Dict[str, dict]:
-    if isinstance(field, fields.ManyToManyFieldInstance):
+    if isinstance(field, ManyToManyFieldInstance):
         return get_m2m_filters(field_name, field)
-    if isinstance(field, fields.BackwardFKRelation):
+    if isinstance(field, BackwardFKRelation):
         return get_backward_fk_filters(field_name, field)
     actual_field_name = field_name
     if field_name == "pk" and field:
