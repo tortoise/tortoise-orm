@@ -135,6 +135,9 @@ class TextField(Field, str):  # type: ignore
     indexable = False
     SQL_TYPE = "TEXT"
 
+    class _db_mysql:
+        SQL_TYPE = "LONGTEXT"
+
 
 class BooleanField(Field):
     """
@@ -359,6 +362,9 @@ class BinaryField(Field, bytes):  # type: ignore
 
     class _db_postgres:
         SQL_TYPE = "BYTEA"
+
+    class _db_mysql:
+        SQL_TYPE = "LONGBLOB"
 
 
 class IntEnumField(SmallIntField):

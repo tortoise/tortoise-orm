@@ -370,7 +370,7 @@ CREATE TABLE `inheritedmodel` (
     `one` VARCHAR(40),
     `new_field` VARCHAR(100) NOT NULL,
     `two` VARCHAR(40) NOT NULL,
-    `name` TEXT NOT NULL
+    `name` LONGTEXT NOT NULL
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `sometable` (
     `sometable_id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -402,7 +402,7 @@ CREATE TABLE `tournament` (
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
 CREATE TABLE `event` (
     `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
-    `name` TEXT NOT NULL,
+    `name` LONGTEXT NOT NULL,
     `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
@@ -459,7 +459,7 @@ CREATE TABLE IF NOT EXISTS `inheritedmodel` (
     `one` VARCHAR(40),
     `new_field` VARCHAR(100) NOT NULL,
     `two` VARCHAR(40) NOT NULL,
-    `name` TEXT NOT NULL
+    `name` LONGTEXT NOT NULL
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `sometable` (
     `sometable_id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -491,7 +491,7 @@ CREATE TABLE IF NOT EXISTS `tournament` (
 ) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\\'`/* we have';
 CREATE TABLE IF NOT EXISTS `event` (
     `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
-    `name` TEXT NOT NULL,
+    `name` LONGTEXT NOT NULL,
     `modified` DATETIME(6) NOT NULL,
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',

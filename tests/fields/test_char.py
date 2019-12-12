@@ -49,28 +49,3 @@ class TestCharFields(test.TestCase):
         obj0 = await testmodels.CharFields.create(char="moo")
         values = await testmodels.CharFields.get(id=obj0.id).values_list("char", flat=True)
         self.assertEqual(values[0], "moo")
-
-
-class TestTextFields(test.TestCase):
-    async def test_empty(self):
-        with self.assertRaises(IntegrityError):
-            await testmodels.TextFields.create()
-
-    async def test_create(self):
-        obj0 = await testmodels.TextFields.create(text="baa")
-        obj = await testmodels.TextFields.get(id=obj0.id)
-        self.assertEqual(obj.text, "baa")
-        self.assertEqual(obj.text_null, None)
-        await obj.save()
-        obj2 = await testmodels.TextFields.get(id=obj.id)
-        self.assertEqual(obj, obj2)
-
-    async def test_values(self):
-        obj0 = await testmodels.TextFields.create(text="baa")
-        values = await testmodels.TextFields.get(id=obj0.id).values("text")
-        self.assertEqual(values[0]["text"], "baa")
-
-    async def test_values_list(self):
-        obj0 = await testmodels.TextFields.create(text="baa")
-        values = await testmodels.TextFields.get(id=obj0.id).values_list("text", flat=True)
-        self.assertEqual(values[0], "baa")

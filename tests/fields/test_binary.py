@@ -9,9 +9,9 @@ class TestBinaryFields(test.TestCase):
             await testmodels.BinaryFields.create()
 
     async def test_create(self):
-        obj0 = await testmodels.BinaryFields.create(binary=bytes(range(256)) * 255)
+        obj0 = await testmodels.BinaryFields.create(binary=bytes(range(256)) * 500)
         obj = await testmodels.BinaryFields.get(id=obj0.id)
-        self.assertEqual(obj.binary, bytes(range(256)) * 255)
+        self.assertEqual(obj.binary, bytes(range(256)) * 500)
         self.assertEqual(obj.binary_null, None)
         await obj.save()
         obj2 = await testmodels.BinaryFields.get(id=obj.id)

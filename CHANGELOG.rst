@@ -5,6 +5,7 @@ Changelog
 Unreleased
 ----------
 - Added ``BinaryField`` for storing binary objects (``bytes``).
+- Changed ``TextField`` to use ``LONGTEXT`` for MySQL to allow for larger than 64KB of text.
 
 0.15.5
 ------
