@@ -75,7 +75,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         return comment
 
     def _get_inner_statements(self) -> List[str]:
-        extra = self._foreign_keys + self._field_indexes
+        extra = self._foreign_keys + list(dict.fromkeys(self._field_indexes))
         self._field_indexes.clear()
         self._foreign_keys.clear()
         return extra

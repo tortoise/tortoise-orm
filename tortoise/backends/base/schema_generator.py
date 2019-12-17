@@ -39,7 +39,7 @@ class BaseSchemaGenerator:
             name=db_field,
             type=field_type,
             nullable=nullable,
-            unique=unique,
+            unique="" if is_pk else unique,
             comment=comment if self.client.capabilities.inline_comment else "",
             primary=" PRIMARY KEY" if is_pk else "",
         ).strip()
@@ -204,7 +204,7 @@ class BaseSchemaGenerator:
 
             fields_to_create.append(field_creation_string)
 
-            if field_object.index:
+            if field_object.index and not field_object.pk:
                 fields_with_index.append(db_field)
 
         if model._meta.unique_together:
@@ -233,7 +233,7 @@ class BaseSchemaGenerator:
 
                 _indexes.append(self._get_index_sql(model, indexes_to_create, safe=safe))
 
-        field_indexes_sqls = [val for val in _indexes if val]
+        field_indexes_sqls = [val for val in list(dict.fromkeys(_indexes)) if val]
 
         fields_to_create.extend(self._get_inner_statements())
 

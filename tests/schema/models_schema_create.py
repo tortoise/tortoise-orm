@@ -81,6 +81,7 @@ class SourceFields(Model):
 
     class Meta:
         table = "sometable"
+        indexes = [["chars"]]
 
 
 class DefaultPK(Model):

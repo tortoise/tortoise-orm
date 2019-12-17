@@ -171,7 +171,7 @@ CREATE TABLE "teamaddress" (
     "city" VARCHAR(50) NOT NULL  /* City */,
     "country" VARCHAR(50) NOT NULL  /* Country */,
     "street" VARCHAR(128) NOT NULL  /* Street Address */,
-    "team_id" VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+    "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
 );
 CREATE TABLE "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -248,7 +248,7 @@ CREATE TABLE IF NOT EXISTS "teamaddress" (
     "city" VARCHAR(50) NOT NULL  /* City */,
     "country" VARCHAR(50) NOT NULL  /* Country */,
     "street" VARCHAR(128) NOT NULL  /* Street Address */,
-    "team_id" VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+    "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -391,7 +391,7 @@ CREATE TABLE `teamaddress` (
     `city` VARCHAR(50) NOT NULL  COMMENT 'City',
     `country` VARCHAR(50) NOT NULL  COMMENT 'Country',
     `street` VARCHAR(128) NOT NULL  COMMENT 'Street Address',
-    `team_id` VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY,
+    `team_id` VARCHAR(50) NOT NULL  PRIMARY KEY,
     CONSTRAINT `fk_teamaddr_team_1c78d737` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `tournament` (
@@ -480,7 +480,7 @@ CREATE TABLE IF NOT EXISTS `teamaddress` (
     `city` VARCHAR(50) NOT NULL  COMMENT 'City',
     `country` VARCHAR(50) NOT NULL  COMMENT 'Country',
     `street` VARCHAR(128) NOT NULL  COMMENT 'Street Address',
-    `team_id` VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY,
+    `team_id` VARCHAR(50) NOT NULL  PRIMARY KEY,
     CONSTRAINT `fk_teamaddr_team_1c78d737` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `tournament` (
@@ -613,7 +613,7 @@ CREATE TABLE "teamaddress" (
     "city" VARCHAR(50) NOT NULL,
     "country" VARCHAR(50) NOT NULL,
     "street" VARCHAR(128) NOT NULL,
-    "team_id" VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+    "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
 );
 COMMENT ON COLUMN "teamaddress"."city" IS 'City';
 COMMENT ON COLUMN "teamaddress"."country" IS 'Country';
@@ -703,7 +703,7 @@ CREATE TABLE IF NOT EXISTS "teamaddress" (
     "city" VARCHAR(50) NOT NULL,
     "country" VARCHAR(50) NOT NULL,
     "street" VARCHAR(128) NOT NULL,
-    "team_id" VARCHAR(50) NOT NULL UNIQUE PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+    "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
 );
 COMMENT ON COLUMN "teamaddress"."city" IS 'City';
 COMMENT ON COLUMN "teamaddress"."country" IS 'Country';

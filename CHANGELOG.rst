@@ -6,6 +6,9 @@ Unreleased
 ----------
 - Added ``BinaryField`` for storing binary objects (``bytes``).
 - Changed ``TextField`` to use ``LONGTEXT`` for MySQL to allow for larger than 64KB of text.
+- De-duplicate index if specified on both ``index=true`` and as part of ``indexes``
+- Primary Keyed ``TextField`` is marked as deprecated.
+  We can't guarnatee that it will be properly indexed or unique in all cases.
 
 0.15.5
 ------

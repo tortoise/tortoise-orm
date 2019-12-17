@@ -1,6 +1,7 @@
 import datetime
 import functools
 import json
+import warnings
 from decimal import Decimal
 from enum import Enum, IntEnum
 from typing import Any, Optional, Type, Union
@@ -134,6 +135,13 @@ class TextField(Field, str):  # type: ignore
 
     indexable = False
     SQL_TYPE = "TEXT"
+
+    def __init__(self, pk: bool = False, **kwargs) -> None:
+        if pk:
+            warnings.warn(
+                "TextField as a PrimaryKey is Deprecated, use CharField instead", DeprecationWarning
+            )
+        super().__init__(pk=pk, **kwargs)
 
     class _db_mysql:
         SQL_TYPE = "LONGTEXT"

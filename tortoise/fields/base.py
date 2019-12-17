@@ -55,6 +55,9 @@ class Field(metaclass=_FieldMeta):
     ) -> None:
         if not self.indexable and (unique or index):
             raise ConfigurationError(f"{self.__class__.__name__} can't be indexed")
+        if pk:
+            index = True
+            unique = True
         self.source_field = source_field
         self.generated = generated
         self.pk = pk

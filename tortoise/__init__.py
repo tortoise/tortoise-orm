@@ -320,6 +320,7 @@ class Tortoise:
                     key_field = f"{field}_id"
                     key_fk_object = deepcopy(related_model._meta.pk)
                     key_fk_object.pk = False
+                    key_fk_object.unique = False
                     key_fk_object.index = fk_object.index
                     key_fk_object.default = fk_object.default
                     key_fk_object.null = fk_object.null
