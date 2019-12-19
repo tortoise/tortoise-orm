@@ -337,17 +337,18 @@ class Tortoise:
 
                     fk_object.model_class = related_model
                     backward_relation_name = fk_object.related_name
-                    if not backward_relation_name:
-                        backward_relation_name = f"{model._meta.table}s"
-                    if backward_relation_name in related_model._meta.fields:
-                        raise ConfigurationError(
-                            f'backward relation "{backward_relation_name}" duplicates in'
-                            f" model {related_model_name}"
+                    if backward_relation_name is not False:
+                        if not backward_relation_name:
+                            backward_relation_name = f"{model._meta.table}s"
+                        if backward_relation_name in related_model._meta.fields:
+                            raise ConfigurationError(
+                                f'backward relation "{backward_relation_name}" duplicates in'
+                                f" model {related_model_name}"
+                            )
+                        fk_relation = BackwardFKRelation(
+                            model, f"{field}_id", fk_object.null, fk_object.description
                         )
-                    fk_relation = BackwardFKRelation(
-                        model, f"{field}_id", fk_object.null, fk_object.description
-                    )
-                    related_model._meta.add_field(backward_relation_name, fk_relation)
+                        related_model._meta.add_field(backward_relation_name, fk_relation)
 
                 for field in model._meta.o2o_fields:
                     o2o_object = cast(OneToOneFieldInstance, model._meta.fields_map[field])
@@ -375,17 +376,18 @@ class Tortoise:
 
                     o2o_object.model_class = related_model
                     backward_relation_name = o2o_object.related_name
-                    if not backward_relation_name:
-                        backward_relation_name = f"{model._meta.table}"
-                    if backward_relation_name in related_model._meta.fields:
-                        raise ConfigurationError(
-                            f'backward relation "{backward_relation_name}" duplicates in'
-                            f" model {related_model_name}"
+                    if backward_relation_name is not False:
+                        if not backward_relation_name:
+                            backward_relation_name = f"{model._meta.table}"
+                        if backward_relation_name in related_model._meta.fields:
+                            raise ConfigurationError(
+                                f'backward relation "{backward_relation_name}" duplicates in'
+                                f" model {related_model_name}"
+                            )
+                        o2o_relation = BackwardOneToOneRelation(
+                            model, f"{field}_id", null=True, description=o2o_object.description
                         )
-                    o2o_relation = BackwardOneToOneRelation(
-                        model, f"{field}_id", null=True, description=o2o_object.description
-                    )
-                    related_model._meta.add_field(backward_relation_name, o2o_relation)
+                        related_model._meta.add_field(backward_relation_name, o2o_relation)
 
                     if o2o_object.pk:
                         pk_attr_changed = True

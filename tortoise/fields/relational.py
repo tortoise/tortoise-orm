@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Awaitable, Generic, Optional, TypeVar, Union
 
 from pypika import Table
+from typing_extensions import Literal
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
 from tortoise.fields.base import CASCADE, RESTRICT, SET_NULL, Field
@@ -263,14 +264,18 @@ class ForeignKeyFieldInstance(Field):
     has_db_field = False
 
     def __init__(
-        self, model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs
+        self,
+        model_name: str,
+        related_name: Union[Optional[str], Literal[False]] = None,
+        on_delete=CASCADE,
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_class: "Type[Model]" = None  # type: ignore
-        self.model_name: str = model_name
-        self.related_name: Optional[str] = related_name
+        self.model_name = model_name
+        self.related_name = related_name
         if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
             raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
         if on_delete == SET_NULL and not bool(kwargs.get("null")):
@@ -294,15 +299,19 @@ class OneToOneFieldInstance(Field):
     has_db_field = False
 
     def __init__(
-        self, model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs
+        self,
+        model_name: str,
+        related_name: Union[Optional[str], Literal[False]] = None,
+        on_delete=CASCADE,
+        **kwargs,
     ) -> None:
         kwargs["unique"] = True
         super().__init__(**kwargs)
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('OneToOneField accepts model name in format "app.Model"')
         self.model_class: "Type[Model]" = None  # type: ignore
-        self.model_name: str = model_name
-        self.related_name: Optional[str] = related_name
+        self.model_name = model_name
+        self.related_name = related_name
         if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
             raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
         if on_delete == SET_NULL and not bool(kwargs.get("null")):
@@ -341,7 +350,10 @@ class ManyToManyFieldInstance(Field):
 
 
 def OneToOneField(
-    model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs,
+    model_name: str,
+    related_name: Union[Optional[str], Literal[False]] = None,
+    on_delete=CASCADE,
+    **kwargs,
 ) -> OneToOneRelation:
     """
     OneToOne relation field.
@@ -378,7 +390,10 @@ def OneToOneField(
 
 
 def ForeignKeyField(
-    model_name: str, related_name: Optional[str] = None, on_delete=CASCADE, **kwargs,
+    model_name: str,
+    related_name: Union[Optional[str], Literal[False]] = None,
+    on_delete=CASCADE,
+    **kwargs,
 ) -> ForeignKeyRelation:
     """
     ForeignKey relation field.

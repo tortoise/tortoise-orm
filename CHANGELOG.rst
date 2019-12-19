@@ -9,6 +9,7 @@ Unreleased
 - De-duplicate index if specified on both ``index=true`` and as part of ``indexes``
 - Primary Keyed ``TextField`` is marked as deprecated.
   We can't guarnatee that it will be properly indexed or unique in all cases.
+- One can now disable the backwards relation for FK/O2O relations by passing ``related_name=False``
 
 0.15.5
 ------

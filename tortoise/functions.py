@@ -26,7 +26,7 @@ class Function:
     def _resolve_field_for_model(self, model, field: str, *default_values) -> dict:
         field_split = field.split("__")
         if not field_split[1:]:
-            function_joins: list = []
+            function_joins = []
             if field_split[0] in model._meta.fetch_fields:
                 related_field = model._meta.fields_map[field_split[0]]
                 related_field_meta = related_field.model_class._meta

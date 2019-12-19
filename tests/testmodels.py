@@ -271,7 +271,10 @@ class UUIDFkRelatedNullModel(Model):
     id = fields.UUIDField(pk=True)
     name = fields.CharField(max_length=50, null=True)
     model: fields.ForeignKeyNullableRelation[UUIDPkModel] = fields.ForeignKeyField(
-        "models.UUIDPkModel", related_name="children_null", null=True
+        "models.UUIDPkModel", related_name=False, null=True
+    )
+    parent: fields.OneToOneNullableRelation[UUIDPkModel] = fields.OneToOneField(
+        "models.UUIDPkModel", related_name=False, null=True
     )
 
 
