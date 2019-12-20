@@ -1,11 +1,52 @@
-from tests.testmodels import Address, Event, NoID, Team, Tournament
+from uuid import uuid4
+
+from tests.testmodels import Address, Event, NoID, Team, Tournament, UUIDFkRelatedNullModel
 from tortoise.contrib import test
 from tortoise.exceptions import (
     ConfigurationError,
     DoesNotExist,
+    IntegrityError,
     MultipleObjectsReturned,
     OperationalError,
 )
+
+
+class TestModelCreate(test.TestCase):
+    async def test_save_generated(self):
+        mdl = await Tournament.create(name="Test")
+        mdl2 = await Tournament.get(id=mdl.id)
+        self.assertEqual(mdl, mdl2)
+
+    async def test_save_non_generated(self):
+        mdl = await UUIDFkRelatedNullModel.create(name="Test")
+        mdl2 = await UUIDFkRelatedNullModel.get(id=mdl.id)
+        self.assertEqual(mdl, mdl2)
+
+    async def test_save_generated_custom_id(self):
+        cid = 12345
+        mdl = await Tournament.create(id=cid, name="Test")
+        self.assertEqual(mdl.id, cid)
+        mdl2 = await Tournament.get(id=cid)
+        self.assertEqual(mdl, mdl2)
+
+    async def test_save_non_generated_custom_id(self):
+        cid = uuid4()
+        mdl = await UUIDFkRelatedNullModel.create(id=cid, name="Test")
+        self.assertEqual(mdl.id, cid)
+        mdl2 = await UUIDFkRelatedNullModel.get(id=cid)
+        self.assertEqual(mdl, mdl2)
+
+    async def test_save_generated_duplicate_custom_id(self):
+        cid = 12345
+        await Tournament.create(id=cid, name="TestOriginal")
+        with self.assertRaises(IntegrityError):
+            await Tournament.create(id=cid, name="Test")
+
+    async def test_save_non_generated_duplicate_custom_id(self):
+        cid = uuid4()
+        await UUIDFkRelatedNullModel.create(id=cid, name="TestOriginal")
+        with self.assertRaises(IntegrityError):
+            await UUIDFkRelatedNullModel.create(id=cid, name="Test")
 
 
 class TestModelMethods(test.TestCase):
@@ -18,14 +59,6 @@ class TestModelMethods(test.TestCase):
         oldid = self.mdl.id
         await self.mdl.save()
         self.assertEqual(self.mdl.id, oldid)
-
-    def test_construct_custom_id(self):
-        with self.assertRaisesRegex(ValueError, "id is DB generated"):
-            self.cls(id=218028, name="Test")
-
-    async def test_save_custom_id(self):
-        with self.assertRaisesRegex(ValueError, "id is DB generated"):
-            await self.cls.create(id=218028, name="Test")
 
     async def test_save_full(self):
         self.mdl.name = "TestS"

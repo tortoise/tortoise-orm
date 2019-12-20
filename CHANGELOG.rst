@@ -10,6 +10,8 @@ Unreleased
 - Primary Keyed ``TextField`` is marked as deprecated.
   We can't guarnatee that it will be properly indexed or unique in all cases.
 - One can now disable the backwards relation for FK/O2O relations by passing ``related_name=False``
+- One can now pass a PK value to a generated field, and Tortoise ORM will use that as the PK as expected.
+  This allows one to have a model that has a autonumber PK, but setting it explicitly if required.
 
 0.15.5
 ------

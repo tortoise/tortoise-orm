@@ -16,7 +16,9 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
     from tortoise.backends.base.client import BaseDBAsyncClient
 
-EXECUTOR_CACHE: Dict[str, Tuple[list, str, Dict[str, Callable], str, Dict[str, str]]] = {}
+EXECUTOR_CACHE: Dict[
+    str, Tuple[list, str, list, str, Dict[str, Callable], str, Dict[str, str]]
+] = {}
 
 
 class BaseExecutor:
@@ -41,9 +43,18 @@ class BaseExecutor:
         if key not in EXECUTOR_CACHE:
             self.regular_columns, columns = self._prepare_insert_columns()
             self.insert_query = self._prepare_insert_statement(columns)
+            self.regular_columns_all = self.regular_columns
+            self.insert_query_all = self.insert_query
+            if self.model._meta.generated_db_fields:
+                self.regular_columns_all, columns_all = self._prepare_insert_columns(
+                    include_generated=True
+                )
+                self.insert_query_all = self._prepare_insert_statement(
+                    columns_all, no_generated=True
+                )
 
             self.column_map: Dict[str, Callable[[Any, Any], Any]] = {}
-            for column in self.regular_columns:
+            for column in self.regular_columns_all:
                 field_object = self.model._meta.fields_map[column]
                 if field_object.__class__ in self.TO_DB_OVERRIDE:
                     self.column_map[column] = partial(
@@ -63,6 +74,8 @@ class BaseExecutor:
             EXECUTOR_CACHE[key] = (
                 self.regular_columns,
                 self.insert_query,
+                self.regular_columns_all,
+                self.insert_query_all,
                 self.column_map,
                 self.delete_query,
                 self.update_cache,
@@ -71,6 +84,8 @@ class BaseExecutor:
             (
                 self.regular_columns,
                 self.insert_query,
+                self.regular_columns_all,
+                self.insert_query_all,
                 self.column_map,
                 self.delete_query,
                 self.update_cache,
@@ -92,11 +107,11 @@ class BaseExecutor:
         await self._execute_prefetch_queries(instance_list)
         return instance_list
 
-    def _prepare_insert_columns(self) -> Tuple[List[str], List[str]]:
+    def _prepare_insert_columns(self, include_generated=False) -> Tuple[List[str], List[str]]:
         regular_columns = []
         for column in self.model._meta.fields_db_projection.keys():
             field_object = self.model._meta.fields_map[column]
-            if not field_object.generated:
+            if include_generated or not field_object.generated:
                 regular_columns.append(column)
         result_columns = [self.model._meta.fields_db_projection[c] for c in regular_columns]
         return regular_columns, result_columns
@@ -107,7 +122,7 @@ class BaseExecutor:
             return cls.TO_DB_OVERRIDE[field_object.__class__](field_object, attr, instance)
         return field_object.to_db_value(attr, instance)
 
-    def _prepare_insert_statement(self, columns: List[str]) -> str:
+    def _prepare_insert_statement(self, columns: List[str], no_generated: bool = False) -> str:
         # Insert should implement returning new id to saved object
         # Each db has it's own methods for it, so each implementation should
         # go to descendant executors
@@ -124,12 +139,19 @@ class BaseExecutor:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, instance: "Model") -> None:
-        values = [
-            self.column_map[column](getattr(instance, column), instance)
-            for column in self.regular_columns
-        ]
-        insert_result = await self.db.execute_insert(self.insert_query, values)
-        await self._process_insert_result(instance, insert_result)
+        if not instance._custom_generated_pk:
+            values = [
+                self.column_map[column](getattr(instance, column), instance)
+                for column in self.regular_columns
+            ]
+            insert_result = await self.db.execute_insert(self.insert_query, values)
+            await self._process_insert_result(instance, insert_result)
+        else:
+            values = [
+                self.column_map[column](getattr(instance, column), instance)
+                for column in self.regular_columns_all
+            ]
+            await self.db.execute_insert(self.insert_query_all, values)
 
     async def execute_bulk_insert(self, instances: "List[Model]") -> None:
         values_lists = [

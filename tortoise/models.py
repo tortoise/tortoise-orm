@@ -472,7 +472,8 @@ class Model(metaclass=ModelMeta):
     def __init__(self, **kwargs) -> None:
         # self._meta is a very common attribute lookup, lets cache it.
         meta = self._meta
-        self._saved_in_db = meta.pk_attr in kwargs and meta.pk.generated
+        self._saved_in_db = False
+        self._custom_generated_pk = False
 
         # Assign values and do type conversions
         passed_fields = {*kwargs.keys()} | meta.fetch_fields
@@ -488,7 +489,7 @@ class Model(metaclass=ModelMeta):
             elif key in meta.fields_db_projection:
                 field_object = meta.fields_map[key]
                 if field_object.generated:
-                    raise ValueError(f"{key} is DB generated, and can't be set from constructor.")
+                    self._custom_generated_pk = True
                 if value is None and not field_object.null:
                     raise ValueError(f"{key} is non nullable field, but null was passed")
                 setattr(self, key, field_object.to_python_value(value))
