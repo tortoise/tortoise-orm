@@ -2,8 +2,8 @@
 
 Changelog
 =========
-Unreleased
-----------
+0.15.6
+------
 - Added ``BinaryField`` for storing binary objects (``bytes``).
 - Changed ``TextField`` to use ``LONGTEXT`` for MySQL to allow for larger than 64KB of text.
 - De-duplicate index if specified on both ``index=true`` and as part of ``indexes``
