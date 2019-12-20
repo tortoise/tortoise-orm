@@ -32,7 +32,7 @@ The following libraries can be used as accelerators:
 
 * `python-rapidjson <https://pypi.org/project/python-rapidjson/>`_: Automatically used if installed for JSON SerDes.
 * `uvloop <https://pypi.org/project/uvloop/>`_: Shown to improve performance, but needs to be set up.
-  Please look at ``uvloop`` docuemntation for more info.
+  Please look at ``uvloop`` documentation for more info.
   If you use a framework, it may already use it.
 
 Tutorial
