@@ -720,6 +720,17 @@ class Model(metaclass=ModelMeta):
         return QuerySet(cls).get(*args, **kwargs)
 
     @classmethod
+    def get_or_none(cls: Type[MODEL], *args, **kwargs) -> QuerySetSingle[Optional[MODEL]]:
+        """
+        Fetches a single record for a Model type using the provided filter parameters or None.
+
+        .. code-block:: python3
+
+            user = await User.get(username="foo")
+        """
+        return QuerySet(cls).filter(*args, **kwargs).first()
+
+    @classmethod
     async def fetch_for_list(
         cls, instance_list: List[MODEL], *args, using_db: Optional[BaseDBAsyncClient] = None
     ) -> None:

@@ -418,6 +418,15 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._get = True
         return queryset  # type: ignore
 
+    def get_or_none(self, *args, **kwargs) -> QuerySetSingle[MODEL]:
+        """
+        Fetch exactly one object matching the parameters.
+        """
+        queryset = self.filter(*args, **kwargs)
+        queryset._limit = 1
+        queryset._single = True
+        return queryset  # type: ignore
+
     def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySet[MODEL]":
         """
         Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
