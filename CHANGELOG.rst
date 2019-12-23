@@ -2,13 +2,12 @@
 
 Changelog
 =========
-Unreleased
-----------
+0.15.7
+------
 - ``QuerySet.Update()`` now returns the count of the no of rows affected. Note, that
 - ``QuerySet.Delete()`` now returns the count of the no of rows deleted.
 - Note that internal API of ``db_connection.execute_query()`` now returns ``rows_affected, results``. (This is informational only)
 - Added ``get_or_none(...)`` as syntactic sugar for ``filter(...).first()``
-
 
 0.15.6
 ------
@@ -23,7 +22,6 @@ Unreleased
 
 0.15.5
 ------
-
 * Refactored Fields:
 
   Fields have been refactored, for better maintenance. There should be no change for most users.
