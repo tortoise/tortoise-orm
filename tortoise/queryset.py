@@ -581,14 +581,14 @@ class UpdateQuery(AwaitableQuery):
 
             self.query = self.query.set(db_field, value)
 
-    def __await__(self) -> Generator[Any, None, None]:
+    def __await__(self) -> Generator[Any, None, int]:
         if self._db is None:
             self._db = self.model._meta.db  # type: ignore
         self._make_query()
         return self._execute().__await__()
 
-    async def _execute(self) -> None:
-        await self._db.execute_query(str(self.query))
+    async def _execute(self) -> int:
+        return (await self._db.execute_query(str(self.query)))[0]
 
 
 class DeleteQuery(AwaitableQuery):
@@ -611,14 +611,14 @@ class DeleteQuery(AwaitableQuery):
         )
         self.query._delete_from = True
 
-    def __await__(self) -> Generator[Any, None, None]:
+    def __await__(self) -> Generator[Any, None, int]:
         if self._db is None:
             self._db = self.model._meta.db  # type: ignore
         self._make_query()
         return self._execute().__await__()
 
-    async def _execute(self) -> None:
-        await self._db.execute_query(str(self.query))
+    async def _execute(self) -> int:
+        return (await self._db.execute_query(str(self.query)))[0]
 
 
 class CountQuery(AwaitableQuery):
@@ -648,7 +648,7 @@ class CountQuery(AwaitableQuery):
         return self._execute().__await__()
 
     async def _execute(self) -> int:
-        result = await self._db.execute_query(str(self.query))
+        _, result = await self._db.execute_query(str(self.query))
         return list(dict(result[0]).values())[0]
 
 
@@ -817,7 +817,7 @@ class ValuesListQuery(FieldSelectQuery):
             yield val
 
     async def _execute(self) -> List[Any]:
-        result = await self._db.execute_query(str(self.query))
+        _, result = await self._db.execute_query(str(self.query))
         columns = [
             (key, self.resolve_to_python_value(self.model, name))
             for key, name in sorted(list(self.fields.items()))

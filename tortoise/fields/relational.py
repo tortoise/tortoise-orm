@@ -189,7 +189,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
 
         # TODO: This is highly inefficient. Should use UNIQUE index by default.
         #  And optionally allow duplicates.
-        already_existing_relations_raw = await db.execute_query(str(select_query))
+        _, already_existing_relations_raw = await db.execute_query(str(select_query))
         already_existing_relations = {
             (
                 pk_formatting_func(r[self.field.backward_key], self.instance),

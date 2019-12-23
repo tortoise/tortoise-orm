@@ -44,7 +44,7 @@ class TestPostgreSQL(test.SimpleTestCase):
             await Tournament.filter(name="Test").first()
 
         conn = Tortoise.get_connection("models")
-        res = await conn.execute_query(
+        _, res = await conn.execute_query(
             "SELECT id, name FROM mytestschema.tournament WHERE name='Test' LIMIT 1"
         )
 

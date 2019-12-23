@@ -93,10 +93,10 @@ class BaseExecutor:
 
     async def execute_explain(self, query) -> Any:
         sql = " ".join((self.EXPLAIN_PREFIX, query.get_sql()))
-        return await self.db.execute_query(sql)
+        return (await self.db.execute_query(sql))[1]
 
     async def execute_select(self, query, custom_fields: Optional[list] = None) -> list:
-        raw_results = await self.db.execute_query(query.get_sql())
+        _, raw_results = await self.db.execute_query(query.get_sql())
         instance_list = []
         for row in raw_results:
             instance: "Model" = self.model._init_from_db(**row)
@@ -187,20 +187,21 @@ class BaseExecutor:
         sql = self.update_cache[key] = query.get_sql()
         return sql
 
-    async def execute_update(self, instance, update_fields: Optional[List[str]]) -> None:
+    async def execute_update(self, instance, update_fields: Optional[List[str]]) -> int:
         values = [
             self.column_map[field](getattr(instance, field), instance)
             for field in update_fields or self.model._meta.fields_db_projection.keys()
             if not self.model._meta.fields_map[field].pk
         ]
         values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
-        await self.db.execute_query(self.get_update_sql(update_fields), values)
+        return (await self.db.execute_query(self.get_update_sql(update_fields), values))[0]
 
-    async def execute_delete(self, instance):
-        await self.db.execute_query(
-            self.delete_query, [self.model._meta.pk.to_db_value(instance.pk, instance)]
-        )
-        return instance
+    async def execute_delete(self, instance) -> int:
+        return (
+            await self.db.execute_query(
+                self.delete_query, [self.model._meta.pk.to_db_value(instance.pk, instance)]
+            )
+        )[0]
 
     async def _prefetch_reverse_relation(
         self, instance_list: list, field: str, related_query
@@ -304,7 +305,7 @@ class BaseExecutor:
             if having_criterion:
                 query = query.having(having_criterion)
 
-        raw_results = await self.db.execute_query(query.get_sql())
+        _, raw_results = await self.db.execute_query(query.get_sql())
         relations = {
             (
                 self.model._meta.pk.to_python_value(e["_backward_relation_key"]),

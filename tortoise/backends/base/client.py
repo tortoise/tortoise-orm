@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any, List, Optional, Sequence, Type, Union
+from typing import Any, List, Optional, Sequence, Tuple, Type, Union
 
 from pypika import Query
 
@@ -95,7 +95,9 @@ class BaseDBAsyncClient:
     async def execute_insert(self, query: str, values: list) -> Any:
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def execute_query(self, query: str, values: Optional[list] = None) -> Sequence[dict]:
+    async def execute_query(
+        self, query: str, values: Optional[list] = None
+    ) -> Tuple[int, Sequence[dict]]:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_script(self, query: str) -> None:

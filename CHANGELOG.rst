@@ -2,6 +2,13 @@
 
 Changelog
 =========
+Unreleased
+----------
+- ``QuerySet.Update()`` now returns the count of the no of rows affected. Note, that
+- ``QuerySet.Delete()`` now returns the count of the no of rows deleted.
+- Note that internal API of ``db_connection.execute_query()`` now returns ``rows_affected, results``. (This is informational only)
+
+
 0.15.6
 ------
 - Added ``BinaryField`` for storing binary objects (``bytes``).

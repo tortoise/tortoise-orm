@@ -26,7 +26,8 @@ class TestQueryset(test.TestCase):
 
     async def test_modify_dataset(self):
         # Modify dataset
-        await IntFields.filter(intnum__gte=70).update(intnum_null=80)
+        rows_affected = await IntFields.filter(intnum__gte=70).update(intnum_null=80)
+        self.assertEqual(rows_affected, 10)
         self.assertEqual(await IntFields.filter(intnum_null=80).count(), 10)
         self.assertEqual(await IntFields.filter(intnum_null__isnull=True).count(), 20)
         await IntFields.filter(intnum_null__isnull=True).update(intnum_null=-1)
@@ -170,7 +171,10 @@ class TestQueryset(test.TestCase):
 
         self.assertEqual(await IntFields.all().count(), 29)
 
-        await IntFields.all().order_by("intnum").limit(10).filter(intnum__gte=70).delete()
+        rows_affected = (
+            await IntFields.all().order_by("intnum").limit(10).filter(intnum__gte=70).delete()
+        )
+        self.assertEqual(rows_affected, 10)
 
         self.assertEqual(await IntFields.all().count(), 19)
 

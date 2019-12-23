@@ -5,7 +5,9 @@ from tortoise.contrib import test
 class TestUpdate(test.TestCase):
     async def test_update(self):
         await Tournament.create(name="1")
-        await Tournament.all().update(name="2")
+        await Tournament.create(name="3")
+        rows_affected = await Tournament.all().update(name="2")
+        self.assertEqual(rows_affected, 2)
 
         tournament = await Tournament.first()
         self.assertEqual(tournament.name, "2")
