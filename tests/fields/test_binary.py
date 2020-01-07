@@ -1,6 +1,7 @@
 from tests import testmodels
 from tortoise.contrib import test
-from tortoise.exceptions import IntegrityError
+from tortoise.exceptions import ConfigurationError, IntegrityError
+from tortoise.fields import BinaryField
 
 
 class TestBinaryFields(test.TestCase):
@@ -29,3 +30,11 @@ class TestBinaryFields(test.TestCase):
         obj0 = await testmodels.BinaryFields.create(binary=bytes(range(256)))
         values = await testmodels.BinaryFields.get(id=obj0.id).values_list("binary", flat=True)
         self.assertEqual(values[0], bytes(range(256)))
+
+    def test_unique_fail(self):
+        with self.assertRaisesRegex(ConfigurationError, "can't be indexed"):
+            BinaryField(unique=True)
+
+    def test_index_fail(self):
+        with self.assertRaisesRegex(ConfigurationError, "can't be indexed"):
+            BinaryField(index=True)

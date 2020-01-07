@@ -1,6 +1,7 @@
 from tests import testmodels
 from tortoise.contrib import test
-from tortoise.exceptions import IntegrityError
+from tortoise.exceptions import ConfigurationError, IntegrityError
+from tortoise.fields import JSONField
 
 
 class TestJSONFields(test.TestCase):
@@ -42,3 +43,11 @@ class TestJSONFields(test.TestCase):
         obj0 = await testmodels.JSONFields.create(data={"some": ["text", 3]})
         values = await testmodels.JSONFields.filter(id=obj0.id).values_list("data", flat=True)
         self.assertEqual(values[0], {"some": ["text", 3]})
+
+    def test_unique_fail(self):
+        with self.assertRaisesRegex(ConfigurationError, "can't be indexed"):
+            JSONField(unique=True)
+
+    def test_index_fail(self):
+        with self.assertRaisesRegex(ConfigurationError, "can't be indexed"):
+            JSONField(index=True)

@@ -1,4 +1,3 @@
-import typing
 from enum import Enum, IntEnum
 
 from tortoise import fields
@@ -18,5 +17,5 @@ class Currency(str, Enum):
 
 
 class EnumFields(Model):
-    service: Service = typing.cast(Service, fields.IntEnumField(Service))
-    currency: Currency = typing.cast(Currency, fields.CharEnumField(Currency, default=Currency.HUF))
+    service: Service = fields.IntEnumField(Service)
+    currency: Currency = fields.CharEnumField(Currency, default=Currency.HUF)

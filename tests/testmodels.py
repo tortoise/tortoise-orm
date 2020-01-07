@@ -3,7 +3,6 @@ This is the testing Models
 """
 import binascii
 import os
-import typing
 import uuid
 from enum import Enum, IntEnum
 
@@ -507,5 +506,5 @@ class Currency(str, Enum):
 
 
 class EnumFields(Model):
-    service: Service = typing.cast(Service, fields.IntEnumField(Service))
-    currency: Currency = typing.cast(Currency, fields.CharEnumField(Currency, default=Currency.HUF))
+    service: Service = fields.IntEnumField(Service)
+    currency: Currency = fields.CharEnumField(Currency, default=Currency.HUF)

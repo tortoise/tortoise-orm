@@ -13,7 +13,7 @@ async def generate_schema_for_client(client, safe: bool) -> None:
     generator = client.schema_generator(client)
     schema = get_schema_sql(client, safe)
     logger.debug("Creating schema: %s", schema)
-    if schema:
+    if schema:  # pragma: nobranch
         await generator.generate_from_string(schema)
 
 

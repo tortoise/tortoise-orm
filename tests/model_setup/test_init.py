@@ -1,5 +1,4 @@
 import os
-import warnings
 
 from tortoise import Tortoise
 from tortoise.contrib import test
@@ -38,7 +37,7 @@ class TestInitErrors(test.SimpleTestCase):
         self.assertIsNotNone(Tortoise.get_connection("default"))
 
     async def test_empty_modules_init(self):
-        with warnings.catch_warnings(record=True) as wrn:
+        with self.assertWarnsRegex(RuntimeWarning, 'Module "tests.model_setup" has no models'):
             await Tortoise.init(
                 {
                     "connections": {
@@ -52,9 +51,6 @@ class TestInitErrors(test.SimpleTestCase):
                     },
                 }
             )
-            self.assertEqual(len(wrn), 1)
-            self.assertEqual(wrn[0].category, RuntimeWarning)
-            self.assertEqual(str(wrn[0].message), 'Module "tests.model_setup" has no models')
 
     async def test_dup1_init(self):
         with self.assertRaisesRegex(

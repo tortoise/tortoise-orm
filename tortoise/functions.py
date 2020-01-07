@@ -38,7 +38,7 @@ class Function:
 
                 if self.populate_field_object:
                     self.field_object = model._meta.fields_map.get(field_split[0], None)
-                    if self.field_object:
+                    if self.field_object:  # pragma: nobranch
                         func = self.field_object.get_for_dialect(
                             model._meta.db.capabilities.dialect, "function_cast"
                         )

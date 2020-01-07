@@ -35,7 +35,7 @@ def translate_exceptions(func):
             raise OperationalError(exc)
         except asyncpg.IntegrityConstraintViolationError as exc:
             raise IntegrityError(exc)
-        except asyncpg.InvalidTransactionStateError as exc:
+        except asyncpg.InvalidTransactionStateError as exc:  # pragma: nocoverage
             raise TransactionManagementError(exc)
 
     return translate_exceptions_
@@ -154,21 +154,19 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     ) -> Tuple[int, List[dict]]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
+            if values:
+                params = [query, *values]
+            else:
+                params = [query]
             if query.startswith("UPDATE") or query.startswith("DELETE"):
-                if values:
-                    res = await connection.execute(query, *values)
-                else:
-                    res = await connection.execute(query)
+                res = await connection.execute(*params)
                 try:
                     rows_affected = int(res.split(" ")[1])
                 except Exception:  # pragma: nocoverage
                     rows_affected = 0
                 return rows_affected, []
             else:
-                if values:
-                    rows = await connection.fetch(query, *values)
-                else:
-                    rows = await connection.fetch(query)
+                rows = await connection.fetch(*params)
                 return len(rows), rows
 
     @translate_exceptions
