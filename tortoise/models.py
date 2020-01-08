@@ -830,5 +830,11 @@ class Model(metaclass=ModelMeta):
         # Maximum recursion level allowed
         pydantic_max_recursion = 3
 
-        # Use comments before field definitions
+        # Use comments found before field definitions as pydantic description
         pydantic_use_comments = True
+
+        # If we should exclude raw fields (the ones have _id suffixes) of relations
+        pydantic_exclude_raw_fields = True
+
+        # Sort fields alphabetically
+        pydantic_sort_fields = False

@@ -2,10 +2,10 @@ import functools
 import inspect
 import re
 import typing
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import tortoise
-from tortoise import exceptions, fields, models
+from tortoise import fields, models
 
 if typing.TYPE_CHECKING:
     from tortoise.models import Model
@@ -93,6 +93,7 @@ try:
             # Stores already created pydantic models
             cache: Dict[str, Type["PydanticModel"]] = {}
 
+        # noinspection PyMethodParameters
         @pydantic.validator("*", pre=True, whole=True)  # It is a classmethod!
         def _tortoise_convert(cls, value):  # pylint: disable=E0213
             # Computed fields
@@ -116,6 +117,7 @@ try:
     def _pydantic_recursion_protector(
         cls: Type["Model"],
         *,
+        stack: tuple,
         exclude: Tuple[str] = (),  # type: ignore
         include: Tuple[str] = (),  # type: ignore
         computed: Tuple[str] = (),  # type: ignore
@@ -124,37 +126,31 @@ try:
         """
         It is an inner function to protect pydantic model creator against cyclic recursion
         """
-        stack = inspect.stack()
-        caller_fname = stack[1].frame.f_locals["fname"]  # The field name of the caller
-        caller_cls = stack[2].frame.f_locals["cls"]  # The class name of the caller
+        caller_cls, caller_fname, _ = stack[0]
         prop_path = [caller_fname]  # It stores the fields in the hierarchy
         level = 1
-        # Go through the stack to find the cls and fname of the caller
-        for frame_info in stack[3:]:
-            if frame_info.filename != __file__ and frame_info.filename != models.__file__:
-                break
-            if frame_info.function == "get_submodel":  # This is the submodel creator function
-                # Check recursion level
-                frame_max_recursion = frame_info.frame.f_back.f_locals["pydantic_max_recursion"]
-                frame_cls = frame_info.frame.f_back.f_locals["cls"]  # The class of the model
-                frame_fname = frame_info.frame.f_locals["fname"]  # The name of the field
-                prop_path.insert(0, frame_fname)
-                if level >= frame_max_recursion:
-                    tortoise.logger.warning(
-                        "Recursion level %i has reached for model %s",
-                        level,
-                        frame_cls.__qualname__ + "." + ".".join(prop_path),
-                    )
-                    return None
-                if frame_cls is caller_cls and frame_fname == caller_fname:
-                    tortoise.logger.warning(
-                        "Recursion detected: %s", frame_cls.__qualname__ + "." + ".".join(prop_path)
-                    )
-                    return None
+        for parent_cls, parent_fname, parent_max_recursion in stack[1:]:
+            # Check recursion level
+            prop_path.insert(0, parent_fname)
+            if level >= parent_max_recursion:
+                tortoise.logger.warning(
+                    "Recursion level %i has reached for model %s",
+                    level,
+                    parent_cls.__qualname__ + "." + ".".join(prop_path),
+                )
+                return None
 
-                level += 1
+            if parent_cls is caller_cls and parent_fname == caller_fname:
+                tortoise.logger.warning(
+                    "Recursion detected: %s", parent_cls.__qualname__ + "." + ".".join(prop_path)
+                )
+                return None
 
-        return cls.pydantic_model(exclude=exclude, include=include, computed=computed, name=name)
+            level += 1
+
+        return _pydantic_model_creator(
+            cls, exclude=exclude, include=include, computed=computed, name=name, stack=stack
+        )
 
     def _pydantic_model_creator(
         cls: Type["Model"],
@@ -163,6 +159,7 @@ try:
         include: Tuple[str] = (),  # type: ignore
         computed: Tuple[str] = (),  # type: ignore
         name=None,
+        stack: tuple = (),
     ) -> Type[PydanticModel]:
         """
         Inner function to create pydantic model.
@@ -189,7 +186,7 @@ try:
         if name in PydanticModel.Meta.cache:
             return PydanticModel.Meta.cache[name]
 
-        # Get defaults
+        # Get settings and defaults
         default_meta = models.Model.Meta
         meta = getattr(cls, "Meta", default_meta)
         default_include = getattr(
@@ -209,9 +206,16 @@ try:
         use_comments = getattr(
             meta, "pydantic_use_comments", getattr(default_meta, "pydantic_use_comments")
         )
-        # It is used in the recursion protector
-        pydantic_max_recursion = getattr(  # noqa: F841
+        max_recursion = getattr(
             meta, "pydantic_max_recursion", getattr(default_meta, "pydantic_max_recursion")
+        )
+        exclude_raw_fields = getattr(
+            meta,
+            "pydantic_exclude_raw_fields",
+            getattr(default_meta, "pydantic_exclude_raw_fields"),
+        )
+        sort_fields = getattr(
+            meta, "pydantic_sort_fields", getattr(default_meta, "pydantic_sort_fields")
         )
 
         # Update parameters with defaults
@@ -227,58 +231,58 @@ try:
         # Properties and their annotations` store
         properties: Dict[str, Any] = {"__annotations__": {}}
 
-        # Generate field map with relations and computed fields
-        field_map = dict(cls._meta.fields_map)  # We need to copy the original to not extend that
-        # Add annotated backward relations as well
+        # Get model description
+        model_description = tortoise.Tortoise.describe_model(cls, serializable=False)
+
+        # Field map we use
+        field_map = {}
+
+        def field_map_update(keys: tuple, is_relation=True) -> None:
+            for key in keys:
+                for fd in model_description[key]:
+                    n = fd["name"]
+                    # Include or exclude field
+                    if (include and n not in include) or n in exclude:  # type: ignore
+                        continue
+                    # Relations most have annotations to be included if backward_relations
+                    # is not True
+                    if is_relation and not backward_relations and n not in annotations:
+                        continue
+                    # Remoce raw fields
+                    raw_field = fd.get("raw_field", None)
+                    if raw_field is not None and exclude_raw_fields:
+                        del field_map[raw_field]
+                    field_map[n] = fd
+
+        # Update field definitions from description
+        field_map_update(("data_fields",), is_relation=False)
+        field_map_update(
+            ("fk_fields", "o2o_fields", "m2m_fields", "backward_fk_fields", "backward_o2o_fields")
+        )
+
+        # Add possible computed fields
         field_map.update(
             {
-                k: v
-                for k, v in annotations.items()
-                if k not in field_map
-                and hasattr(v, "__origin__")
-                and isinstance(v.__origin__, type)
-                and issubclass(v.__origin__, (fields.ManyToManyRelation, fields.ReverseRelation))
+                k: {"field_type": callable, "function": getattr(cls, k), "description": None}
+                for k in computed
             }
         )
-        # Add possible computed fields
-        field_map.update({k: getattr(cls, k) for k in computed})
+
+        # Sort field map if requested (Python 3.6 has ordered dictionary keys)
+        if sort_fields:
+            field_map = {k: field_map[k] for k in sorted(field_map)}
 
         # Process fields
-        for fname, fval in field_map.items():
-            # Include or exclude field
-            if include and fname not in include:  # type: ignore
-                continue
-            if fname in exclude:
-                continue
-
-            # The class of the field
-            fcls = fval if isinstance(fval, type) else type(fval)  # type: ignore
-
-            # Get annotation for the specific field
-            annotation = annotations.get(fname, None)
-            annotation_origin = getattr(annotation, "__origin__", type)
+        for fname, fdesc in field_map.items():
             comment = ""
 
-            def model_from_typevar() -> Type["Model"]:
-                nonlocal annotation
-                try:
-                    # ForeignKeyRelation is an union TypeVar, we need the 2nd argument of it, which
-                    # is the model
-                    if annotation.__origin__ is Union:
-                        annotation = annotation.__args__[1]
-                    # ManyToManyFieldRelation's 1st argument is the model type
-                    elif issubclass(
-                        annotation.__origin__, (fields.ReverseRelation, fields.ManyToManyRelation)
-                    ):
-                        annotation = annotation.__args__[0]
-                except AttributeError:  # If annotation has no __origin__
-                    raise exceptions.FieldError(
-                        f"Annotation error in model '{fqname}' at field '{fname}'!"
-                    )
-                return annotation
+            field_type = fdesc["field_type"]
 
-            def get_submodel(_model: Type["Model"]):
+            def get_submodel(_model: Type["Model"]) -> PydanticModel:
+                """ Get Pydantic model for the submodel """
                 nonlocal exclude, name
+
+                new_stack = stack + ((cls, fname, max_recursion),)
 
                 # Get pydantic schema for the submodel
                 prefix_len = len(fname) + 1
@@ -293,69 +297,67 @@ try:
                     computed=tuple(  # type: ignore
                         [str(v[prefix_len:]) for v in computed if v.startswith(fname + ".")]
                     ),
+                    stack=new_stack,
                 )
 
-                # We need to add the field into exclude and get new name for the class to cache
-                # different model for it
+                # If the result is None (it is recursion protected) we need to add the field into
+                # exclude and get new name for the class to cache different model for it
                 if pmodel is None:
                     exclude += (fname,)  # type: ignore
                     name = get_name()
 
                 return pmodel
 
-            # Foreign keys are embedded schemas
+            # Foreign keys and OneToOne fields are embedded schemas
             if (
-                issubclass(
-                    fcls, (fields.ForeignKeyField, fields.OneToOneField, fields.ReverseRelation)
-                )
-                or annotation_origin is Union
+                field_type is fields.relational.ForeignKeyFieldInstance
+                or field_type is fields.relational.OneToOneFieldInstance
+                or field_type is fields.relational.BackwardOneToOneRelation
             ):
-                annotation = annotation or getattr(fval, "field_type", None)
-                model = annotation if isinstance(annotation, type) else model_from_typevar()
-                model = get_submodel(model)
+                model = get_submodel(fdesc["python_type"])
                 if model:
                     properties["__annotations__"][fname] = model
 
-            # ManyToMany fields are list of embedded schemas
-            elif annotation and issubclass(annotation_origin, fields.ManyToManyRelation):
-                model = model_from_typevar()
-                model = get_submodel(model)
+            # Backward FK and ManyToMany fields are list of embedded schemas
+            elif (
+                field_type is fields.relational.BackwardFKRelation
+                or field_type is fields.relational.ManyToManyFieldInstance
+            ):
+                model = get_submodel(fdesc["python_type"])
                 if model:
                     properties["__annotations__"][fname] = List[model]  # type: ignore
 
-            # These are dynamically created backward relation fields, which are not recommended
-            # to include
-            elif issubclass(fcls, (fields.BackwardFKRelation, fields.ManyToManyFieldInstance)):
-                if backward_relations:
-                    model = get_submodel(typing.cast(Type["Model"], fval.field_type))
-                    if model:
-                        properties["__annotations__"][fname] = List[model]  # type: ignore
-
-            # If the annotation is a tortoise model, we need to create a pydantic submodel for it
-            # It should be possible only for computed fields
-            elif isinstance(annotation, type) and issubclass(annotation, models.Model):
-                model = get_submodel(annotation)
-                if model:
-                    properties["__annotations__"][fname] = model
-
             # Computed fields as methods
-            elif callable(fval):
-                annotation = _get_annotations(cls, fval).get("return", None)
-                comment = inspect.cleandoc(fval.__doc__).replace("\n", "<br>")  # type: ignore
+            elif field_type is callable:
+                func = fdesc["function"]
+                annotation = _get_annotations(cls, func).get("return", None)
+                comment = inspect.cleandoc(func.__doc__).replace("\n", "<br>")  # type: ignore
                 if annotation is not None:
                     properties["__annotations__"][fname] = annotation
 
+            # JSON fields are special
+            elif field_type is fields.JSONField:
+                # We use the annotation if specified, otherwise we default it to dict
+                # (The real python_type is not known, it is just a tuple of dict and list)
+                annotation = annotations.get(fname, None)
+                if annotation is None:
+                    tortoise.logger.warning(
+                        "JSON fields should be annotated. We use dict as default"
+                        " annotation for field '%s'.",
+                        fname,
+                    )
+                properties["__annotations__"][fname] = annotation or dict
+
             # Any other tortoise fields
             else:
-                # Try to get annotation for the field, if not specified, we use the
-                # tortoise field_type
-                properties["__annotations__"][fname] = annotation or fval.field_type
+                properties["__annotations__"][fname] = fdesc["python_type"]
 
             # Create a schema for the field
             if fname in properties["__annotations__"]:
-                comment = comment or comments.get(fname, "")
+                # Use comment if we have and enabled or use the field description if specified
+                description = comment or comments.get(fname, "") or fdesc["description"]
                 properties[fname] = pydantic.Field(
-                    None, description=comment, title=fname.replace("_", " ").title()
+                    None, description=description, title=fname.replace("_", " ").title()
                 )
 
         # Because of recursion, it is possible to already have the model in cache, then we need
@@ -365,8 +367,8 @@ try:
         except KeyError:
             # Creating Pydantic class for the properties generated before
             model = typing.cast(Type[PydanticModel], type(name, (PydanticModel,), properties))
-            # The title of the model to not show the hash postfix
-            model.__config__.title = cls.__name__  # type: ignore
+            # The title of the model to hide the hash postfix
+            setattr(model.__config__, "title", cls.__name__)
             # Store the base class
             setattr(model.__config__, "orig_model", cls)
             # Caching model
