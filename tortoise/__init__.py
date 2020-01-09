@@ -241,7 +241,7 @@ class Tortoise:
 
         :param serializable:
             ``False`` if you want raw python objects,
-            ``True`` for JSON-serialisable data. (Defaults to ``True``)
+            ``True`` for JSON-serializable data. (Defaults to ``True``)
 
         :return:
             A dictionary containing the model qualifier as key,

@@ -391,6 +391,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             q_objects=self._q_objects,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
+            limit=self._limit,
+            offset=self._offset,
         )
 
     def all(self) -> "QuerySet[MODEL]":
@@ -631,13 +633,15 @@ class DeleteQuery(AwaitableQuery):
 
 
 class CountQuery(AwaitableQuery):
-    __slots__ = ("q_objects", "annotations", "custom_filters")
+    __slots__ = ("q_objects", "annotations", "custom_filters", "limit", "offset")
 
-    def __init__(self, model, db, q_objects, annotations, custom_filters) -> None:
+    def __init__(self, model, db, q_objects, annotations, custom_filters, limit, offset) -> None:
         super().__init__(model)
         self.q_objects = q_objects
         self.annotations = annotations
         self.custom_filters = custom_filters
+        self.limit = limit
+        self.offset = offset or 0
         self._db = db
 
     def _make_query(self) -> None:
@@ -658,7 +662,10 @@ class CountQuery(AwaitableQuery):
 
     async def _execute(self) -> int:
         _, result = await self._db.execute_query(str(self.query))
-        return list(dict(result[0]).values())[0]
+        count = list(dict(result[0]).values())[0] - self.offset
+        if self.limit and count > self.limit:
+            return self.limit
+        return count
 
 
 class FieldSelectQuery(AwaitableQuery):

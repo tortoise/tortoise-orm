@@ -17,6 +17,12 @@ class TestQueryset(test.TestCase):
         self.assertEqual(await IntFields.all().count(), 30)
         self.assertEqual(await IntFields.filter(intnum_null=80).count(), 0)
 
+    async def test_limit_count(self):
+        self.assertEqual(await IntFields.all().limit(10).count(), 10)
+
+    async def test_offset_count(self):
+        self.assertEqual(await IntFields.all().offset(10).count(), 20)
+
     async def test_join_count(self):
         tour = await Tournament.create(name="moo")
         await MinRelation.create(tournament=tour)

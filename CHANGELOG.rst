@@ -2,6 +2,11 @@
 
 Changelog
 =========
+future
+------
+- ``TextField`` now recommends usage of ``CharField`` if wanting unique indexing instead of just saying "indexing not supported"
+- ``.count()`` now honours offset and limit
+
 0.15.7
 ------
 - ``QuerySet.Update()`` now returns the count of the no of rows affected. Note, that
