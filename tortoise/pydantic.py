@@ -94,7 +94,7 @@ try:
             cache: Dict[str, Type["PydanticModel"]] = {}
 
         # noinspection PyMethodParameters
-        @pydantic.validator("*", pre=True, whole=True)  # It is a classmethod!
+        @pydantic.validator("*", pre=True, each_item=False)  # It is a classmethod!
         def _tortoise_convert(cls, value):  # pylint: disable=E0213
             # Computed fields
             if callable(value):
@@ -122,7 +122,7 @@ try:
         include: Tuple[str] = (),  # type: ignore
         computed: Tuple[str] = (),  # type: ignore
         name=None,
-    ) -> Optional[Type[BaseModel]]:
+    ) -> Optional[Type[PydanticModel]]:
         """
         It is an inner function to protect pydantic model creator against cyclic recursion
         """
@@ -235,7 +235,7 @@ try:
         model_description = tortoise.Tortoise.describe_model(cls, serializable=False)
 
         # Field map we use
-        field_map = {}
+        field_map: Dict[str, dict] = {}
 
         def field_map_update(keys: tuple, is_relation=True) -> None:
             for key in keys:
@@ -278,7 +278,7 @@ try:
 
             field_type = fdesc["field_type"]
 
-            def get_submodel(_model: Type["Model"]) -> PydanticModel:
+            def get_submodel(_model: Type["Model"]) -> Optional[Type[PydanticModel]]:
                 """ Get Pydantic model for the submodel """
                 nonlocal exclude, name
 
@@ -331,7 +331,7 @@ try:
             elif field_type is callable:
                 func = fdesc["function"]
                 annotation = _get_annotations(cls, func).get("return", None)
-                comment = inspect.cleandoc(func.__doc__).replace("\n", "<br>")  # type: ignore
+                comment = inspect.cleandoc(func.__doc__).replace("\n", "<br>")
                 if annotation is not None:
                     properties["__annotations__"][fname] = annotation
 

@@ -802,6 +802,7 @@ class Model(metaclass=ModelMeta):
     ) -> Type[PydanticModel]:
         """
         Generate Pydantic model from Tortoise model
+
         :param exclude: Return model with all fields except listed in this parameter
         :param include: Return only fields listed in this parameter
         :param computed: Add dynamic or functional fields listed in this parameter
@@ -842,27 +843,27 @@ class Model(metaclass=ModelMeta):
                     unique_together=(("field_a", "field_b"), )
         """
 
-        # If not empty, only fields this property contains will be in the pydantic model
+        #: If not empty, only fields this property contains will be in the pydantic model
         pydantic_include: Tuple[str] = ()  # type: ignore
 
-        # Fields listed in this property will be excluded from pydantic model
+        #: Fields listed in this property will be excluded from pydantic model
         pydantic_exclude: Tuple[str] = ()  # type: ignore
 
-        # Computed fields can be listed here to use in pydantic model
+        #: Computed fields can be listed here to use in pydantic model
         pydantic_computed: Tuple[str] = ()  # type: ignore
 
-        # Use backward relations without annotations - not recommended, it can be huge data
-        # without control
+        #: Use backward relations without annotations - not recommended, it can be huge data
+        #: without control
         pydantic_backward_relations = False
 
-        # Maximum recursion level allowed
+        #: Maximum recursion level allowed
         pydantic_max_recursion = 3
 
-        # Use comments found before field definitions as pydantic description
+        #: Use comments found before field definitions as pydantic description
         pydantic_use_comments = True
 
-        # If we should exclude raw fields (the ones have _id suffixes) of relations
+        #: If we should exclude raw fields (the ones have _id suffixes) of relations
         pydantic_exclude_raw_fields = True
 
-        # Sort fields alphabetically
+        #: Sort fields alphabetically
         pydantic_sort_fields = False

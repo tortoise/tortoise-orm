@@ -2,6 +2,10 @@
 
 Changelog
 =========
+future
+------
+- ``Pydantic`` serialisation support
+
 0.15.8
 ------
 - ``TextField`` now recommends usage of ``CharField`` if wanting unique indexing instead of just saying "indexing not supported"
