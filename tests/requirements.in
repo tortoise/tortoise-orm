@@ -52,3 +52,6 @@ sanic
 # Sample integration - Starlette
 starlette
 uvicorn
+
+# Pydantic support
+pydantic

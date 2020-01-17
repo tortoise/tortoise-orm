@@ -18,6 +18,7 @@ from tortoise.fields.relational import (
     ReverseRelation,
 )
 from tortoise.filters import get_filters_for_field
+from tortoise.pydantic import PydanticModel, _pydantic_model_creator
 from tortoise.queryset import QuerySet, QuerySetSingle
 from tortoise.transactions import current_transaction_map
 
@@ -790,6 +791,35 @@ class Model(metaclass=ModelMeta):
                         " to ManyToMany field."
                     )
 
+    @classmethod
+    def pydantic_model(
+        cls,
+        *,
+        exclude: Tuple[str] = (),  # type: ignore
+        include: Tuple[str] = (),  # type: ignore
+        computed: Tuple[str] = (),  # type: ignore
+        name=None,
+    ) -> Type[PydanticModel]:
+        """
+        Generate Pydantic model from Tortoise model
+        :param exclude: Return model with all fields except listed in this parameter
+        :param include: Return only fields listed in this parameter
+        :param computed: Add dynamic or functional fields listed in this parameter
+        :param name: Name of the new Pydantic model (schema). If not specified, an automatic name
+                     will be given:
+                     model with default arguments will have the same name as Tortoise model class,
+                     otherwise a hash is appended.
+        :return: Pydantic model class generated from tortoise model
+        """
+        if _pydantic_model_creator is not None:
+            return _pydantic_model_creator(
+                cls, include=include, exclude=exclude, computed=computed, name=name
+            )
+        else:
+            raise ConfigurationError(
+                'You need to install Pydantic by running "pip install pydantic".'
+            )
+
     def __await__(self: MODEL) -> Generator[Any, None, MODEL]:
         async def _self() -> MODEL:
             return self
@@ -811,3 +841,28 @@ class Model(metaclass=ModelMeta):
                     table="custom_table"
                     unique_together=(("field_a", "field_b"), )
         """
+
+        # If not empty, only fields this property contains will be in the pydantic model
+        pydantic_include: Tuple[str] = ()  # type: ignore
+
+        # Fields listed in this property will be excluded from pydantic model
+        pydantic_exclude: Tuple[str] = ()  # type: ignore
+
+        # Computed fields can be listed here to use in pydantic model
+        pydantic_computed: Tuple[str] = ()  # type: ignore
+
+        # Use backward relations without annotations - not recommended, it can be huge data
+        # without control
+        pydantic_backward_relations = False
+
+        # Maximum recursion level allowed
+        pydantic_max_recursion = 3
+
+        # Use comments found before field definitions as pydantic description
+        pydantic_use_comments = True
+
+        # If we should exclude raw fields (the ones have _id suffixes) of relations
+        pydantic_exclude_raw_fields = True
+
+        # Sort fields alphabetically
+        pydantic_sort_fields = False

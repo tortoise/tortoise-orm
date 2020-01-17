@@ -73,6 +73,7 @@ priority==1.3.0           # via hypercorn
 py==1.8.1                 # via pytest, tox
 pycodestyle==2.5.0        # via flake8
 pycparser==2.19           # via cffi
+pydantic==1.2
 pyflakes==2.1.1           # via flake8
 pygments==2.5.2
 pylint==2.4.4
