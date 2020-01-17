@@ -1,4 +1,4 @@
-from tests.testmodels import Address, Employee, Event, Team, Tournament
+from tests.testmodels import Address, Employee, Event, Reporter, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError, NoValuesFetched
 from tortoise.functions import Count
@@ -224,3 +224,21 @@ class TestRelations(test.TestCase):
 
         with self.assertRaisesRegex(FieldError, "Field id on event is not a relation"):
             await Event.filter(name="Test").prefetch_related("id")
+
+    async def test_nullable_fk_raw(self):
+        tournament = await Tournament.create(name="New Tournament")
+        reporter = await Reporter.create(name="Reporter")
+        event1 = await Event.create(name="Without reporter", tournament=tournament)
+        event2 = await Event.create(name="With reporter", tournament=tournament, reporter=reporter)
+
+        self.assertFalse(event1.reporter_id)
+        self.assertTrue(event2.reporter_id)
+
+    async def test_nullable_fk_obj(self):
+        tournament = await Tournament.create(name="New Tournament")
+        reporter = await Reporter.create(name="Reporter")
+        event1 = await Event.create(name="Without reporter", tournament=tournament)
+        event2 = await Event.create(name="With reporter", tournament=tournament, reporter=reporter)
+
+        self.assertFalse(event1.reporter)
+        self.assertTrue(event2.reporter)

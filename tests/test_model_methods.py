@@ -9,6 +9,7 @@ from tortoise.exceptions import (
     MultipleObjectsReturned,
     OperationalError,
 )
+from tortoise.models import NoneAwaitable
 
 
 class TestModelCreate(test.TestCase):
@@ -208,3 +209,9 @@ class TestModelConstructor(test.TestCase):
 
     async def test_fk_saved(self):
         Event(name="a", tournament=await Tournament.create(name="a"))
+
+    async def test_noneawaitable(self):
+        self.assertFalse(NoneAwaitable)
+        self.assertIsNone(await NoneAwaitable)
+        self.assertFalse(NoneAwaitable)
+        self.assertIsNone(await NoneAwaitable)

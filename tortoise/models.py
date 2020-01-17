@@ -25,6 +25,19 @@ MODEL = TypeVar("MODEL", bound="Model")
 # TODO: Define Filter type object. Possibly tuple?
 
 
+class _NoneAwaitable:
+    __slots__ = ()
+
+    def __await__(self):
+        yield None
+
+    def __bool__(self):
+        return False
+
+
+NoneAwaitable = _NoneAwaitable()
+
+
 def get_together(meta, together: str) -> Tuple[Tuple[str, ...], ...]:
     _together = getattr(meta, together, ())
 
@@ -45,7 +58,10 @@ def _fk_getter(self, _key, ftype, relation_field):
     try:
         return getattr(self, _key)
     except AttributeError:
-        return ftype.filter(pk=getattr(self, relation_field)).first()
+        _pk = getattr(self, relation_field)
+        if _pk:
+            return ftype.filter(pk=_pk).first()
+        return NoneAwaitable
 
 
 def _rfk_getter(self, _key, ftype, frelfield):

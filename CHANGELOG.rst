@@ -6,6 +6,8 @@ future
 ------
 - ``TextField`` now recommends usage of ``CharField`` if wanting unique indexing instead of just saying "indexing not supported"
 - ``.count()`` now honours offset and limit
+- Testing un-awaited ``ForeignKeyField`` as a boolean expression will automatically resolve as ``False`` if it is None
+- Awaiting a nullable ``ForeignKeyField`` won't touch the DB if it is ``None``
 
 0.15.7
 ------
