@@ -57,7 +57,7 @@ class AwaitableQuery(Generic[MODEL]):
     def resolve_filters(self, model, q_objects, annotations, custom_filters) -> None:
         modifier = QueryModifier()
         for node in q_objects:
-            modifier &= node.resolve(model, annotations, custom_filters)
+            modifier &= node.resolve(model, annotations, custom_filters, model._meta.basetable)
 
         where_criterion, joins, having_criterion = modifier.get_query_modifiers()
         for join in joins:
@@ -68,15 +68,15 @@ class AwaitableQuery(Generic[MODEL]):
         self.query._wheres = where_criterion
         self.query._havings = having_criterion
 
-    def _join_table_by_field(self, table, related_field_name, related_field) -> None:
+    def _join_table_by_field(self, table, related_field_name, related_field) -> Table:
         joins = _get_joins_for_related_field(table, related_field, related_field_name)
         for join in joins:
             if join[0] not in self._joined_tables:
                 self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
                 self._joined_tables.append(join[0])
+        return joins[-1][0]
 
-    def resolve_ordering(self, model, orderings, annotations) -> None:
-        table = model._meta.basetable
+    def resolve_ordering(self, model, table, orderings, annotations) -> None:
         for ordering in orderings:
             field_name = ordering[0]
             if field_name in model._meta.fetch_fields:
@@ -86,15 +86,16 @@ class AwaitableQuery(Generic[MODEL]):
             if field_name.split("__")[0] in model._meta.fetch_fields:
                 related_field_name = field_name.split("__")[0]
                 related_field = model._meta.fields_map[related_field_name]
-                self._join_table_by_field(table, related_field_name, related_field)
+                related_table = self._join_table_by_field(table, related_field_name, related_field)
                 self.resolve_ordering(
                     related_field.model_class,
+                    related_table,
                     [("__".join(field_name.split("__")[1:]), ordering[1])],
                     {},
                 )
             elif field_name in annotations:
                 annotation = annotations[field_name]
-                annotation_info = annotation.resolve(self.model)
+                annotation_info = annotation.resolve(self.model, table)
                 self.query = self.query.orderby(annotation_info["field"], order=ordering[1])
             else:
                 field_object = self.model._meta.fields_map.get(field_name)
@@ -493,14 +494,14 @@ class QuerySet(AwaitableQuery[MODEL]):
             return
         table = self.model._meta.basetable
         if any(
-            annotation.resolve(self.model)["field"].is_aggregate
+            annotation.resolve(self.model, table)["field"].is_aggregate
             for annotation in self._annotations.values()
         ):
             self.query = self.query.groupby(table.id)
         for key, annotation in self._annotations.items():
-            annotation_info = annotation.resolve(self.model)
+            annotation_info = annotation.resolve(self.model, table)
             for join in annotation_info["joins"]:
-                self._join_table_by_field(*join)
+                table = self._join_table_by_field(*join)
             self.query._select_other(annotation_info["field"].as_(key))
 
     def _make_query(self) -> None:
@@ -518,7 +519,9 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query._offset = self._offset
         if self._distinct:
             self.query._distinct = True
-        self.resolve_ordering(self.model, self._orderings, self._annotations)
+        self.resolve_ordering(
+            self.model, self.model._meta.basetable, self._orderings, self._annotations
+        )
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
         if self._db is None:
@@ -677,9 +680,8 @@ class FieldSelectQuery(AwaitableQuery):
         self.annotations = annotations
 
     def _join_table_with_forwarded_fields(
-        self, model, field: str, forwarded_fields: str
+        self, model, table, field: str, forwarded_fields: str
     ) -> Tuple[Table, str]:
-        table = model._meta.basetable
         if field in model._meta.fields_db_projection and not forwarded_fields:
             return table, model._meta.fields_db_projection[field]
 
@@ -696,11 +698,12 @@ class FieldSelectQuery(AwaitableQuery):
         if not field_object:
             raise FieldError(f'Unknown field "{field}" for model "{model.__name__}"')
 
-        self._join_table_by_field(table, field, field_object)
+        table = self._join_table_by_field(table, field, field_object)
         forwarded_fields_split = forwarded_fields.split("__")
 
         return self._join_table_with_forwarded_fields(
             model=field_object.model_class,
+            table=table,
             field=forwarded_fields_split[0],
             forwarded_fields="__".join(forwarded_fields_split[1:]),
         )
@@ -720,14 +723,17 @@ class FieldSelectQuery(AwaitableQuery):
 
         if field in self.annotations:
             annotation = self.annotations[field]
-            annotation_info = annotation.resolve(self.model)
+            annotation_info = annotation.resolve(self.model, table)
             self.query._select_other(annotation_info["field"].as_(return_as))
             return
 
         field_split = field.split("__")
         if field_split[0] in self.model._meta.fetch_fields:
             related_table, related_db_field = self._join_table_with_forwarded_fields(
-                model=self.model, field=field_split[0], forwarded_fields="__".join(field_split[1:])
+                model=self.model,
+                table=table,
+                field=field_split[0],
+                forwarded_fields="__".join(field_split[1:]),
             )
             self.query._select_field(getattr(related_table, related_db_field).as_(return_as))
             return
@@ -820,7 +826,9 @@ class ValuesListQuery(FieldSelectQuery):
             self.query._offset = self.offset
         if self.distinct:
             self.query._distinct = True
-        self.resolve_ordering(self.model, self.orderings, self.annotations)
+        self.resolve_ordering(
+            self.model, self.model._meta.basetable, self.orderings, self.annotations
+        )
 
     def __await__(self) -> Generator[Any, None, List[Any]]:
         if self._db is None:
@@ -899,7 +907,9 @@ class ValuesQuery(FieldSelectQuery):
             self.query._offset = self.offset
         if self.distinct:
             self.query._distinct = True
-        self.resolve_ordering(self.model, self.orderings, self.annotations)
+        self.resolve_ordering(
+            self.model, self.model._meta.basetable, self.orderings, self.annotations
+        )
 
     def __await__(self) -> Generator[Any, None, List[dict]]:
         if self._db is None:

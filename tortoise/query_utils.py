@@ -8,9 +8,10 @@ from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
 
 
-def _process_filter_kwarg(model, key, value) -> Tuple[Criterion, Optional[Tuple[Table, Criterion]]]:
+def _process_filter_kwarg(
+    model, key, value, table
+) -> Tuple[Criterion, Optional[Tuple[Table, Criterion]]]:
     join = None
-    table = model._meta.basetable
 
     if value is None and f"{key}__isnull" in model._meta.filters:
         param = model._meta.get_filter(f"{key}__isnull")
@@ -46,8 +47,10 @@ def _get_joins_for_related_field(
     table_pk = related_field.model._meta.db_pk_field
     related_table_pk = related_field.model_class._meta.db_pk_field
 
+    related_table = (
+        related_field.model_class._meta.basetable
+    )  # .as_(f"{table.get_table_name()}__{related_field_name}")
     if isinstance(related_field, ManyToManyFieldInstance):
-        related_table = related_field.model_class._meta.basetable
         through_table = Table(related_field.through)
         required_joins.append(
             (
@@ -63,7 +66,6 @@ def _get_joins_for_related_field(
             )
         )
     elif isinstance(related_field, BackwardFKRelation):
-        related_table = related_field.model_class._meta.basetable
         required_joins.append(
             (
                 related_table,
@@ -71,7 +73,7 @@ def _get_joins_for_related_field(
             )
         )
     else:
-        related_table = related_field.model_class._meta.basetable
+        related_table = related_table.as_(f"{table.get_table_name()}__{related_field_name}")
         required_joins.append(
             (
                 related_table,
@@ -206,9 +208,7 @@ class Q:
     def negate(self) -> None:
         self._is_negated = not self._is_negated
 
-    def _resolve_nested_filter(self, model, key, value) -> QueryModifier:
-        table = model._meta.basetable
-
+    def _resolve_nested_filter(self, model, key, value, table) -> QueryModifier:
         related_field_name = key.split("__")[0]
         related_field = model._meta.fields_map[related_field_name]
         required_joins = _get_joins_for_related_field(table, related_field, related_field_name)
@@ -216,14 +216,15 @@ class Q:
             model=related_field.model_class,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
+            table=required_joins[-1][0],
         )
 
         return QueryModifier(joins=required_joins) & modifier
 
-    def _resolve_custom_kwarg(self, model, key, value) -> QueryModifier:
+    def _resolve_custom_kwarg(self, model, key, value, table) -> QueryModifier:
         having_info = self._custom_filters[key]
         annotation = self._annotations[having_info["field"]]
-        annotation_info = annotation.resolve(model)
+        annotation_info = annotation.resolve(model, table)
         operator = having_info["operator"]
         overridden_operator = model._meta.db.executor_class.get_overridden_filter_func(
             filter_func=operator
@@ -236,11 +237,11 @@ class Q:
             modifier = QueryModifier(where_criterion=operator(annotation_info["field"], value))
         return modifier
 
-    def _resolve_regular_kwarg(self, model, key, value) -> QueryModifier:
+    def _resolve_regular_kwarg(self, model, key, value, table) -> QueryModifier:
         if key not in model._meta.filters and key.split("__")[0] in model._meta.fetch_fields:
-            modifier = self._resolve_nested_filter(model, key, value)
+            modifier = self._resolve_nested_filter(model, key, value, table)
         else:
-            criterion, join = _process_filter_kwarg(model, key, value)
+            criterion, join = _process_filter_kwarg(model, key, value, table)
             joins = [join] if join else []
             modifier = QueryModifier(where_criterion=criterion, joins=joins)
         return modifier
@@ -273,14 +274,14 @@ class Q:
             raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
         return filter_key, filter_value
 
-    def _resolve_kwargs(self, model) -> QueryModifier:
+    def _resolve_kwargs(self, model, table) -> QueryModifier:
         modifier = QueryModifier()
         for raw_key, raw_value in self.filters.items():
             key, value = self._get_actual_filter_params(model, raw_key, raw_value)
             if key in self._custom_filters:
-                filter_modifier = self._resolve_custom_kwarg(model, key, value)
+                filter_modifier = self._resolve_custom_kwarg(model, key, value, table)
             else:
-                filter_modifier = self._resolve_regular_kwarg(model, key, value)
+                filter_modifier = self._resolve_regular_kwarg(model, key, value, table)
 
             if self.join_type == self.AND:
                 modifier &= filter_modifier
@@ -290,10 +291,10 @@ class Q:
             modifier = ~modifier
         return modifier
 
-    def _resolve_children(self, model) -> QueryModifier:
+    def _resolve_children(self, model, table) -> QueryModifier:
         modifier = QueryModifier()
         for node in self.children:
-            node_modifier = node.resolve(model, self._annotations, self._custom_filters)
+            node_modifier = node.resolve(model, self._annotations, self._custom_filters, table)
             if self.join_type == self.AND:
                 modifier &= node_modifier
             else:
@@ -303,12 +304,12 @@ class Q:
             modifier = ~modifier
         return modifier
 
-    def resolve(self, model, annotations, custom_filters) -> QueryModifier:
+    def resolve(self, model, annotations, custom_filters, table) -> QueryModifier:
         self._annotations = annotations
         self._custom_filters = custom_filters
         if self.filters:
-            return self._resolve_kwargs(model)
-        return self._resolve_children(model)
+            return self._resolve_kwargs(model, table)
+        return self._resolve_children(model, table)
 
 
 class Prefetch:

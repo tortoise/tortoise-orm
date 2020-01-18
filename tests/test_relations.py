@@ -246,15 +246,15 @@ class TestRelations(test.TestCase):
 
 class TestDoubleFK(test.TestCase):
     select_match = r'SELECT [`"]doublefk[`"].[`"]name[`"] [`"]name[`"]'
-    select1_match = r'SELECT [`"]doublefk2[`"].[`"]name[`"] [`"]left__name[`"]'
-    select2_match = r'SELECT [`"]doublefk3[`"].[`"]name[`"] [`"]right__name[`"]'
+    select1_match = r'[`"]doublefk__left[`"].[`"]name[`"] [`"]left__name[`"]'
+    select2_match = r'[`"]doublefk__right[`"].[`"]name[`"] [`"]right__name[`"]'
     join1_match = (
-        r'LEFT OUTER JOIN [`"]doublefk[`"] [`"]doublefk2[`"] ON '
-        r'[`"]doublefk[`"].[`"]id[`"]=[`"]doublefk2[`"].[`"]left_id[`"]'
+        r'LEFT OUTER JOIN [`"]doublefk[`"] [`"]doublefk__left[`"] ON '
+        r'[`"]doublefk__left[`"].[`"]id[`"]=[`"]doublefk[`"].[`"]left_id[`"]'
     )
     join2_match = (
-        r'LEFT OUTER JOIN [`"]doublefk[`"] [`"]doublefk3[`"] ON '
-        r'[`"]doublefk[`"].[`"]id[`"]=[`"]doublefk3[`"].[`"]right_id[`"]'
+        r'LEFT OUTER JOIN [`"]doublefk[`"] [`"]doublefk__right[`"] ON '
+        r'[`"]doublefk__right[`"].[`"]id[`"]=[`"]doublefk[`"].[`"]right_id[`"]'
     )
 
     async def setUp(self) -> None:
@@ -266,9 +266,7 @@ class TestDoubleFK(test.TestCase):
         qset = DoubleFK.filter(left__name="one")
         result = await qset
         query = qset.query.get_sql()
-        print(query)
 
-        self.assertRegex(query, self.select_match)
         self.assertRegex(query, self.join1_match)
         self.assertEqual(result, [self.middle])
 
@@ -276,7 +274,6 @@ class TestDoubleFK(test.TestCase):
         qset = DoubleFK.filter(left__name="one").values("name")
         result = await qset
         query = qset.query.get_sql()
-        print(query)
 
         self.assertRegex(query, self.select_match)
         self.assertRegex(query, self.join1_match)
@@ -286,7 +283,6 @@ class TestDoubleFK(test.TestCase):
         qset = DoubleFK.filter(left__name="one").values("name", "left__name")
         result = await qset
         query = qset.query.get_sql()
-        print(query)
 
         self.assertRegex(query, self.select_match)
         self.assertRegex(query, self.select1_match)
@@ -297,9 +293,7 @@ class TestDoubleFK(test.TestCase):
         qset = DoubleFK.filter(left__name="one", right__name="two")
         result = await qset
         query = qset.query.get_sql()
-        print(query)
 
-        self.assertRegex(query, self.select_match)
         self.assertRegex(query, self.join1_match)
         self.assertRegex(query, self.join2_match)
         self.assertEqual(result, [self.middle])
@@ -308,7 +302,6 @@ class TestDoubleFK(test.TestCase):
         qset = DoubleFK.filter(left__name="one", right__name="two").values("name")
         result = await qset
         query = qset.query.get_sql()
-        print(query)
 
         self.assertRegex(query, self.select_match)
         self.assertRegex(query, self.join1_match)
@@ -321,7 +314,6 @@ class TestDoubleFK(test.TestCase):
         )
         result = await qset
         query = qset.query.get_sql()
-        print(query)
 
         self.assertRegex(query, self.select_match)
         self.assertRegex(query, self.select1_match)
