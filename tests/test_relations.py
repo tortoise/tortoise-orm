@@ -245,7 +245,9 @@ class TestRelations(test.TestCase):
 
 
 class TestDoubleFK(test.TestCase):
-    select_match = r'SELECT [`"]doublefk[`"].[`"]name[`"]'
+    select_match = r'SELECT [`"]doublefk[`"].[`"]name[`"] [`"]name[`"]'
+    select1_match = r'SELECT [`"]doublefk2[`"].[`"]name[`"] [`"]left__name[`"]'
+    select2_match = r'SELECT [`"]doublefk3[`"].[`"]name[`"] [`"]right__name[`"]'
     join1_match = (
         r'LEFT OUTER JOIN [`"]doublefk[`"] [`"]doublefk2[`"] ON '
         r'[`"]doublefk[`"].[`"]id[`"]=[`"]doublefk2[`"].[`"]left_id[`"]'
@@ -280,6 +282,17 @@ class TestDoubleFK(test.TestCase):
         self.assertRegex(query, self.join1_match)
         self.assertEqual(result, [{"name": "middle"}])
 
+    async def test_doublefk_filter_values_rel(self):
+        qset = DoubleFK.filter(left__name="one").values("name", "left__name")
+        result = await qset
+        query = qset.query.get_sql()
+        print(query)
+
+        self.assertRegex(query, self.select_match)
+        self.assertRegex(query, self.select1_match)
+        self.assertRegex(query, self.join1_match)
+        self.assertEqual(result, [{"name": "middle", "left__name": "one"}])
+
     async def test_doublefk_filter_both(self):
         qset = DoubleFK.filter(left__name="one", right__name="two")
         result = await qset
@@ -301,3 +314,18 @@ class TestDoubleFK(test.TestCase):
         self.assertRegex(query, self.join1_match)
         self.assertRegex(query, self.join2_match)
         self.assertEqual(result, [{"name": "middle"}])
+
+    async def test_doublefk_filter_both_values_rel(self):
+        qset = DoubleFK.filter(left__name="one", right__name="two").values(
+            "name", "left__name", "right__name"
+        )
+        result = await qset
+        query = qset.query.get_sql()
+        print(query)
+
+        self.assertRegex(query, self.select_match)
+        self.assertRegex(query, self.select1_match)
+        self.assertRegex(query, self.select2_match)
+        self.assertRegex(query, self.join1_match)
+        self.assertRegex(query, self.join2_match)
+        self.assertEqual(result, [{"name": "middle", "left__name": "one", "right__name": "two"}])
