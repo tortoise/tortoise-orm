@@ -291,6 +291,7 @@ class BaseExecutor:
                     model=related_query.model,
                     annotations=related_query._annotations,
                     custom_filters=related_query._custom_filters,
+                    table=related_query_table,
                 )
 
             where_criterion, joins, having_criterion = modifier.get_query_modifiers()

@@ -508,3 +508,9 @@ class Currency(str, Enum):
 class EnumFields(Model):
     service: Service = fields.IntEnumField(Service)
     currency: Currency = fields.CharEnumField(Currency, default=Currency.HUF)
+
+
+class DoubleFK(Model):
+    name = fields.CharField(max_length=50)
+    left = fields.ForeignKeyField("models.DoubleFK", null=True, related_name="left_rel")
+    right = fields.ForeignKeyField("models.DoubleFK", null=True, related_name="right_rel")

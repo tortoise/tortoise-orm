@@ -1,4 +1,4 @@
-from tests.testmodels import Address, Employee, Event, Reporter, Team, Tournament
+from tests.testmodels import Address, DoubleFK, Employee, Event, Reporter, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError, NoValuesFetched
 from tortoise.functions import Count
@@ -242,3 +242,82 @@ class TestRelations(test.TestCase):
 
         self.assertFalse(event1.reporter)
         self.assertTrue(event2.reporter)
+
+
+class TestDoubleFK(test.TestCase):
+    select_match = r'SELECT [`"]doublefk[`"].[`"]name[`"] [`"]name[`"]'
+    select1_match = r'[`"]doublefk__left[`"].[`"]name[`"] [`"]left__name[`"]'
+    select2_match = r'[`"]doublefk__right[`"].[`"]name[`"] [`"]right__name[`"]'
+    join1_match = (
+        r'LEFT OUTER JOIN [`"]doublefk[`"] [`"]doublefk__left[`"] ON '
+        r'[`"]doublefk__left[`"].[`"]id[`"]=[`"]doublefk[`"].[`"]left_id[`"]'
+    )
+    join2_match = (
+        r'LEFT OUTER JOIN [`"]doublefk[`"] [`"]doublefk__right[`"] ON '
+        r'[`"]doublefk__right[`"].[`"]id[`"]=[`"]doublefk[`"].[`"]right_id[`"]'
+    )
+
+    async def setUp(self) -> None:
+        one = await DoubleFK.create(name="one")
+        two = await DoubleFK.create(name="two")
+        self.middle = await DoubleFK.create(name="middle", left=one, right=two)
+
+    async def test_doublefk_filter(self):
+        qset = DoubleFK.filter(left__name="one")
+        result = await qset
+        query = qset.query.get_sql()
+
+        self.assertRegex(query, self.join1_match)
+        self.assertEqual(result, [self.middle])
+
+    async def test_doublefk_filter_values(self):
+        qset = DoubleFK.filter(left__name="one").values("name")
+        result = await qset
+        query = qset.query.get_sql()
+
+        self.assertRegex(query, self.select_match)
+        self.assertRegex(query, self.join1_match)
+        self.assertEqual(result, [{"name": "middle"}])
+
+    async def test_doublefk_filter_values_rel(self):
+        qset = DoubleFK.filter(left__name="one").values("name", "left__name")
+        result = await qset
+        query = qset.query.get_sql()
+
+        self.assertRegex(query, self.select_match)
+        self.assertRegex(query, self.select1_match)
+        self.assertRegex(query, self.join1_match)
+        self.assertEqual(result, [{"name": "middle", "left__name": "one"}])
+
+    async def test_doublefk_filter_both(self):
+        qset = DoubleFK.filter(left__name="one", right__name="two")
+        result = await qset
+        query = qset.query.get_sql()
+
+        self.assertRegex(query, self.join1_match)
+        self.assertRegex(query, self.join2_match)
+        self.assertEqual(result, [self.middle])
+
+    async def test_doublefk_filter_both_values(self):
+        qset = DoubleFK.filter(left__name="one", right__name="two").values("name")
+        result = await qset
+        query = qset.query.get_sql()
+
+        self.assertRegex(query, self.select_match)
+        self.assertRegex(query, self.join1_match)
+        self.assertRegex(query, self.join2_match)
+        self.assertEqual(result, [{"name": "middle"}])
+
+    async def test_doublefk_filter_both_values_rel(self):
+        qset = DoubleFK.filter(left__name="one", right__name="two").values(
+            "name", "left__name", "right__name"
+        )
+        result = await qset
+        query = qset.query.get_sql()
+
+        self.assertRegex(query, self.select_match)
+        self.assertRegex(query, self.select1_match)
+        self.assertRegex(query, self.select2_match)
+        self.assertRegex(query, self.join1_match)
+        self.assertRegex(query, self.join2_match)
+        self.assertEqual(result, [{"name": "middle", "left__name": "one", "right__name": "two"}])
