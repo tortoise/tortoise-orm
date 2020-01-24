@@ -5,6 +5,7 @@ from pypika.terms import AggregateFunction
 from pypika.terms import Function as BaseFunction
 
 from tortoise.exceptions import ConfigurationError
+from tortoise.fields.relational import ForeignKeyFieldInstance
 
 ##############################################################################
 # Base
@@ -23,18 +24,18 @@ class Function:
         self.field_object: Any = None
         self.default_values = default_values
 
-    def _resolve_field_for_model(self, model, field: str, *default_values) -> dict:
+    def _resolve_field_for_model(self, model, table, field: str, *default_values) -> dict:
         field_split = field.split("__")
         if not field_split[1:]:
             function_joins = []
             if field_split[0] in model._meta.fetch_fields:
                 related_field = model._meta.fields_map[field_split[0]]
                 related_field_meta = related_field.model_class._meta
-                join = (model._meta.basetable, field_split[0], related_field)
+                join = (table, field_split[0], related_field)
                 function_joins.append(join)
                 field = related_field_meta.basetable[related_field_meta.db_pk_field]
             else:
-                field = model._meta.basetable[field_split[0]]
+                field = table[field_split[0]]
 
                 if self.populate_field_object:
                     self.field_object = model._meta.fields_map.get(field_split[0], None)
@@ -51,15 +52,19 @@ class Function:
         if field_split[0] not in model._meta.fetch_fields:
             raise ConfigurationError(f"{field} not resolvable")
         related_field = model._meta.fields_map[field_split[0]]
-        join = (model._meta.basetable, field_split[0], related_field)
+        join = (table, field_split[0], related_field)
+        related_table = related_field.model_class._meta.basetable
+        if isinstance(related_field, ForeignKeyFieldInstance):
+            # Only FK's can be to same table, so we only auto-alias FK join tables
+            related_table = related_table.as_(f"{table.get_table_name()}__{field_split[0]}")
         function = self._resolve_field_for_model(
-            related_field.model_class, "__".join(field_split[1:]), *default_values
+            related_field.model_class, related_table, "__".join(field_split[1:]), *default_values
         )
         function["joins"].append(join)
         return function
 
-    def resolve(self, model) -> dict:
-        function = self._resolve_field_for_model(model, self.field, *self.default_values)
+    def resolve(self, model, table) -> dict:
+        function = self._resolve_field_for_model(model, table, self.field, *self.default_values)
         function["joins"] = reversed(function["joins"])
         return function
 

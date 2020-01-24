@@ -6,6 +6,11 @@ future
 ------
 - ``Pydantic`` serialisation support
 
+0.15.9
+------
+- Alias Foreign Key joins as we can have both self-referencing and duplicate joins to the same table.
+  This generates SQL that differentiates between which instance of the table to work with.
+
 0.15.8
 ------
 - ``TextField`` now recommends usage of ``CharField`` if wanting unique indexing instead of just saying "indexing not supported"
