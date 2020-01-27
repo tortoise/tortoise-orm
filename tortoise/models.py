@@ -18,7 +18,6 @@ from tortoise.fields.relational import (
     ReverseRelation,
 )
 from tortoise.filters import get_filters_for_field
-from tortoise.pydantic import PydanticModel, _pydantic_model_creator
 from tortoise.queryset import QuerySet, QuerySetSingle
 from tortoise.transactions import current_transaction_map
 
@@ -790,36 +789,6 @@ class Model(metaclass=ModelMeta):
                         f"'{cls.__name__}.{together}' '{field_name}' field refers"
                         " to ManyToMany field."
                     )
-
-    @classmethod
-    def pydantic_model(
-        cls,
-        *,
-        exclude: Tuple[str] = (),  # type: ignore
-        include: Tuple[str] = (),  # type: ignore
-        computed: Tuple[str] = (),  # type: ignore
-        name=None,
-    ) -> Type[PydanticModel]:
-        """
-        Generate Pydantic model from Tortoise model
-
-        :param exclude: Return model with all fields except listed in this parameter
-        :param include: Return only fields listed in this parameter
-        :param computed: Add dynamic or functional fields listed in this parameter
-        :param name: Name of the new Pydantic model (schema). If not specified, an automatic name
-                     will be given:
-                     model with default arguments will have the same name as Tortoise model class,
-                     otherwise a hash is appended.
-        :return: Pydantic model class generated from tortoise model
-        """
-        if _pydantic_model_creator is not None:
-            return _pydantic_model_creator(
-                cls, include=include, exclude=exclude, computed=computed, name=name
-            )
-        else:
-            raise ConfigurationError(
-                'You need to install Pydantic by running "pip install pydantic".'
-            )
 
     def __await__(self: MODEL) -> Generator[Any, None, MODEL]:
         async def _self() -> MODEL:
