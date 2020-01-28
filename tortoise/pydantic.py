@@ -104,7 +104,7 @@ class PydanticModel(BaseModel):
         return value
 
     @classmethod
-    async def from_tortoise(cls, obj: "Model"):
+    async def from_tortoise_orm(cls, obj: "Model"):
         # Get fields needed to fetch
         fetch_fields = _get_fetch_fields(cls, getattr(cls.__config__, "orig_model"))
         # Fetch fields
@@ -122,18 +122,18 @@ def _pydantic_recursion_protector(
     include: Tuple[str] = (),  # type: ignore
     computed: Tuple[str] = (),  # type: ignore
     name=None,
+    allow_recursion: bool = False,
 ) -> Optional[Type[PydanticModel]]:
     """
     It is an inner function to protect pydantic model creator against cyclic recursion
     """
-    print(stack)
+    if not allow_recursion and cls in [c[0] for c in stack]:
+        return None
+
     caller_cls, caller_fname, _ = stack[0]
-    # if caller_cls is cls:
-    #     return None
     prop_path = [caller_fname]  # It stores the fields in the hierarchy
     level = 1
     for parent_cls, parent_fname, parent_max_recursion in stack[1:]:
-        print(parent_cls, parent_fname, parent_max_recursion)
         # Check recursion level
         prop_path.insert(0, parent_fname)
         if level >= parent_max_recursion:
@@ -153,10 +153,14 @@ def _pydantic_recursion_protector(
 
         level += 1
 
-    print("AAAA")
-
     return pydantic_model_creator(
-        cls, exclude=exclude, include=include, computed=computed, name=name, stack=stack
+        cls,
+        exclude=exclude,
+        include=include,
+        computed=computed,
+        name=name,
+        stack=stack,
+        allow_recursion=allow_recursion,
     )
 
 
@@ -168,6 +172,7 @@ def pydantic_model_creator(
     computed: Tuple[str] = (),  # type: ignore
     name=None,
     stack: tuple = (),
+    allow_recursion: bool = False,
 ) -> Type[PydanticModel]:
     """
     Inner function to create pydantic model.
@@ -304,6 +309,7 @@ def pydantic_model_creator(
                     [str(v[prefix_len:]) for v in computed if v.startswith(fname + ".")]
                 ),
                 stack=new_stack,
+                allow_recursion=allow_recursion,
             )
 
             # If the result is None (it is recursion protected) we need to add the field into

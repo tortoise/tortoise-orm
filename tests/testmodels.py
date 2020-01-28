@@ -24,6 +24,9 @@ class Tournament(Model):
     minrelations: fields.ReverseRelation["MinRelation"]
     uniquetogetherfieldswithfks: fields.ReverseRelation["UniqueTogetherFieldsWithFK"]
 
+    class Meta:
+        pydantic_exclude = ("minrelations", "uniquetogetherfieldswithfks")
+
     def __str__(self):
         return self.name
 
@@ -77,6 +80,9 @@ class Team(Model):
     events: fields.ManyToManyRelation[Event]
     minrelation_through: fields.ManyToManyRelation["MinRelation"]
     alias = fields.IntField(null=True)
+
+    class Meta:
+        pydantic_exclude = ("minrelations",)
 
     def __str__(self):
         return self.name

@@ -823,7 +823,7 @@ class Model(metaclass=ModelMeta):
 
         #: Use backward relations without annotations - not recommended, it can be huge data
         #: without control
-        pydantic_backward_relations = False
+        pydantic_backward_relations = True
 
         #: Maximum recursion level allowed
         pydantic_max_recursion = 3
