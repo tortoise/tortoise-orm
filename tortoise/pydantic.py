@@ -1,4 +1,3 @@
-import functools
 import inspect
 import re
 import typing
@@ -14,7 +13,7 @@ if typing.TYPE_CHECKING:
     from tortoise.models import Model
 
 
-@functools.lru_cache()
+# @functools.lru_cache()
 def _get_comments(cls: Type["Model"]) -> Dict[str, str]:
     """
     Get comments exactly before attributes
@@ -44,7 +43,6 @@ def _get_comments(cls: Type["Model"]) -> Dict[str, str]:
     return comments
 
 
-@functools.lru_cache()
 def _get_annotations(cls: Type["Model"], method: Optional[Callable] = None) -> Dict[str, Any]:
     """
     Get all annotations including base classes
@@ -73,7 +71,7 @@ def _get_fetch_fields(
         # noinspection PyProtectedMember
         if field_name in model_class._meta.fetch_fields and issubclass(field_type, PydanticModel):
             subclass_fetch_fields = _get_fetch_fields(
-                field_type, getattr(pydantic_class.__config__, "orig_model")
+                field_type, getattr(field_type.__config__, "orig_model")
             )
             if subclass_fetch_fields:
                 fetch_fields.extend([field_name + "__" + f for f in subclass_fetch_fields])
@@ -88,10 +86,6 @@ class PydanticModel(BaseModel):
     class Config:
         orm_mode = True  # It should be in ORM mode to convert tortoise data to pydantic
 
-    class Meta:
-        # Stores already created pydantic models
-        cache: Dict[str, Type["PydanticModel"]] = {}
-
     # noinspection PyMethodParameters
     @pydantic.validator("*", pre=True, each_item=False)  # It is a classmethod!
     def _tortoise_convert(cls, value):  # pylint: disable=E0213
@@ -99,8 +93,8 @@ class PydanticModel(BaseModel):
         if callable(value):
             return value()
         # Convert ManyToManyRelation to list
-        elif isinstance(value, fields.ManyToManyRelation):
-            return [v for v in value]
+        elif isinstance(value, (fields.ManyToManyRelation, fields.ReverseRelation)):
+            return list(value)
         return value
 
     @classmethod
@@ -148,7 +142,6 @@ def _pydantic_recursion_protector(
             tortoise.logger.warning(
                 "Recursion detected: %s", parent_cls.__qualname__ + "." + ".".join(prop_path)
             )
-            print("skipping")
             return None
 
         level += 1
@@ -176,7 +169,6 @@ def pydantic_model_creator(
 ) -> Type[PydanticModel]:
     """
     Inner function to create pydantic model.
-    It stores the created models in cache based on arguments
     """
     # Fully qualified class name
     fqname = cls.__module__ + "." + cls.__qualname__
@@ -194,10 +186,6 @@ def pydantic_model_creator(
     # We need separate model class for different exclude, include and computed parameters
     if not name:
         name = get_name()
-
-    # If we already have this class in cache, use that
-    if name in PydanticModel.Meta.cache:
-        return PydanticModel.Meta.cache[name]
 
     # Get settings and defaults
     default_meta = models.Model.Meta
@@ -313,7 +301,7 @@ def pydantic_model_creator(
             )
 
             # If the result is None (it is recursion protected) we need to add the field into
-            # exclude and get new name for the class to cache different model for it
+            # exclude and get new name for the class
             if pmodel is None:
                 exclude += (fname,)  # type: ignore
                 name = get_name()
@@ -372,18 +360,11 @@ def pydantic_model_creator(
                 None, description=description, title=fname.replace("_", " ").title()
             )
 
-    # Because of recursion, it is possible to already have the model in cache, then we need
-    # to use that
-    try:
-        model = PydanticModel.Meta.cache[name]
-    except KeyError:
-        # Creating Pydantic class for the properties generated before
-        model = typing.cast(Type[PydanticModel], type(name, (PydanticModel,), properties))
-        # The title of the model to hide the hash postfix
-        setattr(model.__config__, "title", cls.__name__)
-        # Store the base class
-        setattr(model.__config__, "orig_model", cls)
-        # Caching model
-        PydanticModel.Meta.cache[name] = model
+    # Creating Pydantic class for the properties generated before
+    model = typing.cast(Type[PydanticModel], type(name, (PydanticModel,), properties))
+    # The title of the model to hide the hash postfix
+    setattr(model.__config__, "title", cls.__name__)
+    # Store the base class
+    setattr(model.__config__, "orig_model", cls)
 
     return model
