@@ -14,3 +14,6 @@ pytest
 pytest-xdist
 pytest-cov
 coveralls
+
+# Pydantic support
+pydantic
