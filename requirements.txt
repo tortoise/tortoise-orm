@@ -1,6 +1,6 @@
-pypika>=0.35.8
-ciso8601>=2.1.1
-aiosqlite>=0.10.0
+pypika>=0.35.21
+ciso8601>=2.1.2
+aiosqlite>=0.11.0
 typing-extensions>=3.7
 
 # For Python3.6 compatibility

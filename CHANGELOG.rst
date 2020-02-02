@@ -2,6 +2,10 @@
 
 Changelog
 =========
+0.15.10
+-------
+- Bumped requirements to cater for newer feature use (#282)
+
 0.15.9
 ------
 - Alias Foreign Key joins as we can have both self-referencing and duplicate joins to the same table.
