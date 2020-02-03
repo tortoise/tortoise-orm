@@ -41,7 +41,7 @@ class ReverseRelation(Generic[MODEL]):
     Relation container for :func:`.ForeignKeyField`.
     """
 
-    def __init__(self, model, relation_field: str, instance) -> None:
+    def __init__(self, model: "Type[Model]", relation_field: str, instance: "Model") -> None:
         self.model = model
         self.relation_field = relation_field
         self.instance = instance
@@ -260,9 +260,15 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         await db.execute_query(str(query))
 
 
-class ForeignKeyFieldInstance(Field):
+class RelationalField(Field):
     has_db_field = False
 
+    def __init__(self, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self.model_class: "Type[Model]" = None  # type: ignore
+
+
+class ForeignKeyFieldInstance(RelationalField):
     def __init__(
         self,
         model_name: str,
@@ -273,7 +279,6 @@ class ForeignKeyFieldInstance(Field):
         super().__init__(**kwargs)
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
-        self.model_class: "Type[Model]" = None  # type: ignore
         self.model_name = model_name
         self.related_name = related_name
         if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
@@ -283,9 +288,7 @@ class ForeignKeyFieldInstance(Field):
         self.on_delete = on_delete
 
 
-class BackwardFKRelation(Field):
-    has_db_field = False
-
+class BackwardFKRelation(RelationalField):
     def __init__(
         self, field_type: "Type[Model]", relation_field: str, null: bool, description: Optional[str]
     ) -> None:
@@ -295,9 +298,7 @@ class BackwardFKRelation(Field):
         self.description: Optional[str] = description
 
 
-class OneToOneFieldInstance(Field):
-    has_db_field = False
-
+class OneToOneFieldInstance(RelationalField):
     def __init__(
         self,
         model_name: str,
@@ -309,7 +310,6 @@ class OneToOneFieldInstance(Field):
         super().__init__(**kwargs)
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('OneToOneField accepts model name in format "app.Model"')
-        self.model_class: "Type[Model]" = None  # type: ignore
         self.model_name = model_name
         self.related_name = related_name
         if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
@@ -323,8 +323,7 @@ class BackwardOneToOneRelation(BackwardFKRelation):
     pass
 
 
-class ManyToManyFieldInstance(Field):
-    has_db_field = False
+class ManyToManyFieldInstance(RelationalField):
     field_type = ManyToManyRelation
 
     def __init__(

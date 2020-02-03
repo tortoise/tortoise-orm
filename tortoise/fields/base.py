@@ -48,7 +48,7 @@ class Field(metaclass=_FieldMeta):
         default: Any = None,
         unique: bool = False,
         index: bool = False,
-        reference: Optional[str] = None,
+        reference: "Optional[Field]" = None,
         model: "Optional[Model]" = None,
         description: Optional[str] = None,
         **kwargs,
@@ -66,11 +66,12 @@ class Field(metaclass=_FieldMeta):
         self.unique = unique
         self.index = index
         self.model_field_name = ""
-        self.model = model
-        self.reference = reference
+        self.model: "Model" = model  # type: ignore
         self.description = description
+        # TODO: consider moving this to RelationalField
+        self.reference = reference
 
-    def to_db_value(self, value: Any, instance) -> Any:
+    def to_db_value(self, value: Any, instance: "Model") -> Any:
         if value is None or isinstance(value, self.field_type):
             return value
         return self.field_type(value)  # pylint: disable=E1102

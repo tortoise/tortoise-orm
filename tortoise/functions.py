@@ -1,11 +1,14 @@
-from typing import Any
+from typing import TYPE_CHECKING, Any, Type, cast
 
-from pypika import functions
+from pypika import Table, functions
 from pypika.terms import AggregateFunction
 from pypika.terms import Function as BaseFunction
 
 from tortoise.exceptions import ConfigurationError
-from tortoise.fields.relational import ForeignKeyFieldInstance
+from tortoise.fields.relational import ForeignKeyFieldInstance, RelationalField
+
+if TYPE_CHECKING:  # pragma: nocoverage
+    from tortoise.models import Model
 
 ##############################################################################
 # Base
@@ -19,17 +22,19 @@ class Function:
     #: Enable populate_field_object where we want to try and preserve the field type.
     populate_field_object = False
 
-    def __init__(self, field, *default_values) -> None:
+    def __init__(self, field: str, *default_values: Any) -> None:
         self.field = field
         self.field_object: Any = None
         self.default_values = default_values
 
-    def _resolve_field_for_model(self, model, table, field: str, *default_values) -> dict:
+    def _resolve_field_for_model(
+        self, model: "Type[Model]", table: Table, field: str, *default_values: Any
+    ) -> dict:
         field_split = field.split("__")
         if not field_split[1:]:
             function_joins = []
             if field_split[0] in model._meta.fetch_fields:
-                related_field = model._meta.fields_map[field_split[0]]
+                related_field = cast(RelationalField, model._meta.fields_map[field_split[0]])
                 related_field_meta = related_field.model_class._meta
                 join = (table, field_split[0], related_field)
                 function_joins.append(join)
@@ -51,7 +56,7 @@ class Function:
 
         if field_split[0] not in model._meta.fetch_fields:
             raise ConfigurationError(f"{field} not resolvable")
-        related_field = model._meta.fields_map[field_split[0]]
+        related_field = cast(RelationalField, model._meta.fields_map[field_split[0]])
         join = (table, field_split[0], related_field)
         related_table = related_field.model_class._meta.basetable
         if isinstance(related_field, ForeignKeyFieldInstance):
@@ -63,7 +68,7 @@ class Function:
         function["joins"].append(join)
         return function
 
-    def resolve(self, model, table) -> dict:
+    def resolve(self, model: "Type[Model]", table: Table) -> dict:
         function = self._resolve_field_for_model(model, table, self.field, *self.default_values)
         function["joins"] = reversed(function["joins"])
         return function

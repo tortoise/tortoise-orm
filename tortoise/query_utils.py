@@ -1,15 +1,19 @@
 from copy import copy
-from typing import Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, cast
 
 from pypika import Table
 from pypika.terms import Criterion
 
 from tortoise.exceptions import FieldError, OperationalError
-from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
+from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance, RelationalField
+
+if TYPE_CHECKING:  # pragma: nocoverage
+    from tortoise.models import Model
+    from tortoise.queryset import QuerySet
 
 
 def _process_filter_kwarg(
-    model, key, value, table
+    model: "Type[Model]", key: str, value: Any, table: Table
 ) -> Tuple[Criterion, Optional[Tuple[Table, Criterion]]]:
     join = None
 
@@ -40,7 +44,7 @@ def _process_filter_kwarg(
 
 
 def _get_joins_for_related_field(
-    table, related_field, related_field_name
+    table: Table, related_field: RelationalField, related_field_name: str
 ) -> List[Tuple[Table, Criterion]]:
     required_joins = []
 
@@ -85,23 +89,23 @@ def _get_joins_for_related_field(
 
 
 class EmptyCriterion(Criterion):  # type: ignore
-    def __or__(self, other):
+    def __or__(self, other: Criterion) -> Criterion:
         return other
 
-    def __and__(self, other):
+    def __and__(self, other: Criterion) -> Criterion:
         return other
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return False
 
 
-def _and(left: Criterion, right: Criterion):
+def _and(left: Criterion, right: Criterion) -> Criterion:
     if left and not right:
         return left
     return left & right
 
 
-def _or(left: Criterion, right: Criterion):
+def _or(left: Criterion, right: Criterion) -> Criterion:
     if left and not right:
         return left
     return left | right
@@ -111,7 +115,7 @@ class QueryModifier:
     def __init__(
         self,
         where_criterion: Optional[Criterion] = None,
-        joins: Optional[List[Tuple[Criterion, Criterion]]] = None,
+        joins: Optional[List[Tuple[Table, Criterion]]] = None,
         having_criterion: Optional[Criterion] = None,
     ) -> None:
         self.where_criterion: Criterion = where_criterion or EmptyCriterion()
@@ -174,7 +178,7 @@ class Q:
     AND = "AND"
     OR = "OR"
 
-    def __init__(self, *args: "Q", join_type=AND, **kwargs) -> None:
+    def __init__(self, *args: "Q", join_type: str = AND, **kwargs: Any) -> None:
         if args and kwargs:
             newarg = Q(join_type=join_type, **kwargs)
             args = (newarg,) + args
@@ -190,12 +194,12 @@ class Q:
         self._annotations: Dict[str, Any] = {}
         self._custom_filters: Dict[str, Dict[str, Any]] = {}
 
-    def __and__(self, other) -> "Q":
+    def __and__(self, other: "Q") -> "Q":
         if not isinstance(other, Q):
             raise OperationalError("AND operation requires a Q node")
         return Q(self, other, join_type=self.AND)
 
-    def __or__(self, other) -> "Q":
+    def __or__(self, other: "Q") -> "Q":
         if not isinstance(other, Q):
             raise OperationalError("OR operation requires a Q node")
         return Q(self, other, join_type=self.OR)
@@ -208,9 +212,11 @@ class Q:
     def negate(self) -> None:
         self._is_negated = not self._is_negated
 
-    def _resolve_nested_filter(self, model, key, value, table) -> QueryModifier:
+    def _resolve_nested_filter(
+        self, model: "Type[Model]", key: str, value: Any, table: Table
+    ) -> QueryModifier:
         related_field_name = key.split("__")[0]
-        related_field = model._meta.fields_map[related_field_name]
+        related_field = cast(RelationalField, model._meta.fields_map[related_field_name])
         required_joins = _get_joins_for_related_field(table, related_field, related_field_name)
         modifier = Q(**{"__".join(key.split("__")[1:]): value}).resolve(
             model=related_field.model_class,
@@ -221,7 +227,9 @@ class Q:
 
         return QueryModifier(joins=required_joins) & modifier
 
-    def _resolve_custom_kwarg(self, model, key, value, table) -> QueryModifier:
+    def _resolve_custom_kwarg(
+        self, model: "Type[Model]", key: str, value: Any, table: Table
+    ) -> QueryModifier:
         having_info = self._custom_filters[key]
         annotation = self._annotations[having_info["field"]]
         annotation_info = annotation.resolve(model, table)
@@ -237,7 +245,9 @@ class Q:
             modifier = QueryModifier(where_criterion=operator(annotation_info["field"], value))
         return modifier
 
-    def _resolve_regular_kwarg(self, model, key, value, table) -> QueryModifier:
+    def _resolve_regular_kwarg(
+        self, model: "Type[Model]", key: str, value: Any, table: Table
+    ) -> QueryModifier:
         if key not in model._meta.filters and key.split("__")[0] in model._meta.fetch_fields:
             modifier = self._resolve_nested_filter(model, key, value, table)
         else:
@@ -246,16 +256,18 @@ class Q:
             modifier = QueryModifier(where_criterion=criterion, joins=joins)
         return modifier
 
-    def _get_actual_filter_params(self, model, key, value) -> Tuple[str, Any]:
+    def _get_actual_filter_params(
+        self, model: "Type[Model]", key: str, value: Table
+    ) -> Tuple[str, Any]:
+        filter_key = key
         if key in model._meta.fk_fields or key in model._meta.o2o_fields:
             field_object = model._meta.fields_map[key]
             if hasattr(value, "pk"):
                 filter_value = value.pk
             else:
                 filter_value = value
-            filter_key = field_object.source_field
+            filter_key = cast(str, field_object.source_field)
         elif key in model._meta.m2m_fields:
-            filter_key = key
             if hasattr(value, "pk"):
                 filter_value = value.pk
             else:
@@ -265,7 +277,6 @@ class Q:
             or key in self._custom_filters
             or key in model._meta.filters
         ):
-            filter_key = key
             filter_value = value
         else:
             allowed = sorted(
@@ -274,7 +285,7 @@ class Q:
             raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
         return filter_key, filter_value
 
-    def _resolve_kwargs(self, model, table) -> QueryModifier:
+    def _resolve_kwargs(self, model: "Type[Model]", table: Table) -> QueryModifier:
         modifier = QueryModifier()
         for raw_key, raw_value in self.filters.items():
             key, value = self._get_actual_filter_params(model, raw_key, raw_value)
@@ -291,7 +302,7 @@ class Q:
             modifier = ~modifier
         return modifier
 
-    def _resolve_children(self, model, table) -> QueryModifier:
+    def _resolve_children(self, model: "Type[Model]", table: Table) -> QueryModifier:
         modifier = QueryModifier()
         for node in self.children:
             node_modifier = node.resolve(model, self._annotations, self._custom_filters, table)
@@ -304,7 +315,13 @@ class Q:
             modifier = ~modifier
         return modifier
 
-    def resolve(self, model, annotations, custom_filters, table) -> QueryModifier:
+    def resolve(
+        self,
+        model: "Type[Model]",
+        annotations: Dict[str, Any],
+        custom_filters: Dict[str, Dict[str, Any]],
+        table: Table,
+    ) -> QueryModifier:
         self._annotations = annotations
         self._custom_filters = custom_filters
         if self.filters:
@@ -315,12 +332,12 @@ class Q:
 class Prefetch:
     __slots__ = ("relation", "queryset")
 
-    def __init__(self, relation, queryset) -> None:
+    def __init__(self, relation: str, queryset: "QuerySet") -> None:
         self.relation = relation
         self.queryset = queryset
         self.queryset.query = copy(self.queryset.model._meta.basequery)
 
-    def resolve_for_queryset(self, queryset) -> None:
+    def resolve_for_queryset(self, queryset: "QuerySet") -> None:
         relation_split = self.relation.split("__")
         first_level_field = relation_split[0]
         if first_level_field not in queryset.model._meta.fetch_fields:

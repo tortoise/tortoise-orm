@@ -119,7 +119,7 @@ class Tortoise:
                 }
         """
 
-        def _type_name(typ) -> str:
+        def _type_name(typ: Type) -> str:
             if typ.__module__ == "builtins":
                 return typ.__name__
             return f"{typ.__module__}.{typ.__name__}"
@@ -268,7 +268,7 @@ class Tortoise:
 
     @classmethod
     def _init_relations(cls) -> None:
-        def get_related_model(related_app_name: str, related_model_name: str):
+        def get_related_model(related_app_name: str, related_model_name: str) -> Type[Model]:
             """
             Test, if app and model really exist. Throws a ConfigurationError with a hopefully
             helpful message. If successfull, returns the requested model.
@@ -348,7 +348,9 @@ class Tortoise:
                         fk_relation = BackwardFKRelation(
                             model, f"{field}_id", fk_object.null, fk_object.description
                         )
-                        related_model._meta.add_field(backward_relation_name, fk_relation)
+                        related_model._meta.add_field(
+                            cast(str, backward_relation_name), fk_relation
+                        )
 
                 for field in model._meta.o2o_fields:
                     o2o_object = cast(OneToOneFieldInstance, model._meta.fields_map[field])
@@ -387,7 +389,9 @@ class Tortoise:
                         o2o_relation = BackwardOneToOneRelation(
                             model, f"{field}_id", null=True, description=o2o_object.description
                         )
-                        related_model._meta.add_field(backward_relation_name, o2o_relation)
+                        related_model._meta.add_field(
+                            cast(str, backward_relation_name), o2o_relation
+                        )
 
                     if o2o_object.pk:
                         pk_attr_changed = True

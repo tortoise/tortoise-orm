@@ -1,6 +1,6 @@
 from copy import copy, deepcopy
 from functools import partial
-from typing import Any, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
+from typing import Any, Awaitable, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
 
 from pypika import Query, Table
 
@@ -18,7 +18,8 @@ from tortoise.fields.relational import (
     ReverseRelation,
 )
 from tortoise.filters import get_filters_for_field
-from tortoise.queryset import QuerySet, QuerySetSingle
+from tortoise.functions import Function
+from tortoise.queryset import Q, QuerySet, QuerySetSingle
 from tortoise.transactions import current_transaction_map
 
 MODEL = TypeVar("MODEL", bound="Model")
@@ -28,17 +29,17 @@ MODEL = TypeVar("MODEL", bound="Model")
 class _NoneAwaitable:
     __slots__ = ()
 
-    def __await__(self):
+    def __await__(self) -> Generator[None, None, None]:
         yield None
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return False
 
 
 NoneAwaitable = _NoneAwaitable()
 
 
-def get_together(meta, together: str) -> Tuple[Tuple[str, ...], ...]:
+def get_together(meta: "Model.Meta", together: str) -> Tuple[Tuple[str, ...], ...]:
     _together = getattr(meta, together, ())
 
     if isinstance(_together, (list, tuple)):
@@ -49,12 +50,12 @@ def get_together(meta, together: str) -> Tuple[Tuple[str, ...], ...]:
     return _together
 
 
-def _fk_setter(self, value, _key, relation_field):
+def _fk_setter(self: "Model", value: "Optional[Model]", _key: str, relation_field: str) -> None:
     setattr(self, relation_field, value.pk if value else None)
     setattr(self, _key, value)
 
 
-def _fk_getter(self, _key, ftype, relation_field):
+def _fk_getter(self: "Model", _key: str, ftype: "Type[Model]", relation_field: str) -> Awaitable:
     try:
         return getattr(self, _key)
     except AttributeError:
@@ -64,7 +65,7 @@ def _fk_getter(self, _key, ftype, relation_field):
         return NoneAwaitable
 
 
-def _rfk_getter(self, _key, ftype, frelfield):
+def _rfk_getter(self: "Model", _key: str, ftype: "Type[Model]", frelfield: str) -> ReverseRelation:
     val = getattr(self, _key, None)
     if val is None:
         val = ReverseRelation(ftype, frelfield, self)
@@ -72,7 +73,9 @@ def _rfk_getter(self, _key, ftype, frelfield):
     return val
 
 
-def _ro2o_getter(self, _key, ftype, frelfield):
+def _ro2o_getter(
+    self: "Model", _key: str, ftype: "Type[Model]", frelfield: str
+) -> "QuerySetSingle[Optional[Model]]":
     if hasattr(self, _key):
         return getattr(self, _key)
 
@@ -81,7 +84,9 @@ def _ro2o_getter(self, _key, ftype, frelfield):
     return val
 
 
-def _m2m_getter(self, _key, field_object):
+def _m2m_getter(
+    self: "Model", _key: str, field_object: ManyToManyFieldInstance
+) -> ManyToManyRelation:
     val = getattr(self, _key, None)
     if val is None:
         val = ManyToManyRelation(field_object.model_class, self, field_object)
@@ -125,7 +130,7 @@ class MetaInfo:
         "db_complex_fields",
     )
 
-    def __init__(self, meta) -> None:
+    def __init__(self, meta: "Model.Meta") -> None:
         self.abstract: bool = getattr(meta, "abstract", False)
         self.table: str = getattr(meta, "table", "")
         self.app: Optional[str] = getattr(meta, "app", None)
@@ -159,7 +164,7 @@ class MetaInfo:
         self.db_default_fields: List[Tuple[str, str, Field]] = []
         self.db_complex_fields: List[Tuple[str, str, Field]] = []
 
-    def add_field(self, name: str, value: Field):
+    def add_field(self, name: str, value: Field) -> None:
         if name in self.fields_map:
             raise ConfigurationError(f"Field {name} already present in meta")
         value.model = self._model
@@ -344,18 +349,18 @@ class MetaInfo:
 class ModelMeta(type):
     __slots__ = ()
 
-    def __new__(mcs, name: str, bases, attrs: dict, *args, **kwargs):
+    def __new__(mcs, name: str, bases: Tuple[Type], attrs: dict):
         fields_db_projection: Dict[str, str] = {}
         fields_map: Dict[str, Field] = {}
         filters: Dict[str, Dict[str, dict]] = {}
         fk_fields: Set[str] = set()
         m2m_fields: Set[str] = set()
         o2o_fields: Set[str] = set()
-        meta_class = attrs.get("Meta", type("Meta", (), {}))
+        meta_class: "Model.Meta" = attrs.get("Meta", type("Meta", (), {}))
         pk_attr: str = "id"
 
         # Searching for Field attributes in the class hierarchy
-        def __search_for_field_attributes(base, attrs: dict):
+        def __search_for_field_attributes(base: Type, attrs: dict) -> None:
             """
             Searching for class attributes of type fields.Field
             in the given class.
@@ -483,9 +488,9 @@ class ModelMeta(type):
 
 class Model(metaclass=ModelMeta):
     # I don' like this here, but it makes auto completion and static analysis much happier
-    _meta = MetaInfo(None)
+    _meta = MetaInfo(None)  # type: ignore
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs: Any) -> None:
         # self._meta is a very common attribute lookup, lets cache it.
         meta = self._meta
         self._saved_in_db = False
@@ -532,7 +537,7 @@ class Model(metaclass=ModelMeta):
                 setattr(self, key, field_object.default)
 
     @classmethod
-    def _init_from_db(cls: Type[MODEL], **kwargs) -> MODEL:
+    def _init_from_db(cls: Type[MODEL], **kwargs: Any) -> MODEL:
         self = cls.__new__(cls)
         self._saved_in_db = True
 
@@ -561,13 +566,13 @@ class Model(metaclass=ModelMeta):
             raise TypeError("Model instances without id are unhashable")
         return hash(self.pk)
 
-    def __eq__(self, other) -> bool:
-        return type(other) is type(self) and self.pk == other.pk
+    def __eq__(self, other: object) -> bool:
+        return type(other) is type(self) and self.pk == other.pk  # type: ignore
 
-    def _get_pk_val(self):
+    def _get_pk_val(self) -> Any:
         return getattr(self, self._meta.pk_attr)
 
-    def _set_pk_val(self, value):
+    def _set_pk_val(self, value: Any) -> None:
         setattr(self, self._meta.pk_attr, value)
 
     pk = property(_get_pk_val, _set_pk_val)
@@ -596,7 +601,7 @@ class Model(metaclass=ModelMeta):
             await executor.execute_insert(self)
             self._saved_in_db = True
 
-    async def delete(self, using_db=None) -> None:
+    async def delete(self, using_db: Optional[BaseDBAsyncClient] = None) -> None:
         """
         Deletes the current model object.
 
@@ -607,7 +612,7 @@ class Model(metaclass=ModelMeta):
             raise OperationalError("Can't delete unpersisted record")
         await db.executor_class(model=self.__class__, db=db).execute_delete(self)
 
-    async def fetch_related(self, *args, using_db: Optional[BaseDBAsyncClient] = None) -> None:
+    async def fetch_related(self, *args: Any, using_db: Optional[BaseDBAsyncClient] = None) -> None:
         """
         Fetch related fields.
 
@@ -625,7 +630,7 @@ class Model(metaclass=ModelMeta):
         cls: Type[MODEL],
         using_db: Optional[BaseDBAsyncClient] = None,
         defaults: Optional[dict] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Tuple[MODEL, bool]:
         """
         Fetches the object if exists (filtering on the provided parameters),
@@ -639,7 +644,7 @@ class Model(metaclass=ModelMeta):
         return await cls.create(**defaults, **kwargs, using_db=using_db), True
 
     @classmethod
-    async def create(cls: Type[MODEL], **kwargs) -> MODEL:
+    async def create(cls: Type[MODEL], **kwargs: Any) -> MODEL:
         """
         Create a record in the DB and returns the object.
 
@@ -697,21 +702,21 @@ class Model(metaclass=ModelMeta):
         return QuerySet(cls).first()
 
     @classmethod
-    def filter(cls: Type[MODEL], *args, **kwargs) -> QuerySet[MODEL]:
+    def filter(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySet[MODEL]:
         """
         Generates a QuerySet with the filter applied.
         """
         return QuerySet(cls).filter(*args, **kwargs)
 
     @classmethod
-    def exclude(cls: Type[MODEL], *args, **kwargs) -> QuerySet[MODEL]:
+    def exclude(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySet[MODEL]:
         """
         Generates a QuerySet with the exclude applied.
         """
         return QuerySet(cls).exclude(*args, **kwargs)
 
     @classmethod
-    def annotate(cls: Type[MODEL], **kwargs) -> QuerySet[MODEL]:
+    def annotate(cls: Type[MODEL], **kwargs: Function) -> QuerySet[MODEL]:
         return QuerySet(cls).annotate(**kwargs)
 
     @classmethod
@@ -722,7 +727,7 @@ class Model(metaclass=ModelMeta):
         return QuerySet(cls)
 
     @classmethod
-    def get(cls: Type[MODEL], *args, **kwargs) -> QuerySetSingle[MODEL]:
+    def get(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySetSingle[MODEL]:
         """
         Fetches a single record for a Model type using the provided filter parameters.
 
@@ -736,7 +741,7 @@ class Model(metaclass=ModelMeta):
         return QuerySet(cls).get(*args, **kwargs)
 
     @classmethod
-    def get_or_none(cls: Type[MODEL], *args, **kwargs) -> QuerySetSingle[Optional[MODEL]]:
+    def get_or_none(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySetSingle[Optional[MODEL]]:
         """
         Fetches a single record for a Model type using the provided filter parameters or None.
 
@@ -748,7 +753,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def fetch_for_list(
-        cls, instance_list: List[MODEL], *args, using_db: Optional[BaseDBAsyncClient] = None
+        cls, instance_list: List[MODEL], *args: Any, using_db: Optional[BaseDBAsyncClient] = None
     ) -> None:
         db = using_db or cls._meta.db
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
