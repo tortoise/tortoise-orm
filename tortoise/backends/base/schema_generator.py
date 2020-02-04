@@ -8,7 +8,7 @@ from tortoise.utils import get_escape_translation_table
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
     from tortoise.models import Model
-    from tortoise.fields.relational import RelationalField, ManyToManyFieldInstance  # noqa
+    from tortoise.fields.relational import ForeignKeyFieldInstance, ManyToManyFieldInstance  # noqa
 
 # pylint: disable=R0201
 
@@ -171,7 +171,7 @@ class BaseSchemaGenerator:
             unique = "UNIQUE" if field_object.unique else ""
 
             if hasattr(field_object, "reference") and field_object.reference:
-                reference = cast("RelationalField", field_object.reference)
+                reference = cast("ForeignKeyFieldInstance", field_object.reference)
                 comment = (
                     self._column_comment_generator(
                         table=model._meta.table, column=db_field, comment=reference.description,

@@ -283,7 +283,6 @@ class RelationalField(Field):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.model_class: "Type[Model]" = None  # type: ignore
-        self.on_delete: str = None  # type: ignore
 
 
 class ForeignKeyFieldInstance(RelationalField):
@@ -316,7 +315,7 @@ class BackwardFKRelation(RelationalField):
         self.description: Optional[str] = description
 
 
-class OneToOneFieldInstance(RelationalField):
+class OneToOneFieldInstance(ForeignKeyFieldInstance):
     def __init__(
         self,
         model_name: str,
@@ -324,17 +323,9 @@ class OneToOneFieldInstance(RelationalField):
         on_delete: str = CASCADE,
         **kwargs: Any,
     ) -> None:
-        kwargs["unique"] = True
-        super().__init__(**kwargs)
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('OneToOneField accepts model name in format "app.Model"')
-        self.model_name = model_name
-        self.related_name = related_name
-        if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
-            raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
-        if on_delete == SET_NULL and not bool(kwargs.get("null")):
-            raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
-        self.on_delete = on_delete
+        super().__init__(model_name, related_name, on_delete, unique=True, **kwargs)
 
 
 class BackwardOneToOneRelation(BackwardFKRelation):

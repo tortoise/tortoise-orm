@@ -311,6 +311,7 @@ class Tortoise:
 
                 pk_attr_changed = False
 
+                # TODO: refactor to share logic between FK & O2O
                 for field in model._meta.fk_fields:
                     fk_object = cast(ForeignKeyFieldInstance, model._meta.fields_map[field])
                     reference = fk_object.model_name

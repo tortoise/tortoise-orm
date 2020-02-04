@@ -434,10 +434,10 @@ class ModelMeta(type):
                     fields_map[key] = value
                     value.model_field_name = key
 
-                    if isinstance(value, ForeignKeyFieldInstance):
-                        fk_fields.add(key)
-                    elif isinstance(value, OneToOneFieldInstance):
+                    if isinstance(value, OneToOneFieldInstance):
                         o2o_fields.add(key)
+                    elif isinstance(value, ForeignKeyFieldInstance):
+                        fk_fields.add(key)
                     elif isinstance(value, ManyToManyFieldInstance):
                         m2m_fields.add(key)
                     else:
