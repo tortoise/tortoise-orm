@@ -279,6 +279,6 @@ Sometimes it is required to fetch only certain related records. You can achieve 
 
 You can view full example here:  :ref:`example_prefetching`
 
-.. automodule:: tortoise.query_utils
-    :members: Prefetch
+.. autoclass:: tortoise.query_utils.Prefetch
+    :members:
     :undoc-members:

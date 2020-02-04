@@ -122,9 +122,9 @@ Parameters
     Sets the character set in use, defaults to ``utf8mb4``
 
 
-Reference
-=========
+Base DB client
+==============
 
 .. automodule:: tortoise.backends.base.client
-    :members:
+    :members: BaseDBAsyncClient
     :undoc-members:
