@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, List
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.utils import get_escape_translation_table
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.asyncpg.client import AsyncpgDBClient
 
 

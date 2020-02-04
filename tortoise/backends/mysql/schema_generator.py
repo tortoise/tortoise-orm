@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, List, Type
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.mysql.client import MySQLClient
     from tortoise.models import Model
 

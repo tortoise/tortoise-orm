@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, List, Set, Type, cast
 from tortoise.exceptions import ConfigurationError
 from tortoise.utils import get_escape_translation_table
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
     from tortoise.models import Model
     from tortoise.fields.relational import RelationalField, ManyToManyFieldInstance  # noqa
