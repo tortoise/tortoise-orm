@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Type, Union
 
 from tortoise.exceptions import ConfigurationError
 
@@ -73,7 +73,7 @@ class Field(metaclass=_FieldMeta):
         # TODO: consider moving this to RelationalField
         self.reference = reference
 
-    def to_db_value(self, value: Any, instance: "Model") -> Any:
+    def to_db_value(self, value: Any, instance: "Union[Type[Model], Model]") -> Any:
         if value is None or isinstance(value, self.field_type):
             return value
         return self.field_type(value)  # pylint: disable=E1102

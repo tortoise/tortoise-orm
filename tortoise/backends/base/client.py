@@ -54,10 +54,10 @@ class Capabilities:
 
         super().__setattr__("_mutable", False)
 
-    def __setattr__(self, attr, value):
+    def __setattr__(self, attr: str, value: Any) -> None:
         if not getattr(self, "_mutable", False):
             raise AttributeError(attr)
-        return super().__setattr__(attr, value)
+        super().__setattr__(attr, value)
 
     def __str__(self) -> str:
         return str(self.__dict__)
@@ -69,7 +69,7 @@ class BaseDBAsyncClient:
     schema_generator: Type[BaseSchemaGenerator] = BaseSchemaGenerator
     capabilities: Capabilities = Capabilities("")
 
-    def __init__(self, connection_name: str, fetch_inserted: bool = True, **kwargs) -> None:
+    def __init__(self, connection_name: str, fetch_inserted: bool = True, **kwargs: Any) -> None:
         self.log = logging.getLogger("db_client")
         self.connection_name = connection_name
         self.fetch_inserted = fetch_inserted
@@ -121,7 +121,7 @@ class ConnectionWrapper:
         await self.lock.acquire()
         return self.connection
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         self.lock.release()
 
 
@@ -140,7 +140,7 @@ class TransactionContext:
         await self.connection.start()
         return self.connection
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         if not self.connection._finalized:
             if exc_type:
                 # Can't rollback a transaction that already failed.
@@ -162,7 +162,7 @@ class TransactionContextPooled(TransactionContext):
         await self.connection.start()
         return self.connection
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         if not self.connection._finalized:
             if exc_type:
                 # Can't rollback a transaction that already failed.
@@ -180,7 +180,7 @@ class NestedTransactionContext(TransactionContext):
         await self.connection.start()
         return self.connection
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         if not self.connection._finalized:
             if exc_type:
                 # Can't rollback a transaction that already failed.
@@ -200,7 +200,7 @@ class PoolConnectionWrapper:
         self.connection = await self.pool.acquire()
         return self.connection
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         # release the connection back to the pool
         await self.pool.release(self.connection)
 

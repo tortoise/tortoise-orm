@@ -753,7 +753,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def fetch_for_list(
-        cls, instance_list: List[MODEL], *args: Any, using_db: Optional[BaseDBAsyncClient] = None
+        cls, instance_list: "List[Model]", *args: Any, using_db: Optional[BaseDBAsyncClient] = None
     ) -> None:
         db = using_db or cls._meta.db
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)

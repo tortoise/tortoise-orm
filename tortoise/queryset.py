@@ -160,7 +160,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
     def __init__(self, model: Type[MODEL]) -> None:
         super().__init__(model)
-        self.fields = model._meta.db_fields
+        self.fields: Set[str] = model._meta.db_fields
 
         self._prefetch_map: Dict[str, Set[Union[str, Prefetch]]] = {}
         self._prefetch_queries: Dict[str, QuerySet] = {}

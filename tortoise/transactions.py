@@ -1,6 +1,6 @@
 import warnings
 from functools import wraps
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, cast
 
 from tortoise.exceptions import ParamsError
 
@@ -12,6 +12,9 @@ if TYPE_CHECKING:  # pragma: nocoverage
         BaseTransactionWrapper,
         TransactionContext,
     )
+
+FuncType = Callable[..., Any]
+F = TypeVar("F", bound=FuncType)
 
 
 def _get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
@@ -44,7 +47,7 @@ def in_transaction(connection_name: Optional[str] = None) -> "TransactionContext
     return connection._in_transaction()
 
 
-def atomic(connection_name: Optional[str] = None) -> Callable:
+def atomic(connection_name: Optional[str] = None) -> Callable[[F], F]:
     """
     Transaction decorator.
 
@@ -55,14 +58,14 @@ def atomic(connection_name: Optional[str] = None) -> Callable:
                             one db connection
     """
 
-    def wrapper(func):
+    def wrapper(func: F) -> F:
         @wraps(func)
         async def wrapped(*args, **kwargs):
             connection = _get_connection(connection_name)
             async with connection._in_transaction():
                 return await func(*args, **kwargs)
 
-        return wrapped
+        return cast(F, wrapped)
 
     return wrapper
 

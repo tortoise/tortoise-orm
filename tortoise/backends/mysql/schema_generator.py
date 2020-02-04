@@ -1,6 +1,10 @@
-from typing import List
+from typing import TYPE_CHECKING, List, Type
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
+
+if TYPE_CHECKING:
+    from tortoise.backends.mysql.client import MySQLClient
+    from tortoise.models import Model
 
 
 class MySQLSchemaGenerator(BaseSchemaGenerator):
@@ -25,7 +29,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         "){extra}{comment};"
     )
 
-    def __init__(self, client) -> None:
+    def __init__(self, client: "MySQLClient") -> None:
         super().__init__(client)
         self._field_indexes = []  # type: List[str]
         self._foreign_keys = []  # type: List[str]
@@ -34,7 +38,9 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         return f"`{val}`"
 
     def _table_generate_extra(self, table: str) -> str:
-        return f" CHARACTER SET {self.client.charset}" if self.client.charset else ""
+        return (
+            f" CHARACTER SET {self.client.charset}" if self.client.charset else ""  # type: ignore
+        )
 
     def _table_comment_generator(self, table: str, comment: str) -> str:
         return f" COMMENT='{self._escape_comment(comment)}'"
@@ -42,7 +48,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     def _column_comment_generator(self, table: str, column: str, comment: str) -> str:
         return f" COMMENT '{self._escape_comment(comment)}'"
 
-    def _get_index_sql(self, model, field_names: List[str], safe: bool) -> str:
+    def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
         """ Get index SQLs, but keep them for ourselves """
         self._field_indexes.append(
             self.INDEX_CREATE_TEMPLATE.format(

@@ -1,7 +1,10 @@
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.utils import get_escape_translation_table
+
+if TYPE_CHECKING:
+    from tortoise.backends.asyncpg.client import AsyncpgDBClient
 
 
 class AsyncpgSchemaGenerator(BaseSchemaGenerator):
@@ -10,8 +13,8 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
     COLUMN_COMMNET_TEMPLATE = 'COMMENT ON COLUMN "{table}"."{column}" IS \'{comment}\';'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}'
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    def __init__(self, client: "AsyncpgDBClient") -> None:
+        super().__init__(client)
         self.comments_array: List[str] = []
 
     def _escape_comment(self, comment: str) -> str:
