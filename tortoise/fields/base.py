@@ -1,10 +1,11 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Type
 
 from tortoise.exceptions import ConfigurationError
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
+# TODO: Replace this with an enum
 CASCADE = "CASCADE"
 RESTRICT = "RESTRICT"
 SET_NULL = "SET NULL"
@@ -12,12 +13,13 @@ SET_DEFAULT = "SET DEFAULT"
 
 
 class _FieldMeta(type):
-    def __new__(mcs, name, bases, attrs):
+    # TODO: Require functions to return field instances instead of this hack
+    def __new__(mcs, name: str, bases: Tuple[Type, ...], attrs: dict):
         if len(bases) > 1 and bases[0] is Field:
             # Instantiate class with only the 1st base class (should be Field)
             cls = type.__new__(mcs, name, (bases[0],), attrs)  # type: Type[Field]
             # All other base classes are our meta types, we store them in class attributes
-            cls.field_type = bases[1] if len(bases) == 2 else bases[1:]
+            cls.field_type = bases[1] if len(bases) == 2 else bases[1:]  # type: ignore
             return cls
         return type.__new__(mcs, name, bases, attrs)
 
@@ -36,7 +38,7 @@ class Field(metaclass=_FieldMeta):
     function_cast = None
 
     # This method is just to make IDE/Linters happy
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls, *args: Any, **kwargs: Any) -> "Field":
         return super().__new__(cls)
 
     def __init__(
@@ -51,7 +53,7 @@ class Field(metaclass=_FieldMeta):
         reference: "Optional[Field]" = None,
         model: "Optional[Model]" = None,
         description: Optional[str] = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         if not self.indexable and (unique or index):
             raise ConfigurationError(f"{self.__class__.__name__} can't be indexed")
@@ -82,7 +84,7 @@ class Field(metaclass=_FieldMeta):
         return self.field_type(value)  # pylint: disable=E1102
 
     @property
-    def required(self):
+    def required(self) -> bool:
         return self.default is None and not self.null and not self.generated
 
     def _get_dialects(self) -> Dict[str, dict]:

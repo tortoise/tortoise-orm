@@ -349,7 +349,7 @@ class MetaInfo:
 class ModelMeta(type):
     __slots__ = ()
 
-    def __new__(mcs, name: str, bases: Tuple[Type], attrs: dict):
+    def __new__(mcs, name: str, bases: Tuple[Type, ...], attrs: dict):
         fields_db_projection: Dict[str, str] = {}
         fields_map: Dict[str, Field] = {}
         filters: Dict[str, Dict[str, dict]] = {}
