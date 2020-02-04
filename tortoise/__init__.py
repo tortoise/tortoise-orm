@@ -80,8 +80,8 @@ class Tortoise:
                     "data_fields":          [...]   # Data fields
                     "fk_fields":            [...]   # Foreign Key fields FROM this model
                     "backward_fk_fields":   [...]   # Foreign Key fields TO this model
-                    "o2o_fields":           [...]  # OneToOne fields FROM this model
-                    "backward_o2o_fields":  [...]  # OneToOne fields TO this model
+                    "o2o_fields":           [...]   # OneToOne fields FROM this model
+                    "backward_o2o_fields":  [...]   # OneToOne fields TO this model
                     "m2m_fields":           [...]   # Many-to-Many fields
                 }
 

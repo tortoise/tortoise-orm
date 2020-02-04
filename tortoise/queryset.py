@@ -44,6 +44,10 @@ T_co = TypeVar("T_co", covariant=True)
 
 
 class QuerySetSingle(Protocol[T_co]):
+    """
+    Awaiting on this will resolve a single instance of the Model object, and not a sequence.
+    """
+
     # pylint: disable=W0104
     def __await__(self) -> Generator[Any, None, T_co]:
         ...  # pragma: nocoverage
@@ -66,6 +70,13 @@ class AwaitableQuery(Generic[MODEL]):
         annotations: Dict[str, Any],
         custom_filters: Dict[str, Dict[str, Any]],
     ) -> None:
+        """
+
+        :param model:
+        :param q_objects:
+        :param annotations:
+        :param custom_filters:
+        """
         modifier = QueryModifier()
         for node in q_objects:
             modifier &= node.resolve(model, annotations, custom_filters, model._meta.basetable)
@@ -96,6 +107,13 @@ class AwaitableQuery(Generic[MODEL]):
         orderings: List[Tuple[str, str]],
         annotations: Dict[str, Any],
     ) -> None:
+        """
+
+        :param model:
+        :param table:
+        :param orderings:
+        :param annotations:
+        """
         for ordering in orderings:
             field_name = ordering[0]
             if field_name in model._meta.fetch_fields:

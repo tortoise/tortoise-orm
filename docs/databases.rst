@@ -120,3 +120,11 @@ Parameters
     Sets TCP NO_DELAY to disable Nagle.
 ``charset``:
     Sets the character set in use, defaults to ``utf8mb4``
+
+
+Reference
+=========
+
+.. automodule:: tortoise.backends.base.client
+    :members:
+    :undoc-members:

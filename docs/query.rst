@@ -56,8 +56,13 @@ QuerySet
 After you obtained queryset from object you can do following operations with it:
 
 .. automodule:: tortoise.queryset
-    :members: QuerySet
-    :undoc-members:
+    :members:
+    :exclude-members: QuerySetSingle, QuerySet, AwaitableQuery
+
+    .. autoclass:: QuerySetSingle
+
+    .. autoclass:: QuerySet
+        :inherited-members:
 
 QuerySet could be constructed, filtered and passed around without actually hitting database.
 Only after you ``await`` QuerySet, it will generate query and run it against database.
@@ -227,6 +232,10 @@ Also, Q objects support negated to generate ``NOT`` (``~`` operator) clause in y
 
     not_third_events = await Event.filter(~Q(name='3'))
 
+.. automodule:: tortoise.query_utils
+    :members: Q, QueryModifier
+    :undoc-members:
+
 
 .. _filtering-queries:
 
@@ -269,3 +278,7 @@ Sometimes it is required to fetch only certain related records. You can achieve 
     ).first()
 
 You can view full example here:  :ref:`example_prefetching`
+
+.. automodule:: tortoise.query_utils
+    :members: Prefetch
+    :undoc-members:

@@ -7,6 +7,8 @@ from typing import get_type_hints, TypeVar, Any, AnyStr, Generic, Union
 from sphinx.util import logging
 from sphinx.util.inspect import Signature
 
+import type_globals
+
 try:
     from typing_extensions import Protocol
 except ImportError:
@@ -53,7 +55,7 @@ def format_annotation(annotation, fully_qualified=False):
                         bound = bound._evaluate(sys.modules[annotation.__module__].__dict__, None)
                     except:
                         try:
-                            bound = bound._evaluate(sys.modules['tortoise'].__dict__, None)
+                            bound = bound._evaluate(type_globals.__dict__, None)
                         except:
                             bound = bound.__forward_arg__
                 return format_annotation(bound, fully_qualified)
@@ -212,7 +214,7 @@ def get_all_type_hints(obj, name):
         pass
     except NameError as exc:
         try:
-            rv = get_type_hints(obj, localns=sys.modules['tortoise'].__dict__)
+            rv = get_type_hints(obj, localns=type_globals.__dict__)
         except Exception as exc:
             logger.warning('Cannot resolve forward reference in type annotations of "%s": %s',
                            name, exc)
@@ -234,7 +236,7 @@ def get_all_type_hints(obj, name):
         pass
     except NameError as exc:
         try:
-            rv = get_type_hints(obj, localns=sys.modules['tortoise'].__dict__)
+            rv = get_type_hints(obj, localns=type_globals.__dict__)
         except:
             logger.warning('Cannot resolve forward reference in type annotations of "%s": %s',
                            name, exc)

@@ -112,6 +112,10 @@ def _or(left: Criterion, right: Criterion) -> Criterion:
 
 
 class QueryModifier:
+    """
+    Internal structure used to generate SQL Queries.
+    """
+
     def __init__(
         self,
         where_criterion: Optional[Criterion] = None,
@@ -162,10 +166,20 @@ class QueryModifier:
         return QueryModifier(where_criterion=self.where_criterion.negate(), joins=self.joins)
 
     def get_query_modifiers(self) -> Tuple[Criterion, List[Tuple[Table, Criterion]], Criterion]:
+        """
+        Returns a tuple of the query criterion.
+        """
         return self.where_criterion, self.joins, self.having_criterion
 
 
 class Q:
+    """
+
+    :param args:
+    :param join_type:
+    :param kwargs:
+    """
+
     __slots__ = (
         "children",
         "filters",
@@ -185,31 +199,46 @@ class Q:
             kwargs = {}
         if not all(isinstance(node, Q) for node in args):
             raise OperationalError("All ordered arguments must be Q nodes")
+        #: Contains the sub-Q's that this Q is made up of
         self.children: Tuple[Q, ...] = args
+        #: Contains the filters applied to this Q
         self.filters: Dict[str, Any] = kwargs
         if join_type not in {self.AND, self.OR}:
             raise OperationalError("join_type must be AND or OR")
+        #: Specifies if this Q does an AND or OR on its children
         self.join_type = join_type
         self._is_negated = False
         self._annotations: Dict[str, Any] = {}
         self._custom_filters: Dict[str, Dict[str, Any]] = {}
 
     def __and__(self, other: "Q") -> "Q":
+        """
+        Returns a binary AND of Q objects, use ``AND`` operator.
+        """
         if not isinstance(other, Q):
             raise OperationalError("AND operation requires a Q node")
         return Q(self, other, join_type=self.AND)
 
     def __or__(self, other: "Q") -> "Q":
+        """
+        Returns a binary OR of Q objects, use ``OR`` operator.
+        """
         if not isinstance(other, Q):
             raise OperationalError("OR operation requires a Q node")
         return Q(self, other, join_type=self.OR)
 
     def __invert__(self) -> "Q":
+        """
+        Returns a negated instance of the Q object, use ``~`` operator.
+        """
         q = Q(*self.children, join_type=self.join_type, **self.filters)
         q.negate()
         return q
 
     def negate(self) -> None:
+        """
+        Negates the curent Q object. (mutation)
+        """
         self._is_negated = not self._is_negated
 
     def _resolve_nested_filter(
@@ -322,6 +351,14 @@ class Q:
         custom_filters: Dict[str, Dict[str, Any]],
         table: Table,
     ) -> QueryModifier:
+        """
+        Resolves the logical Q chain into the parts of a SQL statement.
+
+        :param model:
+        :param annotations:
+        :param custom_filters:
+        :param table:
+        """
         self._annotations = annotations
         self._custom_filters = custom_filters
         if self.filters:
@@ -330,6 +367,12 @@ class Q:
 
 
 class Prefetch:
+    """
+
+    :param relation:
+    :param queryset:
+    """
+
     __slots__ = ("relation", "queryset")
 
     def __init__(self, relation: str, queryset: "QuerySet") -> None:
@@ -338,6 +381,10 @@ class Prefetch:
         self.queryset.query = copy(self.queryset.model._meta.basequery)
 
     def resolve_for_queryset(self, queryset: "QuerySet") -> None:
+        """
+
+        :param queryset:
+        """
         relation_split = self.relation.split("__")
         first_level_field = relation_split[0]
         if first_level_field not in queryset.model._meta.fetch_fields:

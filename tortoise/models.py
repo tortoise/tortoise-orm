@@ -487,6 +487,10 @@ class ModelMeta(type):
 
 
 class Model(metaclass=ModelMeta):
+    """
+    Base class for all Tortoise ORM Models.
+    """
+
     # I don' like this here, but it makes auto completion and static analysis much happier
     _meta = MetaInfo(None)  # type: ignore
 
@@ -589,9 +593,11 @@ class Model(metaclass=ModelMeta):
         """
         Creates/Updates the current model object.
 
-        If ``update_fields`` is provided, it should be a tuple/list of fields by name.
-        This is the subset of fields that should be updated.
-        If the object needs to be created ``update_fields`` will be ignored.
+        :param update_fields: If provided, it should be a tuple/list of fields by name.
+
+            This is the subset of fields that should be updated.
+            If the object needs to be created ``update_fields`` will be ignored.
+        :param using_db: Specific DB connection to use instead of default bound
         """
         db = using_db or self._meta.db
         executor = db.executor_class(model=self.__class__, db=db)
@@ -604,6 +610,8 @@ class Model(metaclass=ModelMeta):
     async def delete(self, using_db: Optional[BaseDBAsyncClient] = None) -> None:
         """
         Deletes the current model object.
+
+        :param using_db: Specific DB connection to use instead of default bound
 
         :raises OperationalError: If object has never been persisted.
         """
@@ -621,6 +629,7 @@ class Model(metaclass=ModelMeta):
             User.fetch_related("emails", "manager")
 
         :param args: The related fields that should be fetched.
+        :param using_db: Specific DB connection to use instead of default bound
         """
         db = using_db or self._meta.db
         await db.executor_class(model=self.__class__, db=db).fetch_for_list([self], *args)
@@ -628,13 +637,17 @@ class Model(metaclass=ModelMeta):
     @classmethod
     async def get_or_create(
         cls: Type[MODEL],
-        using_db: Optional[BaseDBAsyncClient] = None,
         defaults: Optional[dict] = None,
+        using_db: Optional[BaseDBAsyncClient] = None,
         **kwargs: Any,
     ) -> Tuple[MODEL, bool]:
         """
         Fetches the object if exists (filtering on the provided parameters),
         else creates an instance with any unspecified parameters as default values.
+
+        :param defaults:
+        :param using_db: Specific DB connection to use instead of default bound
+        :param kwargs:
         """
         if not defaults:
             defaults = {}
@@ -658,6 +671,8 @@ class Model(metaclass=ModelMeta):
 
             user = User(name="...", email="...")
             await user.save()
+
+        :param kwargs:
         """
         instance = cls(**kwargs)
         db = kwargs.get("using_db") or cls._meta.db
@@ -690,6 +705,7 @@ class Model(metaclass=ModelMeta):
             ])
 
         :param objects: List of objects to bulk create
+        :param using_db: Specific DB connection to use instead of default bound
         """
         db = using_db or cls._meta.db
         await db.executor_class(model=cls, db=db).execute_bulk_insert(objects)  # type: ignore
@@ -705,6 +721,9 @@ class Model(metaclass=ModelMeta):
     def filter(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySet[MODEL]:
         """
         Generates a QuerySet with the filter applied.
+
+        :param args:
+        :param kwargs:
         """
         return QuerySet(cls).filter(*args, **kwargs)
 
@@ -712,11 +731,19 @@ class Model(metaclass=ModelMeta):
     def exclude(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySet[MODEL]:
         """
         Generates a QuerySet with the exclude applied.
+
+        :param args:
+        :param kwargs:
         """
         return QuerySet(cls).exclude(*args, **kwargs)
 
     @classmethod
     def annotate(cls: Type[MODEL], **kwargs: Function) -> QuerySet[MODEL]:
+        """
+        Annotates the result set with extra Functions/Aggregations.
+
+        :param kwargs:
+        """
         return QuerySet(cls).annotate(**kwargs)
 
     @classmethod
@@ -735,6 +762,9 @@ class Model(metaclass=ModelMeta):
 
             user = await User.get(username="foo")
 
+        :param args:
+        :param kwargs:
+
         :raises MultipleObjectsReturned: If provided search returned more than one object.
         :raises DoesNotExist: If object can not be found.
         """
@@ -748,6 +778,9 @@ class Model(metaclass=ModelMeta):
         .. code-block:: python3
 
             user = await User.get(username="foo")
+
+        :param args:
+        :param kwargs:
         """
         return QuerySet(cls).filter(*args, **kwargs).first()
 
@@ -755,6 +788,13 @@ class Model(metaclass=ModelMeta):
     async def fetch_for_list(
         cls, instance_list: "List[Model]", *args: Any, using_db: Optional[BaseDBAsyncClient] = None
     ) -> None:
+        """
+        Fetches related models for provided list of Model objects.
+
+        :param instance_list:
+        :param args:
+        :param using_db:
+        """
         db = using_db or cls._meta.db
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
 
