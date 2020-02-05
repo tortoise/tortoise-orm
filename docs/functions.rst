@@ -4,9 +4,20 @@
 Functions & Aggregates
 ======================
 
+To apply functions to values and get aggregates computed on the DB side, one needs to annotate the QuerySet.
+
+.. code-block:: py3
+
+    results = await SomeModel.filter(...).annotate(clean_desc=Coalesce("desc", "N/A"))
+
+This will add a new attribute on each ``SomeModel`` instance called ``clean_desc`` that will now contain the annotated data.
+
+One can also call ``.values()`` or ``.values_list()`` on it to get the data as per regular.
 
 Functions
 =========
+
+Functions apply a transform on each instance of a Field.
 
 .. autoclass:: tortoise.functions.Trim
 
@@ -21,6 +32,9 @@ Functions
 
 Aggregates
 ==========
+
+Aggregated apply on the entire column, and will often be used with grouping.
+So often makes sense with a ``.first()`` QuerySet.
 
 .. autoclass:: tortoise.functions.Count
 
@@ -37,5 +51,7 @@ Base function class
 ===================
 
 .. automodule:: tortoise.functions
-    :members: Function, Aggregate
-    :undoc-members:
+    :members: Aggregate
+
+    .. autoclass:: Function
+        :members:
