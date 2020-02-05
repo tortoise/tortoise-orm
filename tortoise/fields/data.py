@@ -148,7 +148,7 @@ class CharField(Field, str):  # type: ignore
         super().__init__(**kwargs)
 
     @property
-    def SQL_TYPE(self) -> str:
+    def SQL_TYPE(self) -> str:  # type: ignore
         return f"VARCHAR({self.max_length})"
 
 
@@ -225,7 +225,7 @@ class DecimalField(Field, Decimal):
         return Decimal(value).quantize(self.quant).normalize()
 
     @property
-    def SQL_TYPE(self) -> str:
+    def SQL_TYPE(self) -> str:  # type: ignore
         return f"DECIMAL({self.max_digits},{self.decimal_places})"
 
     class _db_sqlite:

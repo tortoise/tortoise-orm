@@ -31,6 +31,7 @@ Base Field
 .. automodule:: tortoise.fields.base
     :members:
     :undoc-members:
+    :exclude-members: field_type, indexable, has_db_field, skip_to_python_if_native, allows_generated, function_cast, SQL_TYPE, GENERATED_SQL
 
 Data Fields
 -----------
