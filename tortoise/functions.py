@@ -91,7 +91,7 @@ class Function:
         Used to resolve the Function statement for SQL generation.
 
         :param model: Model the function is applied on to.
-        :param table: pypika.Table to keep track of the virtual SQL table
+        :param table: ``pypika.Table`` to keep track of the virtual SQL table
             (to allow self referential joins)
         :return: Dict with keys ``"joins"`` and ``"fields"``
         """

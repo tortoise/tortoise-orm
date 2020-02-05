@@ -174,10 +174,12 @@ class QueryModifier:
 
 class Q:
     """
+    Q Expression container.
+    Q Expressions are a useful tool to compose a query from many small parts.
 
-    :param args:
-    :param join_type:
-    :param kwargs:
+    :param join_type: Is the join an AND or OR join type?
+    :param args: Inner ``Q`` expressions that you want to wrap.
+    :param kwargs: Filter statements that this Q object should encapsulate.
     """
 
     __slots__ = (
@@ -354,10 +356,11 @@ class Q:
         """
         Resolves the logical Q chain into the parts of a SQL statement.
 
-        :param model:
-        :param annotations:
+        :param model: The Model this Q Expression should be resolved on.
+        :param annotations: Extra annotations one wants to inject into the resultset.
         :param custom_filters:
-        :param table:
+        :param table: ``pypika.Table`` to keep track of the virtual SQL table
+            (to allow self referential joins)
         """
         self._annotations = annotations
         self._custom_filters = custom_filters
@@ -368,9 +371,11 @@ class Q:
 
 class Prefetch:
     """
+    Prefetcher container. One would directly use this when wanting to attach a custom QuerySet
+    for specialised prefetching.
 
-    :param relation:
-    :param queryset:
+    :param relation: Related field name.
+    :param queryset: Custom QuerySet to use for prefetching.
     """
 
     __slots__ = ("relation", "queryset")
@@ -382,8 +387,9 @@ class Prefetch:
 
     def resolve_for_queryset(self, queryset: "QuerySet") -> None:
         """
+        Called internally to generate prefetching query.
 
-        :param queryset:
+        :param queryset: Custom QuerySet to use for prefetching.
         """
         relation_split = self.relation.split("__")
         first_level_field = relation_split[0]

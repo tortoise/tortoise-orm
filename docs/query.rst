@@ -269,7 +269,7 @@ When using ``.filter()`` method you can use number of modifiers to field names t
 Complex prefetch
 ================
 
-Sometimes it is required to fetch only certain related records. You can achieve it with ``Prefetch`` object
+Sometimes it is required to fetch only certain related records. You can achieve it with ``Prefetch`` object:
 
 .. code-block:: python3
 
@@ -281,4 +281,3 @@ You can view full example here:  :ref:`example_prefetching`
 
 .. autoclass:: tortoise.query_utils.Prefetch
     :members:
-    :undoc-members:
