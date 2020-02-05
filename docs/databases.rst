@@ -126,5 +126,7 @@ Base DB client
 ==============
 
 .. automodule:: tortoise.backends.base.client
-    :members: BaseDBAsyncClient
-    :undoc-members:
+
+    .. autoclass:: BaseDBAsyncClient
+        :members:
+        :exclude-members: query_class, executor_class, schema_generator, capabilities

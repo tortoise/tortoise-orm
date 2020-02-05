@@ -18,6 +18,25 @@ from tortoise.fields.base import Field
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
+__all__ = (
+    "BigIntField",
+    "BinaryField",
+    "BooleanField",
+    "CharEnumField",
+    "CharField",
+    "DateField",
+    "DatetimeField",
+    "DecimalField",
+    "FloatField",
+    "IntEnumField",
+    "IntField",
+    "JSONField",
+    "SmallIntField",
+    "TextField",
+    "TimeDeltaField",
+    "UUIDField",
+)
+
 # Doing this we can replace json dumps/loads with different implementations
 JsonDumpsFunc = Callable[[Any], str]
 JsonLoadsFunc = Callable[[str], Any]
