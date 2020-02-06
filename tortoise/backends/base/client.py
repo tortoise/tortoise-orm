@@ -122,12 +122,20 @@ class BaseDBAsyncClient:
     async def db_create(self) -> None:
         """
         Created the database in the server. Typically only called by the test runner.
+
+        Need to have called ``create_connection()``` with parameter ``with_db=False`` set to
+        use the default connection instead of the configured one, else you would get errors
+        indicating the database doesn't exist.
         """
         raise NotImplementedError()  # pragma: nocoverage
 
     async def db_delete(self) -> None:
         """
         Delete the database from the Server. Typically only called by the test runner.
+
+        Need to have called ``create_connection()``` with parameter ``with_db=False`` set to
+        use the default connection instead of the configured one, else you would get errors
+        indicating the database is in use.
         """
         raise NotImplementedError()  # pragma: nocoverage
 

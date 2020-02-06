@@ -94,6 +94,8 @@ Parameters
     Duration of inactive connection before assuming that it has gone stale, and force a re-connect.
 ``schema``:
     A specific schema to use by default.
+``ssl``:
+    Either ``True`` or a custom SSL context for self-signed certificates. See :ref:`db_ssl` for more info.
 
 In case any of ``user``, ``password``, ``host``, ``port`` parameters is missing, we are letting ``asyncpg`` retrieve it from default sources (standard PostgreSQL environment variables or default values).
 
@@ -128,6 +130,51 @@ Parameters
     Sets TCP NO_DELAY to disable Nagle.
 ``charset``:
     Sets the character set in use, defaults to ``utf8mb4``
+``ssl``:
+    Either ``True`` or a custom SSL context for self-signed certificates. See :ref:`db_ssl` for more info.
+
+.. _db_ssl:
+
+Passing in custom SSL Certificates
+==================================
+
+To pass in a custom SSL Cert, one has to use the verbose init structure as the URL parser can't
+handle complex objects.
+
+.. code-block::  python3
+
+    # Here we create a custom SSL context
+    import ssl
+    ctx = ssl.create_default_context()
+    # And in this example we disable validation...
+    # Please don't do this. Loot at the official Python ``ssl`` module documentation
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    # Here we do a verbose init
+    await Tortoise.init(
+        config={
+            "connections": {
+                "default": {
+                    "engine": "tortoise.backends.asyncpg",
+                    "credentials": {
+                        "database": None,
+                        "host": "127.0.0.1",
+                        "password": "moo",
+                        "port": 54321,
+                        "user": "postgres",
+                        "ssl": ctx  # Here we pass in the SSL context
+                    }
+                }
+            },
+            "apps": {
+                "models": {
+                    "models": ["some.models"],
+                    "default_connection": "default",
+                }
+            },
+        }
+    )
 
 
 Base DB client
