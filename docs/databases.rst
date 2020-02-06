@@ -48,6 +48,14 @@ SQLite
 
 SQLite is an embedded database, and can run on a file or in-memory. Good database for local development or testing of code logic, but not recommended for production use.
 
+.. caution::
+
+    SQLite doesn't support many of the common datatypes natively, although we do emulation where we can, not everything is perfect.
+
+    For example ``DecimalField`` has precision preserved by storing values as strings, except when doing aggregates/ordering on it. In those cases we have to cast to/from floating-point numbers.
+
+    Similarily case-insensitivity is only partially implemented.
+
 DB URL is typically in the form of :samp:`sqlite://{DB_FILE}`
 So if the ``DB_FILE`` is "/data/db.sqlite3" then the string will be ``sqlite:///data/db.sqlite`` (note the three /'s)
 

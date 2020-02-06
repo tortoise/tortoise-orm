@@ -71,10 +71,11 @@ class AwaitableQuery(Generic[MODEL]):
         custom_filters: Dict[str, Dict[str, Any]],
     ) -> None:
         """
+        Builds the common filters for a QuerySet.
 
-        :param model:
-        :param q_objects:
-        :param annotations:
+        :param model: The Model this querysit is based on.
+        :param q_objects: The Q expressions to apply.
+        :param annotations: Extra annotations to add.
         :param custom_filters:
         """
         modifier = QueryModifier()
@@ -108,11 +109,13 @@ class AwaitableQuery(Generic[MODEL]):
         annotations: Dict[str, Any],
     ) -> None:
         """
+        Applies standard ordering to QuerySet.
 
-        :param model:
-        :param table:
-        :param orderings:
-        :param annotations:
+        :param model: The Model this querysit is based on.
+        :param table: ``pypika.Table`` to keep track of the virtual SQL table
+            (to allow self referential joins)
+        :param orderings: What columns/order to order by
+        :param annotations:  Annotations that may be ordered on
         """
         for ordering in orderings:
             field_name = ordering[0]
