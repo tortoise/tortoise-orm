@@ -57,6 +57,8 @@ The code is structured in the following directories:
     Example code
 ``tortoise/``:
     Base Tortoise ORM
+``tortoise/fields/``:
+    The Fields are defined here.
 ``tortoise/backends/``:
     DB Backends, such as ``sqlite``, ``asyncpg`` & ``mysql``
 ``tortoise/backends/base/``:

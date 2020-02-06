@@ -10,7 +10,7 @@ Our short term goal is to ship the current implementation as MVP, just somewhat 
 For ``v1.0`` that involves:
 
 * Timezone support
-* Change to all-parametrized queries for safety
+* Serialization support (read-only for now, using Pydantic)
 
 Mid-term
 ========
@@ -19,6 +19,7 @@ Here we have all the features that is slightly further out, in no particular ord
 
 * Performance work:
     * Sub queries
+    * Change to all-parametrized queries
     * Faster MySQL driver (possibly based on mysqlclient)
     * Consider using Cython to accelerate critical loops
 
@@ -31,10 +32,6 @@ Here we have all the features that is slightly further out, in no particular ord
     * Ability to define Management Commands
     * Make it simple to inspect Models and Management Commands without using private APIs.
 
-* Better Aggregate functions
-    * Make it easier to do simple aggregations
-    * Expand annotation framework to add statistical functions
-
 * Migrations
     * Comprehensive schema Migrations
     * Automatic forward Migration building
@@ -44,23 +41,19 @@ Here we have all the features that is slightly further out, in no particular ord
     * Fixtures as a property of a migration
 
 * Serialization support
-    * Take inspiration from ``attrs``, ``marshmallow`` and ``pydantic``
-    * Provide sane default serializers that will work as-is for CRUD
-    * Provide sane default schema generators
+    * Add deserialization support
     * Make default serializers support some validation
-    * Make default serializers support data conversion
-    * Make default serializers somewhat customisable
     * Provide clean way to replace serializers with custom solution
-    * Define strategy to work with ``ManyToMany`` relationships
+
+* Extra DB support
+    * CockroachDB
+    * Firebird
 
 * Enhanced test support
     * ``hypothesis`` strategy builder
 
 * Fields
     * Expand on standard provided fields
-    * Provide a simple way to add custom field types
-    * Provide a simple way of overriding fields on a per-database case
-      (for either performance or functionality)
 
 * Documentation
     * Tutorials
