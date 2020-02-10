@@ -291,6 +291,7 @@ class ForeignKeyFieldInstance(RelationalField):
         model_name: str,
         related_name: Union[Optional[str], Literal[False]] = None,
         on_delete: str = CASCADE,
+        to_field: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -303,6 +304,7 @@ class ForeignKeyFieldInstance(RelationalField):
         if on_delete == SET_NULL and not bool(kwargs.get("null")):
             raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
         self.on_delete = on_delete
+        self.to_field = to_field
 
 
 class BackwardFKRelation(RelationalField):
@@ -401,6 +403,7 @@ def ForeignKeyField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
     on_delete: str = CASCADE,
+    to_field: Optional[str] = None,
     **kwargs: Any,
 ) -> ForeignKeyRelation:
     """
@@ -434,7 +437,7 @@ def ForeignKeyField(
                 Can only be set is field has a ``default`` set.
     """
 
-    return ForeignKeyFieldInstance(model_name, related_name, on_delete, **kwargs)
+    return ForeignKeyFieldInstance(model_name, related_name, on_delete, to_field, **kwargs)
 
 
 def ManyToManyField(
