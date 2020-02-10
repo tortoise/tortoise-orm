@@ -398,6 +398,26 @@ class Tortoise:
                     model._meta.add_field(key_field, key_o2o_object)
 
                     o2o_object.model_class = related_model
+                    if o2o_object.to_field:
+                        related_field = o2o_object.model_class._meta.fields_map.get(
+                            o2o_object.to_field, None
+                        )
+                        if related_field:
+                            if related_field.unique:
+                                o2o_object.to_field = related_field
+                            else:
+                                raise ConfigurationError(
+                                    f'field "{o2o_object.to_field}" in model "{related_model_name}" is not unique'
+                                )
+                        else:
+                            raise ConfigurationError(
+                                f'there is no field named "{o2o_object.to_field}" in model "{related_model_name}"'
+                            )
+                    else:
+                        o2o_object.to_field = o2o_object.model_class._meta.fields_map[
+                            o2o_object.model_class._meta.db_pk_field
+                        ]
+
                     backward_relation_name = o2o_object.related_name
                     if backward_relation_name is not False:
                         if not backward_relation_name:
