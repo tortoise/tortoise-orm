@@ -8,6 +8,7 @@ from typing import (
     Dict,
     Generator,
     Generic,
+    Iterable,
     List,
     Optional,
     Set,
@@ -101,11 +102,22 @@ class AwaitableQuery(Generic[MODEL]):
                 self._joined_tables.append(join[0])
         return joins[-1][0]
 
+    @staticmethod
+    def _resolve_ordering_string(ordering: str) -> Tuple[str, str]:
+        order_type = Order.asc
+        if ordering[0] == "-":
+            field_name = ordering[1:]
+            order_type = Order.desc
+        else:
+            field_name = ordering
+
+        return field_name, order_type
+
     def resolve_ordering(
         self,
         model: "Type[Model]",
         table: Table,
-        orderings: List[Tuple[str, str]],
+        orderings: Iterable[Tuple[str, str]],
         annotations: Dict[str, Any],
     ) -> None:
         """
@@ -117,6 +129,10 @@ class AwaitableQuery(Generic[MODEL]):
         :param orderings: What columns/order to order by
         :param annotations:  Annotations that may be ordered on
         """
+        # Do not apply default ordering for annotated queries to not mess them up
+        if not orderings and self.model._meta.ordering and not annotations:
+            orderings = self.model._meta.ordering
+
         for ordering in orderings:
             field_name = ordering[0]
             if field_name in model._meta.fetch_fields:
@@ -271,12 +287,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset = self._clone()
         new_ordering = []
         for ordering in orderings:
-            order_type = Order.asc
-            if ordering[0] == "-":
-                field_name = ordering[1:]
-                order_type = Order.desc
-            else:
-                field_name = ordering
+            field_name, order_type = self._resolve_ordering_string(ordering)
 
             if not (
                 field_name.split("__")[0] in self.model._meta.fields

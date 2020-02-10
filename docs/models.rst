@@ -217,6 +217,17 @@ The ``Meta`` class
             indexes=(("field_a", "field_b"), )
             indexes=(("field_a", "field_b"), ("field_c", "field_d", "field_e")
 
+    .. attribute:: ordering
+        :annotation: = None
+
+        Specify ``ordering`` to set up default ordering for given model.
+        It should be iterable of strings formatted in same way as ``.order_by(...)`` receives.
+        If query is built with ``GROUP_BY`` clause using ``.annotate(...)`` default ordering is not applied.
+
+        .. code-block:: python3
+
+            ordering = ["name", "-score"]
+
 ``ForeignKeyField``
 -------------------
 
