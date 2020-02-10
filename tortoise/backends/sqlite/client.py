@@ -2,7 +2,7 @@ import asyncio
 import os
 import sqlite3
 from functools import wraps
-from typing import List, Optional, Sequence, Tuple
+from typing import Any, Callable, List, Optional, Sequence, Tuple, TypeVar
 
 import aiosqlite
 
@@ -18,8 +18,11 @@ from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
 from tortoise.exceptions import IntegrityError, OperationalError, TransactionManagementError
 
+FuncType = Callable[..., Any]
+F = TypeVar("F", bound=FuncType)
 
-def translate_exceptions(func):
+
+def translate_exceptions(func: F) -> F:
     @wraps(func)
     async def translate_exceptions_(self, query, *args):
         try:
@@ -29,7 +32,7 @@ def translate_exceptions(func):
         except sqlite3.IntegrityError as exc:
             raise IntegrityError(exc)
 
-    return translate_exceptions_
+    return translate_exceptions_  # type: ignore
 
 
 class SqliteClient(BaseDBAsyncClient):
@@ -37,7 +40,7 @@ class SqliteClient(BaseDBAsyncClient):
     schema_generator = SqliteSchemaGenerator
     capabilities = Capabilities("sqlite", daemon=False, requires_limit=True, inline_comment=True)
 
-    def __init__(self, file_path: str, **kwargs) -> None:
+    def __init__(self, file_path: str, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.filename = file_path
 

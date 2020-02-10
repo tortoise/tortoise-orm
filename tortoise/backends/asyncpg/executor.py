@@ -27,7 +27,9 @@ class AsyncpgExecutor(BaseExecutor):
                 query = query.returning(*generated_fields)
         return str(query)
 
-    async def _process_insert_result(self, instance: Model, results: Optional[asyncpg.Record]):
+    async def _process_insert_result(
+        self, instance: Model, results: Optional[asyncpg.Record]
+    ) -> None:
         if results:
             generated_fields = self.model._meta.generated_db_fields
             db_projection = instance._meta.fields_db_projection_reverse

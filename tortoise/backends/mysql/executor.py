@@ -1,9 +1,10 @@
 from pypika import Parameter, functions
 from pypika.enums import SqlTypes
+from pypika.terms import Criterion
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
-from tortoise.fields import BigIntField, IntField, SmallIntField
+from tortoise.fields import BigIntField, Field, IntField, SmallIntField
 from tortoise.filters import (
     contains,
     ends_with,
@@ -15,31 +16,31 @@ from tortoise.filters import (
 )
 
 
-def mysql_contains(field, value):
+def mysql_contains(field: Field, value: str) -> Criterion:
     return functions.Cast(field, SqlTypes.CHAR).like(f"%{value}%")
 
 
-def mysql_starts_with(field, value):
+def mysql_starts_with(field: Field, value: str) -> Criterion:
     return functions.Cast(field, SqlTypes.CHAR).like(f"{value}%")
 
 
-def mysql_ends_with(field, value):
+def mysql_ends_with(field: Field, value: str) -> Criterion:
     return functions.Cast(field, SqlTypes.CHAR).like(f"%{value}")
 
 
-def mysql_insensitive_exact(field, value):
+def mysql_insensitive_exact(field: Field, value: str) -> Criterion:
     return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).eq(functions.Upper(f"{value}"))
 
 
-def mysql_insensitive_contains(field, value):
+def mysql_insensitive_contains(field: Field, value: str) -> Criterion:
     return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).like(functions.Upper(f"%{value}%"))
 
 
-def mysql_insensitive_starts_with(field, value):
+def mysql_insensitive_starts_with(field: Field, value: str) -> Criterion:
     return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).like(functions.Upper(f"{value}%"))
 
 
-def mysql_insensitive_ends_with(field, value):
+def mysql_insensitive_ends_with(field: Field, value: str) -> Criterion:
     return functions.Upper(functions.Cast(field, SqlTypes.CHAR)).like(functions.Upper(f"%{value}"))
 
 
@@ -58,7 +59,7 @@ class MySQLExecutor(BaseExecutor):
     def Parameter(self, pos: int) -> Parameter:
         return Parameter("%s")
 
-    async def _process_insert_result(self, instance: Model, results: int):
+    async def _process_insert_result(self, instance: Model, results: int) -> None:
         pk_field_object = self.model._meta.pk
         if (
             isinstance(pk_field_object, (SmallIntField, IntField, BigIntField))

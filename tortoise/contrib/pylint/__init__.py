@@ -1,7 +1,7 @@
 """
 Tortoise PyLint plugin
 """
-from typing import Dict, Iterator, List
+from typing import Any, Dict, Iterator, List
 
 from astroid import MANAGER, inference_tip, nodes
 from astroid.exceptions import AstroidError
@@ -116,7 +116,7 @@ def is_model_field(cls: ClassDef) -> bool:
     return cls.is_subtype_of(type_name) and cls.qname() != type_name
 
 
-def apply_type_shim(cls: ClassDef, _context=None) -> Iterator[ClassDef]:
+def apply_type_shim(cls: ClassDef, _context: Any = None) -> Iterator[ClassDef]:
     """
     Morphs model fields to representative type
     """

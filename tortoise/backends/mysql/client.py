@@ -1,6 +1,6 @@
 import asyncio
 from functools import wraps
-from typing import List, Optional, SupportsInt, Tuple, Union
+from typing import Any, Callable, List, Optional, SupportsInt, Tuple, TypeVar, Union
 
 import aiomysql
 import pymysql
@@ -26,8 +26,11 @@ from tortoise.exceptions import (
     TransactionManagementError,
 )
 
+FuncType = Callable[..., Any]
+F = TypeVar("F", bound=FuncType)
 
-def translate_exceptions(func):
+
+def translate_exceptions(func: F) -> F:
     @wraps(func)
     async def translate_exceptions_(self, *args):
         try:
@@ -43,7 +46,7 @@ def translate_exceptions(func):
         except pymysql.err.IntegrityError as exc:
             raise IntegrityError(exc)
 
-    return translate_exceptions_
+    return translate_exceptions_  # type: ignore
 
 
 class MySQLClient(BaseDBAsyncClient):
@@ -53,7 +56,14 @@ class MySQLClient(BaseDBAsyncClient):
     capabilities = Capabilities("mysql", requires_limit=True, inline_comment=True)
 
     def __init__(
-        self, *, user: str, password: str, database: str, host: str, port: SupportsInt, **kwargs
+        self,
+        *,
+        user: str,
+        password: str,
+        database: str,
+        host: str,
+        port: SupportsInt,
+        **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
 
@@ -194,7 +204,7 @@ class MySQLClient(BaseDBAsyncClient):
 
 
 class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
-    def __init__(self, connection) -> None:
+    def __init__(self, connection: MySQLClient) -> None:
         self.connection_name = connection.connection_name
         self._connection: aiomysql.Connection = connection._connection
         self._lock = asyncio.Lock()

@@ -1,14 +1,18 @@
 # coding: utf8
 import re
 import sys
+import warnings
 
 from setuptools import find_packages, setup
 
 if sys.version_info < (3, 6):
-    raise RuntimeError("Tortoise-ORM requires Python >= 3.6")
+    raise RuntimeError("Tortoise-ORM requires Python >= 3.6, 3.7+ is recommended")
+
+if sys.version_info < (3, 7):
+    warnings.warn(DeprecationWarning, "Tortoise-ORM will soon drop support for Python 3.6")
 
 
-def version() -> str:
+def version():
     verstrline = open("tortoise/__init__.py", "rt").read()
     mob = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", verstrline, re.M)
     if not mob:
@@ -16,7 +20,7 @@ def version() -> str:
     return mob.group(1)
 
 
-def requirements() -> list:
+def requirements():
     return open("requirements.txt", "rt").read().splitlines()
 
 

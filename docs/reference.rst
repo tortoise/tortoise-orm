@@ -8,6 +8,8 @@ Reference
    databases
    models
    fields
+   schema
    query
+   functions
    transactions
    exceptions

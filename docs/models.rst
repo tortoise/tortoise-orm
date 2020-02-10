@@ -84,7 +84,9 @@ In Tortoise ORM we require that a model has a primary key.
 That primary key will be accessible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
 That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc…
 
-We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
+.. note::
+
+    We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
 
 .. code-block:: python3
 
@@ -228,9 +230,63 @@ The ``Meta`` class
 In event model we got some more fields, that could be interesting for us.
 
 ``fields.ForeignKeyField('models.Tournament', related_name='events')``
-    Here we create foreign key reference to tournament. We create it by referring to model by it's literal, consisting of app name and model name. `models` is default app name, but you can change it in `class Meta` with `app = 'other'`.
+    Here we create foreign key reference to tournament. We create it by referring to model by it's literal, consisting of app name and model name. ``models`` is default app name, but you can change it in ``class Meta`` with ``app = 'other'``.
 ``related_name``
     Is keyword argument, that defines field for related query on referenced models, so with that you could fetch all tournaments's events with like this:
+
+The DB-backing field
+^^^^^^^^^^^^^^^^^^^^
+
+.. note::
+
+    A ``ForeignKeyField`` is a virtual field, meaning it has no direct DB backing.
+    Instead it has a field (by default called :samp:`{FKNAME}_id` (that is, just an ``_id`` is appended)
+    that is the actual DB-backing field.
+
+    It will just contain the Key value of the related table.
+
+    This is an important detail as it would allow one to assign/read the actual value directly,
+    which could be considered an optimization if the entire foreign object isn't needed.
+
+
+Specifying an FK can be done via either passing the object:
+
+.. code-block::  python3
+
+    await SomeModel.create(tournament=the_tournament)
+    # or
+    somemodel.tournament=the_tournament
+
+or by directly accessing the DB-backing field:
+
+.. code-block::  python3
+
+    await SomeModel.create(tournament_id=the_tournament.pk)
+    # or
+    somemodel.tournament_id=the_tournament.pk
+
+
+Querying a relationship is typicall done by appending a double underscore, and then the foreign object's field. Then a normal query attr can be appended.
+This can be chained if the next key is also a foreign object:
+
+    :samp:`{FKNAME}__{FOREIGNFIELD}__gt=3`
+
+    or
+
+    :samp:`{FKNAME}__{FOREIGNFK}__{VERYFOREIGNFIELD}__gt=3`
+
+There is however one major limiatation. We don't want to restrict foreign column names, or have ambiguity (e.g. a foreign object may have a field called ``isnull``)
+
+Then this would be entierly ambugious:
+
+    :samp:`{FKNAME}__isnull`
+
+To prevent that we require that direct filters be applied to the DB-backing field of the foreign key:
+
+    :samp:`{FKNAME}_id__isnull`
+
+Fetching the foreign object
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Fetching foreign keys can be done with both async and sync interfaces.
 
