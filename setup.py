@@ -9,7 +9,7 @@ if sys.version_info < (3, 6):
     raise RuntimeError("Tortoise-ORM requires Python >= 3.6, 3.7+ is recommended")
 
 if sys.version_info < (3, 7):
-    warnings.warn(DeprecationWarning, "Tortoise-ORM will soon drop support for Python 3.6")
+    warnings.warn("Tortoise-ORM will soon drop support for Python 3.6", DeprecationWarning)
 
 
 def version():
