@@ -179,23 +179,26 @@ class BaseSchemaGenerator:
                     if reference.description
                     else ""
                 )
+
+                field_type = reference.to_field.get_for_dialect(self.DIALECT, "SQL_TYPE")
+                field_name = reference.to_field.source_field
+                if not field_name:
+                    field_name = reference.to_field.model_field_name
+
                 field_creation_string = self._create_string(
                     db_field=db_field,
-                    field_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
+                    field_type=field_type,
                     nullable=nullable,
                     unique=unique,
                     is_pk=field_object.pk,
                     comment="",
                 ) + self._create_fk_string(
                     constraint_name=self._generate_fk_name(
-                        model._meta.table,
-                        db_field,
-                        reference.model_class._meta.table,
-                        reference.model_class._meta.db_pk_field,
+                        model._meta.table, db_field, reference.model_class._meta.table, field_name,
                     ),
                     db_field=db_field,
                     table=reference.model_class._meta.table,
-                    field=reference.model_class._meta.db_pk_field,
+                    field=field_name,
                     on_delete=reference.on_delete,
                     comment=comment,
                 )
