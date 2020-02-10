@@ -280,9 +280,11 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
 class RelationalField(Field):
     has_db_field = False
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, to_field: Optional[str] = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.model_class: "Type[Model]" = None  # type: ignore
+        self.to_field = to_field
+        self.to_field_instance: "Field" = None  # type: ignore
 
 
 class ForeignKeyFieldInstance(RelationalField):
@@ -291,7 +293,6 @@ class ForeignKeyFieldInstance(RelationalField):
         model_name: str,
         related_name: Union[Optional[str], Literal[False]] = None,
         on_delete: str = CASCADE,
-        to_field: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
@@ -304,7 +305,6 @@ class ForeignKeyFieldInstance(RelationalField):
         if on_delete == SET_NULL and not bool(kwargs.get("null")):
             raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
         self.on_delete = on_delete
-        self.to_field = to_field
 
 
 class BackwardFKRelation(RelationalField):
@@ -323,13 +323,11 @@ class OneToOneFieldInstance(ForeignKeyFieldInstance):
         model_name: str,
         related_name: Union[Optional[str], Literal[False]] = None,
         on_delete: str = CASCADE,
-        to_field: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('OneToOneField accepts model name in format "app.Model"')
         super().__init__(model_name, related_name, on_delete, unique=True, **kwargs)
-        self.to_field = to_field
 
 
 class BackwardOneToOneRelation(BackwardFKRelation):
@@ -365,7 +363,6 @@ def OneToOneField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
     on_delete: str = CASCADE,
-    to_field: Optional[str] = None,
     **kwargs: Any,
 ) -> OneToOneRelation:
     """
@@ -399,14 +396,13 @@ def OneToOneField(
                 Can only be set is field has a ``default`` set.
     """
 
-    return OneToOneFieldInstance(model_name, related_name, on_delete, to_field, **kwargs)
+    return OneToOneFieldInstance(model_name, related_name, on_delete, **kwargs)
 
 
 def ForeignKeyField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
     on_delete: str = CASCADE,
-    to_field: Optional[str] = None,
     **kwargs: Any,
 ) -> ForeignKeyRelation:
     """
@@ -440,7 +436,7 @@ def ForeignKeyField(
                 Can only be set is field has a ``default`` set.
     """
 
-    return ForeignKeyFieldInstance(model_name, related_name, on_delete, to_field, **kwargs)
+    return ForeignKeyFieldInstance(model_name, related_name, on_delete, **kwargs)
 
 
 def ManyToManyField(

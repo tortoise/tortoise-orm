@@ -343,19 +343,19 @@ class Tortoise:
                         )
                         if related_field:
                             if related_field.unique:
-                                fk_object.to_field = related_field
+                                fk_object.to_field_instance = related_field
                             else:
                                 raise ConfigurationError(
-                                    f'field "{fk_object.to_field}" in model "{related_model_name}" is not unique'
+                                    f'field "{fk_object.to_field}" in model'
+                                    f' "{related_model_name}" is not unique'
                                 )
                         else:
                             raise ConfigurationError(
-                                f'there is no field named "{fk_object.to_field}" in model "{related_model_name}"'
+                                f'there is no field named "{fk_object.to_field}"'
+                                f' in model "{related_model_name}"'
                             )
                     else:
-                        fk_object.to_field = fk_object.model_class._meta.fields_map[
-                            fk_object.model_class._meta.db_pk_field
-                        ]
+                        fk_object.to_field_instance = fk_object.model_class._meta.pk
 
                     backward_relation_name = fk_object.related_name
                     if backward_relation_name is not False:
@@ -404,19 +404,19 @@ class Tortoise:
                         )
                         if related_field:
                             if related_field.unique:
-                                o2o_object.to_field = related_field
+                                o2o_object.to_field_instance = related_field
                             else:
                                 raise ConfigurationError(
-                                    f'field "{o2o_object.to_field}" in model "{related_model_name}" is not unique'
+                                    f'field "{o2o_object.to_field}" in model'
+                                    f' "{related_model_name}" is not unique'
                                 )
                         else:
                             raise ConfigurationError(
-                                f'there is no field named "{o2o_object.to_field}" in model "{related_model_name}"'
+                                f'there is no field named "{o2o_object.to_field}"'
+                                f' in model "{related_model_name}"'
                             )
                     else:
-                        o2o_object.to_field = o2o_object.model_class._meta.fields_map[
-                            o2o_object.model_class._meta.db_pk_field
-                        ]
+                        o2o_object.to_field_instance = o2o_object.model_class._meta.pk
 
                     backward_relation_name = o2o_object.related_name
                     if backward_relation_name is not False:
