@@ -53,6 +53,10 @@ def not_in(field: Term, value: Any) -> Criterion:
     return field.notin(value) | field.isnull()
 
 
+def between_and(field: Term, value: Any) -> Criterion:
+    return field.between(*value)
+
+
 def not_equal(field: Term, value: Any) -> Criterion:
     return field.ne(value) | field.isnull()
 
@@ -234,6 +238,12 @@ def get_filters_for_field(
             "field": actual_field_name,
             "source_field": source_field,
             "operator": operator.lt,
+        },
+        f"{field_name}__range": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": between_and,
+            "value_encoder": list_encoder,
         },
         f"{field_name}__contains": {
             "field": actual_field_name,
