@@ -323,11 +323,13 @@ class OneToOneFieldInstance(ForeignKeyFieldInstance):
         model_name: str,
         related_name: Union[Optional[str], Literal[False]] = None,
         on_delete: str = CASCADE,
+        to_field: Optional[str] = None,
         **kwargs: Any,
     ) -> None:
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('OneToOneField accepts model name in format "app.Model"')
         super().__init__(model_name, related_name, on_delete, unique=True, **kwargs)
+        self.to_field = to_field
 
 
 class BackwardOneToOneRelation(BackwardFKRelation):
@@ -363,6 +365,7 @@ def OneToOneField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
     on_delete: str = CASCADE,
+    to_field: Optional[str] = None,
     **kwargs: Any,
 ) -> OneToOneRelation:
     """
@@ -396,7 +399,7 @@ def OneToOneField(
                 Can only be set is field has a ``default`` set.
     """
 
-    return OneToOneFieldInstance(model_name, related_name, on_delete, **kwargs)
+    return OneToOneFieldInstance(model_name, related_name, on_delete, to_field, **kwargs)
 
 
 def ForeignKeyField(
