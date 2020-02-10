@@ -151,7 +151,7 @@ class BaseDBAsyncClient:
 
     async def execute_insert(self, query: str, values: list) -> Any:
         """
-        Executes an SQL insert statement, with provided parameters.
+        Executes a RAW SQL insert statement, with provided parameters.
 
         :param query: The SQL string, pre-parametrized for the target DB dialect.
         :param values: A sequence of positional DB parameters.
@@ -164,7 +164,7 @@ class BaseDBAsyncClient:
         self, query: str, values: Optional[list] = None
     ) -> Tuple[int, Sequence[dict]]:
         """
-        Executes a SQL query statement, and returns the resultset.
+        Executes a RAW SQL query statement, and returns the resultset.
 
         :param query: The SQL string, pre-parametrized for the target DB dialect.
         :param values: A sequence of positional DB parameters.
@@ -174,7 +174,7 @@ class BaseDBAsyncClient:
 
     async def execute_script(self, query: str) -> None:
         """
-        Executes a SQL script with multiple statements, and returns nothing.
+        Executes a RAW SQL script with multiple statements, and returns nothing.
 
         :param query: The SQL string, which will be passed on verbatim.
             Semicolons is supported here.
@@ -183,7 +183,7 @@ class BaseDBAsyncClient:
 
     async def execute_many(self, query: str, values: List[list]) -> None:
         """
-        Executes a bulk insert statement, like execute_insert, but returns no data.
+        Executes a RAW bulk insert statement, like execute_insert, but returns no data.
 
         :param query: The SQL string, pre-parametrized for the target DB dialect.
         :param values: A sequence of positional DB parameters.
@@ -192,7 +192,7 @@ class BaseDBAsyncClient:
 
     async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
         """
-        Executes a SQL query statement, and returns the resultset as a list of dicts.
+        Executes a RAW SQL query statement, and returns the resultset as a list of dicts.
 
         :param query: The SQL string, pre-parametrized for the target DB dialect.
         :param values: A sequence of positional DB parameters.

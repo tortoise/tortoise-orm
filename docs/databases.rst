@@ -59,11 +59,23 @@ SQLite is an embedded database, and can run on a file or in-memory. Good databas
 DB URL is typically in the form of :samp:`sqlite://{DB_FILE}`
 So if the ``DB_FILE`` is "/data/db.sqlite3" then the string will be ``sqlite:///data/db.sqlite`` (note the three /'s)
 
-Parameters
-----------
+Required Parameters
+-------------------
 
 ``path``:
     Path to SQLite3 file. ``:memory:`` is a special path that indicates in-memory database.
+
+Optional parameters:
+--------------------
+
+SQLite optional parameters is basically any of the ``PRAGMA`` statements documented `here. <https://sqlite.org/pragma.html#toc>`_
+
+``journal_mode`` (defaults to ``WAL``):
+    Specify SQLite journal mode.
+``journal_size_limit`` (defaults to ``16384``):
+    The journal size.
+``foreign_keys``  (defaults to ``ON``)
+    Set to ``OFF`` to not enforce referential integrity.
 
 
 PostgreSQL
@@ -71,8 +83,8 @@ PostgreSQL
 
 DB URL is typically in the form of :samp:`postgres://postgres:pass@db.host:5432/somedb`, or, if connecting via Unix domain socket :samp:`postgres:///somedb`.
 
-Parameters
-----------
+Required Parameters
+-------------------
 
 ``user``:
     Username to connect with.
@@ -84,17 +96,23 @@ Parameters
     Network port that database is available at. (defaults to ``5432``)
 ``database``:
     Database to use.
-``minsize``:
-    Minimum connection pool size (defaults to ``1``)
-``maxsize``:
-    Maximum connection pool size (defaults to ``5``)
-``max_queries``:
-    Maximum no of queries before a connection is closed and replaced. (defaults to ``50000``)
-``max_inactive_connection_lifetime``:
+
+Optional parameters:
+--------------------
+
+PostgreSQL optional parameters are pass-though parameters to the driver, see `here <https://magicstack.github.io/asyncpg/current/api/index.html#connection-pools>`_ for more details.
+
+``minsize`` (defaults to ``1``):
+    Minimum connection pool size
+``maxsize`` (defaults to ``5``):
+    Maximum connection pool size
+``max_queries`` (defaults to ``50000``):
+    Maximum no of queries before a connection is closed and replaced.
+``max_inactive_connection_lifetime`` (defaults to ``300.0``):
     Duration of inactive connection before assuming that it has gone stale, and force a re-connect.
-``schema``:
+``schema`` (uses user's default schema by default):
     A specific schema to use by default.
-``ssl``:
+``ssl`` (defaults to ''False``):
     Either ``True`` or a custom SSL context for self-signed certificates. See :ref:`db_ssl` for more info.
 
 In case any of ``user``, ``password``, ``host``, ``port`` parameters is missing, we are letting ``asyncpg`` retrieve it from default sources (standard PostgreSQL environment variables or default values).
@@ -105,8 +123,8 @@ MySQL/MariaDB
 
 DB URL is typically in the form of :samp:`mysql://myuser:mypass:pass@db.host:3306/somedb`
 
-Parameters
-----------
+Required Parameters
+-------------------
 
 ``user``:
     Username to connect with.
@@ -118,19 +136,25 @@ Parameters
     Network port that database is available at. (defaults to ``3306``)
 ``database``:
     Database to use.
-``minsize``:
-    Minimum connection pool size (defaults to ``1``)
-``maxsize``:
-    Maximum connection pool size (defaults to ``5``)
-``connect_timeout``:
+
+Optional parameters:
+--------------------
+
+MySQL optional parameters are pass-though parameters to the driver, see `here <https://aiomysql.readthedocs.io/en/latest/connection.html#connection>`_ for more details.
+
+``minsize`` (defaults to ``1``):
+    Minimum connection pool size
+``maxsize`` (defaults to ``5``):
+    Maximum connection pool size
+``connect_timeout`` (defaults to ``None``):
     Duration to wait for connection before throwing error.
-``echo``:
-    Echo SQL queries (debug only)
-``no_delay``:
-    Sets TCP NO_DELAY to disable Nagle.
-``charset``:
-    Sets the character set in use, defaults to ``utf8mb4``
-``ssl``:
+``echo`` (defaults to ``False``):
+    Set to `True`` to echo SQL queries (debug only)
+``no_delay`` (defaults to ``None``):
+    Set to ``True`` to set TCP NO_DELAY to disable Nagle's algorithm on the socket.
+``charset`` (defaults to ``utf8mb4``):
+    Sets the character set in use
+``ssl`` (defaults to ''False``):
     Either ``True`` or a custom SSL context for self-signed certificates. See :ref:`db_ssl` for more info.
 
 .. _db_ssl:
@@ -179,6 +203,8 @@ handle complex objects.
 
 Base DB client
 ==============
+
+The Base DB client interface is provided here, but should only be directly used as an advanced case.
 
 .. automodule:: tortoise.backends.base.client
 

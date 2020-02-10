@@ -84,7 +84,9 @@ In Tortoise ORM we require that a model has a primary key.
 That primary key will be accessible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
 That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc…
 
-We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
+.. note::
+
+    We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
 
 .. code-block:: python3
 
@@ -240,6 +242,8 @@ The DB-backing field
     A ``ForeignKeyField`` is a virtual field, meaning it has no direct DB backing.
     Instead it has a field (by default called :samp:`{FKNAME}_id` (that is, just an ``_id`` is appended)
     that is the actual DB-backing field.
+
+    It will just contain the Key value of the related table.
 
     This is an important detail as it would allow one to assign/read the actual value directly,
     which could be considered an optimization if the entire foreign object isn't needed.
