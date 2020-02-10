@@ -110,5 +110,7 @@ class TestDefaultOrdering(test.TestCase):
         await FKToDefaultOrdered.create(link=instance, value=10)
         await DefaultOrdered.create(one="1", second=1)
 
-        instance_list = await DefaultOrdered.all().annotate(res=Sum("related__value"))
-        self.assertEqual([i.one for i in instance_list], ["2", "1"])
+        queryset = DefaultOrdered.all().annotate(res=Sum("related__value"))
+        queryset._make_query()
+        query = queryset.query.get_sql()
+        self.assertTrue("order by" not in query.lower())
