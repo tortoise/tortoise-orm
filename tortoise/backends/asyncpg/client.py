@@ -1,6 +1,6 @@
 import asyncio
 from functools import wraps
-from typing import List, Optional, SupportsInt, Tuple, Union
+from typing import Any, Callable, List, Optional, SupportsInt, Tuple, TypeVar, Union
 
 import asyncpg
 from asyncpg.transaction import Transaction
@@ -25,8 +25,11 @@ from tortoise.exceptions import (
     TransactionManagementError,
 )
 
+FuncType = Callable[..., Any]
+F = TypeVar("F", bound=FuncType)
 
-def translate_exceptions(func):
+
+def translate_exceptions(func: F) -> F:
     @wraps(func)
     async def translate_exceptions_(self, *args):
         try:
@@ -38,7 +41,7 @@ def translate_exceptions(func):
         except asyncpg.InvalidTransactionStateError as exc:  # pragma: nocoverage
             raise TransactionManagementError(exc)
 
-    return translate_exceptions_
+    return translate_exceptions_  # type: ignore
 
 
 class AsyncpgDBClient(BaseDBAsyncClient):
@@ -49,7 +52,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     capabilities = Capabilities("postgres")
 
     def __init__(
-        self, user: str, password: str, database: str, host: str, port: SupportsInt, **kwargs
+        self, user: str, password: str, database: str, host: str, port: SupportsInt, **kwargs: Any
     ) -> None:
         super().__init__(**kwargs)
 

@@ -1,90 +1,105 @@
 import operator
 from functools import partial
-from typing import Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional
 
-from pypika import Table, functions
+from pypika import Table
 from pypika.enums import SqlTypes
+from pypika.functions import Cast, Upper
+from pypika.terms import Criterion, Term
 
 from tortoise.fields import Field
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
 
+if TYPE_CHECKING:  # pragma: nocoverage
+    from tortoise.models import Model
 
-def list_encoder(values, instance, field: Field):
+##############################################################################
+# Encoders
+# Should be type: (Any, instance: "Model", field: Field) -> type:
+##############################################################################
+
+
+def list_encoder(values: Iterable[Any], instance: "Model", field: Field) -> list:
     """Encodes an iterable of a given field into a database-compatible format."""
     return [field.to_db_value(element, instance) for element in values]
 
 
-def related_list_encoder(values, instance, field: Field):
+def related_list_encoder(values: Iterable[Any], instance: "Model", field: Field) -> list:
     return [
         field.to_db_value(element.pk if hasattr(element, "pk") else element, instance)
         for element in values
     ]
 
 
-def bool_encoder(value, *args):
+def bool_encoder(value: Any, instance: "Model", field: Field) -> bool:
     return bool(value)
 
 
-def string_encoder(value, *args):
+def string_encoder(value: Any, instance: "Model", field: Field) -> str:
     return str(value)
 
 
-def is_in(field, value):
+##############################################################################
+# Operators
+# Should be type: (field: Term, value: Any) -> Criterion:
+##############################################################################
+
+
+def is_in(field: Term, value: Any) -> Criterion:
     return field.isin(value)
 
 
-def not_in(field, value):
+def not_in(field: Term, value: Any) -> Criterion:
     return field.notin(value) | field.isnull()
 
 
-def not_equal(field, value):
+def not_equal(field: Term, value: Any) -> Criterion:
     return field.ne(value) | field.isnull()
 
 
-def is_null(field, value):
+def is_null(field: Term, value: Any) -> Criterion:
     if value:
         return field.isnull()
     return field.notnull()
 
 
-def not_null(field, value):
+def not_null(field: Term, value: Any) -> Criterion:
     if value:
         return field.notnull()
     return field.isnull()
 
 
-def contains(field, value):
-    return functions.Cast(field, SqlTypes.VARCHAR).like(f"%{value}%")
+def contains(field: Term, value: str) -> Criterion:
+    return Cast(field, SqlTypes.VARCHAR).like(f"%{value}%")
 
 
-def starts_with(field, value):
-    return functions.Cast(field, SqlTypes.VARCHAR).like(f"{value}%")
+def starts_with(field: Term, value: str) -> Criterion:
+    return Cast(field, SqlTypes.VARCHAR).like(f"{value}%")
 
 
-def ends_with(field, value):
-    return functions.Cast(field, SqlTypes.VARCHAR).like(f"%{value}")
+def ends_with(field: Term, value: str) -> Criterion:
+    return Cast(field, SqlTypes.VARCHAR).like(f"%{value}")
 
 
-def insensitive_exact(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).eq(functions.Upper(f"{value}"))
+def insensitive_exact(field: Term, value: str) -> Criterion:
+    return Upper(Cast(field, SqlTypes.VARCHAR)).eq(Upper(f"{value}"))
 
 
-def insensitive_contains(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
-        functions.Upper(f"%{value}%")
-    )
+def insensitive_contains(field: Term, value: str) -> Criterion:
+    return Upper(Cast(field, SqlTypes.VARCHAR)).like(Upper(f"%{value}%"))
 
 
-def insensitive_starts_with(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
-        functions.Upper(f"{value}%")
-    )
+def insensitive_starts_with(field: Term, value: str) -> Criterion:
+    return Upper(Cast(field, SqlTypes.VARCHAR)).like(Upper(f"{value}%"))
 
 
-def insensitive_ends_with(field, value):
-    return functions.Upper(functions.Cast(field, SqlTypes.VARCHAR)).like(
-        functions.Upper(f"%{value}")
-    )
+def insensitive_ends_with(field: Term, value: str) -> Criterion:
+    return Upper(Cast(field, SqlTypes.VARCHAR)).like(Upper(f"%{value}"))
+
+
+##############################################################################
+# Filter resolvers
+##############################################################################
 
 
 def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> Dict[str, dict]:

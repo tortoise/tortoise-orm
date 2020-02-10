@@ -3,8 +3,9 @@ import os as _os
 import unittest
 from asyncio.events import AbstractEventLoop
 from functools import wraps
-from typing import Any, List, Optional
+from typing import Any, Callable, List, Optional
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
+from unittest.result import TestResult
 
 from asynctest import TestCase as _TestCase
 from asynctest import _fail_on
@@ -209,7 +210,7 @@ class SimpleTestCase(_TestCase):  # type: ignore
         self._checker.check_test(self)
 
     # Override unittest.TestCase methods which call setUp() and tearDown()
-    def run(self, result=None):
+    def run(self, result: Optional[TestResult] = None) -> Optional[TestResult]:
         orig_result = result
         if result is None:  # pragma: nocoverage
             result = self.defaultTestResult()
@@ -231,7 +232,7 @@ class SimpleTestCase(_TestCase):  # type: ignore
                 self._addSkip(result, self, skip_why)
             finally:
                 result.stopTest(self)
-            return
+            return None
         expecting_failure = getattr(testMethod, "__unittest_expecting_failure__", False)
         outcome = unittest.case._Outcome(result)  # type: ignore
         try:
@@ -271,7 +272,7 @@ class SimpleTestCase(_TestCase):  # type: ignore
             # clear the outcome, no more needed
             self._outcome = None
 
-    async def _run_outcome(self, outcome, expecting_failure, testMethod) -> None:
+    async def _run_outcome(self, outcome, expecting_failure: bool, testMethod: Callable) -> None:
         with outcome.testPartExecutor(self):
             await self._setUp()
         if outcome.success:
@@ -282,7 +283,7 @@ class SimpleTestCase(_TestCase):  # type: ignore
             with outcome.testPartExecutor(self):
                 await self._tearDown()
 
-    async def _run_test_method(self, method) -> None:
+    async def _run_test_method(self, method: Callable) -> None:
         # If the method is a coroutine or returns a coroutine, run it on the
         # loop
         result = method()
