@@ -337,6 +337,26 @@ class Tortoise:
                     model._meta.add_field(key_field, key_fk_object)
 
                     fk_object.model_class = related_model
+                    if fk_object.to_field:
+                        related_field = fk_object.model_class._meta.fields_map.get(
+                            fk_object.to_field, None
+                        )
+                        if related_field:
+                            if related_field.unique:
+                                fk_object.to_field = related_field
+                            else:
+                                raise ConfigurationError(
+                                    f'field "{fk_object.to_field}" in model "{related_model_name}" is not unique'
+                                )
+                        else:
+                            raise ConfigurationError(
+                                f'there is no field named "{fk_object.to_field}" in model "{related_model_name}"'
+                            )
+                    else:
+                        fk_object.to_field = fk_object.model_class._meta.fields_map[
+                            fk_object.model_class._meta.db_pk_field
+                        ]
+
                     backward_relation_name = fk_object.related_name
                     if backward_relation_name is not False:
                         if not backward_relation_name:
