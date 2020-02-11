@@ -5,38 +5,35 @@ Key points in this example are use of ForeignKeyField and ManyToManyField
 to declare relations and use of .prefetch_related() and .fetch_related()
 to get this related objects
 """
+from uuid import uuid4
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
 
 
-class Tournament(Model):
-    id = fields.IntField(uk=True)
-    name = fields.CharField(max_length=100, pk=True)
-
-    events: fields.ReverseRelation["Event"]
-
-    def __str__(self):
-        return self.name
-
-
-class Event(Model):
+class Company(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
-    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
-        "models.Tournament", related_name="events", to_field="name",
-    )
+    uuid = fields.UUIDField(unique=True, default=uuid4)
 
-    def __str__(self):
-        return self.name
+    employees: fields.ReverseRelation["Employee"]
+
+
+class Employee(Model):
+    id = fields.IntField(pk=True)
+    name = fields.TextField()
+    company: fields.ForeignKeyRelation[Company] = fields.ForeignKeyField(
+        "models.Company", related_name="employees", to_field="uuid",
+    )
 
 
 async def run():
     await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
     await Tortoise.generate_schemas()
 
-    tournament = Tournament(id=1, name="New Tournament")
-    await tournament.save()
-    await Event(name="Without participants", tournament_id=tournament.name).save()
+    company = Company(id=1, name="First Company")
+    await company.save()
+    # await Employee(name="Sang-Heon Jeon", company_id=company.uuid).save()
 
 
 if __name__ == "__main__":

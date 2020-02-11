@@ -203,4 +203,3 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
                     },
                 }
             )
-
