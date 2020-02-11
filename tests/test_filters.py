@@ -220,3 +220,10 @@ class TestDecimalFieldFilters(test.TestCase):
             .values_list("decimal", flat=True),
             [Decimal("2.3"), Decimal("2.3457"), Decimal("23")],
         )
+
+    async def test_between_and(self):
+        self.assertEqual(
+            await DecimalFields.filter(decimal__range=(Decimal("1.2344"), Decimal("1.2346")))
+            .values_list("decimal", flat=True),
+            [Decimal("1.2345")],
+        )

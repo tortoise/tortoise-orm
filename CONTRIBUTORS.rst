@@ -23,6 +23,7 @@ Contributors
 * Rebecca Klauser ``@svms1``
 * Sina Sohangir ``@sinaso``
 * Weiming Dong ``@dongweiming``
+* Jinlong Peng ``@long2ice``
 
 Special Thanks
 ==============

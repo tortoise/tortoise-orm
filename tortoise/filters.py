@@ -1,6 +1,6 @@
 import operator
 from functools import partial
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional
+from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple
 
 from pypika import Table
 from pypika.enums import SqlTypes
@@ -53,8 +53,8 @@ def not_in(field: Term, value: Any) -> Criterion:
     return field.notin(value) | field.isnull()
 
 
-def between_and(field: Term, value: Any) -> Criterion:
-    return field.between(*value)
+def between_and(field: Term, value: Tuple[Any, Any]) -> Criterion:
+    return field.between(value[0], value[1])
 
 
 def not_equal(field: Term, value: Any) -> Criterion:
