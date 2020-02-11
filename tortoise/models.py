@@ -50,6 +50,16 @@ def get_together(meta: "Model.Meta", together: str) -> Tuple[Tuple[str, ...], ..
     return _together
 
 
+def prepare_default_ordering(meta: "Model.Meta") -> Tuple[Tuple[str, str], ...]:
+    ordering_list = getattr(meta, "ordering", ())
+
+    parsed_ordering = tuple(
+        QuerySet._resolve_ordering_string(ordering) for ordering in ordering_list
+    )
+
+    return parsed_ordering
+
+
 def _fk_setter(self: "Model", value: "Optional[Model]", _key: str, relation_field: str) -> None:
     setattr(self, relation_field, value.pk if value else None)
     setattr(self, _key, value)
@@ -128,6 +138,8 @@ class MetaInfo:
         "db_native_fields",
         "db_default_fields",
         "db_complex_fields",
+        "_default_ordering",
+        "_ordering_validated",
     )
 
     def __init__(self, meta: "Model.Meta") -> None:
@@ -136,6 +148,8 @@ class MetaInfo:
         self.app: Optional[str] = getattr(meta, "app", None)
         self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
         self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
+        self._default_ordering: Tuple[Tuple[str, str], ...] = prepare_default_ordering(meta)
+        self._ordering_validated: bool = False
         self.fields: Set[str] = set()
         self.db_fields: Set[str] = set()
         self.m2m_fields: Set[str] = set()
@@ -156,7 +170,7 @@ class MetaInfo:
         self.basetable: Table = Table("")
         self.pk_attr: str = getattr(meta, "pk_attr", "")
         self.generated_db_fields: Tuple[str] = None  # type: ignore
-        self._model: "Model" = None  # type: ignore
+        self._model: Type["Model"] = None  # type: ignore
         self.table_description: str = getattr(meta, "table_description", "")
         self.pk: Field = None  # type: ignore
         self.db_pk_field: str = ""
@@ -192,6 +206,16 @@ class MetaInfo:
             return current_transaction_map[self.default_connection].get()
         except KeyError:
             raise ConfigurationError("No DB associated to model")
+
+    @property
+    def ordering(self) -> Tuple[Tuple[str, str], ...]:
+        if not self._ordering_validated:
+            unknown_fields = set(f for f, _ in self._default_ordering) - self.fields
+            raise ConfigurationError(
+                f"Unknown fields {','.join(unknown_fields)} in "
+                f"default ordering for model {self._model.__name__}"
+            )
+        return self._default_ordering
 
     def get_filter(self, key: str) -> dict:
         return self.filters[key]
@@ -229,6 +253,12 @@ class MetaInfo:
                 continue
             generated_fields.append(field.source_field or field.model_field_name)
         self.generated_db_fields = tuple(generated_fields)  # type: ignore
+
+        self._ordering_validated = True
+        for field_name, _ in self._default_ordering:
+            if field_name.split("__")[0] not in self.fields:
+                self._ordering_validated = False
+                break
 
     def _generate_lazy_fk_m2m_fields(self) -> None:
         # Create lazy FK fields on model.
@@ -477,7 +507,7 @@ class ModelMeta(type):
         if not fields_map:
             meta.abstract = True
 
-        new_class: "Model" = super().__new__(mcs, name, bases, attrs)  # type: ignore
+        new_class: Type["Model"] = super().__new__(mcs, name, bases, attrs)
         for field in meta.fields_map.values():
             field.model = new_class
 
@@ -682,7 +712,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def bulk_create(
-        cls: Type[MODEL], objects: List[MODEL], using_db: Optional[BaseDBAsyncClient] = None
+        cls: Type[MODEL], objects: List[MODEL], using_db: Optional[BaseDBAsyncClient] = None,
     ) -> None:
         """
         Bulk insert operation:
@@ -786,7 +816,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def fetch_for_list(
-        cls, instance_list: "List[Model]", *args: Any, using_db: Optional[BaseDBAsyncClient] = None
+        cls, instance_list: "List[Model]", *args: Any, using_db: Optional[BaseDBAsyncClient] = None,
     ) -> None:
         """
         Fetches related models for provided list of Model objects.
