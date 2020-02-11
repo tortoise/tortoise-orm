@@ -2,10 +2,13 @@
 
 Changelog
 =========
+0.15.12
+-------
+- Added ``range`` filter to support ``between and`` syntax
+
 0.15.11
 -------
 - Added ``ordering`` option for model ``Meta`` class to apply default ordering
-- Added ``range`` filter to support ``between and`` syntax
 
 0.15.10
 -------
