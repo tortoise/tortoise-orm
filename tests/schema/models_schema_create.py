@@ -1,6 +1,8 @@
 """
 This example demonstrates SQL Schema generation for each DB type supported.
 """
+from uuid import uuid4
+
 from tortoise import fields
 from tortoise.models import Model
 
@@ -82,6 +84,22 @@ class SourceFields(Model):
     class Meta:
         table = "sometable"
         indexes = [["chars"]]
+
+
+class Company(Model):
+    id = fields.IntField(pk=True)
+    name = fields.TextField()
+    uuid = fields.UUIDField(unique=True, default=uuid4)
+
+    employees: fields.ReverseRelation["Employee"]
+
+
+class Employee(Model):
+    id = fields.IntField(pk=True)
+    name = fields.TextField()
+    company: fields.ForeignKeyRelation[Company] = fields.ForeignKeyField(
+        "models.Company", related_name="employees", to_field="uuid",
+    )
 
 
 class DefaultPK(Model):

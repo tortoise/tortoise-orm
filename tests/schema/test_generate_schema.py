@@ -142,9 +142,19 @@ class TestGenerateSchema(test.SimpleTestCase):
         self.assertEqual(
             sql.strip(),
             """
+CREATE TABLE "company" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "name" TEXT NOT NULL,
+    "uuid" CHAR(36) NOT NULL UNIQUE
+);
 CREATE TABLE "defaultpk" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "val" INT NOT NULL
+);
+CREATE TABLE "employee" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "name" TEXT NOT NULL,
+    "company_id" CHAR(36) NOT NULL REFERENCES "company" ("uuid") ON DELETE CASCADE
 );
 CREATE TABLE "inheritedmodel" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -219,9 +229,19 @@ CREATE TABLE "teamevents" (
         self.assertEqual(
             sql.strip(),
             """
+CREATE TABLE IF NOT EXISTS "company" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "name" TEXT NOT NULL,
+    "uuid" CHAR(36) NOT NULL UNIQUE
+);
 CREATE TABLE IF NOT EXISTS "defaultpk" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "val" INT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS "employee" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "name" TEXT NOT NULL,
+    "company_id" CHAR(36) NOT NULL REFERENCES "company" ("uuid") ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS "inheritedmodel" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -360,9 +380,20 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
         self.assertEqual(
             sql.strip(),
             """
+CREATE TABLE `company` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `name` LONGTEXT NOT NULL,
+    `uuid` CHAR(36) NOT NULL UNIQUE
+) CHARACTER SET utf8mb4;
 CREATE TABLE `defaultpk` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `val` INT NOT NULL
+) CHARACTER SET utf8mb4;
+CREATE TABLE `employee` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `name` LONGTEXT NOT NULL,
+    `company_id` CHAR(36) NOT NULL,
+    CONSTRAINT `fk_employee_company_08999a42` FOREIGN KEY (`company_id`) REFERENCES `company` (`uuid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `inheritedmodel` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -449,9 +480,20 @@ CREATE TABLE `teamevents` (
         self.assertEqual(
             sql.strip(),
             """
+CREATE TABLE IF NOT EXISTS `company` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `name` LONGTEXT NOT NULL,
+    `uuid` CHAR(36) NOT NULL UNIQUE
+) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `defaultpk` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `val` INT NOT NULL
+) CHARACTER SET utf8mb4;
+CREATE TABLE IF NOT EXISTS `employee` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `name` LONGTEXT NOT NULL,
+    `company_id` CHAR(36) NOT NULL,
+    CONSTRAINT `fk_employee_company_08999a42` FOREIGN KEY (`company_id`) REFERENCES `company` (`uuid`) ON DELETE CASCADE
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `inheritedmodel` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
@@ -582,9 +624,19 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
         self.assertEqual(
             sql.strip(),
             """
+CREATE TABLE "company" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "uuid" UUID NOT NULL UNIQUE
+);
 CREATE TABLE "defaultpk" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "val" INT NOT NULL
+);
+CREATE TABLE "employee" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "company_id" UUID NOT NULL REFERENCES "company" ("uuid") ON DELETE CASCADE
 );
 CREATE TABLE "inheritedmodel" (
     "id" SERIAL NOT NULL PRIMARY KEY,
@@ -672,9 +724,19 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';
         self.assertEqual(
             sql.strip(),
             """
+CREATE TABLE IF NOT EXISTS "company" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "uuid" UUID NOT NULL UNIQUE
+);
 CREATE TABLE IF NOT EXISTS "defaultpk" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "val" INT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS "employee" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "company_id" UUID NOT NULL REFERENCES "company" ("uuid") ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS "inheritedmodel" (
     "id" SERIAL NOT NULL PRIMARY KEY,
