@@ -60,6 +60,9 @@ class Event(Model):
     token = fields.TextField(default=generate_token)
     alias = fields.IntField(null=True)
 
+    class Meta:
+        ordering = ["name"]
+
     def __str__(self):
         return self.name
 
@@ -83,6 +86,7 @@ class Team(Model):
 
     class Meta:
         pydantic_exclude = ("minrelations",)
+        ordering = ["id"]
 
     def __str__(self):
         return self.name

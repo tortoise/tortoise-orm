@@ -5,6 +5,9 @@ from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
 from tortoise.pydantic import pydantic_model_creator
 
+# import logging
+# logging.basicConfig(level=logging.DEBUG)
+
 
 class Tournament(Model):
     id = fields.IntField(pk=True)
@@ -12,9 +15,6 @@ class Tournament(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
 
     events: fields.ReverseRelation["Event"]
-
-    def __str__(self):
-        return self.name
 
 
 class Event(Model):
@@ -29,8 +29,8 @@ class Event(Model):
     )
     address: fields.OneToOneNullableRelation["Address"]
 
-    def __str__(self):
-        return self.name
+    class Meta:
+        ordering = ["name"]
 
 
 class Address(Model):
@@ -42,9 +42,6 @@ class Address(Model):
         "models.Event", on_delete=fields.CASCADE, related_name="address", pk=True
     )
 
-    def __str__(self):
-        return f"Address({self.city}, {self.street})"
-
 
 class Team(Model):
     id = fields.IntField(pk=True)
@@ -52,9 +49,6 @@ class Team(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
 
     events: fields.ManyToManyRelation[Event]
-
-    def __str__(self):
-        return self.name
 
 
 async def run():
@@ -71,10 +65,12 @@ async def run():
     tournament = await Tournament.create(name="New Tournament")
     await Event.create(name="Empty")
     event = await Event.create(name="Test", tournament=tournament)
+    event2 = await Event.create(name="Test2", tournament=tournament)
     await Address.create(city="Santa Monica", street="Ocean", event=event)
     team1 = await Team.create(name="Onesies")
     team2 = await Team.create(name="T-Shirts")
     await event.participants.add(team1, team2)
+    await event2.participants.add(team1, team2)
 
     pl = [(await Event_Pydantic.from_tortoise_orm(e)).dict() for e in await Event.all()]
     print(
@@ -86,6 +82,13 @@ async def run():
 
     p = await Team_Pydantic.from_tortoise_orm(await Team.all().first())
     print(p.json(indent=4))
+
+    # pobj = await Team.get(name="Onesies")
+    # await pobj.fetch_related('events')#'events__tournament', 'events__address')
+    # for event in pobj.events:
+    #     await event.fetch_related('tournament', 'address')
+    # p = Team_Pydantic.from_orm(pobj)
+    # print(p.json(indent=4))
 
 
 if __name__ == "__main__":

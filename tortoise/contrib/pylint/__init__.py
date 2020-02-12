@@ -25,7 +25,7 @@ def is_model(cls: ClassDef) -> bool:
     """
     Guard to apply this transform to Models only
     """
-    return cls.metaclass() and cls.metaclass().qname() == "tortoise.models.ModelMeta"
+    return bool(cls.metaclass()) and cls.metaclass().qname() == "tortoise.models.ModelMeta"
 
 
 def transform_model(cls: ClassDef) -> None:
@@ -113,7 +113,7 @@ def is_model_field(cls: ClassDef) -> bool:
     Guard to apply this transform to Model Fields only
     """
     type_name = "tortoise.fields.base.Field"
-    return cls.is_subtype_of(type_name) and cls.qname() != type_name
+    return bool(cls.is_subtype_of(type_name)) and cls.qname() != type_name
 
 
 def apply_type_shim(cls: ClassDef, _context: Any = None) -> Iterator[ClassDef]:

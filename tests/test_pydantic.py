@@ -14,20 +14,21 @@ class TestPydantic(test.TestCase):
         self.event = await Event.create(
             name="Test", tournament=self.tournament, reporter=self.reporter
         )
+        self.event2 = await Event.create(name="Test2", tournament=self.tournament)
         self.address = await Address.create(city="Santa Monica", street="Ocean", event=self.event)
         self.team1 = await Team.create(name="Onesies")
         self.team2 = await Team.create(name="T-Shirts")
         await self.event.participants.add(self.team1, self.team2)
+        await self.event2.participants.add(self.team1, self.team2)
 
     async def test_event(self):
-        eventp = await self.Event_Pydantic.from_tortoise_orm(await Event.all().first())
+        eventp = await self.Event_Pydantic.from_tortoise_orm(await Event.get(name="Test"))
         # print(eventp.json(indent=4))
         eventdict = eventp.dict()
 
         # Massage to be repeatable
         del eventdict["modified"]
         del eventdict["tournament"]["created"]
-        eventdict["participants"] = sorted(eventdict["participants"], key=lambda x: x["id"])
 
         self.assertEqual(
             eventdict,
@@ -61,10 +62,8 @@ class TestPydantic(test.TestCase):
 
         # Massage to be repeatable
         del tournamentdict["events"][0]["modified"]
+        del tournamentdict["events"][1]["modified"]
         del tournamentdict["created"]
-        tournamentdict["events"][0]["participants"] = sorted(
-            tournamentdict["events"][0]["participants"], key=lambda x: x["id"]
-        )
 
         self.assertEqual(
             tournamentdict,
@@ -90,20 +89,41 @@ class TestPydantic(test.TestCase):
                             "city": "Santa Monica",
                             "street": "Ocean",
                         },
-                    }
+                    },
+                    {
+                        "id": self.event2.id,
+                        "name": "Test2",
+                        # "modified": "2020-01-28T19:41:38.060070",
+                        "token": self.event2.token,
+                        "alias": None,
+                        "reporter": None,
+                        "participants": [
+                            {"id": self.team1.id, "name": "Onesies", "alias": None},
+                            {"id": self.team2.id, "name": "T-Shirts", "alias": None},
+                        ],
+                        "address": None,
+                    },
                 ],
             },
         )
 
-    @test.expectedFailure
+    # @test.expectedFailure
     async def test_team(self):
-        teamp = await self.Team_Pydantic.from_tortoise_orm(await Team.get(id=self.team1.id).first())
-        # print(teamp.json(indent=4))
+        pobj = await Team.get(id=self.team1.id)
+        await pobj.fetch_related("events")
+        for event in pobj.events:
+            await event.fetch_related("tournament", "address", "reporter")
+        teamp = self.Team_Pydantic.from_orm(pobj)
+
+        # teamp = await self.Team_Pydantic.from_tortoise_orm(await Team.get(id=self.team1.id))
+        print(teamp.json(indent=4))
         teamdict = teamp.dict()
 
         # Massage to be repeatable
         del teamdict["events"][0]["modified"]
         del teamdict["events"][0]["tournament"]["created"]
+        del teamdict["events"][1]["modified"]
+        del teamdict["events"][1]["tournament"]["created"]
 
         self.assertEqual(
             teamdict,
@@ -116,7 +136,7 @@ class TestPydantic(test.TestCase):
                         "id": self.event.id,
                         "name": "Test",
                         # "modified": "2020-01-28T19:47:03.334077",
-                        "token": "b7e698920f328760cf6ece67b3731422",
+                        "token": self.event.token,
                         "alias": None,
                         "tournament": {
                             "id": self.tournament.id,
@@ -130,7 +150,22 @@ class TestPydantic(test.TestCase):
                             "city": "Santa Monica",
                             "street": "Ocean",
                         },
-                    }
+                    },
+                    {
+                        "id": self.event2.id,
+                        "name": "Test2",
+                        # "modified": "2020-01-28T19:47:03.334077",
+                        "token": self.event2.token,
+                        "alias": None,
+                        "tournament": {
+                            "id": self.tournament.id,
+                            "name": "New Tournament",
+                            "desc": None,
+                            # "created": "2020-01-28T19:41:38.059617",
+                        },
+                        "reporter": None,
+                        "address": None,
+                    },
                 ],
             },
         )

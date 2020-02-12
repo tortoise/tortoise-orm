@@ -73,6 +73,7 @@ def _get_fetch_fields(
             subclass_fetch_fields = _get_fetch_fields(
                 field_type, getattr(field_type.__config__, "orig_model")
             )
+            print(subclass_fetch_fields)
             if subclass_fetch_fields:
                 fetch_fields.extend([field_name + "__" + f for f in subclass_fetch_fields])
             else:
@@ -102,6 +103,7 @@ class PydanticModel(BaseModel):
         # Get fields needed to fetch
         fetch_fields = _get_fetch_fields(cls, getattr(cls.__config__, "orig_model"))
         # Fetch fields
+        print(fetch_fields)
         await obj.fetch_related(*fetch_fields)
         # Convert to pydantic object
         values = super().from_orm(obj)

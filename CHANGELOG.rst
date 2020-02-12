@@ -5,6 +5,7 @@ Changelog
 future
 ------
 - ``Pydantic`` serialisation support
+- Now applies default ordering on related fetches.
 
 0.15.12
 -------
