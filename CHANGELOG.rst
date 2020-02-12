@@ -6,6 +6,7 @@ future
 ------
 - ``Pydantic`` serialisation support
 - Now applies default ordering on related fetches.
+- Fix post M2M related queries not being evaluated
 
 0.15.12
 -------

@@ -5,9 +5,6 @@ from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
 from tortoise.pydantic import pydantic_model_creator
 
-# import logging
-# logging.basicConfig(level=logging.DEBUG)
-
 
 class Tournament(Model):
     id = fields.IntField(pk=True)
@@ -15,6 +12,9 @@ class Tournament(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
 
     events: fields.ReverseRelation["Event"]
+
+    class Meta:
+        ordering = ["name"]
 
 
 class Event(Model):
@@ -42,6 +42,9 @@ class Address(Model):
         "models.Event", on_delete=fields.CASCADE, related_name="address", pk=True
     )
 
+    class Meta:
+        ordering = ["city"]
+
 
 class Team(Model):
     id = fields.IntField(pk=True)
@@ -49,6 +52,9 @@ class Team(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
 
     events: fields.ManyToManyRelation[Event]
+
+    class Meta:
+        ordering = ["name"]
 
 
 async def run():
@@ -63,25 +69,34 @@ async def run():
     # print(Team_Pydantic.schema_json(indent=4))
 
     tournament = await Tournament.create(name="New Tournament")
+    tournament2 = await Tournament.create(name="Old Tournament")
     await Event.create(name="Empty")
     event = await Event.create(name="Test", tournament=tournament)
-    event2 = await Event.create(name="Test2", tournament=tournament)
+    event2 = await Event.create(name="TestLast", tournament=tournament)
+    event3 = await Event.create(name="Test2", tournament=tournament2)
     await Address.create(city="Santa Monica", street="Ocean", event=event)
+    await Address.create(city="Somewhere Else", street="Lane", event=event2)
     team1 = await Team.create(name="Onesies")
     team2 = await Team.create(name="T-Shirts")
-    await event.participants.add(team1, team2)
+    team3 = await Team.create(name="Alternates")
+    await event.participants.add(team1, team2, team3)
     await event2.participants.add(team1, team2)
+    await event3.participants.add(team1, team3)
 
-    pl = [(await Event_Pydantic.from_tortoise_orm(e)).dict() for e in await Event.all()]
-    print(
-        Event_Pydantic.__config__.json_dumps(pl, default=Event_Pydantic.__json_encoder__, indent=4)
-    )
+    p = await Event_Pydantic.from_tortoise_orm(await Event.get(name="Test"))
+    print("One Event:", p.json(indent=4))
 
-    p = await Tournament_Pydantic.from_tortoise_orm(await Tournament.all().first())
-    print(p.json(indent=4))
+    p = await Tournament_Pydantic.from_tortoise_orm(await Tournament.get(name="New Tournament"))
+    print("One Tournament:", p.json(indent=4))
 
-    p = await Team_Pydantic.from_tortoise_orm(await Team.all().first())
-    print(p.json(indent=4))
+    p = await Team_Pydantic.from_tortoise_orm(await Team.get(name="Onesies"))
+    print("One Team:", p.json(indent=4))
+
+    # pl = [(await Event_Pydantic.from_tortoise_orm(e)).dict() for e in await Event.all()]
+    # print(
+    #     Event_Pydantic.__config__.json_dumps(pl, default=Event_Pydantic.__json_encoder__,
+    #     indent=4)
+    # )
 
 
 if __name__ == "__main__":
