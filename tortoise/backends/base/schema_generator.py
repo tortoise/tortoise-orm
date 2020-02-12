@@ -180,16 +180,9 @@ class BaseSchemaGenerator:
                     else ""
                 )
 
-                to_field_type = reference.to_field_instance.get_for_dialect(
-                    self.DIALECT, "SQL_TYPE"
-                )
-                to_field_name = reference.to_field_instance.source_field
-                if not to_field_name:
-                    to_field_name = reference.to_field_instance.model_field_name
-
                 field_creation_string = self._create_string(
                     db_field=db_field,
-                    field_type=to_field_type,
+                    field_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                     nullable=nullable,
                     unique=unique,
                     is_pk=field_object.pk,
@@ -199,11 +192,11 @@ class BaseSchemaGenerator:
                         model._meta.table,
                         db_field,
                         reference.model_class._meta.table,
-                        to_field_name,
+                        cast("str", reference.to_field),
                     ),
                     db_field=db_field,
                     table=reference.model_class._meta.table,
-                    field=to_field_name,
+                    field=cast("str", reference.to_field),
                     on_delete=reference.on_delete,
                     comment=comment,
                 )

@@ -33,7 +33,7 @@ async def run():
 
     company = Company(id=1, name="First Company")
     await company.save()
-    # await Employee(name="Sang-Heon Jeon", company_id=company.uuid).save()
+    await Employee(name="Sang-Heon Jeon", company_id=company.uuid).save()
 
 
 if __name__ == "__main__":

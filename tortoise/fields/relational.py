@@ -284,7 +284,6 @@ class RelationalField(Field):
         super().__init__(**kwargs)
         self.model_class: "Type[Model]" = None  # type: ignore
         self.to_field = to_field
-        self.to_field_instance: "Field" = None  # type: ignore
 
 
 class ForeignKeyFieldInstance(RelationalField):

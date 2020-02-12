@@ -318,8 +318,29 @@ class Tortoise:
                     related_app_name, related_model_name = split_reference(reference)
                     related_model = get_related_model(related_app_name, related_model_name)
 
+                    if fk_object.to_field:
+                        related_field = related_model._meta.fields_map.get(fk_object.to_field, None)
+                        if related_field:
+                            if related_field.unique:
+                                key_fk_object = deepcopy(related_field)
+                                fk_object.to_field = related_field.source_field
+                                if not fk_object.to_field:
+                                    fk_object.to_field = related_field.model_field_name
+                            else:
+                                raise ConfigurationError(
+                                    f'field "{fk_object.to_field}" in model'
+                                    f' "{related_model_name}" is not unique'
+                                )
+                        else:
+                            raise ConfigurationError(
+                                f'there is no field named "{fk_object.to_field}"'
+                                f' in model "{related_model_name}"'
+                            )
+                    else:
+                        key_fk_object = deepcopy(related_model._meta.pk)
+                        fk_object.to_field = related_model._meta.db_pk_field
+
                     key_field = f"{field}_id"
-                    key_fk_object = deepcopy(related_model._meta.pk)
                     key_fk_object.pk = False
                     key_fk_object.unique = False
                     key_fk_object.index = fk_object.index
@@ -337,26 +358,6 @@ class Tortoise:
                     model._meta.add_field(key_field, key_fk_object)
 
                     fk_object.model_class = related_model
-                    if fk_object.to_field:
-                        related_field = fk_object.model_class._meta.fields_map.get(
-                            fk_object.to_field, None
-                        )
-                        if related_field:
-                            if related_field.unique:
-                                fk_object.to_field_instance = related_field
-                            else:
-                                raise ConfigurationError(
-                                    f'field "{fk_object.to_field}" in model'
-                                    f' "{related_model_name}" is not unique'
-                                )
-                        else:
-                            raise ConfigurationError(
-                                f'there is no field named "{fk_object.to_field}"'
-                                f' in model "{related_model_name}"'
-                            )
-                    else:
-                        fk_object.to_field_instance = fk_object.model_class._meta.pk
-
                     backward_relation_name = fk_object.related_name
                     if backward_relation_name is not False:
                         if not backward_relation_name:
@@ -379,8 +380,31 @@ class Tortoise:
                     related_app_name, related_model_name = split_reference(reference)
                     related_model = get_related_model(related_app_name, related_model_name)
 
+                    if o2o_object.to_field:
+                        related_field = related_model._meta.fields_map.get(
+                            o2o_object.to_field, None
+                        )
+                        if related_field:
+                            if related_field.unique:
+                                key_o2o_object = deepcopy(related_field)
+                                o2o_object.to_field = related_field.source_field
+                                if not fk_object.to_field:
+                                    o2o_object.to_field = related_field.model_field_name
+                            else:
+                                raise ConfigurationError(
+                                    f'field "{o2o_object.to_field}" in model'
+                                    f' "{related_model_name}" is not unique'
+                                )
+                        else:
+                            raise ConfigurationError(
+                                f'there is no field named "{o2o_object.to_field}"'
+                                f' in model "{related_model_name}"'
+                            )
+                    else:
+                        key_o2o_object = deepcopy(related_model._meta.pk)
+                        o2o_object.to_field = related_model._meta.db_pk_field
+
                     key_field = f"{field}_id"
-                    key_o2o_object = deepcopy(related_model._meta.pk)
                     key_o2o_object.pk = o2o_object.pk
                     key_o2o_object.index = o2o_object.index
                     key_o2o_object.default = o2o_object.default
@@ -398,26 +422,6 @@ class Tortoise:
                     model._meta.add_field(key_field, key_o2o_object)
 
                     o2o_object.model_class = related_model
-                    if o2o_object.to_field:
-                        related_field = o2o_object.model_class._meta.fields_map.get(
-                            o2o_object.to_field, None
-                        )
-                        if related_field:
-                            if related_field.unique:
-                                o2o_object.to_field_instance = related_field
-                            else:
-                                raise ConfigurationError(
-                                    f'field "{o2o_object.to_field}" in model'
-                                    f' "{related_model_name}" is not unique'
-                                )
-                        else:
-                            raise ConfigurationError(
-                                f'there is no field named "{o2o_object.to_field}"'
-                                f' in model "{related_model_name}"'
-                            )
-                    else:
-                        o2o_object.to_field_instance = o2o_object.model_class._meta.pk
-
                     backward_relation_name = o2o_object.related_name
                     if backward_relation_name is not False:
                         if not backward_relation_name:
