@@ -1,7 +1,14 @@
-from tests.testmodels import Event, Tournament
+from tests.testmodels import (
+    DefaultOrdered,
+    DefaultOrderedDesc,
+    DefaultOrderedInvalid,
+    Event,
+    FKToDefaultOrdered,
+    Tournament,
+)
 from tortoise.contrib import test
-from tortoise.exceptions import FieldError
-from tortoise.functions import Count
+from tortoise.exceptions import ConfigurationError, FieldError
+from tortoise.functions import Count, Sum
 
 
 class TestOrderBy(test.TestCase):
@@ -74,3 +81,36 @@ class TestOrderBy(test.TestCase):
             "-events_count"
         )
         self.assertEqual([t.name for t in tournaments], ["1", "2"])
+
+
+class TestDefaultOrdering(test.TestCase):
+    async def test_default_order(self):
+        await DefaultOrdered.create(one="2", second=1)
+        await DefaultOrdered.create(one="1", second=1)
+
+        instance_list = await DefaultOrdered.all()
+        self.assertEqual([i.one for i in instance_list], ["1", "2"])
+
+    async def test_default_order_desc(self):
+        await DefaultOrderedDesc.create(one="1", second=1)
+        await DefaultOrderedDesc.create(one="2", second=1)
+
+        instance_list = await DefaultOrderedDesc.all()
+        self.assertEqual([i.one for i in instance_list], ["2", "1"])
+
+    async def test_default_order_invalid(self):
+        await DefaultOrderedInvalid.create(one="1", second=1)
+        await DefaultOrderedInvalid.create(one="2", second=1)
+
+        with self.assertRaises(ConfigurationError):
+            await DefaultOrderedInvalid.all()
+
+    async def test_default_order_annotated_query(self):
+        instance = await DefaultOrdered.create(one="2", second=1)
+        await FKToDefaultOrdered.create(link=instance, value=10)
+        await DefaultOrdered.create(one="1", second=1)
+
+        queryset = DefaultOrdered.all().annotate(res=Sum("related__value"))
+        queryset._make_query()
+        query = queryset.query.get_sql()
+        self.assertTrue("order by" not in query.lower())

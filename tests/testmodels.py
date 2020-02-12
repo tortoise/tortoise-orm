@@ -520,3 +520,32 @@ class DoubleFK(Model):
     name = fields.CharField(max_length=50)
     left = fields.ForeignKeyField("models.DoubleFK", null=True, related_name="left_rel")
     right = fields.ForeignKeyField("models.DoubleFK", null=True, related_name="right_rel")
+
+
+class DefaultOrdered(Model):
+    one = fields.TextField()
+    second = fields.IntField()
+
+    class Meta:
+        ordering = ["one", "second"]
+
+
+class FKToDefaultOrdered(Model):
+    link = fields.ForeignKeyField("models.DefaultOrdered", related_name="related")
+    value = fields.IntField()
+
+
+class DefaultOrderedDesc(Model):
+    one = fields.TextField()
+    second = fields.IntField()
+
+    class Meta:
+        ordering = ["-one"]
+
+
+class DefaultOrderedInvalid(Model):
+    one = fields.TextField()
+    second = fields.IntField()
+
+    class Meta:
+        ordering = ["one", "third"]

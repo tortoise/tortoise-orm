@@ -153,7 +153,7 @@ class Field(metaclass=_FieldMeta):
         self.model_field_name = ""
         self.description = description
         # TODO: consider making this not be set from constructor
-        self.model: "Model" = model  # type: ignore
+        self.model: Type["Model"] = model  # type: ignore
         # TODO: consider moving this to RelationalField
         self.reference = reference
 

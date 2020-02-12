@@ -6,6 +6,14 @@ future
 ------
 - ``Pydantic`` serialisation support
 
+0.15.12
+-------
+- Added ``range`` filter to support ``between and`` syntax
+
+0.15.11
+-------
+- Added ``ordering`` option for model ``Meta`` class to apply default ordering
+
 0.15.10
 -------
 - Bumped requirements to cater for newer feature use (#282)

@@ -255,6 +255,7 @@ When using ``.filter()`` method you can use number of modifiers to field names t
 - ``gt`` - greater than passed value
 - ``lte`` - lower or equals than passed value
 - ``lt`` - lower than passed value
+- ``range`` - between and given two values
 - ``isnull`` - field is null
 - ``not_isnull`` - field is not null
 - ``contains`` - field contains specified substring
