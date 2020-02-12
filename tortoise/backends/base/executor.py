@@ -332,7 +332,7 @@ class BaseExecutor:
         related_object_list = [related_query.model._init_from_db(**e) for e in raw_results]
         await self.__class__(
             model=related_query.model, db=self.db, prefetch_map=related_query._prefetch_map
-        ).fetch_for_list(related_object_list)
+        )._execute_prefetch_queries(related_object_list)
         related_object_map = {e.pk: e for e in related_object_list}
         relation_map: Dict[str, list] = {}
 
@@ -378,7 +378,6 @@ class BaseExecutor:
             if forwarded_prefetches:
                 related_query = related_query.prefetch_related(*forwarded_prefetches)
             self._prefetch_queries[field] = related_query
-        print("prefetches", self._prefetch_queries)
 
     async def _do_prefetch(
         self, instance_id_list: "List[Model]", field: str, related_query: "QuerySet"
@@ -419,7 +418,6 @@ class BaseExecutor:
             if forwarded_prefetch:
                 self.prefetch_map[first_level_field].add(forwarded_prefetch)
 
-        print("select_related", instance_list, self.prefetch_map)
         await self._execute_prefetch_queries(instance_list)
         return instance_list
 

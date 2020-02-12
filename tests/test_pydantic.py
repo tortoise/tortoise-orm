@@ -26,7 +26,7 @@ class TestPydantic(test.TestCase):
         # print(eventp.json(indent=4))
         eventdict = eventp.dict()
 
-        # Massage to be repeatable
+        # Remove timestamps
         del eventdict["modified"]
         del eventdict["tournament"]["created"]
 
@@ -60,7 +60,7 @@ class TestPydantic(test.TestCase):
         # print(tournamentp.json(indent=4))
         tournamentdict = tournamentp.dict()
 
-        # Massage to be repeatable
+        # Remove timestamps
         del tournamentdict["events"][0]["modified"]
         del tournamentdict["events"][1]["modified"]
         del tournamentdict["created"]
@@ -107,19 +107,12 @@ class TestPydantic(test.TestCase):
             },
         )
 
-    # @test.expectedFailure
     async def test_team(self):
-        pobj = await Team.get(id=self.team1.id)
-        await pobj.fetch_related("events")
-        for event in pobj.events:
-            await event.fetch_related("tournament", "address", "reporter")
-        teamp = self.Team_Pydantic.from_orm(pobj)
-
-        # teamp = await self.Team_Pydantic.from_tortoise_orm(await Team.get(id=self.team1.id))
-        print(teamp.json(indent=4))
+        teamp = await self.Team_Pydantic.from_tortoise_orm(await Team.get(id=self.team1.id))
+        # print(teamp.json(indent=4))
         teamdict = teamp.dict()
 
-        # Massage to be repeatable
+        # Remove timestamps
         del teamdict["events"][0]["modified"]
         del teamdict["events"][0]["tournament"]["created"]
         del teamdict["events"][1]["modified"]

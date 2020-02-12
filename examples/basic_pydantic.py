@@ -83,13 +83,6 @@ async def run():
     p = await Team_Pydantic.from_tortoise_orm(await Team.all().first())
     print(p.json(indent=4))
 
-    # pobj = await Team.get(name="Onesies")
-    # await pobj.fetch_related('events')#'events__tournament', 'events__address')
-    # for event in pobj.events:
-    #     await event.fetch_related('tournament', 'address')
-    # p = Team_Pydantic.from_orm(pobj)
-    # print(p.json(indent=4))
-
 
 if __name__ == "__main__":
     run_async(run())
