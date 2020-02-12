@@ -1,11 +1,12 @@
 from tests.testmodels import Address, Event, Reporter, Team, Tournament
 from tortoise.contrib import test
-from tortoise.pydantic import pydantic_model_creator
+from tortoise.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
 
 class TestPydantic(test.TestCase):
     async def setUp(self) -> None:
         self.Event_Pydantic = pydantic_model_creator(Event)
+        self.Event_Pydantic_List = pydantic_queryset_creator(Event)
         self.Tournament_Pydantic = pydantic_model_creator(Tournament)
         self.Team_Pydantic = pydantic_model_creator(Team)
 
@@ -92,6 +93,95 @@ class TestPydantic(test.TestCase):
                             "id": {"title": "Id", "type": "integer"},
                             "city": {"title": "City", "type": "string"},
                             "street": {"title": "Street", "type": "string"},
+                        },
+                    },
+                },
+            },
+        )
+
+    def test_eventlist_schema(self):
+        self.assertEqual(
+            self.Event_Pydantic_List.schema(),
+            {
+                "title": "Events",
+                "description": "Events on the calendar",
+                "type": "array",
+                "items": {"$ref": "#/definitions/Event"},
+                "definitions": {
+                    "Tournament": {
+                        "title": "Tournament",
+                        "type": "object",
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                            "desc": {"title": "Desc", "type": "string"},
+                            "created": {
+                                "title": "Created",
+                                "type": "string",
+                                "format": "date-time",
+                            },
+                        },
+                    },
+                    "Reporter": {
+                        "title": "Reporter",
+                        "description": "Whom is assigned as the reporter",
+                        "type": "object",
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                        },
+                    },
+                    "Team": {
+                        "title": "Team",
+                        "description": "Team that is a playing",
+                        "type": "object",
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                            "alias": {"title": "Alias", "type": "integer"},
+                        },
+                    },
+                    "Address": {
+                        "title": "Address",
+                        "type": "object",
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "city": {"title": "City", "type": "string"},
+                            "street": {"title": "Street", "type": "string"},
+                        },
+                    },
+                    "Event": {
+                        "title": "Event",
+                        "description": "Events on the calendar",
+                        "type": "object",
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "name": {"title": "Name", "description": "The name", "type": "string"},
+                            "modified": {
+                                "title": "Modified",
+                                "type": "string",
+                                "format": "date-time",
+                            },
+                            "token": {"title": "Token", "type": "string"},
+                            "alias": {"title": "Alias", "type": "integer"},
+                            "tournament": {
+                                "title": "Tournament",
+                                "description": "What tournaments is a happenin'",
+                                "allOf": [{"$ref": "#/definitions/Tournament"}],
+                            },
+                            "reporter": {
+                                "title": "Reporter",
+                                "allOf": [{"$ref": "#/definitions/Reporter"}],
+                            },
+                            "participants": {
+                                "title": "Participants",
+                                "type": "array",
+                                "items": {"$ref": "#/definitions/Team"},
+                            },
+                            "address": {
+                                "title": "Address",
+                                "allOf": [{"$ref": "#/definitions/Address"}],
+                            },
                         },
                     },
                 },
@@ -258,6 +348,61 @@ class TestPydantic(test.TestCase):
                     },
                 },
             },
+        )
+
+    async def test_eventlist(self):
+        eventlp = await self.Event_Pydantic_List.from_queryset(Event.all())
+        # print(eventlp.json(indent=4))
+        eventldict = eventlp.dict()["__root__"]
+
+        # Remove timestamps
+        del eventldict[0]["modified"]
+        del eventldict[0]["tournament"]["created"]
+        del eventldict[1]["modified"]
+        del eventldict[1]["tournament"]["created"]
+
+        self.assertEqual(
+            eventldict,
+            [
+                {
+                    "id": self.event.id,
+                    "name": "Test",
+                    # "modified": "2020-01-28T10:43:50.901562",
+                    "token": self.event.token,
+                    "alias": None,
+                    "tournament": {
+                        "id": self.tournament.id,
+                        "name": "New Tournament",
+                        "desc": None,
+                        # "created": "2020-01-28T10:43:50.900664"
+                    },
+                    "reporter": {"id": self.reporter.id, "name": "The Reporter"},
+                    "participants": [
+                        {"id": self.team1.id, "name": "Onesies", "alias": None},
+                        {"id": self.team2.id, "name": "T-Shirts", "alias": None},
+                    ],
+                    "address": {"id": self.address.pk, "city": "Santa Monica", "street": "Ocean"},
+                },
+                {
+                    "id": self.event2.id,
+                    "name": "Test2",
+                    # "modified": "2020-01-28T10:43:50.901562",
+                    "token": self.event2.token,
+                    "alias": None,
+                    "tournament": {
+                        "id": self.tournament.id,
+                        "name": "New Tournament",
+                        "desc": None,
+                        # "created": "2020-01-28T10:43:50.900664"
+                    },
+                    "reporter": None,
+                    "participants": [
+                        {"id": self.team1.id, "name": "Onesies", "alias": None},
+                        {"id": self.team2.id, "name": "T-Shirts", "alias": None},
+                    ],
+                    "address": None,
+                },
+            ],
         )
 
     async def test_event(self):

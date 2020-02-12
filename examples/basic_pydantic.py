@@ -3,7 +3,7 @@ This example demonstrates pydantic serialisation
 """
 from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
-from tortoise.pydantic import pydantic_model_creator
+from tortoise.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
 
 class Tournament(Model):
@@ -62,8 +62,10 @@ async def run():
     await Tortoise.generate_schemas()
 
     Event_Pydantic = pydantic_model_creator(Event)
+    Event_Pydantic_List = pydantic_queryset_creator(Event)
     Tournament_Pydantic = pydantic_model_creator(Tournament)
     Team_Pydantic = pydantic_model_creator(Team)
+    # print(Event_Pydantic_List.schema_json(indent=4))
     # print(Event_Pydantic.schema_json(indent=4))
     # print(Tournament_Pydantic.schema_json(indent=4))
     # print(Team_Pydantic.schema_json(indent=4))
@@ -92,11 +94,13 @@ async def run():
     p = await Team_Pydantic.from_tortoise_orm(await Team.get(name="Onesies"))
     print("One Team:", p.json(indent=4))
 
-    # pl = [(await Event_Pydantic.from_tortoise_orm(e)).dict() for e in await Event.all()]
-    # print(
-    #     Event_Pydantic.__config__.json_dumps(pl, default=Event_Pydantic.__json_encoder__,
-    #     indent=4)
-    # )
+    pl = [(await Event_Pydantic.from_tortoise_orm(e)).dict() for e in await Event.all()]
+    print(
+        Event_Pydantic.__config__.json_dumps(pl, default=Event_Pydantic.__json_encoder__, indent=4)
+    )
+
+    pl = await Event_Pydantic_List.from_queryset(Event.filter(address__event_id__isnull=True))
+    print("All Events without addresses:", pl.json(indent=4))
 
 
 if __name__ == "__main__":

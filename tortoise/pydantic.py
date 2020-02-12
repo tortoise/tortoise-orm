@@ -12,6 +12,7 @@ from tortoise import fields, models
 
 if typing.TYPE_CHECKING:
     from tortoise.models import Model
+    from tortoise.queryset import QuerySet
 
 
 def _get_comments(cls: Type["Model"]) -> Dict[str, str]:
@@ -19,7 +20,8 @@ def _get_comments(cls: Type["Model"]) -> Dict[str, str]:
     Get comments exactly before attributes
 
     It can be multiline comment. The placeholder "{model}" will be replaced with the name of the
-    model class.
+    model class. We require that the comments are in #: (with a colon) format, so you can
+    differentiate between private and public comments.
 
     :param cls: The class we need to extract comments from its source.
     :return: The dictionary of comments by field name
@@ -81,7 +83,7 @@ def _get_fetch_fields(
 
 
 class PydanticModel(BaseModel):
-    """ Custom Pydantic BaseModel """
+    """ Custom Pydantic BaseModel for Tortoise objects """
 
     class Config:
         orm_mode = True  # It should be in ORM mode to convert tortoise data to pydantic
@@ -98,13 +100,26 @@ class PydanticModel(BaseModel):
         return value
 
     @classmethod
-    async def from_tortoise_orm(cls, obj: "Model"):
+    async def from_tortoise_orm(cls, obj: "Model") -> "PydanticModel":
         # Get fields needed to fetch
         fetch_fields = _get_fetch_fields(cls, getattr(cls.__config__, "orig_model"))
         # Fetch fields
         await obj.fetch_related(*fetch_fields)
         # Convert to pydantic object
         values = super().from_orm(obj)
+        return values
+
+
+class PydanticListModel(BaseModel):
+    """ Custom Pydantic BaseModel for Tortoise Models """
+
+    @classmethod
+    async def from_queryset(cls, queryset: "QuerySet") -> "PydanticListModel":
+        submodel = getattr(cls.__config__, "submodel")
+        fetch_fields = _get_fetch_fields(submodel, getattr(submodel.__config__, "orig_model"))
+        values = cls(
+            __root__=[submodel.from_orm(e) for e in await queryset.prefetch_related(*fetch_fields)]
+        )
         return values
 
 
@@ -362,10 +377,39 @@ def pydantic_model_creator(
 
     # Creating Pydantic class for the properties generated before
     model = typing.cast(Type[PydanticModel], type(name, (PydanticModel,), properties))
+    # Copy the Model docstring over
     model.__doc__ = (cls.__doc__ or "").strip()
     # The title of the model to hide the hash postfix
     setattr(model.__config__, "title", cls.__name__)
     # Store the base class
     setattr(model.__config__, "orig_model", cls)
+
+    return model
+
+
+def pydantic_queryset_creator(
+    cls: Type["Model"],
+    *,
+    exclude: Tuple[str] = (),  # type: ignore
+    include: Tuple[str] = (),  # type: ignore
+    computed: Tuple[str] = (),  # type: ignore
+    name=None,
+    allow_recursion: bool = False,
+) -> Type[PydanticListModel]:
+
+    submodel = pydantic_model_creator(
+        cls, exclude=exclude, include=include, computed=computed, allow_recursion=allow_recursion
+    )
+    lname = name or f"{submodel.__name__}s"
+
+    properties = {"__annotations__": {"__root__": List[submodel]}}  # type: ignore
+    # Creating Pydantic class for the properties generated before
+    model = typing.cast(Type[PydanticListModel], type(lname, (PydanticListModel,), properties))
+    # Copy the Model docstring over
+    model.__doc__ = (cls.__doc__ or "").strip()
+    # The title of the model to hide the hash postfix
+    setattr(model.__config__, "title", lname)
+    # Store the base class & submodel
+    setattr(model.__config__, "submodel", submodel)
 
     return model
