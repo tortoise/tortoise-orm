@@ -1,6 +1,7 @@
 import inspect
 import re
 import typing
+from hashlib import sha256
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type
 
 import pydantic
@@ -13,7 +14,6 @@ if typing.TYPE_CHECKING:
     from tortoise.models import Model
 
 
-# @functools.lru_cache()
 def _get_comments(cls: Type["Model"]) -> Dict[str, str]:
     """
     Get comments exactly before attributes
@@ -30,11 +30,11 @@ def _get_comments(cls: Type["Model"]) -> Dict[str, str]:
     for cls in reversed(cls.__mro__):
         if cls is object:
             continue
-        matches = re.findall(rf"((?:(?!\n|^)[^\w\n]*#.*?\n)+?)[^\w\n]*(\w+)\s*[:=]", source)
+        matches = re.findall(rf"((?:(?!\n|^)[^\w\n]*#:.*?\n)+?)[^\w\n]*(\w+)\s*[:=]", source)
         for match in matches:
             field_name = match[1]
             # Extract text
-            comment = re.sub(r"(^\s*#\s*|\s*$)", "", match[0], flags=re.MULTILINE)
+            comment = re.sub(r"(^\s*#:\s*|\s*$)", "", match[0], flags=re.MULTILINE)
             # Class name template
             comment = comment.replace("{model}", cls.__name__)
             # Change multiline texts to HTML
@@ -177,7 +177,7 @@ def pydantic_model_creator(
         # If arguments are specified (different from the defaults), we append a hash to the
         # class name, to make it unique
         h = (
-            ("_" + hex(hash((fqname, exclude, include, computed)))[2:])
+            "_" + sha256(f"{fqname};{exclude};{include};{computed}".encode("utf-8")).hexdigest()[:8]
             if exclude != () or include != () or computed != ()  # type: ignore
             else ""
         )
@@ -300,11 +300,11 @@ def pydantic_model_creator(
                 allow_recursion=allow_recursion,
             )
 
-            # If the result is None (it is recursion protected) we need to add the field into
-            # exclude and get new name for the class
+            # If the result is None it has been exluded and we need to exclude the field
             if pmodel is None:
                 exclude += (fname,)  # type: ignore
-                name = get_name()
+            # TODO: We need to rename if there are duplicate instances of this model
+            # name = get_name()
 
             return pmodel
 
@@ -362,6 +362,7 @@ def pydantic_model_creator(
 
     # Creating Pydantic class for the properties generated before
     model = typing.cast(Type[PydanticModel], type(name, (PydanticModel,), properties))
+    model.__doc__ = (cls.__doc__ or "").strip()
     # The title of the model to hide the hash postfix
     setattr(model.__config__, "title", cls.__name__)
     # Store the base class

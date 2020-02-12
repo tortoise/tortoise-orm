@@ -32,6 +32,8 @@ class Tournament(Model):
 
 
 class Reporter(Model):
+    """ Whom is assigned as the reporter """
+
     id = fields.IntField(pk=True)
     name = fields.TextField()
 
@@ -45,8 +47,12 @@ class Reporter(Model):
 
 
 class Event(Model):
+    """ Events on the calendar """
+
     id = fields.BigIntField(pk=True)
+    #: The name
     name = fields.TextField()
+    #: What tournaments is a happenin'
     tournament: fields.ForeignKeyRelation["Tournament"] = fields.ForeignKeyField(
         "models.Tournament", related_name="events"
     )
@@ -77,6 +83,10 @@ class Address(Model):
 
 
 class Team(Model):
+    """
+    Team that is a playing
+    """
+
     id = fields.IntField(pk=True)
     name = fields.TextField()
 
