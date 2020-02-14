@@ -60,8 +60,10 @@ def prepare_default_ordering(meta: "Model.Meta") -> Tuple[Tuple[str, str], ...]:
     return parsed_ordering
 
 
-def _fk_setter(self: "Model", value: "Optional[Model]", _key: str, relation_field: str) -> None:
-    setattr(self, relation_field, value.pk if value else None)
+def _fk_setter(
+    self: "Model", value: "Optional[Model]", _key: str, relation_field: str, to_field: str
+) -> None:
+    setattr(self, relation_field, getattr(value, to_field) if value else None)
     setattr(self, _key, value)
 
 
@@ -75,21 +77,23 @@ def _fk_getter(self: "Model", _key: str, ftype: "Type[Model]", relation_field: s
         return NoneAwaitable
 
 
-def _rfk_getter(self: "Model", _key: str, ftype: "Type[Model]", frelfield: str) -> ReverseRelation:
+def _rfk_getter(
+    self: "Model", _key: str, ftype: "Type[Model]", frelfield: str, to_field: str
+) -> ReverseRelation:
     val = getattr(self, _key, None)
     if val is None:
-        val = ReverseRelation(ftype, frelfield, self)
+        val = ReverseRelation(ftype, frelfield, self, to_field)
         setattr(self, _key, val)
     return val
 
 
 def _ro2o_getter(
-    self: "Model", _key: str, ftype: "Type[Model]", frelfield: str
+    self: "Model", _key: str, ftype: "Type[Model]", frelfield: str, to_field: str
 ) -> "QuerySetSingle[Optional[Model]]":
     if hasattr(self, _key):
         return getattr(self, _key)
 
-    val = ftype.filter(**{frelfield: self.pk}).first()
+    val = ftype.filter(**{frelfield: getattr(self, to_field)}).first()
     setattr(self, _key, val)
     return val
 
@@ -264,7 +268,9 @@ class MetaInfo:
         # Create lazy FK fields on model.
         for key in self.fk_fields:
             _key = f"_{key}"
-            relation_field = self.fields_map[key].source_field
+            field_object = self.fields_map[key]
+            relation_field = field_object.source_field
+            to_field = field_object.to_field_instance.model_field_name
             setattr(
                 self._model,
                 key,
@@ -272,11 +278,19 @@ class MetaInfo:
                     partial(
                         _fk_getter,
                         _key=_key,
-                        ftype=self.fields_map[key].model_class,  # type: ignore
+                        ftype=field_object.model_class,  # type: ignore
                         relation_field=relation_field,
                     ),
-                    partial(_fk_setter, _key=_key, relation_field=relation_field),
-                    partial(_fk_setter, value=None, _key=_key, relation_field=relation_field),
+                    partial(
+                        _fk_setter, _key=_key, relation_field=relation_field, to_field=to_field,
+                    ),
+                    partial(
+                        _fk_setter,
+                        value=None,
+                        _key=_key,
+                        relation_field=relation_field,
+                        to_field=to_field,
+                    ),
                 ),
             )
 
@@ -293,6 +307,7 @@ class MetaInfo:
                         _key=_key,
                         ftype=field_object.model_class,
                         frelfield=field_object.relation_field,
+                        to_field=field_object.to_field,
                     )
                 ),
             )
@@ -300,7 +315,9 @@ class MetaInfo:
         # Create lazy one to one fields on model.
         for key in self.o2o_fields:
             _key = f"_{key}"
-            relation_field = self.fields_map[key].source_field
+            field_object = self.fields_map[key]
+            relation_field = field_object.source_field
+            to_field = field_object.to_field_instance.model_field_name
             setattr(
                 self._model,
                 key,
@@ -308,11 +325,19 @@ class MetaInfo:
                     partial(
                         _fk_getter,
                         _key=_key,
-                        ftype=self.fields_map[key].model_class,  # type: ignore
+                        ftype=field_object.model_class,  # type: ignore
                         relation_field=relation_field,
                     ),
-                    partial(_fk_setter, _key=_key, relation_field=relation_field),
-                    partial(_fk_setter, value=None, _key=_key, relation_field=relation_field),
+                    partial(
+                        _fk_setter, _key=_key, relation_field=relation_field, to_field=to_field,
+                    ),
+                    partial(
+                        _fk_setter,
+                        value=None,
+                        _key=_key,
+                        relation_field=relation_field,
+                        to_field=to_field,
+                    ),
                 ),
             )
 
@@ -329,6 +354,7 @@ class MetaInfo:
                         _key=_key,
                         ftype=field_object.model_class,
                         frelfield=field_object.relation_field,
+                        to_field=field_object.to_field,
                     ),
                 ),
             )

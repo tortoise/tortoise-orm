@@ -349,17 +349,22 @@ class BaseExecutor:
     async def _prefetch_direct_relation(
         self, instance_list: "List[Model]", field: str, related_query: "QuerySet"
     ) -> "List[Model]":
-        related_objects_for_fetch = set()
+        related_objects_for_fetch = {}
         relation_key_field = f"{field}_id"
         for instance in instance_list:
             if getattr(instance, relation_key_field):
-                related_objects_for_fetch.add(getattr(instance, relation_key_field))
+                key = instance._meta.fields_map[relation_key_field].model_field_name
+                if key not in related_objects_for_fetch:
+                    related_objects_for_fetch[key] = []
+                related_objects_for_fetch[key].append(getattr(instance, relation_key_field))
             else:
                 setattr(instance, field, None)
 
         if related_objects_for_fetch:
-            related_object_list = await related_query.filter(pk__in=list(related_objects_for_fetch))
-            related_object_map = {obj.pk: obj for obj in related_object_list}
+            related_object_list = await related_query.filter(
+                **{k + "__in": v for k, v in related_objects_for_fetch.items()}
+            )
+            related_object_map = {getattr(obj, key): obj for obj in related_object_list}
             for instance in instance_list:
                 setattr(
                     instance, field, related_object_map.get(getattr(instance, relation_key_field))
