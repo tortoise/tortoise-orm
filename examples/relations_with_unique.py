@@ -21,22 +21,11 @@ class School(Model):
     students: fields.ReverseRelation["Student"]
 
 
-class Club(Model):
-    uuid = fields.UUIDField(pk=True)
-    name = fields.TextField()
-    club_id = fields.IntField(unique=True, source_field="club")
-
-    students: fields.ReverseRelation["Student"]
-
-
 class Student(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
     school: fields.ForeignKeyRelation[School] = fields.ForeignKeyField(
         "models.School", related_name="students", to_field="id",
-    )
-    club: fields.ForeignKeyRelation[Club] = fields.ForeignKeyField(
-        "models.Club", related_name="students", to_field="club_id",
     )
 
 
@@ -45,12 +34,10 @@ async def run():
     await Tortoise.generate_schemas()
 
     school = await School.create(id=1024, name="School")
-    club = await Club.create(club_id=128, name="Club")
-    student = await Student.create(name="Sang-Heon Jeon", school=school, club=club)
-    await student.fetch_related("school", "club")
-    print(student.school == school)
-    print(student.club == club)
-    print((await school.students.all())[0] == student)
+    student = await Student.create(name="Sang-Heon Jeon", school=school)
+
+    student = await Student.get(id=student.id)
+    print(await student.school)
 
 
 if __name__ == "__main__":
