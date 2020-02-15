@@ -5,8 +5,12 @@ Changelog
 future
 ------
 - ``Pydantic`` serialisation support
-- Now applies default ordering on related fetches.
-- Fix post M2M related queries not being evaluated
+
+0.15.13
+-------
+- Applies default ordering on related queries
+- Fix post-ManyToMany related queries not being evaluated correctly
+- Ordering is now preserved on ManyToMany related fetches
 
 0.15.12
 -------
