@@ -95,7 +95,7 @@ class TestPrefetching(test.TestCase):
             .first()
         )
         self.assertEqual(len(fetched_tournaments.events), 1)
-        self.assertEqual(fetched_tournaments.events[0].id, event.id)
+        self.assertEqual(fetched_tournaments.events[0].pk, event.pk)
 
     async def test_prefetch_direct_relation(self):
         tournament = await Tournament.create(name="tournament")

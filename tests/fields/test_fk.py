@@ -66,8 +66,8 @@ class TestForeignKeyField(test.TestCase):
         tour2 = await testmodels.Tournament.create(name="Team2")
         rel0 = await testmodels.Event.create(name="Event1", tournament=tour)
 
-        await testmodels.Event.filter(id=rel0.id).update(tournament=tour2)
-        rel = await testmodels.Event.get(id=rel0.id)
+        await testmodels.Event.filter(pk=rel0.pk).update(tournament=tour2)
+        rel = await testmodels.Event.get(event_id=rel0.event_id)
 
         await rel.fetch_related("tournament")
         self.assertEqual(rel.tournament, tour2)
@@ -79,8 +79,8 @@ class TestForeignKeyField(test.TestCase):
         tour2 = await testmodels.Tournament.create(name="Team2")
         rel0 = await testmodels.Event.create(name="Event1", tournament_id=tour.id)
 
-        await testmodels.Event.filter(id=rel0.id).update(tournament_id=tour2.id)
-        rel = await testmodels.Event.get(id=rel0.id)
+        await testmodels.Event.filter(event_id=rel0.event_id).update(tournament_id=tour2.id)
+        rel = await testmodels.Event.get(pk=rel0.pk)
 
         self.assertEqual(rel.tournament_id, tour2.id)
         self.assertEqual(await tour.events.all(), [])

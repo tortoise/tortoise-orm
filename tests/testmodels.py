@@ -42,7 +42,7 @@ class Reporter(Model):
 
 
 class Event(Model):
-    id = fields.BigIntField(pk=True)
+    event_id = fields.BigIntField(pk=True)
     name = fields.TextField()
     tournament: fields.ForeignKeyRelation["Tournament"] = fields.ForeignKeyField(
         "models.Tournament", related_name="events"
