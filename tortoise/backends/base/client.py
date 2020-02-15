@@ -204,7 +204,7 @@ class BaseDBAsyncClient:
 class ConnectionWrapper:
     __slots__ = ("connection", "lock")
 
-    def __init__(self, connection, lock: asyncio.Lock) -> None:
+    def __init__(self, connection: Any, lock: asyncio.Lock) -> None:
         self.connection = connection
         self.lock: asyncio.Lock = lock
 
@@ -219,7 +219,7 @@ class ConnectionWrapper:
 class TransactionContext:
     __slots__ = ("connection", "connection_name", "token", "lock")
 
-    def __init__(self, connection) -> None:
+    def __init__(self, connection: Any) -> None:
         self.connection = connection
         self.connection_name = connection.connection_name
         self.lock = getattr(connection, "_trxlock", None)
@@ -282,7 +282,7 @@ class NestedTransactionContext(TransactionContext):
 
 
 class PoolConnectionWrapper:
-    def __init__(self, pool) -> None:
+    def __init__(self, pool: Any) -> None:
         self.pool = pool
         self.connection = None
 

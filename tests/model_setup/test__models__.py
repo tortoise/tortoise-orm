@@ -51,7 +51,7 @@ class TestGenerateSchema(test.SimpleTestCase):
             self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split(";\n")
 
     def get_sql(self, text: str) -> str:
-        return re.sub(r"[ \t\n\r]+", " ", [sql for sql in self.sqls if text in sql][0])
+        return str(re.sub(r"[ \t\n\r]+", " ", [sql for sql in self.sqls if text in sql][0]))
 
     async def test_good(self):
         await self.init_for("tests.model_setup.models__models__good")

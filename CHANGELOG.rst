@@ -2,6 +2,12 @@
 
 Changelog
 =========
+0.15.13
+-------
+- Applies default ordering on related queries
+- Fix post-ManyToMany related queries not being evaluated correctly
+- Ordering is now preserved on ManyToMany related fetches
+
 0.15.12
 -------
 - Added ``range`` filter to support ``between and`` syntax
