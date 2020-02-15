@@ -67,13 +67,15 @@ def _fk_setter(
     setattr(self, _key, value)
 
 
-def _fk_getter(self: "Model", _key: str, ftype: "Type[Model]", relation_field: str) -> Awaitable:
+def _fk_getter(
+    self: "Model", _key: str, ftype: "Type[Model]", relation_field: str, to_field: str
+) -> Awaitable:
     try:
         return getattr(self, _key)
     except AttributeError:
-        _pk = getattr(self, relation_field)
-        if _pk:
-            return ftype.filter(pk=_pk).first()
+        value = getattr(self, relation_field)
+        if value:
+            return ftype.filter(**{to_field: value}).first()
         return NoneAwaitable
 
 
@@ -280,6 +282,7 @@ class MetaInfo:
                         _key=_key,
                         ftype=field_object.model_class,  # type: ignore
                         relation_field=relation_field,
+                        to_field=to_field,
                     ),
                     partial(
                         _fk_setter, _key=_key, relation_field=relation_field, to_field=to_field,
@@ -327,6 +330,7 @@ class MetaInfo:
                         _key=_key,
                         ftype=field_object.model_class,  # type: ignore
                         relation_field=relation_field,
+                        to_field=to_field,
                     ),
                     partial(
                         _fk_setter, _key=_key, relation_field=relation_field, to_field=to_field,
