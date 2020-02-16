@@ -214,29 +214,34 @@ class BaseExecutor:
     async def _prefetch_reverse_relation(
         self, instance_list: "List[Model]", field: str, related_query: "QuerySet"
     ) -> list:
-        instance_id_set: set = {
-            self._field_to_db(instance._meta.pk, instance.pk, instance)
-            for instance in instance_list
-        }
-        relation_field = self.model._meta.fields_map[field].relation_field  # type: ignore
+        related_objects_for_fetch: Dict[str, list] = {}
+        key = self.model._meta.fields_map[field].relation_field  # type: ignore
+        for instance in instance_list:
+            if key not in related_objects_for_fetch:
+                related_objects_for_fetch[key] = []
+            related_objects_for_fetch[key].append(
+                self._field_to_db(getattr(instance._meta, "pk"), getattr(instance, "pk"), instance)
+            )
 
         related_query.resolve_ordering(
             related_query.model, related_query.model._meta.basetable, [], {}
         )
         related_object_list = await related_query.filter(
-            **{f"{relation_field}__in": list(instance_id_set)}
+            **{k + "__in": v for k, v in related_objects_for_fetch.items()}
         )
 
         related_object_map: Dict[str, list] = {}
         for entry in related_object_list:
-            object_id = getattr(entry, relation_field)
+            object_id = getattr(entry, key)
             if object_id in related_object_map.keys():
                 related_object_map[object_id].append(entry)
             else:
                 related_object_map[object_id] = [entry]
         for instance in instance_list:
             relation_container = getattr(instance, field)
-            relation_container._set_result_for_query(related_object_map.get(instance.pk, []))
+            relation_container._set_result_for_query(
+                related_object_map.get(getattr(instance, "pk"), [])
+            )
         return instance_list
 
     async def _prefetch_reverse_o2o_relation(

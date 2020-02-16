@@ -61,6 +61,7 @@ class ReverseRelation(Generic[MODEL]):
         self.relation_field = relation_field
         self.instance = instance
         self.to_field = to_field
+        self.from_field_instance: "Field" = None  # type: ignore
         self._fetched = False
         self._custom_query = False
         self.related_objects: List[MODEL] = []
