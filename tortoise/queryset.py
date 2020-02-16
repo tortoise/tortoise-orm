@@ -652,7 +652,9 @@ class UpdateQuery(AwaitableQuery):
             if isinstance(field_object, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
                 fk_field: str = field_object.source_field  # type: ignore
                 db_field = self.model._meta.fields_map[fk_field].source_field
-                value = executor.column_map[fk_field](value.pk, None)
+                value = executor.column_map[fk_field](
+                    getattr(value, field_object.to_field_instance.model_field_name), None
+                )
             else:
                 try:
                     db_field = self.model._meta.fields_db_projection[key]
