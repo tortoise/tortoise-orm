@@ -214,22 +214,23 @@ def pydantic_model_creator(
     default_computed: Tuple[str, ...] = tuple(
         getattr(meta, "pydantic_computed", getattr(default_meta, "pydantic_computed"))
     )
-    backward_relations = getattr(
-        meta, "pydantic_backward_relations", getattr(default_meta, "pydantic_backward_relations"),
+    use_comments: bool = bool(
+        getattr(meta, "pydantic_use_comments", getattr(default_meta, "pydantic_use_comments"))
     )
-    use_comments = getattr(
-        meta, "pydantic_use_comments", getattr(default_meta, "pydantic_use_comments")
+    max_recursion: int = int(
+        getattr(meta, "pydantic_max_recursion", getattr(default_meta, "pydantic_max_recursion"))
     )
-    max_recursion = getattr(
-        meta, "pydantic_max_recursion", getattr(default_meta, "pydantic_max_recursion")
+    exclude_raw_fields: bool = bool(
+        getattr(
+            meta,
+            "pydantic_exclude_raw_fields",
+            getattr(default_meta, "pydantic_exclude_raw_fields"),
+        )
     )
-    exclude_raw_fields = getattr(
-        meta, "pydantic_exclude_raw_fields", getattr(default_meta, "pydantic_exclude_raw_fields"),
+    sort_fields: bool = bool(
+        getattr(meta, "pydantic_sort_fields", getattr(default_meta, "pydantic_sort_fields"))
     )
-    sort_fields = getattr(
-        meta, "pydantic_sort_fields", getattr(default_meta, "pydantic_sort_fields")
-    )
-    _allow_cycles = (
+    _allow_cycles: bool = bool(
         getattr(meta, "pydantic_allow_cycles", getattr(default_meta, "pydantic_sort_fields"))
         if allow_cycles is None
         else allow_cycles
@@ -266,10 +267,6 @@ def pydantic_model_creator(
                 n = fd["name"]
                 # Include or exclude field
                 if (include and n not in include) or n in exclude:
-                    continue
-                # Relations most have annotations to be included if backward_relations
-                # is not True
-                if is_relation and not backward_relations and n not in annotations:
                     continue
                 # Remove raw fields
                 raw_field = fd.get("raw_field", None)

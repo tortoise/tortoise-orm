@@ -888,29 +888,31 @@ class Model(metaclass=ModelMeta):
         """
 
         #: If not empty, only fields this property contains will be in the pydantic model
-        pydantic_include: Tuple[str] = ()  # type: ignore
+        pydantic_include: Tuple[str, ...] = ()
 
         #: Fields listed in this property will be excluded from pydantic model
-        pydantic_exclude: Tuple[str] = ()  # type: ignore
+        pydantic_exclude: Tuple[str, ...] = ()
 
         #: Computed fields can be listed here to use in pydantic model
-        pydantic_computed: Tuple[str] = ()  # type: ignore
+        pydantic_computed: Tuple[str, ...] = ()
 
         #: Use backward relations without annotations - not recommended, it can be huge data
         #: without control
-        pydantic_backward_relations = True
+        pydantic_backward_relations: bool = True
 
         #: Maximum recursion level allowed
-        pydantic_max_recursion = 3
+        pydantic_max_recursion: int = 3
 
-        #: Allow cycles in recursion
-        pydantic_allow_cycles = False
+        #: Allow cycles in recursion - This can result in HUGE data - Be careful!
+        #: Please use this with ``exclude``/``include`` and sane ``max_recursion``
+        pydantic_allow_cycles: bool = False
 
         #: Use comments found before field definitions as pydantic description
-        pydantic_use_comments = True
+        pydantic_use_comments: bool = True
 
         #: If we should exclude raw fields (the ones have _id suffixes) of relations
-        pydantic_exclude_raw_fields = True
+        pydantic_exclude_raw_fields: bool = True
 
-        #: Sort fields alphabetically
-        pydantic_sort_fields = False
+        #: Sort fields alphabetically.
+        #: If not set (or ``False``) then leave fields in declaration order
+        pydantic_sort_fields: bool = False
