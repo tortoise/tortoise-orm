@@ -55,13 +55,12 @@ class ReverseRelation(Generic[MODEL]):
     """
 
     def __init__(
-        self, model: Type[MODEL], relation_field: str, instance: "Model", to_field: str,
+        self, model: Type[MODEL], relation_field: str, instance: "Model", from_field: str,
     ) -> None:
         self.model = model
         self.relation_field = relation_field
         self.instance = instance
-        self.to_field = to_field
-        self.from_field_instance: "Field" = None  # type: ignore
+        self.from_field = from_field
         self._fetched = False
         self._custom_query = False
         self.related_objects: List[MODEL] = []
@@ -72,7 +71,7 @@ class ReverseRelation(Generic[MODEL]):
             raise OperationalError(
                 "This objects hasn't been instanced, call .save() before calling related queries"
             )
-        return self.model.filter(**{self.relation_field: getattr(self.instance, self.to_field)})
+        return self.model.filter(**{self.relation_field: getattr(self.instance, self.from_field)})
 
     def __contains__(self, item: Any) -> bool:
         if not self._fetched:

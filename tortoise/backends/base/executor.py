@@ -9,7 +9,7 @@ from pypika import JoinType, Parameter, Query, Table
 
 from tortoise.exceptions import OperationalError
 from tortoise.fields.base import Field
-from tortoise.fields.relational import ManyToManyFieldInstance
+from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
 from tortoise.query_utils import QueryModifier
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -215,24 +215,30 @@ class BaseExecutor:
         self, instance_list: "List[Model]", field: str, related_query: "QuerySet"
     ) -> list:
         related_objects_for_fetch: Dict[str, list] = {}
-        key = self.model._meta.fields_map[field].relation_field  # type: ignore
+        related_field: BackwardFKRelation = self.model._meta.fields_map[field]  # type: ignore
+        related_field_name = related_field.to_field_instance.model_field_name
+        relation_field = related_field.relation_field
         for instance in instance_list:
-            if key not in related_objects_for_fetch:
-                related_objects_for_fetch[key] = []
-            related_objects_for_fetch[key].append(
-                self._field_to_db(getattr(instance._meta, "pk"), getattr(instance, "pk"), instance)
+            if relation_field not in related_objects_for_fetch:
+                related_objects_for_fetch[relation_field] = []
+            related_objects_for_fetch[relation_field].append(
+                self._field_to_db(
+                    instance._meta.fields_map[related_field_name],
+                    getattr(instance, related_field_name),
+                    instance,
+                )
             )
 
         related_query.resolve_ordering(
             related_query.model, related_query.model._meta.basetable, [], {}
         )
         related_object_list = await related_query.filter(
-            **{k + "__in": v for k, v in related_objects_for_fetch.items()}
+            **{f"{k}__in": v for k, v in related_objects_for_fetch.items()}
         )
 
         related_object_map: Dict[str, list] = {}
         for entry in related_object_list:
-            object_id = getattr(entry, key)
+            object_id = getattr(entry, relation_field)
             if object_id in related_object_map.keys():
                 related_object_map[object_id].append(entry)
             else:
@@ -240,7 +246,7 @@ class BaseExecutor:
         for instance in instance_list:
             relation_container = getattr(instance, field)
             relation_container._set_result_for_query(
-                related_object_map.get(getattr(instance, "pk"), [])
+                related_object_map.get(getattr(instance, related_field_name), [])
             )
         return instance_list
 
@@ -367,7 +373,7 @@ class BaseExecutor:
 
         if related_objects_for_fetch:
             related_object_list = await related_query.filter(
-                **{k + "__in": v for k, v in related_objects_for_fetch.items()}
+                **{f"{k}__in": v for k, v in related_objects_for_fetch.items()}
             )
             related_object_map = {getattr(obj, key): obj for obj in related_object_list}
             for instance in instance_list:

@@ -324,7 +324,6 @@ class Tortoise:
                             if related_field.unique:
                                 key_fk_object = deepcopy(related_field)
                                 fk_object.to_field_instance = related_field
-                                reverse_to_field = fk_object.to_field
                             else:
                                 raise ConfigurationError(
                                     f'field "{fk_object.to_field}" in model'
@@ -338,7 +337,6 @@ class Tortoise:
                     else:
                         key_fk_object = deepcopy(related_model._meta.pk)
                         fk_object.to_field_instance = related_model._meta.pk
-                        reverse_to_field = "pk"
 
                     key_field = f"{field}_id"
                     key_fk_object.pk = False
@@ -368,12 +366,9 @@ class Tortoise:
                                 f" model {related_model_name}"
                             )
                         fk_relation = BackwardFKRelation(
-                            model,
-                            f"{field}_id",
-                            fk_object.null,
-                            fk_object.description,
-                            to_field=reverse_to_field,
+                            model, f"{field}_id", fk_object.null, fk_object.description,
                         )
+                        fk_relation.to_field_instance = fk_object.to_field_instance
                         related_model._meta.add_field(
                             cast(str, backward_relation_name), fk_relation
                         )
@@ -392,7 +387,6 @@ class Tortoise:
                             if related_field.unique:
                                 key_o2o_object = deepcopy(related_field)
                                 o2o_object.to_field_instance = related_field
-                                reverse_to_field = o2o_object.to_field
                             else:
                                 raise ConfigurationError(
                                     f'field "{o2o_object.to_field}" in model'
@@ -406,7 +400,6 @@ class Tortoise:
                     else:
                         key_o2o_object = deepcopy(related_model._meta.pk)
                         o2o_object.to_field_instance = related_model._meta.pk
-                        reverse_to_field = "pk"
 
                     key_field = f"{field}_id"
                     key_o2o_object.pk = o2o_object.pk
@@ -436,12 +429,9 @@ class Tortoise:
                                 f" model {related_model_name}"
                             )
                         o2o_relation = BackwardOneToOneRelation(
-                            model,
-                            f"{field}_id",
-                            null=True,
-                            description=o2o_object.description,
-                            to_field=reverse_to_field,
+                            model, f"{field}_id", null=True, description=o2o_object.description,
                         )
+                        o2o_relation.to_field_instance = o2o_object.to_field_instance
                         related_model._meta.add_field(
                             cast(str, backward_relation_name), o2o_relation
                         )

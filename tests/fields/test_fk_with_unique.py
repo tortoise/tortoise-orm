@@ -1,10 +1,14 @@
 from tests import testmodels
 from tortoise.contrib import test
-from tortoise.exceptions import NoValuesFetched, OperationalError
+from tortoise.exceptions import IntegrityError, NoValuesFetched, OperationalError
 from tortoise.queryset import QuerySet
 
 
 class TestForeignKeyFieldWithUnique(test.TestCase):
+    async def test_student__empty(self):
+        with self.assertRaises(IntegrityError):
+            await testmodels.Student.create()
+
     async def test_student__create_by_id(self):
         school = await testmodels.School.create(id=1024, name="School1")
         student = await testmodels.Student.create(name="Sang-Heon Jeon", school_id=school.id)
@@ -68,6 +72,13 @@ class TestForeignKeyFieldWithUnique(test.TestCase):
         self.assertEqual(student.school_id, school2.id)
         self.assertEqual(await school.students.all(), [])
         self.assertEqual((await school2.students.all())[0], student)
+
+    async def test_delete_by_name(self):
+        school = await testmodels.School.create(id=1024, name="School1")
+        student = await testmodels.Student.create(name="Sang-Heon Jeon", school=school)
+        del student.school
+        with self.assertRaises(IntegrityError):
+            await student.save()
 
     async def test_student__uninstantiated_create(self):
         school = await testmodels.School(id=1024, name="School1")
@@ -154,3 +165,61 @@ class TestForeignKeyFieldWithUnique(test.TestCase):
         student = await testmodels.Student.create(name="Sang-Heon Jeon", school=school)
         await school.fetch_related("students")
         self.assertEqual(list(school.students), [student])
+
+    async def test_student__fetched_len(self):
+        school = await testmodels.School.create(id=1024, name="School1")
+        await testmodels.Student.create(name="Sang-Heon Jeon", school=school)
+        await school.fetch_related("students")
+        self.assertEqual(len(school.students), 1)
+
+    async def test_student__fetched_bool(self):
+        school = await testmodels.School.create(id=1024, name="School1")
+        await school.fetch_related("students")
+        self.assertFalse(bool(school.students))
+        await testmodels.Student.create(name="Sang-Heon Jeon", school=school)
+        await school.fetch_related("students")
+        self.assertTrue(bool(school.students))
+
+    async def test_student__fetched_getitem(self):
+        school = await testmodels.School.create(id=1024, name="School1")
+        student = await testmodels.Student.create(name="Sang-Heon Jeon", school=school)
+        await school.fetch_related("students")
+        self.assertEqual(school.students[0], student)
+
+        with self.assertRaises(IndexError):
+            school.students[1]  # pylint: disable=W0104
+
+    async def test_student__filter(self):
+        school = await testmodels.School.create(id=1024, name="School1")
+        student1 = await testmodels.Student.create(name="Sang-Heon Jeon1", school=school)
+        student2 = await testmodels.Student.create(name="Sang-Heon Jeon2", school=school)
+        self.assertEqual(await school.students.filter(name="Sang-Heon Jeon1"), [student1])
+        self.assertEqual(await school.students.filter(name="Sang-Heon Jeon2"), [student2])
+        self.assertEqual(await school.students.filter(name="Sang-Heon Jeon3"), [])
+
+    async def test_student__all(self):
+        school = await testmodels.School.create(id=1024, name="School1")
+        student1 = await testmodels.Student.create(name="Sang-Heon Jeon1", school=school)
+        student2 = await testmodels.Student.create(name="Sang-Heon Jeon2", school=school)
+        self.assertEqual(set(await school.students.all()), {student1, student2})
+
+    async def test_student_order_by(self):
+        school = await testmodels.School.create(id=1024, name="School1")
+        student1 = await testmodels.Student.create(name="Sang-Heon Jeon1", school=school)
+        student2 = await testmodels.Student.create(name="Sang-Heon Jeon2", school=school)
+        self.assertEqual(await school.students.order_by("-name"), [student2, student1])
+        self.assertEqual(await school.students.order_by("name"), [student1, student2])
+
+    async def test_student__limit(self):
+        school = await testmodels.School.create(id=1024, name="School1")
+        student1 = await testmodels.Student.create(name="Sang-Heon Jeon1", school=school)
+        student2 = await testmodels.Student.create(name="Sang-Heon Jeon2", school=school)
+        await testmodels.Student.create(name="Sang-Heon Jeon3", school=school)
+        self.assertEqual(await school.students.limit(2).order_by("name"), [student1, student2])
+
+    async def test_student_offset(self):
+        school = await testmodels.School.create(id=1024, name="School1")
+        await testmodels.Student.create(name="Sang-Heon Jeon1", school=school)
+        student2 = await testmodels.Student.create(name="Sang-Heon Jeon2", school=school)
+        student3 = await testmodels.Student.create(name="Sang-Heon Jeon3", school=school)
+        self.assertEqual(await school.students.offset(1).order_by("name"), [student2, student3])

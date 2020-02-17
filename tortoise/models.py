@@ -80,22 +80,22 @@ def _fk_getter(
 
 
 def _rfk_getter(
-    self: "Model", _key: str, ftype: "Type[Model]", frelfield: str, to_field: str
+    self: "Model", _key: str, ftype: "Type[Model]", frelfield: str, from_field: str
 ) -> ReverseRelation:
     val = getattr(self, _key, None)
     if val is None:
-        val = ReverseRelation(ftype, frelfield, self, to_field)
+        val = ReverseRelation(ftype, frelfield, self, from_field)
         setattr(self, _key, val)
     return val
 
 
 def _ro2o_getter(
-    self: "Model", _key: str, ftype: "Type[Model]", frelfield: str, to_field: str
+    self: "Model", _key: str, ftype: "Type[Model]", frelfield: str, from_field: str
 ) -> "QuerySetSingle[Optional[Model]]":
     if hasattr(self, _key):
         return getattr(self, _key)
 
-    val = ftype.filter(**{frelfield: getattr(self, to_field)}).first()
+    val = ftype.filter(**{frelfield: getattr(self, from_field)}).first()
     setattr(self, _key, val)
     return val
 
@@ -270,9 +270,9 @@ class MetaInfo:
         # Create lazy FK fields on model.
         for key in self.fk_fields:
             _key = f"_{key}"
-            field_object = self.fields_map[key]
-            relation_field = field_object.source_field
-            to_field = field_object.to_field_instance.model_field_name
+            fk_field_object: ForeignKeyFieldInstance = self.fields_map[key]  # type: ignore
+            relation_field = fk_field_object.source_field
+            to_field = fk_field_object.to_field_instance.model_field_name
             setattr(
                 self._model,
                 key,
@@ -280,7 +280,7 @@ class MetaInfo:
                     partial(
                         _fk_getter,
                         _key=_key,
-                        ftype=field_object.model_class,  # type: ignore
+                        ftype=fk_field_object.model_class,
                         relation_field=relation_field,
                         to_field=to_field,
                     ),
@@ -300,7 +300,7 @@ class MetaInfo:
         # Create lazy reverse FK fields on model.
         for key in self.backward_fk_fields:
             _key = f"_{key}"
-            field_object: BackwardFKRelation = self.fields_map[key]  # type: ignore
+            backward_fk_field_object: BackwardFKRelation = self.fields_map[key]  # type: ignore
             setattr(
                 self._model,
                 key,
@@ -308,9 +308,9 @@ class MetaInfo:
                     partial(
                         _rfk_getter,
                         _key=_key,
-                        ftype=field_object.model_class,
-                        frelfield=field_object.relation_field,
-                        to_field=field_object.to_field,
+                        ftype=backward_fk_field_object.model_class,
+                        frelfield=backward_fk_field_object.relation_field,
+                        from_field=backward_fk_field_object.to_field_instance.model_field_name,
                     )
                 ),
             )
@@ -318,9 +318,9 @@ class MetaInfo:
         # Create lazy one to one fields on model.
         for key in self.o2o_fields:
             _key = f"_{key}"
-            field_object = self.fields_map[key]
-            relation_field = field_object.source_field
-            to_field = field_object.to_field_instance.model_field_name
+            o2o_field_object: OneToOneFieldInstance = self.fields_map[key]  # type: ignore
+            relation_field = o2o_field_object.source_field
+            to_field = o2o_field_object.to_field_instance.model_field_name
             setattr(
                 self._model,
                 key,
@@ -328,7 +328,7 @@ class MetaInfo:
                     partial(
                         _fk_getter,
                         _key=_key,
-                        ftype=field_object.model_class,  # type: ignore
+                        ftype=o2o_field_object.model_class,
                         relation_field=relation_field,
                         to_field=to_field,
                     ),
@@ -348,7 +348,9 @@ class MetaInfo:
         # Create lazy reverse one to one fields on model.
         for key in self.backward_o2o_fields:
             _key = f"_{key}"
-            field_object: BackwardOneToOneRelation = self.fields_map[key]  # type: ignore
+            backward_o2o_field_object: BackwardOneToOneRelation = self.fields_map[  # type: ignore
+                key
+            ]
             setattr(
                 self._model,
                 key,
@@ -356,9 +358,9 @@ class MetaInfo:
                     partial(
                         _ro2o_getter,
                         _key=_key,
-                        ftype=field_object.model_class,
-                        frelfield=field_object.relation_field,
-                        to_field=field_object.to_field,
+                        ftype=backward_o2o_field_object.model_class,
+                        frelfield=backward_o2o_field_object.relation_field,
+                        from_field=backward_o2o_field_object.to_field_instance.model_field_name,
                     ),
                 ),
             )
