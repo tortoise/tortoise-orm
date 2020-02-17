@@ -30,14 +30,14 @@ class TestFiltering(test.TestCase):
         await event_second.participants.add(team_second)
 
         found_events = (
-            await Event.filter(Q(id__in=[event_first.id, event_second.id]) | Q(name="3"))
+            await Event.filter(Q(pk__in=[event_first.pk, event_second.pk]) | Q(name="3"))
             .filter(participants__not=team_second.id)
             .order_by("name", "tournament_id")
             .distinct()
         )
         self.assertEqual(len(found_events), 2)
-        self.assertEqual(found_events[0].id, event_first.id)
-        self.assertEqual(found_events[1].id, event_third.id)
+        self.assertEqual(found_events[0].pk, event_first.pk)
+        self.assertEqual(found_events[1].pk, event_third.pk)
         await Team.filter(events__tournament_id=tournament.id).order_by("-events__name")
         await Tournament.filter(events__name__in=["1", "3"]).distinct()
 
@@ -57,10 +57,10 @@ class TestFiltering(test.TestCase):
         await Tournament.create(name="0")
         tournament = await Tournament.create(name="Tournament")
         event = await Event.create(name="1", tournament=tournament)
-        fetched_tournament = await Tournament.filter(events=event.id).first()
+        fetched_tournament = await Tournament.filter(events=event.event_id).first()
         self.assertEqual(fetched_tournament.id, tournament.id)
 
-        fetched_tournament = await Tournament.filter(Q(events=event.id)).first()
+        fetched_tournament = await Tournament.filter(Q(events=event.event_id)).first()
         self.assertEqual(fetched_tournament.id, tournament.id)
 
     async def test_q_object_related_query(self):
@@ -70,13 +70,13 @@ class TestFiltering(test.TestCase):
         await Event.create(name="1", tournament=tournament_first)
 
         fetched_event = await Event.filter(tournament=tournament_second).first()
-        self.assertEqual(fetched_event.id, event.id)
+        self.assertEqual(fetched_event.pk, event.pk)
 
         fetched_event = await Event.filter(Q(tournament=tournament_second)).first()
-        self.assertEqual(fetched_event.id, event.id)
+        self.assertEqual(fetched_event.pk, event.pk)
 
         fetched_event = await Event.filter(Q(tournament=tournament_second.id)).first()
-        self.assertEqual(fetched_event.id, event.id)
+        self.assertEqual(fetched_event.pk, event.pk)
 
     async def test_null_filter(self):
         tournament = await Tournament.create(name="Tournament")
@@ -85,7 +85,7 @@ class TestFiltering(test.TestCase):
         event = await Event.create(name="1", tournament=tournament)
         fetched_events = await Event.filter(reporter=None)
         self.assertEqual(len(fetched_events), 1)
-        self.assertEqual(fetched_events[0].id, event.id)
+        self.assertEqual(fetched_events[0].pk, event.pk)
 
     async def test_exclude(self):
         await Tournament.create(name="0")

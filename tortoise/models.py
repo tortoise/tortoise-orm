@@ -2,7 +2,7 @@ from copy import copy, deepcopy
 from functools import partial
 from typing import Any, Awaitable, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
 
-from pypika import Query, Table
+from pypika import Order, Query, Table
 
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import ConfigurationError, OperationalError
@@ -50,7 +50,7 @@ def get_together(meta: "Model.Meta", together: str) -> Tuple[Tuple[str, ...], ..
     return _together
 
 
-def prepare_default_ordering(meta: "Model.Meta") -> Tuple[Tuple[str, str], ...]:
+def prepare_default_ordering(meta: "Model.Meta") -> Tuple[Tuple[str, Order], ...]:
     ordering_list = getattr(meta, "ordering", ())
 
     parsed_ordering = tuple(
@@ -148,7 +148,7 @@ class MetaInfo:
         self.app: Optional[str] = getattr(meta, "app", None)
         self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
         self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
-        self._default_ordering: Tuple[Tuple[str, str], ...] = prepare_default_ordering(meta)
+        self._default_ordering: Tuple[Tuple[str, Order], ...] = prepare_default_ordering(meta)
         self._ordering_validated: bool = False
         self.fields: Set[str] = set()
         self.db_fields: Set[str] = set()

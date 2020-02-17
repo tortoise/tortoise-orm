@@ -52,10 +52,12 @@ class TestRelations(test.TestCase):
 
         await Tournament.filter(events__name__in=["Test", "Prod"]).distinct()
 
-        result = await Event.filter(id=event.id).values("id", "name", tournament="tournament__name")
+        result = await Event.filter(pk=event.pk).values(
+            "event_id", "name", tournament="tournament__name"
+        )
         self.assertEqual(result[0]["tournament"], tournament.name)
 
-        result = await Event.filter(id=event.id).values_list("id", "participants__name")
+        result = await Event.filter(pk=event.pk).values_list("event_id", "participants__name")
         self.assertEqual(len(result), 2)
 
     async def test_reset_queryset_on_query(self):
@@ -222,8 +224,8 @@ class TestRelations(test.TestCase):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Test", tournament_id=tournament.id)
 
-        with self.assertRaisesRegex(FieldError, "Field id on event is not a relation"):
-            await Event.filter(name="Test").prefetch_related("id")
+        with self.assertRaisesRegex(FieldError, "Field event_id on event is not a relation"):
+            await Event.filter(name="Test").prefetch_related("event_id")
 
     async def test_nullable_fk_raw(self):
         tournament = await Tournament.create(name="New Tournament")

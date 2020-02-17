@@ -31,7 +31,7 @@ class TestPydantic(test.TestCase):
                 "description": "Events on the calendar",
                 "type": "object",
                 "properties": {
-                    "id": {"title": "Id", "type": "integer"},
+                    "event_id": {"title": "Event Id", "type": "integer"},
                     "name": {"description": "The name", "title": "Name", "type": "string"},
                     "modified": {"title": "Modified", "type": "string", "format": "date-time"},
                     "token": {"title": "Token", "type": "string"},
@@ -155,7 +155,7 @@ class TestPydantic(test.TestCase):
                         "description": "Events on the calendar",
                         "type": "object",
                         "properties": {
-                            "id": {"title": "Id", "type": "integer"},
+                            "event_id": {"title": "Event Id", "type": "integer"},
                             "name": {"title": "Name", "description": "The name", "type": "string"},
                             "modified": {
                                 "title": "Modified",
@@ -239,7 +239,7 @@ class TestPydantic(test.TestCase):
                         "description": "Events on the calendar",
                         "type": "object",
                         "properties": {
-                            "id": {"title": "Id", "type": "integer"},
+                            "event_id": {"title": "Event Id", "type": "integer"},
                             "name": {"description": "The name", "title": "Name", "type": "string"},
                             "modified": {
                                 "title": "Modified",
@@ -322,7 +322,7 @@ class TestPydantic(test.TestCase):
                         "description": "Events on the calendar",
                         "type": "object",
                         "properties": {
-                            "id": {"title": "Id", "type": "integer"},
+                            "event_id": {"title": "Event Id", "type": "integer"},
                             "name": {"description": "The name", "title": "Name", "type": "string"},
                             "modified": {
                                 "title": "Modified",
@@ -365,7 +365,7 @@ class TestPydantic(test.TestCase):
             eventldict,
             [
                 {
-                    "id": self.event.id,
+                    "event_id": self.event.event_id,
                     "name": "Test",
                     # "modified": "2020-01-28T10:43:50.901562",
                     "token": self.event.token,
@@ -384,7 +384,7 @@ class TestPydantic(test.TestCase):
                     "address": {"id": self.address.pk, "city": "Santa Monica", "street": "Ocean"},
                 },
                 {
-                    "id": self.event2.id,
+                    "event_id": self.event2.event_id,
                     "name": "Test2",
                     # "modified": "2020-01-28T10:43:50.901562",
                     "token": self.event2.token,
@@ -417,7 +417,7 @@ class TestPydantic(test.TestCase):
         self.assertEqual(
             eventdict,
             {
-                "id": self.event.id,
+                "event_id": self.event.event_id,
                 "name": "Test",
                 # "modified": "2020-01-28T10:43:50.901562",
                 "token": self.event.token,
@@ -458,7 +458,7 @@ class TestPydantic(test.TestCase):
                 # "created": "2020-01-28T19:41:38.059617",
                 "events": [
                     {
-                        "id": self.event.id,
+                        "event_id": self.event.event_id,
                         "name": "Test",
                         # "modified": "2020-01-28T19:41:38.060070",
                         "token": self.event.token,
@@ -475,7 +475,7 @@ class TestPydantic(test.TestCase):
                         },
                     },
                     {
-                        "id": self.event2.id,
+                        "event_id": self.event2.event_id,
                         "name": "Test2",
                         # "modified": "2020-01-28T19:41:38.060070",
                         "token": self.event2.token,
@@ -510,7 +510,7 @@ class TestPydantic(test.TestCase):
                 "alias": None,
                 "events": [
                     {
-                        "id": self.event.id,
+                        "event_id": self.event.event_id,
                         "name": "Test",
                         # "modified": "2020-01-28T19:47:03.334077",
                         "token": self.event.token,
@@ -529,7 +529,7 @@ class TestPydantic(test.TestCase):
                         },
                     },
                     {
-                        "id": self.event2.id,
+                        "event_id": self.event2.event_id,
                         "name": "Test2",
                         # "modified": "2020-01-28T19:47:03.334077",
                         "token": self.event2.token,

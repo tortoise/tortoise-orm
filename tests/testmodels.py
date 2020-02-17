@@ -49,7 +49,7 @@ class Reporter(Model):
 class Event(Model):
     """ Events on the calendar """
 
-    id = fields.BigIntField(pk=True)
+    event_id = fields.BigIntField(pk=True)
     #: The name
     name = fields.TextField()
     #: What tournaments is a happenin'
