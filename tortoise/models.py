@@ -903,6 +903,9 @@ class Model(metaclass=ModelMeta):
         #: Maximum recursion level allowed
         pydantic_max_recursion = 3
 
+        #: Allow cycles in recursion
+        pydantic_allow_cycles = False
+
         #: Use comments found before field definitions as pydantic description
         pydantic_use_comments = True
 

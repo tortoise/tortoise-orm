@@ -1,4 +1,4 @@
-from tests.testmodels import Address, Event, Reporter, Team, Tournament
+from tests.testmodels import Address, Employee, Event, Reporter, Team, Tournament
 from tortoise.contrib import test
 from tortoise.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
@@ -542,6 +542,172 @@ class TestPydantic(test.TestCase):
                         },
                         "reporter": None,
                         "address": None,
+                    },
+                ],
+            },
+        )
+
+
+class TestPydanticCycle(test.TestCase):
+    async def setUp(self) -> None:
+        self.Employee_Pydantic = pydantic_model_creator(Employee)
+
+        self.root = await Employee.create(name="Root")
+        self.loose = await Employee.create(name="Loose")
+        self._1 = await Employee.create(name="1. First H1", manager=self.root)
+        self._2 = await Employee.create(name="2. Second H1", manager=self.root)
+        self._1_1 = await Employee.create(name="1.1. First H2", manager=self._1)
+        self._1_1_1 = await Employee.create(name="1.1.1. First H3", manager=self._1_1)
+        self._2_1 = await Employee.create(name="2.1. Second H2", manager=self._2)
+        self._2_2 = await Employee.create(name="2.2. Third H2", manager=self._2)
+
+        await self._1.talks_to.add(self._2, self._1_1_1, self.loose)
+        await self._2_1.gets_talked_to.add(self._2_2, self._1_1, self.loose)
+        self.maxDiff = None
+
+    def test_schema(self):
+        self.assertEqual(
+            self.Employee_Pydantic.schema(),
+            {
+                "type": "object",
+                "title": "Employee",
+                "properties": {
+                    "id": {"title": "Id", "type": "integer"},
+                    "manager_id": {"title": "Manager Id", "type": "integer"},
+                    "name": {"title": "Name", "type": "string"},
+                    "talks_to": {
+                        "items": {"$ref": "#/definitions/Employee_aac835d6"},
+                        "title": "Talks To",
+                        "type": "array",
+                    },
+                    "team_members": {
+                        "items": {"$ref": "#/definitions/Employee_56488e10"},
+                        "title": "Team Members",
+                        "type": "array",
+                    },
+                },
+                "definitions": {
+                    "Employee_429b5000": {
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "manager_id": {"title": "Manager " "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                        },
+                        "title": "Employee",
+                        "type": "object",
+                    },
+                    "Employee_56488e10": {
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "manager_id": {"title": "Manager " "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                            "talks_to": {
+                                "items": {"$ref": "#/definitions/Employee_e5c6470f"},
+                                "title": "Talks " "To",
+                                "type": "array",
+                            },
+                            "team_members": {
+                                "items": {"$ref": "#/definitions/Employee_75d67bed"},
+                                "title": "Team " "Members",
+                                "type": "array",
+                            },
+                        },
+                        "title": "Employee",
+                        "type": "object",
+                    },
+                    "Employee_75d67bed": {
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "manager_id": {"title": "Manager " "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                        },
+                        "title": "Employee",
+                        "type": "object",
+                    },
+                    "Employee_aac835d6": {
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "manager_id": {"title": "Manager " "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                            "talks_to": {
+                                "items": {"$ref": "#/definitions/Employee_429b5000"},
+                                "title": "Talks " "To",
+                                "type": "array",
+                            },
+                            "team_members": {
+                                "items": {"$ref": "#/definitions/Employee_c6aa6fe4"},
+                                "title": "Team " "Members",
+                                "type": "array",
+                            },
+                        },
+                        "title": "Employee",
+                        "type": "object",
+                    },
+                    "Employee_c6aa6fe4": {
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "manager_id": {"title": "Manager " "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                        },
+                        "title": "Employee",
+                        "type": "object",
+                    },
+                    "Employee_e5c6470f": {
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "manager_id": {"title": "Manager " "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                        },
+                        "title": "Employee",
+                        "type": "object",
+                    },
+                },
+            },
+        )
+
+    async def test_serialisation(self):
+        empp = await self.Employee_Pydantic.from_tortoise_orm(await Employee.get(name="Root"))
+        # print(empp.json(indent=4))
+        empdict = empp.dict()
+
+        self.assertEqual(
+            empdict,
+            {
+                "id": self.root.id,
+                "manager_id": None,
+                "name": "Root",
+                "talks_to": [],
+                "team_members": [
+                    {
+                        "id": self._1.id,
+                        "manager_id": self.root.id,
+                        "name": "1. First H1",
+                        "talks_to": [
+                            {"id": self.loose.id, "manager_id": None, "name": "Loose"},
+                            {"id": self._2.id, "manager_id": self.root.id, "name": "2. Second H1"},
+                            {
+                                "id": self._1_1_1.id,
+                                "manager_id": self._1_1.id,
+                                "name": "1.1.1. First H3",
+                            },
+                        ],
+                        "team_members": [
+                            {"id": self._1_1.id, "manager_id": self._1.id, "name": "1.1. First H2"}
+                        ],
+                    },
+                    {
+                        "id": self._2.id,
+                        "manager_id": self.root.id,
+                        "name": "2. Second H1",
+                        "talks_to": [],
+                        "team_members": [
+                            {
+                                "id": self._2_1.id,
+                                "manager_id": self._2.id,
+                                "name": "2.1. Second H2",
+                            },
+                            {"id": self._2_2.id, "manager_id": self._2.id, "name": "2.2. Third H2"},
+                        ],
                     },
                 ],
             },

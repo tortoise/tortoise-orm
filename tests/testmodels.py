@@ -446,6 +446,12 @@ class Employee(Model):
             text.append(await member.full_hierarchy__fetch_related(level + 1))
         return "\n".join(text)
 
+    class Meta:
+        pydantic_exclude = ["manager", "gets_talked_to"]
+        pydantic_allow_cycles = True
+        pydantic_max_recursion = 2
+        ordering = ["id"]
+
 
 class StraightFields(Model):
     eyedee = fields.IntField(pk=True, description="Da PK")

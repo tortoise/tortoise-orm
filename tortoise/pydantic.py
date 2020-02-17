@@ -127,16 +127,16 @@ def _pydantic_recursion_protector(
     cls: Type["Model"],
     *,
     stack: tuple,
-    exclude: Tuple[str] = (),  # type: ignore
-    include: Tuple[str] = (),  # type: ignore
-    computed: Tuple[str] = (),  # type: ignore
+    exclude: Tuple[str, ...] = (),
+    include: Tuple[str, ...] = (),
+    computed: Tuple[str, ...] = (),
     name=None,
-    allow_recursion: bool = False,
+    allow_cycles: bool = False,
 ) -> Optional[Type[PydanticModel]]:
     """
     It is an inner function to protect pydantic model creator against cyclic recursion
     """
-    if not allow_recursion and cls in [c[0] for c in stack]:
+    if not allow_cycles and cls in [c[0] for c in stack[:-1]]:
         return None
 
     caller_cls, caller_fname, _ = stack[0]
@@ -146,17 +146,12 @@ def _pydantic_recursion_protector(
         # Check recursion level
         prop_path.insert(0, parent_fname)
         if level >= parent_max_recursion:
-            tortoise.logger.warning(
-                "Recursion level %i has reached for model %s",
-                level,
-                parent_cls.__qualname__ + "." + ".".join(prop_path),
-            )
-            return None
-
-        if parent_cls is caller_cls and parent_fname == caller_fname:
-            tortoise.logger.warning(
-                "Recursion detected: %s", parent_cls.__qualname__ + "." + ".".join(prop_path)
-            )
+            # This is too verbose, Do we even need a way of reporting truncated models?
+            # tortoise.logger.warning(
+            #     "Recursion level %i has reached for model %s",
+            #     level,
+            #     parent_cls.__qualname__ + "." + ".".join(prop_path),
+            # )
             return None
 
         level += 1
@@ -168,19 +163,19 @@ def _pydantic_recursion_protector(
         computed=computed,
         name=name,
         stack=stack,
-        allow_recursion=allow_recursion,
+        allow_cycles=allow_cycles,
     )
 
 
 def pydantic_model_creator(
     cls: Type["Model"],
     *,
-    exclude: Tuple[str] = (),  # type: ignore
-    include: Tuple[str] = (),  # type: ignore
-    computed: Tuple[str] = (),  # type: ignore
+    exclude: Tuple[str, ...] = (),
+    include: Tuple[str, ...] = (),
+    computed: Tuple[str, ...] = (),
     name=None,
     stack: tuple = (),
-    allow_recursion: bool = False,
+    allow_cycles: Optional[bool] = None,
 ) -> Type[PydanticModel]:
     """
     Inner function to create pydantic model.
@@ -191,9 +186,14 @@ def pydantic_model_creator(
     def get_name() -> str:
         # If arguments are specified (different from the defaults), we append a hash to the
         # class name, to make it unique
+        # We don't check by stack, as cycles get explicitly renamed.
+        # When called later, include is explicitly set, so fence passes.
         h = (
-            "_" + sha256(f"{fqname};{exclude};{include};{computed}".encode("utf-8")).hexdigest()[:8]
-            if exclude != () or include != () or computed != ()  # type: ignore
+            "_"
+            + sha256(
+                f"{fqname};{exclude};{include};{computed};{stack}".encode("utf-8")
+            ).hexdigest()[:8]
+            if exclude != () or include != () or computed != ()
             else ""
         )
         return cls.__name__ + h
@@ -205,10 +205,14 @@ def pydantic_model_creator(
     # Get settings and defaults
     default_meta = models.Model.Meta
     meta = getattr(cls, "Meta", default_meta)
-    default_include = getattr(meta, "pydantic_include", getattr(default_meta, "pydantic_include"))
-    default_exclude = getattr(meta, "pydantic_exclude", getattr(default_meta, "pydantic_exclude"))
-    default_computed = getattr(
-        meta, "pydantic_computed", getattr(default_meta, "pydantic_computed")
+    default_include: Tuple[str, ...] = tuple(
+        getattr(meta, "pydantic_include", getattr(default_meta, "pydantic_include"))
+    )
+    default_exclude: Tuple[str, ...] = tuple(
+        getattr(meta, "pydantic_exclude", getattr(default_meta, "pydantic_exclude"))
+    )
+    default_computed: Tuple[str, ...] = tuple(
+        getattr(meta, "pydantic_computed", getattr(default_meta, "pydantic_computed"))
     )
     backward_relations = getattr(
         meta, "pydantic_backward_relations", getattr(default_meta, "pydantic_backward_relations"),
@@ -225,11 +229,16 @@ def pydantic_model_creator(
     sort_fields = getattr(
         meta, "pydantic_sort_fields", getattr(default_meta, "pydantic_sort_fields")
     )
+    _allow_cycles = (
+        getattr(meta, "pydantic_allow_cycles", getattr(default_meta, "pydantic_sort_fields"))
+        if allow_cycles is None
+        else allow_cycles
+    )
 
     # Update parameters with defaults
-    include = include + default_include
-    exclude = exclude + default_exclude
-    computed = computed + default_computed
+    include = tuple(include) + default_include
+    exclude = tuple(exclude) + default_exclude
+    computed = tuple(computed) + default_computed
 
     # Get all annotations
     annotations = _get_annotations(cls)
@@ -256,7 +265,7 @@ def pydantic_model_creator(
             for fd in fds:
                 n = fd["name"]
                 # Include or exclude field
-                if (include and n not in include) or n in exclude:  # type: ignore
+                if (include and n not in include) or n in exclude:
                     continue
                 # Relations most have annotations to be included if backward_relations
                 # is not True
@@ -302,24 +311,21 @@ def pydantic_model_creator(
             prefix_len = len(fname) + 1
             pmodel = _pydantic_recursion_protector(
                 _model,
-                exclude=tuple(  # type: ignore
-                    [str(v[prefix_len:]) for v in exclude if v.startswith(fname + ".")]
-                ),
-                include=tuple(  # type: ignore
-                    [str(v[prefix_len:]) for v in include if v.startswith(fname + ".")]
-                ),
-                computed=tuple(  # type: ignore
+                exclude=tuple([str(v[prefix_len:]) for v in exclude if v.startswith(fname + ".")]),
+                include=tuple([str(v[prefix_len:]) for v in include if v.startswith(fname + ".")]),
+                computed=tuple(
                     [str(v[prefix_len:]) for v in computed if v.startswith(fname + ".")]
                 ),
                 stack=new_stack,
-                allow_recursion=allow_recursion,
+                allow_cycles=_allow_cycles,
             )
 
             # If the result is None it has been exluded and we need to exclude the field
             if pmodel is None:
-                exclude += (fname,)  # type: ignore
-            # TODO: We need to rename if there are duplicate instances of this model
-            # name = get_name()
+                exclude += (fname,)
+            # We need to rename if there are duplicate instances of this model
+            if cls in [c[0] for c in stack]:
+                name = get_name()
 
             return pmodel
 
@@ -390,15 +396,15 @@ def pydantic_model_creator(
 def pydantic_queryset_creator(
     cls: Type["Model"],
     *,
-    exclude: Tuple[str] = (),  # type: ignore
-    include: Tuple[str] = (),  # type: ignore
-    computed: Tuple[str] = (),  # type: ignore
+    exclude: Tuple[str, ...] = (),
+    include: Tuple[str, ...] = (),
+    computed: Tuple[str, ...] = (),
     name=None,
-    allow_recursion: bool = False,
+    allow_cycles: bool = False,
 ) -> Type[PydanticListModel]:
 
     submodel = pydantic_model_creator(
-        cls, exclude=exclude, include=include, computed=computed, allow_recursion=allow_recursion
+        cls, exclude=exclude, include=include, computed=computed, allow_cycles=allow_cycles
     )
     lname = name or f"{submodel.__name__}s"
 
