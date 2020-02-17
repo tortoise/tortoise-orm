@@ -139,10 +139,10 @@ def _pydantic_recursion_protector(
     if not allow_cycles and cls in [c[0] for c in stack[:-1]]:
         return None
 
-    caller_cls, caller_fname, _ = stack[0]
+    caller_fname = stack[0][1]
     prop_path = [caller_fname]  # It stores the fields in the hierarchy
     level = 1
-    for parent_cls, parent_fname, parent_max_recursion in stack[1:]:
+    for _, parent_fname, parent_max_recursion in stack[1:]:
         # Check recursion level
         prop_path.insert(0, parent_fname)
         if level >= parent_max_recursion:
