@@ -4,7 +4,7 @@ from tortoise.exceptions import IntegrityError, OperationalError
 from tortoise.queryset import QuerySet
 
 
-class TestForeignKeyFieldWithUnique(test.TestCase):
+class TestOneToOneFieldWithUnique(test.TestCase):
     async def test_principal__empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.Principal.create()
@@ -84,3 +84,21 @@ class TestForeignKeyFieldWithUnique(test.TestCase):
         school = await testmodels.School(id=1024, name="School1")
         with self.assertRaisesRegex(OperationalError, "You should first call .save()"):
             await testmodels.Principal.create(name="Sang-Heon Jeon", school=school)
+
+    async def test_principal__instantiated_create(self):
+        school = await testmodels.School.create(id=1024, name="School1")
+        await testmodels.Principal.create(name="Sang-Heon Jeon", school=school)
+
+    async def test_principal__fetched_bool(self):
+        school = await testmodels.School.create(id=1024, name="School1")
+        await school.fetch_related("principal")
+        self.assertFalse(bool(school.principal))
+        await testmodels.Principal.create(name="Sang-Heon Jeon", school=school)
+        await school.fetch_related("principal")
+        self.assertTrue(bool(school.principal))
+
+    async def test_principal__filter(self):
+        school = await testmodels.School.create(id=1024, name="School1")
+        principal = await testmodels.Principal.create(name="Sang-Heon Jeon1", school=school)
+        self.assertEqual(await school.principal.filter(name="Sang-Heon Jeon1"), principal)
+        self.assertEqual(await school.principal.filter(name="Sang-Heon Jeon2"), None)
