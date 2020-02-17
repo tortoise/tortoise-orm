@@ -21,7 +21,7 @@ class _FieldMeta(type):
             # Instantiate class with only the 1st base class (should be Field)
             cls = type.__new__(mcs, name, (bases[0],), attrs)  # type: Type[Field]
             # All other base classes are our meta types, we store them in class attributes
-            cls.field_type = bases[1] if len(bases) == 2 else bases[1:]  # type: ignore
+            cls.field_type = bases[1] if len(bases) == 2 else Union[bases[1:]]
             return cls
         return type.__new__(mcs, name, bases, attrs)
 

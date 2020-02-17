@@ -10,7 +10,7 @@ from pydantic import BaseModel  # pylint: disable=E0611
 import tortoise
 from tortoise import fields, models
 
-if typing.TYPE_CHECKING:
+if typing.TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
     from tortoise.queryset import QuerySet
 
@@ -271,7 +271,7 @@ def pydantic_model_creator(
                 # is not True
                 if is_relation and not backward_relations and n not in annotations:
                     continue
-                # Remoce raw fields
+                # Remove raw fields
                 raw_field = fd.get("raw_field", None)
                 if raw_field is not None and exclude_raw_fields:
                     del field_map[raw_field]
@@ -356,22 +356,10 @@ def pydantic_model_creator(
             if annotation is not None:
                 properties["__annotations__"][fname] = annotation
 
-        # JSON fields are special
-        elif field_type is fields.JSONField:
-            # We use the annotation if specified, otherwise we default it to dict
-            # (The real python_type is not known, it is just a tuple of dict and list)
-            annotation = annotations.get(fname, None)
-            if annotation is None:
-                tortoise.logger.warning(
-                    "JSON fields should be annotated. We use dict as default"
-                    " annotation for field '%s'.",
-                    fname,
-                )
-            properties["__annotations__"][fname] = annotation or dict
-
         # Any other tortoise fields
         else:
-            properties["__annotations__"][fname] = fdesc["python_type"]
+            annotation = annotations.get(fname, None)
+            properties["__annotations__"][fname] = annotation or fdesc["python_type"]
 
         # Create a schema for the field
         if fname in properties["__annotations__"]:
