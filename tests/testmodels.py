@@ -7,6 +7,7 @@ import uuid
 from enum import Enum, IntEnum
 
 from tortoise import fields
+from tortoise.exceptions import NoValuesFetched
 from tortoise.models import Model
 
 
@@ -446,7 +447,35 @@ class Employee(Model):
             text.append(await member.full_hierarchy__fetch_related(level + 1))
         return "\n".join(text)
 
+    def name_length(self) -> int:
+        # Computes length of name
+        # Note that this function needs to be annotated with a return type so that pydantic
+        # can generate a valid schema
+        return len(self.name)
+
+    def team_size(self) -> int:
+        """
+        Computes team size.
+
+        Note that this function needs to be annotated with a return type so that pydantic can
+         generate a valid schema.
+
+        Note that the pydantic serializer can't call async methods, but the tortoise helpers
+         pre-fetch relational data, so that it is available before serialization. So we don't
+         need to await the relation. We do however have to protect against the case where no
+         prefetching was done, hence catching and handling the
+         ``tortoise.exceptions.NoValuesFetched`` exception.
+        """
+        try:
+            return len(self.team_members)
+        except NoValuesFetched:
+            return 0
+
+    def not_annotated(self):
+        raise NotImplementedError("Not Done")
+
     class Meta:
+        pydantic_computed = ["name_length", "team_size", "not_annotated"]
         pydantic_exclude = ["manager", "gets_talked_to"]
         pydantic_allow_cycles = True
         pydantic_max_recursion = 2

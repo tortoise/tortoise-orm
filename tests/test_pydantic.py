@@ -569,97 +569,139 @@ class TestPydanticCycle(test.TestCase):
         self.assertEqual(
             self.Employee_Pydantic.schema(),
             {
-                "type": "object",
                 "title": "Employee",
+                "type": "object",
                 "properties": {
                     "id": {"title": "Id", "type": "integer"},
-                    "manager_id": {"title": "Manager Id", "type": "integer"},
                     "name": {"title": "Name", "type": "string"},
+                    "manager_id": {"title": "Manager Id", "type": "integer"},
                     "talks_to": {
-                        "items": {"$ref": "#/definitions/Employee_aac835d6"},
                         "title": "Talks To",
                         "type": "array",
+                        "items": {"$ref": "#/definitions/Employee_0d9ca741"},
                     },
                     "team_members": {
-                        "items": {"$ref": "#/definitions/Employee_56488e10"},
                         "title": "Team Members",
                         "type": "array",
+                        "items": {"$ref": "#/definitions/Employee_f5fb07fd"},
+                    },
+                    "name_length": {"title": "Name Length", "type": "integer"},
+                    "team_size": {
+                        "title": "Team Size",
+                        "description": "Computes team size.<br><br>Note that this function needs to be annotated with a return type so that pydantic can<br> generate a valid schema.<br><br>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br> pre-fetch relational data, so that it is available before serialization. So we don't<br> need to await the relation. We do however have to protect against the case where no<br> prefetching was done, hence catching and handling the<br> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                        "type": "integer",
                     },
                 },
                 "definitions": {
-                    "Employee_429b5000": {
-                        "properties": {
-                            "id": {"title": "Id", "type": "integer"},
-                            "manager_id": {"title": "Manager " "Id", "type": "integer"},
-                            "name": {"title": "Name", "type": "string"},
-                        },
+                    "Employee_f9f05e47": {
                         "title": "Employee",
                         "type": "object",
-                    },
-                    "Employee_56488e10": {
                         "properties": {
                             "id": {"title": "Id", "type": "integer"},
-                            "manager_id": {"title": "Manager " "Id", "type": "integer"},
                             "name": {"title": "Name", "type": "string"},
+                            "manager_id": {"title": "Manager Id", "type": "integer"},
+                            "name_length": {"title": "Name Length", "type": "integer"},
+                            "team_size": {
+                                "title": "Team Size",
+                                "description": "Computes team size.<br><br>Note that this function needs to be annotated with a return type so that pydantic can<br> generate a valid schema.<br><br>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br> pre-fetch relational data, so that it is available before serialization. So we don't<br> need to await the relation. We do however have to protect against the case where no<br> prefetching was done, hence catching and handling the<br> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "type": "integer",
+                            },
+                        },
+                    },
+                    "Employee_992cd278": {
+                        "title": "Employee",
+                        "type": "object",
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                            "manager_id": {"title": "Manager Id", "type": "integer"},
+                            "name_length": {"title": "Name Length", "type": "integer"},
+                            "team_size": {
+                                "title": "Team Size",
+                                "description": "Computes team size.<br><br>Note that this function needs to be annotated with a return type so that pydantic can<br> generate a valid schema.<br><br>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br> pre-fetch relational data, so that it is available before serialization. So we don't<br> need to await the relation. We do however have to protect against the case where no<br> prefetching was done, hence catching and handling the<br> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "type": "integer",
+                            },
+                        },
+                    },
+                    "Employee_0d9ca741": {
+                        "title": "Employee",
+                        "type": "object",
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                            "manager_id": {"title": "Manager Id", "type": "integer"},
                             "talks_to": {
-                                "items": {"$ref": "#/definitions/Employee_e5c6470f"},
-                                "title": "Talks " "To",
+                                "title": "Talks To",
                                 "type": "array",
+                                "items": {"$ref": "#/definitions/Employee_f9f05e47"},
                             },
                             "team_members": {
-                                "items": {"$ref": "#/definitions/Employee_75d67bed"},
-                                "title": "Team " "Members",
+                                "title": "Team Members",
                                 "type": "array",
+                                "items": {"$ref": "#/definitions/Employee_992cd278"},
+                            },
+                            "name_length": {"title": "Name Length", "type": "integer"},
+                            "team_size": {
+                                "title": "Team Size",
+                                "description": "Computes team size.<br><br>Note that this function needs to be annotated with a return type so that pydantic can<br> generate a valid schema.<br><br>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br> pre-fetch relational data, so that it is available before serialization. So we don't<br> need to await the relation. We do however have to protect against the case where no<br> prefetching was done, hence catching and handling the<br> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "type": "integer",
                             },
                         },
+                    },
+                    "Employee_297c851f": {
                         "title": "Employee",
                         "type": "object",
-                    },
-                    "Employee_75d67bed": {
                         "properties": {
                             "id": {"title": "Id", "type": "integer"},
-                            "manager_id": {"title": "Manager " "Id", "type": "integer"},
                             "name": {"title": "Name", "type": "string"},
+                            "manager_id": {"title": "Manager Id", "type": "integer"},
+                            "name_length": {"title": "Name Length", "type": "integer"},
+                            "team_size": {
+                                "title": "Team Size",
+                                "description": "Computes team size.<br><br>Note that this function needs to be annotated with a return type so that pydantic can<br> generate a valid schema.<br><br>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br> pre-fetch relational data, so that it is available before serialization. So we don't<br> need to await the relation. We do however have to protect against the case where no<br> prefetching was done, hence catching and handling the<br> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "type": "integer",
+                            },
                         },
+                    },
+                    "Employee_db6253ef": {
                         "title": "Employee",
                         "type": "object",
-                    },
-                    "Employee_aac835d6": {
                         "properties": {
                             "id": {"title": "Id", "type": "integer"},
-                            "manager_id": {"title": "Manager " "Id", "type": "integer"},
                             "name": {"title": "Name", "type": "string"},
+                            "manager_id": {"title": "Manager Id", "type": "integer"},
+                            "name_length": {"title": "Name Length", "type": "integer"},
+                            "team_size": {
+                                "title": "Team Size",
+                                "description": "Computes team size.<br><br>Note that this function needs to be annotated with a return type so that pydantic can<br> generate a valid schema.<br><br>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br> pre-fetch relational data, so that it is available before serialization. So we don't<br> need to await the relation. We do however have to protect against the case where no<br> prefetching was done, hence catching and handling the<br> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "type": "integer",
+                            },
+                        },
+                    },
+                    "Employee_f5fb07fd": {
+                        "title": "Employee",
+                        "type": "object",
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                            "manager_id": {"title": "Manager Id", "type": "integer"},
                             "talks_to": {
-                                "items": {"$ref": "#/definitions/Employee_429b5000"},
-                                "title": "Talks " "To",
+                                "title": "Talks To",
                                 "type": "array",
+                                "items": {"$ref": "#/definitions/Employee_297c851f"},
                             },
                             "team_members": {
-                                "items": {"$ref": "#/definitions/Employee_c6aa6fe4"},
-                                "title": "Team " "Members",
+                                "title": "Team Members",
                                 "type": "array",
+                                "items": {"$ref": "#/definitions/Employee_db6253ef"},
+                            },
+                            "name_length": {"title": "Name Length", "type": "integer"},
+                            "team_size": {
+                                "title": "Team Size",
+                                "description": "Computes team size.<br><br>Note that this function needs to be annotated with a return type so that pydantic can<br> generate a valid schema.<br><br>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br> pre-fetch relational data, so that it is available before serialization. So we don't<br> need to await the relation. We do however have to protect against the case where no<br> prefetching was done, hence catching and handling the<br> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "type": "integer",
                             },
                         },
-                        "title": "Employee",
-                        "type": "object",
-                    },
-                    "Employee_c6aa6fe4": {
-                        "properties": {
-                            "id": {"title": "Id", "type": "integer"},
-                            "manager_id": {"title": "Manager " "Id", "type": "integer"},
-                            "name": {"title": "Name", "type": "string"},
-                        },
-                        "title": "Employee",
-                        "type": "object",
-                    },
-                    "Employee_e5c6470f": {
-                        "properties": {
-                            "id": {"title": "Id", "type": "integer"},
-                            "manager_id": {"title": "Manager " "Id", "type": "integer"},
-                            "name": {"title": "Name", "type": "string"},
-                        },
-                        "title": "Employee",
-                        "type": "object",
                     },
                 },
             },
@@ -683,17 +725,39 @@ class TestPydanticCycle(test.TestCase):
                         "manager_id": self.root.id,
                         "name": "1. First H1",
                         "talks_to": [
-                            {"id": self.loose.id, "manager_id": None, "name": "Loose"},
-                            {"id": self._2.id, "manager_id": self.root.id, "name": "2. Second H1"},
+                            {
+                                "id": self.loose.id,
+                                "manager_id": None,
+                                "name": "Loose",
+                                "name_length": 5,
+                                "team_size": 0,
+                            },
+                            {
+                                "id": self._2.id,
+                                "manager_id": self.root.id,
+                                "name": "2. Second H1",
+                                "name_length": 12,
+                                "team_size": 0,
+                            },
                             {
                                 "id": self._1_1_1.id,
                                 "manager_id": self._1_1.id,
                                 "name": "1.1.1. First H3",
+                                "name_length": 15,
+                                "team_size": 0,
                             },
                         ],
                         "team_members": [
-                            {"id": self._1_1.id, "manager_id": self._1.id, "name": "1.1. First H2"}
+                            {
+                                "id": self._1_1.id,
+                                "manager_id": self._1.id,
+                                "name": "1.1. First H2",
+                                "name_length": 13,
+                                "team_size": 0,
+                            }
                         ],
+                        "name_length": 11,
+                        "team_size": 1,
                     },
                     {
                         "id": self._2.id,
@@ -705,10 +769,22 @@ class TestPydanticCycle(test.TestCase):
                                 "id": self._2_1.id,
                                 "manager_id": self._2.id,
                                 "name": "2.1. Second H2",
+                                "name_length": 14,
+                                "team_size": 0,
                             },
-                            {"id": self._2_2.id, "manager_id": self._2.id, "name": "2.2. Third H2"},
+                            {
+                                "id": self._2_2.id,
+                                "manager_id": self._2.id,
+                                "name": "2.2. Third H2",
+                                "name_length": 13,
+                                "team_size": 0,
+                            },
                         ],
+                        "name_length": 12,
+                        "team_size": 2,
                     },
                 ],
+                "name_length": 4,
+                "team_size": 2,
             },
         )

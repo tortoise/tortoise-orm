@@ -15,6 +15,10 @@ if typing.TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.queryset import QuerySet
 
 
+def _cleandoc(obj: Any) -> str:
+    return inspect.cleandoc(obj.__doc__ or "").replace("\n", "<br>").strip()
+
+
 def _get_comments(cls: Type["Model"]) -> Dict[str, str]:
     """
     Get comments exactly before attributes
@@ -349,7 +353,7 @@ def pydantic_model_creator(
         elif field_type is callable:
             func = fdesc["function"]
             annotation = _get_annotations(cls, func).get("return", None)
-            comment = inspect.cleandoc(func.__doc__).replace("\n", "<br>")
+            comment = _cleandoc(func)
             if annotation is not None:
                 properties["__annotations__"][fname] = annotation
 
@@ -369,7 +373,7 @@ def pydantic_model_creator(
     # Creating Pydantic class for the properties generated before
     model = typing.cast(Type[PydanticModel], type(name, (PydanticModel,), properties))
     # Copy the Model docstring over
-    model.__doc__ = (cls.__doc__ or "").strip()
+    model.__doc__ = _cleandoc(cls)
     # The title of the model to hide the hash postfix
     setattr(model.__config__, "title", cls.__name__)
     # Store the base class
@@ -397,7 +401,7 @@ def pydantic_queryset_creator(
     # Creating Pydantic class for the properties generated before
     model = typing.cast(Type[PydanticListModel], type(lname, (PydanticListModel,), properties))
     # Copy the Model docstring over
-    model.__doc__ = (cls.__doc__ or "").strip()
+    model.__doc__ = _cleandoc(cls)
     # The title of the model to hide the hash postfix
     setattr(model.__config__, "title", lname)
     # Store the base class & submodel

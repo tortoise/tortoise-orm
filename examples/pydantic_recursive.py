@@ -2,6 +2,7 @@
 This example demonstrates pydantic serialisation of a recursively cycled model.
 """
 from tortoise import Tortoise, fields, run_async
+from tortoise.exceptions import NoValuesFetched
 from tortoise.models import Model
 from tortoise.pydantic import pydantic_model_creator
 
@@ -19,7 +20,36 @@ class Employee(Model):
     )
     gets_talked_to: fields.ManyToManyRelation["Employee"]
 
+    def name_length(self) -> int:
+        # Computes length of name
+        # Note that this function needs to be annotated with a return type so that pydantic
+        # can generate a valid schema
+        return len(self.name)
+
+    def team_size(self) -> int:
+        """
+        Computes team size.
+
+        Note that this function needs to be annotated with a return type so that pydantic can
+         generate a valid schema.
+
+        Note that the pydantic serializer can't call async methods, but the tortoise helpers
+         pre-fetch relational data, so that it is available before serialization. So we don't
+         need to await the relation. We do however have to protect against the case where no
+         prefetching was done, hence catching and handling the
+         ``tortoise.exceptions.NoValuesFetched`` exception.
+        """
+        try:
+            return len(self.team_members)
+        except NoValuesFetched:
+            return -1
+
+    def not_annotated(self):
+        # Never called due to no annotation!
+        raise NotImplementedError("Not Done")
+
     class Meta:
+        pydantic_computed = ["name_length", "team_size", "not_annotated"]
         pydantic_exclude = ["manager", "gets_talked_to"]
         pydantic_allow_cycles = True
         pydantic_max_recursion = 4
