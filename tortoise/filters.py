@@ -144,28 +144,28 @@ def get_backward_fk_filters(field_name: str, field: BackwardFKRelation) -> Dict[
     target_table_pk = field.model_class._meta.pk
     return {
         field_name: {
-            "field": "id",
+            "field": field.model_class._meta.pk_attr,
             "backward_key": field.relation_field,
             "operator": operator.eq,
             "table": Table(field.model_class._meta.table),
             "value_encoder": target_table_pk.to_db_value,
         },
         f"{field_name}__not": {
-            "field": "id",
+            "field": field.model_class._meta.pk_attr,
             "backward_key": field.relation_field,
             "operator": not_equal,
             "table": Table(field.model_class._meta.table),
             "value_encoder": target_table_pk.to_db_value,
         },
         f"{field_name}__in": {
-            "field": "id",
+            "field": field.model_class._meta.pk_attr,
             "backward_key": field.relation_field,
             "operator": is_in,
             "table": Table(field.model_class._meta.table),
             "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
         f"{field_name}__not_in": {
-            "field": "id",
+            "field": field.model_class._meta.pk_attr,
             "backward_key": field.relation_field,
             "operator": not_in,
             "table": Table(field.model_class._meta.table),

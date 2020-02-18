@@ -103,7 +103,7 @@ class AwaitableQuery(Generic[MODEL]):
         return joins[-1][0]
 
     @staticmethod
-    def _resolve_ordering_string(ordering: str) -> Tuple[str, str]:
+    def _resolve_ordering_string(ordering: str) -> Tuple[str, Order]:
         order_type = Order.asc
         if ordering[0] == "-":
             field_name = ordering[1:]
@@ -556,7 +556,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             annotation.resolve(self.model, table)["field"].is_aggregate
             for annotation in self._annotations.values()
         ):
-            self.query = self.query.groupby(table.id)
+            self.query = self.query.groupby(table[self.model._meta.db_pk_field])
         for key, annotation in self._annotations.items():
             annotation_info = annotation.resolve(self.model, table)
             for join in annotation_info["joins"]:

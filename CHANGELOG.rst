@@ -2,10 +2,21 @@
 
 Changelog
 =========
+0.15.13
+-------
+- Applies default ordering on related queries
+- Fix post-ManyToMany related queries not being evaluated correctly
+- Ordering is now preserved on ManyToMany related fetches
+- Fix aggregate function on joined table to use correct primary key
+- Fix filtering by backwards FK to use correct primary key
+
+0.15.12
+-------
+- Added ``range`` filter to support ``between and`` syntax
+
 0.15.11
 -------
 - Added ``ordering`` option for model ``Meta`` class to apply default ordering
-- Added ``range`` filter to support ``between and`` syntax
 
 0.15.10
 -------

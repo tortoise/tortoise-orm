@@ -220,6 +220,9 @@ class BaseExecutor:
         }
         relation_field = self.model._meta.fields_map[field].relation_field  # type: ignore
 
+        related_query.resolve_ordering(
+            related_query.model, related_query.model._meta.basetable, [], {}
+        )
         related_object_list = await related_query.filter(
             **{f"{relation_field}__in": list(instance_id_set)}
         )
@@ -284,6 +287,7 @@ class BaseExecutor:
 
         related_query_table = related_query.model._meta.basetable
         related_pk_field = related_query.model._meta.db_pk_field
+        related_query.resolve_ordering(related_query.model, related_query_table, [], {})
         query = (
             related_query.query.join(subquery)
             .on(subquery._forward_relation_key == related_query_table[related_pk_field])
@@ -317,17 +321,18 @@ class BaseExecutor:
                 query = query.having(having_criterion)
 
         _, raw_results = await self.db.execute_query(query.get_sql())
-        relations = {
+        # TODO: we should only resolve the PK's once
+        relations = [
             (
                 self.model._meta.pk.to_python_value(e["_backward_relation_key"]),
                 field_object.model_class._meta.pk.to_python_value(e[related_pk_field]),
             )
             for e in raw_results
-        }
+        ]
         related_object_list = [related_query.model._init_from_db(**e) for e in raw_results]
         await self.__class__(
             model=related_query.model, db=self.db, prefetch_map=related_query._prefetch_map
-        ).fetch_for_list(related_object_list)
+        )._execute_prefetch_queries(related_object_list)
         related_object_map = {e.pk: e for e in related_object_list}
         relation_map: Dict[str, list] = {}
 
@@ -412,6 +417,7 @@ class BaseExecutor:
             forwarded_prefetch = "__".join(relation_split[1:])
             if forwarded_prefetch:
                 self.prefetch_map[first_level_field].add(forwarded_prefetch)
+
         await self._execute_prefetch_queries(instance_list)
         return instance_list
 
