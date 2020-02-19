@@ -297,4 +297,4 @@ For example to use ``F`` to update user balance atomic:
     await User.filter(id=1).update(balance = F('balance') - 10)
     await User.filter(id=1).update(balance = F('balance') + F('award'), award = 0)
 
-But ``user.balance = F('balance') - 10`` is not supported now.
+Only support ``F`` expressions as part of a ``.update()`` queryset parameter for now.

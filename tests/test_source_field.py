@@ -170,4 +170,4 @@ class SourceFieldTests(StraightFieldTests):
         obj1 = await self.model.create(chars="aaa")
         await self.model.filter(eyedee=obj1.eyedee).update(chars=F("blip"))
         obj2 = await self.model.get(eyedee=obj1.eyedee)
-        assert obj2.chars == "BLIP"
+        self.assertEqual(obj2.chars, "BLIP")

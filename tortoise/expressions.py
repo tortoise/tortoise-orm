@@ -6,7 +6,7 @@ from pypika.terms import ArithmeticExpression
 from tortoise.exceptions import FieldError
 
 
-class F(Field):
+class F(Field):  # type: ignore
     @classmethod
     def resolver_arithmetic_expression(
         cls,

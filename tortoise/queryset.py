@@ -661,7 +661,7 @@ class UpdateQuery(AwaitableQuery):
                 except KeyError:
                     raise FieldError(f"Field {key} is virtual and can not be updated")
                 if not isinstance(value, (F, ArithmeticExpression)):
-                    value = executor.column_map[key](value, None)
+                    value = executor.column_map[key](value, None)  # type: ignore
                 else:
                     value = F.resolver_arithmetic_expression(
                         self.model._meta.fields_db_projection, value
