@@ -56,7 +56,7 @@ def _get_annotations(cls: Type["Model"], method: Optional[Callable] = None) -> D
     :param method: If specified, we try to get the annotations for the callable
     :return: The list of annotations
     """
-    globalns = tortoise.Tortoise.apps[cls._meta.app] if cls._meta.app is not None else None
+    globalns = tortoise.Tortoise.apps.get(cls._meta.app, None) if cls._meta.app else None
     return typing.get_type_hints(method or cls, globalns=globalns)
 
 
@@ -306,20 +306,27 @@ def pydantic_model_creator(
             """ Get Pydantic model for the submodel """
             nonlocal exclude, name
 
-            new_stack = stack + ((cls, fname, max_recursion),)
+            if _model:
+                new_stack = stack + ((cls, fname, max_recursion),)
 
-            # Get pydantic schema for the submodel
-            prefix_len = len(fname) + 1
-            pmodel = _pydantic_recursion_protector(
-                _model,
-                exclude=tuple([str(v[prefix_len:]) for v in exclude if v.startswith(fname + ".")]),
-                include=tuple([str(v[prefix_len:]) for v in include if v.startswith(fname + ".")]),
-                computed=tuple(
-                    [str(v[prefix_len:]) for v in computed if v.startswith(fname + ".")]
-                ),
-                stack=new_stack,
-                allow_cycles=_allow_cycles,
-            )
+                # Get pydantic schema for the submodel
+                prefix_len = len(fname) + 1
+                pmodel = _pydantic_recursion_protector(
+                    _model,
+                    exclude=tuple(
+                        [str(v[prefix_len:]) for v in exclude if v.startswith(fname + ".")]
+                    ),
+                    include=tuple(
+                        [str(v[prefix_len:]) for v in include if v.startswith(fname + ".")]
+                    ),
+                    computed=tuple(
+                        [str(v[prefix_len:]) for v in computed if v.startswith(fname + ".")]
+                    ),
+                    stack=new_stack,
+                    allow_cycles=_allow_cycles,
+                )
+            else:
+                pmodel = None
 
             # If the result is None it has been exluded and we need to exclude the field
             if pmodel is None:
