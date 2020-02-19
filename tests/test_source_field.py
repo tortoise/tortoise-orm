@@ -6,6 +6,7 @@ This is to test that behaviour doesn't change when one defined source_field para
 """
 from tests.testmodels import SourceFields, StraightFields
 from tortoise.contrib import test
+from tortoise.expressions import F
 
 
 class StraightFieldTests(test.TestCase):
@@ -164,3 +165,9 @@ class StraightFieldTests(test.TestCase):
 class SourceFieldTests(StraightFieldTests):
     def setUp(self) -> None:
         self.model = SourceFields  # type: ignore
+
+    async def test_source_field_f_expression(self):
+        obj1 = await self.model.create(chars="aaa")
+        await self.model.filter(eyedee=obj1.eyedee).update(chars=F("blip"))
+        obj2 = await self.model.get(eyedee=obj1.eyedee)
+        assert obj2.chars == "BLIP"

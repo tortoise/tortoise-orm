@@ -3,7 +3,7 @@ import sys
 from tests.testmodels import IntFields, MinRelation, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
-from tortoise.models import F
+from tortoise.expressions import F
 
 # TODO: Test the many exceptions in QuerySet
 # TODO: .filter(intnum_null=None) does not work as expected
