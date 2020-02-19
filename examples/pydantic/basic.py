@@ -57,18 +57,14 @@ class Team(Model):
         ordering = ["name"]
 
 
-Tortoise.init_models(["__main__"], "models")
-
-
-Event_Pydantic = pydantic_model_creator(Event)
-Event_Pydantic_List = pydantic_queryset_creator(Event)
-Tournament_Pydantic = pydantic_model_creator(Tournament)
-Team_Pydantic = pydantic_model_creator(Team)
-
-
 async def run():
     await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
     await Tortoise.generate_schemas()
+
+    Event_Pydantic = pydantic_model_creator(Event)
+    Event_Pydantic_List = pydantic_queryset_creator(Event)
+    Tournament_Pydantic = pydantic_model_creator(Tournament)
+    Team_Pydantic = pydantic_model_creator(Team)
 
     # print(Event_Pydantic_List.schema_json(indent=4))
     # print(Event_Pydantic.schema_json(indent=4))
