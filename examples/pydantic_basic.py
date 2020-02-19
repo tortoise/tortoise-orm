@@ -2,8 +2,8 @@
 This example demonstrates pydantic serialisation
 """
 from tortoise import Tortoise, fields, run_async
+from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 from tortoise.models import Model
-from tortoise.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
 
 class Tournament(Model):
