@@ -282,3 +282,18 @@ You can view full example here:  :ref:`example_prefetching`
 
 .. autoclass:: tortoise.query_utils.Prefetch
     :members:
+
+
+F expression
+================
+
+An F() object represents the value of a model field. It makes it possible to refer to model field values and perform database operations using them without actually having to pull them out of the database into Python memory.
+
+For example to use ``F`` to update user balance atomic:
+
+.. code-block:: python3
+
+    from tortoise.models import F
+    await User.filter(id=1).update(F('balance') - 10)
+
+But ``user.balance = F('balance') - 10`` is not supported now.

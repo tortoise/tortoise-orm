@@ -2,6 +2,7 @@ from copy import copy, deepcopy
 from functools import partial
 from typing import Any, Awaitable, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
 
+from pypika import Field as PField
 from pypika import Order, Query, Table
 
 from tortoise.backends.base.client import BaseDBAsyncClient
@@ -24,6 +25,8 @@ from tortoise.transactions import current_transaction_map
 
 MODEL = TypeVar("MODEL", bound="Model")
 # TODO: Define Filter type object. Possibly tuple?
+
+F = PField
 
 
 class _NoneAwaitable:
