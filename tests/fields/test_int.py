@@ -1,6 +1,7 @@
 from tests import testmodels
 from tortoise.contrib import test
 from tortoise.exceptions import IntegrityError
+from tortoise.expressions import F
 
 
 class TestIntFields(test.TestCase):
@@ -52,6 +53,12 @@ class TestIntFields(test.TestCase):
         values = await testmodels.IntFields.get(id=obj0.id).values_list("intnum", flat=True)
         self.assertEqual(values[0], 1)
 
+    async def test_f_expression(self):
+        obj0 = await testmodels.IntFields.create(intnum=1)
+        await obj0.filter(id=obj0.id).update(intnum=F("intnum") + 1)
+        obj1 = await testmodels.IntFields.get(id=obj0.id)
+        self.assertEqual(obj1.intnum, 2)
+
 
 class TestSmallIntFields(test.TestCase):
     async def test_empty(self):
@@ -87,6 +94,12 @@ class TestSmallIntFields(test.TestCase):
             "smallintnum", flat=True
         )
         self.assertEqual(values[0], 2)
+
+    async def test_f_expression(self):
+        obj0 = await testmodels.SmallIntFields.create(smallintnum=1)
+        await obj0.filter(id=obj0.id).update(smallintnum=F("smallintnum") + 1)
+        obj1 = await testmodels.SmallIntFields.get(id=obj0.id)
+        self.assertEqual(obj1.smallintnum, 2)
 
 
 class TestBigIntFields(test.TestCase):
@@ -126,3 +139,9 @@ class TestBigIntFields(test.TestCase):
         obj0 = await testmodels.BigIntFields.create(intnum=1)
         values = await testmodels.BigIntFields.get(id=obj0.id).values_list("intnum", flat=True)
         self.assertEqual(values[0], 1)
+
+    async def test_f_expression(self):
+        obj0 = await testmodels.BigIntFields.create(intnum=1)
+        await obj0.filter(id=obj0.id).update(intnum=F("intnum") + 1)
+        obj1 = await testmodels.BigIntFields.get(id=obj0.id)
+        self.assertEqual(obj1.intnum, 2)
