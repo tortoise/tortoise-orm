@@ -161,13 +161,13 @@ class StraightFieldTests(test.TestCase):
         obj1a = await self.model.get(eyedee=obj1.eyedee).prefetch_related("rel_to")
         self.assertEqual(list(obj1a.rel_to), [obj2])
 
-
-class SourceFieldTests(StraightFieldTests):
-    def setUp(self) -> None:
-        self.model = SourceFields  # type: ignore
-
-    async def test_source_field_f_expression(self):
+    async def test_f_expression(self):
         obj1 = await self.model.create(chars="aaa")
         await self.model.filter(eyedee=obj1.eyedee).update(chars=F("blip"))
         obj2 = await self.model.get(eyedee=obj1.eyedee)
         self.assertEqual(obj2.chars, "BLIP")
+
+
+class SourceFieldTests(StraightFieldTests):
+    def setUp(self) -> None:
+        self.model = SourceFields  # type: ignore
