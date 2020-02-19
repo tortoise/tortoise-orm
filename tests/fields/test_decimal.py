@@ -4,6 +4,7 @@ from tests import testmodels
 from tortoise import fields
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError, IntegrityError
+from tortoise.expressions import F
 from tortoise.functions import Avg, Max, Sum
 
 
@@ -50,6 +51,12 @@ class TestDecimalFields(test.TestCase):
         self.assertEqual(obj.decimal, Decimal("2.345"))
         self.assertEqual(obj.decimal_nodec, 19)
         self.assertEqual(obj.decimal_null, None)
+
+    async def test_f_expression(self):
+        obj0 = await testmodels.DecimalFields.create(decimal=Decimal("1.23456"), decimal_nodec=18.7)
+        await obj0.filter(id=obj0.id).update(decimal=F("decimal") + Decimal("1"))
+        obj1 = await testmodels.DecimalFields.get(id=obj0.id)
+        self.assertEqual(obj1.decimal, Decimal("2.2346"))
 
     async def test_values(self):
         obj0 = await testmodels.DecimalFields.create(decimal=Decimal("1.23456"), decimal_nodec=18.7)

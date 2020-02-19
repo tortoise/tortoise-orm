@@ -3,6 +3,7 @@ import sys
 from tests.testmodels import IntFields, MinRelation, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
+from tortoise.expressions import F
 
 # TODO: Test the many exceptions in QuerySet
 # TODO: .filter(intnum_null=None) does not work as expected
@@ -215,6 +216,12 @@ class TestQueryset(test.TestCase):
         obj = await IntFields.get(id=obj0.id)
         self.assertEqual(obj.intnum, 2147483646)
         self.assertEqual(obj.intnum_null, None)
+
+    async def test_update_f_expression(self):
+        obj0 = await IntFields.create(intnum=2147483647)
+        await IntFields.filter(id=obj0.id).update(intnum=F("intnum") - 1)
+        obj = await IntFields.get(id=obj0.id)
+        self.assertEqual(obj.intnum, 2147483646)
 
     async def test_update_badparam(self):
         obj0 = await IntFields.create(intnum=2147483647)

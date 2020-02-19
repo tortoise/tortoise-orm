@@ -6,6 +6,10 @@ future
 ------
 - ``Pydantic`` serialisation support
 
+0.15.14
+-------
+- add F expression support in queryset.update()
+
 0.15.13
 -------
 - Applies default ordering on related queries

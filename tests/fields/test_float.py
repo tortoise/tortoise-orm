@@ -3,6 +3,7 @@ from decimal import Decimal
 from tests import testmodels
 from tortoise.contrib import test
 from tortoise.exceptions import IntegrityError
+from tortoise.expressions import F
 
 
 class TestFloatFields(test.TestCase):
@@ -47,3 +48,9 @@ class TestFloatFields(test.TestCase):
         obj0 = await testmodels.FloatFields.create(floatnum=1.23)
         values = await testmodels.FloatFields.filter(id=obj0.id).values_list("floatnum")
         self.assertEqual(list(values[0]), [1.23])
+
+    async def test_f_expression(self):
+        obj0 = await testmodels.FloatFields.create(floatnum=1.23)
+        await obj0.filter(id=obj0.id).update(floatnum=F("floatnum") + 0.01)
+        obj1 = await testmodels.FloatFields.get(id=obj0.id)
+        self.assertEqual(obj1.floatnum, 1.24)

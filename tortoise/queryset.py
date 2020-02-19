@@ -22,10 +22,12 @@ from typing import (
 from pypika import JoinType, Order, Table
 from pypika.functions import Count
 from pypika.queries import QueryBuilder
+from pypika.terms import ArithmeticExpression
 from typing_extensions import Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
+from tortoise.expressions import F
 from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
     OneToOneFieldInstance,
@@ -658,7 +660,12 @@ class UpdateQuery(AwaitableQuery):
                     db_field = self.model._meta.fields_db_projection[key]
                 except KeyError:
                     raise FieldError(f"Field {key} is virtual and can not be updated")
-                value = executor.column_map[key](value, None)
+                if not isinstance(value, (F, ArithmeticExpression)):
+                    value = executor.column_map[key](value, None)  # type: ignore
+                else:
+                    value = F.resolver_arithmetic_expression(
+                        self.model._meta.fields_db_projection, value
+                    )
 
             self.query = self.query.set(db_field, value)
 
