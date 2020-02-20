@@ -43,5 +43,5 @@ class TestRelationsWithUnique(test.TestCase):
 
         fetched_principal = await Principal.create(name="Sang-Heon Jeon3", school=school1)
         self.assertEqual(fetched_principal.name, "Sang-Heon Jeon3")
-        fetched_school = await School.all().prefetch_related("principal").first()
+        fetched_school = await School.filter(name="School1").prefetch_related("principal").first()
         self.assertEqual(fetched_school.name, "School1")
