@@ -89,6 +89,15 @@ Relations
 
 .. _example_relations_recursive:
 
+Relations with Unique field
+=========
+.. literalinclude::  ../../examples/relations_with_unique.py
+
+
+.. rst-class:: html-toggle
+
+.. _example_relations_with_unique:
+
 Recursive Relations
 ===================
 .. literalinclude::  ../../examples/relations_recursive.py

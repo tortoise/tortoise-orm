@@ -402,6 +402,9 @@ def OneToOneField(
             ``field.SET_DEFAULT``:
                 Resets the field to ``default`` value in case the related model gets deleted.
                 Can only be set is field has a ``default`` set.
+    ``to_field``:
+        The attribute name on the related model to establish foreign key relationship.
+        If not set, pk is used
     """
 
     return OneToOneFieldInstance(model_name, related_name, on_delete, **kwargs)
@@ -442,6 +445,9 @@ def ForeignKeyField(
             ``field.SET_DEFAULT``:
                 Resets the field to ``default`` value in case the related model gets deleted.
                 Can only be set is field has a ``default`` set.
+    ``to_field``:
+        The attribute name on the related model to establish foreign key relationship.
+        If not set, pk is used
     """
 
     return ForeignKeyFieldInstance(model_name, related_name, on_delete, **kwargs)
