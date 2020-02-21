@@ -4,7 +4,7 @@ Changelog
 =========
 0.15.14
 -------
-- add F expression support in queryset.update()
+- add F expression support in ``queryset.update()`` - This allows for atomic updates of data in the database. (#294)
 
 0.15.13
 -------
