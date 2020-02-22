@@ -2,6 +2,10 @@
 
 Changelog
 =========
+0.15.15
+-------
+- Add ability to suppply a ``to_field=`` parameter for FK/O2O to a non-PK but still uniquely indexed remote field. (#287)
+
 0.15.14
 -------
 - add F expression support in ``queryset.update()`` - This allows for atomic updates of data in the database. (#294)
