@@ -119,3 +119,87 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
                     },
                 }
             )
+
+    async def test_non_unique_field_in_fk_reference_init(self):
+        with self.assertRaisesRegex(
+            ConfigurationError, 'field "uuid" in model "Tournament" is not unique'
+        ):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "credentials": {"file_path": ":memory:"},
+                        }
+                    },
+                    "apps": {
+                        "models": {
+                            "models": ["tests.model_setup.model_bad_rel6"],
+                            "default_connection": "default",
+                        }
+                    },
+                }
+            )
+
+    async def test_non_exist_field_in_fk_reference_init(self):
+        with self.assertRaisesRegex(
+            ConfigurationError, 'there is no field named "uuids" in model "Tournament"'
+        ):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "credentials": {"file_path": ":memory:"},
+                        }
+                    },
+                    "apps": {
+                        "models": {
+                            "models": ["tests.model_setup.model_bad_rel7"],
+                            "default_connection": "default",
+                        }
+                    },
+                }
+            )
+
+    async def test_non_unique_field_in_o2o_reference_init(self):
+        with self.assertRaisesRegex(
+            ConfigurationError, 'field "uuid" in model "Tournament" is not unique'
+        ):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "credentials": {"file_path": ":memory:"},
+                        }
+                    },
+                    "apps": {
+                        "models": {
+                            "models": ["tests.model_setup.model_bad_rel8"],
+                            "default_connection": "default",
+                        }
+                    },
+                }
+            )
+
+    async def test_non_exist_field_in_o2o_reference_init(self):
+        with self.assertRaisesRegex(
+            ConfigurationError, 'there is no field named "uuids" in model "Tournament"'
+        ):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.sqlite",
+                            "credentials": {"file_path": ":memory:"},
+                        }
+                    },
+                    "apps": {
+                        "models": {
+                            "models": ["tests.model_setup.model_bad_rel9"],
+                            "default_connection": "default",
+                        }
+                    },
+                }
+            )
