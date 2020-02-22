@@ -144,7 +144,7 @@ class Tortoise:
                 return _type_name(typ)
             except AttributeError:
                 try:
-                    return [_type_name(_typ) for _typ in typ]
+                    return [_type_name(_typ) for _typ in typ]  # pragma: nobranch
                 except TypeError:
                     return str(typ)
 
