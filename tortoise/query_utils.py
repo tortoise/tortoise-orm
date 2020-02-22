@@ -48,9 +48,6 @@ def _get_joins_for_related_field(
 ) -> List[Tuple[Table, Criterion]]:
     required_joins = []
 
-    table_pk = related_field.model._meta.db_pk_field
-    related_table_pk = related_field.model_class._meta.db_pk_field
-
     related_table = (
         related_field.model_class._meta.basetable
     )  # .as_(f"{table.get_table_name()}__{related_field_name}")
@@ -59,21 +56,23 @@ def _get_joins_for_related_field(
         required_joins.append(
             (
                 through_table,
-                getattr(table, table_pk) == getattr(through_table, related_field.backward_key),
+                getattr(table, related_field.model._meta.db_pk_field)
+                == getattr(through_table, related_field.backward_key),
             )
         )
         required_joins.append(
             (
                 related_table,
                 getattr(through_table, related_field.forward_key)
-                == getattr(related_table, related_table_pk),
+                == getattr(related_table, related_field.model_class._meta.db_pk_field),
             )
         )
     elif isinstance(related_field, BackwardFKRelation):
         required_joins.append(
             (
                 related_table,
-                getattr(table, table_pk) == getattr(related_table, related_field.relation_field),
+                getattr(table, related_field.to_field_instance.model_field_name)
+                == getattr(related_table, related_field.relation_field),
             )
         )
     else:
@@ -81,7 +80,7 @@ def _get_joins_for_related_field(
         required_joins.append(
             (
                 related_table,
-                getattr(related_table, related_table_pk)
+                getattr(related_table, related_field.to_field_instance.model_field_name)
                 == getattr(table, f"{related_field_name}_id"),
             )
         )
