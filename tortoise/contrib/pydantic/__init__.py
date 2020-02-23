@@ -136,6 +136,7 @@ def _pydantic_recursion_protector(
     computed: Tuple[str, ...] = (),
     name=None,
     allow_cycles: bool = False,
+    sort_alphabetically: Optional[bool] = None,
 ) -> Optional[Type[PydanticModel]]:
     """
     It is an inner function to protect pydantic model creator against cyclic recursion
@@ -168,6 +169,7 @@ def _pydantic_recursion_protector(
         name=name,
         stack=stack,
         allow_cycles=allow_cycles,
+        sort_alphabetically=sort_alphabetically,
     )
 
 
@@ -180,6 +182,7 @@ def pydantic_model_creator(
     name=None,
     stack: tuple = (),
     allow_cycles: Optional[bool] = None,
+    sort_alphabetically: Optional[bool] = None,
 ) -> Type[PydanticModel]:
     """
     Inner function to create pydantic model.
@@ -230,11 +233,15 @@ def pydantic_model_creator(
             getattr(default_meta, "pydantic_exclude_raw_fields"),
         )
     )
-    sort_fields: bool = bool(
-        getattr(meta, "pydantic_sort_fields", getattr(default_meta, "pydantic_sort_fields"))
-    )
+    _sort_fields: bool = bool(
+        getattr(
+            meta,
+            "pydantic_sort_alphabetically",
+            getattr(default_meta, "pydantic_sort_alphabetically"),
+        )
+    ) if sort_alphabetically is None else sort_alphabetically
     _allow_cycles: bool = bool(
-        getattr(meta, "pydantic_allow_cycles", getattr(default_meta, "pydantic_sort_fields"))
+        getattr(meta, "pydantic_allow_cycles", getattr(default_meta, "pydantic_allow_cycles"))
         if allow_cycles is None
         else allow_cycles
     )
@@ -291,9 +298,15 @@ def pydantic_model_creator(
         }
     )
 
-    # Sort field map if requested (Python 3.6 has ordered dictionary keys)
-    if sort_fields:
+    # Sort field map (Python 3.6 has ordered dictionary keys)
+    if _sort_fields:
+        # Sort Alphabetically
         field_map = {k: field_map[k] for k in sorted(field_map)}
+    else:
+        # Sort to definition order
+        field_map = {
+            k: field_map[k] for k in tuple(cls._meta.fields_map.keys()) + computed if k in field_map
+        }
 
     # Process fields
     for fname, fdesc in field_map.items():
@@ -323,6 +336,7 @@ def pydantic_model_creator(
                     ),
                     stack=new_stack,
                     allow_cycles=_allow_cycles,
+                    sort_alphabetically=sort_alphabetically,
                 )
             else:
                 pmodel = None
@@ -397,10 +411,16 @@ def pydantic_queryset_creator(
     computed: Tuple[str, ...] = (),
     name=None,
     allow_cycles: bool = False,
+    sort_alphabetically: Optional[bool] = None,
 ) -> Type[PydanticListModel]:
 
     submodel = pydantic_model_creator(
-        cls, exclude=exclude, include=include, computed=computed, allow_cycles=allow_cycles
+        cls,
+        exclude=exclude,
+        include=include,
+        computed=computed,
+        allow_cycles=allow_cycles,
+        sort_alphabetically=sort_alphabetically,
     )
     lname = name or f"{submodel.__name__}s"
 

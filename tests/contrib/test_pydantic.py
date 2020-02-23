@@ -547,6 +547,119 @@ class TestPydantic(test.TestCase):
             },
         )
 
+    def test_event_named(self):
+        Event_Named = pydantic_model_creator(Event, name="Foo")
+        self.assertEqual(
+            Event_Named.schema(),
+            {
+                "title": "Foo",
+                "description": "Events on the calendar",
+                "type": "object",
+                "properties": {
+                    "event_id": {"title": "Event Id", "type": "integer"},
+                    "name": {"description": "The name", "title": "Name", "type": "string"},
+                    "modified": {"title": "Modified", "type": "string", "format": "date-time"},
+                    "token": {"title": "Token", "type": "string"},
+                    "alias": {"title": "Alias", "type": "integer"},
+                    "tournament": {
+                        "description": "What tournaments is a happenin'",
+                        "title": "Tournament",
+                        "allOf": [{"$ref": "#/definitions/Tournament"}],
+                    },
+                    "reporter": {
+                        "title": "Reporter",
+                        "allOf": [{"$ref": "#/definitions/Reporter"}],
+                    },
+                    "participants": {
+                        "title": "Participants",
+                        "type": "array",
+                        "items": {"$ref": "#/definitions/Team"},
+                    },
+                    "address": {"title": "Address", "allOf": [{"$ref": "#/definitions/Address"}]},
+                },
+                "definitions": {
+                    "Tournament": {
+                        "title": "Tournament",
+                        "type": "object",
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                            "desc": {"title": "Desc", "type": "string"},
+                            "created": {
+                                "title": "Created",
+                                "type": "string",
+                                "format": "date-time",
+                            },
+                        },
+                    },
+                    "Reporter": {
+                        "title": "Reporter",
+                        "description": "Whom is assigned as the reporter",
+                        "type": "object",
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                        },
+                    },
+                    "Team": {
+                        "title": "Team",
+                        "description": "Team that is a playing",
+                        "type": "object",
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                            "alias": {"title": "Alias", "type": "integer"},
+                        },
+                    },
+                    "Address": {
+                        "title": "Address",
+                        "type": "object",
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "city": {"title": "City", "type": "string"},
+                            "street": {"title": "Street", "type": "string"},
+                        },
+                    },
+                },
+            },
+        )
+
+    def test_event_sorted(self):
+        Event_Named = pydantic_model_creator(Event, sort_alphabetically=True)
+        schema = Event_Named.schema()
+        self.assertEqual(
+            list(schema["properties"].keys()),
+            [
+                "address",
+                "alias",
+                "event_id",
+                "modified",
+                "name",
+                "participants",
+                "reporter",
+                "token",
+                "tournament",
+            ],
+        )
+
+    def test_event_unsorted(self):
+        Event_Named = pydantic_model_creator(Event, sort_alphabetically=False)
+        schema = Event_Named.schema()
+        self.assertEqual(
+            list(schema["properties"].keys()),
+            [
+                "event_id",
+                "name",
+                "tournament",
+                "reporter",
+                "participants",
+                "modified",
+                "token",
+                "alias",
+                "address",
+            ],
+        )
+
 
 class TestPydanticCycle(test.TestCase):
     async def setUp(self) -> None:
@@ -574,12 +687,12 @@ class TestPydanticCycle(test.TestCase):
                 "properties": {
                     "id": {"title": "Id", "type": "integer"},
                     "name": {"title": "Name", "type": "string"},
-                    "manager_id": {"title": "Manager Id", "type": "integer"},
                     "talks_to": {
                         "title": "Talks To",
                         "type": "array",
                         "items": {"$ref": "#/definitions/Employee_0d9ca741"},
                     },
+                    "manager_id": {"title": "Manager Id", "type": "integer"},
                     "team_members": {
                         "title": "Team Members",
                         "type": "array",
@@ -629,12 +742,12 @@ class TestPydanticCycle(test.TestCase):
                         "properties": {
                             "id": {"title": "Id", "type": "integer"},
                             "name": {"title": "Name", "type": "string"},
-                            "manager_id": {"title": "Manager Id", "type": "integer"},
                             "talks_to": {
                                 "title": "Talks To",
                                 "type": "array",
                                 "items": {"$ref": "#/definitions/Employee_f9f05e47"},
                             },
+                            "manager_id": {"title": "Manager Id", "type": "integer"},
                             "team_members": {
                                 "title": "Team Members",
                                 "type": "array",
@@ -684,12 +797,12 @@ class TestPydanticCycle(test.TestCase):
                         "properties": {
                             "id": {"title": "Id", "type": "integer"},
                             "name": {"title": "Name", "type": "string"},
-                            "manager_id": {"title": "Manager Id", "type": "integer"},
                             "talks_to": {
                                 "title": "Talks To",
                                 "type": "array",
                                 "items": {"$ref": "#/definitions/Employee_297c851f"},
                             },
+                            "manager_id": {"title": "Manager Id", "type": "integer"},
                             "team_members": {
                                 "title": "Team Members",
                                 "type": "array",
@@ -786,82 +899,5 @@ class TestPydanticCycle(test.TestCase):
                 ],
                 "name_length": 4,
                 "team_size": 2,
-            },
-        )
-
-    def test_event_named(self):
-        Event_Named = pydantic_model_creator(Event, name="Foo")
-        self.assertEqual(
-            Event_Named.schema(),
-            {
-                "title": "Foo",
-                "description": "Events on the calendar",
-                "type": "object",
-                "properties": {
-                    "event_id": {"title": "Event Id", "type": "integer"},
-                    "name": {"description": "The name", "title": "Name", "type": "string"},
-                    "modified": {"title": "Modified", "type": "string", "format": "date-time"},
-                    "token": {"title": "Token", "type": "string"},
-                    "alias": {"title": "Alias", "type": "integer"},
-                    "tournament": {
-                        "description": "What tournaments is a happenin'",
-                        "title": "Tournament",
-                        "allOf": [{"$ref": "#/definitions/Tournament"}],
-                    },
-                    "reporter": {
-                        "title": "Reporter",
-                        "allOf": [{"$ref": "#/definitions/Reporter"}],
-                    },
-                    "participants": {
-                        "title": "Participants",
-                        "type": "array",
-                        "items": {"$ref": "#/definitions/Team"},
-                    },
-                    "address": {"title": "Address", "allOf": [{"$ref": "#/definitions/Address"}]},
-                },
-                "definitions": {
-                    "Tournament": {
-                        "title": "Tournament",
-                        "type": "object",
-                        "properties": {
-                            "id": {"title": "Id", "type": "integer"},
-                            "name": {"title": "Name", "type": "string"},
-                            "desc": {"title": "Desc", "type": "string"},
-                            "created": {
-                                "title": "Created",
-                                "type": "string",
-                                "format": "date-time",
-                            },
-                        },
-                    },
-                    "Reporter": {
-                        "title": "Reporter",
-                        "description": "Whom is assigned as the reporter",
-                        "type": "object",
-                        "properties": {
-                            "id": {"title": "Id", "type": "integer"},
-                            "name": {"title": "Name", "type": "string"},
-                        },
-                    },
-                    "Team": {
-                        "title": "Team",
-                        "description": "Team that is a playing",
-                        "type": "object",
-                        "properties": {
-                            "id": {"title": "Id", "type": "integer"},
-                            "name": {"title": "Name", "type": "string"},
-                            "alias": {"title": "Alias", "type": "integer"},
-                        },
-                    },
-                    "Address": {
-                        "title": "Address",
-                        "type": "object",
-                        "properties": {
-                            "id": {"title": "Id", "type": "integer"},
-                            "city": {"title": "City", "type": "string"},
-                            "street": {"title": "Street", "type": "string"},
-                        },
-                    },
-                },
             },
         )

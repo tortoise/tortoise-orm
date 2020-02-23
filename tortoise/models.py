@@ -947,4 +947,4 @@ class Model(metaclass=ModelMeta):
 
         #: Sort fields alphabetically.
         #: If not set (or ``False``) then leave fields in declaration order
-        pydantic_sort_fields: bool = False
+        pydantic_sort_alphabetically: bool = False
