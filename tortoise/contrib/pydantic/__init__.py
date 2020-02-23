@@ -203,8 +203,7 @@ def pydantic_model_creator(
         return cls.__name__ + h
 
     # We need separate model class for different exclude, include and computed parameters
-    if not name:
-        name = get_name()
+    _name = name or get_name()
 
     # Get settings and defaults
     default_meta = models.Model.Meta
@@ -304,7 +303,7 @@ def pydantic_model_creator(
 
         def get_submodel(_model: Type["Model"]) -> Optional[Type[PydanticModel]]:
             """ Get Pydantic model for the submodel """
-            nonlocal exclude, name
+            nonlocal exclude, _name
 
             if _model:
                 new_stack = stack + ((cls, fname, max_recursion),)
@@ -333,7 +332,7 @@ def pydantic_model_creator(
                 exclude += (fname,)
             # We need to rename if there are duplicate instances of this model
             if cls in [c[0] for c in stack]:
-                name = get_name()
+                _name = name or get_name()
 
             return pmodel
 
@@ -378,11 +377,12 @@ def pydantic_model_creator(
             )
 
     # Creating Pydantic class for the properties generated before
-    model = typing.cast(Type[PydanticModel], type(name, (PydanticModel,), properties))
+    model = typing.cast(Type[PydanticModel], type(_name, (PydanticModel,), properties))
     # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)
-    # The title of the model to hide the hash postfix
-    setattr(model.__config__, "title", cls.__name__)
+    if not name:
+        # The title of the model to hide the hash postfix
+        setattr(model.__config__, "title", cls.__name__)
     # Store the base class
     setattr(model.__config__, "orig_model", cls)
 
