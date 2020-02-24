@@ -148,14 +148,14 @@ class TestQueryset(test.TestCase):
         )
 
     async def test_get_or_none(self):
-        # Test first
-        self.assertEqual(
-            (await IntFields.all().order_by("intnum").get_or_none(intnum__gte=40)).intnum, 40
-        )
+        self.assertEqual((await IntFields.all().get_or_none(intnum=40)).intnum, 40)
 
         self.assertEqual(
             await IntFields.all().order_by("intnum").get_or_none(intnum__gte=400), None
         )
+
+        with self.assertRaises(MultipleObjectsReturned):
+            await IntFields.all().order_by("intnum").get_or_none(intnum__gte=40)
 
     async def test_get(self):
         await IntFields.filter(intnum__gte=70).update(intnum_null=80)
