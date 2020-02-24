@@ -487,7 +487,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         Fetch exactly one object matching the parameters.
         """
         queryset = self.filter(*args, **kwargs)
-        queryset._limit = 1
+        queryset._limit = 2
         queryset._single = True
         return queryset  # type: ignore
 
@@ -608,9 +608,11 @@ class QuerySet(AwaitableQuery[MODEL]):
                 raise DoesNotExist("Object does not exist")
             raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
         if self._single:
+            if len(instance_list) == 1:
+                return instance_list[0]
             if not instance_list:
                 return None  # type: ignore
-            return instance_list[0]
+            raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
         return instance_list
 
 
