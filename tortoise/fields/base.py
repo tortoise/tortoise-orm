@@ -152,6 +152,7 @@ class Field(metaclass=_FieldMeta):
         self.index = index
         self.model_field_name = ""
         self.description = description
+        self.docstring: Optional[str] = None
         # TODO: consider making this not be set from constructor
         self.model: Type["Model"] = model  # type: ignore
         # TODO: consider moving this to RelationalField

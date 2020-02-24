@@ -16,7 +16,15 @@ class Tournament(Model):
 
 
 class Event(Model):
+    """
+    The Event model docstring.
+
+    This is multiline docs.
+    """
+
     id = fields.IntField(pk=True)
+    #: The Event NAME
+    #:  It's pretty important
     name = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
     tournament: fields.ForeignKeyNullableRelation[Tournament] = fields.ForeignKeyField(
@@ -30,15 +38,21 @@ class Event(Model):
 class TestBasic(test.TestCase):
     def test_early_init(self):
 
+        self.maxDiff = None
         Event_TooEarly = pydantic_model_creator(Event)
         self.assertEqual(
             Event_TooEarly.schema(),
             {
                 "title": "Event",
                 "type": "object",
+                "description": "The Event model docstring.<br/><br/>This is multiline docs.",
                 "properties": {
                     "id": {"title": "Id", "type": "integer"},
-                    "name": {"title": "Name", "type": "string"},
+                    "name": {
+                        "title": "Name",
+                        "type": "string",
+                        "description": "The Event NAME<br/>It's pretty important",
+                    },
                     "created_at": {"title": "Created At", "type": "string", "format": "date-time"},
                 },
             },
@@ -50,7 +64,8 @@ class TestBasic(test.TestCase):
                 "app": None,
                 "table": "",
                 "abstract": False,
-                "description": None,
+                "description": "The Event model docstring.",
+                "docstring": "The Event model docstring.\n\nThis is multiline docs.",
                 "unique_together": [],
                 "pk_field": {
                     "name": "id",
@@ -64,6 +79,7 @@ class TestBasic(test.TestCase):
                     "indexed": True,
                     "default": None,
                     "description": None,
+                    "docstring": None,
                 },
                 "data_fields": [
                     {
@@ -78,6 +94,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": None,
+                        "docstring": "The Event NAME\nIt's pretty important",
                     },
                     {
                         "name": "created_at",
@@ -91,6 +108,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": None,
+                        "docstring": None,
                     },
                 ],
                 "fk_fields": [
@@ -105,6 +123,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": None,
+                        "docstring": None,
                     }
                 ],
                 "backward_fk_fields": [],
@@ -122,9 +141,14 @@ class TestBasic(test.TestCase):
             {
                 "title": "Event",
                 "type": "object",
+                "description": "The Event model docstring.<br/><br/>This is multiline docs.",
                 "properties": {
                     "id": {"title": "Id", "type": "integer"},
-                    "name": {"title": "Name", "type": "string"},
+                    "name": {
+                        "title": "Name",
+                        "type": "string",
+                        "description": "The Event NAME<br/>It's pretty important",
+                    },
                     "created_at": {"title": "Created At", "type": "string", "format": "date-time"},
                     "tournament": {
                         "title": "Tournament",
@@ -155,7 +179,8 @@ class TestBasic(test.TestCase):
                 "app": "models",
                 "table": "event",
                 "abstract": False,
-                "description": None,
+                "description": "The Event model docstring.",
+                "docstring": "The Event model docstring.\n\nThis is multiline docs.",
                 "unique_together": [],
                 "pk_field": {
                     "name": "id",
@@ -169,6 +194,7 @@ class TestBasic(test.TestCase):
                     "indexed": True,
                     "default": None,
                     "description": None,
+                    "docstring": None,
                 },
                 "data_fields": [
                     {
@@ -183,6 +209,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": None,
+                        "docstring": "The Event NAME\nIt's pretty important",
                     },
                     {
                         "name": "created_at",
@@ -196,6 +223,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": None,
+                        "docstring": None,
                     },
                     {
                         "name": "tournament_id",
@@ -209,6 +237,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": None,
+                        "docstring": None,
                     },
                 ],
                 "fk_fields": [
@@ -223,6 +252,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": None,
+                        "docstring": None,
                     }
                 ],
                 "backward_fk_fields": [],

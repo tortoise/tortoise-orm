@@ -701,7 +701,7 @@ class TestPydanticCycle(test.TestCase):
                     "name_length": {"title": "Name Length", "type": "integer"},
                     "team_size": {
                         "title": "Team Size",
-                        "description": "Computes team size.<br><br>Note that this function needs to be annotated with a return type so that pydantic can<br> generate a valid schema.<br><br>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br> pre-fetch relational data, so that it is available before serialization. So we don't<br> need to await the relation. We do however have to protect against the case where no<br> prefetching was done, hence catching and handling the<br> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                        "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
                         "type": "integer",
                     },
                 },
@@ -716,7 +716,7 @@ class TestPydanticCycle(test.TestCase):
                             "name_length": {"title": "Name Length", "type": "integer"},
                             "team_size": {
                                 "title": "Team Size",
-                                "description": "Computes team size.<br><br>Note that this function needs to be annotated with a return type so that pydantic can<br> generate a valid schema.<br><br>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br> pre-fetch relational data, so that it is available before serialization. So we don't<br> need to await the relation. We do however have to protect against the case where no<br> prefetching was done, hence catching and handling the<br> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
                                 "type": "integer",
                             },
                         },
@@ -731,7 +731,7 @@ class TestPydanticCycle(test.TestCase):
                             "name_length": {"title": "Name Length", "type": "integer"},
                             "team_size": {
                                 "title": "Team Size",
-                                "description": "Computes team size.<br><br>Note that this function needs to be annotated with a return type so that pydantic can<br> generate a valid schema.<br><br>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br> pre-fetch relational data, so that it is available before serialization. So we don't<br> need to await the relation. We do however have to protect against the case where no<br> prefetching was done, hence catching and handling the<br> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
                                 "type": "integer",
                             },
                         },
@@ -756,7 +756,7 @@ class TestPydanticCycle(test.TestCase):
                             "name_length": {"title": "Name Length", "type": "integer"},
                             "team_size": {
                                 "title": "Team Size",
-                                "description": "Computes team size.<br><br>Note that this function needs to be annotated with a return type so that pydantic can<br> generate a valid schema.<br><br>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br> pre-fetch relational data, so that it is available before serialization. So we don't<br> need to await the relation. We do however have to protect against the case where no<br> prefetching was done, hence catching and handling the<br> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
                                 "type": "integer",
                             },
                         },
@@ -771,7 +771,7 @@ class TestPydanticCycle(test.TestCase):
                             "name_length": {"title": "Name Length", "type": "integer"},
                             "team_size": {
                                 "title": "Team Size",
-                                "description": "Computes team size.<br><br>Note that this function needs to be annotated with a return type so that pydantic can<br> generate a valid schema.<br><br>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br> pre-fetch relational data, so that it is available before serialization. So we don't<br> need to await the relation. We do however have to protect against the case where no<br> prefetching was done, hence catching and handling the<br> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
                                 "type": "integer",
                             },
                         },
@@ -786,7 +786,7 @@ class TestPydanticCycle(test.TestCase):
                             "name_length": {"title": "Name Length", "type": "integer"},
                             "team_size": {
                                 "title": "Team Size",
-                                "description": "Computes team size.<br><br>Note that this function needs to be annotated with a return type so that pydantic can<br> generate a valid schema.<br><br>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br> pre-fetch relational data, so that it is available before serialization. So we don't<br> need to await the relation. We do however have to protect against the case where no<br> prefetching was done, hence catching and handling the<br> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
                                 "type": "integer",
                             },
                         },
@@ -811,7 +811,7 @@ class TestPydanticCycle(test.TestCase):
                             "name_length": {"title": "Name Length", "type": "integer"},
                             "team_size": {
                                 "title": "Team Size",
-                                "description": "Computes team size.<br><br>Note that this function needs to be annotated with a return type so that pydantic can<br> generate a valid schema.<br><br>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br> pre-fetch relational data, so that it is available before serialization. So we don't<br> need to await the relation. We do however have to protect against the case where no<br> prefetching was done, hence catching and handling the<br> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
                                 "type": "integer",
                             },
                         },
