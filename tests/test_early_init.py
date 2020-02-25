@@ -93,7 +93,7 @@ class TestBasic(test.TestCase):
                         "unique": False,
                         "indexed": False,
                         "default": None,
-                        "description": None,
+                        "description": "The Event NAME",
                         "docstring": "The Event NAME\nIt's pretty important",
                     },
                     {
@@ -208,7 +208,7 @@ class TestBasic(test.TestCase):
                         "unique": False,
                         "indexed": False,
                         "default": None,
-                        "description": None,
+                        "description": "The Event NAME",
                         "docstring": "The Event NAME\nIt's pretty important",
                     },
                     {

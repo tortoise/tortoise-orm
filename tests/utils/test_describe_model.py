@@ -444,7 +444,7 @@ class TestBasic(test.TestCase):
                         "unique": False,
                         "indexed": False,
                         "default": "BLIP",
-                        "description": None,
+                        "description": "A docstring comment",
                         "docstring": "A docstring comment",
                     },
                     {
@@ -616,7 +616,7 @@ class TestBasic(test.TestCase):
                         "unique": False,
                         "indexed": False,
                         "default": "BLIP",
-                        "description": None,
+                        "description": "A docstring comment",
                         "docstring": "A docstring comment",
                     },
                     {

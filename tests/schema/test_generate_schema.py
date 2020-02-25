@@ -182,7 +182,7 @@ CREATE TABLE "teamaddress" (
     "country" VARCHAR(50) NOT NULL  /* Country */,
     "street" VARCHAR(128) NOT NULL  /* Street Address */,
     "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
-);
+) /* The Team's address */;
 CREATE TABLE "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL  /* Tournament name */,
@@ -203,7 +203,7 @@ CREATE TABLE "event" (
 CREATE TABLE "venueinformation" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(128) NOT NULL,
-    "capacity" INT NOT NULL,
+    "capacity" INT NOT NULL  /* No. of seats */,
     "rent" REAL NOT NULL,
     "team_id" VARCHAR(50)  UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
 );
@@ -269,7 +269,7 @@ CREATE TABLE IF NOT EXISTS "teamaddress" (
     "country" VARCHAR(50) NOT NULL  /* Country */,
     "street" VARCHAR(128) NOT NULL  /* Street Address */,
     "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
-);
+) /* The Team's address */;
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL  /* Tournament name */,
@@ -290,7 +290,7 @@ CREATE TABLE IF NOT EXISTS "event" (
 CREATE TABLE IF NOT EXISTS "venueinformation" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(128) NOT NULL,
-    "capacity" INT NOT NULL,
+    "capacity" INT NOT NULL  /* No. of seats */,
     "rent" REAL NOT NULL,
     "team_id" VARCHAR(50)  UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
 );
@@ -424,7 +424,7 @@ CREATE TABLE `teamaddress` (
     `street` VARCHAR(128) NOT NULL  COMMENT 'Street Address',
     `team_id` VARCHAR(50) NOT NULL  PRIMARY KEY,
     CONSTRAINT `fk_teamaddr_team_1c78d737` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;
+) CHARACTER SET utf8mb4 COMMENT='The Team\\'s address';
 CREATE TABLE `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL  COMMENT 'Tournament name',
@@ -446,7 +446,7 @@ CREATE TABLE `event` (
 CREATE TABLE `venueinformation` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(128) NOT NULL,
-    `capacity` INT NOT NULL,
+    `capacity` INT NOT NULL  COMMENT 'No. of seats',
     `rent` DOUBLE NOT NULL,
     `team_id` VARCHAR(50)  UNIQUE,
     CONSTRAINT `fk_venueinf_team_198af929` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL
@@ -524,7 +524,7 @@ CREATE TABLE IF NOT EXISTS `teamaddress` (
     `street` VARCHAR(128) NOT NULL  COMMENT 'Street Address',
     `team_id` VARCHAR(50) NOT NULL  PRIMARY KEY,
     CONSTRAINT `fk_teamaddr_team_1c78d737` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;
+) CHARACTER SET utf8mb4 COMMENT='The Team\\'s address';
 CREATE TABLE IF NOT EXISTS `tournament` (
     `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(100) NOT NULL  COMMENT 'Tournament name',
@@ -546,7 +546,7 @@ CREATE TABLE IF NOT EXISTS `event` (
 CREATE TABLE IF NOT EXISTS `venueinformation` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` VARCHAR(128) NOT NULL,
-    `capacity` INT NOT NULL,
+    `capacity` INT NOT NULL  COMMENT 'No. of seats',
     `rent` DOUBLE NOT NULL,
     `team_id` VARCHAR(50)  UNIQUE,
     CONSTRAINT `fk_venueinf_team_198af929` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL
@@ -670,6 +670,7 @@ CREATE TABLE "teamaddress" (
 COMMENT ON COLUMN "teamaddress"."city" IS 'City';
 COMMENT ON COLUMN "teamaddress"."country" IS 'Country';
 COMMENT ON COLUMN "teamaddress"."street" IS 'Street Address';
+COMMENT ON TABLE "teamaddress" IS 'The Team''s address';
 CREATE TABLE "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
@@ -701,6 +702,7 @@ CREATE TABLE "venueinformation" (
     "rent" DOUBLE PRECISION NOT NULL,
     "team_id" VARCHAR(50)  UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
 );
+COMMENT ON COLUMN "venueinformation"."capacity" IS 'No. of seats';
 CREATE TABLE "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
     "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
@@ -770,6 +772,7 @@ CREATE TABLE IF NOT EXISTS "teamaddress" (
 COMMENT ON COLUMN "teamaddress"."city" IS 'City';
 COMMENT ON COLUMN "teamaddress"."country" IS 'Country';
 COMMENT ON COLUMN "teamaddress"."street" IS 'Street Address';
+COMMENT ON TABLE "teamaddress" IS 'The Team''s address';
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
@@ -801,6 +804,7 @@ CREATE TABLE IF NOT EXISTS "venueinformation" (
     "rent" DOUBLE PRECISION NOT NULL,
     "team_id" VARCHAR(50)  UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
 );
+COMMENT ON COLUMN "venueinformation"."capacity" IS 'No. of seats';
 CREATE TABLE IF NOT EXISTS "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
     "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE

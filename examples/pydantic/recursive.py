@@ -48,11 +48,11 @@ class Employee(Model):
         # Never called due to no annotation!
         raise NotImplementedError("Not Done")
 
-    class Meta:
-        pydantic_computed = ["name_length", "team_size", "not_annotated"]
-        pydantic_exclude = ["manager", "gets_talked_to"]
-        pydantic_allow_cycles = True
-        pydantic_max_recursion = 4
+    class PydanticMeta:
+        computed = ["name_length", "team_size", "not_annotated"]
+        exclude = ["manager", "gets_talked_to"]
+        allow_cycles = True
+        max_recursion = 4
 
 
 async def run():

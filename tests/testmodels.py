@@ -25,8 +25,8 @@ class Tournament(Model):
     minrelations: fields.ReverseRelation["MinRelation"]
     uniquetogetherfieldswithfks: fields.ReverseRelation["UniqueTogetherFieldsWithFK"]
 
-    class Meta:
-        pydantic_exclude = ("minrelations", "uniquetogetherfieldswithfks")
+    class PydanticMeta:
+        exclude = ("minrelations", "uniquetogetherfieldswithfks")
 
     def __str__(self):
         return self.name
@@ -96,8 +96,10 @@ class Team(Model):
     alias = fields.IntField(null=True)
 
     class Meta:
-        pydantic_exclude = ("minrelations",)
         ordering = ["id"]
+
+    class PydanticMeta:
+        exclude = ("minrelations",)
 
     def __str__(self):
         return self.name
@@ -479,11 +481,13 @@ class Employee(Model):
         raise NotImplementedError("Not Done")
 
     class Meta:
-        pydantic_computed = ["name_length", "team_size", "not_annotated"]
-        pydantic_exclude = ["manager", "gets_talked_to"]
-        pydantic_allow_cycles = True
-        pydantic_max_recursion = 2
         ordering = ["id"]
+
+    class PydanticMeta:
+        computed = ["name_length", "team_size", "not_annotated"]
+        exclude = ["manager", "gets_talked_to"]
+        allow_cycles = True
+        max_recursion = 2
 
 
 class StraightFields(Model):

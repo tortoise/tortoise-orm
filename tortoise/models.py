@@ -135,9 +135,7 @@ def _get_comments(cls: "Type[Model]") -> Dict[str, str]:
             # Extract text
             comment = re.sub(r"(^\s*#:\s*|\s*$)", "", match[0], flags=re.MULTILINE)
             # Class name template
-            comment = comment.replace("{model}", cls.__name__)
-            # Change multiline texts to HTML
-            comments[field_name] = comment
+            comments[field_name] = comment.replace("{model}", cls.__name__)
 
     return comments
 
@@ -578,6 +576,8 @@ class ModelMeta(type):
         for fname, comment in _get_comments(new_class).items():
             if fname in fields_map:
                 fields_map[fname].docstring = comment
+                if fields_map[fname].description is None:
+                    fields_map[fname].description = comment.split("\n")[0]
 
         if new_class.__doc__ and not meta.table_description:
             meta.table_description = inspect.cleandoc(new_class.__doc__).split("\n")[0]
@@ -957,30 +957,3 @@ class Model(metaclass=ModelMeta):
                     table="custom_table"
                     unique_together=(("field_a", "field_b"), )
         """
-
-        #: If not empty, only fields this property contains will be in the pydantic model
-        pydantic_include: Tuple[str, ...] = ()
-
-        #: Fields listed in this property will be excluded from pydantic model
-        pydantic_exclude: Tuple[str, ...] = ()
-
-        #: Computed fields can be listed here to use in pydantic model
-        pydantic_computed: Tuple[str, ...] = ()
-
-        #: Use backward relations without annotations - not recommended, it can be huge data
-        #: without control
-        pydantic_backward_relations: bool = True
-
-        #: Maximum recursion level allowed
-        pydantic_max_recursion: int = 3
-
-        #: Allow cycles in recursion - This can result in HUGE data - Be careful!
-        #: Please use this with ``exclude``/``include`` and sane ``max_recursion``
-        pydantic_allow_cycles: bool = False
-
-        #: If we should exclude raw fields (the ones have _id suffixes) of relations
-        pydantic_exclude_raw_fields: bool = True
-
-        #: Sort fields alphabetically.
-        #: If not set (or ``False``) then leave fields in declaration order
-        pydantic_sort_alphabetically: bool = False

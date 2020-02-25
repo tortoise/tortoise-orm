@@ -37,7 +37,9 @@ def _get_fetch_fields(
 
 
 class PydanticModel(BaseModel):
-    """ Custom Pydantic BaseModel for Tortoise objects """
+    """
+    Pydantic BaseModel for Tortoise objects
+    """
 
     class Config:
         orm_mode = True  # It should be in ORM mode to convert tortoise data to pydantic
@@ -55,6 +57,13 @@ class PydanticModel(BaseModel):
 
     @classmethod
     async def from_tortoise_orm(cls, obj: "Model") -> "PydanticModel":
+        """
+        Returns a serializable pydantic model instance built from the provided model instance.
+
+        This will prefetch all the relations automatically.
+
+        :param obj: The Model instance you want serialized.
+        """
         # Get fields needed to fetch
         fetch_fields = _get_fetch_fields(cls, getattr(cls.__config__, "orig_model"))
         # Fetch fields
@@ -65,10 +74,20 @@ class PydanticModel(BaseModel):
 
 
 class PydanticListModel(BaseModel):
-    """ Custom Pydantic BaseModel for List of Tortoise Models """
+    """
+    Pydantic BaseModel for List of Tortoise Models
+    """
 
     @classmethod
     async def from_queryset(cls, queryset: "QuerySet") -> "PydanticListModel":
+        """
+        Returns a serializable pydantic model instance that contains a list of models,
+         from the provided queryset.
+
+        This will prefetch all the relations automatically.
+
+        :param queryset: a queryset on the model this PydanticListModel is based on.
+        """
         submodel = getattr(cls.__config__, "submodel")
         fetch_fields = _get_fetch_fields(submodel, getattr(submodel.__config__, "orig_model"))
         values = cls(

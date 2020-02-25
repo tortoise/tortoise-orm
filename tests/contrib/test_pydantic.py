@@ -200,6 +200,7 @@ class TestPydantic(test.TestCase):
                     "desc": {"title": "Desc", "type": "string"},
                     "created": {"title": "Created", "type": "string", "format": "date-time"},
                     "events": {
+                        "description": "What tournaments is a happenin'",
                         "title": "Events",
                         "type": "array",
                         "items": {"$ref": "#/definitions/Event"},

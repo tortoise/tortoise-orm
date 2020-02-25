@@ -5,12 +5,56 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, cast
 import pydantic
 
 import tortoise
-from tortoise import fields, models
+from tortoise import fields
 from tortoise.contrib.pydantic.base import PydanticListModel, PydanticModel
 from tortoise.contrib.pydantic.utils import get_annotations
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
+
+
+class PydanticMeta:
+    """
+    The ``PydanticMeta`` class is used to configure metadata for generating the pydantic Model.
+
+    Usage:
+
+    .. code-block:: python3
+
+        class Foo(Model):
+            ...
+
+            class PydanticMeta:
+                exclude = ("foo", "baa")
+                computed = ("count_peanuts", )
+    """
+
+    #: If not empty, only fields this property contains will be in the pydantic model
+    include: Tuple[str, ...] = ()
+
+    #: Fields listed in this property will be excluded from pydantic model
+    exclude: Tuple[str, ...] = ()
+
+    #: Computed fields can be listed here to use in pydantic model
+    computed: Tuple[str, ...] = ()
+
+    #: Use backward relations without annotations - not recommended, it can be huge data
+    #: without control
+    backward_relations: bool = True
+
+    #: Maximum recursion level allowed
+    max_recursion: int = 3
+
+    #: Allow cycles in recursion - This can result in HUGE data - Be careful!
+    #: Please use this with ``exclude``/``include`` and sane ``max_recursion``
+    allow_cycles: bool = False
+
+    #: If we should exclude raw fields (the ones have _id suffixes) of relations
+    exclude_raw_fields: bool = True
+
+    #: Sort fields alphabetically.
+    #: If not set (or ``False``) then leave fields in declaration order
+    sort_alphabetically: bool = False
 
 
 def _br_it(val: str) -> str:
@@ -61,7 +105,7 @@ def _pydantic_recursion_protector(
         include=include,
         computed=computed,
         name=name,
-        stack=stack,
+        _stack=stack,
         allow_cycles=allow_cycles,
         sort_alphabetically=sort_alphabetically,
     )
@@ -70,17 +114,34 @@ def _pydantic_recursion_protector(
 def pydantic_model_creator(
     cls: "Type[Model]",
     *,
+    name=None,
     exclude: Tuple[str, ...] = (),
     include: Tuple[str, ...] = (),
     computed: Tuple[str, ...] = (),
-    name=None,
-    stack: tuple = (),
     allow_cycles: Optional[bool] = None,
     sort_alphabetically: Optional[bool] = None,
+    _stack: tuple = (),
 ) -> Type[PydanticModel]:
     """
-    Inner function to create pydantic model.
+    Function to build pydantic Model off Tortoise Model.
+
+    :param cls: The Tortoise Model
+    :param name: Specify a custom name explicitly, instead of a generated name.
+    :param exclude: Extra fields to exclude from the provided model.
+    :param include: Extra fields to include from the provided model.
+    :param computed: Extra computed fields to include from the provided model.
+    :param allow_cycles: Do we allow any cycles in the generated model?
+        This is only useful for recursive/self-referential models.
+
+        A value of ``False`` (the default) will prevent any and all backtracking.
+    :param sort_alphabetically: Sort the parameters alphabetically instead of Field-definition order.
+
+        The default order would be:
+            Field definition order +
+            order of reverse relations (as discovered) +
+            order of computed functions (as provided).
     """
+
     # Fully qualified class name
     fqname = cls.__module__ + "." + cls.__qualname__
 
@@ -92,7 +153,7 @@ def pydantic_model_creator(
         h = (
             "_"
             + sha256(
-                f"{fqname};{exclude};{include};{computed};{stack}".encode("utf-8")
+                f"{fqname};{exclude};{include};{computed};{_stack}".encode("utf-8")
             ).hexdigest()[:8]
             if exclude != () or include != () or computed != ()
             else ""
@@ -103,36 +164,19 @@ def pydantic_model_creator(
     _name = name or get_name()
 
     # Get settings and defaults
-    default_meta = models.Model.Meta
-    meta = getattr(cls, "Meta", default_meta)
-    default_include: Tuple[str, ...] = tuple(
-        getattr(meta, "pydantic_include", getattr(default_meta, "pydantic_include"))
-    )
-    default_exclude: Tuple[str, ...] = tuple(
-        getattr(meta, "pydantic_exclude", getattr(default_meta, "pydantic_exclude"))
-    )
-    default_computed: Tuple[str, ...] = tuple(
-        getattr(meta, "pydantic_computed", getattr(default_meta, "pydantic_computed"))
-    )
-    max_recursion: int = int(
-        getattr(meta, "pydantic_max_recursion", getattr(default_meta, "pydantic_max_recursion"))
-    )
+    meta = getattr(cls, "PydanticMeta", PydanticMeta)
+    default_include: Tuple[str, ...] = tuple(getattr(meta, "include", PydanticMeta.include))
+    default_exclude: Tuple[str, ...] = tuple(getattr(meta, "exclude", PydanticMeta.exclude))
+    default_computed: Tuple[str, ...] = tuple(getattr(meta, "computed", PydanticMeta.computed))
+    max_recursion: int = int(getattr(meta, "max_recursion", PydanticMeta.max_recursion))
     exclude_raw_fields: bool = bool(
-        getattr(
-            meta,
-            "pydantic_exclude_raw_fields",
-            getattr(default_meta, "pydantic_exclude_raw_fields"),
-        )
+        getattr(meta, "exclude_raw_fields", PydanticMeta.exclude_raw_fields)
     )
     _sort_fields: bool = bool(
-        getattr(
-            meta,
-            "pydantic_sort_alphabetically",
-            getattr(default_meta, "pydantic_sort_alphabetically"),
-        )
+        getattr(meta, "sort_alphabetically", PydanticMeta.sort_alphabetically)
     ) if sort_alphabetically is None else sort_alphabetically
     _allow_cycles: bool = bool(
-        getattr(meta, "pydantic_allow_cycles", getattr(default_meta, "pydantic_allow_cycles"))
+        getattr(meta, "allow_cycles", PydanticMeta.allow_cycles)
         if allow_cycles is None
         else allow_cycles
     )
@@ -208,7 +252,7 @@ def pydantic_model_creator(
             nonlocal exclude, _name
 
             if _model:
-                new_stack = stack + ((cls, fname, max_recursion),)
+                new_stack = _stack + ((cls, fname, max_recursion),)
 
                 # Get pydantic schema for the submodel
                 prefix_len = len(fname) + 1
@@ -234,7 +278,7 @@ def pydantic_model_creator(
             if pmodel is None:
                 exclude += (fname,)
             # We need to rename if there are duplicate instances of this model
-            if cls in [c[0] for c in stack]:
+            if cls in [c[0] for c in _stack]:
                 _name = name or get_name()
 
             return pmodel
@@ -295,13 +339,35 @@ def pydantic_model_creator(
 def pydantic_queryset_creator(
     cls: "Type[Model]",
     *,
+    name=None,
     exclude: Tuple[str, ...] = (),
     include: Tuple[str, ...] = (),
     computed: Tuple[str, ...] = (),
-    name=None,
     allow_cycles: bool = False,
     sort_alphabetically: Optional[bool] = None,
 ) -> Type[PydanticListModel]:
+    """
+    Function to build a pydantic Model list off Tortoise Model.
+
+    :param cls: The Tortoise Model to put in a list.
+    :param name: Specify a custom name explicitly, instead of a generated name.
+
+        The list generated name is currently naive and merely adds a "s" to the end
+         of the singular name.
+    :param exclude: Extra fields to exclude from the provided model.
+    :param include: Extra fields to include from the provided model.
+    :param computed: Extra computed fields to include from the provided model.
+    :param allow_cycles: Do we allow any cycles in the generated model?
+        This is only useful for recursive/self-referential models.
+
+        A value of ``False`` (the default) will prevent any and all backtracking.
+    :param sort_alphabetically: Sort the parameters alphabetically instead of Field-definition order.
+
+        The default order would be:
+            Field definition order +
+            order of reverse relations (as discovered) +
+            order of computed functions (as provided).
+    """
 
     submodel = pydantic_model_creator(
         cls,

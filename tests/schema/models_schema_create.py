@@ -50,6 +50,12 @@ class Team(Model):
 
 
 class TeamAddress(Model):
+    """
+    The Team's address
+
+    This is a long section of the docs that won't appear in the description.
+    """
+
     city = fields.CharField(max_length=50, description="City")
     country = fields.CharField(max_length=50, description="Country")
     street = fields.CharField(max_length=128, description="Street Address")
@@ -60,6 +66,9 @@ class TeamAddress(Model):
 
 class VenueInformation(Model):
     name = fields.CharField(max_length=128)
+    # This is just a comment
+    #: No. of seats
+    #: All this should not be part of the field description either!
     capacity = fields.IntField()
     rent = fields.FloatField()
     team = fields.OneToOneField("models.Team", on_delete=fields.SET_NULL, null=True)
