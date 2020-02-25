@@ -3,8 +3,60 @@
 Changelog
 =========
 future
-------
-- ``Pydantic`` serialisation support
+-------
+- Fix default type of ``JSONField``
+- Model docstrings and ``#:`` comments directly preceding Field definitions are now used as docstrings and DDL descriptions.
+
+  This is now cleaned and carried as part of the ``docstring`` parameter in ``describe_model(...)``
+
+  If one doesn't explicitly specify a Field ``description=`` or Model ``Meta.table_description=`` then we default to the first line as the description.
+  This is done because a description is submitted to the DB, and needs to be short (depending on DB, 63 chars) in size.
+
+  Usage example:
+
+  .. code-block:: python3
+
+    class Something(Model):
+        """
+        A Docstring.
+
+        Some extra info.
+        """
+
+        # A regular comment
+        name = fields.CharField(max_length=50)
+        #: A docstring comment
+        chars = fields.CharField(max_length=50, description="Some chars")
+        #: A docstring comment
+        #: Some more detail
+        blip = fields.CharField(max_length=50)
+
+    # When looking at the describe model:
+    {
+        "description": "A Docstring.",
+        "docstring": "A Docstring.\n\nSome extra info.",
+        ...
+        "data_fields": [
+            {
+                "name": "name",
+                ...
+                "description": null,
+                "docstring": null
+            },
+            {
+                "name": "chars",
+                ...
+                "description": "Some chars",
+                "docstring": "A docstring comment"
+            },
+            {
+                "name": "blip",
+                ...
+                "description": "A docstring comment",
+                "docstring": "A docstring comment\nSome more detail"
+            }
+        ]
+    }
 
 0.15.17
 -------
