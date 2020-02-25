@@ -2,8 +2,10 @@
 
 Changelog
 =========
+
 0.15.16
-- ``get_or_none(...)`` now raise MultipleObjectsReturnederror if multiple object fetched. (#298)
+-------
+- ``get_or_none(...)`` now raises ``MultipleObjectsReturned`` if multiple object fetched. (#298)
 
 0.15.15
 -------
