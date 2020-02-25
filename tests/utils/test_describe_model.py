@@ -1,5 +1,6 @@
 import json
 import uuid
+from typing import Union
 
 from tests.testmodels import (
     Event,
@@ -933,7 +934,7 @@ class TestBasic(test.TestCase):
                         "field_type": "JSONField",
                         "db_column": "data",
                         "db_field_types": {"": "TEXT", "postgres": "JSONB"},
-                        "python_type": ["dict", "list"],
+                        "python_type": "Union[dict, list]",
                         "generated": False,
                         "nullable": False,
                         "unique": False,
@@ -946,7 +947,7 @@ class TestBasic(test.TestCase):
                         "field_type": "JSONField",
                         "db_column": "data_null",
                         "db_field_types": {"": "TEXT", "postgres": "JSONB"},
-                        "python_type": ["dict", "list"],
+                        "python_type": "Union[dict, list]",
                         "generated": False,
                         "nullable": True,
                         "unique": False,
@@ -959,7 +960,7 @@ class TestBasic(test.TestCase):
                         "field_type": "JSONField",
                         "db_column": "data_default",
                         "db_field_types": {"": "TEXT", "postgres": "JSONB"},
-                        "python_type": ["dict", "list"],
+                        "python_type": "Union[dict, list]",
                         "generated": False,
                         "nullable": False,
                         "unique": False,
@@ -1007,7 +1008,7 @@ class TestBasic(test.TestCase):
                         "field_type": fields.JSONField,
                         "db_column": "data",
                         "db_field_types": {"": "TEXT", "postgres": "JSONB"},
-                        "python_type": (dict, list),
+                        "python_type": Union[dict, list],
                         "generated": False,
                         "nullable": False,
                         "unique": False,
@@ -1020,7 +1021,7 @@ class TestBasic(test.TestCase):
                         "field_type": fields.JSONField,
                         "db_column": "data_null",
                         "db_field_types": {"": "TEXT", "postgres": "JSONB"},
-                        "python_type": (dict, list),
+                        "python_type": Union[dict, list],
                         "generated": False,
                         "nullable": True,
                         "unique": False,
@@ -1033,7 +1034,7 @@ class TestBasic(test.TestCase):
                         "field_type": fields.JSONField,
                         "db_column": "data_default",
                         "db_field_types": {"": "TEXT", "postgres": "JSONB"},
-                        "python_type": (dict, list),
+                        "python_type": Union[dict, list],
                         "generated": False,
                         "nullable": False,
                         "unique": False,

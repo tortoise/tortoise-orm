@@ -122,6 +122,8 @@ class Tortoise:
         def _type_name(typ: Type) -> str:
             if typ.__module__ == "builtins":
                 return typ.__name__
+            if typ.__module__ == "typing":
+                return str(typ).replace("typing.", "")
             return f"{typ.__module__}.{typ.__name__}"
 
         def model_name(typ: Type[Model]) -> str:

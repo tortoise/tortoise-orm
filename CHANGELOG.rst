@@ -2,6 +2,9 @@
 
 Changelog
 =========
+0.15.18
+-------
+- Fix default type of ``JSONField``
 
 0.15.17
 -------
