@@ -146,7 +146,10 @@ class Tortoise:
             try:
                 return _type_name(typ)
             except AttributeError:
-                return [_type_name(_typ) for _typ in typ]
+                try:
+                    return [_type_name(_typ) for _typ in typ]  # pragma: nobranch
+                except TypeError:
+                    return str(typ)
 
         def default_name(default: Any) -> Optional[Union[int, float, str, bool]]:
             if isinstance(default, (int, float, str, bool, type(None))):
@@ -551,6 +554,19 @@ class Tortoise:
             current_transaction_map[name] = ContextVar(name, default=connection)
 
     @classmethod
+    def init_models(
+        cls, models_paths: List[str], app_label: str, init_relations: bool = True
+    ) -> None:
+        app_models: List[Type[Model]] = []
+        for module in models_paths:
+            app_models += cls._discover_models(module, app_label)
+
+        cls.apps[app_label] = {model.__name__: model for model in app_models}
+
+        if init_relations:
+            cls._init_relations()
+
+    @classmethod
     def _init_apps(cls, apps_config: dict) -> None:
         for name, info in apps_config.items():
             try:
@@ -561,16 +577,11 @@ class Tortoise:
                         info.get("default_connection", "default"), name
                     )
                 )
-            app_models: List[Type[Model]] = []
-            for module in info["models"]:
-                app_models += cls._discover_models(module, name)
 
-            models_map = {}
-            for model in app_models:
+            cls.init_models(info["models"], name, init_relations=False)
+
+            for model in cls.apps[name].values():
                 model._meta.default_connection = info.get("default_connection", "default")
-                models_map[model.__name__] = model
-
-            cls.apps[name] = models_map
 
         cls._init_relations()
 
