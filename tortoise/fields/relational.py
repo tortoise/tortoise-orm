@@ -54,10 +54,13 @@ class ReverseRelation(Generic[MODEL]):
     Relation container for :func:`.ForeignKeyField`.
     """
 
-    def __init__(self, model: Type[MODEL], relation_field: str, instance: "Model") -> None:
+    def __init__(
+        self, model: Type[MODEL], relation_field: str, instance: "Model", from_field: str,
+    ) -> None:
         self.model = model
         self.relation_field = relation_field
         self.instance = instance
+        self.from_field = from_field
         self._fetched = False
         self._custom_query = False
         self.related_objects: List[MODEL] = []
@@ -68,7 +71,7 @@ class ReverseRelation(Generic[MODEL]):
             raise OperationalError(
                 "This objects hasn't been instanced, call .save() before calling related queries"
             )
-        return self.model.filter(**{self.relation_field: self.instance.pk})
+        return self.model.filter(**{self.relation_field: getattr(self.instance, self.from_field)})
 
     def __contains__(self, item: Any) -> bool:
         if not self._fetched:
@@ -159,7 +162,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
     def __init__(
         self, model: Type[MODEL], instance: "Model", m2m_field: "ManyToManyFieldInstance"
     ) -> None:
-        super().__init__(model, m2m_field.related_name, instance)
+        super().__init__(model, m2m_field.related_name, instance, "pk")
         self.field = m2m_field
         self.model = m2m_field.model_class  # type: ignore
         self.instance = instance
@@ -280,9 +283,11 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
 class RelationalField(Field):
     has_db_field = False
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, to_field: Optional[str] = None, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.model_class: "Type[Model]" = None  # type: ignore
+        self.to_field = to_field
+        self.to_field_instance: "Field" = None  # type: ignore
 
 
 class ForeignKeyFieldInstance(RelationalField):
@@ -307,9 +312,14 @@ class ForeignKeyFieldInstance(RelationalField):
 
 class BackwardFKRelation(RelationalField):
     def __init__(
-        self, field_type: "Type[Model]", relation_field: str, null: bool, description: Optional[str]
+        self,
+        field_type: "Type[Model]",
+        relation_field: str,
+        null: bool,
+        description: Optional[str],
+        **kwargs: Any,
     ) -> None:
-        super().__init__(null=null)
+        super().__init__(null=null, **kwargs)
         self.model_class: "Type[Model]" = field_type
         self.relation_field: str = relation_field
         self.description: Optional[str] = description
@@ -392,6 +402,9 @@ def OneToOneField(
             ``field.SET_DEFAULT``:
                 Resets the field to ``default`` value in case the related model gets deleted.
                 Can only be set is field has a ``default`` set.
+    ``to_field``:
+        The attribute name on the related model to establish foreign key relationship.
+        If not set, pk is used
     """
 
     return OneToOneFieldInstance(model_name, related_name, on_delete, **kwargs)
@@ -432,6 +445,9 @@ def ForeignKeyField(
             ``field.SET_DEFAULT``:
                 Resets the field to ``default`` value in case the related model gets deleted.
                 Can only be set is field has a ``default`` set.
+    ``to_field``:
+        The attribute name on the related model to establish foreign key relationship.
+        If not set, pk is used
     """
 
     return ForeignKeyFieldInstance(model_name, related_name, on_delete, **kwargs)

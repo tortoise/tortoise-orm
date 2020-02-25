@@ -24,6 +24,7 @@ Contributors
 * Sina Sohangir ``@sinaso``
 * Weiming Dong ``@dongweiming``
 * Jinlong Peng ``@long2ice``
+* Sang-Heon Jeon ``@lntuition``
 
 Special Thanks
 ==============
