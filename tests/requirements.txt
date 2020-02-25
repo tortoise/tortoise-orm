@@ -6,48 +6,48 @@
 #
 -e .
 aiofiles==0.4.0           # via quart, sanic
-aiomysql==0.0.20
-aiosqlite==0.11.0
+aiomysql==0.0.20          # via -r requirements.in (line 8)
+aiosqlite==0.11.0         # via -r ../docs/../requirements.txt (line 3), tortoise-orm
 alabaster==0.7.12         # via sphinx
 apipkg==1.5               # via execnet
 appdirs==1.4.3            # via black, virtualenv
 astroid==2.3.3            # via pylint
-asyncpg==0.20.1
-asynctest==0.13.0
+asyncpg==0.20.1           # via -r requirements.in (line 7)
+asynctest==0.13.0         # via -r requirements.in (line 29)
 attrs==19.3.0             # via black, pytest
 babel==2.8.0              # via sphinx
-bandit==1.6.2
-black==19.10b0
+bandit==1.6.2             # via -r requirements.in (line 24)
+black==19.10b0            # via -r requirements.in (line 25)
 bleach==3.1.1             # via readme-renderer
 blinker==1.4              # via quart
 certifi==2019.11.28       # via httpx, requests
 cffi==1.14.0              # via cryptography
 chardet==3.0.4            # via httpx, requests
-ciso8601==2.1.3
+ciso8601==2.1.3           # via -r ../docs/../requirements.txt (line 2), tortoise-orm
 click==7.0                # via black, pip-tools, quart, uvicorn
-cloud-sptheme==1.10.0
+cloud-sptheme==1.10.0     # via -r ../docs/requirements.in (line 4)
 colorama==0.4.3           # via green
 coverage==5.0.3           # via coveralls, green, nose2, pytest-cov
-coveralls==1.11.1
+coveralls==1.11.1         # via -r requirements.in (line 31)
 cryptography==2.8         # via pymysql
 distlib==0.3.0            # via virtualenv
 docopt==0.6.2             # via coveralls
-docutils==0.16
+docutils==0.16            # via -r requirements.in (line 22), readme-renderer, sphinx
 entrypoints==0.3          # via flake8
 execnet==1.7.1            # via pytest-xdist
 filelock==3.0.12          # via tox, virtualenv
-flake8-isort==2.8.0
+flake8-isort==2.8.0       # via -r requirements.in (line 20)
 flake8==3.7.9             # via flake8-isort
 gitdb==4.0.2              # via gitpython
 gitpython==3.1.0          # via bandit
-green==3.1.0
+green==3.1.0              # via -r requirements.in (line 30)
 h11==0.8.1                # via httpx, hypercorn, uvicorn, wsproto
 h2==3.2.0                 # via httpx, hypercorn
 hpack==3.0.0              # via h2
 hstspreload==2020.2.25    # via httpx
 httptools==0.1.1          # via sanic, uvicorn
 httpx==0.9.3              # via sanic
-hypercorn==0.9.1 ; python_version >= "3.7"
+hypercorn==0.9.1 ; python_version >= "3.7"  # via -r requirements.in (line 46), quart
 hyperframe==5.2.0         # via h2
 idna==2.9                 # via httpx, requests
 imagesize==1.2.0          # via sphinx
@@ -62,12 +62,12 @@ mccabe==0.6.1             # via flake8, pylint
 more-itertools==8.2.0     # via pytest
 multidict==4.7.5          # via sanic
 mypy-extensions==0.4.3    # via mypy
-mypy==0.761
-nose2==0.9.2
+mypy==0.761               # via -r requirements.in (line 19)
+nose2==0.9.2              # via -r requirements.in (line 33)
 packaging==20.1           # via pytest, sphinx, tox
 pathspec==0.7.0           # via black
 pbr==5.4.4                # via stevedore
-pip-tools==4.5.0
+pip-tools==4.5.0          # via -r requirements.in (line 13)
 pkginfo==1.5.0.1          # via twine
 pluggy==0.13.1            # via pytest, tox
 priority==1.3.0           # via hypercorn
@@ -75,53 +75,53 @@ py==1.8.1                 # via pytest, tox
 pycodestyle==2.5.0        # via flake8
 pycparser==2.19           # via cffi
 pyflakes==2.1.1           # via flake8
-pygments==2.5.2
-pylint==2.4.4
+pygments==2.5.2           # via -r requirements.in (line 23), readme-renderer, sphinx
+pylint==2.4.4             # via -r requirements.in (line 21)
 pymysql==0.9.2            # via aiomysql
 pyparsing==2.4.6          # via packaging
-pypika==0.35.21
-pytest-cov==2.8.1
+pypika==0.35.21           # via -r ../docs/../requirements.txt (line 1), tortoise-orm
+pytest-cov==2.8.1         # via -r requirements.in (line 35)
 pytest-forked==1.1.3      # via pytest-xdist
-pytest-xdist==1.31.0
-pytest==5.3.5
-python-rapidjson==0.9.1 ; implementation_name == "cpython"
+pytest-xdist==1.31.0      # via -r requirements.in (line 34)
+pytest==5.3.5             # via -r requirements.in (line 32), pytest-cov, pytest-forked, pytest-xdist
+python-rapidjson==0.9.1 ; implementation_name == "cpython"  # via -r requirements.in (line 42)
 pytz==2019.3              # via babel
-pyyaml==5.3
-quart==0.11.2 ; python_version >= "3.7"
+pyyaml==5.3               # via -r requirements.in (line 4), bandit
+quart==0.11.2 ; python_version >= "3.7"  # via -r requirements.in (line 47)
 readme-renderer==24.0     # via twine
 regex==2020.2.20          # via black
 requests-toolbelt==0.9.1  # via twine
 requests==2.23.0          # via coveralls, requests-toolbelt, sphinx, twine
 rfc3986==1.3.2            # via httpx
-sanic==19.12.2
+sanic==19.12.2            # via -r requirements.in (line 50)
 six==1.14.0               # via astroid, bandit, bleach, cryptography, nose2, packaging, pip-tools, pytest-xdist, readme-renderer, sphinx, stevedore, tox, virtualenv
 smmap==3.0.1              # via gitdb
 sniffio==1.1.0            # via httpx
 snowballstemmer==2.0.0    # via sphinx
 sortedcontainers==2.1.0   # via quart
-sphinx==1.8.5
+sphinx==1.8.5             # via -r ../docs/requirements.in (line 3), cloud-sptheme
 sphinxcontrib-websupport==1.2.0  # via sphinx
-starlette==0.13.2
+starlette==0.13.2         # via -r requirements.in (line 53)
 stevedore==1.32.0         # via bandit
 testfixtures==6.14.0      # via flake8-isort
 toml==0.10.0              # via black, hypercorn, isort, quart, tox
-tox==3.14.5
+tox==3.14.5               # via -r requirements.in (line 28)
 tqdm==4.43.0              # via twine
-twine==1.15.0
+twine==1.15.0             # via -r requirements.in (line 38)
 typed-ast==1.4.1          # via astroid, black, mypy
-typing-extensions==3.7.4.1
+typing-extensions==3.7.4.1  # via -r ../docs/../requirements.txt (line 4), hypercorn, mypy, tortoise-orm
 ujson==1.35               # via sanic
 unidecode==1.1.1          # via green
 urllib3==1.25.8           # via requests
-uvicorn==0.11.3
-uvloop==0.14.0 ; sys_platform != "win32" and implementation_name == "cpython"
+uvicorn==0.11.3           # via -r requirements.in (line 54)
+uvloop==0.14.0 ; sys_platform != "win32" and implementation_name == "cpython"  # via -r requirements.in (line 41), sanic, uvicorn
 virtualenv==20.0.5        # via tox
 wcwidth==0.1.8            # via pytest
 webencodings==0.5.1       # via bleach
 websockets==8.1           # via sanic, uvicorn
 werkzeug==1.0.0           # via quart
 wrapt==1.11.2             # via astroid
-wsproto==0.15.0 ; python_version >= "3.7"
+wsproto==0.15.0 ; python_version >= "3.7"  # via -r requirements.in (line 45), hypercorn
 zipp==3.0.0               # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
