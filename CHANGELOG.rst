@@ -4,8 +4,7 @@ Changelog
 =========
 future
 -------
-- Fix default type of ``JSONField``
-- Model docstrings and ``#:`` comments directly preceding Field definitions are now used as docstrings and DDL descriptions.
+* Model docstrings and ``#:`` comments directly preceding Field definitions are now used as docstrings and DDL descriptions.
 
   This is now cleaned and carried as part of the ``docstring`` parameter in ``describe_model(...)``
 
@@ -57,6 +56,23 @@ future
             }
         ]
     }
+
+* Early Partial Init of models.
+
+  We now have an early init of models, which can be useful when needing Models that are not bound to a DB, but otherwise complete.
+  e.g. Schema generation without needing to be properly set up.
+
+  Usage example:
+
+  .. code-block:: python3
+
+    # Lets say you defined your models in "some/models.py", and "other/ddef.py"
+    # And you are going to use them in the "model" namespace:
+    Tortoise.init_models(["some.models", "other.ddef"], "models")
+
+    # Now the models will have relationships built, so introspection of schema will be comprehensive
+
+- Fix default type of ``JSONField``
 
 0.15.17
 -------
