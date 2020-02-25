@@ -3,6 +3,10 @@
 Changelog
 =========
 
+0.15.17
+-------
+- Now ``get_or_none(...)``, classmethod of ``Model`` class, works in the same way as ``queryset``
+
 0.15.16
 -------
 - ``get_or_none(...)`` now raises ``MultipleObjectsReturned`` if multiple object fetched. (#298)
