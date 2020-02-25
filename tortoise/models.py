@@ -883,7 +883,7 @@ class Model(metaclass=ModelMeta):
         :param args:
         :param kwargs:
         """
-        return QuerySet(cls).filter(*args, **kwargs).first()
+        return QuerySet(cls).get_or_none(*args, **kwargs)
 
     @classmethod
     async def fetch_for_list(
