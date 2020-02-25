@@ -2,6 +2,9 @@
 
 Changelog
 =========
+0.15.16
+- ``get_or_none(...)`` now raise MultipleObjectsReturnederror if multiple object fetched. (#298)
+
 0.15.15
 -------
 - Add ability to suppply a ``to_field=`` parameter for FK/O2O to a non-PK but still uniquely indexed remote field. (#287)
