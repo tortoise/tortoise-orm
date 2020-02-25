@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import inspect
 import json
 import logging
 import os
@@ -74,6 +75,7 @@ class Tortoise:
                     "table":                str     # DB table name
                     "abstract":             bool    # Is the model Abstract?
                     "description":          str     # Description of table (nullable)
+                    "docstring":            str     # Model docstring (nullable)
                     "unique_together":      [...]   # List of List containing field names that
                                                     #  are unique together
                     "pk_field":             {...}   # Primary key field
@@ -105,6 +107,7 @@ class Tortoise:
                     "indexed":      bool    # Is the field indexed?
                     "default":      ...     # The default value (coerced to int/float/str/bool/null)
                     "description":  str     # Description of the field (nullable)
+                    "docstring":    str     # Field docstring (nullable)
                 }
 
             When ``serializable=False`` is specified some fields are not coerced to valid
@@ -169,6 +172,7 @@ class Tortoise:
                 "indexed": field.index or field.unique,
                 "default": default_name(field.default) if serializable else field.default,
                 "description": field.description,
+                "docstring": field.docstring,
             }
 
             # Delete db fields for non-db fields
@@ -196,6 +200,7 @@ class Tortoise:
             "table": model._meta.table,
             "abstract": model._meta.abstract,
             "description": model._meta.table_description or None,
+            "docstring": inspect.cleandoc(model.__doc__ or "") or None,
             "unique_together": model._meta.unique_together or [],
             "pk_field": describe_field(model._meta.pk_attr),
             "data_fields": [
