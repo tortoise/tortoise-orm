@@ -482,7 +482,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._get = True
         return queryset  # type: ignore
 
-    def get_or_none(self, *args: Q, **kwargs: Any) -> QuerySetSingle[MODEL]:
+    def get_or_none(self, *args: Q, **kwargs: Any) -> QuerySetSingle[Optional[MODEL]]:
         """
         Fetch exactly one object matching the parameters.
         """
