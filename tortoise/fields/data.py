@@ -7,13 +7,20 @@ from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Any, Callable, Optional, Type, TypeVar, Union
 from uuid import UUID, uuid4
 
-import ciso8601
 from pypika import functions
 from pypika.enums import SqlTypes
 from pypika.terms import Term
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields.base import Field
+
+try:
+    from ciso8601 import parse_datetime
+except ImportError:  # pragma: nocoverage
+    from iso8601 import parse_date
+
+    parse_datetime = functools.partial(parse_date, default_timezone=None)
+
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -264,7 +271,7 @@ class DatetimeField(Field, datetime.datetime):
     def to_python_value(self, value: Any) -> Optional[datetime.datetime]:
         if value is None or isinstance(value, datetime.datetime):
             return value
-        return ciso8601.parse_datetime(value)
+        return parse_datetime(value)
 
     def to_db_value(
         self, value: Optional[datetime.datetime], instance: "Union[Type[Model], Model]"
@@ -291,7 +298,7 @@ class DateField(Field, datetime.date):
     def to_python_value(self, value: Any) -> Optional[datetime.date]:
         if value is None or isinstance(value, datetime.date):
             return value
-        return ciso8601.parse_datetime(value).date()
+        return parse_datetime(value).date()
 
 
 class TimeDeltaField(Field, datetime.timedelta):
