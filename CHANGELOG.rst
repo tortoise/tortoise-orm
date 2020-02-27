@@ -2,6 +2,7 @@
 
 Changelog
 =========
+- Install on Windows does not require a C compiler any more.
 
 0.15.17
 -------

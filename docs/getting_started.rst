@@ -34,6 +34,8 @@ The following libraries can be used as accelerators:
 * `uvloop <https://pypi.org/project/uvloop/>`_: Shown to improve performance, but needs to be set up.
   Please look at ``uvloop`` documentation for more info.
   If you use a framework, it may already use it.
+* `ciso8601 <https://pypi.org/project/ciso8601/>`_: Automatically used if installed.
+  Not automatically installed on Windows due to often a lack of a C compiler. Default on Linux/CPython.
 
 Tutorial
 ========
