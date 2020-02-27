@@ -1,4 +1,5 @@
 -r ../requirements.txt
+iso8601
 
 # Optional dependencies
 pyyaml>=4.2b1

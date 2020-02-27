@@ -40,6 +40,7 @@ twine<2.0
 # Optional accelerators
 uvloop>=0.12.0; sys_platform != "win32" and implementation_name == "cpython"
 python-rapidjson; implementation_name == "cpython"
+iso8601
 
 # Sample integration - Quart
 wsproto;python_version>="3.7"
