@@ -73,6 +73,7 @@ future
     # Now the models will have relationships built, so introspection of schema will be comprehensive
 
 - Fix default type of ``JSONField``
+- Install on Windows does not require a C compiler any more.
 
 0.15.17
 -------
