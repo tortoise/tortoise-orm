@@ -16,10 +16,9 @@ class F(Field):  # type: ignore
         if isinstance(arithmetic_expression_or_field, Field):
             name = arithmetic_expression_or_field.name
             try:
-                name = fields_db_projection[name]
+                arithmetic_expression_or_field.name = fields_db_projection[name]
             except KeyError:
                 raise FieldError(f"Field {name} is virtual and can not be updated")
-            arithmetic_expression_or_field.name = name
         elif isinstance(arithmetic_expression_or_field, ArithmeticExpression):
             left = arithmetic_expression_or_field.left
             right = arithmetic_expression_or_field.right
