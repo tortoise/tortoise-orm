@@ -667,9 +667,7 @@ class UpdateQuery(AwaitableQuery):
                 if not isinstance(value, (F, ArithmeticExpression)):
                     value = executor.column_map[key](value, None)  # type: ignore
                 else:
-                    value = F.resolver_arithmetic_expression(
-                        self.model._meta.fields_db_projection, value
-                    )
+                    value = F.resolver_arithmetic_expression(self.model, value)[0]
 
             self.query = self.query.set(db_field, value)
 

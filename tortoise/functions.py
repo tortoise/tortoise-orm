@@ -102,7 +102,9 @@ class Function:
             function["joins"] = reversed(function["joins"])
             return function
         else:
-            field = F.resolver_arithmetic_expression(model._meta.fields_db_projection, self.field)
+            field, field_object = F.resolver_arithmetic_expression(model, self.field)
+            if self.populate_field_object:
+                self.field_object = field_object
             return {"joins": [], "field": self.database_func(field, *self.default_values)}
 
 

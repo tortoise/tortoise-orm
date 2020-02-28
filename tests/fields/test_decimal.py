@@ -3,7 +3,7 @@ from decimal import Decimal
 from tests import testmodels
 from tortoise import fields
 from tortoise.contrib import test
-from tortoise.exceptions import ConfigurationError, IntegrityError
+from tortoise.exceptions import ConfigurationError, FieldError, IntegrityError
 from tortoise.expressions import F
 from tortoise.functions import Avg, Max, Sum
 
@@ -108,6 +108,40 @@ class TestDecimalFields(test.TestCase):
             values[0], {"sum_decimal": Decimal("37.26")},
         )
 
+        values = (
+            await testmodels.DecimalFields.all()
+            .annotate(sum_decimal=Sum(F("decimal") + 1))
+            .values("sum_decimal")
+        )
+        self.assertEqual(
+            values[0], {"sum_decimal": Decimal("40.26")},
+        )
+
+        values = (
+            await testmodels.DecimalFields.all()
+            .annotate(sum_decimal=Sum(F("decimal") + F("decimal")))
+            .values("sum_decimal")
+        )
+        self.assertEqual(
+            values[0], {"sum_decimal": Decimal("74.52")},
+        )
+
+    async def test_aggregate_sum_fail_with_f_expression(self):
+        with self.assertRaisesRegex(
+            FieldError,
+            "Field not_exist is not default field in model, so can not be used with F expression",
+        ):
+            await testmodels.DecimalFields.all().annotate(sum_decimal=Sum(F("not_exist"))).values(
+                "sum_decimal"
+            )
+
+        with self.assertRaisesRegex(
+            FieldError, "Cannot use arithmetic expression between different field type"
+        ):
+            await testmodels.DecimalFields.all().annotate(
+                sum_decimal=Sum(F("decimal") + F("id"))
+            ).values("sum_decimal")
+
     async def test_aggregate_avg(self):
         await testmodels.DecimalFields.create(decimal=Decimal("0"), decimal_nodec=1)
         await testmodels.DecimalFields.create(decimal=Decimal("9.99"), decimal_nodec=1)
@@ -134,6 +168,24 @@ class TestDecimalFields(test.TestCase):
             values[0], {"avg_decimal": Decimal("12.42")},
         )
 
+        values = (
+            await testmodels.DecimalFields.all()
+            .annotate(avg_decimal=Avg(F("decimal") + 1))
+            .values("avg_decimal")
+        )
+        self.assertEqual(
+            values[0], {"avg_decimal": Decimal("13.42")},
+        )
+
+        values = (
+            await testmodels.DecimalFields.all()
+            .annotate(avg_decimal=Avg(F("decimal") + F("decimal")))
+            .values("avg_decimal")
+        )
+        self.assertEqual(
+            values[0], {"avg_decimal": Decimal("24.84")},
+        )
+
     async def test_aggregate_max(self):
         await testmodels.DecimalFields.create(decimal=Decimal("0"), decimal_nodec=1)
         await testmodels.DecimalFields.create(decimal=Decimal("9.99"), decimal_nodec=1)
@@ -158,4 +210,22 @@ class TestDecimalFields(test.TestCase):
         )
         self.assertEqual(
             values[0], {"max_decimal": Decimal("27.27")},
+        )
+
+        values = (
+            await testmodels.DecimalFields.all()
+            .annotate(max_decimal=Max(F("decimal") + 1))
+            .values("max_decimal")
+        )
+        self.assertEqual(
+            values[0], {"max_decimal": Decimal("28.27")},
+        )
+
+        values = (
+            await testmodels.DecimalFields.all()
+            .annotate(max_decimal=Max(F("decimal") + F("decimal")))
+            .values("max_decimal")
+        )
+        self.assertEqual(
+            values[0], {"max_decimal": Decimal("54.54")},
         )
