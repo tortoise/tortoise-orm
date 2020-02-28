@@ -29,7 +29,6 @@ class TestConcurrencyIsolated(test.IsolatedTestCase):
         for una in unas:
             self.assertEqual(una[0], unas[0][0])
 
-    @test.expectedFailure
     async def test_concurrent_get_or_create(self):
         unas = await asyncio.gather(*[UniqueName.get_or_create(name="d") for _ in range(10)])
         una_created = [una[1] for una in unas if una[1] is True]
@@ -76,7 +75,6 @@ class TestConcurrencyTransactioned(test.TestCase):
         for una in unas:
             self.assertEqual(una[0], unas[0][0])
 
-    @test.skip("Crashes with MySQL & PostgreSQL")
     async def test_concurrent_get_or_create(self):
         unas = await asyncio.gather(*[UniqueName.get_or_create(name="b") for _ in range(10)])
         una_created = [una[1] for una in unas if una[1] is True]
