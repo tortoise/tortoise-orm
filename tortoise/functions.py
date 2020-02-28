@@ -35,7 +35,7 @@ class Function:
         Enable populate_field_object where we want to try and preserve the field type.
     """
 
-    __slots__ = ("field", "field_object", "default_values")
+    __slots__ = ("field", "field_is_str", "field_object", "default_values")
 
     database_func = BaseFunction
     # Enable populate_field_object where we want to try and preserve the field type.
