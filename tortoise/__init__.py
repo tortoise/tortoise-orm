@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import inspect
 import json
 import logging
 import os
@@ -74,6 +75,7 @@ class Tortoise:
                     "table":                str     # DB table name
                     "abstract":             bool    # Is the model Abstract?
                     "description":          str     # Description of table (nullable)
+                    "docstring":            str     # Model docstring (nullable)
                     "unique_together":      [...]   # List of List containing field names that
                                                     #  are unique together
                     "pk_field":             {...}   # Primary key field
@@ -105,6 +107,7 @@ class Tortoise:
                     "indexed":      bool    # Is the field indexed?
                     "default":      ...     # The default value (coerced to int/float/str/bool/null)
                     "description":  str     # Description of the field (nullable)
+                    "docstring":    str     # Field docstring (nullable)
                 }
 
             When ``serializable=False`` is specified some fields are not coerced to valid
@@ -122,6 +125,8 @@ class Tortoise:
         def _type_name(typ: Type) -> str:
             if typ.__module__ == "builtins":
                 return typ.__name__
+            if typ.__module__ == "typing":
+                return str(typ).replace("typing.", "")
             return f"{typ.__module__}.{typ.__name__}"
 
         def model_name(typ: Type[Model]) -> str:
@@ -141,7 +146,10 @@ class Tortoise:
             try:
                 return _type_name(typ)
             except AttributeError:
-                return [_type_name(_typ) for _typ in typ]
+                try:
+                    return [_type_name(_typ) for _typ in typ]  # pragma: nobranch
+                except TypeError:
+                    return str(typ)
 
         def default_name(default: Any) -> Optional[Union[int, float, str, bool]]:
             if isinstance(default, (int, float, str, bool, type(None))):
@@ -167,6 +175,7 @@ class Tortoise:
                 "indexed": field.index or field.unique,
                 "default": default_name(field.default) if serializable else field.default,
                 "description": field.description,
+                "docstring": field.docstring,
             }
 
             # Delete db fields for non-db fields
@@ -194,6 +203,7 @@ class Tortoise:
             "table": model._meta.table,
             "abstract": model._meta.abstract,
             "description": model._meta.table_description or None,
+            "docstring": inspect.cleandoc(model.__doc__ or "") or None,
             "unique_together": model._meta.unique_together or [],
             "pk_field": describe_field(model._meta.pk_attr),
             "data_fields": [
@@ -544,6 +554,19 @@ class Tortoise:
             current_transaction_map[name] = ContextVar(name, default=connection)
 
     @classmethod
+    def init_models(
+        cls, models_paths: List[str], app_label: str, init_relations: bool = True
+    ) -> None:
+        app_models: List[Type[Model]] = []
+        for module in models_paths:
+            app_models += cls._discover_models(module, app_label)
+
+        cls.apps[app_label] = {model.__name__: model for model in app_models}
+
+        if init_relations:
+            cls._init_relations()
+
+    @classmethod
     def _init_apps(cls, apps_config: dict) -> None:
         for name, info in apps_config.items():
             try:
@@ -554,16 +577,11 @@ class Tortoise:
                         info.get("default_connection", "default"), name
                     )
                 )
-            app_models: List[Type[Model]] = []
-            for module in info["models"]:
-                app_models += cls._discover_models(module, name)
 
-            models_map = {}
-            for model in app_models:
+            cls.init_models(info["models"], name, init_relations=False)
+
+            for model in cls.apps[name].values():
                 model._meta.default_connection = info.get("default_connection", "default")
-                models_map[model.__name__] = model
-
-            cls.apps[name] = models_map
 
         cls._init_relations()
 
@@ -781,4 +799,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.15.15"
+__version__ = "0.15.17"

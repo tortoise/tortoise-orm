@@ -155,6 +155,11 @@ class TestModelMethods(test.TestCase):
         mdl = await self.cls.get_or_none(name="Test2")
         self.assertEqual(mdl, None)
 
+        await self.cls.create(name="Test")
+
+        with self.assertRaises(MultipleObjectsReturned):
+            await self.cls.get_or_none(name="Test")
+
 
 class TestModelMethodsNoID(TestModelMethods):
     async def setUp(self):

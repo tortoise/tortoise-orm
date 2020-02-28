@@ -2,6 +2,87 @@
 
 Changelog
 =========
+future
+-------
+* Model docstrings and ``#:`` comments directly preceding Field definitions are now used as docstrings and DDL descriptions.
+
+  This is now cleaned and carried as part of the ``docstring`` parameter in ``describe_model(...)``
+
+  If one doesn't explicitly specify a Field ``description=`` or Model ``Meta.table_description=`` then we default to the first line as the description.
+  This is done because a description is submitted to the DB, and needs to be short (depending on DB, 63 chars) in size.
+
+  Usage example:
+
+  .. code-block:: python3
+
+    class Something(Model):
+        """
+        A Docstring.
+
+        Some extra info.
+        """
+
+        # A regular comment
+        name = fields.CharField(max_length=50)
+        #: A docstring comment
+        chars = fields.CharField(max_length=50, description="Some chars")
+        #: A docstring comment
+        #: Some more detail
+        blip = fields.CharField(max_length=50)
+
+    # When looking at the describe model:
+    {
+        "description": "A Docstring.",
+        "docstring": "A Docstring.\n\nSome extra info.",
+        ...
+        "data_fields": [
+            {
+                "name": "name",
+                ...
+                "description": null,
+                "docstring": null
+            },
+            {
+                "name": "chars",
+                ...
+                "description": "Some chars",
+                "docstring": "A docstring comment"
+            },
+            {
+                "name": "blip",
+                ...
+                "description": "A docstring comment",
+                "docstring": "A docstring comment\nSome more detail"
+            }
+        ]
+    }
+
+* Early Partial Init of models.
+
+  We now have an early init of models, which can be useful when needing Models that are not bound to a DB, but otherwise complete.
+  e.g. Schema generation without needing to be properly set up.
+
+  Usage example:
+
+  .. code-block:: python3
+
+    # Lets say you defined your models in "some/models.py", and "other/ddef.py"
+    # And you are going to use them in the "model" namespace:
+    Tortoise.init_models(["some.models", "other.ddef"], "models")
+
+    # Now the models will have relationships built, so introspection of schema will be comprehensive
+
+- Fix default type of ``JSONField``
+- Install on Windows does not require a C compiler any more.
+
+0.15.17
+-------
+- Now ``get_or_none(...)``, classmethod of ``Model`` class, works in the same way as ``queryset``
+
+0.15.16
+-------
+- ``get_or_none(...)`` now raises ``MultipleObjectsReturned`` if multiple object fetched. (#298)
+
 0.15.15
 -------
 - Add ability to suppply a ``to_field=`` parameter for FK/O2O to a non-PK but still uniquely indexed remote field. (#287)

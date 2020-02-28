@@ -1,3 +1,5 @@
+import inspect
+import re
 from copy import copy, deepcopy
 from functools import partial
 from typing import Any, Awaitable, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
@@ -108,6 +110,34 @@ def _m2m_getter(
         val = ManyToManyRelation(field_object.model_class, self, field_object)
         setattr(self, _key, val)
     return val
+
+
+def _get_comments(cls: "Type[Model]") -> Dict[str, str]:
+    """
+    Get comments exactly before attributes
+
+    It can be multiline comment. The placeholder "{model}" will be replaced with the name of the
+    model class. We require that the comments are in #: (with a colon) format, so you can
+    differentiate between private and public comments.
+
+    :param cls: The class we need to extract comments from its source.
+    :return: The dictionary of comments by field name
+    """
+    source = inspect.getsource(cls)
+    comments = {}
+
+    for cls in reversed(cls.__mro__):
+        if cls is object:
+            continue
+        matches = re.findall(rf"((?:(?!\n|^)[^\w\n]*#:.*?\n)+?)[^\w\n]*(\w+)\s*[:=]", source)
+        for match in matches:
+            field_name = match[1]
+            # Extract text
+            comment = re.sub(r"(^\s*#:\s*|\s*$)", "", match[0], flags=re.MULTILINE)
+            # Class name template
+            comments[field_name] = comment.replace("{model}", cls.__name__)
+
+    return comments
 
 
 class MetaInfo:
@@ -543,6 +573,15 @@ class ModelMeta(type):
         for field in meta.fields_map.values():
             field.model = new_class
 
+        for fname, comment in _get_comments(new_class).items():
+            if fname in fields_map:
+                fields_map[fname].docstring = comment
+                if fields_map[fname].description is None:
+                    fields_map[fname].description = comment.split("\n")[0]
+
+        if new_class.__doc__ and not meta.table_description:
+            meta.table_description = inspect.cleandoc(new_class.__doc__).split("\n")[0]
+
         meta._model = new_class
         meta.finalise_fields()
         return new_class
@@ -844,7 +883,7 @@ class Model(metaclass=ModelMeta):
         :param args:
         :param kwargs:
         """
-        return QuerySet(cls).filter(*args, **kwargs).first()
+        return QuerySet(cls).get_or_none(*args, **kwargs)
 
     @classmethod
     async def fetch_for_list(

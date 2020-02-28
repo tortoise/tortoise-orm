@@ -185,6 +185,10 @@ class FloatFields(Model):
 
 
 class JSONFields(Model):
+    """
+    This model contains many JSON blobs
+    """
+
     id = fields.IntField(pk=True)
     data = fields.JSONField()
     data_null = fields.JSONField(null=True)
@@ -453,10 +457,16 @@ class StraightFields(Model):
 
 
 class SourceFields(Model):
+    """
+    A Docstring.
+    """
+
     eyedee = fields.IntField(pk=True, source_field="sometable_id", description="Da PK")
+    # A regular comment
     chars = fields.CharField(
         max_length=50, source_field="some_chars_table", index=True, description="Some chars"
     )
+    #: A docstring comment
     blip = fields.CharField(max_length=50, default="BLIP", source_field="da_blip")
 
     fk: fields.ForeignKeyNullableRelation["SourceFields"] = fields.ForeignKeyField(

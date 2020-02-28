@@ -1,5 +1,6 @@
 import json
 import uuid
+from typing import Union
 
 from tests.testmodels import (
     Event,
@@ -57,6 +58,7 @@ class TestBasic(test.TestCase):
                 "table": "straightfields",
                 "abstract": False,
                 "description": "Straight auto-mapped fields",
+                "docstring": None,
                 "unique_together": [["chars", "blip"]],
                 "pk_field": {
                     "name": "eyedee",
@@ -70,6 +72,7 @@ class TestBasic(test.TestCase):
                     "indexed": True,
                     "default": None,
                     "description": "Da PK",
+                    "docstring": None,
                 },
                 "data_fields": [
                     {
@@ -84,6 +87,7 @@ class TestBasic(test.TestCase):
                         "indexed": True,
                         "default": None,
                         "description": "Some chars",
+                        "docstring": None,
                     },
                     {
                         "name": "blip",
@@ -97,6 +101,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": "BLIP",
                         "description": None,
+                        "docstring": None,
                     },
                     {
                         "name": "fk_id",
@@ -110,12 +115,14 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
+                        "docstring": None,
                     },
                     {
                         "db_column": "o2o_id",
                         "db_field_types": {"": "INT"},
                         "default": None,
                         "description": "Line",
+                        "docstring": None,
                         "field_type": "IntField",
                         "generated": False,
                         "indexed": True,
@@ -137,6 +144,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
+                        "docstring": None,
                     }
                 ],
                 "backward_fk_fields": [
@@ -150,12 +158,14 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
+                        "docstring": None,
                     }
                 ],
                 "o2o_fields": [
                     {
                         "default": None,
                         "description": "Line",
+                        "docstring": None,
                         "field_type": "OneToOneFieldInstance",
                         "generated": False,
                         "indexed": True,
@@ -170,6 +180,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": "Line",
+                        "docstring": None,
                         "field_type": "BackwardOneToOneRelation",
                         "generated": False,
                         "indexed": False,
@@ -190,6 +201,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "M2M to myself",
+                        "docstring": None,
                     },
                     {
                         "name": "rel_from",
@@ -201,6 +213,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "M2M to myself",
+                        "docstring": None,
                     },
                 ],
             },
@@ -217,6 +230,7 @@ class TestBasic(test.TestCase):
                 "table": "straightfields",
                 "abstract": False,
                 "description": "Straight auto-mapped fields",
+                "docstring": None,
                 "unique_together": [["chars", "blip"]],
                 "pk_field": {
                     "name": "eyedee",
@@ -230,6 +244,7 @@ class TestBasic(test.TestCase):
                     "indexed": True,
                     "default": None,
                     "description": "Da PK",
+                    "docstring": None,
                 },
                 "data_fields": [
                     {
@@ -244,6 +259,7 @@ class TestBasic(test.TestCase):
                         "indexed": True,
                         "default": None,
                         "description": "Some chars",
+                        "docstring": None,
                     },
                     {
                         "name": "blip",
@@ -257,6 +273,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": "BLIP",
                         "description": None,
+                        "docstring": None,
                     },
                     {
                         "name": "fk_id",
@@ -270,6 +287,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
+                        "docstring": None,
                     },
                     {
                         "name": "o2o_id",
@@ -283,6 +301,7 @@ class TestBasic(test.TestCase):
                         "indexed": True,
                         "default": None,
                         "description": "Line",
+                        "docstring": None,
                     },
                 ],
                 "fk_fields": [
@@ -297,6 +316,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
+                        "docstring": None,
                     }
                 ],
                 "backward_fk_fields": [
@@ -310,12 +330,14 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
+                        "docstring": None,
                     }
                 ],
                 "o2o_fields": [
                     {
                         "default": None,
                         "description": "Line",
+                        "docstring": None,
                         "field_type": OneToOneFieldInstance,
                         "generated": False,
                         "indexed": True,
@@ -330,6 +352,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": "Line",
+                        "docstring": None,
                         "field_type": fields.BackwardOneToOneRelation,
                         "generated": False,
                         "indexed": False,
@@ -350,6 +373,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "M2M to myself",
+                        "docstring": None,
                     },
                     {
                         "name": "rel_from",
@@ -361,6 +385,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "M2M to myself",
+                        "docstring": None,
                     },
                 ],
             },
@@ -377,6 +402,7 @@ class TestBasic(test.TestCase):
                 "table": "sometable",
                 "abstract": False,
                 "description": "Source mapped fields",
+                "docstring": "A Docstring.",
                 "unique_together": [["chars", "blip"]],
                 "pk_field": {
                     "name": "eyedee",
@@ -390,6 +416,7 @@ class TestBasic(test.TestCase):
                     "indexed": True,
                     "default": None,
                     "description": "Da PK",
+                    "docstring": None,
                 },
                 "data_fields": [
                     {
@@ -404,6 +431,7 @@ class TestBasic(test.TestCase):
                         "indexed": True,
                         "default": None,
                         "description": "Some chars",
+                        "docstring": None,
                     },
                     {
                         "name": "blip",
@@ -416,7 +444,8 @@ class TestBasic(test.TestCase):
                         "unique": False,
                         "indexed": False,
                         "default": "BLIP",
-                        "description": None,
+                        "description": "A docstring comment",
+                        "docstring": "A docstring comment",
                     },
                     {
                         "name": "fk_id",
@@ -430,6 +459,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
+                        "docstring": None,
                     },
                     {
                         "name": "o2o_id",
@@ -443,6 +473,7 @@ class TestBasic(test.TestCase):
                         "indexed": True,
                         "default": None,
                         "description": "Line",
+                        "docstring": None,
                     },
                 ],
                 "fk_fields": [
@@ -457,6 +488,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
+                        "docstring": None,
                     }
                 ],
                 "backward_fk_fields": [
@@ -470,12 +502,14 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
+                        "docstring": None,
                     }
                 ],
                 "o2o_fields": [
                     {
                         "default": None,
                         "description": "Line",
+                        "docstring": None,
                         "field_type": "OneToOneFieldInstance",
                         "generated": False,
                         "indexed": True,
@@ -490,6 +524,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": "Line",
+                        "docstring": None,
                         "field_type": "BackwardOneToOneRelation",
                         "generated": False,
                         "indexed": False,
@@ -510,6 +545,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "M2M to myself",
+                        "docstring": None,
                     },
                     {
                         "name": "rel_from",
@@ -521,6 +557,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "M2M to myself",
+                        "docstring": None,
                     },
                 ],
             },
@@ -537,6 +574,7 @@ class TestBasic(test.TestCase):
                 "table": "sometable",
                 "abstract": False,
                 "description": "Source mapped fields",
+                "docstring": "A Docstring.",
                 "unique_together": [["chars", "blip"]],
                 "pk_field": {
                     "name": "eyedee",
@@ -550,6 +588,7 @@ class TestBasic(test.TestCase):
                     "indexed": True,
                     "default": None,
                     "description": "Da PK",
+                    "docstring": None,
                 },
                 "data_fields": [
                     {
@@ -564,6 +603,7 @@ class TestBasic(test.TestCase):
                         "indexed": True,
                         "default": None,
                         "description": "Some chars",
+                        "docstring": None,
                     },
                     {
                         "name": "blip",
@@ -576,7 +616,8 @@ class TestBasic(test.TestCase):
                         "unique": False,
                         "indexed": False,
                         "default": "BLIP",
-                        "description": None,
+                        "description": "A docstring comment",
+                        "docstring": "A docstring comment",
                     },
                     {
                         "name": "fk_id",
@@ -590,6 +631,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
+                        "docstring": None,
                     },
                     {
                         "name": "o2o_id",
@@ -603,6 +645,7 @@ class TestBasic(test.TestCase):
                         "indexed": True,
                         "default": None,
                         "description": "Line",
+                        "docstring": None,
                     },
                 ],
                 "fk_fields": [
@@ -617,6 +660,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
+                        "docstring": None,
                     }
                 ],
                 "backward_fk_fields": [
@@ -630,12 +674,14 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
+                        "docstring": None,
                     }
                 ],
                 "o2o_fields": [
                     {
                         "default": None,
                         "description": "Line",
+                        "docstring": None,
                         "field_type": OneToOneFieldInstance,
                         "generated": False,
                         "indexed": True,
@@ -650,6 +696,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": "Line",
+                        "docstring": None,
                         "field_type": fields.BackwardOneToOneRelation,
                         "generated": False,
                         "indexed": False,
@@ -670,6 +717,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "M2M to myself",
+                        "docstring": None,
                     },
                     {
                         "name": "rel_from",
@@ -681,6 +729,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": "M2M to myself",
+                        "docstring": None,
                     },
                 ],
             },
@@ -697,6 +746,7 @@ class TestBasic(test.TestCase):
                 "table": "uuidpkmodel",
                 "abstract": False,
                 "description": None,
+                "docstring": None,
                 "unique_together": [],
                 "pk_field": {
                     "name": "id",
@@ -710,6 +760,7 @@ class TestBasic(test.TestCase):
                     "indexed": True,
                     "default": "<function uuid.uuid4>",
                     "description": None,
+                    "docstring": None,
                 },
                 "data_fields": [],
                 "fk_fields": [],
@@ -724,6 +775,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": None,
+                        "docstring": None,
                     },
                 ],
                 "o2o_fields": [],
@@ -739,6 +791,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": None,
+                        "docstring": None,
                     }
                 ],
             },
@@ -755,6 +808,7 @@ class TestBasic(test.TestCase):
                 "table": "uuidpkmodel",
                 "abstract": False,
                 "description": None,
+                "docstring": None,
                 "unique_together": [],
                 "pk_field": {
                     "name": "id",
@@ -768,6 +822,7 @@ class TestBasic(test.TestCase):
                     "indexed": True,
                     "default": uuid.uuid4,
                     "description": None,
+                    "docstring": None,
                 },
                 "data_fields": [],
                 "fk_fields": [],
@@ -782,6 +837,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": None,
+                        "docstring": None,
                     },
                 ],
                 "o2o_fields": [],
@@ -797,6 +853,7 @@ class TestBasic(test.TestCase):
                         "indexed": False,
                         "default": None,
                         "description": None,
+                        "docstring": None,
                     }
                 ],
             },
@@ -818,6 +875,7 @@ class TestBasic(test.TestCase):
                         "db_field_types": {"": "VARCHAR(50)"},
                         "default": None,
                         "description": None,
+                        "docstring": None,
                         "field_type": "CharField",
                         "generated": False,
                         "indexed": False,
@@ -831,6 +889,7 @@ class TestBasic(test.TestCase):
                         "db_field_types": {"": "CHAR(36)", "postgres": "UUID"},
                         "default": None,
                         "description": None,
+                        "docstring": None,
                         "field_type": "UUIDField",
                         "generated": False,
                         "indexed": False,
@@ -844,6 +903,7 @@ class TestBasic(test.TestCase):
                         "db_field_types": {"": "CHAR(36)", "postgres": "UUID"},
                         "default": None,
                         "description": None,
+                        "docstring": None,
                         "field_type": "UUIDField",
                         "generated": False,
                         "indexed": True,
@@ -854,10 +914,12 @@ class TestBasic(test.TestCase):
                     },
                 ],
                 "description": None,
+                "docstring": None,
                 "fk_fields": [
                     {
                         "default": None,
                         "description": None,
+                        "docstring": None,
                         "field_type": "ForeignKeyFieldInstance",
                         "generated": False,
                         "indexed": False,
@@ -874,6 +936,7 @@ class TestBasic(test.TestCase):
                     {
                         "default": None,
                         "description": None,
+                        "docstring": None,
                         "field_type": "OneToOneFieldInstance",
                         "generated": False,
                         "indexed": True,
@@ -889,6 +952,7 @@ class TestBasic(test.TestCase):
                     "db_field_types": {"": "CHAR(36)", "postgres": "UUID"},
                     "default": "<function uuid.uuid4>",
                     "description": None,
+                    "docstring": None,
                     "field_type": "UUIDField",
                     "generated": False,
                     "indexed": True,
@@ -912,7 +976,8 @@ class TestBasic(test.TestCase):
                 "app": "models",
                 "table": "jsonfields",
                 "abstract": False,
-                "description": None,
+                "description": "This model contains many JSON blobs",
+                "docstring": "This model contains many JSON blobs",
                 "unique_together": [],
                 "pk_field": {
                     "name": "id",
@@ -926,6 +991,7 @@ class TestBasic(test.TestCase):
                     "indexed": True,
                     "default": None,
                     "description": None,
+                    "docstring": None,
                 },
                 "data_fields": [
                     {
@@ -933,39 +999,42 @@ class TestBasic(test.TestCase):
                         "field_type": "JSONField",
                         "db_column": "data",
                         "db_field_types": {"": "TEXT", "postgres": "JSONB"},
-                        "python_type": ["dict", "list"],
+                        "python_type": "Union[dict, list]",
                         "generated": False,
                         "nullable": False,
                         "unique": False,
                         "indexed": False,
                         "default": None,
                         "description": None,
+                        "docstring": None,
                     },
                     {
                         "name": "data_null",
                         "field_type": "JSONField",
                         "db_column": "data_null",
                         "db_field_types": {"": "TEXT", "postgres": "JSONB"},
-                        "python_type": ["dict", "list"],
+                        "python_type": "Union[dict, list]",
                         "generated": False,
                         "nullable": True,
                         "unique": False,
                         "indexed": False,
                         "default": None,
                         "description": None,
+                        "docstring": None,
                     },
                     {
                         "name": "data_default",
                         "field_type": "JSONField",
                         "db_column": "data_default",
                         "db_field_types": {"": "TEXT", "postgres": "JSONB"},
-                        "python_type": ["dict", "list"],
+                        "python_type": "Union[dict, list]",
                         "generated": False,
                         "nullable": False,
                         "unique": False,
                         "indexed": False,
                         "default": "{'a': 1}",
                         "description": None,
+                        "docstring": None,
                     },
                 ],
                 "fk_fields": [],
@@ -986,7 +1055,8 @@ class TestBasic(test.TestCase):
                 "app": "models",
                 "table": "jsonfields",
                 "abstract": False,
-                "description": None,
+                "description": "This model contains many JSON blobs",
+                "docstring": "This model contains many JSON blobs",
                 "unique_together": [],
                 "pk_field": {
                     "name": "id",
@@ -1000,6 +1070,7 @@ class TestBasic(test.TestCase):
                     "indexed": True,
                     "default": None,
                     "description": None,
+                    "docstring": None,
                 },
                 "data_fields": [
                     {
@@ -1007,39 +1078,42 @@ class TestBasic(test.TestCase):
                         "field_type": fields.JSONField,
                         "db_column": "data",
                         "db_field_types": {"": "TEXT", "postgres": "JSONB"},
-                        "python_type": (dict, list),
+                        "python_type": Union[dict, list],
                         "generated": False,
                         "nullable": False,
                         "unique": False,
                         "indexed": False,
                         "default": None,
                         "description": None,
+                        "docstring": None,
                     },
                     {
                         "name": "data_null",
                         "field_type": fields.JSONField,
                         "db_column": "data_null",
                         "db_field_types": {"": "TEXT", "postgres": "JSONB"},
-                        "python_type": (dict, list),
+                        "python_type": Union[dict, list],
                         "generated": False,
                         "nullable": True,
                         "unique": False,
                         "indexed": False,
                         "default": None,
                         "description": None,
+                        "docstring": None,
                     },
                     {
                         "name": "data_default",
                         "field_type": fields.JSONField,
                         "db_column": "data_default",
                         "db_field_types": {"": "TEXT", "postgres": "JSONB"},
-                        "python_type": (dict, list),
+                        "python_type": Union[dict, list],
                         "generated": False,
                         "nullable": False,
                         "unique": False,
                         "indexed": False,
                         "default": {"a": 1},
                         "description": None,
+                        "docstring": None,
                     },
                 ],
                 "fk_fields": [],
