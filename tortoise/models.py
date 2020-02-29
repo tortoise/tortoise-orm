@@ -7,7 +7,12 @@ from typing import Any, Awaitable, Dict, Generator, List, Optional, Set, Tuple, 
 from pypika import Order, Query, Table
 
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.exceptions import ConfigurationError, IntegrityError, OperationalError
+from tortoise.exceptions import (
+    ConfigurationError,
+    IntegrityError,
+    OperationalError,
+    TransactionManagementError,
+)
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntField
 from tortoise.fields.relational import (
@@ -759,11 +764,11 @@ class Model(metaclass=ModelMeta):
                 return instance, False
             try:
                 return await cls.create(**defaults, **kwargs), True
-            except IntegrityError:
-                instance = await cls.filter(**kwargs).first()
-                if instance:
-                    return instance, False
-                raise
+            except (IntegrityError, TransactionManagementError):
+                # Let transaction close
+                pass
+        # Try after transaction in case transaction error
+        return await cls.get(**kwargs), False
 
     @classmethod
     async def create(cls: Type[MODEL], **kwargs: Any) -> MODEL:
