@@ -74,6 +74,7 @@ future
 
 - Fix default type of ``JSONField``
 - Install on Windows does not require a C compiler any more.
+- Allow F expression to ``Function``. (#301)
 
 0.15.17
 -------
