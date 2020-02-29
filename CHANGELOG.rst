@@ -2,6 +2,8 @@
 
 Changelog
 =========
+0.15.18
+-------
 - Install on Windows does not require a C compiler any more.
 - Fix ``IntegrityError`` with unique field and ``get_or_create``
 
