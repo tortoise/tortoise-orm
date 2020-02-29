@@ -33,10 +33,7 @@ class F(Field):  # type: ignore
                             field_object, arithmetic_expression_or_field
                         )
             except KeyError:
-                raise FieldError(
-                    f"Field {name} is not default field in model,"
-                    f" so can not be used with F expression"
-                )
+                raise FieldError(f"There is no non-virtual field {name} on Model {model.__name__}")
         elif isinstance(arithmetic_expression_or_field, ArithmeticExpression):
             left = arithmetic_expression_or_field.left
             right = arithmetic_expression_or_field.right

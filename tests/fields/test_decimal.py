@@ -146,8 +146,7 @@ class TestDecimalFields(test.TestCase):
 
     async def test_aggregate_sum_no_exist_field_with_f_expression(self):
         with self.assertRaisesRegex(
-            FieldError,
-            "Field not_exist is not default field in model, so can not be used with F expression",
+            FieldError, "There is no non-virtual field not_exist on Model DecimalFields",
         ):
             await testmodels.DecimalFields.all().annotate(sum_decimal=Sum(F("not_exist"))).values(
                 "sum_decimal"
