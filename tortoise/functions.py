@@ -35,7 +35,7 @@ class Function:
         Enable populate_field_object where we want to try and preserve the field type.
     """
 
-    __slots__ = ("field", "field_is_str", "field_object", "default_values")
+    __slots__ = ("field", "field_object", "default_values")
 
     database_func = BaseFunction
     # Enable populate_field_object where we want to try and preserve the field type.
@@ -43,7 +43,6 @@ class Function:
 
     def __init__(self, field: Union[str, F, ArithmeticExpression], *default_values: Any) -> None:
         self.field = field
-        self.field_is_str: bool = isinstance(field, str)
         self.field_object: "Optional[Field]" = None
         self.default_values = default_values
 
@@ -97,7 +96,7 @@ class Function:
         :return: Dict with keys ``"joins"`` and ``"fields"``
         """
 
-        if self.field_is_str:
+        if isinstance(self.field, str):
             function = self._resolve_field_for_model(model, table, self.field, *self.default_values)
             function["joins"] = reversed(function["joins"])
             return function

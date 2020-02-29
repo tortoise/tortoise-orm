@@ -22,7 +22,7 @@ from typing import (
 from pypika import JoinType, Order, Table
 from pypika.functions import Count
 from pypika.queries import QueryBuilder
-from pypika.terms import ArithmeticExpression
+from pypika.terms import Term
 from typing_extensions import Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
@@ -664,8 +664,8 @@ class UpdateQuery(AwaitableQuery):
                     db_field = self.model._meta.fields_db_projection[key]
                 except KeyError:
                     raise FieldError(f"Field {key} is virtual and can not be updated")
-                if not isinstance(value, (F, ArithmeticExpression)):
-                    value = executor.column_map[key](value, None)  # type: ignore
+                if not isinstance(value, Term):
+                    value = executor.column_map[key](value, None)
                 else:
                     value = F.resolver_arithmetic_expression(self.model, value)[0]
 
