@@ -152,7 +152,7 @@ class TestDecimalFields(test.TestCase):
                 "sum_decimal"
             )
 
-    async def test_aggregate_sum_different_field_type_with_f_expression(self):
+    async def test_aggregate_sum_different_field_type_at_right_with_f_expression(self):
         with self.assertRaisesRegex(
             FieldError, "Cannot use arithmetic expression between different field type"
         ):
@@ -160,6 +160,7 @@ class TestDecimalFields(test.TestCase):
                 sum_decimal=Sum(F("decimal") + F("id"))
             ).values("sum_decimal")
 
+    async def test_aggregate_sum_different_field_type_at_left_with_f_expression(self):
         with self.assertRaisesRegex(
             FieldError, "Cannot use arithmetic expression between different field type"
         ):
