@@ -5,7 +5,12 @@ from typing import Any, Awaitable, Dict, Generator, List, Optional, Set, Tuple, 
 from pypika import Order, Query, Table
 
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.exceptions import ConfigurationError, OperationalError
+from tortoise.exceptions import (
+    ConfigurationError,
+    IntegrityError,
+    OperationalError,
+    TransactionManagementError,
+)
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntField
 from tortoise.fields.relational import (
@@ -20,7 +25,7 @@ from tortoise.fields.relational import (
 from tortoise.filters import get_filters_for_field
 from tortoise.functions import Function
 from tortoise.queryset import Q, QuerySet, QuerySetSingle
-from tortoise.transactions import current_transaction_map
+from tortoise.transactions import current_transaction_map, in_transaction
 
 MODEL = TypeVar("MODEL", bound="Model")
 # TODO: Define Filter type object. Possibly tuple?
@@ -713,10 +718,18 @@ class Model(metaclass=ModelMeta):
         """
         if not defaults:
             defaults = {}
-        instance = await cls.filter(**kwargs).first()
-        if instance:
-            return instance, False
-        return await cls.create(**defaults, **kwargs, using_db=using_db), True
+        db = using_db if using_db else cls._meta.db
+        async with in_transaction(connection_name=db.connection_name):
+            instance = await cls.filter(**kwargs).first()
+            if instance:
+                return instance, False
+            try:
+                return await cls.create(**defaults, **kwargs), True
+            except (IntegrityError, TransactionManagementError):
+                # Let transaction close
+                pass
+        # Try after transaction in case transaction error
+        return await cls.get(**kwargs), False
 
     @classmethod
     async def create(cls: Type[MODEL], **kwargs: Any) -> MODEL:
