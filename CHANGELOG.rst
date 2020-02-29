@@ -73,6 +73,9 @@ future
     # Now the models will have relationships built, so introspection of schema will be comprehensive
 
 - Fix default type of ``JSONField``
+
+0.15.18
+-------
 - Install on Windows does not require a C compiler any more.
 - Fix ``IntegrityError`` with unique field and ``get_or_create``
 
