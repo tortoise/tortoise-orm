@@ -73,6 +73,7 @@ future
     # Now the models will have relationships built, so introspection of schema will be comprehensive
 
 - Fix default type of ``JSONField``
+- Allow usage of F expressions to in annotations. (#301)
 
 0.15.18
 -------
