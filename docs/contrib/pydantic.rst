@@ -20,9 +20,14 @@ Lets start with a basic Tortoise Model:
     from tortoise import fields
     from tortoise.models import Model
 
+
     class Tournament(Model):
+        """
+        This references a Tournament
+        """
         id = fields.IntField(pk=True)
-        name = fields.TextField()
+        name = fields.CharField(max_length=100)
+        #: The date-time the Tournament record was created at
         created_at = fields.DatetimeField(auto_now_add=True)
 
 To create a Pydantic model from that one would call ``pydantic_model_creator``:
@@ -42,6 +47,7 @@ The JSON-Schema of ``Tournament_Pydantic`` is now:
     >>> print(Tournament_Pydantic.schema())
     {
         'title': 'Tournament',
+        'description': 'This references a Tournament',
         'type': 'object',
         'properties': {
             'id': {
@@ -54,11 +60,14 @@ The JSON-Schema of ``Tournament_Pydantic`` is now:
             },
             'created_at': {
                 'title': 'Created At',
+                'description': 'The date-time the Tournament record was created at',
                 'type': 'string',
                 'format': 'date-time'
             }
         }
     }
+
+Note how the class docstring and doc-comment ``#: `` is included as descriptions in the Schema.
 
 To serialise an object it is simply *(in an async context)*:
 
@@ -83,12 +92,6 @@ And one could get the contents by using regulat Pydantic-object methods, such as
         "name": "New Tournament",
         "created_at": "2020-03-01T20:28:09.346808"
     }
-
-.. rst-class:: html-toggle
-
-Tutorial 1 source
------------------
-.. literalinclude::  ../../examples/pydantic/tutorial_1.py
 
 
 Creators

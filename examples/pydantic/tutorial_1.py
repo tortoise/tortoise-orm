@@ -7,8 +7,13 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
+    """
+    This references a Tournament
+    """
+
     id = fields.IntField(pk=True)
-    name = fields.TextField()
+    name = fields.CharField(max_length=100)
+    #: The date-time the Tournament record was created at
     created_at = fields.DatetimeField(auto_now_add=True)
 
 
@@ -34,4 +39,3 @@ async def run():
 
 if __name__ == "__main__":
     run_async(run())
-
