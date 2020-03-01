@@ -4,6 +4,8 @@
 Pydantic Examples
 =================
 
+See the :ref:`contrib_pydantic`
+
 .. rst-class:: html-toggle
 
 .. _example_pydantic_basic:
@@ -30,3 +32,14 @@ Recursive models + Computed fields
 ==================================
 .. literalinclude::  ../../examples/pydantic/recursive.py
 
+
+.. _example_pydantic_tutorials:
+
+Tutorials
+=========
+
+.. rst-class:: html-toggle
+
+Tutorial 1 source
+-----------------
+.. literalinclude::  ../../examples/pydantic/tutorial_1.py
