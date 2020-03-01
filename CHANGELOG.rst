@@ -73,8 +73,12 @@ future
     # Now the models will have relationships built, so introspection of schema will be comprehensive
 
 - Fix default type of ``JSONField``
+- Allow usage of F expressions to in annotations. (#301)
+
+0.15.18
+-------
 - Install on Windows does not require a C compiler any more.
-- Allow F expression to ``Function``. (#301)
+- Fix ``IntegrityError`` with unique field and ``get_or_create``
 
 0.15.17
 -------

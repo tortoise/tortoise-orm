@@ -1,5 +1,3 @@
-import sys
-
 from tests.testmodels import IntFields, MinRelation, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
@@ -278,7 +276,6 @@ class TestQueryset(test.TestCase):
         ):
             await IntFields.all().values_list(flat=True)
 
-    @test.skipIf(sys.version_info < (3, 6), "Class fields not sorted in 3.5")
     async def test_all_values_list(self):
         data = await IntFields.all().order_by("id").values_list()
         self.assertEqual(data[2], (self.intfields[2].id, 16, None))
