@@ -183,8 +183,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_prefetch_map",
         "_prefetch_queries",
         "_single",
-        "_get",
-        "_count",
+        "_raise_does_not_exist",
         "_db",
         "_limit",
         "_offset",
@@ -200,12 +199,10 @@ class QuerySet(AwaitableQuery[MODEL]):
     def __init__(self, model: Type[MODEL]) -> None:
         super().__init__(model)
         self.fields: Set[str] = model._meta.db_fields
-
         self._prefetch_map: Dict[str, Set[Union[str, Prefetch]]] = {}
         self._prefetch_queries: Dict[str, QuerySet] = {}
         self._single: bool = False
-        self._get: bool = False
-        self._count: bool = False
+        self._raise_does_not_exist: bool = False
         self._limit: Optional[int] = None
         self._offset: Optional[int] = None
         self._filter_kwargs: Dict[str, Any] = {}
@@ -225,8 +222,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._prefetch_map = copy(self._prefetch_map)
         queryset._prefetch_queries = copy(self._prefetch_queries)
         queryset._single = self._single
-        queryset._get = self._get
-        queryset._count = self._count
+        queryset._raise_does_not_exist = self._raise_does_not_exist
         queryset._db = self._db
         queryset._limit = self._limit
         queryset._offset = self._offset
@@ -479,7 +475,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         queryset = self.filter(*args, **kwargs)
         queryset._limit = 2
-        queryset._get = True
+        queryset._single = True
+        queryset._raise_does_not_exist = True
         return queryset  # type: ignore
 
     def get_or_none(self, *args: Q, **kwargs: Any) -> QuerySetSingle[Optional[MODEL]]:
@@ -601,16 +598,12 @@ class QuerySet(AwaitableQuery[MODEL]):
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
         ).execute_select(self.query, custom_fields=list(self._annotations.keys()))
-        if self._get:
-            if len(instance_list) == 1:
-                return instance_list[0]
-            if not instance_list:
-                raise DoesNotExist("Object does not exist")
-            raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
         if self._single:
             if len(instance_list) == 1:
                 return instance_list[0]
             if not instance_list:
+                if self._raise_does_not_exist:
+                    raise DoesNotExist("Object does not exist")
                 return None  # type: ignore
             raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
         return instance_list

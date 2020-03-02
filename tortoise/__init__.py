@@ -359,13 +359,12 @@ class Tortoise:
                     key_fk_object.description = fk_object.description
                     if fk_object.source_field:
                         key_fk_object.source_field = fk_object.source_field
-                        fk_object.source_field = key_field
                     else:
-                        fk_object.source_field = key_field
                         key_fk_object.source_field = key_field
                     model._meta.add_field(key_field, key_fk_object)
 
                     fk_object.model_class = related_model
+                    fk_object.source_field = key_field
                     backward_relation_name = fk_object.related_name
                     if backward_relation_name is not False:
                         if not backward_relation_name:
@@ -422,13 +421,12 @@ class Tortoise:
                     key_o2o_object.description = o2o_object.description
                     if o2o_object.source_field:
                         key_o2o_object.source_field = o2o_object.source_field
-                        o2o_object.source_field = key_field
                     else:
-                        o2o_object.source_field = key_field
                         key_o2o_object.source_field = key_field
                     model._meta.add_field(key_field, key_o2o_object)
 
                     o2o_object.model_class = related_model
+                    o2o_object.source_field = key_field
                     backward_relation_name = o2o_object.related_name
                     if backward_relation_name is not False:
                         if not backward_relation_name:

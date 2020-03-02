@@ -74,38 +74,23 @@ class ReverseRelation(Generic[MODEL]):
         return self.model.filter(**{self.relation_field: getattr(self.instance, self.from_field)})
 
     def __contains__(self, item: Any) -> bool:
-        if not self._fetched:
-            raise NoValuesFetched(
-                "No values were fetched for this relation, first use .fetch_related()"
-            )
+        self._raise_if_not_fetched()
         return item in self.related_objects
 
     def __iter__(self) -> "Iterator[MODEL]":
-        if not self._fetched:
-            raise NoValuesFetched(
-                "No values were fetched for this relation, first use .fetch_related()"
-            )
+        self._raise_if_not_fetched()
         return self.related_objects.__iter__()
 
     def __len__(self) -> int:
-        if not self._fetched:
-            raise NoValuesFetched(
-                "No values were fetched for this relation, first use .fetch_related()"
-            )
+        self._raise_if_not_fetched()
         return len(self.related_objects)
 
     def __bool__(self) -> bool:
-        if not self._fetched:
-            raise NoValuesFetched(
-                "No values were fetched for this relation, first use .fetch_related()"
-            )
+        self._raise_if_not_fetched()
         return bool(self.related_objects)
 
     def __getitem__(self, item: int) -> MODEL:
-        if not self._fetched:
-            raise NoValuesFetched(
-                "No values were fetched for this relation, first use .fetch_related()"
-            )
+        self._raise_if_not_fetched()
         return self.related_objects[item]
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
@@ -152,6 +137,12 @@ class ReverseRelation(Generic[MODEL]):
     def _set_result_for_query(self, sequence: List[MODEL]) -> None:
         self._fetched = True
         self.related_objects = sequence
+
+    def _raise_if_not_fetched(self) -> None:
+        if not self._fetched:
+            raise NoValuesFetched(
+                "No values were fetched for this relation, first use .fetch_related()"
+            )
 
 
 class ManyToManyRelation(ReverseRelation[MODEL]):
