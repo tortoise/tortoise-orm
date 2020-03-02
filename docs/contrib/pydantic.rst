@@ -78,7 +78,7 @@ The JSON-Schema of ``Tournament_Pydantic`` is now:
         }
     }
 
-Note how the class docstring and doc-comment `` #: `` is included as descriptions in the Schema.
+Note how the class docstring and doc-comment ``#:`` is included as descriptions in the Schema.
 
 To serialise an object it is simply *(in an async context)*:
 
