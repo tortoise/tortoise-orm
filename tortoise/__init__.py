@@ -555,15 +555,24 @@ class Tortoise:
 
     @classmethod
     def init_models(
-        cls, models_paths: List[str], app_label: str, init_relations: bool = True
+        cls, models_paths: List[str], app_label: str, _init_relations: bool = True
     ) -> None:
+        """
+        Early initialisation of Tortoise ORM Models.
+
+        Initialise the relationships between Models.
+        This does not initialise any database connection.
+
+        :param models_paths: A list of model paths to initialise
+        :param app_label: The app label, e.g. 'models'
+        """
         app_models: List[Type[Model]] = []
         for module in models_paths:
             app_models += cls._discover_models(module, app_label)
 
         cls.apps[app_label] = {model.__name__: model for model in app_models}
 
-        if init_relations:
+        if _init_relations:
             cls._init_relations()
 
     @classmethod
@@ -578,7 +587,7 @@ class Tortoise:
                     )
                 )
 
-            cls.init_models(info["models"], name, init_relations=False)
+            cls.init_models(info["models"], name, _init_relations=False)
 
             for model in cls.apps[name].values():
                 model._meta.default_connection = info.get("default_connection", "default")

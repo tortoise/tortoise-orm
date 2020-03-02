@@ -128,7 +128,10 @@ def _get_comments(cls: "Type[Model]") -> Dict[str, str]:
     :param cls: The class we need to extract comments from its source.
     :return: The dictionary of comments by field name
     """
-    source = inspect.getsource(cls)
+    try:
+        source = inspect.getsource(cls)
+    except TypeError:  # pragma: nocoverage
+        return {}
     comments = {}
 
     for cls in reversed(cls.__mro__):
