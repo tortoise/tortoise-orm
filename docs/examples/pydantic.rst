@@ -35,11 +35,17 @@ Recursive models + Computed fields
 
 .. _example_pydantic_tutorials:
 
-Tutorials
-=========
+Tutorial sources
+================
 
 .. rst-class:: html-toggle
 
-Tutorial 1 source
------------------
+1: Basic usage
+--------------
 .. literalinclude::  ../../examples/pydantic/tutorial_1.py
+
+.. rst-class:: html-toggle
+
+2: Querysets & Lists
+--------------------
+.. literalinclude::  ../../examples/pydantic/tutorial_2.py
