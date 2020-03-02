@@ -1,5 +1,11 @@
 """
 Pydantic tutorial 1
+
+Here we introduce:
+* Creating a Pydantic model from a Tortoise model
+* Docstrings & doc-comments are used
+* Evaluating the generated schema
+* Simple serialisation with both .dict() and .json()
 """
 from tortoise import Tortoise, fields, run_async
 from tortoise.contrib.pydantic import pydantic_model_creator

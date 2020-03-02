@@ -49,3 +49,9 @@ Tutorial sources
 2: Querysets & Lists
 --------------------
 .. literalinclude::  ../../examples/pydantic/tutorial_2.py
+
+.. rst-class:: html-toggle
+
+3: Relations & Early-init
+-------------------------
+.. literalinclude::  ../../examples/pydantic/tutorial_2.py
