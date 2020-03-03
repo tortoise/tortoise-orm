@@ -10,8 +10,6 @@ We currently only support generating Pydantic objects for serialisation, and no 
 
 See the :ref:`examples_pydantic`
 
-see :class:`tortoise.contrib.pydantic.creator.PydanticMeta`
-
 Tutorial
 ========
 
