@@ -8,6 +8,7 @@ Examples
    :maxdepth: 3
 
    examples/basic
+   examples/pydantic
    examples/quart
    examples/sanic
    examples/starlette

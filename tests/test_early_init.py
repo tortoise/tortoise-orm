@@ -1,5 +1,6 @@
 from tortoise import Tortoise, fields
 from tortoise.contrib import test
+from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.models import Model
 
 
@@ -38,6 +39,24 @@ class TestBasic(test.TestCase):
     def test_early_init(self):
 
         self.maxDiff = None
+        Event_TooEarly = pydantic_model_creator(Event)
+        self.assertEqual(
+            Event_TooEarly.schema(),
+            {
+                "title": "Event",
+                "type": "object",
+                "description": "The Event model docstring.<br/><br/>This is multiline docs.",
+                "properties": {
+                    "id": {"title": "Id", "type": "integer"},
+                    "name": {
+                        "title": "Name",
+                        "type": "string",
+                        "description": "The Event NAME<br/>It's pretty important",
+                    },
+                    "created_at": {"title": "Created At", "type": "string", "format": "date-time"},
+                },
+            },
+        )
         self.assertEqual(
             Tortoise.describe_model(Event),
             {
@@ -116,6 +135,43 @@ class TestBasic(test.TestCase):
 
         Tortoise.init_models(["tests.test_early_init"], "models")
 
+        Event_Pydantic = pydantic_model_creator(Event)
+        self.assertEqual(
+            Event_Pydantic.schema(),
+            {
+                "title": "Event",
+                "type": "object",
+                "description": "The Event model docstring.<br/><br/>This is multiline docs.",
+                "properties": {
+                    "id": {"title": "Id", "type": "integer"},
+                    "name": {
+                        "title": "Name",
+                        "type": "string",
+                        "description": "The Event NAME<br/>It's pretty important",
+                    },
+                    "created_at": {"title": "Created At", "type": "string", "format": "date-time"},
+                    "tournament": {
+                        "title": "Tournament",
+                        "allOf": [{"$ref": "#/definitions/Tournament"}],
+                    },
+                },
+                "definitions": {
+                    "Tournament": {
+                        "title": "Tournament",
+                        "type": "object",
+                        "properties": {
+                            "id": {"title": "Id", "type": "integer"},
+                            "name": {"title": "Name", "type": "string"},
+                            "created_at": {
+                                "title": "Created At",
+                                "type": "string",
+                                "format": "date-time",
+                            },
+                        },
+                    }
+                },
+            },
+        )
         self.assertEqual(
             Tortoise.describe_model(Event),
             {

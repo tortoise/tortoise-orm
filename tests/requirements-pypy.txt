@@ -26,6 +26,7 @@ packaging==20.1           # via pytest
 pluggy==0.13.1            # via pytest
 py==1.8.1                 # via pytest
 pycparser==2.19           # via cffi
+pydantic==1.4             # via -r requirements-pypy.in (line 19)
 pymysql==0.9.2            # via aiomysql
 pyparsing==2.4.6          # via packaging
 pypika==0.35.21           # via -r ../requirements.txt (line 1)

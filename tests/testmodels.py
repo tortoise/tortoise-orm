@@ -7,6 +7,7 @@ import uuid
 from enum import Enum, IntEnum
 
 from tortoise import fields
+from tortoise.exceptions import NoValuesFetched
 from tortoise.models import Model
 
 
@@ -24,11 +25,16 @@ class Tournament(Model):
     minrelations: fields.ReverseRelation["MinRelation"]
     uniquetogetherfieldswithfks: fields.ReverseRelation["UniqueTogetherFieldsWithFK"]
 
+    class PydanticMeta:
+        exclude = ("minrelations", "uniquetogetherfieldswithfks")
+
     def __str__(self):
         return self.name
 
 
 class Reporter(Model):
+    """ Whom is assigned as the reporter """
+
     id = fields.IntField(pk=True)
     name = fields.TextField()
 
@@ -42,8 +48,12 @@ class Reporter(Model):
 
 
 class Event(Model):
+    """ Events on the calendar """
+
     event_id = fields.BigIntField(pk=True)
+    #: The name
     name = fields.TextField()
+    #: What tournaments is a happenin'
     tournament: fields.ForeignKeyRelation["Tournament"] = fields.ForeignKeyField(
         "models.Tournament", related_name="events"
     )
@@ -56,6 +66,9 @@ class Event(Model):
     modified = fields.DatetimeField(auto_now=True)
     token = fields.TextField(default=generate_token)
     alias = fields.IntField(null=True)
+
+    class Meta:
+        ordering = ["name"]
 
     def __str__(self):
         return self.name
@@ -71,12 +84,22 @@ class Address(Model):
 
 
 class Team(Model):
+    """
+    Team that is a playing
+    """
+
     id = fields.IntField(pk=True)
     name = fields.TextField()
 
     events: fields.ManyToManyRelation[Event]
     minrelation_through: fields.ManyToManyRelation["MinRelation"]
     alias = fields.IntField(null=True)
+
+    class Meta:
+        ordering = ["id"]
+
+    class PydanticMeta:
+        exclude = ("minrelations",)
 
     def __str__(self):
         return self.name
@@ -429,6 +452,42 @@ class Employee(Model):
         for member in self.team_members:
             text.append(await member.full_hierarchy__fetch_related(level + 1))
         return "\n".join(text)
+
+    def name_length(self) -> int:
+        # Computes length of name
+        # Note that this function needs to be annotated with a return type so that pydantic
+        # can generate a valid schema
+        return len(self.name)
+
+    def team_size(self) -> int:
+        """
+        Computes team size.
+
+        Note that this function needs to be annotated with a return type so that pydantic can
+         generate a valid schema.
+
+        Note that the pydantic serializer can't call async methods, but the tortoise helpers
+         pre-fetch relational data, so that it is available before serialization. So we don't
+         need to await the relation. We do however have to protect against the case where no
+         prefetching was done, hence catching and handling the
+         ``tortoise.exceptions.NoValuesFetched`` exception.
+        """
+        try:
+            return len(self.team_members)
+        except NoValuesFetched:
+            return 0
+
+    def not_annotated(self):
+        raise NotImplementedError("Not Done")
+
+    class Meta:
+        ordering = ["id"]
+
+    class PydanticMeta:
+        computed = ["name_length", "team_size", "not_annotated"]
+        exclude = ["manager", "gets_talked_to"]
+        allow_cycles = True
+        max_recursion = 2
 
 
 class StraightFields(Model):
