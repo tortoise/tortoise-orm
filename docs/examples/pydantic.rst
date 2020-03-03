@@ -54,4 +54,10 @@ Tutorial sources
 
 3: Relations & Early-init
 -------------------------
-.. literalinclude::  ../../examples/pydantic/tutorial_2.py
+.. literalinclude::  ../../examples/pydantic/tutorial_3.py
+
+.. rst-class:: html-toggle
+
+3: PydanticMeta & Callables
+-------------------------
+.. literalinclude::  ../../examples/pydantic/tutorial_4.py

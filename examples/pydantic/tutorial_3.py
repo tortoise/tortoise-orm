@@ -50,7 +50,7 @@ Tournament_Pydantic = pydantic_model_creator(Tournament)
 # Print JSON-schema
 print(Tournament_Pydantic.schema_json(indent=4))
 
-
+# Note how both schema's don't follow relations back.
 Event_Pydantic = pydantic_model_creator(Event)
 # Print JSON-schema
 print(Event_Pydantic.schema_json(indent=4))

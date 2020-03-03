@@ -10,6 +10,8 @@ We currently only support generating Pydantic objects for serialisation, and no 
 
 See the :ref:`examples_pydantic`
 
+see :class:`tortoise.contrib.pydantic.creator.PydanticMeta`
+
 Tutorial
 ========
 
@@ -41,7 +43,8 @@ Lets start with a basic Tortoise Model:
         #: The date-time the Tournament record was created at
         created_at = fields.DatetimeField(auto_now_add=True)
 
-To create a Pydantic model from that one would call ``pydantic_model_creator``:
+| To create a Pydantic model from that one would call:
+| :meth:`tortoise.contrib.pydantic.creator.pydantic_model_creator`
 
 .. code-block:: py3
 
@@ -134,7 +137,8 @@ Here we introduce:
             #  the pydantic serialiser will use this to order the results
             ordering = ["name"]
 
-To create a Pydantic list-model from that one would call ``pydantic_queryset_creator``:
+| To create a Pydantic list-model from that one would call:
+| :meth:`tortoise.contrib.pydantic.creator.pydantic_queryset_creator`
 
 .. code-block:: py3
 
@@ -319,7 +323,7 @@ Oh no! Where is the relation?
 
 Because the models have not fully initialised, it doesn't know about the relations at this stage.
 
-We need to initialise our model relationships early:
+We need to initialise our model relationships early using :meth:`tortoise.Tortoise.init_models`
 
 .. code-block:: py3
 
@@ -450,6 +454,8 @@ Note we can also create a model for ``Event`` the same way, and it should just w
 
 And that also has the relation defined!
 
+Note how both schema's don't follow relations back. This is on by default, and in a later tutorial we will show the options.
+
 Lets create and serialise the objects and see what they look like *(in an async context)*:
 
 .. code-block:: py3
@@ -503,8 +509,8 @@ Creators
 PydanticMeta
 ============
 
-.. automodule:: tortoise.contrib.pydantic.creator
-    :members: PydanticMeta
+.. autoclass:: tortoise.contrib.pydantic.creator.PydanticMeta
+    :members:
 
 Model classes
 =============
