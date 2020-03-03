@@ -499,6 +499,188 @@ And serialising the event *(in an async context)*:
         }
     }
 
+
+.. rst-class:: html-toggle
+
+4: PydanticMeta & Callables
+---------------------------
+
+Here we introduce:
+
+* Configuring model creator via ``PydanticMeta`` class.
+* Using callable functions to annotate extra data.
+
+Let's add some methods that calculate data, and tell the creators to use them:
+
+.. code-block:: py3
+
+    class Tournament(Model):
+        """
+        This references a Tournament
+        """
+
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=100)
+        created_at = fields.DatetimeField(auto_now_add=True)
+
+        # It is useful to define the reverse relations manually so that type checking
+        #  and auto completion work
+        events: fields.ReverseRelation["Event"]
+
+        def name_length(self) -> int:
+            """
+            Computed length of name
+            """
+            return len(self.name)
+
+        def events_num(self) -> int:
+            """
+            Computed team size
+            """
+            try:
+                return len(self.events)
+            except NoValuesFetched:
+                return -1
+
+        class PydanticMeta:
+            # Let's exclude the created timestamp
+            exclude = ("created_at",)
+            # Let's include two callables as computed columns
+            computed = ("name_length", "events_num")
+
+
+    class Event(Model):
+        """
+        This references an Event in a Tournament
+        """
+
+        id = fields.IntField(pk=True)
+        name = fields.CharField(max_length=100)
+        created_at = fields.DatetimeField(auto_now_add=True)
+
+        tournament = fields.ForeignKeyField(
+            "models.Tournament", related_name="events", description="The Tournement this happens in"
+        )
+
+        class Meta:
+            ordering = ["name"]
+
+        class PydanticMeta:
+            exclude = ("created_at",)
+
+There is much to unpack here.
+
+Firstly, we defined a ``PydanticMeta`` block, and in there is configuration options for the pydantic model creator.
+See :class:`tortoise.contrib.pydantic.creator.PydanticMeta` for the available options.
+
+Secondly, we excluded ``created_at`` in both models, as we decided it provided no benefit.
+
+Thirly, we added two callables: ``name_length`` and ``events_num``. We want these as part of the result set.
+Note that callables/computed fields require manual specification of return type, as without this we can't determine the record type which is needed to create a valid Pydantic schema.
+This is not needed for standard Tortoise ORM fields, as the fields already define a valid type.
+
+Note that the Pydantic serializer can't call async methods, but since the tortoise helpers pre-fetch relational data, it is available before serialization.
+So we don't need to await the relation.
+We should however protect against the case where no prefetching was done, hence catching and handling the ``tortoise.exceptions.NoValuesFetched`` exception.
+
+Next we create our Pydantic model using ``pydantic_model_creator``:
+
+.. code-block:: py3
+
+    from tortoise import Tortoise
+
+    Tortoise.init_models(["__main__"], "models")
+    Tournament_Pydantic = pydantic_model_creator(Tournament)
+
+The JSON-Schema of ``Tournament_Pydantic`` is now:
+
+.. code-block:: json
+
+    {
+        "title": "Tournament",
+        "description": "This references a Tournament",
+        "type": "object",
+        "properties": {
+            "id": {
+                "title": "Id",
+                "type": "integer"
+            },
+            "name": {
+                "title": "Name",
+                "type": "string"
+            },
+            "events": {
+                "title": "Events",
+                "description": "The Tournement this happens in",
+                "type": "array",
+                "items": {
+                    "$ref": "#/definitions/Event"
+                }
+            },
+            "name_length": {
+                "title": "Name Length",
+                "description": "Computes length of name",
+                "type": "integer"
+            },
+            "events_num": {
+                "title": "Events Num",
+                "description": "Computes team size.",
+                "type": "integer"
+            }
+        },
+        "definitions": {
+            "Event": {
+                "title": "Event",
+                "description": "This references an Event in a Tournament",
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "title": "Id",
+                        "type": "integer"
+                    },
+                    "name": {
+                        "title": "Name",
+                        "type": "string"
+                    }
+                }
+            }
+        }
+    }
+
+Note that ``created_at`` is removed, and ``name_length`` & ``events_num`` is added.
+
+Lets create and serialise the objects and see what they look like *(in an async context)*:
+
+.. code-block:: py3
+
+    # Create objects
+    tournament = await Tournament.create(name="New Tournament")
+    await Event.create(name="Event 1", tournament=tournament)
+    await Event.create(name="Event 2", tournament=tournament)
+
+    # Serialise Tournament
+    tourpy = await Tournament_Pydantic.from_tortoise_orm(tournament)
+
+    >>> print(tourpy.json())
+    {
+        "id": 1,
+        "name": "New Tournament",
+        "events": [
+            {
+                "id": 1,
+                "name": "Event 1"
+            },
+            {
+                "id": 2,
+                "name": "Event 2"
+            }
+        ],
+        "name_length": 14,
+        "events_num": 2
+    }
+
+
+
 Creators
 ========
 

@@ -18,8 +18,11 @@ class Tournament(Model):
 
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=100)
-    #: The date-time the Tournament record was created at
     created_at = fields.DatetimeField(auto_now_add=True)
+
+    # It is useful to define the reverse relations manually so that type checking
+    #  and auto completion work
+    events: fields.ReverseRelation["Event"]
 
     def name_length(self) -> int:
         """
@@ -40,14 +43,16 @@ class Tournament(Model):
         #  pre-fetch relational data, so that it is available before serialization. So we don't
         #  need to await the relation. We do however have to protect against the case where no
         #  prefetching was done, hence catching and handling the
-        #  ``tortoise.exceptions.NoValuesFetched`` exception.
+        #  ``tortoise.exceptions.NoValuesFetched`` exception
         try:
             return len(self.events)
         except NoValuesFetched:
             return -1
 
     class PydanticMeta:
+        # Let's exclude the created timestamp
         exclude = ("created_at",)
+        # Let's include two callables as computed columns
         computed = ("name_length", "events_num")
 
 
@@ -65,8 +70,6 @@ class Event(Model):
     )
 
     class Meta:
-        # Define the default ordering
-        #  the pydantic serialiser will use this to order the results
         ordering = ["name"]
 
     class PydanticMeta:
@@ -75,10 +78,9 @@ class Event(Model):
 
 # Initialise model structure early. This does not init any database structures
 Tortoise.init_models(["__main__"], "models")
-
-
-# We now have a complete model
 Tournament_Pydantic = pydantic_model_creator(Tournament)
+
+
 # Print JSON-schema
 print(Tournament_Pydantic.schema_json(indent=4))
 

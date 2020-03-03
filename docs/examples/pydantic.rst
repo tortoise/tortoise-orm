@@ -58,6 +58,6 @@ Tutorial sources
 
 .. rst-class:: html-toggle
 
-3: PydanticMeta & Callables
--------------------------
+4: PydanticMeta & Callables
+---------------------------
 .. literalinclude::  ../../examples/pydantic/tutorial_4.py
