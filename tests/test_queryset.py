@@ -1,6 +1,12 @@
 from tests.testmodels import IntFields, MinRelation, Tournament
 from tortoise.contrib import test
-from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
+from tortoise.exceptions import (
+    DoesNotExist,
+    FieldError,
+    IntegrityError,
+    MultipleObjectsReturned,
+    ParamsError,
+)
 from tortoise.expressions import F
 
 # TODO: Test the many exceptions in QuerySet
@@ -19,8 +25,16 @@ class TestQueryset(test.TestCase):
     async def test_limit_count(self):
         self.assertEqual(await IntFields.all().limit(10).count(), 10)
 
+    async def test_limit_negative(self):
+        with self.assertRaisesRegex(ParamsError, "limit should be non-negative number"):
+            await IntFields.all().limit(-10)
+
     async def test_offset_count(self):
         self.assertEqual(await IntFields.all().offset(10).count(), 20)
+
+    async def test_offset_negative(self):
+        with self.assertRaisesRegex(ParamsError, "offset should be non-negative number"):
+            await IntFields.all().offset(-10)
 
     async def test_join_count(self):
         tour = await Tournament.create(name="moo")

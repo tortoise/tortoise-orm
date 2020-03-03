@@ -26,7 +26,13 @@ from pypika.terms import Term
 from typing_extensions import Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
-from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
+from tortoise.exceptions import (
+    DoesNotExist,
+    FieldError,
+    IntegrityError,
+    MultipleObjectsReturned,
+    ParamsError,
+)
 from tortoise.expressions import F
 from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
@@ -300,6 +306,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         Limits QuerySet to given length.
         """
+        if limit < 0:
+            raise ParamsError("limit should be non-negative number")
+
         queryset = self._clone()
         queryset._limit = limit
         return queryset
@@ -308,6 +317,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         Query offset for QuerySet.
         """
+        if offset < 0:
+            raise ParamsError("offset should be non-negative number")
+
         queryset = self._clone()
         queryset._offset = offset
         if self.capabilities.requires_limit and queryset._limit is None:

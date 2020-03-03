@@ -74,6 +74,7 @@ future
 
 - Fix default type of ``JSONField``
 - Allow usage of F expressions to in annotations. (#301)
+- Now negative number with ``limit(...)`` and ``offset(...)`` raise ``ParamsError``. (#306)
 
 0.15.18
 -------
