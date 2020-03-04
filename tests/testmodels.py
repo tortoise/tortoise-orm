@@ -424,8 +424,8 @@ class Employee(Model):
             "{}{} (to: {}) (from: {})".format(
                 level * "  ",
                 self,
-                ", ".join(sorted([str(val) async for val in self.talks_to])),
-                ", ".join(sorted([str(val) async for val in self.gets_talked_to])),
+                ", ".join(sorted([str(val) async for val in self.talks_to])),  # noqa
+                ", ".join(sorted([str(val) async for val in self.gets_talked_to])),  # noqa
             )
         ]
         async for member in self.team_members:
@@ -445,8 +445,8 @@ class Employee(Model):
             "{}{} (to: {}) (from: {})".format(
                 level * "  ",
                 self,
-                ", ".join(sorted([str(val) for val in self.talks_to])),
-                ", ".join(sorted([str(val) for val in self.gets_talked_to])),
+                ", ".join(sorted(str(val) for val in self.talks_to)),
+                ", ".join(sorted(str(val) for val in self.gets_talked_to)),
             )
         ]
         for member in self.team_members:

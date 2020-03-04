@@ -282,6 +282,8 @@ class Tortoise:
             """
             Test, if app and model really exist. Throws a ConfigurationError with a hopefully
             helpful message. If successfull, returns the requested model.
+
+            :raises ConfigurationError: If no such app exists.
             """
             try:
                 return cls.apps[related_app_name][related_model_name]
@@ -298,6 +300,8 @@ class Tortoise:
             Test, if reference follow the official naming conventions. Throws a
             ConfigurationError with a hopefully helpful message. If successfull,
             returns the app and the model name.
+
+            :raises ConfigurationError: If no model reference is invalid.
             """
             items = reference.split(".")
             if len(items) != 2:  # pragma: nocoverage
@@ -563,6 +567,8 @@ class Tortoise:
 
         :param models_paths: A list of model paths to initialise
         :param app_label: The app label, e.g. 'models'
+
+        :raises ConfigurationError: If models are invalid.
         """
         app_models: List[Type[Model]] = []
         for module in models_paths:
@@ -684,10 +690,7 @@ class Tortoise:
             If ``True`` tries to create database for specified connections,
             could be used for testing purposes.
 
-        Raises
-        ------
-        ConfigurationError
-            For any configuration error
+        :raises ConfigurationError: For any configuration error
         """
         if cls._inited:
             await cls.close_connections()
@@ -759,6 +762,8 @@ class Tortoise:
         ----------
         safe:
             When set to true, creates the table only when it does not already exist.
+
+        :raises ConfigurationError: When ``.init()`` has not been called.
         """
         if not cls._inited:
             raise ConfigurationError("You have to call .init() first before generating schemas")
@@ -770,6 +775,8 @@ class Tortoise:
         """
         Tries to drop all databases provided in config passed to ``.init()`` method.
         Normally should be used only for testing purposes.
+
+        :raises ConfigurationError: When ``.init()`` has not been called.
         """
         if not cls._inited:
             raise ConfigurationError("You have to call .init() first before deleting schemas")

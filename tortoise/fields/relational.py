@@ -163,6 +163,8 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         Adds one or more of ``instances`` to the relation.
 
         If it is already added, it will be silently ignored.
+
+        :raises OperationalError: If Object to add is not saved.
         """
         if not instances:
             return
@@ -242,6 +244,8 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
     ) -> None:
         """
         Removes one or more of ``instances`` from the relation.
+
+        :raises OperationalError: remove() was called with no instances.
         """
         db = using_db if using_db else self.model._meta.db
         if not instances:

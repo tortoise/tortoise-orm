@@ -254,7 +254,7 @@ class MetaInfo:
     @property
     def ordering(self) -> Tuple[Tuple[str, str], ...]:
         if not self._ordering_validated:
-            unknown_fields = set(f for f, _ in self._default_ordering) - self.fields
+            unknown_fields = {f for f, _ in self._default_ordering} - self.fields
             raise ConfigurationError(
                 f"Unknown fields {','.join(unknown_fields)} in "
                 f"default ordering for model {self._model.__name__}"
@@ -927,7 +927,11 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def _check_together(cls, together: str) -> None:
-        """Check the value of "unique_together" option."""
+        """
+        Check the value of "unique_together" option.
+
+        :raises ConfigurationError: If the model has not been configured correctly.
+        """
         _together = getattr(cls._meta, together)
         if not isinstance(_together, (tuple, list)):
             raise ConfigurationError(f"'{cls.__name__}.{together}' must be a list or tuple.")

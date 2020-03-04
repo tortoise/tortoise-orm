@@ -136,6 +136,8 @@ class AwaitableQuery(Generic[MODEL]):
             (to allow self referential joins)
         :param orderings: What columns/order to order by
         :param annotations:  Annotations that may be ordered on
+
+        :raises FieldError: If a field provided does not exist in model.
         """
         # Do not apply default ordering for annotated queries to not mess them up
         if not orderings and self.model._meta.ordering and not annotations:
@@ -287,6 +289,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             .order_by('name', '-tournament__name')
 
         Supports ordering by related models too.
+
+        :raises FieldError: If unknown field has been provided.
         """
         queryset = self._clone()
         new_ordering = []
@@ -305,9 +309,11 @@ class QuerySet(AwaitableQuery[MODEL]):
     def limit(self, limit: int) -> "QuerySet[MODEL]":
         """
         Limits QuerySet to given length.
+
+        :raises ParamsError: Limit should be non-negative number.
         """
         if limit < 0:
-            raise ParamsError("limit should be non-negative number")
+            raise ParamsError("Limit should be non-negative number")
 
         queryset = self._clone()
         queryset._limit = limit
@@ -316,9 +322,11 @@ class QuerySet(AwaitableQuery[MODEL]):
     def offset(self, offset: int) -> "QuerySet[MODEL]":
         """
         Query offset for QuerySet.
+
+        :raises ParamsError: Offset should be non-negative number.
         """
         if offset < 0:
-            raise ParamsError("offset should be non-negative number")
+            raise ParamsError("Offset should be non-negative number")
 
         queryset = self._clone()
         queryset._offset = offset
@@ -340,6 +348,8 @@ class QuerySet(AwaitableQuery[MODEL]):
     def annotate(self, **kwargs: Function) -> "QuerySet[MODEL]":
         """
         Annotate result with aggregation or function result.
+
+        :raises TypeError: Value of kwarg is expected to be a ``Function`` instance.
         """
         queryset = self._clone()
         for key, annotation in kwargs.items():
@@ -386,6 +396,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         Can pass names of fields to fetch, or as a ``field_name='name_in_dict'`` kwarg.
 
         If no arguments are passed it will default to a dict containing all fields.
+
+        :raises FieldError: If duplicate key has been provided.
         """
         if args or kwargs:
             fields_for_select: Dict[str, str] = {}
@@ -503,6 +515,8 @@ class QuerySet(AwaitableQuery[MODEL]):
     def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySet[MODEL]":
         """
         Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
+
+        :raises FieldError: If the field to prefetch on is not a relation, or not found.
         """
         queryset = self._clone()
         queryset._prefetch_map = {}
@@ -842,7 +856,7 @@ class FieldSelectQuery(AwaitableQuery):
             # return as is to get whole model objects
             return lambda x: x
 
-        if field in [x[1] for x in model._meta.db_native_fields]:
+        if field in (x[1] for x in model._meta.db_native_fields):
             return lambda x: x
 
         if field in self.annotations:
@@ -941,7 +955,7 @@ class ValuesListQuery(FieldSelectQuery):
         _, result = await self._db.execute_query(str(self.query))
         columns = [
             (key, self.resolve_to_python_value(self.model, name))
-            for key, name in sorted(list(self.fields.items()))
+            for key, name in sorted(self.fields.items())
         ]
         if self.flat:
             func = columns[0][1]

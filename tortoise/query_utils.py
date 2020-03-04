@@ -215,6 +215,8 @@ class Q:
     def __and__(self, other: "Q") -> "Q":
         """
         Returns a binary AND of Q objects, use ``AND`` operator.
+
+        :raises OperationalError: AND operation requires a Q node
         """
         if not isinstance(other, Q):
             raise OperationalError("AND operation requires a Q node")
@@ -223,6 +225,8 @@ class Q:
     def __or__(self, other: "Q") -> "Q":
         """
         Returns a binary OR of Q objects, use ``OR`` operator.
+
+        :raises OperationalError: OR operation requires a Q node
         """
         if not isinstance(other, Q):
             raise OperationalError("OR operation requires a Q node")
@@ -310,7 +314,7 @@ class Q:
             filter_value = value
         else:
             allowed = sorted(
-                list(model._meta.fields | model._meta.fetch_fields | set(self._custom_filters))
+                model._meta.fields | model._meta.fetch_fields | set(self._custom_filters)
             )
             raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
         return filter_key, filter_value
@@ -389,6 +393,7 @@ class Prefetch:
         Called internally to generate prefetching query.
 
         :param queryset: Custom QuerySet to use for prefetching.
+        :raises OperationalError: If field does not exist in model.
         """
         relation_split = self.relation.split("__")
         first_level_field = relation_split[0]

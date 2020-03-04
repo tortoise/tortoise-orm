@@ -79,7 +79,7 @@ def _pydantic_recursion_protector(
     """
     It is an inner function to protect pydantic model creator against cyclic recursion
     """
-    if not allow_cycles and cls in [c[0] for c in stack[:-1]]:
+    if not allow_cycles and cls in (c[0] for c in stack[:-1]):
         return None
 
     caller_fname = stack[0][1]
@@ -259,13 +259,13 @@ def pydantic_model_creator(
                 pmodel = _pydantic_recursion_protector(
                     _model,
                     exclude=tuple(
-                        [str(v[prefix_len:]) for v in exclude if v.startswith(fname + ".")]
+                        str(v[prefix_len:]) for v in exclude if v.startswith(fname + ".")
                     ),
                     include=tuple(
-                        [str(v[prefix_len:]) for v in include if v.startswith(fname + ".")]
+                        str(v[prefix_len:]) for v in include if v.startswith(fname + ".")
                     ),
                     computed=tuple(
-                        [str(v[prefix_len:]) for v in computed if v.startswith(fname + ".")]
+                        str(v[prefix_len:]) for v in computed if v.startswith(fname + ".")
                     ),
                     stack=new_stack,
                     allow_cycles=_allow_cycles,
@@ -278,7 +278,7 @@ def pydantic_model_creator(
             if pmodel is None:
                 exclude += (fname,)
             # We need to rename if there are duplicate instances of this model
-            if cls in [c[0] for c in _stack]:
+            if cls in (c[0] for c in _stack):
                 _name = name or get_name()
 
             return pmodel
