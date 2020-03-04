@@ -75,7 +75,7 @@ Then you should install your db driver
 
 .. code-block:: bash
 
-    pip install asyncpg aiosqlite
+    pip install asyncpg aiosqlite aiomysql
 
 
 Quick Tutorial
@@ -140,7 +140,7 @@ Here we create connection to SQLite database in the local directory called ``db.
 
 Tortoise ORM currently supports the following databases:
 
-* SQLite
+* SQLite (requires ``aiosqlite``)
 * PostgreSQL (requires ``asyncpg``)
 * MySQL (requires ``aiomysql``)
 
