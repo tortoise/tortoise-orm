@@ -169,10 +169,10 @@ class StraightFieldTests(test.TestCase):
         self.assertEqual(obj2.chars, "BLIP")
 
     async def test_function(self):
-        obj1 = await self.model.create(chars="aaa")
-        await self.model.filter(eyedee=obj1.eyedee).update(chars=Trim("  BLIP  "))
+        obj1 = await self.model.create(chars="  aaa ")
+        await self.model.filter(eyedee=obj1.eyedee).update(chars=Trim("chars"))
         obj2 = await self.model.get(eyedee=obj1.eyedee)
-        self.assertEqual(obj2.chars, "BLIP")
+        self.assertEqual(obj2.chars, "aaa")
 
 
 class SourceFieldTests(StraightFieldTests):

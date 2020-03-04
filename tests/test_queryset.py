@@ -238,9 +238,9 @@ class TestQueryset(test.TestCase):
 
     async def test_update_function(self):
         obj0 = await IntFields.create(intnum=2147483647)
-        await IntFields.filter(id=obj0.id).update(intnum=Length("four"))
+        await IntFields.filter(id=obj0.id).update(intnum=Length("intnum"))
         obj = await IntFields.get(id=obj0.id)
-        self.assertEqual(obj.intnum, 4)
+        self.assertEqual(obj.intnum, 10)
 
     async def test_update_badparam(self):
         obj0 = await IntFields.create(intnum=2147483647)
