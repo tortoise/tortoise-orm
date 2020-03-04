@@ -8,6 +8,7 @@ from tortoise.exceptions import (
     ParamsError,
 )
 from tortoise.expressions import F
+from tortoise.functions import Length
 
 # TODO: Test the many exceptions in QuerySet
 # TODO: .filter(intnum_null=None) does not work as expected
@@ -234,6 +235,12 @@ class TestQueryset(test.TestCase):
         await IntFields.filter(id=obj0.id).update(intnum=F("intnum") - 1)
         obj = await IntFields.get(id=obj0.id)
         self.assertEqual(obj.intnum, 2147483646)
+
+    async def test_update_function(self):
+        obj0 = await IntFields.create(intnum=2147483647)
+        await IntFields.filter(id=obj0.id).update(intnum=Length("four"))
+        obj = await IntFields.get(id=obj0.id)
+        self.assertEqual(obj.intnum, 4)
 
     async def test_update_badparam(self):
         obj0 = await IntFields.create(intnum=2147483647)

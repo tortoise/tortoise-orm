@@ -7,6 +7,7 @@ This is to test that behaviour doesn't change when one defined source_field para
 from tests.testmodels import SourceFields, StraightFields
 from tortoise.contrib import test
 from tortoise.expressions import F
+from tortoise.functions import Trim
 
 
 class StraightFieldTests(test.TestCase):
@@ -164,6 +165,12 @@ class StraightFieldTests(test.TestCase):
     async def test_f_expression(self):
         obj1 = await self.model.create(chars="aaa")
         await self.model.filter(eyedee=obj1.eyedee).update(chars=F("blip"))
+        obj2 = await self.model.get(eyedee=obj1.eyedee)
+        self.assertEqual(obj2.chars, "BLIP")
+
+    async def test_function(self):
+        obj1 = await self.model.create(chars="aaa")
+        await self.model.filter(eyedee=obj1.eyedee).update(chars=Trim("  BLIP  "))
         obj2 = await self.model.get(eyedee=obj1.eyedee)
         self.assertEqual(obj2.chars, "BLIP")
 

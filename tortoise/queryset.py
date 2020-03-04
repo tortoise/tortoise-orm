@@ -20,7 +20,7 @@ from typing import (
 )
 
 from pypika import JoinType, Order, Table
-from pypika.functions import Function, Count
+from pypika.functions import Count
 from pypika.queries import QueryBuilder
 from pypika.terms import Term
 from typing_extensions import Protocol
