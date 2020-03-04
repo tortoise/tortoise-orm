@@ -32,7 +32,7 @@ coveralls==1.11.1         # via -r requirements.in (line 31)
 cryptography==2.8         # via pymysql
 distlib==0.3.0            # via virtualenv
 docopt==0.6.2             # via coveralls
-docutils==0.16            # via -r requirements.in (line 22), readme-renderer, sphinx
+docutils==0.14            # via -r ../docs/requirements.in (line 6), -r requirements.in (line 22), readme-renderer, sphinx
 entrypoints==0.3          # via flake8
 execnet==1.7.1            # via pytest-xdist
 filelock==3.0.12          # via tox, virtualenv
@@ -44,10 +44,10 @@ green==3.1.0              # via -r requirements.in (line 30)
 h11==0.8.1                # via httpx, hypercorn, uvicorn, wsproto
 h2==3.2.0                 # via httpx, hypercorn
 hpack==3.0.0              # via h2
-hstspreload==2020.2.25    # via httpx
+hstspreload==2020.2.29    # via httpx
 httptools==0.1.1          # via sanic, uvicorn
 httpx==0.9.3              # via sanic
-hypercorn==0.9.1 ; python_version >= "3.7"  # via -r requirements.in (line 47), quart
+hypercorn==0.9.2 ; python_version >= "3.7"  # via -r requirements.in (line 47), quart
 hyperframe==5.2.0         # via h2
 idna==2.9                 # via httpx, requests
 imagesize==1.2.0          # via sphinx
@@ -68,16 +68,16 @@ nose2==0.9.2              # via -r requirements.in (line 33)
 packaging==20.1           # via pytest, sphinx, tox
 pathspec==0.7.0           # via black
 pbr==5.4.4                # via stevedore
-pip-tools==4.5.0          # via -r requirements.in (line 13)
+pip-tools==4.5.1          # via -r requirements.in (line 13)
 pkginfo==1.5.0.1          # via twine
 pluggy==0.13.1            # via pytest, tox
 priority==1.3.0           # via hypercorn
 py==1.8.1                 # via pytest, tox
 pycodestyle==2.5.0        # via flake8
 pycparser==2.19           # via cffi
-pydantic==1.4             # via -r requirements.in (line 57)
+pydantic==1.4             # via -r requirements.in (line 58)
 pyflakes==2.1.1           # via flake8
-pygments==2.5.2           # via -r requirements.in (line 23), readme-renderer, sphinx
+pygments==2.3.1           # via -r ../docs/requirements.in (line 5), -r requirements.in (line 23), readme-renderer, sphinx
 pylint==2.4.4             # via -r requirements.in (line 21)
 pymysql==0.9.2            # via aiomysql
 pyparsing==2.4.6          # via packaging
@@ -123,7 +123,7 @@ websockets==8.1           # via sanic, uvicorn
 werkzeug==1.0.0           # via quart
 wrapt==1.11.2             # via astroid
 wsproto==0.15.0 ; python_version >= "3.7"  # via -r requirements.in (line 46), hypercorn
-zipp==3.0.0               # via importlib-metadata
+zipp==3.1.0               # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools

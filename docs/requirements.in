@@ -2,3 +2,5 @@
 
 sphinx<2
 cloud_sptheme>=1.10
+Pygments==2.3.1
+docutils==0.14
