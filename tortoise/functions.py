@@ -132,7 +132,7 @@ class Trim(Function):
 
 class Length(Function):
     """
-    Returns lenth of text/blob.
+    Returns length of text/blob.
 
     :samp:`Length("{FIELD_NAME}")`
     """
