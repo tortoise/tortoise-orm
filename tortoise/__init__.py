@@ -690,7 +690,10 @@ class Tortoise:
             If ``True`` tries to create database for specified connections,
             could be used for testing purposes.
 
-        :raises ConfigurationError: For any configuration error
+        Raises
+        ------
+        ConfigurationError
+            For any configuration error
         """
         if cls._inited:
             await cls.close_connections()
@@ -758,10 +761,7 @@ class Tortoise:
         Will fail if schemas already exists, so it's not recommended to be used as part
         of application workflow
 
-        Parameters
-        ----------
-        safe:
-            When set to true, creates the table only when it does not already exist.
+        :param safe: When set to true, creates the table only when it does not already exist.
 
         :raises ConfigurationError: When ``.init()`` has not been called.
         """
