@@ -4,7 +4,7 @@
 Pydantic Examples
 =================
 
-See the :ref:`contrib_pydantic`
+See :ref:`contrib_pydantic`
 
 .. rst-class:: html-toggle
 
@@ -34,6 +34,8 @@ Recursive models + Computed fields
 
 
 .. _example_pydantic_tutorials:
+
+.. rst-class:: emphasize-children
 
 Tutorial sources
 ================

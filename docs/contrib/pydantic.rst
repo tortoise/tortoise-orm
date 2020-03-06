@@ -10,6 +10,8 @@ We currently only support generating Pydantic objects for serialisation, and no 
 
 See the :ref:`examples_pydantic`
 
+.. rst-class:: emphasize-children
+
 Tutorial
 ========
 

@@ -446,11 +446,11 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         Update all objects in QuerySet with given kwargs.
 
-        A usage example:
+        .. admonition: Example:
 
-        .. code-block:: py3
+            .. code-block:: py3
 
-            await Employee.filter(occupation='developer').update(salary=5000)
+                await Employee.filter(occupation='developer').update(salary=5000)
 
         Will instead of returning a resultset, update the data in the DB itself.
         """

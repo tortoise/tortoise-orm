@@ -71,6 +71,11 @@ def register_tortoise(
     generate_schemas:
         True to generate schema immediately. Only useful for dev environments
         or SQLite ``:memory:`` databases
+
+    Raises
+    ------
+    ConfigurationError
+        For any configuration error
     """
 
     @app.before_serving

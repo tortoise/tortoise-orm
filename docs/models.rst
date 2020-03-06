@@ -4,6 +4,8 @@
 Models
 ======
 
+.. rst-class:: emphasize-children
+
 Usage
 =====
 
