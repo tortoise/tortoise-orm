@@ -16,8 +16,8 @@ help:
 	@echo  "    style       Auto-formats the code"
 
 up:
-	#cd tests && CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements-pypy.txt requirements-pypy.in -U
-	cd tests && CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements.txt requirements.in -Uv
+	cd tests && CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements-pypy.txt requirements-pypy.in -U
+	cd tests && CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements.txt requirements.in -U
 	sed -i "s/^-e .*/-e ./" tests/requirements.txt
 
 deps:

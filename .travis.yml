@@ -2,7 +2,6 @@ language: python
 python:
   - 3.7
   - 3.8
-  - 3.9-dev
 env:
   global:
     TORTOISE_TEST_MODULES=tests.testmodels
