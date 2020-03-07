@@ -231,7 +231,7 @@ def pydantic_model_creator(
         }
     )
 
-    # Sort field map (Python 3.6 has ordered dictionary keys)
+    # Sort field map (Python 3.7+ has guaranteed ordered dictionary keys)
     if _sort_fields:
         # Sort Alphabetically
         field_map = {k: field_map[k] for k in sorted(field_map)}

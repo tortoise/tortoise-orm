@@ -12,6 +12,11 @@ Changelog
 
 0.16.0
 ------
+.. caution::
+   **This release drops support of Python 3.6:**
+
+   Tortoise ORM now requires a minimum of CPython 3.7
+
 New features:
 ^^^^^^^^^^^^^
 * Model docstrings and ``#:`` comments directly preceding Field definitions are now used as docstrings and DDL descriptions.
