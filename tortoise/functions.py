@@ -6,11 +6,11 @@ from pypika.terms import Function as BaseFunction
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.expressions import F
+from tortoise.fields.base import Field
 from tortoise.fields.relational import ForeignKeyFieldInstance, RelationalField
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
-    from tortoise.fields.base import Field
 
 ##############################################################################
 # Base
@@ -59,13 +59,13 @@ class Function:
                 function_joins.append(join)
                 field = related_field_meta.basetable[related_field_meta.db_pk_field]
             else:
-                field = model._meta.fields_map.get(field_split[0])
-                if field.source_field:
-                    field = table[field.source_field]
+                field_object = cast(Field, model._meta.fields_map.get(field_split[0]))
+                if field_object.source_field:
+                    field = table[field_object.source_field]
                 else:
                     field = table[field_split[0]]
                 if self.populate_field_object:
-                    self.field_object = model._meta.fields_map.get(field_split[0], None)
+                    self.field_object = model._meta.fields_map.get(field_split[0])
                     if self.field_object:  # pragma: nobranch
                         func = self.field_object.get_for_dialect(
                             model._meta.db.capabilities.dialect, "function_cast"
