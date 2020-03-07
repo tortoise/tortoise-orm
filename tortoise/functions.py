@@ -46,6 +46,9 @@ class Function:
         self.field_object: "Optional[Field]" = None
         self.default_values = default_values
 
+    def _get_function_field(self, field: str, *default_values):
+        return self.database_func(field, *default_values)
+
     def _resolve_field_for_model(
         self, model: "Type[Model]", table: Table, field: str, *default_values: Any
     ) -> dict:
@@ -73,7 +76,7 @@ class Function:
                         if func:
                             field = func(self.field_object, field)
 
-            function_field = self.database_func(field, *default_values)
+            function_field = self._get_function_field(field, *default_values)
             return {"joins": function_joins, "field": function_field}
 
         if field_split[0] not in model._meta.fetch_fields:
@@ -114,9 +117,31 @@ class Function:
 class Aggregate(Function):
     """
     Base for SQL Aggregates.
+
+    :param field: Field name
+    :param default_values: Extra parameters to the function.
+    :param is_distinct: Flag for aggregate with distinction
     """
 
     database_func = AggregateFunction
+
+    def __init__(
+        self,
+        field: Union[str, F, ArithmeticExpression],
+        *default_values: Any,
+        is_distinct=False,
+    ) -> None:
+        self.field = field
+        self.field_object: "Optional[Field]" = None
+        self.default_values = default_values
+        self._is_distinct = is_distinct
+
+    def _get_function_field(self, field: str, *default_values):
+        if self._is_distinct:
+            return self.database_func(field, *default_values).distinct()
+        else:
+            return self.database_func(field, *default_values)
+
 
 
 ##############################################################################
