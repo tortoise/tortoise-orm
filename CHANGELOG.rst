@@ -104,7 +104,11 @@ Bugfixes:
 
 Removals:
 ^^^^^^^^^
+- Removed ``import from tortoise.aggregation`` as this was deprecated since 0.14.0
+- Removed ``start_transaction`` as it has been broken since 0.15.0
+- Removed support for Python 3.6 / PyPy-3.6, as it has been broken since 0.15.0
 
+  If you still need Python 3.6 support, you can install ``tortoise-orm<0.16`` as we will still push critical bugfixes to it for a while.
 
 .. rst-class:: emphasize-children
 
