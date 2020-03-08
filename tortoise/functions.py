@@ -129,15 +129,13 @@ class Aggregate(Function):
         self,
         field: Union[str, F, ArithmeticExpression],
         *default_values: Any,
-        is_distinct=False,
+        distinct=False
     ) -> None:
-        self.field = field
-        self.field_object: "Optional[Field]" = None
-        self.default_values = default_values
-        self._is_distinct = is_distinct
+        super().__init__(field, *default_values)
+        self.distinct = distinct
 
     def _get_function_field(self, field: str, *default_values):
-        if self._is_distinct:
+        if self.distinct:
             return self.database_func(field, *default_values).distinct()
         else:
             return self.database_func(field, *default_values)
