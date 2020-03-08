@@ -59,13 +59,13 @@ class Function:
                 function_joins.append(join)
                 field = related_field_meta.basetable[related_field_meta.db_pk_field]
             else:
-                field_object = cast(Field, model._meta.fields_map.get(field_split[0]))
+                field_object = cast(Field, model._meta.fields_map[field_split[0]])
                 if field_object.source_field:
                     field = table[field_object.source_field]
                 else:
                     field = table[field_split[0]]
                 if self.populate_field_object:
-                    self.field_object = model._meta.fields_map.get(field_split[0])
+                    self.field_object = model._meta.fields_map.get(field_split[0], None)
                     if self.field_object:  # pragma: nobranch
                         func = self.field_object.get_for_dialect(
                             model._meta.db.capabilities.dialect, "function_cast"
