@@ -104,6 +104,10 @@ New features:
 - Now negative number with ``limit(...)`` and ``offset(...)`` raise ``ParamsError``. (#306)
 - Allow usage of Function to ``queryset.update()``. (#308)
 
+* Add distinct to Aggregate
+
+  Functions that inherits Aggregate can use with ``distinct`` flag
+
 Bugfixes:
 ^^^^^^^^^
 - Fix default type of ``JSONField``
