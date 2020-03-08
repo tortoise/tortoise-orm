@@ -126,10 +126,7 @@ class Aggregate(Function):
     database_func = AggregateFunction
 
     def __init__(
-        self,
-        field: Union[str, F, ArithmeticExpression],
-        *default_values: Any,
-        distinct=False
+        self, field: Union[str, F, ArithmeticExpression], *default_values: Any, distinct=False
     ) -> None:
         super().__init__(field, *default_values)
         self.distinct = distinct
@@ -139,7 +136,6 @@ class Aggregate(Function):
             return self.database_func(field, *default_values).distinct()
         else:
             return self.database_func(field, *default_values)
-
 
 
 ##############################################################################

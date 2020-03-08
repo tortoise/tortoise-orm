@@ -653,12 +653,12 @@ class Comment(Model):
     id = fields.IntField(pk=True)
     content = fields.TextField()
     post: fields.ForeignKeyRelation[Post] = fields.ForeignKeyField(
-        'models.Post', related_name='comments'
+        "models.Post", related_name="comments"
     )
 
 
 class Favorite(Model):
     id = fields.IntField(pk=True)
     post: fields.ForeignKeyRelation[Post] = fields.ForeignKeyField(
-        'models.Post', related_name='favorites'
+        "models.Post", related_name="favorites"
     )
