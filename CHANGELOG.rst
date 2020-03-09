@@ -102,7 +102,6 @@ New features:
 
 - Allow usage of ``F`` expressions to in annotations. (#301)
 - Now negative number with ``limit(...)`` and ``offset(...)`` raise ``ParamsError``. (#306)
-- Fix Function with ``source_field`` option. (#311)
 
 Bugfixes:
 ^^^^^^^^^
@@ -120,6 +119,10 @@ Removals:
 
 0.15
 ====
+
+0.15.19
+-------
+- Fix Function with ``source_field`` option. (#311)
 
 0.15.18
 -------
