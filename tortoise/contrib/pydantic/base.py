@@ -38,7 +38,10 @@ def _get_fetch_fields(
 
 class PydanticModel(BaseModel):
     """
-    Pydantic BaseModel for Tortoise objects
+    Pydantic BaseModel for Tortoise objects.
+
+    This provides an extra method above the usual Pydantic
+    `model properties <https://pydantic-docs.helpmanual.io/usage/models/#model-properties>`__
     """
 
     class Config:
@@ -60,7 +63,19 @@ class PydanticModel(BaseModel):
         """
         Returns a serializable pydantic model instance built from the provided model instance.
 
-        This will prefetch all the relations automatically.
+        .. note::
+
+            This will prefetch all the relations automatically. It is probably what you want.
+
+            If you don't want this, or require a ``sync`` method, look to using ``.from_orm()``.
+
+            In that case you'd have to manage  prefetching yourself,
+            or exclude relational fields from being part of the model using
+            :class:`tortoise.contrib.pydantic.creator.PydanticMeta`, or you would be
+            getting ``OperationalError`` exceptions.
+
+            This is due to how the ``asyncio`` framework forces I/O to happen in explicit ``await``
+            statements. Hence we can only do lazy-fetching during an awaited method.
 
         :param obj: The Model instance you want serialized.
         """
@@ -76,13 +91,16 @@ class PydanticModel(BaseModel):
 class PydanticListModel(BaseModel):
     """
     Pydantic BaseModel for List of Tortoise Models
+
+    This provides an extra method above the usual Pydantic
+    `model properties <https://pydantic-docs.helpmanual.io/usage/models/#model-properties>`__
     """
 
     @classmethod
     async def from_queryset(cls, queryset: "QuerySet") -> "PydanticListModel":
         """
         Returns a serializable pydantic model instance that contains a list of models,
-         from the provided queryset.
+        from the provided queryset.
 
         This will prefetch all the relations automatically.
 
