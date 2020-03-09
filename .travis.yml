@@ -1,6 +1,5 @@
 language: python
 python:
-  - 3.6
   - 3.7
   - 3.8
 env:
@@ -8,11 +7,6 @@ env:
     TORTOISE_TEST_MODULES=tests.testmodels
 matrix:
   include:
-  - python: pypy3.6-7.1.1
-    install: pip install -r tests/requirements-pypy.txt
-    script: make _testall
-    env: PYTEST_ADDOPTS="--no-cov"
-    after_success: echo
   - python: 3.7
     env: TEST_RUNNER=green
     script: green

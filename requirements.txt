@@ -3,6 +3,3 @@ ciso8601>=2.1.2; sys_platform != "win32" and implementation_name == "cpython"
 iso8601>=0.1.12; sys_platform == "win32" or implementation_name != "cpython"
 aiosqlite>=0.11.0
 typing-extensions>=3.7
-
-# For Python3.6 compatibility
-aiocontextvars>=0.2.2;python_version<"3.7"
