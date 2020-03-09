@@ -20,6 +20,8 @@ Fields are defined as properties of a ``Model`` class object:
         name = fields.CharField(max_length=255)
 
 
+.. rst-class:: emphasize-children
+
 Reference
 =========
 

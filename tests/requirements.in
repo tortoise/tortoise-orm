@@ -18,6 +18,8 @@ pip-tools
 ## Linter tools
 mypy
 flake8-isort
+flake8-comprehensions
+darglint
 pylint
 docutils
 pygments
@@ -53,3 +55,6 @@ sanic
 # Sample integration - Starlette
 starlette
 uvicorn
+
+# Pydantic support
+pydantic

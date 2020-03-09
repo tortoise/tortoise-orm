@@ -68,7 +68,7 @@ Required Parameters
 Optional parameters:
 --------------------
 
-SQLite optional parameters is basically any of the ``PRAGMA`` statements documented `here. <https://sqlite.org/pragma.html#toc>`_
+SQLite optional parameters is basically any of the ``PRAGMA`` statements documented `here. <https://sqlite.org/pragma.html#toc>`__
 
 ``journal_mode`` (defaults to ``WAL``):
     Specify SQLite journal mode.
@@ -100,7 +100,7 @@ Required Parameters
 Optional parameters:
 --------------------
 
-PostgreSQL optional parameters are pass-though parameters to the driver, see `here <https://magicstack.github.io/asyncpg/current/api/index.html#connection-pools>`_ for more details.
+PostgreSQL optional parameters are pass-though parameters to the driver, see `here <https://magicstack.github.io/asyncpg/current/api/index.html#connection-pools>`__ for more details.
 
 ``minsize`` (defaults to ``1``):
     Minimum connection pool size
@@ -140,7 +140,7 @@ Required Parameters
 Optional parameters:
 --------------------
 
-MySQL optional parameters are pass-though parameters to the driver, see `here <https://aiomysql.readthedocs.io/en/latest/connection.html#connection>`_ for more details.
+MySQL optional parameters are pass-though parameters to the driver, see `here <https://aiomysql.readthedocs.io/en/latest/connection.html#connection>`__ for more details.
 
 ``minsize`` (defaults to ``1``):
     Minimum connection pool size

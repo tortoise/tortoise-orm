@@ -13,7 +13,7 @@ from tortoise.backends.base.client import (
     BaseTransactionWrapper,
     Capabilities,
     ConnectionWrapper,
-    NestedTransactionContext,
+    NestedTransactionPooledContext,
     PoolConnectionWrapper,
     TransactionContext,
     TransactionContextPooled,
@@ -192,6 +192,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     def __init__(self, connection: AsyncpgDBClient) -> None:
         self._connection: asyncpg.Connection = connection._connection
         self._lock = asyncio.Lock()
+        self._trxlock = asyncio.Lock()
         self.log = connection.log
         self.connection_name = connection.connection_name
         self.transaction: Transaction = None
@@ -199,7 +200,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         self._parent = connection
 
     def _in_transaction(self) -> "TransactionContext":
-        return NestedTransactionContext(self)
+        return NestedTransactionPooledContext(self)
 
     def acquire_connection(self) -> "ConnectionWrapper":
         return ConnectionWrapper(self._connection, self._lock)

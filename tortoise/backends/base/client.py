@@ -168,7 +168,6 @@ class BaseDBAsyncClient:
 
         :param query: The SQL string, pre-parametrized for the target DB dialect.
         :param values: A sequence of positional DB parameters.
-        :return: A tuple containing (affected-rows, resultset)
         """
         raise NotImplementedError()  # pragma: nocoverage
 
@@ -196,7 +195,6 @@ class BaseDBAsyncClient:
 
         :param query: The SQL string, pre-parametrized for the target DB dialect.
         :param values: A sequence of positional DB parameters.
-        :return: The resultset as a list of dicts.
         """
         raise NotImplementedError()  # pragma: nocoverage
 
@@ -268,7 +266,6 @@ class TransactionContextPooled(TransactionContext):
 
 class NestedTransactionContext(TransactionContext):
     async def __aenter__(self):
-        await self.connection.start()
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -277,8 +274,20 @@ class NestedTransactionContext(TransactionContext):
                 # Can't rollback a transaction that already failed.
                 if exc_type is not TransactionManagementError:
                     await self.connection.rollback()
-            else:
-                await self.connection.commit()
+
+
+class NestedTransactionPooledContext(TransactionContext):
+    async def __aenter__(self):
+        await self.lock.acquire()
+        return self.connection
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        self.lock.release()
+        if not self.connection._finalized:
+            if exc_type:
+                # Can't rollback a transaction that already failed.
+                if exc_type is not TransactionManagementError:
+                    await self.connection.rollback()
 
 
 class PoolConnectionWrapper:

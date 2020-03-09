@@ -7,7 +7,12 @@ from typing import Any, Awaitable, Dict, Generator, List, Optional, Set, Tuple, 
 from pypika import Order, Query, Table
 
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.exceptions import ConfigurationError, OperationalError
+from tortoise.exceptions import (
+    ConfigurationError,
+    IntegrityError,
+    OperationalError,
+    TransactionManagementError,
+)
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntField
 from tortoise.fields.relational import (
@@ -22,7 +27,7 @@ from tortoise.fields.relational import (
 from tortoise.filters import get_filters_for_field
 from tortoise.functions import Function
 from tortoise.queryset import Q, QuerySet, QuerySetSingle
-from tortoise.transactions import current_transaction_map
+from tortoise.transactions import current_transaction_map, in_transaction
 
 MODEL = TypeVar("MODEL", bound="Model")
 # TODO: Define Filter type object. Possibly tuple?
@@ -123,7 +128,10 @@ def _get_comments(cls: "Type[Model]") -> Dict[str, str]:
     :param cls: The class we need to extract comments from its source.
     :return: The dictionary of comments by field name
     """
-    source = inspect.getsource(cls)
+    try:
+        source = inspect.getsource(cls)
+    except TypeError:  # pragma: nocoverage
+        return {}
     comments = {}
 
     for cls in reversed(cls.__mro__):
@@ -246,7 +254,7 @@ class MetaInfo:
     @property
     def ordering(self) -> Tuple[Tuple[str, str], ...]:
         if not self._ordering_validated:
-            unknown_fields = set(f for f, _ in self._default_ordering) - self.fields
+            unknown_fields = {f for f, _ in self._default_ordering} - self.fields
             raise ConfigurationError(
                 f"Unknown fields {','.join(unknown_fields)} in "
                 f"default ordering for model {self._model.__name__}"
@@ -752,10 +760,18 @@ class Model(metaclass=ModelMeta):
         """
         if not defaults:
             defaults = {}
-        instance = await cls.filter(**kwargs).first()
-        if instance:
-            return instance, False
-        return await cls.create(**defaults, **kwargs, using_db=using_db), True
+        db = using_db if using_db else cls._meta.db
+        async with in_transaction(connection_name=db.connection_name):
+            instance = await cls.filter(**kwargs).first()
+            if instance:
+                return instance, False
+            try:
+                return await cls.create(**defaults, **kwargs), True
+            except (IntegrityError, TransactionManagementError):
+                # Let transaction close
+                pass
+        # Try after transaction in case transaction error
+        return await cls.get(**kwargs), False
 
     @classmethod
     async def create(cls: Type[MODEL], **kwargs: Any) -> MODEL:
@@ -911,7 +927,11 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def _check_together(cls, together: str) -> None:
-        """Check the value of "unique_together" option."""
+        """
+        Check the value of "unique_together" option.
+
+        :raises ConfigurationError: If the model has not been configured correctly.
+        """
         _together = getattr(cls._meta, together)
         if not isinstance(_together, (tuple, list)):
             raise ConfigurationError(f"'{cls.__name__}.{together}' must be a list or tuple.")

@@ -282,6 +282,8 @@ class Tortoise:
             """
             Test, if app and model really exist. Throws a ConfigurationError with a hopefully
             helpful message. If successfull, returns the requested model.
+
+            :raises ConfigurationError: If no such app exists.
             """
             try:
                 return cls.apps[related_app_name][related_model_name]
@@ -298,6 +300,8 @@ class Tortoise:
             Test, if reference follow the official naming conventions. Throws a
             ConfigurationError with a hopefully helpful message. If successfull,
             returns the app and the model name.
+
+            :raises ConfigurationError: If no model reference is invalid.
             """
             items = reference.split(".")
             if len(items) != 2:  # pragma: nocoverage
@@ -359,13 +363,12 @@ class Tortoise:
                     key_fk_object.description = fk_object.description
                     if fk_object.source_field:
                         key_fk_object.source_field = fk_object.source_field
-                        fk_object.source_field = key_field
                     else:
-                        fk_object.source_field = key_field
                         key_fk_object.source_field = key_field
                     model._meta.add_field(key_field, key_fk_object)
 
                     fk_object.model_class = related_model
+                    fk_object.source_field = key_field
                     backward_relation_name = fk_object.related_name
                     if backward_relation_name is not False:
                         if not backward_relation_name:
@@ -422,13 +425,12 @@ class Tortoise:
                     key_o2o_object.description = o2o_object.description
                     if o2o_object.source_field:
                         key_o2o_object.source_field = o2o_object.source_field
-                        o2o_object.source_field = key_field
                     else:
-                        o2o_object.source_field = key_field
                         key_o2o_object.source_field = key_field
                     model._meta.add_field(key_field, key_o2o_object)
 
                     o2o_object.model_class = related_model
+                    o2o_object.source_field = key_field
                     backward_relation_name = o2o_object.related_name
                     if backward_relation_name is not False:
                         if not backward_relation_name:
@@ -555,15 +557,26 @@ class Tortoise:
 
     @classmethod
     def init_models(
-        cls, models_paths: List[str], app_label: str, init_relations: bool = True
+        cls, models_paths: List[str], app_label: str, _init_relations: bool = True
     ) -> None:
+        """
+        Early initialisation of Tortoise ORM Models.
+
+        Initialise the relationships between Models.
+        This does not initialise any database connection.
+
+        :param models_paths: A list of model paths to initialise
+        :param app_label: The app label, e.g. 'models'
+
+        :raises ConfigurationError: If models are invalid.
+        """
         app_models: List[Type[Model]] = []
         for module in models_paths:
             app_models += cls._discover_models(module, app_label)
 
         cls.apps[app_label] = {model.__name__: model for model in app_models}
 
-        if init_relations:
+        if _init_relations:
             cls._init_relations()
 
     @classmethod
@@ -578,7 +591,7 @@ class Tortoise:
                     )
                 )
 
-            cls.init_models(info["models"], name, init_relations=False)
+            cls.init_models(info["models"], name, _init_relations=False)
 
             for model in cls.apps[name].values():
                 model._meta.default_connection = info.get("default_connection", "default")
@@ -630,57 +643,51 @@ class Tortoise:
         You can configure using only one of ``config``, ``config_file``
         and ``(db_url, modules)``.
 
-        Parameters
-        ----------
-        config:
+        :param config:
             Dict containing config:
 
-            Example
-            -------
+            .. admonition:: Example
 
-            .. code-block:: python3
+                .. code-block:: python3
 
-                {
-                    'connections': {
-                        # Dict format for connection
-                        'default': {
-                            'engine': 'tortoise.backends.asyncpg',
-                            'credentials': {
-                                'host': 'localhost',
-                                'port': '5432',
-                                'user': 'tortoise',
-                                'password': 'qwerty123',
-                                'database': 'test',
-                            }
+                    {
+                        'connections': {
+                            # Dict format for connection
+                            'default': {
+                                'engine': 'tortoise.backends.asyncpg',
+                                'credentials': {
+                                    'host': 'localhost',
+                                    'port': '5432',
+                                    'user': 'tortoise',
+                                    'password': 'qwerty123',
+                                    'database': 'test',
+                                }
+                            },
+                            # Using a DB_URL string
+                            'default': 'postgres://postgres:qwerty123@localhost:5432/events'
                         },
-                        # Using a DB_URL string
-                        'default': 'postgres://postgres:qwerty123@localhost:5432/events'
-                    },
-                    'apps': {
-                        'models': {
-                            'models': ['__main__'],
-                            # If no default_connection specified, defaults to 'default'
-                            'default_connection': 'default',
+                        'apps': {
+                            'models': {
+                                'models': ['__main__'],
+                                # If no default_connection specified, defaults to 'default'
+                                'default_connection': 'default',
+                            }
                         }
                     }
-                }
 
-        config_file:
+        :param config_file:
             Path to .json or .yml (if PyYAML installed) file containing config with
             same format as above.
-        db_url:
+        :param db_url:
             Use a DB_URL string. See :ref:`db_url`
-        modules:
+        :param modules:
             Dictionary of ``key``: [``list_of_modules``] that defined "apps" and modules that
             should be discovered for models.
-        _create_db:
+        :param _create_db:
             If ``True`` tries to create database for specified connections,
             could be used for testing purposes.
 
-        Raises
-        ------
-        ConfigurationError
-            For any configuration error
+        :raises ConfigurationError: For any configuration error
         """
         if cls._inited:
             await cls.close_connections()
@@ -748,10 +755,9 @@ class Tortoise:
         Will fail if schemas already exists, so it's not recommended to be used as part
         of application workflow
 
-        Parameters
-        ----------
-        safe:
-            When set to true, creates the table only when it does not already exist.
+        :param safe: When set to true, creates the table only when it does not already exist.
+
+        :raises ConfigurationError: When ``.init()`` has not been called.
         """
         if not cls._inited:
             raise ConfigurationError("You have to call .init() first before generating schemas")
@@ -763,6 +769,8 @@ class Tortoise:
         """
         Tries to drop all databases provided in config passed to ``.init()`` method.
         Normally should be used only for testing purposes.
+
+        :raises ConfigurationError: When ``.init()`` has not been called.
         """
         if not cls._inited:
             raise ConfigurationError("You have to call .init() first before deleting schemas")
@@ -799,4 +807,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.15.17"
+__version__ = "0.15.18"

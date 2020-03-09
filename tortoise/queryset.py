@@ -22,11 +22,17 @@ from typing import (
 from pypika import JoinType, Order, Table
 from pypika.functions import Count
 from pypika.queries import QueryBuilder
-from pypika.terms import ArithmeticExpression
+from pypika.terms import Term
 from typing_extensions import Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
-from tortoise.exceptions import DoesNotExist, FieldError, IntegrityError, MultipleObjectsReturned
+from tortoise.exceptions import (
+    DoesNotExist,
+    FieldError,
+    IntegrityError,
+    MultipleObjectsReturned,
+    ParamsError,
+)
 from tortoise.expressions import F
 from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
@@ -130,6 +136,8 @@ class AwaitableQuery(Generic[MODEL]):
             (to allow self referential joins)
         :param orderings: What columns/order to order by
         :param annotations:  Annotations that may be ordered on
+
+        :raises FieldError: If a field provided does not exist in model.
         """
         # Do not apply default ordering for annotated queries to not mess them up
         if not orderings and self.model._meta.ordering and not annotations:
@@ -183,8 +191,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_prefetch_map",
         "_prefetch_queries",
         "_single",
-        "_get",
-        "_count",
+        "_raise_does_not_exist",
         "_db",
         "_limit",
         "_offset",
@@ -200,12 +207,10 @@ class QuerySet(AwaitableQuery[MODEL]):
     def __init__(self, model: Type[MODEL]) -> None:
         super().__init__(model)
         self.fields: Set[str] = model._meta.db_fields
-
         self._prefetch_map: Dict[str, Set[Union[str, Prefetch]]] = {}
         self._prefetch_queries: Dict[str, QuerySet] = {}
         self._single: bool = False
-        self._get: bool = False
-        self._count: bool = False
+        self._raise_does_not_exist: bool = False
         self._limit: Optional[int] = None
         self._offset: Optional[int] = None
         self._filter_kwargs: Dict[str, Any] = {}
@@ -225,8 +230,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._prefetch_map = copy(self._prefetch_map)
         queryset._prefetch_queries = copy(self._prefetch_queries)
         queryset._single = self._single
-        queryset._get = self._get
-        queryset._count = self._count
+        queryset._raise_does_not_exist = self._raise_does_not_exist
         queryset._db = self._db
         queryset._limit = self._limit
         queryset._offset = self._offset
@@ -285,6 +289,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             .order_by('name', '-tournament__name')
 
         Supports ordering by related models too.
+
+        :raises FieldError: If unknown field has been provided.
         """
         queryset = self._clone()
         new_ordering = []
@@ -303,7 +309,12 @@ class QuerySet(AwaitableQuery[MODEL]):
     def limit(self, limit: int) -> "QuerySet[MODEL]":
         """
         Limits QuerySet to given length.
+
+        :raises ParamsError: Limit should be non-negative number.
         """
+        if limit < 0:
+            raise ParamsError("Limit should be non-negative number")
+
         queryset = self._clone()
         queryset._limit = limit
         return queryset
@@ -311,7 +322,12 @@ class QuerySet(AwaitableQuery[MODEL]):
     def offset(self, offset: int) -> "QuerySet[MODEL]":
         """
         Query offset for QuerySet.
+
+        :raises ParamsError: Offset should be non-negative number.
         """
+        if offset < 0:
+            raise ParamsError("Offset should be non-negative number")
+
         queryset = self._clone()
         queryset._offset = offset
         if self.capabilities.requires_limit and queryset._limit is None:
@@ -332,6 +348,8 @@ class QuerySet(AwaitableQuery[MODEL]):
     def annotate(self, **kwargs: Function) -> "QuerySet[MODEL]":
         """
         Annotate result with aggregation or function result.
+
+        :raises TypeError: Value of kwarg is expected to be a ``Function`` instance.
         """
         queryset = self._clone()
         for key, annotation in kwargs.items():
@@ -378,6 +396,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         Can pass names of fields to fetch, or as a ``field_name='name_in_dict'`` kwarg.
 
         If no arguments are passed it will default to a dict containing all fields.
+
+        :raises FieldError: If duplicate key has been provided.
         """
         if args or kwargs:
             fields_for_select: Dict[str, str] = {}
@@ -426,11 +446,11 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         Update all objects in QuerySet with given kwargs.
 
-        A usage example:
+        .. admonition: Example:
 
-        .. code-block:: py3
+            .. code-block:: py3
 
-            await Employee.filter(occupation='developer').update(salary=5000)
+                await Employee.filter(occupation='developer').update(salary=5000)
 
         Will instead of returning a resultset, update the data in the DB itself.
         """
@@ -479,7 +499,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         queryset = self.filter(*args, **kwargs)
         queryset._limit = 2
-        queryset._get = True
+        queryset._single = True
+        queryset._raise_does_not_exist = True
         return queryset  # type: ignore
 
     def get_or_none(self, *args: Q, **kwargs: Any) -> QuerySetSingle[Optional[MODEL]]:
@@ -494,6 +515,8 @@ class QuerySet(AwaitableQuery[MODEL]):
     def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySet[MODEL]":
         """
         Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
+
+        :raises FieldError: If the field to prefetch on is not a relation, or not found.
         """
         queryset = self._clone()
         queryset._prefetch_map = {}
@@ -601,16 +624,12 @@ class QuerySet(AwaitableQuery[MODEL]):
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
         ).execute_select(self.query, custom_fields=list(self._annotations.keys()))
-        if self._get:
-            if len(instance_list) == 1:
-                return instance_list[0]
-            if not instance_list:
-                raise DoesNotExist("Object does not exist")
-            raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
         if self._single:
             if len(instance_list) == 1:
                 return instance_list[0]
             if not instance_list:
+                if self._raise_does_not_exist:
+                    raise DoesNotExist("Object does not exist")
                 return None  # type: ignore
             raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
         return instance_list
@@ -664,12 +683,10 @@ class UpdateQuery(AwaitableQuery):
                     db_field = self.model._meta.fields_db_projection[key]
                 except KeyError:
                     raise FieldError(f"Field {key} is virtual and can not be updated")
-                if not isinstance(value, (F, ArithmeticExpression)):
-                    value = executor.column_map[key](value, None)  # type: ignore
+                if not isinstance(value, Term):
+                    value = executor.column_map[key](value, None)
                 else:
-                    value = F.resolver_arithmetic_expression(
-                        self.model._meta.fields_db_projection, value
-                    )
+                    value = F.resolver_arithmetic_expression(self.model, value)[0]
 
             self.query = self.query.set(db_field, value)
 
@@ -839,7 +856,7 @@ class FieldSelectQuery(AwaitableQuery):
             # return as is to get whole model objects
             return lambda x: x
 
-        if field in [x[1] for x in model._meta.db_native_fields]:
+        if field in (x[1] for x in model._meta.db_native_fields):
             return lambda x: x
 
         if field in self.annotations:
@@ -938,7 +955,7 @@ class ValuesListQuery(FieldSelectQuery):
         _, result = await self._db.execute_query(str(self.query))
         columns = [
             (key, self.resolve_to_python_value(self.model, name))
-            for key, name in sorted(list(self.fields.items()))
+            for key, name in sorted(self.fields.items())
         ]
         if self.flat:
             func = columns[0][1]

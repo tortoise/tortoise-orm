@@ -74,38 +74,23 @@ class ReverseRelation(Generic[MODEL]):
         return self.model.filter(**{self.relation_field: getattr(self.instance, self.from_field)})
 
     def __contains__(self, item: Any) -> bool:
-        if not self._fetched:
-            raise NoValuesFetched(
-                "No values were fetched for this relation, first use .fetch_related()"
-            )
+        self._raise_if_not_fetched()
         return item in self.related_objects
 
     def __iter__(self) -> "Iterator[MODEL]":
-        if not self._fetched:
-            raise NoValuesFetched(
-                "No values were fetched for this relation, first use .fetch_related()"
-            )
+        self._raise_if_not_fetched()
         return self.related_objects.__iter__()
 
     def __len__(self) -> int:
-        if not self._fetched:
-            raise NoValuesFetched(
-                "No values were fetched for this relation, first use .fetch_related()"
-            )
+        self._raise_if_not_fetched()
         return len(self.related_objects)
 
     def __bool__(self) -> bool:
-        if not self._fetched:
-            raise NoValuesFetched(
-                "No values were fetched for this relation, first use .fetch_related()"
-            )
+        self._raise_if_not_fetched()
         return bool(self.related_objects)
 
     def __getitem__(self, item: int) -> MODEL:
-        if not self._fetched:
-            raise NoValuesFetched(
-                "No values were fetched for this relation, first use .fetch_related()"
-            )
+        self._raise_if_not_fetched()
         return self.related_objects[item]
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
@@ -113,27 +98,26 @@ class ReverseRelation(Generic[MODEL]):
 
     async def __aiter__(self) -> AsyncGenerator[Any, MODEL]:
         if not self._fetched:
-            self.related_objects = await self
-            self._fetched = True
+            self._set_result_for_query(await self)
 
         for val in self.related_objects:
             yield val
 
     def filter(self, *args: "Q", **kwargs: Any) -> "QuerySet[MODEL]":
         """
-        Returns QuerySet with related elements filtered by args/kwargs.
+        Returns a QuerySet with related elements filtered by args/kwargs.
         """
         return self._query.filter(*args, **kwargs)
 
     def all(self) -> "QuerySet[MODEL]":
         """
-        Returns QuerySet with all related elements.
+        Returns a QuerySet with all related elements.
         """
         return self._query
 
     def order_by(self, *orderings: str) -> "QuerySet[MODEL]":
         """
-        Returns QuerySet related elements in order.
+        Returns a QuerySet related elements in order.
         """
         return self._query.order_by(*orderings)
 
@@ -145,13 +129,19 @@ class ReverseRelation(Generic[MODEL]):
 
     def offset(self, offset: int) -> "QuerySet[MODEL]":
         """
-        Returns aQuerySet with all related elements offset by «offset».
+        Returns a QuerySet with all related elements offset by «offset».
         """
         return self._query.offset(offset)
 
     def _set_result_for_query(self, sequence: List[MODEL]) -> None:
         self._fetched = True
         self.related_objects = sequence
+
+    def _raise_if_not_fetched(self) -> None:
+        if not self._fetched:
+            raise NoValuesFetched(
+                "No values were fetched for this relation, first use .fetch_related()"
+            )
 
 
 class ManyToManyRelation(ReverseRelation[MODEL]):
@@ -172,6 +162,8 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         Adds one or more of ``instances`` to the relation.
 
         If it is already added, it will be silently ignored.
+
+        :raises OperationalError: If Object to add is not saved.
         """
         if not instances:
             return
@@ -251,6 +243,8 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
     ) -> None:
         """
         Removes one or more of ``instances`` from the relation.
+
+        :raises OperationalError: remove() was called with no instances.
         """
         db = using_db if using_db else self.model._meta.db
         if not instances:

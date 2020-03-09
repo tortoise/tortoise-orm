@@ -1,10 +1,11 @@
-from typing import TYPE_CHECKING, Any, Optional, Type, cast
+from typing import TYPE_CHECKING, Any, Optional, Type, Union, cast
 
 from pypika import Table, functions
-from pypika.terms import AggregateFunction
+from pypika.terms import AggregateFunction, ArithmeticExpression
 from pypika.terms import Function as BaseFunction
 
 from tortoise.exceptions import ConfigurationError
+from tortoise.expressions import F
 from tortoise.fields.relational import ForeignKeyFieldInstance, RelationalField
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -40,7 +41,7 @@ class Function:
     # Enable populate_field_object where we want to try and preserve the field type.
     populate_field_object = False
 
-    def __init__(self, field: str, *default_values: Any) -> None:
+    def __init__(self, field: Union[str, F, ArithmeticExpression], *default_values: Any) -> None:
         self.field = field
         self.field_object: "Optional[Field]" = None
         self.default_values = default_values
@@ -59,7 +60,6 @@ class Function:
                 field = related_field_meta.basetable[related_field_meta.db_pk_field]
             else:
                 field = table[field_split[0]]
-
                 if self.populate_field_object:
                     self.field_object = model._meta.fields_map.get(field_split[0], None)
                     if self.field_object:  # pragma: nobranch
@@ -95,9 +95,16 @@ class Function:
             (to allow self referential joins)
         :return: Dict with keys ``"joins"`` and ``"fields"``
         """
-        function = self._resolve_field_for_model(model, table, self.field, *self.default_values)
-        function["joins"] = reversed(function["joins"])
-        return function
+
+        if isinstance(self.field, str):
+            function = self._resolve_field_for_model(model, table, self.field, *self.default_values)
+            function["joins"] = reversed(function["joins"])
+            return function
+        else:
+            field, field_object = F.resolver_arithmetic_expression(model, self.field)
+            if self.populate_field_object:
+                self.field_object = field_object
+            return {"joins": [], "field": self.database_func(field, *self.default_values)}
 
 
 class Aggregate(Function):
@@ -125,7 +132,7 @@ class Trim(Function):
 
 class Length(Function):
     """
-    Returns lenth of text/blob.
+    Returns length of text/blob.
 
     :samp:`Length("{FIELD_NAME}")`
     """
