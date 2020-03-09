@@ -2,6 +2,10 @@
 
 Changelog
 =========
+0.15.19
+-------
+- Fix Function with ``source_field`` option. (#311)
+
 0.15.18
 -------
 - Install on Windows does not require a C compiler any more.

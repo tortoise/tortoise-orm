@@ -431,6 +431,7 @@ class StraightFields(Model):
     eyedee = fields.IntField(pk=True, description="Da PK")
     chars = fields.CharField(max_length=50, index=True, description="Some chars")
     blip = fields.CharField(max_length=50, default="BLIP")
+    nullable = fields.CharField(max_length=50, null=True)
 
     fk: fields.ForeignKeyNullableRelation["StraightFields"] = fields.ForeignKeyField(
         "models.StraightFields", related_name="fkrev", null=True, description="Tree!"
@@ -458,6 +459,7 @@ class SourceFields(Model):
         max_length=50, source_field="some_chars_table", index=True, description="Some chars"
     )
     blip = fields.CharField(max_length=50, default="BLIP", source_field="da_blip")
+    nullable = fields.CharField(max_length=50, null=True, source_field="some_nullable")
 
     fk: fields.ForeignKeyNullableRelation["SourceFields"] = fields.ForeignKeyField(
         "models.SourceFields",
