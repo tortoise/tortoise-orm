@@ -7,7 +7,7 @@ This is to test that behaviour doesn't change when one defined source_field para
 from tests.testmodels import SourceFields, StraightFields
 from tortoise.contrib import test
 from tortoise.expressions import F
-from tortoise.functions import Trim
+from tortoise.functions import Coalesce, Count, Length, Lower, Trim, Upper
 
 
 class StraightFieldTests(test.TestCase):
@@ -173,6 +173,53 @@ class StraightFieldTests(test.TestCase):
         await self.model.filter(eyedee=obj1.eyedee).update(chars=Trim("chars"))
         obj2 = await self.model.get(eyedee=obj1.eyedee)
         self.assertEqual(obj2.chars, "aaa")
+
+    async def test_filter_by_aggregation_field_coalesce(self):
+        await self.model.create(chars="aaa", nullable="null")
+        await self.model.create(chars="bbb")
+        objs = await self.model.annotate(null=Coalesce("nullable", "null")).filter(null="null")
+
+        self.assertEqual(len(objs), 2)
+        self.assertSetEqual({(o.chars, o.null) for o in objs}, {("aaa", "null"), ("bbb", "null")})
+
+    async def test_filter_by_aggregation_field_count(self):
+        await self.model.create(chars="aaa")
+        await self.model.create(chars="bbb")
+        obj = await self.model.annotate(chars_count=Count("chars")).filter(
+            chars_count=1, chars="aaa"
+        )
+
+        self.assertEqual(len(obj), 1)
+        self.assertEqual(obj[0].chars, "aaa")
+
+    async def test_filter_by_aggregation_field_length(self):
+        await self.model.create(chars="aaa")
+        await self.model.create(chars="bbbbb")
+        obj = await self.model.annotate(chars_length=Length("chars")).filter(chars_length=3)
+
+        self.assertEqual(len(obj), 1)
+        self.assertEqual(obj[0].chars_length, 3)
+
+    async def test_filter_by_aggregation_field_lower(self):
+        await self.model.create(chars="AaA")
+        obj = await self.model.annotate(chars_lower=Lower("chars")).filter(chars_lower="aaa")
+
+        self.assertEqual(len(obj), 1)
+        self.assertEqual(obj[0].chars_lower, "aaa")
+
+    async def test_filter_by_aggregation_field_trim(self):
+        await self.model.create(chars="   aaa   ")
+        obj = await self.model.annotate(chars_trim=Trim("chars")).filter(chars_trim="aaa")
+
+        self.assertEqual(len(obj), 1)
+        self.assertEqual(obj[0].chars_trim, "aaa")
+
+    async def test_filter_by_aggregation_field_upper(self):
+        await self.model.create(chars="aAa")
+        obj = await self.model.annotate(chars_upper=Upper("chars")).filter(chars_upper="AAA")
+
+        self.assertEqual(len(obj), 1)
+        self.assertEqual(obj[0].chars_upper, "AAA")
 
 
 class SourceFieldTests(StraightFieldTests):

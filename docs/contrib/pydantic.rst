@@ -10,6 +10,8 @@ We currently only support generating Pydantic objects for serialisation, and no 
 
 See the :ref:`examples_pydantic`
 
+.. rst-class:: emphasize-children
+
 Tutorial
 ========
 
@@ -24,6 +26,8 @@ Here we introduce:
 * Docstrings & doc-comments are used
 * Evaluating the generated schema
 * Simple serialisation with both ``.dict()`` and ``.json()``
+
+Source to example: :ref:`example_pydantic_tut1`
 
 Lets start with a basic Tortoise Model:
 
@@ -50,7 +54,7 @@ Lets start with a basic Tortoise Model:
 
     Tournament_Pydantic = pydantic_model_creator(Tournament)
 
-And now have a Pydantic Model that can be used for representing schema and serialisation.
+And now have a `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ that can be used for representing schema and serialisation.
 
 The JSON-Schema of ``Tournament_Pydantic`` is now:
 
@@ -88,7 +92,7 @@ To serialise an object it is simply *(in an async context)*:
     tournament = await Tournament.create(name="New Tournament")
     tourpy = await Tournament_Pydantic.from_tortoise_orm(tournament)
 
-And one could get the contents by using regulat Pydantic-object methods, such as ``.dict()`` or ``.json()``
+And one could get the contents by using `regular Pydantic-object methods <https://pydantic-docs.helpmanual.io/usage/exporting_models/>`_, such as ``.dict()`` or ``.json()``
 
 .. code-block:: py3
 
@@ -115,6 +119,8 @@ Here we introduce:
 
 * Creating a list-model to serialise a queryset
 * Default sorting is honoured
+
+Source to example: :ref:`example_pydantic_tut2`
 
 .. code-block:: py3
 
@@ -144,13 +150,13 @@ Here we introduce:
 
     Tournament_Pydantic_List = pydantic_queryset_creator(Tournament)
 
-And now have a Pydantic Model that can be used for representing schema and serialisation.
+And now have a `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ that can be used for representing schema and serialisation.
 
 The JSON-Schema of ``Tournament_Pydantic_List`` is now:
 
 .. code-block:: py3
 
-    >>> print(Tournament_Pydantic_List  .schema())
+    >>> print(Tournament_Pydantic_List.schema())
     {
         'title': 'Tournaments',
         'description': 'This references a Tournament',
@@ -196,7 +202,7 @@ To serialise an object it is simply *(in an async context)*:
 
     tourpy = await Tournament_Pydantic_List.from_queryset(Tournament.all())
 
-And one could get the contents by using regulat Pydantic-object methods, such as ``.dict()`` or ``.json()``
+And one could get the contents by using `regular Pydantic-object methods <https://pydantic-docs.helpmanual.io/usage/exporting_models/>`_, such as ``.dict()`` or ``.json()``
 
 .. code-block:: py3
 
@@ -252,6 +258,14 @@ Here we introduce:
 * Relationships
 * Early model init
 
+.. note::
+
+    The part of this tutorial about early-init is only required if you need to generate the pydantic models **before** you have initialised Tortoise ORM.
+
+    Look at :ref:`example_pydantic_basic` (in function ``run``) to see where the ``*_creator is only`` called **after** we initialised Tortoise ORM properly, in that case an early init is not needed.
+
+Source to example: :ref:`example_pydantic_tut3`
+
 We define our models with a relationship:
 
 .. code-block:: py3
@@ -282,7 +296,7 @@ We define our models with a relationship:
             "models.Tournament", related_name="events", description="The Tournement this happens in"
         )
 
-Next we create our Pydantic model using ``pydantic_model_creator``:
+Next we create our `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ using ``pydantic_model_creator``:
 
 .. code-block:: py3
 
@@ -508,6 +522,8 @@ Here we introduce:
 * Configuring model creator via ``PydanticMeta`` class.
 * Using callable functions to annotate extra data.
 
+Source to example: :ref:`example_pydantic_tut4`
+
 Let's add some methods that calculate data, and tell the creators to use them:
 
 .. code-block:: py3
@@ -581,7 +597,7 @@ Note that the Pydantic serializer can't call async methods, but since the tortoi
 So we don't need to await the relation.
 We should however protect against the case where no prefetching was done, hence catching and handling the ``tortoise.exceptions.NoValuesFetched`` exception.
 
-Next we create our Pydantic model using ``pydantic_model_creator``:
+Next we create our `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ using ``pydantic_model_creator``:
 
 .. code-block:: py3
 

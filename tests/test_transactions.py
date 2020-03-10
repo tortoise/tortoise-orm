@@ -1,7 +1,7 @@
 from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import OperationalError, TransactionManagementError
-from tortoise.transactions import atomic, in_transaction, start_transaction
+from tortoise.transactions import atomic, in_transaction
 
 
 class SomeException(Exception):
@@ -85,34 +85,6 @@ class TestTransactions(test.TruncationTestCase):
 
         with self.assertRaises(OperationalError):
             await bound_to_fall()
-        saved_event = await Tournament.filter(name="Test").first()
-        self.assertEqual(saved_event.id, tournament.id)
-        saved_event = await Tournament.filter(name="Updated name").first()
-        self.assertIsNone(saved_event)
-
-    @test.skip("start_transaction is dodgy")
-    async def test_transaction_manual_commit(self):
-        tournament = await Tournament.create(name="Test")
-
-        connection = await start_transaction()
-        await Tournament.filter(id=tournament.id).update(name="Updated name")
-        saved_event = await Tournament.filter(name="Updated name").first()
-        self.assertEqual(saved_event.id, tournament.id)
-        await connection.commit()
-
-        saved_event = await Tournament.filter(name="Updated name").first()
-        self.assertEqual(saved_event.id, tournament.id)
-
-    @test.skip("start_transaction is dodgy")
-    async def test_transaction_manual_rollback(self):
-        tournament = await Tournament.create(name="Test")
-
-        connection = await start_transaction()
-        await Tournament.filter(id=tournament.id).update(name="Updated name")
-        saved_event = await Tournament.filter(name="Updated name").first()
-        self.assertEqual(saved_event.id, tournament.id)
-        await connection.rollback()
-
         saved_event = await Tournament.filter(name="Test").first()
         self.assertEqual(saved_event.id, tournament.id)
         saved_event = await Tournament.filter(name="Updated name").first()

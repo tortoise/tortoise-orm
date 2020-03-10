@@ -1,8 +1,5 @@
 -e ..
 
-# Optional dependencies
-pyyaml>=4.2b1
-
 ## Database Drivers
 asyncpg
 aiomysql
@@ -18,6 +15,8 @@ pip-tools
 ## Linter tools
 mypy
 flake8-isort
+flake8-comprehensions
+darglint
 pylint
 docutils
 pygments
@@ -43,12 +42,11 @@ python-rapidjson; implementation_name == "cpython"
 iso8601
 
 # Sample integration - Quart
-wsproto;python_version>="3.7"
-hypercorn;python_version>="3.7"
-quart;python_version>="3.7"
+quart
 
 # Sample integration - Sanic
 sanic
+ujson==1.35
 
 # Sample integration - Starlette
 starlette

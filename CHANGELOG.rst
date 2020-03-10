@@ -1,9 +1,24 @@
 .. _changelog:
 
+=========
 Changelog
 =========
-future
--------
+
+
+.. rst-class:: emphasize-children
+
+0.16
+====
+
+0.16.0
+------
+.. caution::
+   **This release drops support for Python 3.6:**
+
+   Tortoise ORM now requires a minimum of CPython 3.7
+
+New features:
+^^^^^^^^^^^^^
 * Model docstrings and ``#:`` comments directly preceding Field definitions are now used as docstrings and DDL descriptions.
 
   This is now cleaned and carried as part of the ``docstring`` parameter in ``describe_model(...)``
@@ -72,10 +87,43 @@ future
 
     # Now the models will have relationships built, so introspection of schema will be comprehensive
 
-- Fix default type of ``JSONField``
-- Allow usage of F expressions to in annotations. (#301)
+* Pydantic serialisation.
+
+  We now include native support for automatically building a Pydantic model from Tortoise ORM models.
+  This will correctly model:
+
+  * Data Fields
+  * Relationships (FK/O2O/M2M)
+  * Callables
+
+  At this stage we only suport serialisation, not deserialisation.
+
+  For mode information, please see :ref:`contrib_pydantic`
+
+- Allow usage of ``F`` expressions to in annotations. (#301)
 - Now negative number with ``limit(...)`` and ``offset(...)`` raise ``ParamsError``. (#306)
 - Allow usage of Function to ``queryset.update()``. (#308)
+
+Bugfixes:
+^^^^^^^^^
+- Fix default type of ``JSONField``
+
+Removals:
+^^^^^^^^^
+- Removed ``tortoise.aggregation`` as this was deprecated since 0.14.0
+- Removed ``start_transaction`` as it has been broken since 0.15.0
+- Removed support for Python 3.6 / PyPy-3.6, as it has been broken since 0.15.0
+
+  If you still need Python 3.6 support, you can install ``tortoise-orm<0.16`` as we will still backport critical bugfixes to the 0.15 branch for a while.
+
+.. rst-class:: emphasize-children
+
+0.15
+====
+
+0.15.19
+-------
+- Fix Function with ``source_field`` option. (#311)
 
 0.15.18
 -------
@@ -230,6 +278,12 @@ Deprecations:
 
   There is a known context confusion, specifically regarding nested transactions.
 
+
+.. rst-class:: emphasize-children
+
+0.14
+====
+
 0.14.2
 ------
 - A Field name of ``alias`` is now no longer reserved.
@@ -281,6 +335,10 @@ Breaking Changes:
   the new hash algorithm is much better in this regard.
 - Dropped support for Python 3.5
 
+.. rst-class:: emphasize-children
+
+0.13
+====
 
 0.13.12
 -------
@@ -409,6 +467,12 @@ Docs/examples:
 
 - Lots of small documentation cleanups
 
+
+.. rst-class:: emphasize-children
+
+0.12
+====
+
 0.12.7 (retracted)
 ------------------
 - Support connecting to PostgreSQL via Unix domain socket (simple case).
@@ -497,6 +561,11 @@ Docs/examples:
 
       guid = fields.UUIDField(pk=True)
 
+
+.. rst-class:: emphasize-children
+
+0.11
+====
 
 0.11.13
 -------
@@ -603,6 +672,11 @@ Docs/examples:
 - Numerous bug fixes
 - Removed known broken connection pooling
 
+.. rst-class:: emphasize-children
+
+0.10
+====
+
 0.10.11
 -------
 - Pre-build some query & filters statically, 15-30% speed up for smaller queries.
@@ -701,6 +775,12 @@ Docs/examples:
 - Exceptions have been further clarified
 - Support for CPython 3.7
 - Added support for MySQL/MariaDB
+
+
+.. rst-class:: emphasize-children
+
+0.9 & older
+===========
 
 0.9.4
 -----

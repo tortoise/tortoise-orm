@@ -424,8 +424,8 @@ class Employee(Model):
             "{}{} (to: {}) (from: {})".format(
                 level * "  ",
                 self,
-                ", ".join(sorted([str(val) async for val in self.talks_to])),
-                ", ".join(sorted([str(val) async for val in self.gets_talked_to])),
+                ", ".join(sorted([str(val) async for val in self.talks_to])),  # noqa
+                ", ".join(sorted([str(val) async for val in self.gets_talked_to])),  # noqa
             )
         ]
         async for member in self.team_members:
@@ -445,8 +445,8 @@ class Employee(Model):
             "{}{} (to: {}) (from: {})".format(
                 level * "  ",
                 self,
-                ", ".join(sorted([str(val) for val in self.talks_to])),
-                ", ".join(sorted([str(val) for val in self.gets_talked_to])),
+                ", ".join(sorted(str(val) for val in self.talks_to)),
+                ", ".join(sorted(str(val) for val in self.gets_talked_to)),
             )
         ]
         for member in self.team_members:
@@ -494,6 +494,7 @@ class StraightFields(Model):
     eyedee = fields.IntField(pk=True, description="Da PK")
     chars = fields.CharField(max_length=50, index=True, description="Some chars")
     blip = fields.CharField(max_length=50, default="BLIP")
+    nullable = fields.CharField(max_length=50, null=True)
 
     fk: fields.ForeignKeyNullableRelation["StraightFields"] = fields.ForeignKeyField(
         "models.StraightFields", related_name="fkrev", null=True, description="Tree!"
@@ -527,6 +528,7 @@ class SourceFields(Model):
     )
     #: A docstring comment
     blip = fields.CharField(max_length=50, default="BLIP", source_field="da_blip")
+    nullable = fields.CharField(max_length=50, null=True, source_field="some_nullable")
 
     fk: fields.ForeignKeyNullableRelation["SourceFields"] = fields.ForeignKeyField(
         "models.SourceFields",

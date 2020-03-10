@@ -79,7 +79,7 @@ def _pydantic_recursion_protector(
     """
     It is an inner function to protect pydantic model creator against cyclic recursion
     """
-    if not allow_cycles and cls in [c[0] for c in stack[:-1]]:
+    if not allow_cycles and cls in (c[0] for c in stack[:-1]):
         return None
 
     caller_fname = stack[0][1]
@@ -123,7 +123,7 @@ def pydantic_model_creator(
     _stack: tuple = (),
 ) -> Type[PydanticModel]:
     """
-    Function to build pydantic Model off Tortoise Model.
+    Function to build `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ off Tortoise Model.
 
     :param cls: The Tortoise Model
     :param name: Specify a custom name explicitly, instead of a generated name.
@@ -137,9 +137,10 @@ def pydantic_model_creator(
     :param sort_alphabetically: Sort the parameters alphabetically instead of Field-definition order.
 
         The default order would be:
-            Field definition order +
-            order of reverse relations (as discovered) +
-            order of computed functions (as provided).
+
+            * Field definition order +
+            * order of reverse relations (as discovered) +
+            * order of computed functions (as provided).
     """
 
     # Fully qualified class name
@@ -231,7 +232,7 @@ def pydantic_model_creator(
         }
     )
 
-    # Sort field map (Python 3.6 has ordered dictionary keys)
+    # Sort field map (Python 3.7+ has guaranteed ordered dictionary keys)
     if _sort_fields:
         # Sort Alphabetically
         field_map = {k: field_map[k] for k in sorted(field_map)}
@@ -259,13 +260,13 @@ def pydantic_model_creator(
                 pmodel = _pydantic_recursion_protector(
                     _model,
                     exclude=tuple(
-                        [str(v[prefix_len:]) for v in exclude if v.startswith(fname + ".")]
+                        str(v[prefix_len:]) for v in exclude if v.startswith(fname + ".")
                     ),
                     include=tuple(
-                        [str(v[prefix_len:]) for v in include if v.startswith(fname + ".")]
+                        str(v[prefix_len:]) for v in include if v.startswith(fname + ".")
                     ),
                     computed=tuple(
-                        [str(v[prefix_len:]) for v in computed if v.startswith(fname + ".")]
+                        str(v[prefix_len:]) for v in computed if v.startswith(fname + ".")
                     ),
                     stack=new_stack,
                     allow_cycles=_allow_cycles,
@@ -278,7 +279,7 @@ def pydantic_model_creator(
             if pmodel is None:
                 exclude += (fname,)
             # We need to rename if there are duplicate instances of this model
-            if cls in [c[0] for c in _stack]:
+            if cls in (c[0] for c in _stack):
                 _name = name or get_name()
 
             return pmodel
@@ -347,13 +348,13 @@ def pydantic_queryset_creator(
     sort_alphabetically: Optional[bool] = None,
 ) -> Type[PydanticListModel]:
     """
-    Function to build a pydantic Model list off Tortoise Model.
+    Function to build a `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ list off Tortoise Model.
 
     :param cls: The Tortoise Model to put in a list.
     :param name: Specify a custom name explicitly, instead of a generated name.
 
         The list generated name is currently naive and merely adds a "s" to the end
-         of the singular name.
+        of the singular name.
     :param exclude: Extra fields to exclude from the provided model.
     :param include: Extra fields to include from the provided model.
     :param computed: Extra computed fields to include from the provided model.
@@ -364,9 +365,10 @@ def pydantic_queryset_creator(
     :param sort_alphabetically: Sort the parameters alphabetically instead of Field-definition order.
 
         The default order would be:
-            Field definition order +
-            order of reverse relations (as discovered) +
-            order of computed functions (as provided).
+
+            * Field definition order +
+            * order of reverse relations (as discovered) +
+            * order of computed functions (as provided).
     """
 
     submodel = pydantic_model_creator(

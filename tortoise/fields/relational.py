@@ -98,27 +98,26 @@ class ReverseRelation(Generic[MODEL]):
 
     async def __aiter__(self) -> AsyncGenerator[Any, MODEL]:
         if not self._fetched:
-            self.related_objects = await self
-            self._fetched = True
+            self._set_result_for_query(await self)
 
         for val in self.related_objects:
             yield val
 
     def filter(self, *args: "Q", **kwargs: Any) -> "QuerySet[MODEL]":
         """
-        Returns QuerySet with related elements filtered by args/kwargs.
+        Returns a QuerySet with related elements filtered by args/kwargs.
         """
         return self._query.filter(*args, **kwargs)
 
     def all(self) -> "QuerySet[MODEL]":
         """
-        Returns QuerySet with all related elements.
+        Returns a QuerySet with all related elements.
         """
         return self._query
 
     def order_by(self, *orderings: str) -> "QuerySet[MODEL]":
         """
-        Returns QuerySet related elements in order.
+        Returns a QuerySet related elements in order.
         """
         return self._query.order_by(*orderings)
 
@@ -130,7 +129,7 @@ class ReverseRelation(Generic[MODEL]):
 
     def offset(self, offset: int) -> "QuerySet[MODEL]":
         """
-        Returns aQuerySet with all related elements offset by «offset».
+        Returns a QuerySet with all related elements offset by «offset».
         """
         return self._query.offset(offset)
 
@@ -163,6 +162,8 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         Adds one or more of ``instances`` to the relation.
 
         If it is already added, it will be silently ignored.
+
+        :raises OperationalError: If Object to add is not saved.
         """
         if not instances:
             return
@@ -242,6 +243,8 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
     ) -> None:
         """
         Removes one or more of ``instances`` from the relation.
+
+        :raises OperationalError: remove() was called with no instances.
         """
         db = using_db if using_db else self.model._meta.db
         if not instances:
