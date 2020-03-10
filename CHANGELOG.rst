@@ -102,6 +102,7 @@ New features:
 
 - Allow usage of ``F`` expressions to in annotations. (#301)
 - Now negative number with ``limit(...)`` and ``offset(...)`` raise ``ParamsError``. (#306)
+- Allow usage of Function to ``queryset.update()``. (#308)
 
 Bugfixes:
 ^^^^^^^^^

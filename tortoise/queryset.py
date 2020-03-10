@@ -685,10 +685,12 @@ class UpdateQuery(AwaitableQuery):
                     db_field = self.model._meta.fields_db_projection[key]
                 except KeyError:
                     raise FieldError(f"Field {key} is virtual and can not be updated")
-                if not isinstance(value, Term):
-                    value = executor.column_map[key](value, None)
-                else:
+                if isinstance(value, Term):
                     value = F.resolver_arithmetic_expression(self.model, value)[0]
+                elif isinstance(value, Function):
+                    value = value.resolve(self.model, table)["field"]
+                else:
+                    value = executor.column_map[key](value, None)
 
             self.query = self.query.set(db_field, value)
 
