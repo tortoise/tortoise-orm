@@ -8,7 +8,6 @@ from tortoise.exceptions import (
     ParamsError,
 )
 from tortoise.expressions import F
-from tortoise.functions import Length
 
 # TODO: Test the many exceptions in QuerySet
 # TODO: .filter(intnum_null=None) does not work as expected
