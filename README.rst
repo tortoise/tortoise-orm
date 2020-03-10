@@ -31,7 +31,7 @@ You can find docs at `ReadTheDocs <http://tortoise-orm.readthedocs.io/en/latest/
    Tortoise ORM is young project and breaking changes are to be expected.
    We keep a `Changelog <http://tortoise-orm.readthedocs.io/en/latest/CHANGELOG.html>`_ and it will have possible breakage clearly documented.
 
-Tortoise ORM is supported on CPython >= 3.6 for SQLite, MySQL and PostgreSQL, and PyPy3.6 >= 7.1 for SQLite and MySQL only.
+Tortoise ORM is supported on CPython >= 3.7 for SQLite, MySQL and PostgreSQL.
 
 Why was Tortoise ORM built?
 ---------------------------

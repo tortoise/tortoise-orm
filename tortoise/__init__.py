@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import warnings
+from contextvars import ContextVar
 from copy import deepcopy
 from inspect import isclass
 from typing import Any, Coroutine, Dict, List, Optional, Tuple, Type, Union, cast
@@ -26,11 +27,6 @@ from tortoise.models import Model
 from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
 from tortoise.utils import generate_schema_for_client
-
-try:
-    from contextvars import ContextVar
-except ImportError:  # pragma: nocoverage
-    from aiocontextvars import ContextVar  # type: ignore
 
 logger = logging.getLogger("tortoise")
 

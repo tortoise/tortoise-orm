@@ -1,4 +1,0 @@
-aiocontextvars==0.2.2 ; python_version < "3.7"
-contextvars==2.4 ; python_version < "3.7"
-immutables==0.9 ; python_version < "3.7"
-dataclasses==0.6 ; python_version<"3.7"

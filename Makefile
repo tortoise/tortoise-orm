@@ -18,8 +18,6 @@ help:
 up:
 	cd tests && CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements-pypy.txt requirements-pypy.in -U
 	cd tests && CUSTOM_COMPILE_COMMAND="make up" pip-compile -o requirements.txt requirements.in -U
-	cat tests/extra_requirements.txt >> tests/requirements-pypy.txt
-	cat tests/extra_requirements.txt >> tests/requirements.txt
 	sed -i "s/^-e .*/-e ./" tests/requirements.txt
 
 deps:

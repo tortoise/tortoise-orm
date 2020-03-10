@@ -123,7 +123,7 @@ def pydantic_model_creator(
     _stack: tuple = (),
 ) -> Type[PydanticModel]:
     """
-    Function to build pydantic Model off Tortoise Model.
+    Function to build `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ off Tortoise Model.
 
     :param cls: The Tortoise Model
     :param name: Specify a custom name explicitly, instead of a generated name.
@@ -137,9 +137,10 @@ def pydantic_model_creator(
     :param sort_alphabetically: Sort the parameters alphabetically instead of Field-definition order.
 
         The default order would be:
-            Field definition order +
-            order of reverse relations (as discovered) +
-            order of computed functions (as provided).
+
+            * Field definition order +
+            * order of reverse relations (as discovered) +
+            * order of computed functions (as provided).
     """
 
     # Fully qualified class name
@@ -231,7 +232,7 @@ def pydantic_model_creator(
         }
     )
 
-    # Sort field map (Python 3.6 has ordered dictionary keys)
+    # Sort field map (Python 3.7+ has guaranteed ordered dictionary keys)
     if _sort_fields:
         # Sort Alphabetically
         field_map = {k: field_map[k] for k in sorted(field_map)}
@@ -347,13 +348,13 @@ def pydantic_queryset_creator(
     sort_alphabetically: Optional[bool] = None,
 ) -> Type[PydanticListModel]:
     """
-    Function to build a pydantic Model list off Tortoise Model.
+    Function to build a `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ list off Tortoise Model.
 
     :param cls: The Tortoise Model to put in a list.
     :param name: Specify a custom name explicitly, instead of a generated name.
 
         The list generated name is currently naive and merely adds a "s" to the end
-         of the singular name.
+        of the singular name.
     :param exclude: Extra fields to exclude from the provided model.
     :param include: Extra fields to include from the provided model.
     :param computed: Extra computed fields to include from the provided model.
@@ -364,9 +365,10 @@ def pydantic_queryset_creator(
     :param sort_alphabetically: Sort the parameters alphabetically instead of Field-definition order.
 
         The default order would be:
-            Field definition order +
-            order of reverse relations (as discovered) +
-            order of computed functions (as provided).
+
+            * Field definition order +
+            * order of reverse relations (as discovered) +
+            * order of computed functions (as provided).
     """
 
     submodel = pydantic_model_creator(
