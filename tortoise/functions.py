@@ -1,7 +1,8 @@
 from typing import TYPE_CHECKING, Any, Optional, Type, Union, cast
 
 from pypika import Table, functions
-from pypika.terms import AggregateFunction, ArithmeticExpression
+from pypika.functions import DistinctOptionFunction
+from pypika.terms import ArithmeticExpression
 from pypika.terms import Function as BaseFunction
 
 from tortoise.exceptions import ConfigurationError
@@ -11,6 +12,7 @@ from tortoise.fields.relational import ForeignKeyFieldInstance, RelationalField
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
     from tortoise.fields.base import Field
+
 
 ##############################################################################
 # Base
@@ -123,7 +125,7 @@ class Aggregate(Function):
     :param is_distinct: Flag for aggregate with distinction
     """
 
-    database_func = AggregateFunction
+    database_func = DistinctOptionFunction
 
     def __init__(
         self, field: Union[str, F, ArithmeticExpression], *default_values: Any, distinct=False
