@@ -639,26 +639,3 @@ class Principal(Model):
     school: fields.OneToOneRelation[School] = fields.OneToOneField(
         "models.School", on_delete=fields.CASCADE, related_name="principal", to_field="id"
     )
-
-
-class Post(Model):
-    id = fields.IntField(pk=True)
-    name = fields.TextField()
-
-    comments = fields.ReverseRelation["Comment"]
-    favorites = fields.ReverseRelation["Favorite"]
-
-
-class Comment(Model):
-    id = fields.IntField(pk=True)
-    content = fields.TextField()
-    post: fields.ForeignKeyRelation[Post] = fields.ForeignKeyField(
-        "models.Post", related_name="comments"
-    )
-
-
-class Favorite(Model):
-    id = fields.IntField(pk=True)
-    post: fields.ForeignKeyRelation[Post] = fields.ForeignKeyField(
-        "models.Post", related_name="favorites"
-    )
