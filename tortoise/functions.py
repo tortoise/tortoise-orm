@@ -54,46 +54,45 @@ class Function:
     def _resolve_field_for_model(
         self, model: "Type[Model]", table: Table, field: str, *default_values: Any
     ) -> dict:
-        field_split = field.split("__")
-        if not field_split[1:]:
-            function_joins = []
-            if field_split[0] in model._meta.fetch_fields:
-                related_field = cast(RelationalField, model._meta.fields_map[field_split[0]])
-                related_field_meta = related_field.model_class._meta
-                join = (table, field_split[0], related_field)
-                function_joins.append(join)
-                field = related_field_meta.basetable[related_field_meta.db_pk_field]
+        joins = []
+        fields = field.split("__")
+
+        for iter_field in fields[:-1]:
+            if iter_field not in model._meta.fetch_fields:
+                raise ConfigurationError(f"{field} not resolvable")
+
+            related_field = cast(RelationalField, model._meta.fields_map[iter_field])
+            joins.append((table, iter_field, related_field))
+
+            model = related_field.model_class
+            related_table = related_field.model_class._meta.basetable
+            if isinstance(related_field, ForeignKeyFieldInstance):
+                # Only FK's can be to same table, so we only auto-alias FK join tables
+                related_table = related_table.as_(f"{table.get_table_name()}__{iter_field}")
+            table = related_table
+
+        last_field = fields[-1]
+        if last_field in model._meta.fetch_fields:
+            related_field = cast(RelationalField, model._meta.fields_map[last_field])
+            joins.append((table, last_field, related_field))
+            related_field_meta = related_field.model_class._meta
+            field = related_field_meta.basetable[related_field_meta.db_pk_field]
+        else:
+            field_object = model._meta.fields_map[last_field]
+            if field_object.source_field:
+                field = table[field_object.source_field]
             else:
-                field_object = model._meta.fields_map[field_split[0]]
-                if field_object.source_field:
-                    field = table[field_object.source_field]
-                else:
-                    field = table[field_split[0]]
-                if self.populate_field_object:
-                    self.field_object = model._meta.fields_map.get(field_split[0], None)
-                    if self.field_object:  # pragma: nobranch
-                        func = self.field_object.get_for_dialect(
-                            model._meta.db.capabilities.dialect, "function_cast"
-                        )
-                        if func:
-                            field = func(self.field_object, field)
+                field = table[last_field]
+            if self.populate_field_object:
+                self.field_object = model._meta.fields_map.get(last_field, None)
+                if self.field_object:  # pragma: nobranch
+                    func = self.field_object.get_for_dialect(
+                        model._meta.db.capabilities.dialect, "function_cast"
+                    )
+                    if func:
+                        field = func(self.field_object, field)
 
-            function_field = self._get_function_field(field, *default_values)
-            return {"joins": function_joins, "field": function_field}
-
-        if field_split[0] not in model._meta.fetch_fields:
-            raise ConfigurationError(f"{field} not resolvable")
-        related_field = cast(RelationalField, model._meta.fields_map[field_split[0]])
-        join = (table, field_split[0], related_field)
-        related_table = related_field.model_class._meta.basetable
-        if isinstance(related_field, ForeignKeyFieldInstance):
-            # Only FK's can be to same table, so we only auto-alias FK join tables
-            related_table = related_table.as_(f"{table.get_table_name()}__{field_split[0]}")
-        function = self._resolve_field_for_model(
-            related_field.model_class, related_table, "__".join(field_split[1:]), *default_values
-        )
-        function["joins"].append(join)
-        return function
+        return {"joins": joins, "field": self._get_function_field(field, *default_values)}
 
     def resolve(self, model: "Type[Model]", table: Table) -> dict:
         """
