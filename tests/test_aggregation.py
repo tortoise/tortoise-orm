@@ -1,4 +1,4 @@
-from tests.testmodels import Event, Team, Tournament
+from tests.testmodels import Event, MinRelation, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 from tortoise.functions import Count, Min, Sum
@@ -49,3 +49,28 @@ class TestAggregation(test.TestCase):
 
         with self.assertRaisesRegex(ConfigurationError, "name__id not resolvable"):
             await Event.all().annotate(tournament_test_id=Sum("name__id")).first()
+
+    async def test_aggregation_with_distinct(self):
+        tournament = await Tournament.create(name="New Tournament")
+        await Event.create(name="Event 1", tournament=tournament)
+        await Event.create(name="Event 2", tournament=tournament)
+        await MinRelation.create(tournament=tournament)
+
+        tournament_2 = await Tournament.create(name="New Tournament")
+        await Event.create(name="Event 1", tournament=tournament_2)
+        await Event.create(name="Event 2", tournament=tournament_2)
+        await Event.create(name="Event 3", tournament=tournament_2)
+        await MinRelation.create(tournament=tournament_2)
+        await MinRelation.create(tournament=tournament_2)
+
+        school_with_distinct_count = (
+            await Tournament.filter(id=tournament_2.id)
+            .annotate(
+                events_count=Count("events", distinct=True),
+                minrelations_count=Count("minrelations", distinct=True),
+            )
+            .first()
+        )
+
+        self.assertEqual(school_with_distinct_count.events_count, 3)
+        self.assertEqual(school_with_distinct_count.minrelations_count, 2)
