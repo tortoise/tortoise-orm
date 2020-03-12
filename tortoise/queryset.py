@@ -576,17 +576,19 @@ class QuerySet(AwaitableQuery[MODEL]):
     def _resolve_annotate(self) -> None:
         if not self._annotations:
             return
+
         table = self.model._meta.basetable
-        if any(
-            annotation.resolve(self.model, table)["field"].is_aggregate
-            for annotation in self._annotations.values()
-        ):
-            self.query = self.query.groupby(table[self.model._meta.db_pk_field])
+        annotation_info = {}
         for key, annotation in self._annotations.items():
-            annotation_info = annotation.resolve(self.model, table)
-            for join in annotation_info["joins"]:
-                table = self._join_table_by_field(*join)
-            self.query._select_other(annotation_info["field"].as_(key))
+            annotation_info[key] = annotation.resolve(self.model, table)
+
+        if any(info["field"].is_aggregate for info in annotation_info.values()):
+            self.query = self.query.groupby(table[self.model._meta.db_pk_field])
+
+        for key, info in annotation_info.items():
+            for join in info["joins"]:
+                self._join_table_by_field(*join)
+            self.query._select_other(info["field"].as_(key))
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery_all_fields)
@@ -683,10 +685,12 @@ class UpdateQuery(AwaitableQuery):
                     db_field = self.model._meta.fields_db_projection[key]
                 except KeyError:
                     raise FieldError(f"Field {key} is virtual and can not be updated")
-                if not isinstance(value, Term):
-                    value = executor.column_map[key](value, None)
-                else:
+                if isinstance(value, Term):
                     value = F.resolver_arithmetic_expression(self.model, value)[0]
+                elif isinstance(value, Function):
+                    value = value.resolve(self.model, table)["field"]
+                else:
+                    value = executor.column_map[key](value, None)
 
             self.query = self.query.set(db_field, value)
 
