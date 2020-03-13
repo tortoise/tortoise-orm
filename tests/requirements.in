@@ -54,3 +54,6 @@ uvicorn
 
 # Pydantic support
 pydantic
+
+# FastAPI support
+fastapi

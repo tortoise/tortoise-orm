@@ -7,7 +7,7 @@ from tortoise import fields
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
-    from tortoise.queryset import QuerySet
+    from tortoise.queryset import QuerySet, QuerySetSingle
 
 
 def _get_fetch_fields(
@@ -86,6 +86,32 @@ class PydanticModel(BaseModel):
         # Convert to pydantic object
         values = super().from_orm(obj)
         return values
+
+    @classmethod
+    async def from_queryset_single(cls, queryset: "QuerySetSingle") -> "PydanticModel":
+        """
+        Returns a serializable pydantic model instance that contains a list of models,
+        from the provided queryset.
+
+        This will prefetch all the relations automatically.
+
+        :param queryset: a queryset on the model this PydanticListModel is based on.
+        """
+        fetch_fields = _get_fetch_fields(cls, getattr(cls.__config__, "orig_model"))
+        return cls.from_orm(await queryset.prefetch_related(*fetch_fields))
+
+    @classmethod
+    async def from_queryset(cls, queryset: "QuerySet") -> "List[PydanticModel]":
+        """
+        Returns a serializable pydantic model instance that contains a list of models,
+        from the provided queryset.
+
+        This will prefetch all the relations automatically.
+
+        :param queryset: a queryset on the model this PydanticListModel is based on.
+        """
+        fetch_fields = _get_fetch_fields(cls, getattr(cls.__config__, "orig_model"))
+        return [cls.from_orm(e) for e in await queryset.prefetch_related(*fetch_fields)]
 
 
 class PydanticListModel(BaseModel):
