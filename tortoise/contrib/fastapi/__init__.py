@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel  # pylint: disable=E0611
 
 from tortoise import Tortoise
 from tortoise.exceptions import DoesNotExist

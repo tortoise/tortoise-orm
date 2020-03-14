@@ -19,5 +19,9 @@ class Users(models.Model):
         """
         return f"User {self.id}: {self.username}"
 
+    class PydanticMeta:
+        computed = ["pretty_name"]
+
 
 User_Pydantic = pydantic_model_creator(Users, name="User")
+UserIn_Pydantic = pydantic_model_creator(Users, name="UserIn", exclude_readonly=True)

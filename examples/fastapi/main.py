@@ -1,35 +1,12 @@
+# pylint: disable=E0611
 from typing import List
 
 from fastapi import FastAPI
 
-from tortoise import fields, models
+from models import User_Pydantic, UserIn_Pydantic, Users
 from tortoise.contrib.fastapi import HTTPNotFoundError, register_tortoise
-from tortoise.contrib.pydantic import pydantic_model_creator
 
-
-class Users(models.Model):
-    """
-    This contains users
-
-    Starting off very basic.
-    """
-
-    id = fields.IntField(pk=True)
-    #: This is a username
-    username = fields.CharField(max_length=20)
-
-    def pretty_name(self) -> str:
-        """
-        Returns a prettified name
-        """
-        return f"User {self.id}: {self.username}"
-
-    class PydanticMeta:
-        computed = ["pretty_name"]
-
-
-User_Pydantic = pydantic_model_creator(Users, name="User")
-app = FastAPI()
+app = FastAPI(title="Tortoise ORM FastAPI example")
 
 
 @app.get("/users", response_model=List[User_Pydantic])
@@ -38,10 +15,8 @@ async def get_users():
 
 
 @app.post("/users", response_model=User_Pydantic)
-async def create_user(user: User_Pydantic):
-    data = user.dict()
-    data.pop("id", None)
-    user_obj = await Users.create(**data)
+async def create_user(user: UserIn_Pydantic):
+    user_obj = await Users.create(**user.dict())
     return await User_Pydantic.from_tortoise_orm(user_obj)
 
 
@@ -52,6 +27,14 @@ async def get_user(user_id: int):
     return await User_Pydantic.from_queryset_single(Users.get(id=user_id))
 
 
+@app.post(
+    "/user/{user_id}", response_model=User_Pydantic, responses={404: {"model": HTTPNotFoundError}}
+)
+async def update_user(user_id: int, user: UserIn_Pydantic):
+    await Users.filter(id=user_id).update(**user.dict())
+    return await User_Pydantic.from_queryset_single(Users.get(id=user_id))
+
+
 register_tortoise(
-    app, db_url="sqlite://:memory:", modules={"models": ["__main__"]}, generate_schemas=True
+    app, db_url="sqlite://:memory:", modules={"models": ["models"]}, generate_schemas=True
 )
