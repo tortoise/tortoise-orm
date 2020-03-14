@@ -1,12 +1,17 @@
 # pylint: disable=E0611
 from typing import List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
 from models import User_Pydantic, UserIn_Pydantic, Users
 from tortoise.contrib.fastapi import HTTPNotFoundError, register_tortoise
 
 app = FastAPI(title="Tortoise ORM FastAPI example")
+
+
+class Status(BaseModel):
+    message: str
 
 
 @app.get("/users", response_model=List[User_Pydantic])
@@ -33,6 +38,14 @@ async def get_user(user_id: int):
 async def update_user(user_id: int, user: UserIn_Pydantic):
     await Users.filter(id=user_id).update(**user.dict())
     return await User_Pydantic.from_queryset_single(Users.get(id=user_id))
+
+
+@app.delete("/user/{user_id}", response_model=Status, responses={404: {"model": HTTPNotFoundError}})
+async def delete_user(user_id: int):
+    deleted_count = await Users.filter(id=user_id).delete()
+    if not deleted_count:
+        raise HTTPException(status_code=404, detail={"message": f"User {user_id} not found"})
+    return Status(message=f"Deleted user {user_id}")
 
 
 register_tortoise(
