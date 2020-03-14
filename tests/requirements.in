@@ -28,7 +28,7 @@ tox
 asynctest
 green
 coveralls
-pytest
+pytest<5.4
 nose2
 pytest-xdist
 pytest-cov
