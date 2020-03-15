@@ -96,6 +96,8 @@ class TestPydantic(test.TestCase):
                         },
                     },
                 },
+                "required": [],
+                "additionalProperties": False,
             },
         )
 
@@ -185,6 +187,8 @@ class TestPydantic(test.TestCase):
                         },
                     },
                 },
+                "required": [],
+                "additionalProperties": False,
             },
         )
 
@@ -265,6 +269,8 @@ class TestPydantic(test.TestCase):
                         },
                     },
                 },
+                "required": [],
+                "additionalProperties": False,
             },
         )
 
@@ -348,6 +354,8 @@ class TestPydantic(test.TestCase):
                         },
                     },
                 },
+                "required": [],
+                "additionalProperties": False,
             },
         )
 
@@ -622,6 +630,8 @@ class TestPydantic(test.TestCase):
                         },
                     },
                 },
+                "required": [],
+                "additionalProperties": False,
             },
         )
 
@@ -818,6 +828,8 @@ class TestPydanticCycle(test.TestCase):
                         },
                     },
                 },
+                "required": [],
+                "additionalProperties": False,
             },
         )
 

@@ -44,7 +44,7 @@ async def update_user(user_id: int, user: UserIn_Pydantic):
 async def delete_user(user_id: int):
     deleted_count = await Users.filter(id=user_id).delete()
     if not deleted_count:
-        raise HTTPException(status_code=404, detail={"message": f"User {user_id} not found"})
+        raise HTTPException(status_code=404, detail=f"User {user_id} not found")
     return Status(message=f"Deleted user {user_id}")
 
 

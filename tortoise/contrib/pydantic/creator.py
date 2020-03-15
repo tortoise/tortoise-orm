@@ -193,7 +193,13 @@ def pydantic_model_creator(
     annotations = get_annotations(cls)
 
     # Properties and their annotations` store
-    properties: Dict[str, Any] = {"__annotations__": {}}
+    pconfig: Type[pydantic.main.BaseConfig] = type(
+        "Config",
+        (PydanticModel.Config,),
+        {"title": name or cls.__name__, "extra": pydantic.main.Extra.forbid, "fields": {},},
+    )
+    pannotations: Dict[str, Type] = {}
+    properties: Dict[str, Any] = {"__annotations__": pannotations, "Config": pconfig}
 
     # Get model description
     model_description = tortoise.Tortoise.describe_model(cls, serializable=False)
@@ -250,6 +256,7 @@ def pydantic_model_creator(
     # Process fields
     for fname, fdesc in field_map.items():
         comment = ""
+        fconfig: Dict[str, Any] = {}
 
         field_type = fdesc["field_type"]
 
@@ -297,7 +304,7 @@ def pydantic_model_creator(
         ):
             model = get_submodel(fdesc["python_type"])
             if model:
-                properties["__annotations__"][fname] = model
+                pannotations[fname] = model
 
         # Backward FK and ManyToMany fields are list of embedded schemas
         elif (
@@ -306,7 +313,7 @@ def pydantic_model_creator(
         ):
             model = get_submodel(fdesc["python_type"])
             if model:
-                properties["__annotations__"][fname] = List[model]  # type: ignore
+                pannotations[fname] = List[model]  # type: ignore
 
         # Computed fields as methods
         elif field_type is callable:
@@ -314,28 +321,31 @@ def pydantic_model_creator(
             annotation = get_annotations(cls, func).get("return", None)
             comment = _cleandoc(func)
             if annotation is not None:
-                properties["__annotations__"][fname] = annotation
+                pannotations[fname] = annotation
 
         # Any other tortoise fields
         else:
             annotation = annotations.get(fname, None)
-            properties["__annotations__"][fname] = annotation or fdesc["python_type"]
+            ptype = fdesc["python_type"]
+            if fdesc.get("nullable"):
+                ptype = Optional[ptype]
+                fconfig["nullable"] = True
+            pannotations[fname] = annotation or ptype
+            if fdesc.get("default"):
+                properties[fname] = fdesc.get("default")
 
         # Create a schema for the field
-        if fname in properties["__annotations__"]:
+        if fname in pannotations:
             # Use comment if we have and enabled or use the field description if specified
             description = comment or _br_it(fdesc.get("docstring") or fdesc["description"] or "")
-            properties[fname] = pydantic.Field(
-                None, description=description, title=fname.replace("_", " ").title()
-            )
+            fconfig["description"] = description
+            fconfig["title"] = fname.replace("_", " ").title()
+            pconfig.fields[fname] = fconfig
 
     # Creating Pydantic class for the properties generated before
     model = cast(Type[PydanticModel], type(_name, (PydanticModel,), properties))
     # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)
-    if not name:
-        # The title of the model to hide the hash postfix
-        setattr(model.__config__, "title", cls.__name__)
     # Store the base class
     setattr(model.__config__, "orig_model", cls)
 

@@ -10,7 +10,7 @@ from tortoise.exceptions import DoesNotExist
 
 
 class HTTPNotFoundError(BaseModel):
-    message: str
+    detail: str
 
 
 def register_tortoise(
@@ -103,4 +103,4 @@ def register_tortoise(
 
         @app.exception_handler(DoesNotExist)
         async def doesnotexist_exception_handler(request: Request, exc: DoesNotExist):
-            return JSONResponse(status_code=404, content={"message": str(exc)},)
+            return JSONResponse(status_code=404, content={"detail": str(exc)},)
