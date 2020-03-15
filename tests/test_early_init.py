@@ -6,7 +6,7 @@ from tortoise.models import Model
 
 class Tournament(Model):
     id = fields.IntField(pk=True)
-    name = fields.TextField()
+    name = fields.CharField(max_length=100)
     created_at = fields.DatetimeField(auto_now_add=True)
 
     events: fields.ReverseRelation["Event"]
@@ -25,7 +25,7 @@ class Event(Model):
     id = fields.IntField(pk=True)
     #: The Event NAME
     #:  It's pretty important
-    name = fields.TextField()
+    name = fields.CharField(max_length=255)
     created_at = fields.DatetimeField(auto_now_add=True)
     tournament: fields.ForeignKeyNullableRelation[Tournament] = fields.ForeignKeyField(
         "models.Tournament", related_name="events", null=True
@@ -47,14 +47,22 @@ class TestBasic(test.TestCase):
                 "type": "object",
                 "description": "The Event model docstring.<br/><br/>This is multiline docs.",
                 "properties": {
-                    "id": {"title": "Id", "type": "integer"},
+                    "id": {"title": "Id", "type": "integer", "maximum": 2147483647, "minimum": 1},
                     "name": {
                         "title": "Name",
                         "type": "string",
                         "description": "The Event NAME<br/>It's pretty important",
+                        "maxLength": 255,
                     },
-                    "created_at": {"title": "Created At", "type": "string", "format": "date-time"},
+                    "created_at": {
+                        "title": "Created At",
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": True,
+                    },
                 },
+                "required": ["id", "name", "created_at"],
+                "additionalProperties": False,
             },
         )
         self.assertEqual(
@@ -80,13 +88,14 @@ class TestBasic(test.TestCase):
                     "default": None,
                     "description": None,
                     "docstring": None,
+                    "constraints": {"ge": 1, "le": 2147483647},
                 },
                 "data_fields": [
                     {
                         "name": "name",
-                        "field_type": "TextField",
+                        "field_type": "CharField",
                         "db_column": "name",
-                        "db_field_types": {"": "TEXT", "mysql": "LONGTEXT"},
+                        "db_field_types": {"": "VARCHAR(255)"},
                         "python_type": "str",
                         "generated": False,
                         "nullable": False,
@@ -95,6 +104,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "The Event NAME",
                         "docstring": "The Event NAME\nIt's pretty important",
+                        "constraints": {"max_length": 255},
                     },
                     {
                         "name": "created_at",
@@ -109,6 +119,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {"readOnly": True},
                     },
                 ],
                 "fk_fields": [
@@ -124,6 +135,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {},
                     }
                 ],
                 "backward_fk_fields": [],
@@ -143,13 +155,19 @@ class TestBasic(test.TestCase):
                 "type": "object",
                 "description": "The Event model docstring.<br/><br/>This is multiline docs.",
                 "properties": {
-                    "id": {"title": "Id", "type": "integer"},
+                    "id": {"title": "Id", "type": "integer", "maximum": 2147483647, "minimum": 1},
                     "name": {
                         "title": "Name",
                         "type": "string",
                         "description": "The Event NAME<br/>It's pretty important",
+                        "maxLength": 255,
                     },
-                    "created_at": {"title": "Created At", "type": "string", "format": "date-time"},
+                    "created_at": {
+                        "title": "Created At",
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": True,
+                    },
                     "tournament": {
                         "title": "Tournament",
                         "allOf": [{"$ref": "#/definitions/Tournament"}],
@@ -160,16 +178,26 @@ class TestBasic(test.TestCase):
                         "title": "Tournament",
                         "type": "object",
                         "properties": {
-                            "id": {"title": "Id", "type": "integer"},
-                            "name": {"title": "Name", "type": "string"},
+                            "id": {
+                                "title": "Id",
+                                "type": "integer",
+                                "maximum": 2147483647,
+                                "minimum": 1,
+                            },
+                            "name": {"title": "Name", "type": "string", "maxLength": 100},
                             "created_at": {
                                 "title": "Created At",
                                 "type": "string",
                                 "format": "date-time",
+                                "readOnly": True,
                             },
                         },
+                        "required": ["id", "name", "created_at"],
+                        "additionalProperties": False,
                     }
                 },
+                "required": ["id", "name", "created_at", "tournament"],
+                "additionalProperties": False,
             },
         )
         self.assertEqual(
@@ -195,13 +223,14 @@ class TestBasic(test.TestCase):
                     "default": None,
                     "description": None,
                     "docstring": None,
+                    "constraints": {"ge": 1, "le": 2147483647},
                 },
                 "data_fields": [
                     {
                         "name": "name",
-                        "field_type": "TextField",
+                        "field_type": "CharField",
                         "db_column": "name",
-                        "db_field_types": {"": "TEXT", "mysql": "LONGTEXT"},
+                        "db_field_types": {"": "VARCHAR(255)"},
                         "python_type": "str",
                         "generated": False,
                         "nullable": False,
@@ -210,6 +239,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "The Event NAME",
                         "docstring": "The Event NAME\nIt's pretty important",
+                        "constraints": {"max_length": 255},
                     },
                     {
                         "name": "created_at",
@@ -224,6 +254,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {"readOnly": True},
                     },
                     {
                         "name": "tournament_id",
@@ -238,6 +269,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [
@@ -253,6 +285,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {},
                     }
                 ],
                 "backward_fk_fields": [],
