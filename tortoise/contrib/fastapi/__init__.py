@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel  # pylint: disable=E0611
 
 from tortoise import Tortoise
-from tortoise.exceptions import DoesNotExist
+from tortoise.exceptions import DoesNotExist, IntegrityError
 
 
 class HTTPNotFoundError(BaseModel):
@@ -78,7 +78,7 @@ def register_tortoise(
         True to generate schema immediately. Only useful for dev environments
         or SQLite ``:memory:`` databases
     add_exception_handlers:
-        Should we add exception handlers for DoesNotExist?
+        Should we add exception handlers for ``DoesNotExist`` & ``IntegrityError``?
 
     Raises
     ------
@@ -103,4 +103,11 @@ def register_tortoise(
 
         @app.exception_handler(DoesNotExist)
         async def doesnotexist_exception_handler(request: Request, exc: DoesNotExist):
-            return JSONResponse(status_code=404, content={"detail": str(exc)},)
+            return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+        @app.exception_handler(IntegrityError)
+        async def integrityerror_exception_handler(request: Request, exc: IntegrityError):
+            return JSONResponse(
+                status_code=422,
+                content={"detail": {"loc": [], "msg": str(exc), "type": "IntegrityError"}},
+            )

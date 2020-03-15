@@ -196,7 +196,7 @@ def pydantic_model_creator(
     pconfig: Type[pydantic.main.BaseConfig] = type(
         "Config",
         (PydanticModel.Config,),
-        {"title": name or cls.__name__, "extra": pydantic.main.Extra.forbid, "fields": {},},
+        {"title": name or cls.__name__, "extra": pydantic.main.Extra.forbid, "fields": {}},
     )
     pannotations: Dict[str, Type] = {}
     properties: Dict[str, Any] = {"__annotations__": pannotations, "Config": pconfig}
@@ -326,13 +326,14 @@ def pydantic_model_creator(
         # Any other tortoise fields
         else:
             annotation = annotations.get(fname, None)
+            fconfig.update(fdesc["constraints"])
             ptype = fdesc["python_type"]
             if fdesc.get("nullable"):
-                ptype = Optional[ptype]
                 fconfig["nullable"] = True
-            pannotations[fname] = annotation or ptype
-            if fdesc.get("default"):
-                properties[fname] = fdesc.get("default")
+            if fdesc.get("nullable") or fdesc.get("default"):
+                ptype = Optional[ptype]
+            if not (exclude_readonly and fdesc["constraints"].get("readOnly") is True):
+                pannotations[fname] = annotation or ptype
 
         # Create a schema for the field
         if fname in pannotations:
