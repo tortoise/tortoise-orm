@@ -8,7 +8,7 @@ from pypika.terms import Function as BaseFunction
 from tortoise.exceptions import ConfigurationError
 from tortoise.expressions import F
 from tortoise.fields.relational import ForeignKeyFieldInstance, RelationalField
-from tortoise.query_utils import Q, QueryModifier, _get_joins_for_related_field
+from tortoise.query_utils import Q, QueryModifier
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -57,6 +57,7 @@ class Function:
     ) -> dict:
         joins = []
         fields = field.split("__")
+        default_model = model
 
         for iter_field in fields[:-1]:
             if iter_field not in model._meta.fetch_fields:
@@ -93,7 +94,7 @@ class Function:
                     if func:
                         field = func(self.field_object, field)
 
-        ret = self._get_function_field(model, field, *default_values)
+        ret = self._get_function_field(default_model, field, *default_values)
         ret["joins"] = reversed(joins)
         return ret
 
