@@ -304,6 +304,11 @@ def pydantic_model_creator(
         ):
             model = get_submodel(fdesc["python_type"])
             if model:
+                if fdesc.get("nullable"):
+                    fconfig["nullable"] = True
+                if fdesc.get("nullable") or fdesc.get("default"):
+                    model = Optional[model]
+
                 pannotations[fname] = model
 
         # Backward FK and ManyToMany fields are list of embedded schemas

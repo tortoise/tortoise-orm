@@ -170,6 +170,7 @@ class TestBasic(test.TestCase):
                     },
                     "tournament": {
                         "title": "Tournament",
+                        "nullable": True,
                         "allOf": [{"$ref": "#/definitions/Tournament"}],
                     },
                 },
@@ -196,7 +197,7 @@ class TestBasic(test.TestCase):
                         "additionalProperties": False,
                     }
                 },
-                "required": ["id", "name", "created_at", "tournament"],
+                "required": ["id", "name", "created_at"],
                 "additionalProperties": False,
             },
         )
