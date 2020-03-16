@@ -88,7 +88,7 @@ class TestAggregation(test.TestCase):
             await Tournament.all()
             .annotate(
                 all=Count("events", _filter=Q(name__in=["New Tournament"])),
-                no=Count("events", _filter=Q(id__gte=3)),
+                no=Count("events", _filter=Q(name__not="New Tournament")),
                 event1=Sum("events__event_id", _filter=Q(events__name="Event 1")),
                 event2=Min("events__event_id", _filter=Q(events__name__not="Event 1")),
             )
