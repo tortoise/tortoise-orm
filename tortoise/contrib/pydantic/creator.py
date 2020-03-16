@@ -198,7 +198,7 @@ def pydantic_model_creator(
         (PydanticModel.Config,),
         {"title": name or cls.__name__, "extra": pydantic.main.Extra.forbid, "fields": {}},
     )
-    pannotations: Dict[str, Type] = {}
+    pannotations: Dict[str, Optional[Type]] = {}
     properties: Dict[str, Any] = {"__annotations__": pannotations, "Config": pconfig}
 
     # Get model description
