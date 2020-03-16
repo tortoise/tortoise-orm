@@ -588,6 +588,12 @@ class QuerySet(AwaitableQuery[MODEL]):
         for key, info in annotation_info.items():
             for join in info["joins"]:
                 self._join_table_by_field(*join)
+
+            for join in info.get("filter_joins", []):
+                if join[0] not in self._joined_tables:
+                    self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
+                    self._joined_tables.append(join[0])
+
             self.query._select_other(info["field"].as_(key))
 
     def _make_query(self) -> None:

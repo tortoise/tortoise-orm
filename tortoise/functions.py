@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Any, Optional, Type, Union, cast
 
-from pypika import Table, functions
+from pypika import Case, Table, functions
 from pypika.functions import DistinctOptionFunction
 from pypika.terms import ArithmeticExpression
 from pypika.terms import Function as BaseFunction
@@ -8,6 +8,7 @@ from pypika.terms import Function as BaseFunction
 from tortoise.exceptions import ConfigurationError
 from tortoise.expressions import F
 from tortoise.fields.relational import ForeignKeyFieldInstance, RelationalField
+from tortoise.query_utils import Q, QueryModifier, _get_joins_for_related_field
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -48,11 +49,11 @@ class Function:
         self.field_object: "Optional[Field]" = None
         self.default_values = default_values
 
-    def _get_function_field(self, field: str, *default_values):
-        return self.database_func(field, *default_values)
+    def _get_function_field(self, model: "Type[Model]", field: str, *default_values):
+        return {"field": self.database_func(field, *default_values)}
 
     def _resolve_field_for_model(
-        self, model: "Type[Model]", table: Table, field: str, *default_values: Any
+        self, model: "Type[Model]", table: Table, field: str, *default_values
     ) -> dict:
         joins = []
         fields = field.split("__")
@@ -92,7 +93,9 @@ class Function:
                     if func:
                         field = func(self.field_object, field)
 
-        return {"joins": joins, "field": self._get_function_field(field, *default_values)}
+        ret = self._get_function_field(model, field, *default_values)
+        ret["joins"] = reversed(joins)
+        return ret
 
     def resolve(self, model: "Type[Model]", table: Table) -> dict:
         """
@@ -106,7 +109,6 @@ class Function:
 
         if isinstance(self.field, str):
             function = self._resolve_field_for_model(model, table, self.field, *self.default_values)
-            function["joins"] = reversed(function["joins"])
             return function
         else:
             field, field_object = F.resolver_arithmetic_expression(model, self.field)
@@ -127,16 +129,33 @@ class Aggregate(Function):
     database_func = DistinctOptionFunction
 
     def __init__(
-        self, field: Union[str, F, ArithmeticExpression], *default_values: Any, distinct=False
+        self,
+        field: Union[str, F, ArithmeticExpression],
+        *default_values: Any,
+        distinct=False,
+        _filter: Optional[Q] = None,
     ) -> None:
         super().__init__(field, *default_values)
         self.distinct = distinct
+        self.filter = _filter
 
-    def _get_function_field(self, field: str, *default_values):
-        if self.distinct:
-            return self.database_func(field, *default_values).distinct()
+    def _get_function_field(self, model: "Type[Model]", field: str, *default_values) -> dict:
+        ret = {}
+
+        if self.filter:
+            modifier = QueryModifier()
+            modifier &= self.filter.resolve(model, {}, {}, model._meta.basetable)
+            where_criterion, ret["filter_joins"], having_criterion = modifier.get_query_modifiers()
+            field = Case().when(where_criterion, field).else_(None)
         else:
-            return self.database_func(field, *default_values)
+            ret["filter_joins"] = []
+
+        if self.distinct:
+            ret["field"] = self.database_func(field, *default_values).distinct()
+        else:
+            ret["field"] = self.database_func(field, *default_values)
+
+        return ret
 
 
 ##############################################################################
