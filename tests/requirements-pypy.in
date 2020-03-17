@@ -8,7 +8,7 @@ aiomysql
 
 ## Test tools
 asynctest
-pytest
+pytest<5.4
 pytest-xdist
 pytest-cov
 coveralls

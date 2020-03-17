@@ -172,6 +172,7 @@ class Tortoise:
                 "default": default_name(field.default) if serializable else field.default,
                 "description": field.description,
                 "docstring": field.docstring,
+                "constraints": field.constraints,
             }
 
             # Delete db fields for non-db fields
@@ -378,9 +379,7 @@ class Tortoise:
                             model, f"{field}_id", fk_object.null, fk_object.description,
                         )
                         fk_relation.to_field_instance = fk_object.to_field_instance
-                        related_model._meta.add_field(
-                            cast(str, backward_relation_name), fk_relation
-                        )
+                        related_model._meta.add_field(backward_relation_name, fk_relation)
 
                 for field in model._meta.o2o_fields:
                     o2o_object = cast(OneToOneFieldInstance, model._meta.fields_map[field])
@@ -440,9 +439,7 @@ class Tortoise:
                             model, f"{field}_id", null=True, description=o2o_object.description,
                         )
                         o2o_relation.to_field_instance = o2o_object.to_field_instance
-                        related_model._meta.add_field(
-                            cast(str, backward_relation_name), o2o_relation
-                        )
+                        related_model._meta.add_field(backward_relation_name, o2o_relation)
 
                     if o2o_object.pk:
                         pk_attr_changed = True
