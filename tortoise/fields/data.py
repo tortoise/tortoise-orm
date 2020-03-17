@@ -484,9 +484,11 @@ class IntEnumFieldInstance(SmallIntField):
         return self.enum_type(value) if value is not None else None
 
     def to_db_value(
-        self, value: Union[IntEnum, None], instance: "Union[Type[Model], Model]"
+        self, value: Union[IntEnum, None, int], instance: "Union[Type[Model], Model]"
     ) -> Union[int, None]:
-        return int(value.value) if value is not None else None
+        if isinstance(value, IntEnum):
+            return int(value.value)
+        return value
 
 
 IntEnumType = TypeVar("IntEnumType", bound=IntEnum)
