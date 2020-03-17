@@ -91,12 +91,12 @@ class PydanticModel(BaseModel):
     @classmethod
     async def from_queryset_single(cls, queryset: "QuerySetSingle") -> "PydanticModel":
         """
-        Returns a serializable pydantic model instance that contains a list of models,
+        Returns a serializable pydantic model instance for a single model
         from the provided queryset.
 
         This will prefetch all the relations automatically.
 
-        :param queryset: a queryset on the model this PydanticListModel is based on.
+        :param queryset: a queryset on the model this PydanticModel is based on.
         """
         fetch_fields = _get_fetch_fields(cls, getattr(cls.__config__, "orig_model"))
         return cls.from_orm(await queryset.prefetch_related(*fetch_fields))
@@ -109,7 +109,7 @@ class PydanticModel(BaseModel):
 
         This will prefetch all the relations automatically.
 
-        :param queryset: a queryset on the model this PydanticListModel is based on.
+        :param queryset: a queryset on the model this PydanticModel is based on.
         """
         fetch_fields = _get_fetch_fields(cls, getattr(cls.__config__, "orig_model"))
         return [cls.from_orm(e) for e in await queryset.prefetch_related(*fetch_fields)]

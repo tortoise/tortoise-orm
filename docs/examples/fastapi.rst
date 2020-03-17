@@ -1,8 +1,8 @@
 .. _example_fastapi:
 
-===============
-FastAPI Example
-===============
+================
+FastAPI Examples
+================
 
 This is an example of the  :ref:`contrib_fastapi`
 
@@ -13,10 +13,15 @@ This is an example of the  :ref:`contrib_fastapi`
     uvicorn main:app --reload
 
 
+.. rst-class:: emphasize-children
+
+Basic non-relational example
+============================
+
 models.py
-=========
+---------
 .. literalinclude::  ../../examples/fastapi/models.py
 
 main.py
-=======
+-------
 .. literalinclude::  ../../examples/fastapi/main.py

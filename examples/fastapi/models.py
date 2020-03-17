@@ -25,12 +25,6 @@ class Users(models.Model):
             return f"{self.name or ''} {self.family_name or ''}".strip()
         return self.username
 
-    def set_password(self, password: str, repeat_password: str) -> bool:
-        """
-        Sets the password_hash
-        """
-        pass
-
     class PydanticMeta:
         computed = ["full_name"]
         exclude = ["password_hash"]

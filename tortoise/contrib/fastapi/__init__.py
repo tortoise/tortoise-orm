@@ -20,7 +20,7 @@ def register_tortoise(
     db_url: Optional[str] = None,
     modules: Optional[Dict[str, List[str]]] = None,
     generate_schemas: bool = False,
-    add_exception_handlers: bool = True,
+    add_exception_handlers: bool = False,
 ) -> None:
     """
     Registers ``startup`` and ``shutdown`` events to set-up and tear-down Tortoise-ORM
@@ -78,7 +78,8 @@ def register_tortoise(
         True to generate schema immediately. Only useful for dev environments
         or SQLite ``:memory:`` databases
     add_exception_handlers:
-        Should we add exception handlers for ``DoesNotExist`` & ``IntegrityError``?
+        True to add some automatic exception handlers for ``DoesNotExist`` & ``IntegrityError``.
+        This is not recommended for production systems as it may leak data.
 
     Raises
     ------
