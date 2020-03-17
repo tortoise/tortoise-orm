@@ -61,6 +61,18 @@ class QuerySetSingle(Protocol[T_co]):
     def __await__(self) -> Generator[Any, None, T_co]:
         ...  # pragma: nocoverage
 
+    def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySetSingle[MODEL]":
+        ...  # pragma: nocoverage
+
+    def annotate(self, **kwargs: Function) -> "QuerySetSingle[MODEL]":
+        ...  # pragma: nocoverage
+
+    def values_list(self, *fields_: str, flat: bool = False) -> "ValuesListQuery":
+        ...  # pragma: nocoverage
+
+    def values(self, *args: str, **kwargs: str) -> "ValuesQuery":
+        ...  # pragma: nocoverage
+
 
 class AwaitableQuery(Generic[MODEL]):
     __slots__ = ("_joined_tables", "query", "model", "_db", "capabilities")
