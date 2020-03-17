@@ -12,6 +12,12 @@ Changelog
 0.16.1
 ------
 * ``QuerySetSingle`` now has better code completion
+* Created Pydantic models will now have the basic validation elements:
+
+  * ``required`` is correctly populated for required fields
+  * ``nullable`` is added to the schema where nulls are accepted
+  * ``maxLength`` for CharFields
+  * ``minimum`` & ``maximum`` values for integer fields
 
 
 0.16.0

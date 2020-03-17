@@ -195,6 +195,13 @@ class Field(metaclass=_FieldMeta):
         """
         return self.default is None and not self.null and not self.generated
 
+    @property
+    def constraints(self) -> dict:
+        """
+        Returns a dict with constraints defined in the Pydantic/JSONSchema format.
+        """
+        return {}
+
     def _get_dialects(self) -> Dict[str, dict]:
         return {
             dialect[4:]: {

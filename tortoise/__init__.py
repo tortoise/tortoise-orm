@@ -172,6 +172,7 @@ class Tortoise:
                 "default": default_name(field.default) if serializable else field.default,
                 "description": field.description,
                 "docstring": field.docstring,
+                "constraints": field.constraints,
             }
 
             # Delete db fields for non-db fields

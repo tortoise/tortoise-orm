@@ -73,6 +73,7 @@ class TestBasic(test.TestCase):
                     "default": None,
                     "description": "Da PK",
                     "docstring": None,
+                    "constraints": {"ge": 1, "le": 2147483647},
                 },
                 "data_fields": [
                     {
@@ -88,6 +89,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Some chars",
                         "docstring": None,
+                        "constraints": {"max_length": 50},
                     },
                     {
                         "name": "blip",
@@ -102,6 +104,7 @@ class TestBasic(test.TestCase):
                         "default": "BLIP",
                         "description": None,
                         "docstring": None,
+                        "constraints": {"max_length": 50},
                     },
                     {
                         "name": "nullable",
@@ -116,6 +119,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {"max_length": 50},
                     },
                     {
                         "name": "fk_id",
@@ -130,6 +134,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                     {
                         "db_column": "o2o_id",
@@ -144,6 +149,7 @@ class TestBasic(test.TestCase):
                         "nullable": True,
                         "python_type": "int",
                         "unique": True,
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [
@@ -159,6 +165,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
+                        "constraints": {},
                     }
                 ],
                 "backward_fk_fields": [
@@ -173,6 +180,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
+                        "constraints": {},
                     }
                 ],
                 "o2o_fields": [
@@ -188,6 +196,7 @@ class TestBasic(test.TestCase):
                         "python_type": "models.StraightFields",
                         "raw_field": "o2o_id",
                         "unique": True,
+                        "constraints": {},
                     }
                 ],
                 "backward_o2o_fields": [
@@ -202,6 +211,7 @@ class TestBasic(test.TestCase):
                         "nullable": True,
                         "python_type": "models.StraightFields",
                         "unique": False,
+                        "constraints": {},
                     }
                 ],
                 "m2m_fields": [
@@ -216,6 +226,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "M2M to myself",
                         "docstring": None,
+                        "constraints": {},
                     },
                     {
                         "name": "rel_from",
@@ -228,6 +239,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "M2M to myself",
                         "docstring": None,
+                        "constraints": {},
                     },
                 ],
             },
@@ -259,6 +271,7 @@ class TestBasic(test.TestCase):
                     "default": None,
                     "description": "Da PK",
                     "docstring": None,
+                    "constraints": {"ge": 1, "le": 2147483647},
                 },
                 "data_fields": [
                     {
@@ -274,6 +287,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Some chars",
                         "docstring": None,
+                        "constraints": {"max_length": 50},
                     },
                     {
                         "name": "blip",
@@ -288,6 +302,7 @@ class TestBasic(test.TestCase):
                         "default": "BLIP",
                         "description": None,
                         "docstring": None,
+                        "constraints": {"max_length": 50},
                     },
                     {
                         "name": "nullable",
@@ -302,6 +317,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {"max_length": 50},
                     },
                     {
                         "name": "fk_id",
@@ -316,6 +332,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                     {
                         "name": "o2o_id",
@@ -330,6 +347,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Line",
                         "docstring": None,
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [
@@ -345,6 +363,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
+                        "constraints": {},
                     }
                 ],
                 "backward_fk_fields": [
@@ -359,6 +378,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
+                        "constraints": {},
                     }
                 ],
                 "o2o_fields": [
@@ -374,6 +394,7 @@ class TestBasic(test.TestCase):
                         "python_type": StraightFields,
                         "raw_field": "o2o_id",
                         "unique": True,
+                        "constraints": {},
                     },
                 ],
                 "backward_o2o_fields": [
@@ -388,6 +409,7 @@ class TestBasic(test.TestCase):
                         "nullable": True,
                         "python_type": StraightFields,
                         "unique": False,
+                        "constraints": {},
                     },
                 ],
                 "m2m_fields": [
@@ -402,6 +424,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "M2M to myself",
                         "docstring": None,
+                        "constraints": {},
                     },
                     {
                         "name": "rel_from",
@@ -414,6 +437,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "M2M to myself",
                         "docstring": None,
+                        "constraints": {},
                     },
                 ],
             },
@@ -445,6 +469,7 @@ class TestBasic(test.TestCase):
                     "default": None,
                     "description": "Da PK",
                     "docstring": None,
+                    "constraints": {"ge": 1, "le": 2147483647},
                 },
                 "data_fields": [
                     {
@@ -460,6 +485,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Some chars",
                         "docstring": None,
+                        "constraints": {"max_length": 50},
                     },
                     {
                         "name": "blip",
@@ -474,6 +500,7 @@ class TestBasic(test.TestCase):
                         "default": "BLIP",
                         "description": "A docstring comment",
                         "docstring": "A docstring comment",
+                        "constraints": {"max_length": 50},
                     },
                     {
                         "name": "nullable",
@@ -488,6 +515,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {"max_length": 50},
                     },
                     {
                         "name": "fk_id",
@@ -502,6 +530,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                     {
                         "name": "o2o_id",
@@ -516,6 +545,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Line",
                         "docstring": None,
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [
@@ -531,6 +561,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
+                        "constraints": {},
                     }
                 ],
                 "backward_fk_fields": [
@@ -545,6 +576,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
+                        "constraints": {},
                     }
                 ],
                 "o2o_fields": [
@@ -560,6 +592,7 @@ class TestBasic(test.TestCase):
                         "python_type": "models.SourceFields",
                         "raw_field": "o2o_id",
                         "unique": True,
+                        "constraints": {},
                     }
                 ],
                 "backward_o2o_fields": [
@@ -574,6 +607,7 @@ class TestBasic(test.TestCase):
                         "nullable": True,
                         "python_type": "models.SourceFields",
                         "unique": False,
+                        "constraints": {},
                     }
                 ],
                 "m2m_fields": [
@@ -588,6 +622,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "M2M to myself",
                         "docstring": None,
+                        "constraints": {},
                     },
                     {
                         "name": "rel_from",
@@ -600,6 +635,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "M2M to myself",
                         "docstring": None,
+                        "constraints": {},
                     },
                 ],
             },
@@ -631,6 +667,7 @@ class TestBasic(test.TestCase):
                     "default": None,
                     "description": "Da PK",
                     "docstring": None,
+                    "constraints": {"ge": 1, "le": 2147483647},
                 },
                 "data_fields": [
                     {
@@ -646,6 +683,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Some chars",
                         "docstring": None,
+                        "constraints": {"max_length": 50},
                     },
                     {
                         "name": "blip",
@@ -660,6 +698,7 @@ class TestBasic(test.TestCase):
                         "default": "BLIP",
                         "description": "A docstring comment",
                         "docstring": "A docstring comment",
+                        "constraints": {"max_length": 50},
                     },
                     {
                         "name": "nullable",
@@ -674,6 +713,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {"max_length": 50},
                     },
                     {
                         "name": "fk_id",
@@ -688,6 +728,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                     {
                         "name": "o2o_id",
@@ -702,6 +743,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Line",
                         "docstring": None,
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [
@@ -717,6 +759,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
+                        "constraints": {},
                     }
                 ],
                 "backward_fk_fields": [
@@ -731,6 +774,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
+                        "constraints": {},
                     }
                 ],
                 "o2o_fields": [
@@ -746,6 +790,7 @@ class TestBasic(test.TestCase):
                         "python_type": SourceFields,
                         "raw_field": "o2o_id",
                         "unique": True,
+                        "constraints": {},
                     }
                 ],
                 "backward_o2o_fields": [
@@ -760,6 +805,7 @@ class TestBasic(test.TestCase):
                         "nullable": True,
                         "python_type": SourceFields,
                         "unique": False,
+                        "constraints": {},
                     }
                 ],
                 "m2m_fields": [
@@ -774,6 +820,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "M2M to myself",
                         "docstring": None,
+                        "constraints": {},
                     },
                     {
                         "name": "rel_from",
@@ -786,6 +833,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": "M2M to myself",
                         "docstring": None,
+                        "constraints": {},
                     },
                 ],
             },
@@ -817,6 +865,7 @@ class TestBasic(test.TestCase):
                     "default": "<function uuid.uuid4>",
                     "description": None,
                     "docstring": None,
+                    "constraints": {},
                 },
                 "data_fields": [],
                 "fk_fields": [],
@@ -832,6 +881,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {},
                     },
                 ],
                 "o2o_fields": [],
@@ -848,6 +898,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {},
                     }
                 ],
             },
@@ -879,6 +930,7 @@ class TestBasic(test.TestCase):
                     "default": uuid.uuid4,
                     "description": None,
                     "docstring": None,
+                    "constraints": {},
                 },
                 "data_fields": [],
                 "fk_fields": [],
@@ -894,6 +946,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {},
                     },
                 ],
                 "o2o_fields": [],
@@ -910,6 +963,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {},
                     }
                 ],
             },
@@ -939,6 +993,7 @@ class TestBasic(test.TestCase):
                         "nullable": True,
                         "python_type": "str",
                         "unique": False,
+                        "constraints": {"max_length": 50},
                     },
                     {
                         "db_column": "model_id",
@@ -953,6 +1008,7 @@ class TestBasic(test.TestCase):
                         "nullable": True,
                         "python_type": "uuid.UUID",
                         "unique": False,
+                        "constraints": {},
                     },
                     {
                         "db_column": "parent_id",
@@ -967,6 +1023,7 @@ class TestBasic(test.TestCase):
                         "nullable": True,
                         "python_type": "uuid.UUID",
                         "unique": True,
+                        "constraints": {},
                     },
                 ],
                 "description": None,
@@ -984,6 +1041,7 @@ class TestBasic(test.TestCase):
                         "python_type": "models.UUIDPkModel",
                         "raw_field": "model_id",
                         "unique": False,
+                        "constraints": {},
                     }
                 ],
                 "m2m_fields": [],
@@ -1001,6 +1059,7 @@ class TestBasic(test.TestCase):
                         "python_type": "models.UUIDPkModel",
                         "raw_field": "parent_id",
                         "unique": True,
+                        "constraints": {},
                     }
                 ],
                 "pk_field": {
@@ -1016,6 +1075,7 @@ class TestBasic(test.TestCase):
                     "nullable": False,
                     "python_type": "uuid.UUID",
                     "unique": True,
+                    "constraints": {},
                 },
                 "table": "uuidfkrelatednullmodel",
                 "unique_together": [],
@@ -1048,6 +1108,7 @@ class TestBasic(test.TestCase):
                     "default": None,
                     "description": None,
                     "docstring": None,
+                    "constraints": {"ge": 1, "le": 2147483647},
                 },
                 "data_fields": [
                     {
@@ -1063,6 +1124,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {},
                     },
                     {
                         "name": "data_null",
@@ -1077,6 +1139,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {},
                     },
                     {
                         "name": "data_default",
@@ -1091,6 +1154,7 @@ class TestBasic(test.TestCase):
                         "default": "{'a': 1}",
                         "description": None,
                         "docstring": None,
+                        "constraints": {},
                     },
                 ],
                 "fk_fields": [],
@@ -1127,6 +1191,7 @@ class TestBasic(test.TestCase):
                     "default": None,
                     "description": None,
                     "docstring": None,
+                    "constraints": {"ge": 1, "le": 2147483647},
                 },
                 "data_fields": [
                     {
@@ -1142,6 +1207,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {},
                     },
                     {
                         "name": "data_null",
@@ -1156,6 +1222,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
+                        "constraints": {},
                     },
                     {
                         "name": "data_default",
@@ -1170,6 +1237,7 @@ class TestBasic(test.TestCase):
                         "default": {"a": 1},
                         "description": None,
                         "docstring": None,
+                        "constraints": {},
                     },
                 ],
                 "fk_fields": [],
