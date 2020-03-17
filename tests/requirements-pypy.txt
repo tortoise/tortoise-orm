@@ -13,7 +13,7 @@ certifi==2019.11.28       # via requests
 cffi==1.14.0              # via cryptography
 chardet==3.0.4            # via requests
 ciso8601==2.1.3 ; sys_platform != "win32" and implementation_name == "cpython"  # via -r ../requirements.txt
-coverage==5.0.3           # via coveralls, pytest-cov
+coverage==5.0.4           # via coveralls, pytest-cov
 coveralls==1.11.1         # via -r requirements-pypy.in
 cryptography==2.8         # via pymysql
 docopt==0.6.2             # via coveralls
