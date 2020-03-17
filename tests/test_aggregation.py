@@ -89,8 +89,8 @@ class TestAggregation(test.TestCase):
             .annotate(
                 all=Count("events", _filter=Q(name__in=["New Tournament"])),
                 no=Count("events", _filter=Q(name__not="New Tournament")),
-                event1=Sum("events__event_id", _filter=Q(events__name="Event 1")),
-                event2=Min("events__event_id", _filter=Q(events__name__not="Event 1")),
+                event1=Count("events", _filter=Q(events__name="Event 1")),
+                not_event1=Count("events", _filter=Q(events__name__not="Event 1")),
             )
             .first()
         )
@@ -98,4 +98,4 @@ class TestAggregation(test.TestCase):
         self.assertEqual(tournament_with_filter.all, 3)
         self.assertEqual(tournament_with_filter.no, 0)
         self.assertEqual(tournament_with_filter.event1, 1)
-        self.assertEqual(tournament_with_filter.event2, 2)
+        self.assertEqual(tournament_with_filter.not_event1, 2)
