@@ -76,6 +76,13 @@ class IntField(Field, int):
             kwargs["generated"] = bool(kwargs.get("generated", True))
         super().__init__(pk=pk, **kwargs)
 
+    @property
+    def constraints(self) -> dict:
+        return {
+            "ge": 1 if self.generated else -2147483648,
+            "le": 2147483647,
+        }
+
     class _db_postgres:
         GENERATED_SQL = "SERIAL NOT NULL PRIMARY KEY"
 
@@ -101,6 +108,13 @@ class BigIntField(Field, int):
         if pk:
             kwargs["generated"] = bool(kwargs.get("generated", True))
         super().__init__(pk=pk, **kwargs)
+
+    @property
+    def constraints(self) -> dict:
+        return {
+            "ge": 1 if self.generated else -9223372036854775808,
+            "le": 9223372036854775807,
+        }
 
     class _db_postgres:
         GENERATED_SQL = "BIGSERIAL NOT NULL PRIMARY KEY"
@@ -128,6 +142,13 @@ class SmallIntField(Field, int):
             kwargs["generated"] = bool(kwargs.get("generated", True))
         super().__init__(pk=pk, **kwargs)
 
+    @property
+    def constraints(self) -> dict:
+        return {
+            "ge": 1 if self.generated else -32768,
+            "le": 32767,
+        }
+
     class _db_postgres:
         GENERATED_SQL = "SMALLSERIAL NOT NULL PRIMARY KEY"
 
@@ -153,6 +174,12 @@ class CharField(Field, str):  # type: ignore
             raise ConfigurationError("'max_length' must be >= 1")
         self.max_length = int(max_length)
         super().__init__(**kwargs)
+
+    @property
+    def constraints(self) -> dict:
+        return {
+            "max_length": self.max_length,
+        }
 
     @property
     def SQL_TYPE(self) -> str:  # type: ignore
@@ -285,6 +312,13 @@ class DatetimeField(Field, datetime.datetime):
                 setattr(instance, self.model_field_name, value)
                 return value
         return value
+
+    @property
+    def constraints(self) -> dict:
+        data = {}
+        if self.auto_now_add:
+            data["readOnly"] = True
+        return data
 
 
 class DateField(Field, datetime.date):

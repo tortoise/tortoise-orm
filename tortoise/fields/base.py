@@ -38,6 +38,7 @@ class Field(metaclass=_FieldMeta):
     :param null: Is this field nullable?
     :param default: A default value for the field if not specified on Model creation.
         This can also be a callable for dynamic defaults in which case we will call it.
+        The default value will not be part of the schema.
     :param unique: Is this field unique?
     :param index: Should this field be indexed by itself?
     :param description: Field description. Will also appear in ``Tortoise.describe_model()``
@@ -193,6 +194,13 @@ class Field(metaclass=_FieldMeta):
         It needs to be non-nullable and not have a default or be DB-generated to be required.
         """
         return self.default is None and not self.null and not self.generated
+
+    @property
+    def constraints(self) -> dict:
+        """
+        Returns a dict with constraints defined in the Pydantic/JSONSchema format.
+        """
+        return {}
 
     def _get_dialects(self) -> Dict[str, dict]:
         return {

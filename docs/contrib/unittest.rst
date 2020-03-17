@@ -83,6 +83,10 @@ Furthermore, you may set the database configuration parameter as an environment 
 Py.test
 -------
 
+.. note::
+
+    pytest 5.4 has a bug that stops it from working with async test cases. You may have to install ``pytest<5.4`` to get it to work.
+
 Run the initializer and finalizer in your ``conftest.py`` file:
 
 .. code-block:: python3
