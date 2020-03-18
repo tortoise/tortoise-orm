@@ -121,6 +121,7 @@ def pydantic_model_creator(
     allow_cycles: Optional[bool] = None,
     sort_alphabetically: Optional[bool] = None,
     _stack: tuple = (),
+    exclude_readonly: bool = False,
 ) -> Type[PydanticModel]:
     """
     Function to build `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ off Tortoise Model.
@@ -141,6 +142,7 @@ def pydantic_model_creator(
             * Field definition order +
             * order of reverse relations (as discovered) +
             * order of computed functions (as provided).
+    :param exclude_readonly: Build a subset model that excludes any readonly fields
     """
 
     # Fully qualified class name
@@ -225,18 +227,21 @@ def pydantic_model_creator(
                 field_map[n] = fd
 
     # Update field definitions from description
-    field_map_update(("pk_field", "data_fields"), is_relation=False)
-    field_map_update(
-        ("fk_fields", "o2o_fields", "m2m_fields", "backward_fk_fields", "backward_o2o_fields")
-    )
+    if not exclude_readonly:
+        field_map_update(("pk_field",), is_relation=False)
+    field_map_update(("data_fields",), is_relation=False)
+    if not exclude_readonly:
+        field_map_update(
+            ("fk_fields", "o2o_fields", "m2m_fields", "backward_fk_fields", "backward_o2o_fields")
+        )
 
-    # Add possible computed fields
-    field_map.update(
-        {
-            k: {"field_type": callable, "function": getattr(cls, k), "description": None}
-            for k in computed
-        }
-    )
+        # Add possible computed fields
+        field_map.update(
+            {
+                k: {"field_type": callable, "function": getattr(cls, k), "description": None}
+                for k in computed
+            }
+        )
 
     # Sort field map (Python 3.7+ has guaranteed ordered dictionary keys)
     if _sort_fields:
@@ -332,7 +337,8 @@ def pydantic_model_creator(
                 fconfig["nullable"] = True
             if fdesc.get("nullable") or fdesc.get("default"):
                 ptype = Optional[ptype]
-            pannotations[fname] = annotation or ptype
+            if not (exclude_readonly and fdesc["constraints"].get("readOnly") is True):
+                pannotations[fname] = annotation or ptype
 
         # Create a schema for the field
         if fname in pannotations:
@@ -346,9 +352,6 @@ def pydantic_model_creator(
     model = cast(Type[PydanticModel], type(_name, (PydanticModel,), properties))
     # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)
-    if not name:
-        # The title of the model to hide the hash postfix
-        setattr(model.__config__, "title", cls.__name__)
     # Store the base class
     setattr(model.__config__, "orig_model", cls)
 

@@ -10,3 +10,4 @@ quart
 sanic
 starlette
 pydantic
+fastapi
