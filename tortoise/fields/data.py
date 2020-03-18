@@ -480,8 +480,8 @@ class IntEnumFieldInstance(SmallIntField):
         super().__init__(description=description, **kwargs)
         self.enum_type = enum_type
 
-    def to_python_value(self, value: Union[int, None]) -> Union[IntEnum, None]:
-        return self.enum_type(value) if value is not None else None
+    def to_python_value(self, value: Union[int, None, str]) -> Union[IntEnum, None]:
+        return self.enum_type(int(value)) if value is not None else None
 
     def to_db_value(
         self, value: Union[IntEnum, None, int], instance: "Union[Type[Model], Model]"
