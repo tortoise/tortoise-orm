@@ -19,6 +19,15 @@ Changelog
   * ``maxLength`` for CharFields
   * ``minimum`` & ``maximum`` values for integer fields
 
+  To get Pydantic to handle nullable/default fields correctly one should do a ``**user.dict(exclude_unset=True)`` when passing values to a Model class.
+
+* Added ``FastAPI`` helper that is based on the ``starlette`` helper but optionally adds helpers to catch and report with proper error ``DoesNotExist`` and ``IntegrityError`` Tortoise exceptions.
+* Allows a Pydantic model to exclude all read-only fields by setting ``exclude_readonly=True`` when calling ``pydantic_model_creator``.
+* a Tortoise ``PydanticModel`` now provides two extra helper functions:
+
+  * ``from_queryset``: Returns a ``List[PydanticModel]`` which is the format that e.g. FastAPI expects
+  * ``from_queryset_single``: allows one to avoid calling ``await`` multiple times to get the object and all its related items.
+
 
 0.16.0
 ------

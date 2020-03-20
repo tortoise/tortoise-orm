@@ -8,5 +8,6 @@ omit =
     tortoise/contrib/quart/*
     tortoise/contrib/sanic/*
     tortoise/contrib/starlette/*
+    tortoise/contrib/fastapi/*
 [report]
 show_missing = True
