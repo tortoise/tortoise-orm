@@ -541,9 +541,11 @@ class CharEnumFieldInstance(CharField):
         return self.enum_type(value) if value is not None else None
 
     def to_db_value(
-        self, value: Union[Enum, None], instance: "Union[Type[Model], Model]"
+        self, value: Union[Enum, None, str], instance: "Union[Type[Model], Model]"
     ) -> Union[str, None]:
-        return str(value.value) if value is not None else None
+        if isinstance(value, Enum):
+            return str(value.value)
+        return value
 
 
 CharEnumType = TypeVar("CharEnumType", bound=Enum)
