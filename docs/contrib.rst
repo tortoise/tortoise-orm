@@ -4,9 +4,10 @@ Contrib
 .. toctree::
    :maxdepth: 3
 
-   contrib/pydantic
    contrib/linters
+   contrib/pydantic
    contrib/unittest
+   contrib/fastapi
    contrib/quart
    contrib/sanic
    contrib/starlette

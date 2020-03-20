@@ -9,6 +9,7 @@ Examples
 
    examples/basic
    examples/pydantic
+   examples/fastapi
    examples/quart
    examples/sanic
    examples/starlette
