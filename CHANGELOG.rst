@@ -25,7 +25,7 @@ Changelog
   * ``maxLength`` for CharFields
   * ``minimum`` & ``maximum`` values for integer fields
 
-  To get Pydantic to handle nullable/defaulted fields correctly one should do a ``**user.dict(exclude_unset=True)`` when passing values to a Model class.
+  To get Pydantic to handle nullable/default fields correctly one should do a ``**user.dict(exclude_unset=True)`` when passing values to a Model class.
 
 * Added ``FastAPI`` helper that is based on the ``starlette`` helper but optionally adds helpers to catch and report with proper error ``DoesNotExist`` and ``IntegrityError`` Tortoise exceptions.
 * Allows a Pydantic model to exclude all read-only fields by setting ``exclude_readonly=True`` when calling ``pydantic_model_creator``.
