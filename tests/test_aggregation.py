@@ -50,6 +50,23 @@ class TestAggregation(test.TestCase):
         with self.assertRaisesRegex(ConfigurationError, "name__id not resolvable"):
             await Event.all().annotate(tournament_test_id=Sum("name__id")).first()
 
+    async def test_nested_aggregation_in_annotation(self):
+        tournament = await Tournament.create(name="0")
+        await Tournament.create(name="1")
+        event = await Event.create(name="2", tournament=tournament)
+
+        team_first = await Team.create(name="First")
+        team_second = await Team.create(name="Second")
+
+        await event.participants.add(team_second)
+        await event.participants.add(team_first)
+
+        tournaments = await Tournament.annotate(
+            events_participants_count=Count("events__participants")
+        ).filter(id=tournament.id)
+        self.assertEqual(len(tournaments), 1)
+        self.assertEqual(tournaments[0].id, tournament.id)
+
     async def test_aggregation_with_distinct(self):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Event 1", tournament=tournament)

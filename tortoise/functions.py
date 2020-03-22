@@ -106,7 +106,6 @@ class Function:
 
         if isinstance(self.field, str):
             function = self._resolve_field_for_model(model, table, self.field, *self.default_values)
-            function["joins"] = reversed(function["joins"])
             return function
         else:
             field, field_object = F.resolver_arithmetic_expression(model, self.field)
