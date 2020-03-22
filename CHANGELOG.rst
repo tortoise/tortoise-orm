@@ -9,6 +9,10 @@ Changelog
 
 0.16
 ====
+0.16.2
+------
+* Fix bug with join query with aggregation
+
 0.16.1
 ------
 * ``QuerySetSingle`` now has better code completion
