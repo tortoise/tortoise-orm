@@ -58,7 +58,6 @@ class MySQLExecutor(BaseExecutor):
         insensitive_ends_with: mysql_insensitive_ends_with,
     }
     EXPLAIN_PREFIX = "EXPLAIN FORMAT=JSON"
-    DB_NATIVE = {bytes, str, int, float, decimal.Decimal, datetime.datetime, datetime.date}
 
     def Parameter(self, pos: int) -> Parameter:
         return Parameter("%s")
