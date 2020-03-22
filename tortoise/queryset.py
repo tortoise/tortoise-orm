@@ -75,7 +75,7 @@ class QuerySetSingle(Protocol[T_co]):
 
 
 class AwaitableQuery(Generic[MODEL]):
-    __slots__ = ("_joined_tables", "query", "model", "_db", "capabilities")
+    __slots__ = ("_joined_tables", "query", "model", "_db", "capabilities", "_annotations")
 
     def __init__(self, model: Type[MODEL]) -> None:
         self._joined_tables: List[Table] = []
@@ -83,6 +83,7 @@ class AwaitableQuery(Generic[MODEL]):
         self.query: QueryBuilder = QUERY
         self._db: BaseDBAsyncClient = None  # type: ignore
         self.capabilities: Capabilities = model._meta.db.capabilities
+        self._annotations: Dict[str, Function] = {}
 
     def resolve_filters(
         self,
@@ -99,6 +100,8 @@ class AwaitableQuery(Generic[MODEL]):
         :param annotations: Extra annotations to add.
         :param custom_filters:
         """
+        has_aggregate = self._resolve_annotate()
+
         modifier = QueryModifier()
         for node in q_objects:
             modifier &= node.resolve(model, annotations, custom_filters, model._meta.basetable)
@@ -111,6 +114,11 @@ class AwaitableQuery(Generic[MODEL]):
 
         self.query._wheres = where_criterion
         self.query._havings = having_criterion
+
+        if has_aggregate and (self._joined_tables or having_criterion):
+            self.query = self.query.groupby(
+                self.model._meta.basetable[self.model._meta.db_pk_field]
+            )
 
     def _join_table_by_field(
         self, table: Table, related_field_name: str, related_field: RelationalField
@@ -190,6 +198,22 @@ class AwaitableQuery(Generic[MODEL]):
 
                 self.query = self.query.orderby(field, order=ordering[1])
 
+    def _resolve_annotate(self) -> bool:
+        if not self._annotations:
+            return False
+
+        table = self.model._meta.basetable
+        annotation_info = {}
+        for key, annotation in self._annotations.items():
+            annotation_info[key] = annotation.resolve(self.model, table)
+
+        for key, info in annotation_info.items():
+            for join in info["joins"]:
+                self._join_table_by_field(*join)
+            self.query._select_other(info["field"].as_(key))
+
+        return any(info["field"].is_aggregate for info in annotation_info.values())
+
     def _make_query(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
@@ -211,7 +235,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_orderings",
         "_q_objects",
         "_distinct",
-        "_annotations",
         "_having",
         "_custom_filters",
     )
@@ -229,7 +252,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._orderings: List[Tuple[str, Any]] = []
         self._q_objects: List[Q] = []
         self._distinct: bool = False
-        self._annotations: Dict[str, Function] = {}
         self._having: Dict[str, Any] = {}
         self._custom_filters: Dict[str, dict] = {}
 
@@ -392,7 +414,8 @@ class QuerySet(AwaitableQuery[MODEL]):
                 field
                 for field in self.model._meta.fields_map.keys()
                 if field in self.model._meta.db_fields
-            ],
+            ]
+            + list(self._annotations.keys()),
             distinct=self._distinct,
             limit=self._limit,
             offset=self._offset,
@@ -423,11 +446,13 @@ class QuerySet(AwaitableQuery[MODEL]):
                     raise FieldError(f"Duplicate key {return_as}")
                 fields_for_select[return_as] = field
         else:
-            fields_for_select = {
-                field: field
+            _fields = [
+                field
                 for field in self.model._meta.fields_map.keys()
                 if field in self.model._meta.db_fields
-            }
+            ] + list(self._annotations.keys())
+
+            fields_for_select = {field: field for field in _fields}
 
         return ValuesQuery(
             db=self._db,
@@ -585,26 +610,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._db = _db
         return queryset
 
-    def _resolve_annotate(self) -> None:
-        if not self._annotations:
-            return
-
-        table = self.model._meta.basetable
-        annotation_info = {}
-        for key, annotation in self._annotations.items():
-            annotation_info[key] = annotation.resolve(self.model, table)
-
-        if any(info["field"].is_aggregate for info in annotation_info.values()):
-            self.query = self.query.groupby(table[self.model._meta.db_pk_field])
-
-        for key, info in annotation_info.items():
-            for join in info["joins"]:
-                self._join_table_by_field(*join)
-            self.query._select_other(info["field"].as_(key))
-
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery_all_fields)
-        self._resolve_annotate()
         self.resolve_filters(
             model=self.model,
             q_objects=self._q_objects,
@@ -849,9 +856,7 @@ class FieldSelectQuery(AwaitableQuery):
             )
 
         if field in self.annotations:
-            annotation = self.annotations[field]
-            annotation_info = annotation.resolve(self.model, table)
-            self.query._select_other(annotation_info["field"].as_(return_as))
+            self._annotations[return_as] = self.annotations[field]
             return
 
         field_split = field.split("__")
