@@ -64,8 +64,7 @@ class TestAggregation(test.TestCase):
         tournaments = await Tournament.annotate(
             events_participants_count=Count("events__participants")
         ).filter(id=tournament.id)
-        self.assertEqual(len(tournaments), 1)
-        self.assertEqual(tournaments[0].id, tournament.id)
+        self.assertEqual(tournaments[0].events_participants_count, 2)
 
     async def test_aggregation_with_distinct(self):
         tournament = await Tournament.create(name="New Tournament")
