@@ -14,6 +14,16 @@ def generate_token():
     return binascii.hexlify(os.urandom(16)).decode("ascii")
 
 
+class Author(Model):
+    name = fields.CharField(max_length=255)
+
+
+class Book(Model):
+    name = fields.CharField(max_length=255)
+    author = fields.ForeignKeyField("models.Author", related_name="books")
+    rating = fields.FloatField()
+
+
 class Tournament(Model):
     id = fields.SmallIntField(pk=True)
     name = fields.CharField(max_length=255)

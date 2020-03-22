@@ -1,7 +1,7 @@
-from tests.testmodels import Event, Team, Tournament
+from tests.testmodels import Author, Book, Event, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
-from tortoise.functions import Count, Min, Sum
+from tortoise.functions import Avg, Count, Min, Sum
 
 
 class TestAggregation(test.TestCase):
@@ -49,3 +49,32 @@ class TestAggregation(test.TestCase):
 
         with self.assertRaisesRegex(ConfigurationError, "name__id not resolvable"):
             await Event.all().annotate(tournament_test_id=Sum("name__id")).first()
+
+    async def test_group_aggregation(self):
+        author = await Author.create(name="Some One")
+        await Book.create(name="First!", author=author, rating=4)
+        await Book.create(name="Second!", author=author, rating=3)
+        await Book.create(name="Third!", author=author, rating=3)
+
+        authors = await Author.all().annotate(average_rating=Avg("books__rating"))
+        self.assertAlmostEqual(authors[0].average_rating, 3.3333333333)
+
+        authors = await Author.all().annotate(average_rating=Avg("books__rating")).values()
+        self.assertAlmostEqual(authors[0]["average_rating"], 3.3333333333)
+
+        authors = (
+            await Author.all()
+            .annotate(average_rating=Avg("books__rating"))
+            .values("id", "name", "average_rating")
+        )
+        self.assertAlmostEqual(authors[0]["average_rating"], 3.3333333333)
+
+        authors = await Author.all().annotate(average_rating=Avg("books__rating")).values_list()
+        self.assertAlmostEqual(authors[0][2], 3.3333333333)
+
+        authors = (
+            await Author.all()
+            .annotate(average_rating=Avg("books__rating"))
+            .values_list("id", "name", "average_rating")
+        )
+        self.assertAlmostEqual(authors[0][2], 3.3333333333)

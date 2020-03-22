@@ -2,6 +2,12 @@
 
 Changelog
 =========
+0.15.20
+------
+* Default ``values()`` & ``values_list()`` now includes annotations.
+* Annotations over joins now work correctly with ``values()`` & ``values_list()``
+* Ensure ``GROUP BY`` precedes ``HAVING`` to ensure that filtering by aggregates work correctly.
+
 0.15.19
 -------
 - Fix Function with ``source_field`` option. (#311)
