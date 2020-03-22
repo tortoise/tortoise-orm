@@ -15,6 +15,7 @@ Changelog
 * Annotations over joins now work correctly with ``values()`` & ``values_list()``
 * Ensure ``GROUP BY`` precedes ``HAVING`` to ensure that filtering by aggregates work correctly.
 * Fix bug with join query with aggregation
+* Cast ``BooleanField`` values correctly on SQLite & MySQL
 
 0.16.1
 ------
