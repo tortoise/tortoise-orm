@@ -11,8 +11,8 @@ class TestBooleanFields(test.TestCase):
     async def test_create(self):
         obj0 = await testmodels.BooleanFields.create(boolean=True)
         obj = await testmodels.BooleanFields.get(id=obj0.id)
-        self.assertEqual(obj.boolean, True)
-        self.assertEqual(obj.boolean_null, None)
+        self.assertIs(obj.boolean, True)
+        self.assertIs(obj.boolean_null, None)
         await obj.save()
         obj2 = await testmodels.BooleanFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
@@ -21,15 +21,15 @@ class TestBooleanFields(test.TestCase):
         obj0 = await testmodels.BooleanFields.create(boolean=False)
         await testmodels.BooleanFields.filter(id=obj0.id).update(boolean=False)
         obj = await testmodels.BooleanFields.get(id=obj0.id)
-        self.assertEqual(obj.boolean, False)
-        self.assertEqual(obj.boolean_null, None)
+        self.assertIs(obj.boolean, False)
+        self.assertIs(obj.boolean_null, None)
 
     async def test_values(self):
         obj0 = await testmodels.BooleanFields.create(boolean=True)
         values = await testmodels.BooleanFields.get(id=obj0.id).values("boolean")
-        self.assertEqual(values[0]["boolean"], True)
+        self.assertIs(values[0]["boolean"], True)
 
     async def test_values_list(self):
         obj0 = await testmodels.BooleanFields.create(boolean=True)
         values = await testmodels.BooleanFields.get(id=obj0.id).values_list("boolean", flat=True)
-        self.assertEqual(values[0], True)
+        self.assertIs(values[0], True)
