@@ -1,32 +1,14 @@
 import uuid
-from typing import Any, List, Optional
+from typing import List, Optional
 
 import asyncpg
 from pypika import Parameter
-from pypika.terms import Term, ValueWrapper
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
-from tortoise.filters import is_in, not_in
-
-
-def postgres_is_in(field: Term, value: Any) -> Term:
-    if value:
-        return field.isin(value)
-    return ValueWrapper(False)
-
-
-def post_gres_not_in(field: Term, value: Any) -> Term:
-    if value:
-        return field.notin(value) | field.isnull()
-    return ValueWrapper(True)
 
 
 class AsyncpgExecutor(BaseExecutor):
-    FILTER_FUNC_OVERRIDE = {
-        is_in: postgres_is_in,
-        not_in: post_gres_not_in,
-    }
     EXPLAIN_PREFIX = "EXPLAIN (FORMAT JSON, VERBOSE)"
     DB_NATIVE = BaseExecutor.DB_NATIVE | {bool, uuid.UUID}
 
