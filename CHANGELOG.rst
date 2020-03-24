@@ -9,6 +9,10 @@ Changelog
 
 0.16
 ====
+0.16.3
+------
+* Fix bug with order_by on nested fields
+
 0.16.2
 ------
 * Default ``values()`` & ``values_list()`` now includes annotations.
