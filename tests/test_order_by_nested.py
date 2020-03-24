@@ -13,7 +13,7 @@ class TestOrderByNested(test.TestCase):
 
         self.assertEqual(
             await Event.all().order_by("-name").values("name"),
-            [{'name': "Event 2"}, {'name': "Event 1"}],
+            [{"name": "Event 2"}, {"name": "Event 1"}],
         )
 
         self.assertEqual(
