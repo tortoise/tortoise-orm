@@ -12,6 +12,11 @@ class TestOrderByNested(test.TestCase):
         )
 
         self.assertEqual(
+            await Event.all().order_by("-name").values("name"),
+            [{'name': "Event 2"}, {'name': "Event 1"}],
+        )
+
+        self.assertEqual(
             await Event.all().prefetch_related("tournament").values("tournament__desc"),
             [{"tournament__desc": "B"}, {"tournament__desc": "A"}],
         )

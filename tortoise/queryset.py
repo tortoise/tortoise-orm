@@ -184,10 +184,7 @@ class AwaitableQuery(Generic[MODEL]):
                 annotation_info = annotation.resolve(self.model, table)
                 self.query = self.query.orderby(annotation_info["field"], order=ordering[1])
             else:
-                if self.model != model:
-                    field_object = model._meta.fields_map.get(field_name)
-                else:
-                    field_object = self.model._meta.fields_map.get(field_name)
+                field_object = model._meta.fields_map.get(field_name)
 
                 if not field_object:
                     raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
