@@ -24,10 +24,10 @@ class TestDatetimeFields(test.TestCase):
         obj = await testmodels.DatetimeFields.get(id=obj0.id)
         self.assertEqual(obj.datetime, now)
         self.assertEqual(obj.datetime_null, None)
-        self.assertLess(obj.datetime_auto - now, timedelta(microseconds=10000))
-        self.assertLess(obj.datetime_add - now, timedelta(microseconds=10000))
+        self.assertLess(obj.datetime_auto - now, timedelta(microseconds=20000))
+        self.assertLess(obj.datetime_add - now, timedelta(microseconds=20000))
         datetime_auto = obj.datetime_auto
-        sleep(0.011)
+        sleep(0.012)
         await obj.save()
         obj2 = await testmodels.DatetimeFields.get(id=obj.id)
         self.assertEqual(obj2.datetime, now)
