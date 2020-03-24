@@ -187,7 +187,7 @@ class AwaitableQuery(Generic[MODEL]):
                 field_object = model._meta.fields_map.get(field_name)
 
                 if not field_object:
-                    raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
+                    raise FieldError(f"Unknown field {field_name} for model {model.__name__}")
                 field_name = field_object.source_field or field_name
                 field = getattr(table, field_name)
 
