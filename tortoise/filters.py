@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple
 from pypika import Table
 from pypika.enums import SqlTypes
 from pypika.functions import Cast, Upper
-from pypika.terms import Criterion, Term
+from pypika.terms import Criterion, Term, ValueWrapper
 
 from tortoise.fields import Field
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
@@ -45,12 +45,16 @@ def string_encoder(value: Any, instance: "Model", field: Field) -> str:
 ##############################################################################
 
 
-def is_in(field: Term, value: Any) -> Criterion:
-    return field.isin(value)
+def is_in(field: Term, value: Any) -> Term:
+    if value:
+        return field.isin(value)
+    return ValueWrapper(0)
 
 
-def not_in(field: Term, value: Any) -> Criterion:
-    return field.notin(value) | field.isnull()
+def not_in(field: Term, value: Any) -> Term:
+    if value:
+        return field.notin(value) | field.isnull()
+    return ValueWrapper(1)
 
 
 def between_and(field: Term, value: Tuple[Any, Any]) -> Criterion:

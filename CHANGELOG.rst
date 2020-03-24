@@ -11,6 +11,7 @@ Changelog
 ====
 0.16.3
 ------
+* Fixed invalid ``var IN ()`` SQL generated using ``__in=`` and ``__not_in`` filters.
 * Fix bug with order_by on nested fields
 
 0.16.2
