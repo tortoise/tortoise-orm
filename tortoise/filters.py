@@ -48,13 +48,13 @@ def string_encoder(value: Any, instance: "Model", field: Field) -> str:
 def is_in(field: Term, value: Any) -> Term:
     if value:
         return field.isin(value)
-    return ValueWrapper(False)
+    return ValueWrapper(0)
 
 
 def not_in(field: Term, value: Any) -> Term:
     if value:
         return field.notin(value) | field.isnull()
-    return ValueWrapper(True)
+    return ValueWrapper(1)
 
 
 def between_and(field: Term, value: Tuple[Any, Any]) -> Criterion:
