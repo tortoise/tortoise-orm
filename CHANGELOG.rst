@@ -2,6 +2,10 @@
 
 Changelog
 =========
+0.15.21
+-------
+* Fixed invalid ``var IN ()`` SQL generated using ``__in=`` and ``__not_in`` filters.
+
 0.15.20
 ------
 * Default ``values()`` & ``values_list()`` now includes annotations.
