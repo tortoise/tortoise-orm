@@ -48,9 +48,7 @@ def _get_joins_for_related_field(
 ) -> List[Tuple[Table, Criterion]]:
     required_joins = []
 
-    related_table = (
-        related_field.model_class._meta.basetable
-    )  # .as_(f"{table.get_table_name()}__{related_field_name}")
+    related_table: Table = related_field.model_class._meta.basetable
     if isinstance(related_field, ManyToManyFieldInstance):
         through_table = Table(related_field.through)
         required_joins.append(
@@ -68,6 +66,8 @@ def _get_joins_for_related_field(
             )
         )
     elif isinstance(related_field, BackwardFKRelation):
+        if table == related_table:
+            related_table = related_table.as_(f"{table.get_table_name()}__{related_field_name}")
         required_joins.append(
             (
                 related_table,

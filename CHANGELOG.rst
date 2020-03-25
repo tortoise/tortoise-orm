@@ -6,6 +6,7 @@ Changelog
 -------
 * Fixed invalid ``var IN ()`` SQL generated using ``__in=`` and ``__not_in`` filters.
 * Fix bug with order_by on nested fields
+* Fix joining with self by reverse-foreign-key for filtering and annotation
 
 0.15.20
 ------
