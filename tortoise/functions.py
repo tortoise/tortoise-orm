@@ -7,7 +7,7 @@ from pypika.terms import Function as BaseFunction
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.expressions import F
-from tortoise.fields.relational import ForeignKeyFieldInstance, RelationalField
+from tortoise.fields.relational import BackwardFKRelation, ForeignKeyFieldInstance, RelationalField
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -48,7 +48,9 @@ class Function:
         self.field_object: "Optional[Field]" = None
         self.default_values = default_values
 
-    def _get_function_field(self, field: str, *default_values):
+    def _get_function_field(
+        self, field: "Union[ArithmeticExpression, Field, str]", *default_values
+    ):
         return self.database_func(field, *default_values)
 
     def _resolve_field_for_model(
@@ -65,7 +67,7 @@ class Function:
             joins.append((table, iter_field, related_field))
 
             model = related_field.model_class
-            related_table = related_field.model_class._meta.basetable
+            related_table: Table = related_field.model_class._meta.basetable
             if isinstance(related_field, ForeignKeyFieldInstance):
                 # Only FK's can be to same table, so we only auto-alias FK join tables
                 related_table = related_table.as_(f"{table.get_table_name()}__{iter_field}")
@@ -74,9 +76,15 @@ class Function:
         last_field = fields[-1]
         if last_field in model._meta.fetch_fields:
             related_field = cast(RelationalField, model._meta.fields_map[last_field])
-            joins.append((table, last_field, related_field))
             related_field_meta = related_field.model_class._meta
-            field = related_field_meta.basetable[related_field_meta.db_pk_field]
+            joins.append((table, last_field, related_field))
+            related_table = related_field_meta.basetable
+
+            if isinstance(related_field, BackwardFKRelation):
+                if table == related_table:
+                    related_table = related_table.as_(f"{table.get_table_name()}__{last_field}")
+
+            field = related_table[related_field_meta.db_pk_field]
         else:
             field_object = model._meta.fields_map[last_field]
             if field_object.source_field:
@@ -111,7 +119,7 @@ class Function:
             field, field_object = F.resolver_arithmetic_expression(model, self.field)
             if self.populate_field_object:
                 self.field_object = field_object
-            return {"joins": [], "field": self.database_func(field, *self.default_values)}
+            return {"joins": [], "field": self._get_function_field(field, *self.default_values)}
 
 
 class Aggregate(Function):
@@ -131,7 +139,9 @@ class Aggregate(Function):
         super().__init__(field, *default_values)
         self.distinct = distinct
 
-    def _get_function_field(self, field: str, *default_values):
+    def _get_function_field(
+        self, field: "Union[ArithmeticExpression, Field, str]", *default_values
+    ):
         if self.distinct:
             return self.database_func(field, *default_values).distinct()
         else:

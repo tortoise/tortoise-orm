@@ -156,7 +156,6 @@ class TestRelations(test.TestCase):
         self.assertEqual(len(fetched_event.participants), 0)
 
     async def test_self_ref(self):
-        self.maxDiff = None
         root = await Employee.create(name="Root")
         loose = await Employee.create(name="Loose")
         _1 = await Employee.create(name="1. First H1", manager=root)
@@ -193,7 +192,6 @@ class TestRelations(test.TestCase):
         self.assertEqual(await root2.full_hierarchy__fetch_related(), ROOT_TEXT)
 
     async def test_self_ref_filter_by_child(self):
-        self.maxDiff = None
         root = await Employee.create(name="Root")
         await Employee.create(name="1. First H1", manager=root)
         await Employee.create(name="2. Second H1", manager=root)
@@ -202,7 +200,6 @@ class TestRelations(test.TestCase):
         self.assertEqual(root.id, root2.id)
 
     async def test_self_ref_filter_both(self):
-        self.maxDiff = None
         root = await Employee.create(name="Root")
         await Employee.create(name="1. First H1", manager=root)
         await Employee.create(name="2. Second H1", manager=root)
@@ -211,13 +208,15 @@ class TestRelations(test.TestCase):
         self.assertEqual(root.id, root2.id)
 
     async def test_self_ref_annotate(self):
-        self.maxDiff = None
         root = await Employee.create(name="Root")
+        await Employee.create(name="Loose")
         await Employee.create(name="1. First H1", manager=root)
         await Employee.create(name="2. Second H1", manager=root)
 
         root_ann = await Employee.get(name="Root").annotate(num_team_members=Count("team_members"))
         self.assertEqual(root_ann.num_team_members, 2)
+        root_ann = await Employee.get(name="Loose").annotate(num_team_members=Count("team_members"))
+        self.assertEqual(root_ann.num_team_members, 0)
 
     async def test_prefetch_related_fk(self):
         tournament = await Tournament.create(name="New Tournament")

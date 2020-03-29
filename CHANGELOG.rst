@@ -9,6 +9,12 @@ Changelog
 
 0.16
 ====
+0.16.4
+------
+* More consistent escaping of db columns, fixes using SQL reserved keywords as field names with a function.
+* Fix the aggregates using the wrong side of the join when doing a self-referential aggregation.
+* Fix ``F`` funtions wrapped forgetting about ``distinct=True``
+
 0.16.3
 ------
 * Fixed invalid ``var IN ()`` SQL generated using ``__in=`` and ``__not_in`` filters.

@@ -189,7 +189,7 @@ class AwaitableQuery(Generic[MODEL]):
                 if not field_object:
                     raise FieldError(f"Unknown field {field_name} for model {model.__name__}")
                 field_name = field_object.source_field or field_name
-                field = getattr(table, field_name)
+                field = table[field_name]
 
                 func = field_object.get_for_dialect(
                     model._meta.db.capabilities.dialect, "function_cast"
@@ -847,7 +847,7 @@ class FieldSelectQuery(AwaitableQuery):
         table = self.model._meta.basetable
         if field in self.model._meta.fields_db_projection:
             db_field = self.model._meta.fields_db_projection[field]
-            self.query._select_field(getattr(table, db_field).as_(return_as))
+            self.query._select_field(table[db_field].as_(return_as))
             return
 
         if field in self.model._meta.fetch_fields:
@@ -868,7 +868,7 @@ class FieldSelectQuery(AwaitableQuery):
                 field=field_split[0],
                 forwarded_fields="__".join(field_split[1:]),
             )
-            self.query._select_field(getattr(related_table, related_db_field).as_(return_as))
+            self.query._select_field(related_table[related_db_field].as_(return_as))
             return
 
         raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')
