@@ -5,7 +5,7 @@ from pypika.terms import AggregateFunction
 from pypika.terms import Function as BaseFunction
 
 from tortoise.exceptions import ConfigurationError
-from tortoise.fields.relational import ForeignKeyFieldInstance, RelationalField
+from tortoise.fields.relational import BackwardFKRelation, ForeignKeyFieldInstance, RelationalField
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -54,9 +54,15 @@ class Function:
             if field_split[0] in model._meta.fetch_fields:
                 related_field = cast(RelationalField, model._meta.fields_map[field_split[0]])
                 related_field_meta = related_field.model_class._meta
+                related_table = related_field_meta.basetable
+                if isinstance(related_field, BackwardFKRelation):
+                    if table == related_table:
+                        related_table = related_table.as_(
+                            f"{table.get_table_name()}__{field_split[0]}"
+                        )
                 join = (table, field_split[0], related_field)
                 function_joins.append(join)
-                field = related_field_meta.basetable[related_field_meta.db_pk_field]
+                field = related_table[related_field_meta.db_pk_field]
             else:
                 field_object = model._meta.fields_map[field_split[0]]
                 if field_object.source_field:

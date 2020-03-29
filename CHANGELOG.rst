@@ -2,6 +2,10 @@
 
 Changelog
 =========
+0.15.22
+-------
+* Fix the aggregates using the wrong side of the join when doing a self-referential aggregation.
+
 0.15.21
 -------
 * Fixed invalid ``var IN ()`` SQL generated using ``__in=`` and ``__not_in`` filters.
