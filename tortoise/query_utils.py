@@ -27,11 +27,11 @@ def _process_filter_kwarg(
     if param.get("table"):
         join = (
             param["table"],
-            table[pk_db_field] == getattr(param["table"], param["backward_key"]),
+            table[pk_db_field] == param["table"][param["backward_key"]],
         )
         if param.get("value_encoder"):
             value = param["value_encoder"](value, model)
-        criterion = param["operator"](getattr(param["table"], param["field"]), value)
+        criterion = param["operator"](param["table"][param["field"]], value)
     else:
         field_object = model._meta.fields_map[param["field"]]
         encoded_value = (
@@ -48,31 +48,31 @@ def _get_joins_for_related_field(
 ) -> List[Tuple[Table, Criterion]]:
     required_joins = []
 
-    related_table = (
-        related_field.model_class._meta.basetable
-    )  # .as_(f"{table.get_table_name()}__{related_field_name}")
+    related_table: Table = related_field.model_class._meta.basetable
     if isinstance(related_field, ManyToManyFieldInstance):
         through_table = Table(related_field.through)
         required_joins.append(
             (
                 through_table,
-                getattr(table, related_field.model._meta.db_pk_field)
-                == getattr(through_table, related_field.backward_key),
+                table[related_field.model._meta.db_pk_field]
+                == through_table[related_field.backward_key],
             )
         )
         required_joins.append(
             (
                 related_table,
-                getattr(through_table, related_field.forward_key)
-                == getattr(related_table, related_field.model_class._meta.db_pk_field),
+                through_table[related_field.forward_key]
+                == related_table[related_field.model_class._meta.db_pk_field],
             )
         )
     elif isinstance(related_field, BackwardFKRelation):
+        if table == related_table:
+            related_table = related_table.as_(f"{table.get_table_name()}__{related_field_name}")
         required_joins.append(
             (
                 related_table,
-                getattr(table, related_field.to_field_instance.model_field_name)
-                == getattr(related_table, related_field.relation_field),
+                table[related_field.to_field_instance.model_field_name]
+                == related_table[related_field.relation_field],
             )
         )
     else:
@@ -80,8 +80,8 @@ def _get_joins_for_related_field(
         required_joins.append(
             (
                 related_table,
-                getattr(related_table, related_field.to_field_instance.model_field_name)
-                == getattr(table, f"{related_field_name}_id"),
+                related_table[related_field.to_field_instance.model_field_name]
+                == table[f"{related_field_name}_id"],
             )
         )
     return required_joins

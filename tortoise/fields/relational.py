@@ -176,22 +176,21 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         select_query = (
             db.query_class.from_(through_table)
             .where(
-                getattr(through_table, self.field.backward_key)
+                through_table[self.field.backward_key]
                 == pk_formatting_func(self.instance.pk, self.instance)
             )
             .select(self.field.backward_key, self.field.forward_key)
         )
         query = db.query_class.into(through_table).columns(
-            getattr(through_table, self.field.forward_key),
-            getattr(through_table, self.field.backward_key),
+            through_table[self.field.forward_key], through_table[self.field.backward_key],
         )
 
         if len(instances) == 1:
-            criterion = getattr(
-                through_table, self.field.forward_key
-            ) == related_pk_formatting_func(instances[0].pk, instances[0])
+            criterion = through_table[self.field.forward_key] == related_pk_formatting_func(
+                instances[0].pk, instances[0]
+            )
         else:
-            criterion = getattr(through_table, self.field.forward_key).isin(
+            criterion = through_table[self.field.forward_key].isin(
                 [related_pk_formatting_func(i.pk, i) for i in instances]
             )
 
@@ -231,7 +230,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         query = (
             db.query_class.from_(through_table)
             .where(
-                getattr(through_table, self.field.backward_key)
+                through_table[self.field.backward_key]
                 == pk_formatting_func(self.instance.pk, self.instance)
             )
             .delete()
@@ -255,18 +254,18 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
 
         if len(instances) == 1:
             condition = (
-                getattr(through_table, self.field.forward_key)
+                through_table[self.field.forward_key]
                 == related_pk_formatting_func(instances[0].pk, instances[0])
             ) & (
-                getattr(through_table, self.field.backward_key)
+                through_table[self.field.backward_key]
                 == pk_formatting_func(self.instance.pk, self.instance)
             )
         else:
             condition = (
-                getattr(through_table, self.field.backward_key)
+                through_table[self.field.backward_key]
                 == pk_formatting_func(self.instance.pk, self.instance)
             ) & (
-                getattr(through_table, self.field.forward_key).isin(
+                through_table[self.field.forward_key].isin(
                     [related_pk_formatting_func(i.pk, i) for i in instances]
                 )
             )
