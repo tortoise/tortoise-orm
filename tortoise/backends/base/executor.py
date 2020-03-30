@@ -56,7 +56,7 @@ class BaseExecutor:
                     include_generated=True
                 )
                 self.insert_query_all = self._prepare_insert_statement(
-                    columns_all, no_generated=True
+                    columns_all, has_generated=False
                 )
 
             self.column_map: Dict[str, Callable[[Any, Any], Any]] = {}
@@ -72,7 +72,7 @@ class BaseExecutor:
             table = self.model._meta.basetable
             self.delete_query = str(
                 self.model._meta.basequery.where(
-                    table[self.model._meta.db_pk_field] == self.Parameter(0)
+                    table[self.model._meta.db_pk_field] == self.parameter(0)
                 ).delete()
             )
             self.update_cache: Dict[str, str] = {}
@@ -132,20 +132,20 @@ class BaseExecutor:
             return cls.TO_DB_OVERRIDE[field_object.__class__](field_object, attr, instance)
         return field_object.to_db_value(attr, instance)
 
-    def _prepare_insert_statement(self, columns: List[str], no_generated: bool = False) -> str:
+    def _prepare_insert_statement(self, columns: List[str], has_generated: bool = True) -> str:
         # Insert should implement returning new id to saved object
         # Each db has it's own methods for it, so each implementation should
         # go to descendant executors
         return str(
             self.db.query_class.into(self.model._meta.basetable)
             .columns(*columns)
-            .insert(*[self.Parameter(i) for i in range(len(columns))])
+            .insert(*[self.parameter(i) for i in range(len(columns))])
         )
 
     async def _process_insert_result(self, instance: "Model", results: Any) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    def Parameter(self, pos: int) -> Parameter:
+    def parameter(self, pos: int) -> Parameter:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, instance: "Model") -> None:
@@ -189,10 +189,10 @@ class BaseExecutor:
             db_field = self.model._meta.fields_db_projection[field]
             field_object = self.model._meta.fields_map[field]
             if not field_object.pk:
-                query = query.set(db_field, self.Parameter(count))
+                query = query.set(db_field, self.parameter(count))
                 count += 1
 
-        query = query.where(table[self.model._meta.db_pk_field] == self.Parameter(count))
+        query = query.where(table[self.model._meta.db_pk_field] == self.parameter(count))
 
         sql = self.update_cache[key] = query.get_sql()
         return sql

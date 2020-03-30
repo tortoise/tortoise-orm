@@ -56,7 +56,7 @@ class MySQLExecutor(BaseExecutor):
     }
     EXPLAIN_PREFIX = "EXPLAIN FORMAT=JSON"
 
-    def Parameter(self, pos: int) -> Parameter:
+    def parameter(self, pos: int) -> Parameter:
         return Parameter("%s")
 
     async def _process_insert_result(self, instance: Model, results: int) -> None:
