@@ -45,7 +45,7 @@ class BaseExecutor:
         self.prefetch_map = prefetch_map or {}
         self._prefetch_queries = prefetch_queries or {}
 
-        key = f"{self.db.connection_name}:{self.model._meta.table}"
+        key = f"{self.db.connection_name}:{self.model._meta.db_table}"
         if key not in EXECUTOR_CACHE:
             self.regular_columns, columns = self._prepare_insert_columns()
             self.insert_query = self._prepare_insert_statement(columns)
@@ -447,7 +447,7 @@ class BaseExecutor:
             first_level_field = relation_split[0]
             if first_level_field not in self.model._meta.fetch_fields:
                 raise OperationalError(
-                    f"relation {first_level_field} for {self.model._meta.table} not found"
+                    f"relation {first_level_field} for {self.model._meta.db_table} not found"
                 )
 
             if first_level_field not in self.prefetch_map.keys():

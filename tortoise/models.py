@@ -151,7 +151,7 @@ def _get_comments(cls: "Type[Model]") -> Dict[str, str]:
 class MetaInfo:
     __slots__ = (
         "abstract",
-        "table",
+        "db_table",
         "app",
         "fields",
         "db_fields",
@@ -188,7 +188,7 @@ class MetaInfo:
 
     def __init__(self, meta: "Model.Meta") -> None:
         self.abstract: bool = getattr(meta, "abstract", False)
-        self.table: str = getattr(meta, "table", "")
+        self.db_table: str = getattr(meta, "table", "")
         self.app: Optional[str] = getattr(meta, "app", None)
         self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
         self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")

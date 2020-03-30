@@ -126,7 +126,7 @@ class Tortoise:
             return f"{typ.__module__}.{typ.__name__}"
 
         def model_name(typ: Type[Model]) -> str:
-            name = typ._meta.table
+            name = typ._meta.db_table
             for app in cls.apps.values():  # pragma: nobranch
                 for _name, _model in app.items():  # pragma: nobranch
                     if typ == _model:
@@ -197,7 +197,7 @@ class Tortoise:
         return {
             "name": model_name(model),
             "app": model._meta.app,
-            "table": model._meta.table,
+            "table": model._meta.db_table,
             "abstract": model._meta.abstract,
             "description": model._meta.table_description or None,
             "docstring": inspect.cleandoc(model.__doc__ or "") or None,
@@ -317,8 +317,8 @@ class Tortoise:
                 if model._meta._inited:
                     continue
                 model._meta._inited = True
-                if not model._meta.table:
-                    model._meta.table = model.__name__.lower()
+                if not model._meta.db_table:
+                    model._meta.db_table = model.__name__.lower()
 
                 pk_attr_changed = False
 
@@ -369,7 +369,7 @@ class Tortoise:
                     backward_relation_name = fk_object.related_name
                     if backward_relation_name is not False:
                         if not backward_relation_name:
-                            backward_relation_name = f"{model._meta.table}s"
+                            backward_relation_name = f"{model._meta.db_table}s"
                         if backward_relation_name in related_model._meta.fields:
                             raise ConfigurationError(
                                 f'backward relation "{backward_relation_name}" duplicates in'
@@ -429,7 +429,7 @@ class Tortoise:
                     backward_relation_name = o2o_object.related_name
                     if backward_relation_name is not False:
                         if not backward_relation_name:
-                            backward_relation_name = f"{model._meta.table}"
+                            backward_relation_name = f"{model._meta.db_table}"
                         if backward_relation_name in related_model._meta.fields:
                             raise ConfigurationError(
                                 f'backward relation "{backward_relation_name}" duplicates in'
@@ -452,9 +452,9 @@ class Tortoise:
 
                     backward_key = m2m_object.backward_key
                     if not backward_key:
-                        backward_key = f"{model._meta.table}_id"
+                        backward_key = f"{model._meta.db_table}_id"
                         if backward_key == m2m_object.forward_key:
-                            backward_key = f"{model._meta.table}_rel_id"
+                            backward_key = f"{model._meta.db_table}_rel_id"
                         m2m_object.backward_key = backward_key
 
                     reference = m2m_object.model_name
@@ -465,7 +465,9 @@ class Tortoise:
 
                     backward_relation_name = m2m_object.related_name
                     if not backward_relation_name:
-                        backward_relation_name = m2m_object.related_name = f"{model._meta.table}s"
+                        backward_relation_name = (
+                            m2m_object.related_name
+                        ) = f"{model._meta.db_table}s"
                     if backward_relation_name in related_model._meta.fields:
                         raise ConfigurationError(
                             f'backward relation "{backward_relation_name}" duplicates in'
@@ -474,12 +476,12 @@ class Tortoise:
 
                     if not m2m_object.through:
                         related_model_table_name = (
-                            related_model._meta.table
-                            if related_model._meta.table
+                            related_model._meta.db_table
+                            if related_model._meta.db_table
                             else related_model.__name__.lower()
                         )
 
-                        m2m_object.through = f"{model._meta.table}_{related_model_table_name}"
+                        m2m_object.through = f"{model._meta.db_table}_{related_model_table_name}"
 
                     m2m_relation = ManyToManyFieldInstance(
                         f"{app_name}.{model_name}",
@@ -615,8 +617,8 @@ class Tortoise:
         for app in cls.apps.values():
             for model in app.values():
                 model._meta.finalise_model()
-                model._meta.basetable = Table(model._meta.table)
-                model._meta.basequery = model._meta.db.query_class.from_(model._meta.table)
+                model._meta.basetable = Table(model._meta.db_table)
+                model._meta.basequery = model._meta.db.query_class.from_(model._meta.db_table)
                 model._meta.basequery_all_fields = model._meta.basequery.select(
                     *model._meta.db_fields
                 )

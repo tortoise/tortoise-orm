@@ -122,7 +122,7 @@ class BaseSchemaGenerator:
         # NOTE: for compatibility, index name should not be longer than 30
         # characters (Oracle limit).
         # That's why we slice some of the strings here.
-        table_name = model._meta.table
+        table_name = model._meta.db_table
         index_name = "{}_{}_{}_{}".format(
             prefix,
             table_name[:11],
@@ -148,7 +148,7 @@ class BaseSchemaGenerator:
         return self.INDEX_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
             index_name=self._generate_index_name("idx", model, field_names),
-            table_name=model._meta.table,
+            table_name=model._meta.db_table,
             fields=", ".join([self.quote(f) for f in field_names]),
         )
 
@@ -168,7 +168,7 @@ class BaseSchemaGenerator:
             field_object = model._meta.fields_map[field_name]
             comment = (
                 self._column_comment_generator(
-                    table=model._meta.table, column=column_name, comment=field_object.description
+                    table=model._meta.db_table, column=column_name, comment=field_object.description
                 )
                 if field_object.description
                 else ""
@@ -194,7 +194,9 @@ class BaseSchemaGenerator:
                 reference = cast("ForeignKeyFieldInstance", field_object.reference)
                 comment = (
                     self._column_comment_generator(
-                        table=model._meta.table, column=column_name, comment=reference.description,
+                        table=model._meta.db_table,
+                        column=column_name,
+                        comment=reference.description,
                     )
                     if reference.description
                     else ""
@@ -213,18 +215,18 @@ class BaseSchemaGenerator:
                     comment="",
                 ) + self._create_fk_string(
                     constraint_name=self._generate_fk_name(
-                        model._meta.table,
+                        model._meta.db_table,
                         column_name,
-                        reference.model_class._meta.table,
+                        reference.model_class._meta.db_table,
                         to_field_name,
                     ),
                     db_column=column_name,
-                    table=reference.model_class._meta.table,
+                    table=reference.model_class._meta.db_table,
                     field=to_field_name,
                     on_delete=reference.on_delete,
                     comment=comment,
                 )
-                references.add(reference.model_class._meta.table)
+                references.add(reference.model_class._meta.db_table)
             else:
                 field_creation_string = self._create_string(
                     db_column=column_name,
@@ -273,7 +275,7 @@ class BaseSchemaGenerator:
         table_fields_string = "\n    {}\n".format(",\n    ".join(fields_to_create))
         table_comment = (
             self._table_comment_generator(
-                table=model._meta.table, comment=model._meta.table_description
+                table=model._meta.db_table, comment=model._meta.table_description
             )
             if model._meta.table_description
             else ""
@@ -281,10 +283,10 @@ class BaseSchemaGenerator:
 
         table_create_string = self.TABLE_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
-            table_name=model._meta.table,
+            table_name=model._meta.db_table,
             fields=table_fields_string,
             comment=table_comment,
-            extra=self._table_generate_extra(table=model._meta.table),
+            extra=self._table_generate_extra(table=model._meta.db_table),
         )
 
         table_create_string = "\n".join([table_create_string, *field_indexes_sqls])
@@ -298,8 +300,8 @@ class BaseSchemaGenerator:
             m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
                 exists="IF NOT EXISTS " if safe else "",
                 table_name=field_object.through,
-                backward_table=model._meta.table,
-                forward_table=field_object.model_class._meta.table,
+                backward_table=model._meta.db_table,
+                forward_table=field_object.model_class._meta.db_table,
                 backward_field=model._meta.db_pk_field,
                 forward_field=field_object.model_class._meta.db_pk_field,
                 backward_key=field_object.backward_key,
@@ -319,7 +321,7 @@ class BaseSchemaGenerator:
             m2m_tables_for_create.append(m2m_create_string)
 
         return {
-            "table": model._meta.table,
+            "table": model._meta.db_table,
             "model": model,
             "table_creation_string": table_create_string,
             "references": references,

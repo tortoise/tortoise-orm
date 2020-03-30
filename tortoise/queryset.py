@@ -568,10 +568,10 @@ class QuerySet(AwaitableQuery[MODEL]):
             if first_level_field not in self.model._meta.fetch_fields:
                 if first_level_field in self.model._meta.fields:
                     raise FieldError(
-                        f"Field {first_level_field} on {self.model._meta.table} is not a relation"
+                        f"Field {first_level_field} on {self.model._meta.db_table} is not a relation"
                     )
                 raise FieldError(
-                    f"Relation {first_level_field} for {self.model._meta.table} not found"
+                    f"Relation {first_level_field} for {self.model._meta.db_table} not found"
                 )
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()
