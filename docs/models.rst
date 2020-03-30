@@ -102,7 +102,6 @@ If you don't define a primary key, we will create a primary key of type ``IntFie
 
 .. note::
    If this is used on an Integer Field, ``generated`` will be set to ``True`` unless you explicitly pass ``generated=False`` as well.
-   If ``generated`` is ``True`` any value you parse for this field is silently ignored and it will let the database assign an value instead.
 
 Any of these are valid primary key definitions in a Model:
 

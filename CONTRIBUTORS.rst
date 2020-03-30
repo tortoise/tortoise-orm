@@ -27,6 +27,7 @@ Contributors
 * Jinlong Peng ``@long2ice``
 * Sang-Heon Jeon ``@lntuition``
 * Jong-Yeop Park ``@pjongy``
+* ``@sm0k``
 
 Special Thanks
 ==============
