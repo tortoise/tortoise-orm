@@ -691,11 +691,11 @@ class Model(metaclass=ModelMeta):
 
     async def _pre_save(self, using_db, update_fields):
         for listener in self._listeners.get(Signals.pre_save, {}).get(self.__class__, []):
-            await listener(self.__class__, self, not self._saved_in_db, using_db, update_fields)
+            await listener(self.__class__, self, using_db, update_fields)
 
-    async def _post_save(self, using_db, update_fields):
+    async def _post_save(self, using_db, created, update_fields):
         for listener in self._listeners.get(Signals.post_save, {}).get(self.__class__, []):
-            await listener(self.__class__, self, not self._saved_in_db, using_db, update_fields)
+            await listener(self.__class__, self, created, using_db, update_fields)
 
     @classmethod
     def _init_from_db(cls: Type[MODEL], **kwargs: Any) -> MODEL:
@@ -762,12 +762,14 @@ class Model(metaclass=ModelMeta):
         await self._pre_save(using_db, update_fields)
 
         if self._saved_in_db:
+            created = False
             await executor.execute_update(self, update_fields)
         else:
+            created = True
             await executor.execute_insert(self)
             self._saved_in_db = True
 
-        await self._post_save(using_db, update_fields)
+        await self._post_save(using_db, created, update_fields)
 
     async def delete(self, using_db: Optional[BaseDBAsyncClient] = None) -> None:
         """
