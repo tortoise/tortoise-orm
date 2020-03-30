@@ -35,30 +35,36 @@ class BaseSchemaGenerator:
         self.client = client
 
     def _create_string(
-        self, db_field: str, field_type: str, nullable: str, unique: str, is_pk: bool, comment: str
+        self,
+        db_column: str,
+        field_type: str,
+        nullable: str,
+        unique: str,
+        is_primary_key: bool,
+        comment: str,
     ) -> str:
         # children can override this function to customize their sql queries
 
         return self.FIELD_TEMPLATE.format(
-            name=db_field,
+            name=db_column,
             type=field_type,
             nullable=nullable,
-            unique="" if is_pk else unique,
+            unique="" if is_primary_key else unique,
             comment=comment if self.client.capabilities.inline_comment else "",
-            primary=" PRIMARY KEY" if is_pk else "",
+            primary=" PRIMARY KEY" if is_primary_key else "",
         ).strip()
 
     def _create_fk_string(
         self,
         constraint_name: str,
-        db_field: str,
+        db_column: str,
         table: str,
         field: str,
         on_delete: str,
         comment: str,
     ) -> str:
         return self.FK_TEMPLATE.format(
-            db_field=db_field, table=table, field=field, on_delete=on_delete, comment=comment
+            db_column=db_column, table=table, field=field, on_delete=on_delete, comment=comment
         )
 
     def _table_comment_generator(self, table: str, comment: str) -> str:
@@ -158,11 +164,11 @@ class BaseSchemaGenerator:
         m2m_tables_for_create = []
         references = set()
 
-        for field_name, db_field in model._meta.fields_db_projection.items():
+        for field_name, column_name in model._meta.fields_db_projection.items():
             field_object = model._meta.fields_map[field_name]
             comment = (
                 self._column_comment_generator(
-                    table=model._meta.table, column=db_field, comment=field_object.description
+                    table=model._meta.table, column=column_name, comment=field_object.description
                 )
                 if field_object.description
                 else ""
@@ -174,7 +180,9 @@ class BaseSchemaGenerator:
                     if generated_sql:  # pragma: nobranch
                         fields_to_create.append(
                             self.GENERATED_PK_TEMPLATE.format(
-                                field_name=db_field, generated_sql=generated_sql, comment=comment,
+                                field_name=column_name,
+                                generated_sql=generated_sql,
+                                comment=comment,
                             )
                         )
                         continue
@@ -182,11 +190,11 @@ class BaseSchemaGenerator:
             nullable = "NOT NULL" if not field_object.null else ""
             unique = "UNIQUE" if field_object.unique else ""
 
-            if hasattr(field_object, "reference") and field_object.reference:
+            if getattr(field_object, "reference", None):
                 reference = cast("ForeignKeyFieldInstance", field_object.reference)
                 comment = (
                     self._column_comment_generator(
-                        table=model._meta.table, column=db_field, comment=reference.description,
+                        table=model._meta.table, column=column_name, comment=reference.description,
                     )
                     if reference.description
                     else ""
@@ -197,20 +205,20 @@ class BaseSchemaGenerator:
                     to_field_name = reference.to_field_instance.model_field_name
 
                 field_creation_string = self._create_string(
-                    db_field=db_field,
+                    db_column=column_name,
                     field_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                     nullable=nullable,
                     unique=unique,
-                    is_pk=field_object.pk,
+                    is_primary_key=field_object.pk,
                     comment="",
                 ) + self._create_fk_string(
                     constraint_name=self._generate_fk_name(
                         model._meta.table,
-                        db_field,
+                        column_name,
                         reference.model_class._meta.table,
                         to_field_name,
                     ),
-                    db_field=db_field,
+                    db_column=column_name,
                     table=reference.model_class._meta.table,
                     field=to_field_name,
                     on_delete=reference.on_delete,
@@ -219,18 +227,18 @@ class BaseSchemaGenerator:
                 references.add(reference.model_class._meta.table)
             else:
                 field_creation_string = self._create_string(
-                    db_field=db_field,
+                    db_column=column_name,
                     field_type=field_object.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                     nullable=nullable,
                     unique=unique,
-                    is_pk=field_object.pk,
+                    is_primary_key=field_object.pk,
                     comment=comment,
                 )
 
             fields_to_create.append(field_creation_string)
 
             if field_object.index and not field_object.pk:
-                fields_with_index.append(db_field)
+                fields_with_index.append(column_name)
 
         if model._meta.unique_together:
             for unique_together_list in model._meta.unique_together:
