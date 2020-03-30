@@ -23,7 +23,7 @@ def _process_filter_kwarg(
     else:
         param = model._meta.get_filter(key)
 
-    pk_db_field = model._meta.db_pk_field
+    pk_db_field = model._meta.db_pk_column
     if param.get("table"):
         join = (
             param["table"],
@@ -54,7 +54,7 @@ def _get_joins_for_related_field(
         required_joins.append(
             (
                 through_table,
-                table[related_field.model._meta.db_pk_field]
+                table[related_field.model._meta.db_pk_column]
                 == through_table[related_field.backward_key],
             )
         )
@@ -62,7 +62,7 @@ def _get_joins_for_related_field(
             (
                 related_table,
                 through_table[related_field.forward_key]
-                == related_table[related_field.model_class._meta.db_pk_field],
+                == related_table[related_field.model_class._meta.db_pk_column],
             )
         )
     elif isinstance(related_field, BackwardFKRelation):

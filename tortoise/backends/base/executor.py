@@ -72,7 +72,7 @@ class BaseExecutor:
             table = self.model._meta.basetable
             self.delete_query = str(
                 self.model._meta.basequery.where(
-                    table[self.model._meta.db_pk_field] == self.parameter(0)
+                    table[self.model._meta.db_pk_column] == self.parameter(0)
                 ).delete()
             )
             self.update_cache: Dict[str, str] = {}
@@ -194,7 +194,7 @@ class BaseExecutor:
                 query = query.set(db_column, self.parameter(count))
                 count += 1
 
-        query = query.where(table[self.model._meta.db_pk_field] == self.parameter(count))
+        query = query.where(table[self.model._meta.db_pk_column] == self.parameter(count))
 
         sql = self.update_cache[key] = query.get_sql()
         return sql
@@ -318,7 +318,7 @@ class BaseExecutor:
         )
 
         related_query_table = related_query.model._meta.basetable
-        related_pk_field = related_query.model._meta.db_pk_field
+        related_pk_field = related_query.model._meta.db_pk_column
         related_query.resolve_ordering(related_query.model, related_query_table, [], {})
         query = (
             related_query.query.join(subquery)

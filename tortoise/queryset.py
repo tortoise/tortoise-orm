@@ -117,7 +117,7 @@ class AwaitableQuery(Generic[MODEL]):
 
         if has_aggregate and (self._joined_tables or having_criterion):
             self.query = self.query.groupby(
-                self.model._meta.basetable[self.model._meta.db_pk_field]
+                self.model._meta.basetable[self.model._meta.db_pk_column]
             )
 
     def _join_table_by_field(
