@@ -84,7 +84,7 @@ class Function:
                 if table == related_table:
                     related_table = related_table.as_(f"{table.get_table_name()}__{last_field}")
 
-            field = related_table[related_field_meta.db_pk_field]
+            field = related_table[related_field_meta.db_pk_column]
         else:
             field_object = model._meta.fields_map[last_field]
             if field_object.source_field:

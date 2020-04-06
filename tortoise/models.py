@@ -151,7 +151,7 @@ def _get_comments(cls: "Type[Model]") -> Dict[str, str]:
 class MetaInfo:
     __slots__ = (
         "abstract",
-        "table",
+        "db_table",
         "app",
         "fields",
         "db_fields",
@@ -178,7 +178,7 @@ class MetaInfo:
         "_model",
         "table_description",
         "pk",
-        "db_pk_field",
+        "db_pk_column",
         "db_native_fields",
         "db_default_fields",
         "db_complex_fields",
@@ -188,7 +188,7 @@ class MetaInfo:
 
     def __init__(self, meta: "Model.Meta") -> None:
         self.abstract: bool = getattr(meta, "abstract", False)
-        self.table: str = getattr(meta, "table", "")
+        self.db_table: str = getattr(meta, "table", "")
         self.app: Optional[str] = getattr(meta, "app", None)
         self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
         self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
@@ -217,7 +217,7 @@ class MetaInfo:
         self._model: Type["Model"] = None  # type: ignore
         self.table_description: str = getattr(meta, "table_description", "")
         self.pk: Field = None  # type: ignore
-        self.db_pk_field: str = ""
+        self.db_pk_column: str = ""
         self.db_native_fields: List[Tuple[str, str, Field]] = []
         self.db_default_fields: List[Tuple[str, str, Field]] = []
         self.db_complex_fields: List[Tuple[str, str, Field]] = []
@@ -266,7 +266,7 @@ class MetaInfo:
 
     def finalise_pk(self) -> None:
         self.pk = self.fields_map[self.pk_attr]
-        self.db_pk_field = self.pk.source_field or self.pk_attr
+        self.db_pk_column = self.pk.source_field or self.pk_attr
 
     def finalise_model(self) -> None:
         """
