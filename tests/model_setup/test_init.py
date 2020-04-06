@@ -139,7 +139,7 @@ class TestInitErrors(test.SimpleTestCase):
     async def test_multiple_pk(self):
         with self.assertRaisesRegex(
             ConfigurationError,
-            "Can't create model Tournament with two primary keys, only single pk are supported",
+            "Can't create model Tournament with two primary keys, only single primary key is supported",
         ):
             await Tortoise.init(
                 {

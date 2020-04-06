@@ -136,9 +136,10 @@ class Field(metaclass=_FieldMeta):
         index: bool = False,
         description: Optional[str] = None,
         model: "Optional[Model]" = None,
-        reference: "Optional[Field]" = None,
         **kwargs: Any,
     ) -> None:
+        # TODO: Rename pk to primary_key, alias pk, deprecate
+        # TODO: Rename index to db_index, alias index, deprecate
         if not self.indexable and (unique or index):
             raise ConfigurationError(f"{self.__class__.__name__} can't be indexed")
         if pk:
@@ -156,8 +157,7 @@ class Field(metaclass=_FieldMeta):
         self.docstring: Optional[str] = None
         # TODO: consider making this not be set from constructor
         self.model: Type["Model"] = model  # type: ignore
-        # TODO: consider moving this to RelationalField
-        self.reference = reference
+        self.reference: "Optional[Field]" = None
 
     def to_db_value(self, value: Any, instance: "Union[Type[Model], Model]") -> Any:
         """

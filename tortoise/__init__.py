@@ -125,18 +125,10 @@ class Tortoise:
                 return str(typ).replace("typing.", "")
             return f"{typ.__module__}.{typ.__name__}"
 
-        def model_name(typ: Type[Model]) -> str:
-            name = typ._meta.db_table
-            for app in cls.apps.values():  # pragma: nobranch
-                for _name, _model in app.items():  # pragma: nobranch
-                    if typ == _model:
-                        name = _name
-            return f"{typ._meta.app}.{name}"
-
         def type_name(typ: Any) -> Union[str, List[str]]:
             try:
                 if issubclass(typ, Model):
-                    return model_name(typ)
+                    return typ._meta.full_name
             except TypeError:
                 pass
             try:
@@ -195,7 +187,7 @@ class Tortoise:
             return desc
 
         return {
-            "name": model_name(model),
+            "name": model._meta.full_name,
             "app": model._meta.app,
             "table": model._meta.db_table,
             "abstract": model._meta.abstract,

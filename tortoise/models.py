@@ -21,6 +21,7 @@ from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
     ManyToManyFieldInstance,
     ManyToManyRelation,
+    NoneAwaitable,
     OneToOneFieldInstance,
     ReverseRelation,
 )
@@ -31,19 +32,6 @@ from tortoise.transactions import current_transaction_map, in_transaction
 
 MODEL = TypeVar("MODEL", bound="Model")
 # TODO: Define Filter type object. Possibly tuple?
-
-
-class _NoneAwaitable:
-    __slots__ = ()
-
-    def __await__(self) -> Generator[None, None, None]:
-        yield None
-
-    def __bool__(self) -> bool:
-        return False
-
-
-NoneAwaitable = _NoneAwaitable()
 
 
 def get_together(meta: "Model.Meta", together: str) -> Tuple[Tuple[str, ...], ...]:
@@ -112,7 +100,7 @@ def _m2m_getter(
 ) -> ManyToManyRelation:
     val = getattr(self, _key, None)
     if val is None:
-        val = ManyToManyRelation(field_object.model_class, self, field_object)
+        val = ManyToManyRelation(self, field_object)
         setattr(self, _key, val)
     return val
 
@@ -221,6 +209,10 @@ class MetaInfo:
         self.db_native_fields: List[Tuple[str, str, Field]] = []
         self.db_default_fields: List[Tuple[str, str, Field]] = []
         self.db_complex_fields: List[Tuple[str, str, Field]] = []
+
+    @property
+    def full_name(self) -> str:
+        return f"{self.app}.{self._model.__name__}"
 
     def add_field(self, name: str, value: Field) -> None:
         if name in self.fields_map:
@@ -507,7 +499,7 @@ class ModelMeta(type):
                         if custom_pk_present:
                             raise ConfigurationError(
                                 f"Can't create model {name} with two primary keys,"
-                                " only single pk are supported"
+                                " only single primary key is supported"
                             )
                         if value.generated and not value.allows_generated:
                             raise ConfigurationError(

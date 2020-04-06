@@ -49,15 +49,28 @@ Type hint for the result of accessing the :func:`.ForeignKeyField` field in the 
 """
 
 
+class _NoneAwaitable:
+    __slots__ = ()
+
+    def __await__(self) -> Generator[None, None, None]:
+        yield None
+
+    def __bool__(self) -> bool:
+        return False
+
+
+NoneAwaitable = _NoneAwaitable()
+
+
 class ReverseRelation(Generic[MODEL]):
     """
     Relation container for :func:`.ForeignKeyField`.
     """
 
     def __init__(
-        self, model: Type[MODEL], relation_field: str, instance: "Model", from_field: str,
+        self, remote_model: Type[MODEL], relation_field: str, instance: "Model", from_field: str,
     ) -> None:
-        self.model = model
+        self.remote_model = remote_model
         self.relation_field = relation_field
         self.instance = instance
         self.from_field = from_field
@@ -71,7 +84,9 @@ class ReverseRelation(Generic[MODEL]):
             raise OperationalError(
                 "This objects hasn't been instanced, call .save() before calling related queries"
             )
-        return self.model.filter(**{self.relation_field: getattr(self.instance, self.from_field)})
+        return self.remote_model.filter(
+            **{self.relation_field: getattr(self.instance, self.from_field)}
+        )
 
     def __contains__(self, item: Any) -> bool:
         self._raise_if_not_fetched()
@@ -149,12 +164,9 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
     Many to many relation container for :func:`.ManyToManyField`.
     """
 
-    def __init__(
-        self, model: Type[MODEL], instance: "Model", m2m_field: "ManyToManyFieldInstance"
-    ) -> None:
-        super().__init__(model, m2m_field.related_name, instance, "pk")
+    def __init__(self, instance: "Model", m2m_field: "ManyToManyFieldInstance") -> None:
+        super().__init__(m2m_field.model_class, m2m_field.related_name, instance, "pk")  # type: ignore
         self.field = m2m_field
-        self.model = m2m_field.model_class  # type: ignore
         self.instance = instance
 
     async def add(self, *instances: MODEL, using_db: "Optional[BaseDBAsyncClient]" = None) -> None:
@@ -169,7 +181,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
             return
         if not self.instance._saved_in_db:
             raise OperationalError(f"You should first call .save() on {self.instance}")
-        db = using_db if using_db else self.model._meta.db
+        db = using_db if using_db else self.remote_model._meta.db
         pk_formatting_func = type(self.instance)._meta.pk.to_db_value
         related_pk_formatting_func = type(instances[0])._meta.pk.to_db_value
         through_table = Table(self.field.through)
@@ -224,7 +236,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         """
         Clears ALL relations.
         """
-        db = using_db if using_db else self.model._meta.db
+        db = using_db if using_db else self.remote_model._meta.db
         through_table = Table(self.field.through)
         pk_formatting_func = type(self.instance)._meta.pk.to_db_value
         query = (
@@ -245,7 +257,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
 
         :raises OperationalError: remove() was called with no instances.
         """
-        db = using_db if using_db else self.model._meta.db
+        db = using_db if using_db else self.remote_model._meta.db
         if not instances:
             raise OperationalError("remove() called on no instances")
         through_table = Table(self.field.through)
@@ -280,7 +292,7 @@ class RelationalField(Field):
         super().__init__(**kwargs)
         self.model_class: "Type[Model]" = None  # type: ignore
         self.to_field = to_field
-        self.to_field_instance: "Field" = None  # type: ignore
+        self.to_field_instance: Field = None  # type: ignore
 
 
 class ForeignKeyFieldInstance(RelationalField):
@@ -348,6 +360,8 @@ class ManyToManyFieldInstance(RelationalField):
         field_type: "Type[Model]" = None,  # type: ignore
         **kwargs: Any,
     ) -> None:
+        # TODO: rename through to through_table
+        # TODO: add through to use a Model
         super().__init__(**kwargs)
         self.model_class: "Type[Model]" = field_type
         if len(model_name.split(".")) != 2:
