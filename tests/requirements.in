@@ -46,7 +46,6 @@ quart
 
 # Sample integration - Sanic
 sanic
-ujson==1.35
 
 # Sample integration - Starlette
 starlette
