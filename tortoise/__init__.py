@@ -539,13 +539,23 @@ class Tortoise:
             if isinstance(info, str):
                 info = expand_db_url(info)
             client_class = cls._discover_client_class(info.get("engine"))
-            db_params = info["credentials"].copy()
-            db_params.update({"connection_name": name})
-            connection = client_class(**db_params)  # type: ignore
-            if create_db:
-                await connection.db_create()
-            await connection.create_connection(with_db=True)
-            cls._connections[name] = connection
+
+            # If no credentials assume given pool and acquisition function.
+            if not connections_config[name]['credentials']:
+                # Fake keys.
+                keys = {'user': '', 'password': '', 'database': '', 'host': '', 'port': '0'}
+                connection = client_class(**keys, connection_name=name)
+                client_class._pool = info['pool']
+                client_class.acquire_connection = info['acquire']
+                cls._connections[name] = client_class
+            else:
+                db_params = info["credentials"].copy()
+                db_params.update({"connection_name": name})
+                connection = client_class(**db_params)  # type: ignore
+                if create_db:
+                    await connection.db_create()
+                await connection.create_connection(with_db=True)
+                cls._connections[name] = connection
             current_transaction_map[name] = ContextVar(name, default=connection)
 
     @classmethod
