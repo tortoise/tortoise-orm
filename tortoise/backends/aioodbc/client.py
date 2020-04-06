@@ -84,8 +84,9 @@ class OracleQuery(Query):
 
 
 
+DSN_TEMPLATE = "ODBC;Driver={{{driver}}};SERVER={c.host}:{c.port}/c.dataabase;UID={c.user};PWD={c.password};SCHEMA={c.schema};"
+
 class AioodbcDBClient(BaseDBAsyncClient):
-    DSN_TEMPLATE = "ODBC;Driver={{{driver}}};SERVER={c.host}:{c.port}/c.dataabase;UID={c.user};PWD={c.password};SCHEMA={c.schema};"
     query_class = OracleQuery
     executor_class = AioodbcExecutor
     schema_generator = AioodbcSchemaGenerator
@@ -125,7 +126,7 @@ class AioodbcDBClient(BaseDBAsyncClient):
             "pwd": self.password,
             **self.extra
         }
-        self._template["dsn"] = self.DSN_TEMPLATE.format(c=self, driver=self.extra['driver'])
+        self._template["dsn"] = DSN_TEMPLATE.format(c=self, driver=self.extra['driver'])
         if self.schema:
             self._template["server_settings"] = {"search_path": self.schema}
 
