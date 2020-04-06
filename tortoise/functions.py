@@ -66,8 +66,8 @@ class Function:
             related_field = cast(RelationalField, model._meta.fields_map[iter_field])
             joins.append((table, iter_field, related_field))
 
-            model = related_field.model_class
-            related_table: Table = related_field.model_class._meta.basetable
+            model = related_field.related_model
+            related_table: Table = related_field.related_model._meta.basetable
             if isinstance(related_field, ForeignKeyFieldInstance):
                 # Only FK's can be to same table, so we only auto-alias FK join tables
                 related_table = related_table.as_(f"{table.get_table_name()}__{iter_field}")
@@ -76,7 +76,7 @@ class Function:
         last_field = fields[-1]
         if last_field in model._meta.fetch_fields:
             related_field = cast(RelationalField, model._meta.fields_map[last_field])
-            related_field_meta = related_field.model_class._meta
+            related_field_meta = related_field.related_model._meta
             joins.append((table, last_field, related_field))
             related_table = related_field_meta.basetable
 

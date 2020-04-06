@@ -174,7 +174,7 @@ class AwaitableQuery(Generic[MODEL]):
                 related_field = cast(RelationalField, model._meta.fields_map[related_field_name])
                 related_table = self._join_table_by_field(table, related_field_name, related_field)
                 self.resolve_ordering(
-                    related_field.model_class,
+                    related_field.related_model,
                     related_table,
                     [("__".join(field_name.split("__")[1:]), ordering[1])],
                     {},
@@ -837,7 +837,7 @@ class FieldSelectQuery(AwaitableQuery):
         forwarded_fields_split = forwarded_fields.split("__")
 
         return self._join_table_with_forwarded_fields(
-            model=field_object.model_class,
+            model=field_object.related_model,
             table=table,
             field=forwarded_fields_split[0],
             forwarded_fields="__".join(forwarded_fields_split[1:]),
@@ -892,7 +892,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         field_split = field.split("__")
         if field_split[0] in model._meta.fetch_fields:
-            new_model = model._meta.fields_map[field_split[0]].model_class  # type: ignore
+            new_model = model._meta.fields_map[field_split[0]].related_model  # type: ignore
             return self.resolve_to_python_value(new_model, "__".join(field_split[1:]))
 
         raise FieldError(f'Unknown field "{field}" for model "{model}"')

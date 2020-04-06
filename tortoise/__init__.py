@@ -149,7 +149,7 @@ class Tortoise:
         def describe_field(name: str) -> dict:
             # TODO: db_type
             field = model._meta.fields_map[name]
-            field_type = getattr(field, "model_class", field.field_type)
+            field_type = getattr(field, "related_model", field.field_type)
             desc = {
                 "name": name,
                 "field_type": field.__class__.__name__ if serializable else field.__class__,
@@ -356,7 +356,7 @@ class Tortoise:
                         key_fk_object.source_field = key_field
                     model._meta.add_field(key_field, key_fk_object)
 
-                    fk_object.model_class = related_model
+                    fk_object.related_model = related_model
                     fk_object.source_field = key_field
                     backward_relation_name = fk_object.related_name
                     if backward_relation_name is not False:
@@ -416,7 +416,7 @@ class Tortoise:
                         key_o2o_object.source_field = key_field
                     model._meta.add_field(key_field, key_o2o_object)
 
-                    o2o_object.model_class = related_model
+                    o2o_object.related_model = related_model
                     o2o_object.source_field = key_field
                     backward_relation_name = o2o_object.related_name
                     if backward_relation_name is not False:
@@ -453,7 +453,7 @@ class Tortoise:
                     related_app_name, related_model_name = split_reference(reference)
                     related_model = get_related_model(related_app_name, related_model_name)
 
-                    m2m_object.model_class = related_model
+                    m2m_object.related_model = related_model
 
                     backward_relation_name = m2m_object.related_name
                     if not backward_relation_name:

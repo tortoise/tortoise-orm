@@ -165,7 +165,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
     """
 
     def __init__(self, instance: "Model", m2m_field: "ManyToManyFieldInstance") -> None:
-        super().__init__(m2m_field.model_class, m2m_field.related_name, instance, "pk")  # type: ignore
+        super().__init__(m2m_field.related_model, m2m_field.related_name, instance, "pk")  # type: ignore
         self.field = m2m_field
         self.instance = instance
 
@@ -288,9 +288,11 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
 class RelationalField(Field):
     has_db_field = False
 
-    def __init__(self, to_field: Optional[str] = None, **kwargs: Any) -> None:
+    def __init__(
+        self, related_model: "Type[Model]", to_field: Optional[str] = None, **kwargs: Any
+    ) -> None:
         super().__init__(**kwargs)
-        self.model_class: "Type[Model]" = None  # type: ignore
+        self.related_model: "Type[Model]" = related_model
         self.to_field = to_field
         self.to_field_instance: Field = None  # type: ignore
 
@@ -303,7 +305,7 @@ class ForeignKeyFieldInstance(RelationalField):
         on_delete: str = CASCADE,
         **kwargs: Any,
     ) -> None:
-        super().__init__(**kwargs)
+        super().__init__(None, **kwargs)  # type: ignore
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name = model_name
@@ -324,8 +326,7 @@ class BackwardFKRelation(RelationalField):
         description: Optional[str],
         **kwargs: Any,
     ) -> None:
-        super().__init__(null=null, **kwargs)
-        self.model_class: "Type[Model]" = field_type
+        super().__init__(field_type, null=null, **kwargs)
         self.relation_field: str = relation_field
         self.description: Optional[str] = description
 
@@ -362,8 +363,7 @@ class ManyToManyFieldInstance(RelationalField):
     ) -> None:
         # TODO: rename through to through_table
         # TODO: add through to use a Model
-        super().__init__(**kwargs)
-        self.model_class: "Type[Model]" = field_type
+        super().__init__(field_type, **kwargs)
         if len(model_name.split(".")) != 2:
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name: str = model_name

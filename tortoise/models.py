@@ -310,7 +310,7 @@ class MetaInfo:
                     partial(
                         _fk_getter,
                         _key=_key,
-                        ftype=fk_field_object.model_class,
+                        ftype=fk_field_object.related_model,
                         relation_field=relation_field,
                         to_field=to_field,
                     ),
@@ -338,7 +338,7 @@ class MetaInfo:
                     partial(
                         _rfk_getter,
                         _key=_key,
-                        ftype=backward_fk_field_object.model_class,
+                        ftype=backward_fk_field_object.related_model,
                         frelfield=backward_fk_field_object.relation_field,
                         from_field=backward_fk_field_object.to_field_instance.model_field_name,
                     )
@@ -358,7 +358,7 @@ class MetaInfo:
                     partial(
                         _fk_getter,
                         _key=_key,
-                        ftype=o2o_field_object.model_class,
+                        ftype=o2o_field_object.related_model,
                         relation_field=relation_field,
                         to_field=to_field,
                     ),
@@ -388,7 +388,7 @@ class MetaInfo:
                     partial(
                         _ro2o_getter,
                         _key=_key,
-                        ftype=backward_o2o_field_object.model_class,
+                        ftype=backward_o2o_field_object.related_model,
                         frelfield=backward_o2o_field_object.relation_field,
                         from_field=backward_o2o_field_object.to_field_instance.model_field_name,
                     ),
