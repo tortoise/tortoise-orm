@@ -219,6 +219,7 @@ class MetaInfo:
             raise ConfigurationError(f"Field {name} already present in meta")
         value.model = self._model
         self.fields_map[name] = value
+        value.model_field_name = name
 
         if value.has_db_field:
             self.fields_db_projection[name] = value.source_field or name

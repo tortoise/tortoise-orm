@@ -151,9 +151,9 @@ class Tortoise:
             field = model._meta.fields_map[name]
             field_type = getattr(field, "related_model", field.field_type)
             desc = {
-                "name": name,
+                "name": field.model_field_name,
                 "field_type": field.__class__.__name__ if serializable else field.__class__,
-                "db_column": field.source_field or name,
+                "db_column": field.source_field or field.model_field_name,
                 "raw_field": None,
                 "db_field_types": field.get_db_field_types(),
                 "python_type": type_name(field_type) if serializable else field_type,
@@ -340,6 +340,7 @@ class Tortoise:
                     else:
                         key_fk_object = deepcopy(related_model._meta.pk)
                         fk_object.to_field_instance = related_model._meta.pk
+                        fk_object.to_field = related_model._meta.pk_attr
 
                     key_field = f"{field}_id"
                     key_fk_object.pk = False

@@ -385,7 +385,7 @@ class BaseExecutor:
         relation_key_field = f"{field}_id"
         for instance in instance_list:
             if getattr(instance, relation_key_field):
-                key = instance._meta.fields_map[relation_key_field].model_field_name
+                key = instance._meta.fields_map[field].to_field
                 if key not in related_objects_for_fetch:
                     related_objects_for_fetch[key] = []
                 related_objects_for_fetch[key].append(getattr(instance, relation_key_field))
