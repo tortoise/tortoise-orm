@@ -11,3 +11,6 @@ sanic
 starlette
 pydantic
 fastapi
+
+# Resolves comflicts
+h11==0.8.1
