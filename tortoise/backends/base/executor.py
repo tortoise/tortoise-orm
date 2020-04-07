@@ -3,7 +3,7 @@ import datetime
 import decimal
 from copy import copy
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Type, Union, cast
 
 from pypika import JoinType, Parameter, Query, Table
 
@@ -13,6 +13,7 @@ from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
     ManyToManyFieldInstance,
+    RelationalField,
 )
 from tortoise.query_utils import QueryModifier
 
@@ -385,7 +386,7 @@ class BaseExecutor:
         relation_key_field = f"{field}_id"
         for instance in instance_list:
             if getattr(instance, relation_key_field):
-                key = instance._meta.fields_map[field].to_field
+                key = cast(RelationalField, instance._meta.fields_map[field]).to_field
                 if key not in related_objects_for_fetch:
                     related_objects_for_fetch[key] = []
                 related_objects_for_fetch[key].append(getattr(instance, relation_key_field))
