@@ -132,7 +132,7 @@ class TestDescribeModel(test.SimpleTestCase):
         )
 
     def test_describe_model_straight(self):
-        val = Tortoise.describe_model(StraightFields)
+        val = StraightFields.describe()
 
         self.assertEqual(
             val,
@@ -330,7 +330,7 @@ class TestDescribeModel(test.SimpleTestCase):
         )
 
     def test_describe_model_straight_native(self):
-        val = Tortoise.describe_model(StraightFields, serializable=False)
+        val = StraightFields.describe(serializable=False)
 
         self.assertEqual(
             val,
@@ -528,7 +528,7 @@ class TestDescribeModel(test.SimpleTestCase):
         )
 
     def test_describe_model_source(self):
-        val = Tortoise.describe_model(SourceFields)
+        val = SourceFields.describe()
 
         self.assertEqual(
             val,
@@ -726,7 +726,7 @@ class TestDescribeModel(test.SimpleTestCase):
         )
 
     def test_describe_model_source_native(self):
-        val = Tortoise.describe_model(SourceFields, serializable=False)
+        val = SourceFields.describe(serializable=False)
 
         self.assertEqual(
             val,
@@ -924,7 +924,7 @@ class TestDescribeModel(test.SimpleTestCase):
         )
 
     def test_describe_model_uuidpk(self):
-        val = Tortoise.describe_model(UUIDPkModel)
+        val = UUIDPkModel.describe()
 
         self.assertEqual(
             val,
@@ -989,7 +989,7 @@ class TestDescribeModel(test.SimpleTestCase):
         )
 
     def test_describe_model_uuidpk_native(self):
-        val = Tortoise.describe_model(UUIDPkModel, serializable=False)
+        val = UUIDPkModel.describe(serializable=False)
 
         self.assertEqual(
             val,
@@ -1054,7 +1054,7 @@ class TestDescribeModel(test.SimpleTestCase):
         )
 
     def test_describe_model_uuidpk_relatednull(self):
-        val = Tortoise.describe_model(UUIDFkRelatedNullModel, serializable=True)
+        val = UUIDFkRelatedNullModel.describe(serializable=True)
 
         self.assertEqual(
             val,
@@ -1167,7 +1167,7 @@ class TestDescribeModel(test.SimpleTestCase):
         )
 
     def test_describe_model_json(self):
-        val = Tortoise.describe_model(JSONFields)
+        val = JSONFields.describe()
 
         self.assertEqual(
             val,
@@ -1250,7 +1250,7 @@ class TestDescribeModel(test.SimpleTestCase):
         )
 
     def test_describe_model_json_native(self):
-        val = Tortoise.describe_model(JSONFields, serializable=False)
+        val = JSONFields.describe(serializable=False)
 
         self.assertEqual(
             val,

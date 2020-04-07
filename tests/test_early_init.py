@@ -66,7 +66,7 @@ class TestBasic(test.TestCase):
             },
         )
         self.assertEqual(
-            Tortoise.describe_model(Event),
+            Event.describe(),
             {
                 "name": "None.Event",
                 "app": None,
@@ -202,7 +202,7 @@ class TestBasic(test.TestCase):
             },
         )
         self.assertEqual(
-            Tortoise.describe_model(Event),
+            Event.describe(),
             {
                 "name": "models.Event",
                 "app": "models",

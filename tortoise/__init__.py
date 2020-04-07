@@ -46,7 +46,9 @@ class Tortoise:
         return cls._connections[connection_name]
 
     @classmethod
-    def describe_model(cls, model: Type[Model], serializable: bool = True) -> dict:
+    def describe_model(
+        cls, model: Type[Model], serializable: bool = True
+    ) -> dict:  # pragma: nocoverage
         """
         Describes the given list of models or ALL registered models.
 
@@ -58,7 +60,15 @@ class Tortoise:
             ``True`` for JSON-serialisable data. (Defaults to ``True``)
 
         See :meth:`tortoise.models.Model.describe`
+
+        .. warning::
+           This is deprecated, please use :meth:`tortoise.models.Model.describe` instead
         """
+        warnings.warn(
+            "Tortoise.describe_model(<MODEL>) is deprecated, please use <MODEL>.describe() instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return model.describe(serializable=serializable)
 
     @classmethod
