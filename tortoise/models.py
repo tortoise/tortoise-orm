@@ -257,10 +257,6 @@ class MetaInfo:
     def get_filter(self, key: str) -> dict:
         return self.filters[key]
 
-    def finalise_pk(self) -> None:
-        self.pk = self.fields_map[self.pk_attr]
-        self.db_pk_column = self.pk.source_field or self.pk_attr
-
     def finalise_model(self) -> None:
         """
         Finalise the model after it had been fully loaded.
@@ -566,6 +562,9 @@ class ModelMeta(type):
         meta.m2m_fields = m2m_fields
         meta.default_connection = None
         meta.pk_attr = pk_attr
+        meta.pk = fields_map.get(pk_attr)  # type: ignore
+        if meta.pk:
+            meta.db_pk_column = meta.pk.source_field or meta.pk_attr
         meta._inited = False
         if not fields_map:
             meta.abstract = True

@@ -296,6 +296,11 @@ class RelationalField(Field):
         self.to_field: str = to_field  # type: ignore
         self.to_field_instance: Field = None  # type: ignore
 
+    def describe(self, serializable: bool) -> dict:
+        desc = super().describe(serializable)
+        del desc["db_column"]
+        return desc
+
 
 class ForeignKeyFieldInstance(RelationalField):
     def __init__(
@@ -315,6 +320,11 @@ class ForeignKeyFieldInstance(RelationalField):
         if on_delete == SET_NULL and not bool(kwargs.get("null")):
             raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
         self.on_delete = on_delete
+
+    def describe(self, serializable: bool) -> dict:
+        desc = super().describe(serializable)
+        desc["raw_field"] = self.source_field
+        return desc
 
 
 class BackwardFKRelation(RelationalField):

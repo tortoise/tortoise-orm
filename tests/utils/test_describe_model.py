@@ -25,29 +25,113 @@ from tortoise.fields.relational import (
 )
 
 
-class TestBasic(test.TestCase):
-    maxDiff = None
-
-    async def test_describe_models_all_serializable(self):
+class TestDescribeModels(test.TestCase):
+    def test_describe_models_all_serializable(self):
         val = Tortoise.describe_models()
         json.dumps(val)
         self.assertIn("models.SourceFields", val.keys())
         self.assertIn("models.Event", val.keys())
 
-    async def test_describe_models_all_not_serializable(self):
+    def test_describe_models_all_not_serializable(self):
         val = Tortoise.describe_models(serializable=False)
         with self.assertRaisesRegex(TypeError, "not JSON serializable"):
             json.dumps(val)
         self.assertIn("models.SourceFields", val.keys())
         self.assertIn("models.Event", val.keys())
 
-    async def test_describe_models_some(self):
+
+class TestDescribeModel(test.SimpleTestCase):
+    maxDiff = None
+
+    def test_describe_field_noninit_ser(self):
+        field = fields.IntField(pk=True)
+        self.assertEqual(
+            field.describe(serializable=True),
+            {
+                "name": "",
+                "field_type": "IntField",
+                "db_column": "",
+                "db_field_types": {"": "INT"},
+                "python_type": "int",
+                "generated": True,
+                "nullable": False,
+                "unique": True,
+                "indexed": True,
+                "default": None,
+                "description": None,
+                "docstring": None,
+                "constraints": {"ge": 1, "le": 2147483647},
+            },
+        )
+
+    def test_describe_field_noninit(self):
+        field = fields.IntField(pk=True)
+        self.assertEqual(
+            field.describe(serializable=False),
+            {
+                "name": "",
+                "field_type": fields.IntField,
+                "db_column": "",
+                "db_field_types": {"": "INT"},
+                "python_type": int,
+                "generated": True,
+                "nullable": False,
+                "unique": True,
+                "indexed": True,
+                "default": None,
+                "description": None,
+                "docstring": None,
+                "constraints": {"ge": 1, "le": 2147483647},
+            },
+        )
+
+    def test_describe_relfield_noninit_ser(self):
+        field = fields.ForeignKeyField("a.b")
+        self.assertEqual(
+            field.describe(serializable=True),
+            {
+                "name": "",
+                "field_type": "ForeignKeyFieldInstance",
+                "python_type": "None",
+                "generated": False,
+                "nullable": False,
+                "unique": False,
+                "indexed": False,
+                "default": None,
+                "description": None,
+                "docstring": None,
+                "constraints": {},
+                "raw_field": None,
+            },
+        )
+
+    def test_describe_relfield_noninit(self):
+        field = fields.ForeignKeyField("a.b")
+        self.assertEqual(
+            field.describe(serializable=False),
+            {
+                "name": "",
+                "field_type": ForeignKeyFieldInstance,
+                "python_type": None,
+                "generated": False,
+                "nullable": False,
+                "unique": False,
+                "indexed": False,
+                "default": None,
+                "description": None,
+                "docstring": None,
+                "constraints": {},
+                "raw_field": None,
+            },
+        )
+
+    def test_describe_models_some(self):
         val = Tortoise.describe_models([Event, Tournament, Reporter, Team])
         self.assertEqual(
             {"models.Event", "models.Tournament", "models.Reporter", "models.Team"}, set(val.keys())
         )
 
-    async def test_describe_model_straight(self):
+    def test_describe_model_straight(self):
         val = Tortoise.describe_model(StraightFields)
 
         self.assertEqual(
@@ -245,7 +329,7 @@ class TestBasic(test.TestCase):
             },
         )
 
-    async def test_describe_model_straight_native(self):
+    def test_describe_model_straight_native(self):
         val = Tortoise.describe_model(StraightFields, serializable=False)
 
         self.assertEqual(
@@ -443,7 +527,7 @@ class TestBasic(test.TestCase):
             },
         )
 
-    async def test_describe_model_source(self):
+    def test_describe_model_source(self):
         val = Tortoise.describe_model(SourceFields)
 
         self.assertEqual(
@@ -641,7 +725,7 @@ class TestBasic(test.TestCase):
             },
         )
 
-    async def test_describe_model_source_native(self):
+    def test_describe_model_source_native(self):
         val = Tortoise.describe_model(SourceFields, serializable=False)
 
         self.assertEqual(
@@ -839,7 +923,7 @@ class TestBasic(test.TestCase):
             },
         )
 
-    async def test_describe_model_uuidpk(self):
+    def test_describe_model_uuidpk(self):
         val = Tortoise.describe_model(UUIDPkModel)
 
         self.assertEqual(
@@ -904,7 +988,7 @@ class TestBasic(test.TestCase):
             },
         )
 
-    async def test_describe_model_uuidpk_native(self):
+    def test_describe_model_uuidpk_native(self):
         val = Tortoise.describe_model(UUIDPkModel, serializable=False)
 
         self.assertEqual(
@@ -969,7 +1053,7 @@ class TestBasic(test.TestCase):
             },
         )
 
-    async def test_describe_model_uuidpk_relatednull(self):
+    def test_describe_model_uuidpk_relatednull(self):
         val = Tortoise.describe_model(UUIDFkRelatedNullModel, serializable=True)
 
         self.assertEqual(
@@ -1082,7 +1166,7 @@ class TestBasic(test.TestCase):
             },
         )
 
-    async def test_describe_model_json(self):
+    def test_describe_model_json(self):
         val = Tortoise.describe_model(JSONFields)
 
         self.assertEqual(
@@ -1165,7 +1249,7 @@ class TestBasic(test.TestCase):
             },
         )
 
-    async def test_describe_model_json_native(self):
+    def test_describe_model_json_native(self):
         val = Tortoise.describe_model(JSONFields, serializable=False)
 
         self.assertEqual(

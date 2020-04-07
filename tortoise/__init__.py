@@ -117,75 +117,6 @@ class Tortoise:
                     "default":      ...     # The default value as native type OR a callable
                 }
         """
-
-        def _type_name(typ: Type) -> str:
-            if typ.__module__ == "builtins":
-                return typ.__name__
-            if typ.__module__ == "typing":
-                return str(typ).replace("typing.", "")
-            return f"{typ.__module__}.{typ.__name__}"
-
-        def type_name(typ: Any) -> Union[str, List[str]]:
-            try:
-                if issubclass(typ, Model):
-                    return typ._meta.full_name
-            except TypeError:
-                pass
-            try:
-                return _type_name(typ)
-            except AttributeError:
-                try:
-                    return [_type_name(_typ) for _typ in typ]  # pragma: nobranch
-                except TypeError:
-                    return str(typ)
-
-        def default_name(default: Any) -> Optional[Union[int, float, str, bool]]:
-            if isinstance(default, (int, float, str, bool, type(None))):
-                return default
-            if callable(default):
-                return f"<function {default.__module__}.{default.__name__}>"
-            return str(default)
-
-        def describe_field(name: str) -> dict:
-            # TODO: db_type
-            field = model._meta.fields_map[name]
-            field_type = getattr(field, "related_model", field.field_type)
-            desc = {
-                "name": field.model_field_name,
-                "field_type": field.__class__.__name__ if serializable else field.__class__,
-                "db_column": field.source_field or field.model_field_name,
-                "raw_field": None,
-                "db_field_types": field.get_db_field_types(),
-                "python_type": type_name(field_type) if serializable else field_type,
-                "generated": field.generated,
-                "nullable": field.null,
-                "unique": field.unique,
-                "indexed": field.index or field.unique,
-                "default": default_name(field.default) if serializable else field.default,
-                "description": field.description,
-                "docstring": field.docstring,
-                "constraints": field.constraints,
-            }
-
-            # Delete db fields for non-db fields
-            if not desc["db_field_types"]:
-                del desc["db_field_types"]
-
-            # Foreign Keys have
-            if isinstance(field, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
-                del desc["db_column"]
-                desc["raw_field"] = field.source_field
-            else:
-                del desc["raw_field"]
-
-            # These fields are entierly "virtual", so no direct DB representation
-            if isinstance(
-                field, (ManyToManyFieldInstance, BackwardFKRelation, BackwardOneToOneRelation,),
-            ):
-                del desc["db_column"]
-
-            return desc
-
         return {
             "name": model._meta.full_name,
             "app": model._meta.app,
@@ -194,36 +125,36 @@ class Tortoise:
             "description": model._meta.table_description or None,
             "docstring": inspect.cleandoc(model.__doc__ or "") or None,
             "unique_together": model._meta.unique_together or [],
-            "pk_field": describe_field(model._meta.pk_attr),
+            "pk_field": model._meta.pk.describe(serializable),
             "data_fields": [
-                describe_field(name)
-                for name in model._meta.fields_map.keys()
+                field.describe(serializable)
+                for name, field in model._meta.fields_map.items()
                 if name != model._meta.pk_attr
                 and name in (model._meta.fields - model._meta.fetch_fields)
             ],
             "fk_fields": [
-                describe_field(name)
-                for name in model._meta.fields_map.keys()
+                field.describe(serializable)
+                for name, field in model._meta.fields_map.items()
                 if name in model._meta.fk_fields
             ],
             "backward_fk_fields": [
-                describe_field(name)
-                for name in model._meta.fields_map.keys()
+                field.describe(serializable)
+                for name, field in model._meta.fields_map.items()
                 if name in model._meta.backward_fk_fields
             ],
             "o2o_fields": [
-                describe_field(name)
-                for name in model._meta.fields_map.keys()
+                field.describe(serializable)
+                for name, field in model._meta.fields_map.items()
                 if name in model._meta.o2o_fields
             ],
             "backward_o2o_fields": [
-                describe_field(name)
-                for name in model._meta.fields_map.keys()
+                field.describe(serializable)
+                for name, field in model._meta.fields_map.items()
                 if name in model._meta.backward_o2o_fields
             ],
             "m2m_fields": [
-                describe_field(name)
-                for name in model._meta.fields_map.keys()
+                field.describe(serializable)
+                for name, field in model._meta.fields_map.items()
                 if name in model._meta.m2m_fields
             ],
         }
@@ -311,8 +242,6 @@ class Tortoise:
                 model._meta._inited = True
                 if not model._meta.db_table:
                     model._meta.db_table = model.__name__.lower()
-
-                pk_attr_changed = False
 
                 # TODO: refactor to share logic between FK & O2O
                 for field in model._meta.fk_fields:
@@ -435,7 +364,6 @@ class Tortoise:
                         related_model._meta.add_field(backward_relation_name, o2o_relation)
 
                     if o2o_object.pk:
-                        pk_attr_changed = True
                         model._meta.pk_attr = key_field
 
                 for field in list(model._meta.m2m_fields):
@@ -489,9 +417,6 @@ class Tortoise:
                     model._meta.filters.update(get_m2m_filters(field, m2m_object))
                     related_model._meta.add_field(backward_relation_name, m2m_relation)
 
-                if pk_attr_changed:
-                    model._meta.finalise_pk()
-
     @classmethod
     def _discover_client_class(cls, engine: str) -> BaseDBAsyncClient:
         # Let exception bubble up for transparency
@@ -522,7 +447,6 @@ class Tortoise:
                 if attr._meta.app and attr._meta.app != app_label:
                     continue
                 attr._meta.app = app_label
-                attr._meta.finalise_pk()
                 discovered_models.append(attr)
         if not discovered_models:
             warnings.warn(f'Module "{models_path}" has no models', RuntimeWarning, stacklevel=4)
