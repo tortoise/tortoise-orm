@@ -948,6 +948,84 @@ class Model(metaclass=ModelMeta):
                         " to ManyToMany field."
                     )
 
+    @classmethod
+    def describe(cls, serializable: bool = True) -> dict:
+        """
+        Describes the given list of models or ALL registered models.
+
+        :param serializable:
+            ``False`` if you want raw python objects,
+            ``True`` for JSON-serialisable data. (Defaults to ``True``)
+
+        :return:
+            A dictionary containing the model description.
+
+            The base dict has a fixed set of keys that reference a list of fields
+            (or a single field in the case of the primary key):
+
+            .. code-block:: python3
+
+                {
+                    "name":                 str     # Qualified model name
+                    "app":                  str     # 'App' namespace
+                    "table":                str     # DB table name
+                    "abstract":             bool    # Is the model Abstract?
+                    "description":          str     # Description of table (nullable)
+                    "docstring":            str     # Model docstring (nullable)
+                    "unique_together":      [...]   # List of List containing field names that
+                                                    #  are unique together
+                    "pk_field":             {...}   # Primary key field
+                    "data_fields":          [...]   # Data fields
+                    "fk_fields":            [...]   # Foreign Key fields FROM this model
+                    "backward_fk_fields":   [...]   # Foreign Key fields TO this model
+                    "o2o_fields":           [...]   # OneToOne fields FROM this model
+                    "backward_o2o_fields":  [...]   # OneToOne fields TO this model
+                    "m2m_fields":           [...]   # Many-to-Many fields
+                }
+
+            Each field is specified as defined in :meth:`tortoise.fields.base.Field.describe`
+        """
+        return {
+            "name": cls._meta.full_name,
+            "app": cls._meta.app,
+            "table": cls._meta.db_table,
+            "abstract": cls._meta.abstract,
+            "description": cls._meta.table_description or None,
+            "docstring": inspect.cleandoc(cls.__doc__ or "") or None,
+            "unique_together": cls._meta.unique_together or [],
+            "pk_field": cls._meta.pk.describe(serializable),
+            "data_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name != cls._meta.pk_attr and name in (cls._meta.fields - cls._meta.fetch_fields)
+            ],
+            "fk_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name in cls._meta.fk_fields
+            ],
+            "backward_fk_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name in cls._meta.backward_fk_fields
+            ],
+            "o2o_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name in cls._meta.o2o_fields
+            ],
+            "backward_o2o_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name in cls._meta.backward_o2o_fields
+            ],
+            "m2m_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name in cls._meta.m2m_fields
+            ],
+        }
+
     def __await__(self: MODEL) -> Generator[Any, None, MODEL]:
         async def _self() -> MODEL:
             return self
