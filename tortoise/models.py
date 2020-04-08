@@ -37,9 +37,8 @@ MODEL = TypeVar("MODEL", bound="Model")
 def get_together(meta: "Model.Meta", together: str) -> Tuple[Tuple[str, ...], ...]:
     _together = getattr(meta, together, ())
 
-    if isinstance(_together, (list, tuple)):
-        if _together and isinstance(_together[0], str):
-            _together = (_together,)
+    if _together and isinstance(_together, (list, tuple)) and isinstance(_together[0], str):
+        _together = (_together,)
 
     # return without validation, validation will be done further in the code
     return _together

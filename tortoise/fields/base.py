@@ -219,7 +219,7 @@ class Field(metaclass=_FieldMeta):
         :return: A dictionary that is keyed by dialect.
             A blank dialect `""` means it is the default DB field type.
         """
-        if not self.has_db_field:
+        if not self.has_db_field:  # pragma: nocoverage
             return None
         return {
             "": getattr(self, "SQL_TYPE"),
