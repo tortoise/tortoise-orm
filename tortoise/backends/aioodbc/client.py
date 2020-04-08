@@ -2,13 +2,14 @@ import asyncio
 from functools import wraps
 from typing import Any, Callable, List, Optional, SupportsInt, Tuple, TypeVar, Union
 
-import aioodbc
-import pyodbc
 # from asyncpg.transaction import Transaction
 import pypika
+from pypika import Dialects
 from pypika import OracleQuery as OrigOracleQuery
+from pypika.queries import Query, QueryBuilder
 
-
+import aioodbc
+import pyodbc
 from tortoise.backends.aioodbc.executor import AioodbcExecutor
 from tortoise.backends.aioodbc.schema_generator import AioodbcSchemaGenerator
 from tortoise.backends.base.client import (
@@ -44,18 +45,9 @@ def translate_exceptions(func: F) -> F:
         except pyodbc.Error as exc:
             raise OperationalError(exc)
         # except pyodbc.erras exc:  # pragma: nocoverage
-            # raise TransactionManagementError(exc)
+        # raise TransactionManagementError(exc)
 
     return translate_exceptions_  # type: ignore
-
-
-
-
-
-
-from pypika import OracleQuery as OrigOracleQuery
-from pypika.queries import QueryBuilder, Query
-from pypika import Dialects
 
 
 class OracleQueryBuilder(QueryBuilder):
@@ -63,12 +55,10 @@ class OracleQueryBuilder(QueryBuilder):
         super(OracleQueryBuilder, self).__init__(dialect=Dialects.ORACLE, **kwargs)
 
     def get_sql(self, *args, **kwargs):
-        return super(OracleQueryBuilder, self).get_sql(
-            *args, groupby_alias=False, **kwargs
-        )
+        return super(OracleQueryBuilder, self).get_sql(*args, groupby_alias=False, **kwargs)
 
     def _limit_sql(self):
-        return f' FETCH NEXT {self._limit} ROWS ONLY'
+        return f" FETCH NEXT {self._limit} ROWS ONLY"
 
 
 class OracleQuery(Query):
@@ -83,8 +73,16 @@ class OracleQuery(Query):
         return builder
 
 
+DSN_TEMPLATE = (
+    "ODBC;"
+    "Driver={{{driver}}};"
+    "SERVER={c.host}:{c.port}"
+    "/{c.dataabase};"
+    "UID={c.user};"
+    "PWD={c.password}"
+    ";SCHEMA={c.schema};"
+)
 
-DSN_TEMPLATE = "ODBC;Driver={{{driver}}};SERVER={c.host}:{c.port}/c.dataabase;UID={c.user};PWD={c.password};SCHEMA={c.schema};"
 
 class AioodbcDBClient(BaseDBAsyncClient):
     query_class = OracleQuery
@@ -124,22 +122,23 @@ class AioodbcDBClient(BaseDBAsyncClient):
             "min_size": self.pool_minsize,
             "max_size": self.pool_maxsize,
             "pwd": self.password,
-            **self.extra
+            **self.extra,
         }
-        self._template["dsn"] = DSN_TEMPLATE.format(c=self, driver=self.extra['driver'])
+        self._template["dsn"] = DSN_TEMPLATE.format(c=self, driver=self.extra["driver"])
         if self.schema:
             self._template["server_settings"] = {"search_path": self.schema}
 
         async def conn_attributes(conn):
-            #conn.setdecoding(pyodbc.SQL_CHAR, encoding='utf-8')
-            #conn.setdecoding(pyodbc.SQL_WCHAR, encoding='utf-8')
-            #conn.setdecoding(pyodbc.SQL_WMETADATA, encoding='utf-16le')
-            #conn.setencoding(encoding='utf-16')
+            # conn.setdecoding(pyodbc.SQL_CHAR, encoding='utf-8')
+            # conn.setdecoding(pyodbc.SQL_WCHAR, encoding='utf-8')
+            # conn.setdecoding(pyodbc.SQL_WMETADATA, encoding='utf-16le')
+            # conn.setencoding(encoding='utf-16')
             pass
+
         try:
-            self._pool = await aioodbc.create_pool(loop=None,
-                                                   **self._template,
-                                                   after_created=conn_attributes)
+            self._pool = await aioodbc.create_pool(
+                loop=None, **self._template, after_created=conn_attributes
+            )
             self.log.debug("Created connection pool %s with params: %s", self._pool, self._template)
         except pyodbc.OperationalError:
             raise DBConnectionError(f"Can't establish connection to database {self.database}")
@@ -186,7 +185,6 @@ class AioodbcDBClient(BaseDBAsyncClient):
     async def execute_insert(self, query: str, values: list):
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            # TODO: Cache prepared statement
             return await connection.fetchrow(query, *values)
 
     @translate_exceptions
@@ -211,7 +209,7 @@ class AioodbcDBClient(BaseDBAsyncClient):
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
-                params = [item for item in  [query, values] if item]
+                params = [item for item in [query, values] if item]
                 await cursor.execute(*params)
                 rows = await cursor.fetchall()
                 if rows:
@@ -219,14 +217,8 @@ class AioodbcDBClient(BaseDBAsyncClient):
                     return cursor.rowcount, [dict(zip(fields, row)) for row in rows]
                 return cursor.rowcount, []
 
-    @translate_exceptions
     async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
-        async with self.acquire_connection() as connection:
-            self.log.debug("%s: %s", query, values)
-            if values:
-                # TODO: Cache prepared statement
-                return list(map(dict, await connection.fetch(query, *values)))
-            return list(map(dict, await connection.fetch(query)))
+        return (await self.execute_query(query, values))[1]
 
     @translate_exceptions
     async def execute_script(self, query: str) -> None:
