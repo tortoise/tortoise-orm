@@ -1,9 +1,9 @@
 import uuid
 from typing import List, Optional
 
-import aioodbc
 from pypika import Parameter
 
+import aioodbc
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
 
@@ -27,8 +27,7 @@ class AioodbcExecutor(BaseExecutor):
                 query = query.returning(*generated_fields)
         return str(query)
 
-    async def _process_insert_result(
-        self, instance: Model, results) -> None:
+    async def _process_insert_result(self, instance: Model, results) -> None:
         if results:
             generated_fields = self.model._meta.generated_db_fields
             db_projection = instance._meta.fields_db_projection_reverse
