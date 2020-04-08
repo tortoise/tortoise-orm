@@ -541,12 +541,18 @@ class Tortoise:
             client_class = cls._discover_client_class(info.get("engine"))
 
             # If no credentials assume given pool and acquisition function.
-            if not connections_config[name]["credentials"]:
+            if not info["credentials"]:
                 # Fake keys.
-                keys = {"user": "", "password": "", "database": "", "host": "", "port": "0"}
-                connection = client_class(**keys, connection_name=name)
-                client_class._pool = info["pool"]
-                client_class.acquire_connection = info["acquire"]
+                keys = {
+                    "user": "",
+                    "password": "",
+                    "database": "",
+                    "host": "",
+                    "port": "0",
+                }
+                connection = client_class(**keys, connection_name=name)  # type: ignore
+                client_class._pool = info["pool"]  # type: ignore
+                client_class.acquire_connection = info["acquire"]  # type: ignore
                 cls._connections[name] = client_class
             else:
                 db_params = info["credentials"].copy()

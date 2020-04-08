@@ -1,9 +1,8 @@
 import uuid
-from typing import List, Optional
+from typing import List
 
 from pypika import Parameter
 
-import aioodbc
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
 
