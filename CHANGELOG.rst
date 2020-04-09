@@ -5,6 +5,7 @@ Changelog
 0.15.22
 -------
 * Fix the aggregates using the wrong side of the join when doing a self-referential aggregation.
+* Fix for ``generate_schemas`` param being ignored in ``tortoise.contrib.quart.register_tortoise``
 
 0.15.21
 -------
