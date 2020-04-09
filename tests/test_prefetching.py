@@ -106,7 +106,7 @@ class TestPrefetching(test.TestCase):
     async def test_prefetch_bad_key(self):
         tournament = await Tournament.create(name="tournament")
         await Event.create(name="First", tournament=tournament)
-        with self.assertRaisesRegex(FieldError, "Relation tour1nament for event not found"):
+        with self.assertRaisesRegex(FieldError, "Relation tour1nament for models.Event not found"):
             await Event.first().prefetch_related("tour1nament")
 
     async def test_prefetch_m2m_filter(self):

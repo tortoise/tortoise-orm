@@ -48,7 +48,7 @@ def _get_joins_for_related_field(
 ) -> List[Tuple[Table, Criterion]]:
     required_joins = []
 
-    related_table: Table = related_field.model_class._meta.basetable
+    related_table: Table = related_field.related_model._meta.basetable
     if isinstance(related_field, ManyToManyFieldInstance):
         through_table = Table(related_field.through)
         required_joins.append(
@@ -62,7 +62,7 @@ def _get_joins_for_related_field(
             (
                 related_table,
                 through_table[related_field.forward_key]
-                == related_table[related_field.model_class._meta.db_pk_column],
+                == related_table[related_field.related_model._meta.db_pk_column],
             )
         )
     elif isinstance(related_field, BackwardFKRelation):
@@ -253,7 +253,7 @@ class Q:
         related_field = cast(RelationalField, model._meta.fields_map[related_field_name])
         required_joins = _get_joins_for_related_field(table, related_field, related_field_name)
         modifier = Q(**{"__".join(key.split("__")[1:]): value}).resolve(
-            model=related_field.model_class,
+            model=related_field.related_model,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
             table=required_joins[-1][0],
