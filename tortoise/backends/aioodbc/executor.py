@@ -1,12 +1,9 @@
-from typing import Optional, Type, Union
-
 from pypika import Parameter, functions
-from pypika.enums import SqlTypes
 from pypika.terms import Criterion
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
-from tortoise.fields import BigIntField, CharField, Field, IntField, SmallIntField
+from tortoise.fields import BigIntField, Field, IntField, SmallIntField
 from tortoise.filters import (
     contains,
     ends_with,
