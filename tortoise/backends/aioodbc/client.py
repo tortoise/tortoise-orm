@@ -192,7 +192,8 @@ class AioodbcDBClient(BaseDBAsyncClient):
             async with cnxn.cursor() as crsr:
                 self.log.debug("%s: %s", query, values)
                 try:
-                    crsr.fast_executemany = True
+                    # Possibly useful for speedups.
+                    # crsr.fast_executemany = True
                     await crsr.executemany(query, values)
                 except pyodbc.DatabaseError:
                     cnxn.rollback()
@@ -207,7 +208,7 @@ class AioodbcDBClient(BaseDBAsyncClient):
     ) -> Tuple[int, List[dict]]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            async with connection.crsr() as crsr:
+            async with connection.cursor() as crsr:
                 params = [item for item in [query, values] if item]
                 await crsr.execute(*params)
                 rows = await crsr.fetchall()
@@ -251,7 +252,6 @@ class TransactionWrapper(AioodbcDBClient, BaseTransactionWrapper):
             cnxn.autocommit = False
             async with cnxn.cursor() as crsr:
                 self.log.debug("%s: %s", query, values)
-                crsr.fast_executemany = True
                 await crsr.executemany(query, values)
 
     @translate_exceptions

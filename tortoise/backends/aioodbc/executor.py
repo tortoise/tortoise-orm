@@ -1,34 +1,68 @@
-import uuid
-from typing import List
-
-from pypika import Parameter
+from pypika import Parameter, functions
+from pypika.enums import SqlTypes
+from pypika.terms import Criterion
+from typing import Optional, Type, Union
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
+from tortoise.fields import BigIntField, Field, IntField, SmallIntField, CharField
+from tortoise.filters import (
+    contains,
+    ends_with,
+    insensitive_contains,
+    insensitive_ends_with,
+    insensitive_exact,
+    insensitive_starts_with,
+    starts_with,
+)
+
+def aiodbc_contains(field: Field, value: str) -> Criterion:
+    return field.like(f"%{value}%")
+
+
+def aiodbc_starts_with(field: Field, value: str) -> Criterion:
+    return field.like(f"{value}%")
+
+
+def aiodbc_ends_with(field: Field, value: str) -> Criterion:
+    return field.like(f"%{value}")
+
+
+def aiodbc_insensitive_exact(field: Field, value: str) -> Criterion:
+    return functions.Upper(field).eq(functions.Upper(f"{value}"))
+
+
+def aiodbc_insensitive_contains(field: Field, value: str) -> Criterion:
+    return functions.Upper(field).like(functions.Upper(f"%{value}%"))
+
+
+def aiodbc_insensitive_starts_with(field: Field, value: str) -> Criterion:
+    return functions.Upper(field).like(functions.Upper(f"{value}%"))
+
+
+def aiodbc_insensitive_ends_with(field: Field, value: str) -> Criterion:
+    return functions.Upper(field).like(functions.Upper(f"%{value}"))
 
 
 class AioodbcExecutor(BaseExecutor):
-    EXPLAIN_PREFIX = "EXPLAIN (FORMAT JSON, VERBOSE)"
-    DB_NATIVE = BaseExecutor.DB_NATIVE | {bool, uuid.UUID}
+    FILTER_FUNC_OVERRIDE = {
+        contains: aiodbc_contains,
+        starts_with: aiodbc_starts_with,
+        ends_with: aiodbc_ends_with,
+        insensitive_exact: aiodbc_insensitive_exact,
+        insensitive_contains: aiodbc_insensitive_contains,
+        insensitive_starts_with: aiodbc_insensitive_starts_with,
+        insensitive_ends_with: aiodbc_insensitive_ends_with,
+    }
+    EXPLAIN_PREFIX = "EXPLAIN FORMAT=JSON"
 
     def Parameter(self, pos: int) -> Parameter:
-        return Parameter("$%d" % (pos + 1,))
+        return Parameter("%s")
 
-    def _prepare_insert_statement(self, columns: List[str], no_generated: bool = False) -> str:
-        query = (
-            self.db.query_class.into(self.model._meta.basetable)
-            .columns(*columns)
-            .insert(*[self.Parameter(i) for i in range(len(columns))])
-        )
-        if not no_generated:
-            generated_fields = self.model._meta.generated_db_fields
-            if generated_fields:
-                query = query.returning(*generated_fields)
-        return str(query)
-
-    async def _process_insert_result(self, instance: Model, results) -> None:
-        if results:
-            generated_fields = self.model._meta.generated_db_fields
-            db_projection = instance._meta.fields_db_projection_reverse
-            for key, val in zip(generated_fields, results):
-                setattr(instance, db_projection[key], val)
+    async def _process_insert_result(self, instance: Model, results: int) -> None:
+        pk_field_object = self.model._meta.pk
+        if (
+            isinstance(pk_field_object, (SmallIntField, IntField, BigIntField))
+            and pk_field_object.generated
+        ):
+            instance.pk = results
