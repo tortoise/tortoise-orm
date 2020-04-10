@@ -19,6 +19,10 @@ dist: xenial
 services:
   - postgresql
   - mysql
+addons:
+  apt:
+    packages:
+      - unixodbc-dev
 cache: pip
 install:
   - pip install -r tests/requirements.txt
