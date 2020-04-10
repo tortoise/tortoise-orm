@@ -14,6 +14,7 @@ Changelog
 * Moved ``Tortoise.describe_model(<MODEL>, ...)`` to ``<MODEL>.describe(...)``
 * Deprecated ``Tortoise.describe_model()``
 * Fix for ``generate_schemas`` param being ignored in ``tortoise.contrib.quart.register_tortoise``
+* Fix join query with `source_field` param
 
 0.16.4
 ------

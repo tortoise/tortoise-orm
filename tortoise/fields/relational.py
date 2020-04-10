@@ -332,12 +332,14 @@ class BackwardFKRelation(RelationalField):
         self,
         field_type: "Type[Model]",
         relation_field: str,
+        relation_source_field: str,
         null: bool,
         description: Optional[str],
         **kwargs: Any,
     ) -> None:
         super().__init__(field_type, null=null, **kwargs)
         self.relation_field: str = relation_field
+        self.relation_source_field: str = relation_source_field
         self.description: Optional[str] = description
 
 

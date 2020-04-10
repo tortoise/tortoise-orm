@@ -209,7 +209,11 @@ class Tortoise:
                                 f" model {related_model_name}"
                             )
                         fk_relation = BackwardFKRelation(
-                            model, f"{field}_id", fk_object.null, fk_object.description,
+                            model,
+                            f"{field}_id",
+                            key_fk_object.source_field,
+                            fk_object.null,
+                            fk_object.description,
                         )
                         fk_relation.to_field_instance = fk_object.to_field_instance
                         related_model._meta.add_field(backward_relation_name, fk_relation)
@@ -269,7 +273,11 @@ class Tortoise:
                                 f" model {related_model_name}"
                             )
                         o2o_relation = BackwardOneToOneRelation(
-                            model, f"{field}_id", null=True, description=o2o_object.description,
+                            model,
+                            f"{field}_id",
+                            key_o2o_object.source_field,
+                            null=True,
+                            description=o2o_object.description,
                         )
                         o2o_relation.to_field_instance = o2o_object.to_field_instance
                         related_model._meta.add_field(backward_relation_name, o2o_relation)
