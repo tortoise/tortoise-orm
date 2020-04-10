@@ -66,13 +66,16 @@ def _get_joins_for_related_field(
             )
         )
     elif isinstance(related_field, BackwardFKRelation):
+        to_field_source_field = related_field.to_field_instance.source_field
+        if not to_field_source_field:
+            to_field_source_field = related_field.to_field_instance.model_field_name
+
         if table == related_table:
             related_table = related_table.as_(f"{table.get_table_name()}__{related_field_name}")
         required_joins.append(
             (
                 related_table,
-                table[related_field.to_field_instance.model_field_name]
-                == related_table[related_field.relation_field],
+                table[to_field_source_field] == related_table[related_field.relation_source_field],
             )
         )
     else:
