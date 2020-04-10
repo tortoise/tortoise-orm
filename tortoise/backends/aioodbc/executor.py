@@ -1,9 +1,9 @@
 from pypika import Parameter, functions
-from pypika.terms import Criterion
+from pypika.terms import Criterion, Field
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
-from tortoise.fields import BigIntField, Field, IntField, SmallIntField
+from tortoise.fields import BigIntField, IntField, SmallIntField
 from tortoise.filters import (
     contains,
     ends_with,
