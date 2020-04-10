@@ -21,6 +21,7 @@ from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
     ManyToManyFieldInstance,
     ManyToManyRelation,
+    NoneAwaitable,
     OneToOneFieldInstance,
     ReverseRelation,
 )
@@ -33,25 +34,11 @@ MODEL = TypeVar("MODEL", bound="Model")
 # TODO: Define Filter type object. Possibly tuple?
 
 
-class _NoneAwaitable:
-    __slots__ = ()
-
-    def __await__(self) -> Generator[None, None, None]:
-        yield None
-
-    def __bool__(self) -> bool:
-        return False
-
-
-NoneAwaitable = _NoneAwaitable()
-
-
 def get_together(meta: "Model.Meta", together: str) -> Tuple[Tuple[str, ...], ...]:
     _together = getattr(meta, together, ())
 
-    if isinstance(_together, (list, tuple)):
-        if _together and isinstance(_together[0], str):
-            _together = (_together,)
+    if _together and isinstance(_together, (list, tuple)) and isinstance(_together[0], str):
+        _together = (_together,)
 
     # return without validation, validation will be done further in the code
     return _together
@@ -112,7 +99,7 @@ def _m2m_getter(
 ) -> ManyToManyRelation:
     val = getattr(self, _key, None)
     if val is None:
-        val = ManyToManyRelation(field_object.model_class, self, field_object)
+        val = ManyToManyRelation(self, field_object)
         setattr(self, _key, val)
     return val
 
@@ -151,7 +138,7 @@ def _get_comments(cls: "Type[Model]") -> Dict[str, str]:
 class MetaInfo:
     __slots__ = (
         "abstract",
-        "table",
+        "db_table",
         "app",
         "fields",
         "db_fields",
@@ -178,7 +165,7 @@ class MetaInfo:
         "_model",
         "table_description",
         "pk",
-        "db_pk_field",
+        "db_pk_column",
         "db_native_fields",
         "db_default_fields",
         "db_complex_fields",
@@ -188,7 +175,7 @@ class MetaInfo:
 
     def __init__(self, meta: "Model.Meta") -> None:
         self.abstract: bool = getattr(meta, "abstract", False)
-        self.table: str = getattr(meta, "table", "")
+        self.db_table: str = getattr(meta, "table", "")
         self.app: Optional[str] = getattr(meta, "app", None)
         self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
         self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
@@ -217,16 +204,21 @@ class MetaInfo:
         self._model: Type["Model"] = None  # type: ignore
         self.table_description: str = getattr(meta, "table_description", "")
         self.pk: Field = None  # type: ignore
-        self.db_pk_field: str = ""
+        self.db_pk_column: str = ""
         self.db_native_fields: List[Tuple[str, str, Field]] = []
         self.db_default_fields: List[Tuple[str, str, Field]] = []
         self.db_complex_fields: List[Tuple[str, str, Field]] = []
+
+    @property
+    def full_name(self) -> str:
+        return f"{self.app}.{self._model.__name__}"
 
     def add_field(self, name: str, value: Field) -> None:
         if name in self.fields_map:
             raise ConfigurationError(f"Field {name} already present in meta")
         value.model = self._model
         self.fields_map[name] = value
+        value.model_field_name = name
 
         if value.has_db_field:
             self.fields_db_projection[name] = value.source_field or name
@@ -263,10 +255,6 @@ class MetaInfo:
 
     def get_filter(self, key: str) -> dict:
         return self.filters[key]
-
-    def finalise_pk(self) -> None:
-        self.pk = self.fields_map[self.pk_attr]
-        self.db_pk_field = self.pk.source_field or self.pk_attr
 
     def finalise_model(self) -> None:
         """
@@ -318,7 +306,7 @@ class MetaInfo:
                     partial(
                         _fk_getter,
                         _key=_key,
-                        ftype=fk_field_object.model_class,
+                        ftype=fk_field_object.related_model,
                         relation_field=relation_field,
                         to_field=to_field,
                     ),
@@ -346,7 +334,7 @@ class MetaInfo:
                     partial(
                         _rfk_getter,
                         _key=_key,
-                        ftype=backward_fk_field_object.model_class,
+                        ftype=backward_fk_field_object.related_model,
                         frelfield=backward_fk_field_object.relation_field,
                         from_field=backward_fk_field_object.to_field_instance.model_field_name,
                     )
@@ -366,7 +354,7 @@ class MetaInfo:
                     partial(
                         _fk_getter,
                         _key=_key,
-                        ftype=o2o_field_object.model_class,
+                        ftype=o2o_field_object.related_model,
                         relation_field=relation_field,
                         to_field=to_field,
                     ),
@@ -396,7 +384,7 @@ class MetaInfo:
                     partial(
                         _ro2o_getter,
                         _key=_key,
-                        ftype=backward_o2o_field_object.model_class,
+                        ftype=backward_o2o_field_object.related_model,
                         frelfield=backward_o2o_field_object.relation_field,
                         from_field=backward_o2o_field_object.to_field_instance.model_field_name,
                     ),
@@ -507,7 +495,7 @@ class ModelMeta(type):
                         if custom_pk_present:
                             raise ConfigurationError(
                                 f"Can't create model {name} with two primary keys,"
-                                " only single pk are supported"
+                                " only single primary key is supported"
                             )
                         if value.generated and not value.allows_generated:
                             raise ConfigurationError(
@@ -573,6 +561,9 @@ class ModelMeta(type):
         meta.m2m_fields = m2m_fields
         meta.default_connection = None
         meta.pk_attr = pk_attr
+        meta.pk = fields_map.get(pk_attr)  # type: ignore
+        if meta.pk:
+            meta.db_pk_column = meta.pk.source_field or meta.pk_attr
         meta._inited = False
         if not fields_map:
             meta.abstract = True
@@ -955,6 +946,84 @@ class Model(metaclass=ModelMeta):
                         f"'{cls.__name__}.{together}' '{field_name}' field refers"
                         " to ManyToMany field."
                     )
+
+    @classmethod
+    def describe(cls, serializable: bool = True) -> dict:
+        """
+        Describes the given list of models or ALL registered models.
+
+        :param serializable:
+            ``False`` if you want raw python objects,
+            ``True`` for JSON-serialisable data. (Defaults to ``True``)
+
+        :return:
+            A dictionary containing the model description.
+
+            The base dict has a fixed set of keys that reference a list of fields
+            (or a single field in the case of the primary key):
+
+            .. code-block:: python3
+
+                {
+                    "name":                 str     # Qualified model name
+                    "app":                  str     # 'App' namespace
+                    "table":                str     # DB table name
+                    "abstract":             bool    # Is the model Abstract?
+                    "description":          str     # Description of table (nullable)
+                    "docstring":            str     # Model docstring (nullable)
+                    "unique_together":      [...]   # List of List containing field names that
+                                                    #  are unique together
+                    "pk_field":             {...}   # Primary key field
+                    "data_fields":          [...]   # Data fields
+                    "fk_fields":            [...]   # Foreign Key fields FROM this model
+                    "backward_fk_fields":   [...]   # Foreign Key fields TO this model
+                    "o2o_fields":           [...]   # OneToOne fields FROM this model
+                    "backward_o2o_fields":  [...]   # OneToOne fields TO this model
+                    "m2m_fields":           [...]   # Many-to-Many fields
+                }
+
+            Each field is specified as defined in :meth:`tortoise.fields.base.Field.describe`
+        """
+        return {
+            "name": cls._meta.full_name,
+            "app": cls._meta.app,
+            "table": cls._meta.db_table,
+            "abstract": cls._meta.abstract,
+            "description": cls._meta.table_description or None,
+            "docstring": inspect.cleandoc(cls.__doc__ or "") or None,
+            "unique_together": cls._meta.unique_together or [],
+            "pk_field": cls._meta.pk.describe(serializable),
+            "data_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name != cls._meta.pk_attr and name in (cls._meta.fields - cls._meta.fetch_fields)
+            ],
+            "fk_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name in cls._meta.fk_fields
+            ],
+            "backward_fk_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name in cls._meta.backward_fk_fields
+            ],
+            "o2o_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name in cls._meta.o2o_fields
+            ],
+            "backward_o2o_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name in cls._meta.backward_o2o_fields
+            ],
+            "m2m_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name in cls._meta.m2m_fields
+            ],
+        }
 
     def __await__(self: MODEL) -> Generator[Any, None, MODEL]:
         async def _self() -> MODEL:

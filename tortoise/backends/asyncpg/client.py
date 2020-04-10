@@ -177,7 +177,6 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             if values:
-                # TODO: Cache prepared statement
                 return list(map(dict, await connection.fetch(query, *values)))
             return list(map(dict, await connection.fetch(query)))
 

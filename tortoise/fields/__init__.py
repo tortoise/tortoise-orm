@@ -18,6 +18,7 @@ from tortoise.fields.data import (
     UUIDField,
 )
 from tortoise.fields.relational import (
+    BackwardFKRelation,
     BackwardOneToOneRelation,
     ForeignKeyField,
     ForeignKeyNullableRelation,

@@ -59,7 +59,7 @@ class SqliteExecutor(BaseExecutor):
     EXPLAIN_PREFIX = "EXPLAIN QUERY PLAN"
     DB_NATIVE = {bytes, str, int, float}
 
-    def Parameter(self, pos: int) -> Parameter:
+    def parameter(self, pos: int) -> Parameter:
         return Parameter("?")
 
     async def _process_insert_result(self, instance: Model, results: int) -> None:

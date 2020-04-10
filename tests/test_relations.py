@@ -236,21 +236,21 @@ class TestRelations(test.TestCase):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Test", tournament_id=tournament.id)
 
-        with self.assertRaisesRegex(FieldError, "Relation tourn1ment for event not found"):
+        with self.assertRaisesRegex(FieldError, "Relation tourn1ment for models.Event not found"):
             await Event.filter(name="Test").prefetch_related("tourn1ment")
 
     async def test_prefetch_related_nonrel_field(self):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Test", tournament_id=tournament.id)
 
-        with self.assertRaisesRegex(FieldError, "Field modified on event is not a relation"):
+        with self.assertRaisesRegex(FieldError, "Field modified on models.Event is not a relation"):
             await Event.filter(name="Test").prefetch_related("modified")
 
     async def test_prefetch_related_id(self):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Test", tournament_id=tournament.id)
 
-        with self.assertRaisesRegex(FieldError, "Field event_id on event is not a relation"):
+        with self.assertRaisesRegex(FieldError, "Field event_id on models.Event is not a relation"):
             await Event.filter(name="Test").prefetch_related("event_id")
 
     async def test_nullable_fk_raw(self):

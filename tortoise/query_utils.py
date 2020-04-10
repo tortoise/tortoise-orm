@@ -23,7 +23,7 @@ def _process_filter_kwarg(
     else:
         param = model._meta.get_filter(key)
 
-    pk_db_field = model._meta.db_pk_field
+    pk_db_field = model._meta.db_pk_column
     if param.get("table"):
         join = (
             param["table"],
@@ -48,13 +48,13 @@ def _get_joins_for_related_field(
 ) -> List[Tuple[Table, Criterion]]:
     required_joins = []
 
-    related_table: Table = related_field.model_class._meta.basetable
+    related_table: Table = related_field.related_model._meta.basetable
     if isinstance(related_field, ManyToManyFieldInstance):
         through_table = Table(related_field.through)
         required_joins.append(
             (
                 through_table,
-                table[related_field.model._meta.db_pk_field]
+                table[related_field.model._meta.db_pk_column]
                 == through_table[related_field.backward_key],
             )
         )
@@ -62,17 +62,20 @@ def _get_joins_for_related_field(
             (
                 related_table,
                 through_table[related_field.forward_key]
-                == related_table[related_field.model_class._meta.db_pk_field],
+                == related_table[related_field.related_model._meta.db_pk_column],
             )
         )
     elif isinstance(related_field, BackwardFKRelation):
+        to_field_source_field = related_field.to_field_instance.source_field
+        if not to_field_source_field:
+            to_field_source_field = related_field.to_field_instance.model_field_name
+
         if table == related_table:
             related_table = related_table.as_(f"{table.get_table_name()}__{related_field_name}")
         required_joins.append(
             (
                 related_table,
-                table[related_field.to_field_instance.model_field_name]
-                == related_table[related_field.relation_field],
+                table[to_field_source_field] == related_table[related_field.relation_source_field],
             )
         )
     else:
@@ -253,7 +256,7 @@ class Q:
         related_field = cast(RelationalField, model._meta.fields_map[related_field_name])
         required_joins = _get_joins_for_related_field(table, related_field, related_field_name)
         modifier = Q(**{"__".join(key.split("__")[1:]): value}).resolve(
-            model=related_field.model_class,
+            model=related_field.related_model,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
             table=required_joins[-1][0],
@@ -399,7 +402,7 @@ class Prefetch:
         first_level_field = relation_split[0]
         if first_level_field not in queryset.model._meta.fetch_fields:
             raise OperationalError(
-                f"relation {first_level_field} for {queryset.model._meta.table} not found"
+                f"relation {first_level_field} for {queryset.model._meta.db_table} not found"
             )
         forwarded_prefetch = "__".join(relation_split[1:])
         if forwarded_prefetch:
