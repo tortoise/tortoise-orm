@@ -30,7 +30,7 @@ colorama==0.4.3           # via green
 coverage==5.0.4           # via coveralls, green, nose2, pytest-cov
 coveralls==2.0.0          # via -r requirements.in
 cryptography==2.9         # via pymysql
-darglint==1.2.2           # via -r requirements.in
+darglint==1.2.0           # via -r requirements.in
 distlib==0.3.0            # via virtualenv
 docopt==0.6.2             # via coveralls
 docutils==0.14            # via -r ../docs/requirements.in, -r requirements.in, readme-renderer, sphinx
