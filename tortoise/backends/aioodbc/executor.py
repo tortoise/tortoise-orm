@@ -1,11 +1,12 @@
+from typing import Optional, Type, Union
+
 from pypika import Parameter, functions
 from pypika.enums import SqlTypes
 from pypika.terms import Criterion
-from typing import Optional, Type, Union
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
-from tortoise.fields import BigIntField, Field, IntField, SmallIntField, CharField
+from tortoise.fields import BigIntField, CharField, Field, IntField, SmallIntField
 from tortoise.filters import (
     contains,
     ends_with,
@@ -15,6 +16,7 @@ from tortoise.filters import (
     insensitive_starts_with,
     starts_with,
 )
+
 
 def aiodbc_contains(field: Field, value: str) -> Criterion:
     return field.like(f"%{value}%")
