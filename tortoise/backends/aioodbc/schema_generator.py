@@ -54,7 +54,7 @@ class AioodbcSchemaGenerator(BaseSchemaGenerator):
             self.INDEX_CREATE_TEMPLATE.format(
                 exists="IF NOT EXISTS " if safe else "",
                 index_name=self._generate_index_name("idx", model, field_names),
-                table_name=model._meta.table,
+                table_name=model._meta.db_table,
                 fields=", ".join([self.quote(f) for f in field_names]),
             )
         )
