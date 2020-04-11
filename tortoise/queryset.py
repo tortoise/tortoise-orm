@@ -558,7 +558,21 @@ class QuerySet(AwaitableQuery[MODEL]):
 
     def only(self, *fields_for_select: str) -> "QuerySet[MODEL]":
         """
-        Fetch ONLY the specified fields.
+        Fetch ONLY the specified fields to create a partial model.
+
+        Persisting changes on the model is allowed only when:
+
+        * All the fields you want to update is specified in ``<model>.save(update_fields=[...])``
+        * You included the Model primary key in the `.only(...)``
+
+        To protect against common mistakes we ensure that errors get raised:
+
+        * If you access a field that is not specified, you will get an ``AttributeError``.
+        * If you do a ``<model>.save()`` a ``IncompleteInstanceError`` will be raised as the model is, as requested, incomplete.
+        * If you do a ``<model>.save(update_fields=[...])`` and you didn't include the primary key in the ``.only(...)``,
+          then ``IncompleteInstanceError`` will be raised indicating that updates can't be done without the primary key being known.
+        * If you do a ``<model>.save(update_fields=[...])`` and one of the fields in ``update_fields`` was not in the ``.only(...)``,
+          then ``IncompleteInstanceError`` as that field is not available to be updated.
         """
         queryset = self._clone()
         queryset._fields_for_select = fields_for_select
