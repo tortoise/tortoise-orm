@@ -67,6 +67,9 @@ class QuerySetSingle(Protocol[T_co]):
     def annotate(self, **kwargs: Function) -> "QuerySetSingle[MODEL]":
         ...  # pragma: nocoverage
 
+    def only(self, *fields_for_select: str) -> "QuerySetSingle[MODEL]":
+        ...  # pragma: nocoverage
+
     def values_list(self, *fields_: str, flat: bool = False) -> "ValuesListQuery":
         ...  # pragma: nocoverage
 
@@ -232,6 +235,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_db",
         "_limit",
         "_offset",
+        "_fields_for_select",
         "_filter_kwargs",
         "_orderings",
         "_q_objects",
@@ -255,6 +259,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._distinct: bool = False
         self._having: Dict[str, Any] = {}
         self._custom_filters: Dict[str, dict] = {}
+        self._fields_for_select: Tuple[str, ...] = ()
 
     def _clone(self) -> "QuerySet[MODEL]":
         queryset = QuerySet.__new__(QuerySet)
@@ -269,6 +274,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._db = self._db
         queryset._limit = self._limit
         queryset._offset = self._offset
+        queryset._fields_for_select = self._fields_for_select
         queryset._filter_kwargs = copy(self._filter_kwargs)
         queryset._orderings = copy(self._orderings)
         queryset._joined_tables = copy(self._joined_tables)
@@ -550,6 +556,14 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._single = True
         return queryset  # type: ignore
 
+    def only(self, *fields_for_select: str) -> "QuerySet[MODEL]":
+        """
+        Fetch ONLY the specified fields.
+        """
+        queryset = self._clone()
+        queryset._fields_for_select = fields_for_select
+        return queryset
+
     def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySet[MODEL]":
         """
         Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
@@ -612,7 +626,15 @@ class QuerySet(AwaitableQuery[MODEL]):
         return queryset
 
     def _make_query(self) -> None:
-        self.query = copy(self.model._meta.basequery_all_fields)
+        if self._fields_for_select:
+            table = self.model._meta.basetable
+            db_fields_for_select = [
+                table[self.model._meta.fields_db_projection[field]].as_(field)
+                for field in self._fields_for_select
+            ]
+            self.query = copy(self.model._meta.basequery).select(*db_fields_for_select)
+        else:
+            self.query = copy(self.model._meta.basequery_all_fields)
         self.resolve_filters(
             model=self.model,
             q_objects=self._q_objects,
