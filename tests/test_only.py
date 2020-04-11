@@ -8,8 +8,23 @@ class TestOnlyStraight(test.TestCase):
         self.model = StraightFields
         self.instance = await self.model.create(chars="Test")
 
-    async def test_fetch(self):
+    async def test_get(self):
         instance_part = await self.model.get(chars="Test").only("chars", "blip")
+
+        self.assertEqual(instance_part.chars, "Test")
+        with self.assertRaises(AttributeError):
+            _ = instance_part.nullable
+
+    async def test_filter(self):
+        instances = await self.model.filter(chars="Test").only("chars", "blip")
+
+        self.assertEqual(len(instances), 1)
+        self.assertEqual(instances[0].chars, "Test")
+        with self.assertRaises(AttributeError):
+            _ = instances[0].nullable
+
+    async def test_first(self):
+        instance_part = await self.model.filter(chars="Test").only("chars", "blip").first()
 
         self.assertEqual(instance_part.chars, "Test")
         with self.assertRaises(AttributeError):
