@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, cast
 
 import pydantic
 
-import tortoise
 from tortoise import fields
 from tortoise.contrib.pydantic.base import PydanticListModel, PydanticModel
 from tortoise.contrib.pydantic.utils import get_annotations
@@ -202,7 +201,7 @@ def pydantic_model_creator(
     properties: Dict[str, Any] = {"__annotations__": pannotations, "Config": pconfig}
 
     # Get model description
-    model_description = tortoise.Tortoise.describe_model(cls, serializable=False)
+    model_description = cls.describe(serializable=False)
 
     # if not stack:
     #     stack = ((cls, '', max_recursion + 1),)

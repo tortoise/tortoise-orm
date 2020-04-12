@@ -111,7 +111,7 @@ def insensitive_ends_with(field: Term, value: str) -> Criterion:
 
 
 def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> Dict[str, dict]:
-    target_table_pk = field.model_class._meta.pk
+    target_table_pk = field.related_model._meta.pk
     return {
         field_name: {
             "field": field.forward_key,
@@ -145,34 +145,34 @@ def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> Dict[str
 
 
 def get_backward_fk_filters(field_name: str, field: BackwardFKRelation) -> Dict[str, dict]:
-    target_table_pk = field.model_class._meta.pk
+    target_table_pk = field.related_model._meta.pk
     return {
         field_name: {
-            "field": field.model_class._meta.pk_attr,
+            "field": field.related_model._meta.pk_attr,
             "backward_key": field.relation_field,
             "operator": operator.eq,
-            "table": Table(field.model_class._meta.table),
+            "table": Table(field.related_model._meta.db_table),
             "value_encoder": target_table_pk.to_db_value,
         },
         f"{field_name}__not": {
-            "field": field.model_class._meta.pk_attr,
+            "field": field.related_model._meta.pk_attr,
             "backward_key": field.relation_field,
             "operator": not_equal,
-            "table": Table(field.model_class._meta.table),
+            "table": Table(field.related_model._meta.db_table),
             "value_encoder": target_table_pk.to_db_value,
         },
         f"{field_name}__in": {
-            "field": field.model_class._meta.pk_attr,
+            "field": field.related_model._meta.pk_attr,
             "backward_key": field.relation_field,
             "operator": is_in,
-            "table": Table(field.model_class._meta.table),
+            "table": Table(field.related_model._meta.db_table),
             "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
         f"{field_name}__not_in": {
-            "field": field.model_class._meta.pk_attr,
+            "field": field.related_model._meta.pk_attr,
             "backward_key": field.relation_field,
             "operator": not_in,
-            "table": Table(field.model_class._meta.table),
+            "table": Table(field.related_model._meta.db_table),
             "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
     }

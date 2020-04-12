@@ -67,6 +67,9 @@ class QuerySetSingle(Protocol[T_co]):
     def annotate(self, **kwargs: Function) -> "QuerySetSingle[MODEL]":
         ...  # pragma: nocoverage
 
+    def only(self, *fields_for_select: str) -> "QuerySetSingle[MODEL]":
+        ...  # pragma: nocoverage
+
     def values_list(self, *fields_: str, flat: bool = False) -> "ValuesListQuery":
         ...  # pragma: nocoverage
 
@@ -117,7 +120,7 @@ class AwaitableQuery(Generic[MODEL]):
 
         if has_aggregate and (self._joined_tables or having_criterion):
             self.query = self.query.groupby(
-                self.model._meta.basetable[self.model._meta.db_pk_field]
+                self.model._meta.basetable[self.model._meta.db_pk_column]
             )
 
     def _join_table_by_field(
@@ -174,7 +177,7 @@ class AwaitableQuery(Generic[MODEL]):
                 related_field = cast(RelationalField, model._meta.fields_map[related_field_name])
                 related_table = self._join_table_by_field(table, related_field_name, related_field)
                 self.resolve_ordering(
-                    related_field.model_class,
+                    related_field.related_model,
                     related_table,
                     [("__".join(field_name.split("__")[1:]), ordering[1])],
                     {},
@@ -232,6 +235,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_db",
         "_limit",
         "_offset",
+        "_fields_for_select",
         "_filter_kwargs",
         "_orderings",
         "_q_objects",
@@ -255,6 +259,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._distinct: bool = False
         self._having: Dict[str, Any] = {}
         self._custom_filters: Dict[str, dict] = {}
+        self._fields_for_select: Tuple[str, ...] = ()
 
     def _clone(self) -> "QuerySet[MODEL]":
         queryset = QuerySet.__new__(QuerySet)
@@ -269,6 +274,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._db = self._db
         queryset._limit = self._limit
         queryset._offset = self._offset
+        queryset._fields_for_select = self._fields_for_select
         queryset._filter_kwargs = copy(self._filter_kwargs)
         queryset._orderings = copy(self._orderings)
         queryset._joined_tables = copy(self._joined_tables)
@@ -550,6 +556,28 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._single = True
         return queryset  # type: ignore
 
+    def only(self, *fields_for_select: str) -> "QuerySet[MODEL]":
+        """
+        Fetch ONLY the specified fields to create a partial model.
+
+        Persisting changes on the model is allowed only when:
+
+        * All the fields you want to update is specified in ``<model>.save(update_fields=[...])``
+        * You included the Model primary key in the `.only(...)``
+
+        To protect against common mistakes we ensure that errors get raised:
+
+        * If you access a field that is not specified, you will get an ``AttributeError``.
+        * If you do a ``<model>.save()`` a ``IncompleteInstanceError`` will be raised as the model is, as requested, incomplete.
+        * If you do a ``<model>.save(update_fields=[...])`` and you didn't include the primary key in the ``.only(...)``,
+          then ``IncompleteInstanceError`` will be raised indicating that updates can't be done without the primary key being known.
+        * If you do a ``<model>.save(update_fields=[...])`` and one of the fields in ``update_fields`` was not in the ``.only(...)``,
+          then ``IncompleteInstanceError`` as that field is not available to be updated.
+        """
+        queryset = self._clone()
+        queryset._fields_for_select = fields_for_select
+        return queryset
+
     def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySet[MODEL]":
         """
         Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
@@ -568,10 +596,10 @@ class QuerySet(AwaitableQuery[MODEL]):
             if first_level_field not in self.model._meta.fetch_fields:
                 if first_level_field in self.model._meta.fields:
                     raise FieldError(
-                        f"Field {first_level_field} on {self.model._meta.table} is not a relation"
+                        f"Field {first_level_field} on {self.model._meta.full_name} is not a relation"
                     )
                 raise FieldError(
-                    f"Relation {first_level_field} for {self.model._meta.table} not found"
+                    f"Relation {first_level_field} for {self.model._meta.full_name} not found"
                 )
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()
@@ -612,7 +640,15 @@ class QuerySet(AwaitableQuery[MODEL]):
         return queryset
 
     def _make_query(self) -> None:
-        self.query = copy(self.model._meta.basequery_all_fields)
+        if self._fields_for_select:
+            table = self.model._meta.basetable
+            db_fields_for_select = [
+                table[self.model._meta.fields_db_projection[field]].as_(field)
+                for field in self._fields_for_select
+            ]
+            self.query = copy(self.model._meta.basequery).select(*db_fields_for_select)
+        else:
+            self.query = copy(self.model._meta.basequery_all_fields)
         self.resolve_filters(
             model=self.model,
             q_objects=self._q_objects,
@@ -837,7 +873,7 @@ class FieldSelectQuery(AwaitableQuery):
         forwarded_fields_split = forwarded_fields.split("__")
 
         return self._join_table_with_forwarded_fields(
-            model=field_object.model_class,
+            model=field_object.related_model,
             table=table,
             field=forwarded_fields_split[0],
             forwarded_fields="__".join(forwarded_fields_split[1:]),
@@ -892,7 +928,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         field_split = field.split("__")
         if field_split[0] in model._meta.fetch_fields:
-            new_model = model._meta.fields_map[field_split[0]].model_class  # type: ignore
+            new_model = model._meta.fields_map[field_split[0]].related_model  # type: ignore
             return self.resolve_to_python_value(new_model, "__".join(field_split[1:]))
 
         raise FieldError(f'Unknown field "{field}" for model "{model}"')

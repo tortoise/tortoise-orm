@@ -1,16 +1,3 @@
-__all__ = (
-    "BaseORMException",
-    "FieldError",
-    "ConfigurationError",
-    "TransactionManagementError",
-    "OperationalError",
-    "IntegrityError",
-    "NoValuesFetched",
-    "MultipleObjectsReturned",
-    "DoesNotExist",
-)
-
-
 class BaseORMException(Exception):
     """
     Base ORM Exception.
@@ -69,6 +56,12 @@ class MultipleObjectsReturned(OperationalError):
 class DoesNotExist(OperationalError):
     """
     The DoesNotExist exception is raised when expecting data, such as a ``.get()`` operation.
+    """
+
+
+class IncompleteInstanceError(OperationalError):
+    """
+    The IncompleteInstanceError exception is raised when a partial model is attempted to be persisted.
     """
 
 
