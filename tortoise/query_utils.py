@@ -364,7 +364,7 @@ class Q:
 
         :param model: The Model this Q Expression should be resolved on.
         :param annotations: Extra annotations one wants to inject into the resultset.
-        :param custom_filters:
+        :param custom_filters: Pre-resolved filters to be passed though.
         :param table: ``pypika.Table`` to keep track of the virtual SQL table
             (to allow self referential joins)
         """

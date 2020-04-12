@@ -101,7 +101,7 @@ class AwaitableQuery(Generic[MODEL]):
         :param model: The Model this querysit is based on.
         :param q_objects: The Q expressions to apply.
         :param annotations: Extra annotations to add.
-        :param custom_filters:
+        :param custom_filters: Pre-resolved filters to be passed though.
         """
         has_aggregate = self._resolve_annotate()
 

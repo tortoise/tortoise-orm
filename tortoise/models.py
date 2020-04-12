@@ -778,9 +778,9 @@ class Model(metaclass=ModelMeta):
         Fetches the object if exists (filtering on the provided parameters),
         else creates an instance with any unspecified parameters as default values.
 
-        :param defaults:
+        :param defaults: Default values to be added to a created instance if it can't be fetched.
         :param using_db: Specific DB connection to use instead of default bound
-        :param kwargs:
+        :param kwargs: Query parameters.
         """
         if not defaults:
             defaults = {}
@@ -813,7 +813,7 @@ class Model(metaclass=ModelMeta):
             user = User(name="...", email="...")
             await user.save()
 
-        :param kwargs:
+        :param kwargs: Model parameters.
         """
         instance = cls(**kwargs)
         db = kwargs.get("using_db") or cls._meta.db
@@ -863,8 +863,8 @@ class Model(metaclass=ModelMeta):
         """
         Generates a QuerySet with the filter applied.
 
-        :param args:
-        :param kwargs:
+        :param args: Q funtions containing constraints. Will be AND'ed.
+        :param kwargs: Simple filter constraints.
         """
         return QuerySet(cls).filter(*args, **kwargs)
 
@@ -873,8 +873,8 @@ class Model(metaclass=ModelMeta):
         """
         Generates a QuerySet with the exclude applied.
 
-        :param args:
-        :param kwargs:
+        :param args: Q funtions containing constraints. Will be AND'ed.
+        :param kwargs: Simple filter constraints.
         """
         return QuerySet(cls).exclude(*args, **kwargs)
 
@@ -883,7 +883,7 @@ class Model(metaclass=ModelMeta):
         """
         Annotates the result set with extra Functions/Aggregations.
 
-        :param kwargs:
+        :param kwargs: Parameter name and the Function/Aggregation to annotate with.
         """
         return QuerySet(cls).annotate(**kwargs)
 
@@ -903,8 +903,8 @@ class Model(metaclass=ModelMeta):
 
             user = await User.get(username="foo")
 
-        :param args:
-        :param kwargs:
+        :param args: Q funtions containing constraints. Will be AND'ed.
+        :param kwargs: Simple filter constraints.
 
         :raises MultipleObjectsReturned: If provided search returned more than one object.
         :raises DoesNotExist: If object can not be found.
@@ -920,8 +920,8 @@ class Model(metaclass=ModelMeta):
 
             user = await User.get(username="foo")
 
-        :param args:
-        :param kwargs:
+        :param args: Q funtions containing constraints. Will be AND'ed.
+        :param kwargs: Simple filter constraints.
         """
         return QuerySet(cls).get_or_none(*args, **kwargs)
 
@@ -932,9 +932,9 @@ class Model(metaclass=ModelMeta):
         """
         Fetches related models for provided list of Model objects.
 
-        :param instance_list:
-        :param args:
-        :param using_db:
+        :param instance_list: List of Model objects to fetch relations for.
+        :param args: Relation names to fetch.
+        :param using_db: DO NOT USE
         """
         db = using_db or cls._meta.db
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
