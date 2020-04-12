@@ -9,6 +9,7 @@ from pypika import Order, Query, Table
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import (
     ConfigurationError,
+    IncompleteInstanceError,
     IntegrityError,
     OperationalError,
     TransactionManagementError,
@@ -597,6 +598,7 @@ class Model(metaclass=ModelMeta):
     def __init__(self, **kwargs: Any) -> None:
         # self._meta is a very common attribute lookup, lets cache it.
         meta = self._meta
+        self._partial = False
         self._saved_in_db = False
         self._custom_generated_pk = False
 
@@ -643,17 +645,31 @@ class Model(metaclass=ModelMeta):
     @classmethod
     def _init_from_db(cls: Type[MODEL], **kwargs: Any) -> MODEL:
         self = cls.__new__(cls)
+        self._partial = False
         self._saved_in_db = True
 
         meta = self._meta
 
-        for key, model_field, field in meta.db_native_fields:
-            setattr(self, model_field, kwargs[key])
-        for key, model_field, field in meta.db_default_fields:
-            value = kwargs[key]
-            setattr(self, model_field, None if value is None else field.field_type(value))
-        for key, model_field, field in meta.db_complex_fields:
-            setattr(self, model_field, field.to_python_value(kwargs[key]))
+        try:
+            # This is like so for performance reasons.
+            #  We want to avoid conditionals and calling .to_python_value()
+            # Native fields are fields that are already converted to/from python to DB type
+            #  by the DB driver
+            for key, model_field, field in meta.db_native_fields:
+                setattr(self, model_field, kwargs[key])
+            # Fields that don't override .to_python_value() are converted without a call
+            #  as we already know what we will be doing.
+            for key, model_field, field in meta.db_default_fields:
+                value = kwargs[key]
+                setattr(self, model_field, None if value is None else field.field_type(value))
+            # These fields need manual .to_python_value()
+            for key, model_field, field in meta.db_complex_fields:
+                setattr(self, model_field, field.to_python_value(kwargs[key]))
+        except KeyError:
+            self._partial = True
+            # TODO: Apply similar perf optimisation as above for partial
+            for key, value in kwargs.items():
+                setattr(self, key, meta.fields_map[key].to_python_value(value))
 
         return self
 
@@ -698,9 +714,26 @@ class Model(metaclass=ModelMeta):
             This is the subset of fields that should be updated.
             If the object needs to be created ``update_fields`` will be ignored.
         :param using_db: Specific DB connection to use instead of default bound
+
+        :raises IncompleteInstanceError: If the model is partial and the fields are not available for persistance.
         """
         db = using_db or self._meta.db
         executor = db.executor_class(model=self.__class__, db=db)
+        if self._partial:
+            if update_fields:
+                for field in update_fields:
+                    if not hasattr(self, self._meta.pk_attr):
+                        raise IncompleteInstanceError(
+                            f"{self.__class__.__name__} is a partial model without primary key fetchd. Partial update not available"
+                        )
+                    if not hasattr(self, field):
+                        raise IncompleteInstanceError(
+                            f"{self.__class__.__name__} is a partial model, field '{field}' is not available"
+                        )
+            else:
+                raise IncompleteInstanceError(
+                    f"{self.__class__.__name__} is a partial model, can only be saved with the relevant update_field provided"
+                )
         if self._saved_in_db:
             await executor.execute_update(self, update_fields)
         else:

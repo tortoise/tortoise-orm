@@ -59,6 +59,12 @@ class DoesNotExist(OperationalError):
     """
 
 
+class IncompleteInstanceError(OperationalError):
+    """
+    The IncompleteInstanceError exception is raised when a partial model is attempted to be persisted.
+    """
+
+
 class DBConnectionError(BaseORMException, ConnectionError):
     """
     The DBConnectionError is raised when problems with connecting to db occurs
