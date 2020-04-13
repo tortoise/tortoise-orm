@@ -2,7 +2,19 @@ import inspect
 import re
 from copy import copy, deepcopy
 from functools import partial
-from typing import Any, Awaitable, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+)
 
 from pypika import Order, Query, Table
 
