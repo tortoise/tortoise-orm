@@ -11,6 +11,7 @@ Changelog
 ====
 0.16.6
 ------
+- Fixed bad SQL generation when doing a ``.values()`` query over a Foreign Key
 * Added support for partial models:
 
   To create a partial model, one can do a ``.only(<fieldnames-as-strings>)`` as part of the QuerySet.
