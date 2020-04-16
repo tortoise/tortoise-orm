@@ -11,7 +11,6 @@ Changelog
 ====
 0.16.6
 ------
-- Fixed bad SQL generation when doing a ``.values()`` query over a Foreign Key
 * Added support for partial models:
 
   To create a partial model, one can do a ``.only(<fieldnames-as-strings>)`` as part of the QuerySet.
@@ -30,6 +29,9 @@ Changelog
     then ``IncompleteInstanceError`` will be raised indicating that updates can't be done without the primary key being known.
   * If you do a ``<model>.save(update_fields=[...])`` and one of the fields in ``update_fields`` was not in the ``.only(...)``,
     then ``IncompleteInstanceError`` as that field is not available to be updated.
+
+- Fixed bad SQL generation when doing a ``.values()`` query over a Foreign Key
+- Added `<model>.update_from_dict({...})` that will mass update values safely from a dictionary
 
 0.16.5
 ------
