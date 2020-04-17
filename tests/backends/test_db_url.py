@@ -108,6 +108,22 @@ class TestConfigGenerator(test.SimpleTestCase):
             },
         )
 
+    def test_postgres_encoded_password(self):
+        res = expand_db_url("postgres://postgres:kx%25jj5%2Fg@127.0.0.1:54321/test")
+        self.assertDictEqual(
+            res,
+            {
+                "engine": "tortoise.backends.asyncpg",
+                "credentials": {
+                    "database": "test",
+                    "host": "127.0.0.1",
+                    "password": "kx%jj5/g",
+                    "port": 54321,
+                    "user": "postgres",
+                },
+            },
+        )
+
     def test_postgres_no_db(self):
         res = expand_db_url("postgres://postgres:moo@127.0.0.1:54321")
         self.assertDictEqual(
@@ -191,6 +207,24 @@ class TestConfigGenerator(test.SimpleTestCase):
                     "database": "test",
                     "host": "127.0.0.1",
                     "password": "",
+                    "port": 33060,
+                    "user": "root",
+                    "charset": "utf8mb4",
+                    "sql_mode": "STRICT_TRANS_TABLES",
+                },
+            },
+        )
+
+    def test_mysql_encoded_password(self):
+        res = expand_db_url("mysql://root:kx%25jj5%2Fg@127.0.0.1:33060/test")
+        self.assertEqual(
+            res,
+            {
+                "engine": "tortoise.backends.mysql",
+                "credentials": {
+                    "database": "test",
+                    "host": "127.0.0.1",
+                    "password": "kx%jj5/g",
                     "port": 33060,
                     "user": "root",
                     "charset": "utf8mb4",

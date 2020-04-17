@@ -106,7 +106,9 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     if vmap.get("password"):
         # asyncpg accepts None for password, but aiomysql not
         params[vmap["password"]] = (
-            None if (not url.password and db_backend == "postgres") else str(url.password or "")
+            None
+            if (not url.password and db_backend == "postgres")
+            else urlparse.unquote_plus(url.password or "")
         )
 
     return {"engine": db["engine"], "credentials": params}
