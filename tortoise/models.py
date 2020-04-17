@@ -2,7 +2,19 @@ import inspect
 import re
 from copy import copy, deepcopy
 from functools import partial
-from typing import Any, Awaitable, Dict, Generator, List, Optional, Set, Tuple, Type, TypeVar
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeVar,
+)
 
 from pypika import Order, Query, Table
 
@@ -29,9 +41,12 @@ from tortoise.fields.relational import (
 from tortoise.filters import get_filters_for_field
 from tortoise.functions import Function
 from tortoise.queryset import Q, QuerySet, QuerySetSingle
+from tortoise.signals import Signals
 from tortoise.transactions import current_transaction_map, in_transaction
 
 MODEL = TypeVar("MODEL", bound="Model")
+
+
 # TODO: Define Filter type object. Possibly tuple?
 
 
@@ -594,6 +609,12 @@ class Model(metaclass=ModelMeta):
 
     # I don' like this here, but it makes auto completion and static analysis much happier
     _meta = MetaInfo(None)  # type: ignore
+    _listeners: Dict[Signals, Dict["Type[MODEL]", List[Callable]]] = {
+        Signals.pre_save: {},
+        Signals.post_save: {},
+        Signals.pre_delete: {},
+        Signals.post_delete: {},
+    }  # type: ignore
 
     def __init__(self, **kwargs: Any) -> None:
         # self._meta is a very common attribute lookup, lets cache it.
@@ -724,6 +745,41 @@ class Model(metaclass=ModelMeta):
         self._set_kwargs(data)
         return self  # type: ignore
 
+    @classmethod
+    def register_listener(cls, signal: Signals, listener: Callable):
+        assert callable(listener), "listener must be callable!"
+        if listener not in cls._listeners.get(signal).get(cls):
+            cls._listeners.get(signal).get(cls).append(listener)
+
+    async def _pre_delete(self, using_db: Optional[BaseDBAsyncClient] = None,) -> None:
+        for listener in self._listeners.get(Signals.pre_delete).get(self.__class__):
+            await listener(
+                self.__class__, self, using_db,
+            )
+
+    async def _post_delete(self, using_db: Optional[BaseDBAsyncClient] = None,) -> None:
+        for listener in self._listeners.get(Signals.post_delete).get(self.__class__):
+            await listener(
+                self.__class__, self, using_db,
+            )
+
+    async def _pre_save(
+        self,
+        using_db: Optional[BaseDBAsyncClient] = None,
+        update_fields: Optional[List[str]] = None,
+    ) -> None:
+        for listener in self._listeners.get(Signals.pre_save).get(self.__class__):
+            await listener(self.__class__, self, using_db, update_fields)
+
+    async def _post_save(
+        self,
+        using_db: Optional[BaseDBAsyncClient] = None,
+        created: bool = False,
+        update_fields: Optional[List[str]] = None,
+    ) -> None:
+        for listener in self._listeners.get(Signals.post_save).get(self.__class__):
+            await listener(self.__class__, self, created, using_db, update_fields)
+
     async def save(
         self,
         using_db: Optional[BaseDBAsyncClient] = None,
@@ -757,11 +813,15 @@ class Model(metaclass=ModelMeta):
                 raise IncompleteInstanceError(
                     f"{self.__class__.__name__} is a partial model, can only be saved with the relevant update_field provided"
                 )
+        await self._pre_save(using_db, update_fields)
         if self._saved_in_db:
             await executor.execute_update(self, update_fields)
+            created = False
         else:
             await executor.execute_insert(self)
+            created = True
             self._saved_in_db = True
+        await self._post_save(using_db, created, update_fields)
 
     async def delete(self, using_db: Optional[BaseDBAsyncClient] = None) -> None:
         """
@@ -774,7 +834,9 @@ class Model(metaclass=ModelMeta):
         db = using_db or self._meta.db
         if not self._saved_in_db:
             raise OperationalError("Can't delete unpersisted record")
+        await self._pre_delete(using_db)
         await db.executor_class(model=self.__class__, db=db).execute_delete(self)
+        await self._post_delete(using_db)
 
     async def fetch_related(self, *args: Any, using_db: Optional[BaseDBAsyncClient] = None) -> None:
         """
@@ -839,9 +901,9 @@ class Model(metaclass=ModelMeta):
         :param kwargs: Model parameters.
         """
         instance = cls(**kwargs)
+        instance._saved_in_db = False
         db = kwargs.get("using_db") or cls._meta.db
-        await db.executor_class(model=cls, db=db).execute_insert(instance)
-        instance._saved_in_db = True
+        await instance.save(using_db=db)
         return instance
 
     @classmethod
