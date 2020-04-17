@@ -66,9 +66,10 @@ def _get_joins_for_related_field(
             )
         )
     elif isinstance(related_field, BackwardFKRelation):
-        to_field_source_field = related_field.to_field_instance.source_field
-        if not to_field_source_field:
-            to_field_source_field = related_field.to_field_instance.model_field_name
+        to_field_source_field = (
+            related_field.to_field_instance.source_field
+            or related_field.to_field_instance.model_field_name
+        )
 
         if table == related_table:
             related_table = related_table.as_(f"{table.get_table_name()}__{related_field_name}")
@@ -79,13 +80,17 @@ def _get_joins_for_related_field(
             )
         )
     else:
+        to_field_source_field = (
+            related_field.to_field_instance.source_field
+            or related_field.to_field_instance.model_field_name
+        )
+
+        from_field = related_field.model._meta.fields_map[related_field.source_field]  # type: ignore
+        from_field_source_field = from_field.source_field or from_field.model_field_name
+
         related_table = related_table.as_(f"{table.get_table_name()}__{related_field_name}")
         required_joins.append(
-            (
-                related_table,
-                related_table[related_field.to_field_instance.model_field_name]
-                == table[f"{related_field_name}_id"],
-            )
+            (related_table, related_table[to_field_source_field] == table[from_field_source_field],)
         )
     return required_joins
 
@@ -364,7 +369,7 @@ class Q:
 
         :param model: The Model this Q Expression should be resolved on.
         :param annotations: Extra annotations one wants to inject into the resultset.
-        :param custom_filters:
+        :param custom_filters: Pre-resolved filters to be passed though.
         :param table: ``pypika.Table`` to keep track of the virtual SQL table
             (to allow self referential joins)
         """

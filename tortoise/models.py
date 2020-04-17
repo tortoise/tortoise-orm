@@ -616,6 +616,17 @@ class Model(metaclass=ModelMeta):
         self._saved_in_db = False
         self._custom_generated_pk = False
 
+        # Assign defaults for missing fields
+        for key in meta.fields.difference(self._set_kwargs(kwargs)):
+            field_object = meta.fields_map[key]
+            if callable(field_object.default):
+                setattr(self, key, field_object.default())
+            else:
+                setattr(self, key, field_object.default)
+
+    def _set_kwargs(self, kwargs: dict) -> Set[str]:
+        meta = self._meta
+
         # Assign values and do type conversions
         passed_fields = {*kwargs.keys()} | meta.fetch_fields
 
@@ -626,7 +637,7 @@ class Model(metaclass=ModelMeta):
                         f"You should first call .save() on {value} before referring to it"
                     )
                 setattr(self, key, value)
-                passed_fields.add(meta.fields_map[key].source_field)  # type: ignore
+                passed_fields.add(meta.fields_map[key].source_field)
             elif key in meta.fields_db_projection:
                 field_object = meta.fields_map[key]
                 if field_object.generated:
@@ -648,13 +659,7 @@ class Model(metaclass=ModelMeta):
                     "You can't set m2m relations through init, use m2m_manager instead"
                 )
 
-        # Assign defaults for missing fields
-        for key in meta.fields.difference(passed_fields):
-            field_object = meta.fields_map[key]
-            if callable(field_object.default):
-                setattr(self, key, field_object.default())
-            else:
-                setattr(self, key, field_object.default)
+        return passed_fields
 
     @classmethod
     def register_listener(cls, signal: Signals, listener: Callable):
@@ -747,6 +752,24 @@ class Model(metaclass=ModelMeta):
     Can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc...
     """
 
+    def update_from_dict(self, data: dict) -> MODEL:
+        """
+        Updates the current model with the provided dict.
+        This can allow mass-updating a model from a dict, also ensuring that datatype conversions happen.
+
+        This will ignore any extra fields, and NOT update the model with them,
+        but will raise errors on bad types or updating Many-instance relations.
+
+        :param data: The parameters you want to update in a dict format
+        :return: The current model instance
+
+        :raises ConfigurationError: When attempting to update a remote instance
+            (e.g. a reverse ForeignKey or ManyToMany relation)
+        :raises ValueError: When a passed parameter is not type compatible
+        """
+        self._set_kwargs(data)
+        return self  # type: ignore
+
     async def save(
         self,
         using_db: Optional[BaseDBAsyncClient] = None,
@@ -833,9 +856,9 @@ class Model(metaclass=ModelMeta):
         Fetches the object if exists (filtering on the provided parameters),
         else creates an instance with any unspecified parameters as default values.
 
-        :param defaults:
+        :param defaults: Default values to be added to a created instance if it can't be fetched.
         :param using_db: Specific DB connection to use instead of default bound
-        :param kwargs:
+        :param kwargs: Query parameters.
         """
         if not defaults:
             defaults = {}
@@ -868,7 +891,7 @@ class Model(metaclass=ModelMeta):
             user = User(name="...", email="...")
             await user.save()
 
-        :param kwargs:
+        :param kwargs: Model parameters.
         """
         instance = cls(**kwargs)
         instance._saved_in_db = False
@@ -918,8 +941,8 @@ class Model(metaclass=ModelMeta):
         """
         Generates a QuerySet with the filter applied.
 
-        :param args:
-        :param kwargs:
+        :param args: Q funtions containing constraints. Will be AND'ed.
+        :param kwargs: Simple filter constraints.
         """
         return QuerySet(cls).filter(*args, **kwargs)
 
@@ -928,8 +951,8 @@ class Model(metaclass=ModelMeta):
         """
         Generates a QuerySet with the exclude applied.
 
-        :param args:
-        :param kwargs:
+        :param args: Q funtions containing constraints. Will be AND'ed.
+        :param kwargs: Simple filter constraints.
         """
         return QuerySet(cls).exclude(*args, **kwargs)
 
@@ -938,7 +961,7 @@ class Model(metaclass=ModelMeta):
         """
         Annotates the result set with extra Functions/Aggregations.
 
-        :param kwargs:
+        :param kwargs: Parameter name and the Function/Aggregation to annotate with.
         """
         return QuerySet(cls).annotate(**kwargs)
 
@@ -958,8 +981,8 @@ class Model(metaclass=ModelMeta):
 
             user = await User.get(username="foo")
 
-        :param args:
-        :param kwargs:
+        :param args: Q funtions containing constraints. Will be AND'ed.
+        :param kwargs: Simple filter constraints.
 
         :raises MultipleObjectsReturned: If provided search returned more than one object.
         :raises DoesNotExist: If object can not be found.
@@ -975,8 +998,8 @@ class Model(metaclass=ModelMeta):
 
             user = await User.get(username="foo")
 
-        :param args:
-        :param kwargs:
+        :param args: Q funtions containing constraints. Will be AND'ed.
+        :param kwargs: Simple filter constraints.
         """
         return QuerySet(cls).get_or_none(*args, **kwargs)
 
@@ -987,9 +1010,9 @@ class Model(metaclass=ModelMeta):
         """
         Fetches related models for provided list of Model objects.
 
-        :param instance_list:
-        :param args:
-        :param using_db:
+        :param instance_list: List of Model objects to fetch relations for.
+        :param args: Relation names to fetch.
+        :param using_db: DO NOT USE
         """
         db = using_db or cls._meta.db
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
