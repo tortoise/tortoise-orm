@@ -160,6 +160,27 @@ class TestModelMethods(test.TestCase):
         with self.assertRaises(MultipleObjectsReturned):
             await self.cls.get_or_none(name="Test")
 
+    async def test_update_from_dict(self):
+        evt1 = await Event.create(name="a", tournament=await Tournament.create(name="a"))
+        orig_modified = evt1.modified
+        await evt1.update_from_dict({"alias": "8", "name": "b", "bad_name": "foo"}).save()
+        self.assertEqual(evt1.alias, 8)
+        self.assertEqual(evt1.name, "b")
+
+        with self.assertRaises(AttributeError):
+            _ = evt1.bad_name
+
+        evt2 = await Event.get(name="b")
+        self.assertEqual(evt1.pk, evt2.pk)
+        self.assertEqual(evt1.modified, evt2.modified)
+        self.assertNotEqual(orig_modified, evt1.modified)
+
+        with self.assertRaises(ConfigurationError):
+            evt2.update_from_dict({"participants": []})
+
+        with self.assertRaises(ValueError):
+            evt2.update_from_dict({"alias": "foo"})
+
 
 class TestModelMethodsNoID(TestModelMethods):
     async def setUp(self):
@@ -213,7 +234,7 @@ class TestModelConstructor(test.TestCase):
             Event(name="a", tournament=Tournament(name="a"))
 
     async def test_fk_saved(self):
-        Event(name="a", tournament=await Tournament.create(name="a"))
+        await Event.create(name="a", tournament=await Tournament.create(name="a"))
 
     async def test_noneawaitable(self):
         self.assertFalse(NoneAwaitable)

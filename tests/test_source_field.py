@@ -162,6 +162,13 @@ class StraightFieldTests(test.TestCase):
         obj1a = await self.model.get(eyedee=obj1.eyedee).prefetch_related("rel_to")
         self.assertEqual(list(obj1a.rel_to), [obj2])
 
+    async def test_values_reverse_relation(self):
+        obj1 = await self.model.create(chars="aaa")
+        await self.model.create(chars="bbb", fk=obj1)
+
+        obj1a = await self.model.filter(chars="aaa").values("fkrev__chars")
+        self.assertEqual(obj1a[0]["fkrev__chars"], "bbb")
+
     async def test_f_expression(self):
         obj1 = await self.model.create(chars="aaa")
         await self.model.filter(eyedee=obj1.eyedee).update(chars=F("blip"))
@@ -220,6 +227,13 @@ class StraightFieldTests(test.TestCase):
 
         self.assertEqual(len(obj), 1)
         self.assertEqual(obj[0].chars_upper, "AAA")
+
+    async def test_values_by_fk(self):
+        obj1 = await self.model.create(chars="aaa")
+        await self.model.create(chars="bbb", fk=obj1)
+
+        obj = await self.model.filter(chars="bbb").values("fk__chars")
+        self.assertEqual(obj, [{"fk__chars": "aaa"}])
 
 
 class SourceFieldTests(StraightFieldTests):

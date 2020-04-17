@@ -1,5 +1,5 @@
 import logging
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 logger = logging.getLogger("tortoise")
 
@@ -11,8 +11,8 @@ def get_schema_sql(client: "BaseDBAsyncClient", safe: bool) -> str:
     """
     Generates the SQL schema for the given client.
 
-    :param client:
-    :param safe:
+    :param client: The DB client to generate Schema SQL for
+    :param safe: When set to true, creates the table only when it does not already exist.
     """
     generator = client.schema_generator(client)
     return generator.get_create_schema_sql(safe)
@@ -22,24 +22,11 @@ async def generate_schema_for_client(client: "BaseDBAsyncClient", safe: bool) ->
     """
     Generates and applies the SQL schema directly to the given client.
 
-    :param client:
-    :param safe:
+    :param client: The DB client to generate Schema SQL for
+    :param safe: When set to true, creates the table only when it does not already exist.
     """
     generator = client.schema_generator(client)
     schema = get_schema_sql(client, safe)
     logger.debug("Creating schema: %s", schema)
     if schema:  # pragma: nobranch
         await generator.generate_from_string(schema)
-
-
-def get_escape_translation_table() -> List[str]:
-    """escape sequence taken based on definition provided by PostgreSQL and MySQL"""
-    _escape_table = [chr(x) for x in range(128)]
-    _escape_table[0] = "\\0"
-    _escape_table[ord("\\")] = "\\\\"
-    _escape_table[ord("\n")] = "\\n"
-    _escape_table[ord("\r")] = "\\r"
-    _escape_table[ord("\032")] = "\\Z"
-    _escape_table[ord('"')] = '\\"'
-    _escape_table[ord("'")] = "\\'"
-    return _escape_table

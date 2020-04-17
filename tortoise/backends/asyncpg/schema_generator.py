@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING, List
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
-from tortoise.utils import get_escape_translation_table
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.asyncpg.client import AsyncpgDBClient
@@ -17,10 +16,11 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
         super().__init__(client)
         self.comments_array: List[str] = []
 
-    def _escape_comment(self, comment: str) -> str:
-        table = get_escape_translation_table()
+    @classmethod
+    def _get_escape_translation_table(cls) -> List[str]:
+        table = super()._get_escape_translation_table()
         table[ord("'")] = "''"
-        return comment.translate(table)
+        return table
 
     def _table_comment_generator(self, table: str, comment: str) -> str:
         comment = self.TABLE_COMMENT_TEMPLATE.format(

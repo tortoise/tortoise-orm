@@ -1,6 +1,6 @@
 checkfiles = tortoise/ examples/ tests/ conftest.py
-black_opts = -l 100 -t py36
-py_warn = PYTHONWARNINGS=default PYTHONASYNCIODEBUG=1 PYTHONDEBUG=x PYTHONDEVMODE=dev
+black_opts = -l 100 -t py37
+py_warn = PYTHONDEVMODE=1
 
 help:
 	@echo  "Tortoise ORM development makefile"

@@ -3,8 +3,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple
 
 from pypika import Table
-from pypika.enums import SqlTypes
-from pypika.functions import Cast, Upper
+from pypika.functions import Upper
 from pypika.terms import BasicCriterion, Criterion, Equality, Term, ValueWrapper
 
 from tortoise.fields import Field
@@ -48,12 +47,14 @@ def string_encoder(value: Any, instance: "Model", field: Field) -> str:
 def is_in(field: Term, value: Any) -> Criterion:
     if value:
         return field.isin(value)
+    # SQL has no False, so we return 1=0
     return BasicCriterion(Equality.eq, ValueWrapper(1), ValueWrapper(0))
 
 
 def not_in(field: Term, value: Any) -> Criterion:
     if value:
         return field.notin(value) | field.isnull()
+    # SQL has no True, so we return 1=1
     return BasicCriterion(Equality.eq, ValueWrapper(1), ValueWrapper(1))
 
 
@@ -78,31 +79,31 @@ def not_null(field: Term, value: Any) -> Criterion:
 
 
 def contains(field: Term, value: str) -> Criterion:
-    return Cast(field, SqlTypes.VARCHAR).like(f"%{value}%")
+    return field.like(f"%{value}%")
 
 
 def starts_with(field: Term, value: str) -> Criterion:
-    return Cast(field, SqlTypes.VARCHAR).like(f"{value}%")
+    return field.like(f"{value}%")
 
 
 def ends_with(field: Term, value: str) -> Criterion:
-    return Cast(field, SqlTypes.VARCHAR).like(f"%{value}")
+    return field.like(f"%{value}")
 
 
 def insensitive_exact(field: Term, value: str) -> Criterion:
-    return Upper(Cast(field, SqlTypes.VARCHAR)).eq(Upper(f"{value}"))
+    return Upper(field).eq(Upper(f"{value}"))
 
 
 def insensitive_contains(field: Term, value: str) -> Criterion:
-    return Upper(Cast(field, SqlTypes.VARCHAR)).like(Upper(f"%{value}%"))
+    return Upper(field).like(Upper(f"%{value}%"))
 
 
 def insensitive_starts_with(field: Term, value: str) -> Criterion:
-    return Upper(Cast(field, SqlTypes.VARCHAR)).like(Upper(f"{value}%"))
+    return Upper(field).like(Upper(f"{value}%"))
 
 
 def insensitive_ends_with(field: Term, value: str) -> Criterion:
-    return Upper(Cast(field, SqlTypes.VARCHAR)).like(Upper(f"%{value}"))
+    return Upper(field).like(Upper(f"%{value}"))
 
 
 ##############################################################################
@@ -111,7 +112,7 @@ def insensitive_ends_with(field: Term, value: str) -> Criterion:
 
 
 def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> Dict[str, dict]:
-    target_table_pk = field.model_class._meta.pk
+    target_table_pk = field.related_model._meta.pk
     return {
         field_name: {
             "field": field.forward_key,
@@ -145,34 +146,34 @@ def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> Dict[str
 
 
 def get_backward_fk_filters(field_name: str, field: BackwardFKRelation) -> Dict[str, dict]:
-    target_table_pk = field.model_class._meta.pk
+    target_table_pk = field.related_model._meta.pk
     return {
         field_name: {
-            "field": field.model_class._meta.pk_attr,
+            "field": field.related_model._meta.pk_attr,
             "backward_key": field.relation_field,
             "operator": operator.eq,
-            "table": Table(field.model_class._meta.table),
+            "table": Table(field.related_model._meta.db_table),
             "value_encoder": target_table_pk.to_db_value,
         },
         f"{field_name}__not": {
-            "field": field.model_class._meta.pk_attr,
+            "field": field.related_model._meta.pk_attr,
             "backward_key": field.relation_field,
             "operator": not_equal,
-            "table": Table(field.model_class._meta.table),
+            "table": Table(field.related_model._meta.db_table),
             "value_encoder": target_table_pk.to_db_value,
         },
         f"{field_name}__in": {
-            "field": field.model_class._meta.pk_attr,
+            "field": field.related_model._meta.pk_attr,
             "backward_key": field.relation_field,
             "operator": is_in,
-            "table": Table(field.model_class._meta.table),
+            "table": Table(field.related_model._meta.db_table),
             "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
         f"{field_name}__not_in": {
-            "field": field.model_class._meta.pk_attr,
+            "field": field.related_model._meta.pk_attr,
             "backward_key": field.relation_field,
             "operator": not_in,
-            "table": Table(field.model_class._meta.table),
+            "table": Table(field.related_model._meta.db_table),
             "value_encoder": partial(related_list_encoder, field=target_table_pk),
         },
     }

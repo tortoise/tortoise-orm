@@ -40,14 +40,6 @@ class Capabilities:
         inline_comment: bool = False,
         supports_transactions: bool = True,
     ) -> None:
-        """
-
-        :param dialect:
-        :param daemon:
-        :param requires_limit:
-        :param inline_comment:
-        :param supports_transactions:
-        """
         super().__setattr__("_mutable", True)
 
         self.dialect = dialect
@@ -168,6 +160,7 @@ class BaseDBAsyncClient:
 
         :param query: The SQL string, pre-parametrized for the target DB dialect.
         :param values: A sequence of positional DB parameters.
+        :return: A tuple of: (The nunber of rows affected, The resultset)
         """
         raise NotImplementedError()  # pragma: nocoverage
 
