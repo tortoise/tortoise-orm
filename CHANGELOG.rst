@@ -2,6 +2,12 @@
 
 Changelog
 =========
+0.15.23
+-------
+- Fixed SQL injection issue in MySQL
+- Fixed SQL injection issues in MySQL when using ``contains``, ``starts_with`` or ``ends_with`` filters (and their case-insensitive counterparts)
+- Fixed malformed SQL for PostgreSQL and SQLite when using ``contains``, ``starts_with`` or ``ends_with`` filters (and their case-insensitive counterparts)
+
 0.15.22
 -------
 * Fix the aggregates using the wrong side of the join when doing a self-referential aggregation.
