@@ -32,6 +32,9 @@ Changelog
 
 - Fixed bad SQL generation when doing a ``.values()`` query over a Foreign Key
 - Added `<model>.update_from_dict({...})` that will mass update values safely from a dictionary
+- Fixed SQL injection issue in MySQL
+- Fixed SQL injection issues in MySQL when using ``contains``, ``starts_with`` or ``ends_with`` filters (and their case-insensitive counterparts)
+- Fixed malformed SQL for PostgreSQL and SQLite when using ``contains``, ``starts_with`` or ``ends_with`` filters (and their case-insensitive counterparts)
 
 0.16.5
 ------
