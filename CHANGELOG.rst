@@ -32,6 +32,7 @@ Changelog
 
 - Fixed bad SQL generation when doing a ``.values()`` query over a Foreign Key
 - Added `<model>.update_from_dict({...})` that will mass update values safely from a dictionary
+- Fixed processing URL encoded password in connection string
 
 0.16.5
 ------
