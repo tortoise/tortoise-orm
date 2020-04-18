@@ -11,6 +11,20 @@ Changelog
 ====
 0.16.6
 ------
+.. warning::
+
+    This is a security fix release. We recommend everyone updates.
+
+Security fixes
+^^^^^^^^^^^^^^
+
+- Fixed SQL injection issue in MySQL
+- Fixed SQL injection issues in MySQL when using ``contains``, ``starts_with`` or ``ends_with`` filters (and their case-insensitive counterparts)
+- Fixed malformed SQL for PostgreSQL and SQLite when using ``contains``, ``starts_with`` or ``ends_with`` filters (and their case-insensitive counterparts)
+
+Other changes
+^^^^^^^^^^^^^
+
 * Added support for partial models:
 
   To create a partial model, one can do a ``.only(<fieldnames-as-strings>)`` as part of the QuerySet.
@@ -33,9 +47,6 @@ Changelog
 - Fixed bad SQL generation when doing a ``.values()`` query over a Foreign Key
 - Added `<model>.update_from_dict({...})` that will mass update values safely from a dictionary
 - Fixed processing URL encoded password in connection string
-- Fixed SQL injection issue in MySQL
-- Fixed SQL injection issues in MySQL when using ``contains``, ``starts_with`` or ``ends_with`` filters (and their case-insensitive counterparts)
-- Fixed malformed SQL for PostgreSQL and SQLite when using ``contains``, ``starts_with`` or ``ends_with`` filters (and their case-insensitive counterparts)
 
 0.16.5
 ------
@@ -196,6 +207,30 @@ Removals:
 
 0.15
 ====
+
+0.15.23
+-------
+- Fixed SQL injection issue in MySQL
+- Fixed SQL injection issues in MySQL when using ``contains``, ``starts_with`` or ``ends_with`` filters (and their case-insensitive counterparts)
+- Fixed malformed SQL for PostgreSQL and SQLite when using ``contains``, ``starts_with`` or ``ends_with`` filters (and their case-insensitive counterparts)
+
+0.15.22
+-------
+* Fix the aggregates using the wrong side of the join when doing a self-referential aggregation.
+* Fix for ``generate_schemas`` param being ignored in ``tortoise.contrib.quart.register_tortoise``
+
+0.15.21
+-------
+* Fixed invalid ``var IN ()`` SQL generated using ``__in=`` and ``__not_in`` filters.
+* Fix bug with order_by on nested fields
+* Fix joining with self by reverse-foreign-key for filtering and annotation
+
+0.15.20
+------
+* Default ``values()`` & ``values_list()`` now includes annotations.
+* Annotations over joins now work correctly with ``values()`` & ``values_list()``
+* Ensure ``GROUP BY`` precedes ``HAVING`` to ensure that filtering by aggregates work correctly.
+* Cast ``BooleanField`` values correctly on SQLite & MySQL
 
 0.15.19
 -------
