@@ -649,3 +649,7 @@ class Principal(Model):
     school: fields.OneToOneRelation[School] = fields.OneToOneField(
         "models.School", on_delete=fields.CASCADE, related_name="principal", to_field="id"
     )
+
+
+class Signal(Model):
+    name = fields.CharField(max_length=255)

@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 import re
 from copy import copy, deepcopy
@@ -609,12 +610,7 @@ class Model(metaclass=ModelMeta):
 
     # I don' like this here, but it makes auto completion and static analysis much happier
     _meta = MetaInfo(None)  # type: ignore
-    _listeners: Dict[Signals, Dict["Type[MODEL]", List[Callable]]] = {
-        Signals.pre_save: {},
-        Signals.post_save: {},
-        Signals.pre_delete: {},
-        Signals.post_delete: {},
-    }  # type: ignore
+    _listeners: Dict[Signals, Dict[Type[MODEL], List[Callable]]] = {}
 
     def __init__(self, **kwargs: Any) -> None:
         # self._meta is a very common attribute lookup, lets cache it.
@@ -748,28 +744,32 @@ class Model(metaclass=ModelMeta):
     @classmethod
     def register_listener(cls, signal: Signals, listener: Callable):
         assert callable(listener), "listener must be callable!"
+        cls._listeners.setdefault(signal, {})
+        cls._listeners.get(signal).setdefault(cls, [])
         if listener not in cls._listeners.get(signal).get(cls):
             cls._listeners.get(signal).get(cls).append(listener)
 
     async def _pre_delete(self, using_db: Optional[BaseDBAsyncClient] = None,) -> None:
-        for listener in self._listeners.get(Signals.pre_delete).get(self.__class__):
-            await listener(
-                self.__class__, self, using_db,
-            )
+        listeners = []
+        for listener in self._listeners.get(Signals.pre_delete, {}).get(self.__class__, []):
+            listeners.append(listener(self.__class__, self, using_db,))
+        await asyncio.gather(*listeners)
 
     async def _post_delete(self, using_db: Optional[BaseDBAsyncClient] = None,) -> None:
-        for listener in self._listeners.get(Signals.post_delete).get(self.__class__):
-            await listener(
-                self.__class__, self, using_db,
-            )
+        listeners = []
+        for listener in self._listeners.get(Signals.post_delete, {}).get(self.__class__, []):
+            listeners.append(listener(self.__class__, self, using_db,))
+        await asyncio.gather(*listeners)
 
     async def _pre_save(
         self,
         using_db: Optional[BaseDBAsyncClient] = None,
         update_fields: Optional[List[str]] = None,
     ) -> None:
-        for listener in self._listeners.get(Signals.pre_save).get(self.__class__):
-            await listener(self.__class__, self, using_db, update_fields)
+        listeners = []
+        for listener in self._listeners.get(Signals.pre_save, {}).get(self.__class__, []):
+            listeners.append(listener(self.__class__, self, using_db, update_fields))
+        await asyncio.gather(*listeners)
 
     async def _post_save(
         self,
@@ -777,8 +777,10 @@ class Model(metaclass=ModelMeta):
         created: bool = False,
         update_fields: Optional[List[str]] = None,
     ) -> None:
-        for listener in self._listeners.get(Signals.post_save).get(self.__class__):
-            await listener(self.__class__, self, created, using_db, update_fields)
+        listeners = []
+        for listener in self._listeners.get(Signals.post_save, {}).get(self.__class__, []):
+            listeners.append(listener(self.__class__, self, created, using_db, update_fields))
+        await asyncio.gather(*listeners)
 
     async def save(
         self,

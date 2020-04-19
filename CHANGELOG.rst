@@ -9,6 +9,11 @@ Changelog
 
 0.16
 ====
+
+0.16.7
+------
+* Add model signals support.
+
 0.16.6
 ------
 * Added support for partial models:
