@@ -23,6 +23,14 @@ The form is:
 
 :samp:`{DB_TYPE}://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DB_NAME}?{PARAM1}=value&{PARAM2}=value`
 
+If password contains special characters it need to be URL encoded:
+
+.. code-block::  python3
+
+    >>> import urllib.parse
+    >>> urllib.parse.quote_plus("kx%jj5/g")
+    'kx%25jj5%2Fg'
+
 The supported ``DB_TYPE``:
 
 ``sqlite``:
