@@ -2,7 +2,6 @@ language: python
 python:
   - 3.7
   - 3.8
-  - 3.9-dev
 env:
   global:
     TORTOISE_TEST_MODULES=tests.testmodels
@@ -15,6 +14,9 @@ matrix:
   - python: 3.7
     env: TEST_RUNNER=nose2
     script: "nose2 --plugin tortoise.contrib.test.nose2 --db-module tests.testmodels --db-url sqlite://:memory:"
+    after_success: echo
+  - python: 3.9-dev
+    script: make testall
     after_success: echo
 dist: xenial
 services:
