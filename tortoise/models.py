@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 import re
 from copy import copy, deepcopy
@@ -45,6 +46,8 @@ from tortoise.signals import Signals
 from tortoise.transactions import current_transaction_map, in_transaction
 
 MODEL = TypeVar("MODEL", bound="Model")
+
+
 # TODO: Define Filter type object. Possibly tuple?
 
 
@@ -607,7 +610,12 @@ class Model(metaclass=ModelMeta):
 
     # I don' like this here, but it makes auto completion and static analysis much happier
     _meta = MetaInfo(None)  # type: ignore
-    _listeners: Dict[Signals, Dict[Type[MODEL], List[Callable]]] = {}
+    _listeners: Dict[Signals, Dict[Type[MODEL], List[Callable]]] = {  # type: ignore
+        Signals.pre_save: {},
+        Signals.post_save: {},
+        Signals.pre_delete: {},
+        Signals.post_delete: {},
+    }
 
     def __init__(self, **kwargs: Any) -> None:
         # self._meta is a very common attribute lookup, lets cache it.
@@ -660,38 +668,6 @@ class Model(metaclass=ModelMeta):
                 )
 
         return passed_fields
-
-    @classmethod
-    def register_listener(cls, signal: Signals, listener: Callable):
-        assert callable(listener), "listener must be callable!"
-        cls._listeners.setdefault(signal, {})
-        cls._listeners.get(signal).setdefault(cls, [])
-        if listener not in cls._listeners.get(signal).get(cls):
-            cls._listeners.get(signal).get(cls).append(listener)
-
-    async def _pre_delete(
-        self, using_db,
-    ):
-        for listener in self._listeners.get(Signals.pre_delete, {}).get(self.__class__, []):
-            await listener(
-                self.__class__, self, using_db,
-            )
-
-    async def _post_delete(
-        self, using_db,
-    ):
-        for listener in self._listeners.get(Signals.post_delete, {}).get(self.__class__, []):
-            await listener(
-                self.__class__, self, using_db,
-            )
-
-    async def _pre_save(self, using_db, update_fields):
-        for listener in self._listeners.get(Signals.pre_save, {}).get(self.__class__, []):
-            await listener(self.__class__, self, using_db, update_fields)
-
-    async def _post_save(self, using_db, created, update_fields):
-        for listener in self._listeners.get(Signals.post_save, {}).get(self.__class__, []):
-            await listener(self.__class__, self, created, using_db, update_fields)
 
     @classmethod
     def _init_from_db(cls: Type[MODEL], **kwargs: Any) -> MODEL:
@@ -770,6 +746,59 @@ class Model(metaclass=ModelMeta):
         self._set_kwargs(data)
         return self  # type: ignore
 
+    @classmethod
+    def register_listener(cls, signal: Signals, listener: Callable):
+        """
+        Register listener to current model class for special Signal.
+
+        :param signal: one of tortoise.signals.Signal
+        :param listener: callable listener
+
+        :raises ConfigurationError: When listener is not callable
+        """
+        if not callable(listener):
+            raise ConfigurationError("Signal listener must be callable!")
+        cls_listeners = cls._listeners.get(signal).setdefault(cls, [])  # type:ignore
+        if listener not in cls_listeners:
+            cls_listeners.append(listener)
+
+    async def _pre_delete(self, using_db: Optional[BaseDBAsyncClient] = None,) -> None:
+        listeners = []
+        cls_listeners = self._listeners.get(Signals.pre_delete, {}).get(self.__class__, [])
+        for listener in cls_listeners:
+            listeners.append(listener(self.__class__, self, using_db,))
+        await asyncio.gather(*listeners)
+
+    async def _post_delete(self, using_db: Optional[BaseDBAsyncClient] = None,) -> None:
+        listeners = []
+        cls_listeners = self._listeners.get(Signals.post_delete, {}).get(self.__class__, [])
+        for listener in cls_listeners:
+            listeners.append(listener(self.__class__, self, using_db,))
+        await asyncio.gather(*listeners)
+
+    async def _pre_save(
+        self,
+        using_db: Optional[BaseDBAsyncClient] = None,
+        update_fields: Optional[List[str]] = None,
+    ) -> None:
+        listeners = []
+        cls_listeners = self._listeners.get(Signals.pre_save, {}).get(self.__class__, [])
+        for listener in cls_listeners:
+            listeners.append(listener(self.__class__, self, using_db, update_fields))
+        await asyncio.gather(*listeners)
+
+    async def _post_save(
+        self,
+        using_db: Optional[BaseDBAsyncClient] = None,
+        created: bool = False,
+        update_fields: Optional[List[str]] = None,
+    ) -> None:
+        listeners = []
+        cls_listeners = self._listeners.get(Signals.post_save, {}).get(self.__class__, [])
+        for listener in cls_listeners:
+            listeners.append(listener(self.__class__, self, created, using_db, update_fields))
+        await asyncio.gather(*listeners)
+
     async def save(
         self,
         using_db: Optional[BaseDBAsyncClient] = None,
@@ -805,13 +834,12 @@ class Model(metaclass=ModelMeta):
                 )
         await self._pre_save(using_db, update_fields)
         if self._saved_in_db:
-            created = False
             await executor.execute_update(self, update_fields)
+            created = False
         else:
-            created = True
             await executor.execute_insert(self)
+            created = True
             self._saved_in_db = True
-
         await self._post_save(using_db, created, update_fields)
 
     async def delete(self, using_db: Optional[BaseDBAsyncClient] = None) -> None:
@@ -826,9 +854,7 @@ class Model(metaclass=ModelMeta):
         if not self._saved_in_db:
             raise OperationalError("Can't delete unpersisted record")
         await self._pre_delete(using_db)
-
         await db.executor_class(model=self.__class__, db=db).execute_delete(self)
-
         await self._post_delete(using_db)
 
     async def fetch_related(self, *args: Any, using_db: Optional[BaseDBAsyncClient] = None) -> None:

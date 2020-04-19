@@ -110,3 +110,13 @@ Recursive Relations
 Enumeration Fields
 ==================
 .. literalinclude::  ../../examples/enum_fields.py
+
+
+.. rst-class:: html-toggle
+
+.. _example_model_signals:
+
+Model Signals
+=============
+.. literalinclude::  ../../examples/signals.py
+

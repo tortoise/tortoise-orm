@@ -1,9 +1,16 @@
 from enum import Enum
+from typing import Callable
 
 Signals = Enum("Signals", ["pre_save", "post_save", "pre_delete", "post_delete"])
 
 
-def post_save(*senders):
+def post_save(*senders) -> Callable:
+    """
+    Register given models post_save signal.
+
+    :param senders: Model class
+    """
+
     def decorator(f):
         for sender in senders:
             sender.register_listener(Signals.post_save, f)
@@ -12,7 +19,13 @@ def post_save(*senders):
     return decorator
 
 
-def pre_save(*senders):
+def pre_save(*senders) -> Callable:
+    """
+    Register given models pre_save signal.
+
+    :param senders: Model class
+    """
+
     def decorator(f):
         for sender in senders:
             sender.register_listener(Signals.pre_save, f)
@@ -21,7 +34,13 @@ def pre_save(*senders):
     return decorator
 
 
-def pre_delete(*senders):
+def pre_delete(*senders) -> Callable:
+    """
+    Register given models pre_delete signal.
+
+    :param senders: Model class
+    """
+
     def decorator(f):
         for sender in senders:
             sender.register_listener(Signals.pre_delete, f)
@@ -30,7 +49,13 @@ def pre_delete(*senders):
     return decorator
 
 
-def post_delete(*senders):
+def post_delete(*senders) -> Callable:
+    """
+    Register given models post_delete signal.
+
+    :param senders: Model class
+    """
+
     def decorator(f):
         for sender in senders:
             sender.register_listener(Signals.post_delete, f)
