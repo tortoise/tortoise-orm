@@ -13,3 +13,4 @@ Reference
    functions
    transactions
    exceptions
+   signal

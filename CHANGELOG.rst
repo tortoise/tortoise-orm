@@ -9,10 +9,13 @@ Changelog
 
 0.16
 ====
+
 0.16.7
 ------
 - Added preliminary support for Python 3.9
 - ``TruncationTestCase`` now properly quotes table names when it clears them out.
+- Add model signals support
+  
 
 0.16.6
 ------
