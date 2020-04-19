@@ -84,13 +84,17 @@ def _restore_default() -> None:
 
 
 def initializer(
-    modules: List[str], db_url: Optional[str] = None, loop: Optional[AbstractEventLoop] = None
+    modules: List[str],
+    db_url: Optional[str] = None,
+    app_label: str = "models",
+    loop: Optional[AbstractEventLoop] = None,
 ) -> None:
     """
     Sets up the DB for testing. Must be called as part of test environment setup.
 
     :param modules: List of modules to look for models in.
     :param db_url: The db_url, defaults to ``sqlite://:memory``.
+    :param app_label: The name of the APP to initialise the modules in, defaults to "models"
     :param loop: Optional event loop.
     """
     # pylint: disable=W0603
@@ -104,7 +108,7 @@ def initializer(
     _MODULES = modules
     if db_url is not None:  # pragma: nobranch
         _TORTOISE_TEST_DB = db_url
-    _CONFIG = getDBConfig(app_label="models", modules=_MODULES)
+    _CONFIG = getDBConfig(app_label=app_label, modules=_MODULES)
 
     loop = loop or asyncio.get_event_loop()
     _LOOP = loop
@@ -133,14 +137,21 @@ def env_initializer() -> None:  # pragma: nocoverage
 
     ``TORTOISE_TEST_MODULES``:
         A comma-separated list of modules to include *(required)*
+    ``TORTOISE_TEST_APP``:
+        The name of the APP to initialise the modules in *(optional)*
+
+        If not provided, it will default to "models".
     ``TORTOISE_TEST_DB``:
         The db_url of the test db. *(optional*)
+
+        If not provided, it will default to an in-memory SQLite DB.
     """
     modules = str(_os.environ.get("TORTOISE_TEST_MODULES", "tests.testmodels")).split(",")
     db_url = _os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
+    app_label = _os.environ.get("TORTOISE_TEST_APP", "models")
     if not modules:  # pragma: nocoverage
         raise Exception("TORTOISE_TEST_MODULES envvar not defined")
-    initializer(modules, db_url=db_url)
+    initializer(modules, db_url=db_url, app_label=app_label)
 
 
 class SimpleTestCase(_TestCase):  # type: ignore
