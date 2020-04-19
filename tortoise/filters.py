@@ -76,13 +76,6 @@ class Like(BasicCriterion):  # type: ignore
         return sql
 
 
-def escape_val(val: Any) -> Any:
-    if isinstance(val, str):
-        print(val)
-        return val.replace("\\", "\\\\")
-    return val
-
-
 def escape_like(val: str) -> str:
     return val.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
