@@ -9,11 +9,16 @@ Changelog
 
 0.16
 ====
+0.16.7
+------
+- Added preliminary support for Python 3.9
+- ``TruncationTestCase`` now properly quotes table names when it clears them out.
+
 0.16.6
 ------
 .. warning::
 
-    This is a security fix release. We recommend everyone updates.
+    This is a security fix release. We recommend everyone update.
 
 Security fixes
 ^^^^^^^^^^^^^^
