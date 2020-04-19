@@ -651,5 +651,5 @@ class Principal(Model):
     )
 
 
-class Signal(Model):
+class Signals(Model):
     name = fields.CharField(max_length=255)
