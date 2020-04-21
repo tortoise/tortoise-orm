@@ -118,7 +118,7 @@ class AwaitableQuery(Generic[MODEL]):
         self.query._wheres = where_criterion
         self.query._havings = having_criterion
 
-        if has_aggregate and (self._joined_tables or having_criterion):
+        if has_aggregate and (self._joined_tables or having_criterion or self.query._orderbys):
             self.query = self.query.groupby(
                 self.model._meta.basetable[self.model._meta.db_pk_column]
             )
@@ -649,6 +649,9 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query = copy(self.model._meta.basequery).select(*db_fields_for_select)
         else:
             self.query = copy(self.model._meta.basequery_all_fields)
+        self.resolve_ordering(
+            self.model, self.model._meta.basetable, self._orderings, self._annotations
+        )
         self.resolve_filters(
             model=self.model,
             q_objects=self._q_objects,
@@ -661,9 +664,6 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query._offset = self._offset
         if self._distinct:
             self.query._distinct = True
-        self.resolve_ordering(
-            self.model, self.model._meta.basetable, self._orderings, self._annotations
-        )
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
         if self._db is None:
@@ -983,6 +983,9 @@ class ValuesListQuery(FieldSelectQuery):
         for positional_number, field in self.fields.items():
             self.add_field_to_select_query(field, positional_number)
 
+        self.resolve_ordering(
+            self.model, self.model._meta.basetable, self.orderings, self.annotations
+        )
         self.resolve_filters(
             model=self.model,
             q_objects=self.q_objects,
@@ -995,9 +998,6 @@ class ValuesListQuery(FieldSelectQuery):
             self.query._offset = self.offset
         if self.distinct:
             self.query._distinct = True
-        self.resolve_ordering(
-            self.model, self.model._meta.basetable, self.orderings, self.annotations
-        )
 
     def __await__(self) -> Generator[Any, None, List[Any]]:
         if self._db is None:
@@ -1064,6 +1064,9 @@ class ValuesQuery(FieldSelectQuery):
         for return_as, field in self.fields_for_select.items():
             self.add_field_to_select_query(field, return_as)
 
+        self.resolve_ordering(
+            self.model, self.model._meta.basetable, self.orderings, self.annotations
+        )
         self.resolve_filters(
             model=self.model,
             q_objects=self.q_objects,
@@ -1076,9 +1079,6 @@ class ValuesQuery(FieldSelectQuery):
             self.query._offset = self.offset
         if self.distinct:
             self.query._distinct = True
-        self.resolve_ordering(
-            self.model, self.model._meta.basetable, self.orderings, self.annotations
-        )
 
     def __await__(self) -> Generator[Any, None, List[dict]]:
         if self._db is None:
