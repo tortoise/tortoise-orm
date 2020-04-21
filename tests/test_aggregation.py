@@ -2,6 +2,7 @@ from tests.testmodels import Author, Book, Event, MinRelation, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 from tortoise.functions import Avg, Count, Min, Sum
+from tortoise.query_utils import Q
 
 
 class TestAggregation(test.TestCase):
@@ -90,6 +91,23 @@ class TestAggregation(test.TestCase):
 
         self.assertEqual(school_with_distinct_count.events_count, 3)
         self.assertEqual(school_with_distinct_count.minrelations_count, 2)
+
+    async def test_aggregation_with_filter(self):
+        tournament = await Tournament.create(name="New Tournament")
+        await MinRelation.create(tournament=tournament)
+        await MinRelation.create(tournament=tournament)
+
+        tournament_with_filter = (
+            await Tournament.all()
+            .annotate(
+                all=Count("minrelations", distinct=True, _filter=Q(name__in=["New Tournament"])),
+                no=Count("minrelations", _filter=Q(name__not="New Tournament")),
+            )
+            .first()
+        )
+
+        self.assertEqual(tournament_with_filter.all, 2)
+        self.assertEqual(tournament_with_filter.no, 0)
 
     async def test_group_aggregation(self):
         author = await Author.create(name="Some One")

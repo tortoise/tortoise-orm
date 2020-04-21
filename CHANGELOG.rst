@@ -10,6 +10,10 @@ Changelog
 0.16
 ====
 
+0.16.8
+------
+- Allow `Q` expression to function with `_filter` parameter
+
 0.16.7
 ------
 - Added preliminary support for Python 3.9
