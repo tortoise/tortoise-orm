@@ -2,6 +2,10 @@
 
 Changelog
 =========
+0.15.24
+------
+- Fixed regression where ``GROUP BY`` class is missing for an aggregate with a specified order.
+
 0.15.23
 -------
 - Fixed SQL injection issue in MySQL
