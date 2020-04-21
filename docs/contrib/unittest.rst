@@ -37,8 +37,8 @@ To get ``test.TestCase`` to work as expected, you need to configure your test en
 
     # In setup
     initializer(['module.a', 'module.b.c'])
-    # With optional db_url and loop parameters
-    initializer(['module.a', 'module.b.c'], db_url='...', loop=loop)
+    # With optional db_url, app_label and loop parameters
+    initializer(['module.a', 'module.b.c'], db_url='...', app_label="someapp", loop=loop)
     # Or env-var driven → See Green test runner section below.
     env_initializer()
 
@@ -98,7 +98,7 @@ Run the initializer and finalizer in your ``conftest.py`` file:
     @pytest.fixture(scope="session", autouse=True)
     def initialize_tests(request):
         db_url = os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
-        initializer(["tests.testmodels"], db_url=db_url)
+        initializer(["tests.testmodels"], db_url=db_url, app_label="models")
         request.addfinalizer(finalizer)
 
 
