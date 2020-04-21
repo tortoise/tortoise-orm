@@ -14,6 +14,7 @@ class TortoisePlugin(Plugin):  # type: ignore
 
     def __init__(self) -> None:
         self.db_url = self.config.as_str("db-url", "").strip() or "sqlite://:memory:"
+        self.app_label = self.config.as_str("app-label", "").strip() or "models"
         self.db_modules = self.config.as_list("db-module", [])
         if not self.db_modules:
             self.alwaysOn = False
@@ -26,6 +27,14 @@ class TortoisePlugin(Plugin):  # type: ignore
             metavar="MODULE",
             dest="db_modules",
             help="Tortoise ORM modules to build models from (REQUIRED) (multi-allowed)",
+        )
+        group.add_argument(
+            "--app-label",
+            action="store",
+            default="",
+            metavar="URI",
+            dest="db_url",
+            help="The name of the APP to initialise the modules in",
         )
         group.add_argument(
             "--db-url",
@@ -42,7 +51,7 @@ class TortoisePlugin(Plugin):  # type: ignore
         self.db_modules = event.args.db_modules or self.db_modules
 
     def startTestRun(self, event: Event) -> None:
-        initializer(self.db_modules, db_url=self.db_url)
+        initializer(self.db_modules, db_url=self.db_url, app_label=self.app_label)
 
     def stopTestRun(self, event: Event) -> None:  # pylint: disable=R0201
         finalizer()
