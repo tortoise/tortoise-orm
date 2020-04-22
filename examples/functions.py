@@ -64,7 +64,9 @@ async def run():
 
     print(await Event.all().annotate(tournament_test_id=Sum("tournament__id")).first())
 
-    print(await Tournament.annotate(clean_desciption=Coalesce("desc")).filter(clean_desciption=""))
+    print(
+        await Tournament.annotate(clean_desciption=Coalesce("desc", "")).filter(clean_desciption="")
+    )
 
     print(
         await Tournament.annotate(trimmed_name=Trim("name")).filter(trimmed_name="final tournament")

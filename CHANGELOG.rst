@@ -10,12 +10,17 @@ Changelog
 0.16
 ====
 
+0.16.8
+------
+- Add ``group by`` support
+- Fixed regression where ``GROUP BY`` class is missing for an aggregate with a specified order.
+
 0.16.7
 ------
 - Added preliminary support for Python 3.9
 - ``TruncationTestCase`` now properly quotes table names when it clears them out.
 - Add model signals support
-  
+- Added ``app_label`` to ``test initializer(...)`` and ``TORTOISE_TEST_APP`` as test environment variable.
 
 0.16.6
 ------
