@@ -9,6 +9,9 @@ Changelog
 
 0.16
 ====
+0.16.8
+------
+- Fixed regression where ``GROUP BY`` class is missing for an aggregate with a specified order.
 
 0.16.8
 ------
