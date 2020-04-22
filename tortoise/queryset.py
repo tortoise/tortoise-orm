@@ -118,7 +118,7 @@ class AwaitableQuery(Generic[MODEL]):
         self.query._wheres = where_criterion
         self.query._havings = having_criterion
 
-        if has_aggregate and (self._joined_tables or having_criterion):
+        if has_aggregate and (self._joined_tables or having_criterion or self.query._orderbys):
             self.query = self.query.groupby(
                 self.model._meta.basetable[self.model._meta.db_pk_column]
             )
@@ -242,6 +242,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_distinct",
         "_having",
         "_custom_filters",
+        "_group_bys",
     )
 
     def __init__(self, model: Type[MODEL]) -> None:
@@ -260,6 +261,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._having: Dict[str, Any] = {}
         self._custom_filters: Dict[str, dict] = {}
         self._fields_for_select: Tuple[str, ...] = ()
+        self._group_bys: Tuple[str, ...] = ()
 
     def _clone(self) -> "QuerySet[MODEL]":
         queryset = QuerySet.__new__(QuerySet)
@@ -283,6 +285,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._annotations = copy(self._annotations)
         queryset._having = copy(self._having)
         queryset._custom_filters = copy(self._custom_filters)
+        queryset._group_bys = copy(self._group_bys)
         return queryset
 
     def _filter_or_exclude(self, *args: Q, negate: bool, **kwargs: Any) -> "QuerySet[MODEL]":
@@ -402,6 +405,16 @@ class QuerySet(AwaitableQuery[MODEL]):
             queryset._custom_filters.update(get_filters_for_field(key, None, key))
         return queryset
 
+    def group_by(self, *fields: str) -> "QuerySet[MODEL]":
+        """
+        Make QuerySet returns list of dict or tuple with group by.
+
+        Must call before .values() or .values_list()
+        """
+        queryset = self._clone()
+        queryset._group_bys = fields
+        return queryset
+
     def values_list(self, *fields_: str, flat: bool = False) -> "ValuesListQuery":
         """
         Make QuerySet returns list of tuples for given args instead of objects.
@@ -429,6 +442,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             orderings=self._orderings,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
+            group_bys=self._group_bys,
         )
 
     def values(self, *args: str, **kwargs: str) -> "ValuesQuery":
@@ -472,6 +486,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             orderings=self._orderings,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
+            group_bys=self._group_bys,
         )
 
     def delete(self) -> "DeleteQuery":
@@ -649,6 +664,9 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query = copy(self.model._meta.basequery).select(*db_fields_for_select)
         else:
             self.query = copy(self.model._meta.basequery_all_fields)
+        self.resolve_ordering(
+            self.model, self.model._meta.basetable, self._orderings, self._annotations
+        )
         self.resolve_filters(
             model=self.model,
             q_objects=self._q_objects,
@@ -661,9 +679,6 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query._offset = self._offset
         if self._distinct:
             self.query._distinct = True
-        self.resolve_ordering(
-            self.model, self.model._meta.basetable, self._orderings, self._annotations
-        )
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
         if self._db is None:
@@ -946,6 +961,7 @@ class ValuesListQuery(FieldSelectQuery):
         "custom_filters",
         "q_objects",
         "fields_for_select_list",
+        "group_bys",
     )
 
     def __init__(
@@ -961,6 +977,7 @@ class ValuesListQuery(FieldSelectQuery):
         flat: bool,
         annotations: Dict[str, Any],
         custom_filters: Dict[str, Dict[str, Any]],
+        group_bys: Tuple[str, ...],
     ) -> None:
         super().__init__(model, annotations)
         if flat and (len(fields_for_select_list) != 1):
@@ -977,12 +994,16 @@ class ValuesListQuery(FieldSelectQuery):
         self.fields_for_select_list = fields_for_select_list
         self.flat = flat
         self._db = db
+        self.group_bys = group_bys
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
         for positional_number, field in self.fields.items():
             self.add_field_to_select_query(field, positional_number)
 
+        self.resolve_ordering(
+            self.model, self.model._meta.basetable, self.orderings, self.annotations
+        )
         self.resolve_filters(
             model=self.model,
             q_objects=self.q_objects,
@@ -995,9 +1016,9 @@ class ValuesListQuery(FieldSelectQuery):
             self.query._offset = self.offset
         if self.distinct:
             self.query._distinct = True
-        self.resolve_ordering(
-            self.model, self.model._meta.basetable, self.orderings, self.annotations
-        )
+        if self.group_bys:
+            self.query._groupbys = []
+            self.query = self.query.groupby(*self.group_bys)
 
     def __await__(self) -> Generator[Any, None, List[Any]]:
         if self._db is None:
@@ -1034,6 +1055,7 @@ class ValuesQuery(FieldSelectQuery):
         "annotations",
         "custom_filters",
         "q_objects",
+        "group_bys",
     )
 
     def __init__(
@@ -1048,6 +1070,7 @@ class ValuesQuery(FieldSelectQuery):
         orderings: List[Tuple[str, str]],
         annotations: Dict[str, Any],
         custom_filters: Dict[str, Dict[str, Any]],
+        group_bys: Tuple[str, ...],
     ) -> None:
         super().__init__(model, annotations)
         self.fields_for_select = fields_for_select
@@ -1058,12 +1081,16 @@ class ValuesQuery(FieldSelectQuery):
         self.custom_filters = custom_filters
         self.q_objects = q_objects
         self._db = db
+        self.group_bys = group_bys
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
         for return_as, field in self.fields_for_select.items():
             self.add_field_to_select_query(field, return_as)
 
+        self.resolve_ordering(
+            self.model, self.model._meta.basetable, self.orderings, self.annotations
+        )
         self.resolve_filters(
             model=self.model,
             q_objects=self.q_objects,
@@ -1076,9 +1103,9 @@ class ValuesQuery(FieldSelectQuery):
             self.query._offset = self.offset
         if self.distinct:
             self.query._distinct = True
-        self.resolve_ordering(
-            self.model, self.model._meta.basetable, self.orderings, self.annotations
-        )
+        if self.group_bys:
+            self.query._groupbys = []
+            self.query = self.query.groupby(*self.group_bys)
 
     def __await__(self) -> Generator[Any, None, List[dict]]:
         if self._db is None:
