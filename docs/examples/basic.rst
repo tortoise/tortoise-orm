@@ -53,6 +53,15 @@ Functions
 
 .. _example_schema_create:
 
+Group By
+========
+.. literalinclude::  ../../examples/group_by.py
+
+
+.. rst-class:: html-toggle
+
+.. _example_aggregation:
+
 Schema creation
 ===============
 .. literalinclude::  ../../examples/schema_create.py
