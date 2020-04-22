@@ -12,6 +12,7 @@ Changelog
 
 0.16.8
 ------
+- Allow `Q` expression to function with `_filter` parameter
 - Add ``group by`` support
 - Fixed regression where ``GROUP BY`` class is missing for an aggregate with a specified order.
 
