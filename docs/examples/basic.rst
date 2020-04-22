@@ -53,6 +53,15 @@ Functions
 
 .. _example_schema_create:
 
+Aggregate
+=========
+.. literalinclude::  ../../examples/aggregations.py
+
+
+.. rst-class:: html-toggle
+
+.. _example_aggregation:
+
 Schema creation
 ===============
 .. literalinclude::  ../../examples/schema_create.py
