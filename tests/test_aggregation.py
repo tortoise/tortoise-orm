@@ -94,20 +94,23 @@ class TestAggregation(test.TestCase):
 
     async def test_aggregation_with_filter(self):
         tournament = await Tournament.create(name="New Tournament")
-        await MinRelation.create(tournament=tournament)
-        await MinRelation.create(tournament=tournament)
+        await Event.create(name="Event 1", tournament=tournament)
+        await Event.create(name="Event 2", tournament=tournament)
+        await Event.create(name="Event 3", tournament=tournament)
 
         tournament_with_filter = (
             await Tournament.all()
             .annotate(
-                all=Count("minrelations", distinct=True, _filter=Q(name__in=["New Tournament"])),
-                no=Count("minrelations", _filter=Q(name__not="New Tournament")),
+                all=Count("events", _filter=Q(name="New Tournament")),
+                one=Count("events", _filter=Q(events__name="Event 1")),
+                two=Count("events", _filter=Q(events__name__not="Event 1")),
             )
             .first()
         )
 
-        self.assertEqual(tournament_with_filter.all, 2)
-        self.assertEqual(tournament_with_filter.no, 0)
+        self.assertEqual(tournament_with_filter.all, 3)
+        self.assertEqual(tournament_with_filter.one, 1)
+        self.assertEqual(tournament_with_filter.two, 2)
 
     async def test_group_aggregation(self):
         author = await Author.create(name="Some One")
