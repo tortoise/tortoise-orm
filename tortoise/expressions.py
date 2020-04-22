@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Optional, Tuple, Type, Union
 
 from pypika import Field
-from pypika.terms import ArithmeticExpression
+from pypika.terms import ArithmeticExpression, Term
 
 from tortoise.exceptions import FieldError
 
@@ -12,9 +12,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 class F(Field):  # type: ignore
     @classmethod
     def resolver_arithmetic_expression(
-        cls,
-        model: "Type[Model]",
-        arithmetic_expression_or_field: Union[ArithmeticExpression, Field],
+        cls, model: "Type[Model]", arithmetic_expression_or_field: Term,
     ) -> Tuple[Union[ArithmeticExpression, Field], Optional[Field]]:
         field_object = None
 
