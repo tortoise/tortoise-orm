@@ -679,7 +679,6 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query._offset = self._offset
         if self._distinct:
             self.query._distinct = True
-        print(str(self.query))
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
         if self._db is None:

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Optional, Tuple, Type
 
 from pypika import Field
 from pypika.terms import ArithmeticExpression, Term
