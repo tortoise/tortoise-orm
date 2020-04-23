@@ -407,7 +407,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
     def group_by(self, *fields: str) -> "QuerySet[MODEL]":
         """
-        Make QuerySet returns list of dict with group by.
+        Make QuerySet returns list of dict or tuple with group by.
 
         Must call before .values() or .values_list()
         """
@@ -679,9 +679,6 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query._offset = self._offset
         if self._distinct:
             self.query._distinct = True
-        self.resolve_ordering(
-            self.model, self.model._meta.basetable, self._orderings, self._annotations
-        )
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
         if self._db is None:
@@ -1022,9 +1019,6 @@ class ValuesListQuery(FieldSelectQuery):
         if self.group_bys:
             self.query._groupbys = []
             self.query = self.query.groupby(*self.group_bys)
-        self.resolve_ordering(
-            self.model, self.model._meta.basetable, self.orderings, self.annotations
-        )
 
     def __await__(self) -> Generator[Any, None, List[Any]]:
         if self._db is None:
@@ -1112,9 +1106,6 @@ class ValuesQuery(FieldSelectQuery):
         if self.group_bys:
             self.query._groupbys = []
             self.query = self.query.groupby(*self.group_bys)
-        self.resolve_ordering(
-            self.model, self.model._meta.basetable, self.orderings, self.annotations
-        )
 
     def __await__(self) -> Generator[Any, None, List[dict]]:
         if self._db is None:

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Optional, Tuple, Type
 
 from pypika import Field
 from pypika.terms import ArithmeticExpression, Term
@@ -13,7 +13,7 @@ class F(Field):  # type: ignore
     @classmethod
     def resolver_arithmetic_expression(
         cls, model: "Type[Model]", arithmetic_expression_or_field: Term,
-    ) -> Tuple[Union[ArithmeticExpression, Field], Optional[Field]]:
+    ) -> Tuple[Term, Optional[Field]]:
         field_object = None
 
         if isinstance(arithmetic_expression_or_field, Field):

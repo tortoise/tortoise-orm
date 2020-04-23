@@ -9,13 +9,12 @@ Changelog
 
 0.16
 ====
-0.16.8
-------
-- Fixed regression where ``GROUP BY`` class is missing for an aggregate with a specified order.
 
 0.16.8
 ------
-- Add ``group by`` support
+- Allow ``Q`` expression to function with ``_filter`` parameter on aggregations
+- Add manual ``.group_by()`` support
+- Fixed regression where ``GROUP BY`` class is missing for an aggregate with a specified order.
 
 0.16.7
 ------
@@ -48,7 +47,7 @@ Other changes
   Persisting changes on the model is allowed only when:
 
   * All the fields you want to update is specified in ``<model>.save(update_fields=[...])``
-  * You included the Model primary key in the `.only(...)``
+  * You included the Model primary key in the ``.only(...)``
 
   To protect against common mistakes we ensure that errors get raised:
 

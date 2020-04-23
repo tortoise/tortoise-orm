@@ -155,3 +155,7 @@ class TestGroupBy(test.TestCase):
         )
         self.assertEqual(len(ret), 1)
         self.assertEqual(ret[0][1], 4.5)
+
+    async def test_implicit_group_by(self):
+        ret = await Author.annotate(count=Count("books")).filter(count__gt=6)
+        self.assertEqual(ret[0].count, 10)
