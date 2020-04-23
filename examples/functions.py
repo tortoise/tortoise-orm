@@ -1,6 +1,7 @@
 from tortoise import Tortoise, fields, run_async
 from tortoise.functions import Coalesce, Count, Length, Lower, Min, Sum, Trim, Upper
 from tortoise.models import Model
+from tortoise.query_utils import Q
 
 
 class Tournament(Model):
@@ -57,6 +58,11 @@ async def run():
     await event.participants.add(participants[0], participants[1])
 
     print(await Tournament.all().annotate(events_count=Count("events")).filter(events_count__gte=1))
+    print(
+        await Tournament.all()
+        .annotate(events_count_with_filter=Count("events", _filter=Q(name="New Tournament")))
+        .filter(events_count_with_filter__gte=1)
+    )
 
     print(await Event.filter(id=event.id).first().annotate(lowest_team_id=Min("participants__id")))
 
