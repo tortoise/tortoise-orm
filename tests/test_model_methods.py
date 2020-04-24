@@ -1,6 +1,14 @@
 from uuid import uuid4
 
-from tests.testmodels import Address, Event, NoID, Team, Tournament, UUIDFkRelatedNullModel
+from tests.testmodels import (
+    Address,
+    Event,
+    IntFields,
+    NoID,
+    Team,
+    Tournament,
+    UUIDFkRelatedNullModel,
+)
 from tortoise.contrib import test
 from tortoise.exceptions import (
     ConfigurationError,
@@ -9,6 +17,7 @@ from tortoise.exceptions import (
     MultipleObjectsReturned,
     OperationalError,
 )
+from tortoise.expressions import F
 from tortoise.models import NoneAwaitable
 
 
@@ -60,6 +69,13 @@ class TestModelMethods(test.TestCase):
         oldid = self.mdl.id
         await self.mdl.save()
         self.assertEqual(self.mdl.id, oldid)
+
+    async def test_save_f_expression(self):
+        int_field = await IntFields.create(intnum=1)
+        int_field.intnum = F("intnum") + 1
+        await int_field.save(update_fields=["intnum"])
+        n_int = await IntFields.get(pk=int_field.pk)
+        self.assertEqual(n_int.intnum, 2)
 
     async def test_save_full(self):
         self.mdl.name = "TestS"
