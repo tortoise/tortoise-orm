@@ -21,7 +21,6 @@ except ImportError:  # pragma: nocoverage
 
     parse_datetime = functools.partial(parse_date, default_timezone=None)
 
-
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
@@ -308,7 +307,7 @@ class DatetimeField(Field, datetime.datetime):
             if self.auto_now or (
                 self.auto_now_add and getattr(instance, self.model_field_name) is None
             ):
-                value = datetime.datetime.now()
+                value = datetime.datetime.utcnow()
                 setattr(instance, self.model_field_name, value)
                 return value
         return value
@@ -480,14 +479,16 @@ class IntEnumFieldInstance(SmallIntField):
         super().__init__(description=description, **kwargs)
         self.enum_type = enum_type
 
-    def to_python_value(self, value: Union[int, None, str]) -> Union[IntEnum, None]:
-        return self.enum_type(int(value)) if value is not None else None
+    def to_python_value(self, value: Union[int, None]) -> Union[IntEnum, None]:
+        return self.enum_type(value) if value is not None else None
 
     def to_db_value(
         self, value: Union[IntEnum, None, int], instance: "Union[Type[Model], Model]"
     ) -> Union[int, None]:
         if isinstance(value, IntEnum):
             return int(value.value)
+        elif isinstance(value, int):
+            return int(self.enum_type(value))
         return value
 
 
@@ -545,6 +546,8 @@ class CharEnumFieldInstance(CharField):
     ) -> Union[str, None]:
         if isinstance(value, Enum):
             return str(value.value)
+        elif isinstance(value, str):
+            return str(self.enum_type(value).value)
         return value
 
 
