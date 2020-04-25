@@ -10,6 +10,10 @@ Changelog
 0.16
 ====
 
+0.16.9
+------
+- Support ``F`` expression in ``.save()`` now
+
 0.16.8
 ------
 - Allow ``Q`` expression to function with ``_filter`` parameter on aggregations
