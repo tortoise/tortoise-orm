@@ -37,6 +37,11 @@ class TestIntEnumFields(test.TestCase):
         obj = await testmodels.EnumFields.filter(id=obj0.id).first()
         self.assertEqual(obj, None)
 
+        obj3 = await testmodels.EnumFields.create(service=3)
+        self.assertIsInstance(obj3.service, testmodels.Service)
+        with self.assertRaises(ValueError):
+            await testmodels.EnumFields.create(service=4)
+
     async def test_update(self):
         obj0 = await testmodels.EnumFields.create(service=testmodels.Service.system_administration)
         await testmodels.EnumFields.filter(id=obj0.id).update(
@@ -45,14 +50,28 @@ class TestIntEnumFields(test.TestCase):
         obj = await testmodels.EnumFields.get(id=obj0.id)
         self.assertEqual(obj.service, testmodels.Service.database_design)
 
+        await testmodels.EnumFields.filter(id=obj0.id).update(service=2)
+        obj = await testmodels.EnumFields.get(id=obj0.id)
+        self.assertEqual(obj.service, testmodels.Service.database_design)
+        with self.assertRaises(ValueError):
+            await testmodels.EnumFields.filter(id=obj0.id).update(service=4)
+
     async def test_values(self):
         obj0 = await testmodels.EnumFields.create(service=testmodels.Service.system_administration)
         values = await testmodels.EnumFields.get(id=obj0.id).values("service")
         self.assertEqual(values[0]["service"], testmodels.Service.system_administration)
 
+        obj1 = await testmodels.EnumFields.create(service=3)
+        values = await testmodels.EnumFields.get(id=obj1.id).values("service")
+        self.assertEqual(values[0]["service"], testmodels.Service.system_administration)
+
     async def test_values_list(self):
         obj0 = await testmodels.EnumFields.create(service=testmodels.Service.system_administration)
         values = await testmodels.EnumFields.get(id=obj0.id).values_list("service", flat=True)
+        self.assertEqual(values[0], testmodels.Service.system_administration)
+
+        obj1 = await testmodels.EnumFields.create(service=3)
+        values = await testmodels.EnumFields.get(id=obj1.id).values_list("service", flat=True)
         self.assertEqual(values[0], testmodels.Service.system_administration)
 
     def test_char_fails(self):
@@ -99,6 +118,15 @@ class TestCharEnumFields(test.TestCase):
         obj = await testmodels.EnumFields.filter(id=obj0.id).first()
         self.assertEqual(obj, None)
 
+        obj0 = await testmodels.EnumFields.create(
+            service=testmodels.Service.system_administration, currency="USD"
+        )
+        self.assertIsInstance(obj0.currency, testmodels.Currency)
+        with self.assertRaises(ValueError):
+            await testmodels.EnumFields.create(
+                service=testmodels.Service.system_administration, currency="XXX"
+            )
+
     async def test_update(self):
         obj0 = await testmodels.EnumFields.create(
             service=testmodels.Service.system_administration, currency=testmodels.Currency.HUF
@@ -107,6 +135,12 @@ class TestCharEnumFields(test.TestCase):
         obj = await testmodels.EnumFields.get(id=obj0.id)
         self.assertEqual(obj.currency, testmodels.Currency.EUR)
 
+        await testmodels.EnumFields.filter(id=obj0.id).update(currency="USD")
+        obj = await testmodels.EnumFields.get(id=obj0.id)
+        self.assertEqual(obj.currency, testmodels.Currency.USD)
+        with self.assertRaises(ValueError):
+            await testmodels.EnumFields.filter(id=obj0.id).update(currency="XXX")
+
     async def test_values(self):
         obj0 = await testmodels.EnumFields.create(
             service=testmodels.Service.system_administration, currency=testmodels.Currency.EUR
@@ -114,11 +148,19 @@ class TestCharEnumFields(test.TestCase):
         values = await testmodels.EnumFields.get(id=obj0.id).values("currency")
         self.assertEqual(values[0]["currency"], testmodels.Currency.EUR)
 
+        obj1 = await testmodels.EnumFields.create(service=3, currency="EUR")
+        values = await testmodels.EnumFields.get(id=obj1.id).values("currency")
+        self.assertEqual(values[0]["currency"], testmodels.Currency.EUR)
+
     async def test_values_list(self):
         obj0 = await testmodels.EnumFields.create(
             service=testmodels.Service.system_administration, currency=testmodels.Currency.EUR
         )
         values = await testmodels.EnumFields.get(id=obj0.id).values_list("currency", flat=True)
+        self.assertEqual(values[0], testmodels.Currency.EUR)
+
+        obj1 = await testmodels.EnumFields.create(service=3, currency="EUR")
+        values = await testmodels.EnumFields.get(id=obj1.id).values_list("currency", flat=True)
         self.assertEqual(values[0], testmodels.Currency.EUR)
 
     def test_auto_maxlen(self):
