@@ -27,7 +27,7 @@ async def run():
 
     obj0 = await EnumFields.create(service=Service.python_programming, currency=Currency.USD)
     # also you can use valid int and str value directly
-    obj1 = await EnumFields.create(service=1, currency="USD")
+    await EnumFields.create(service=1, currency="USD")
 
     try:
         # invalid enum value will raise ValueError
