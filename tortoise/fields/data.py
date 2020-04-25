@@ -21,7 +21,6 @@ except ImportError:  # pragma: nocoverage
 
     parse_datetime = functools.partial(parse_date, default_timezone=None)
 
-
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
@@ -484,9 +483,13 @@ class IntEnumFieldInstance(SmallIntField):
         return self.enum_type(value) if value is not None else None
 
     def to_db_value(
-        self, value: Union[IntEnum, None], instance: "Union[Type[Model], Model]"
+        self, value: Union[IntEnum, None, int], instance: "Union[Type[Model], Model]"
     ) -> Union[int, None]:
-        return int(value.value) if value is not None else None
+        if isinstance(value, IntEnum):
+            return int(value.value)
+        elif isinstance(value, int):
+            return int(self.enum_type(value))
+        return value
 
 
 IntEnumType = TypeVar("IntEnumType", bound=IntEnum)
@@ -502,6 +505,8 @@ def IntEnumField(
 
     The description of the field is set automatically if not specified to a multiline list of
     "name: value" pairs.
+
+    **Note**: Valid int value of ``enum_type`` is acceptable.
 
     ``enum_type``:
         The enum class
@@ -539,9 +544,13 @@ class CharEnumFieldInstance(CharField):
         return self.enum_type(value) if value is not None else None
 
     def to_db_value(
-        self, value: Union[Enum, None], instance: "Union[Type[Model], Model]"
+        self, value: Union[Enum, None, str], instance: "Union[Type[Model], Model]"
     ) -> Union[str, None]:
-        return str(value.value) if value is not None else None
+        if isinstance(value, Enum):
+            return str(value.value)
+        elif isinstance(value, str):
+            return str(self.enum_type(value).value)
+        return value
 
 
 CharEnumType = TypeVar("CharEnumType", bound=Enum)
@@ -561,6 +570,8 @@ def CharEnumField(
     **Warning**: If ``max_length`` is not specified or equals to zero, the size of represented
     char fields is automatically detected. So if later you update the enum, you need to update your
     table schema as well.
+
+    **Note**: Valid str value of ``enum_type`` is acceptable.
 
     ``enum_type``:
         The enum class

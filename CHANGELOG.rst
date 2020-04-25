@@ -13,6 +13,7 @@ Changelog
 0.16.9
 ------
 - Support ``F`` expression in ``.save()`` now
+- ``IntEnumField`` accept valid int value and ``CharEnumField`` accept valid str value
 
 0.16.8
 ------
