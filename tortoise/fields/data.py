@@ -78,7 +78,7 @@ class IntField(Field, int):
     @property
     def constraints(self) -> dict:
         return {
-            "ge": 1 if self.generated else -2147483648,
+            "ge": 1 if self.generated or self.reference else -2147483648,
             "le": 2147483647,
         }
 
@@ -111,7 +111,7 @@ class BigIntField(Field, int):
     @property
     def constraints(self) -> dict:
         return {
-            "ge": 1 if self.generated else -9223372036854775808,
+            "ge": 1 if self.generated or self.reference else -9223372036854775808,
             "le": 9223372036854775807,
         }
 
@@ -144,7 +144,7 @@ class SmallIntField(Field, int):
     @property
     def constraints(self) -> dict:
         return {
-            "ge": 1 if self.generated else -32768,
+            "ge": 1 if self.generated or self.reference else -32768,
             "le": 32767,
         }
 

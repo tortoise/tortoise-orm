@@ -270,7 +270,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
-                        "constraints": {"ge": -2147483648, "le": 2147483647},
+                        "constraints": {"ge": 1, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [

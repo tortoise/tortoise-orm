@@ -16,6 +16,9 @@ Changelog
 - ``IntEnumField`` accept valid int value and ``CharEnumField`` accept valid str value
 - Pydantic models get created with globally unique identifier
 - Leaf-detection to minimize duplicate Pydantic model creation
+- Pydantic models with a Primary Key that is also a raw field of a relation is now not hidden when ``exclude_raw_fields=True`` as it is a critically important field
+- Raise an informative error when a field is set as nullable and primary key at the same time
+- Foreign key id's are now described to have the positive-integer range of the field it is related to
 
 0.16.8
 ------

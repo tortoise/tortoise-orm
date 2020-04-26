@@ -217,25 +217,27 @@ def pydantic_model_creator(
     # Get model description
     model_description = cls.describe(serializable=False)
 
-    # if not stack:
-    #     stack = ((cls, '', max_recursion + 1),)
-
     # Field map we use
     field_map: Dict[str, dict] = {}
+    pk_raw_field: str = ""
 
     def field_map_update(keys: tuple, is_relation=True) -> None:
+        nonlocal pk_raw_field
+
         for key in keys:
             fds = model_description[key]
             if isinstance(fds, dict):
                 fds = [fds]
             for fd in fds:
                 n = fd["name"]
+                if key == "pk_field":
+                    pk_raw_field = n
                 # Include or exclude field
                 if (include and n not in include) or n in exclude:
                     continue
                 # Remove raw fields
                 raw_field = fd.get("raw_field", None)
-                if raw_field is not None and exclude_raw_fields:
+                if raw_field is not None and exclude_raw_fields and raw_field != pk_raw_field:
                     del field_map[raw_field]
                 field_map[n] = fd
 
