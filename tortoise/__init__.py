@@ -245,6 +245,7 @@ class Tortoise:
                     else:
                         key_o2o_object = deepcopy(related_model._meta.pk)
                         o2o_object.to_field_instance = related_model._meta.pk
+                        o2o_object.to_field = related_model._meta.pk_attr
 
                     key_field = f"{field}_id"
                     key_o2o_object.pk = o2o_object.pk
