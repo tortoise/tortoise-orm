@@ -20,6 +20,7 @@ Changelog
 - Raise an informative error when a field is set as nullable and primary key at the same time
 - Foreign key id's are now described to have the positive-integer range of the field it is related to
 - Fixed prefetching over OneToOne relations
+- Fixed ``__contains`` for non-text fields (e.g. ``JSONB``)
 
 0.16.8
 ------
