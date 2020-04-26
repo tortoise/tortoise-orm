@@ -3,7 +3,8 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple
 
 from pypika import Table
-from pypika.functions import Upper
+from pypika.enums import SqlTypes
+from pypika.functions import Cast, Upper
 from pypika.terms import (
     BasicCriterion,
     Criterion,
@@ -147,31 +148,37 @@ def not_null(field: Term, value: Any) -> Criterion:
 
 
 def contains(field: Term, value: str) -> Criterion:
-    return Like(field, field.wrap_constant(f"%{escape_like(value)}%"))
+    return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"%{escape_like(value)}%"))
 
 
 def starts_with(field: Term, value: str) -> Criterion:
-    return Like(field, field.wrap_constant(f"{escape_like(value)}%"))
+    return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"{escape_like(value)}%"))
 
 
 def ends_with(field: Term, value: str) -> Criterion:
-    return Like(field, field.wrap_constant(f"%{escape_like(value)}"))
+    return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"%{escape_like(value)}"))
 
 
 def insensitive_exact(field: Term, value: str) -> Criterion:
-    return Upper(field).eq(Upper(str(value)))
+    return Upper(Cast(field, SqlTypes.VARCHAR)).eq(Upper(str(value)))
 
 
 def insensitive_contains(field: Term, value: str) -> Criterion:
-    return Like(Upper(field), field.wrap_constant(Upper(f"%{escape_like(value)}%")))
+    return Like(
+        Upper(Cast(field, SqlTypes.VARCHAR)), field.wrap_constant(Upper(f"%{escape_like(value)}%"))
+    )
 
 
 def insensitive_starts_with(field: Term, value: str) -> Criterion:
-    return Like(Upper(field), field.wrap_constant(Upper(f"{escape_like(value)}%")))
+    return Like(
+        Upper(Cast(field, SqlTypes.VARCHAR)), field.wrap_constant(Upper(f"{escape_like(value)}%"))
+    )
 
 
 def insensitive_ends_with(field: Term, value: str) -> Criterion:
-    return Like(Upper(field), field.wrap_constant(Upper(f"%{escape_like(value)}")))
+    return Like(
+        Upper(Cast(field, SqlTypes.VARCHAR)), field.wrap_constant(Upper(f"%{escape_like(value)}"))
+    )
 
 
 ##############################################################################
