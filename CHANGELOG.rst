@@ -14,6 +14,8 @@ Changelog
 ------
 - Support ``F`` expression in ``.save()`` now
 - ``IntEnumField`` accept valid int value and ``CharEnumField`` accept valid str value
+- Pydantic models get created with globally unique identifier
+- Leaf-detection to minimize duplicate Pydantic model creation
 
 0.16.8
 ------

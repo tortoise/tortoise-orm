@@ -41,17 +41,17 @@ class TestPydantic(test.TestCase):
                     "tournament": {
                         "title": "Tournament",
                         "description": "What tournaments is a happenin'",
-                        "allOf": [{"$ref": "#/definitions/Tournament"}],
+                        "allOf": [{"$ref": "#/definitions/Tournament_leaf"}],
                     },
                     "reporter": {
                         "title": "Reporter",
                         "nullable": True,
-                        "allOf": [{"$ref": "#/definitions/Reporter"}],
+                        "allOf": [{"$ref": "#/definitions/Reporter_leaf"}],
                     },
                     "participants": {
                         "title": "Participants",
                         "type": "array",
-                        "items": {"$ref": "#/definitions/Team"},
+                        "items": {"$ref": "#/definitions/Team_leaf"},
                     },
                     "modified": {
                         "title": "Modified",
@@ -70,13 +70,13 @@ class TestPydantic(test.TestCase):
                     "address": {
                         "title": "Address",
                         "nullable": True,
-                        "allOf": [{"$ref": "#/definitions/Address"}],
+                        "allOf": [{"$ref": "#/definitions/Address_leaf"}],
                     },
                 },
                 "required": ["event_id", "name", "tournament", "participants", "modified"],
                 "additionalProperties": False,
                 "definitions": {
-                    "Tournament": {
+                    "Tournament_leaf": {
                         "title": "Tournament",
                         "type": "object",
                         "properties": {
@@ -98,7 +98,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name", "created"],
                         "additionalProperties": False,
                     },
-                    "Reporter": {
+                    "Reporter_leaf": {
                         "title": "Reporter",
                         "description": "Whom is assigned as the reporter",
                         "type": "object",
@@ -114,7 +114,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name"],
                         "additionalProperties": False,
                     },
-                    "Team": {
+                    "Team_leaf": {
                         "title": "Team",
                         "description": "Team that is a playing",
                         "type": "object",
@@ -137,7 +137,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name"],
                         "additionalProperties": False,
                     },
-                    "Address": {
+                    "Address_leaf": {
                         "title": "Address",
                         "type": "object",
                         "properties": {
@@ -166,7 +166,7 @@ class TestPydantic(test.TestCase):
                 "type": "array",
                 "items": {"$ref": "#/definitions/Event"},
                 "definitions": {
-                    "Tournament": {
+                    "Tournament_leaf": {
                         "title": "Tournament",
                         "type": "object",
                         "properties": {
@@ -188,7 +188,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name", "created"],
                         "additionalProperties": False,
                     },
-                    "Reporter": {
+                    "Reporter_leaf": {
                         "title": "Reporter",
                         "description": "Whom is assigned as the reporter",
                         "type": "object",
@@ -204,7 +204,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name"],
                         "additionalProperties": False,
                     },
-                    "Team": {
+                    "Team_leaf": {
                         "title": "Team",
                         "description": "Team that is a playing",
                         "type": "object",
@@ -227,7 +227,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name"],
                         "additionalProperties": False,
                     },
-                    "Address": {
+                    "Address_leaf": {
                         "title": "Address",
                         "type": "object",
                         "properties": {
@@ -258,17 +258,17 @@ class TestPydantic(test.TestCase):
                             "tournament": {
                                 "title": "Tournament",
                                 "description": "What tournaments is a happenin'",
-                                "allOf": [{"$ref": "#/definitions/Tournament"}],
+                                "allOf": [{"$ref": "#/definitions/Tournament_leaf"}],
                             },
                             "reporter": {
                                 "title": "Reporter",
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/definitions/Reporter"}],
+                                "allOf": [{"$ref": "#/definitions/Reporter_leaf"}],
                             },
                             "participants": {
                                 "title": "Participants",
                                 "type": "array",
-                                "items": {"$ref": "#/definitions/Team"},
+                                "items": {"$ref": "#/definitions/Team_leaf"},
                             },
                             "modified": {
                                 "title": "Modified",
@@ -287,7 +287,7 @@ class TestPydantic(test.TestCase):
                             "address": {
                                 "title": "Address",
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/definitions/Address"}],
+                                "allOf": [{"$ref": "#/definitions/Address_leaf"}],
                             },
                         },
                         "required": ["event_id", "name", "tournament", "participants", "modified"],
@@ -317,13 +317,13 @@ class TestPydantic(test.TestCase):
                         "title": "Events",
                         "description": "What tournaments is a happenin'",
                         "type": "array",
-                        "items": {"$ref": "#/definitions/Event"},
+                        "items": {"$ref": "#/definitions/Event_b4oydv"},
                     },
                 },
                 "required": ["id", "name", "created", "events"],
                 "additionalProperties": False,
                 "definitions": {
-                    "Reporter": {
+                    "Reporter_leaf": {
                         "title": "Reporter",
                         "description": "Whom is assigned as the reporter",
                         "type": "object",
@@ -339,7 +339,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name"],
                         "additionalProperties": False,
                     },
-                    "Team": {
+                    "Team_leaf": {
                         "title": "Team",
                         "description": "Team that is a playing",
                         "type": "object",
@@ -362,7 +362,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name"],
                         "additionalProperties": False,
                     },
-                    "Address": {
+                    "Address_leaf": {
                         "title": "Address",
                         "type": "object",
                         "properties": {
@@ -378,7 +378,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "city", "street"],
                         "additionalProperties": False,
                     },
-                    "Event": {
+                    "Event_b4oydv": {
                         "title": "Event",
                         "description": "Events on the calendar",
                         "type": "object",
@@ -393,12 +393,12 @@ class TestPydantic(test.TestCase):
                             "reporter": {
                                 "title": "Reporter",
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/definitions/Reporter"}],
+                                "allOf": [{"$ref": "#/definitions/Reporter_leaf"}],
                             },
                             "participants": {
                                 "title": "Participants",
                                 "type": "array",
-                                "items": {"$ref": "#/definitions/Team"},
+                                "items": {"$ref": "#/definitions/Team_leaf"},
                             },
                             "modified": {
                                 "title": "Modified",
@@ -417,7 +417,7 @@ class TestPydantic(test.TestCase):
                             "address": {
                                 "title": "Address",
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/definitions/Address"}],
+                                "allOf": [{"$ref": "#/definitions/Address_leaf"}],
                             },
                         },
                         "required": ["event_id", "name", "participants", "modified"],
@@ -447,13 +447,13 @@ class TestPydantic(test.TestCase):
                     "events": {
                         "title": "Events",
                         "type": "array",
-                        "items": {"$ref": "#/definitions/Event"},
+                        "items": {"$ref": "#/definitions/Event_dlqoeq"},
                     },
                 },
                 "required": ["id", "name", "events"],
                 "additionalProperties": False,
                 "definitions": {
-                    "Tournament": {
+                    "Tournament_leaf": {
                         "title": "Tournament",
                         "type": "object",
                         "properties": {
@@ -475,7 +475,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name", "created"],
                         "additionalProperties": False,
                     },
-                    "Reporter": {
+                    "Reporter_leaf": {
                         "title": "Reporter",
                         "description": "Whom is assigned as the reporter",
                         "type": "object",
@@ -491,7 +491,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name"],
                         "additionalProperties": False,
                     },
-                    "Address": {
+                    "Address_leaf": {
                         "title": "Address",
                         "type": "object",
                         "properties": {
@@ -507,7 +507,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "city", "street"],
                         "additionalProperties": False,
                     },
-                    "Event": {
+                    "Event_dlqoeq": {
                         "title": "Event",
                         "description": "Events on the calendar",
                         "type": "object",
@@ -522,12 +522,12 @@ class TestPydantic(test.TestCase):
                             "tournament": {
                                 "title": "Tournament",
                                 "description": "What tournaments is a happenin'",
-                                "allOf": [{"$ref": "#/definitions/Tournament"}],
+                                "allOf": [{"$ref": "#/definitions/Tournament_leaf"}],
                             },
                             "reporter": {
                                 "title": "Reporter",
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/definitions/Reporter"}],
+                                "allOf": [{"$ref": "#/definitions/Reporter_leaf"}],
                             },
                             "modified": {
                                 "title": "Modified",
@@ -546,7 +546,7 @@ class TestPydantic(test.TestCase):
                             "address": {
                                 "title": "Address",
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/definitions/Address"}],
+                                "allOf": [{"$ref": "#/definitions/Address_leaf"}],
                             },
                         },
                         "required": ["event_id", "name", "tournament", "modified"],
@@ -755,7 +755,22 @@ class TestPydantic(test.TestCase):
 
     def test_event_named(self):
         Event_Named = pydantic_model_creator(Event, name="Foo")
-        self.assertEqual(Event_Named.schema()["title"], "Foo")
+        schema = Event_Named.schema()
+        self.assertEqual(schema["title"], "Foo")
+        self.assertSetEqual(
+            set(schema["properties"].keys()),
+            {
+                "address",
+                "alias",
+                "event_id",
+                "modified",
+                "name",
+                "participants",
+                "reporter",
+                "token",
+                "tournament",
+            },
+        )
 
     def test_event_sorted(self):
         Event_Named = pydantic_model_creator(Event, sort_alphabetically=True)
@@ -823,7 +838,7 @@ class TestPydanticCycle(test.TestCase):
                     "talks_to": {
                         "title": "Talks To",
                         "type": "array",
-                        "items": {"$ref": "#/definitions/Employee_0d9ca741"},
+                        "items": {"$ref": "#/definitions/Employee_5gupxf"},
                     },
                     "manager_id": {
                         "title": "Manager Id",
@@ -835,7 +850,7 @@ class TestPydanticCycle(test.TestCase):
                     "team_members": {
                         "title": "Team Members",
                         "type": "array",
-                        "items": {"$ref": "#/definitions/Employee_f5fb07fd"},
+                        "items": {"$ref": "#/definitions/Employee_4fgkwn"},
                     },
                     "name_length": {"title": "Name Length", "type": "integer"},
                     "team_size": {
@@ -847,7 +862,7 @@ class TestPydanticCycle(test.TestCase):
                 "required": ["id", "name", "talks_to", "team_members", "name_length", "team_size"],
                 "additionalProperties": False,
                 "definitions": {
-                    "Employee_f9f05e47": {
+                    "Employee_leaf": {
                         "title": "Employee",
                         "type": "object",
                         "properties": {
@@ -875,35 +890,7 @@ class TestPydanticCycle(test.TestCase):
                         "required": ["id", "name", "name_length", "team_size"],
                         "additionalProperties": False,
                     },
-                    "Employee_992cd278": {
-                        "title": "Employee",
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "title": "Id",
-                                "minimum": 1,
-                                "maximum": 2147483647,
-                                "type": "integer",
-                            },
-                            "name": {"title": "Name", "maxLength": 50, "type": "string"},
-                            "manager_id": {
-                                "title": "Manager Id",
-                                "minimum": -2147483648,
-                                "maximum": 2147483647,
-                                "nullable": True,
-                                "type": "integer",
-                            },
-                            "name_length": {"title": "Name Length", "type": "integer"},
-                            "team_size": {
-                                "title": "Team Size",
-                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
-                                "type": "integer",
-                            },
-                        },
-                        "required": ["id", "name", "name_length", "team_size"],
-                        "additionalProperties": False,
-                    },
-                    "Employee_0d9ca741": {
+                    "Employee_5gupxf": {
                         "title": "Employee",
                         "type": "object",
                         "properties": {
@@ -917,7 +904,7 @@ class TestPydanticCycle(test.TestCase):
                             "talks_to": {
                                 "title": "Talks To",
                                 "type": "array",
-                                "items": {"$ref": "#/definitions/Employee_f9f05e47"},
+                                "items": {"$ref": "#/definitions/Employee_leaf"},
                             },
                             "manager_id": {
                                 "title": "Manager Id",
@@ -929,7 +916,7 @@ class TestPydanticCycle(test.TestCase):
                             "team_members": {
                                 "title": "Team Members",
                                 "type": "array",
-                                "items": {"$ref": "#/definitions/Employee_992cd278"},
+                                "items": {"$ref": "#/definitions/Employee_leaf"},
                             },
                             "name_length": {"title": "Name Length", "type": "integer"},
                             "team_size": {
@@ -948,63 +935,7 @@ class TestPydanticCycle(test.TestCase):
                         ],
                         "additionalProperties": False,
                     },
-                    "Employee_297c851f": {
-                        "title": "Employee",
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "title": "Id",
-                                "minimum": 1,
-                                "maximum": 2147483647,
-                                "type": "integer",
-                            },
-                            "name": {"title": "Name", "maxLength": 50, "type": "string"},
-                            "manager_id": {
-                                "title": "Manager Id",
-                                "minimum": -2147483648,
-                                "maximum": 2147483647,
-                                "nullable": True,
-                                "type": "integer",
-                            },
-                            "name_length": {"title": "Name Length", "type": "integer"},
-                            "team_size": {
-                                "title": "Team Size",
-                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
-                                "type": "integer",
-                            },
-                        },
-                        "required": ["id", "name", "name_length", "team_size"],
-                        "additionalProperties": False,
-                    },
-                    "Employee_db6253ef": {
-                        "title": "Employee",
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "title": "Id",
-                                "minimum": 1,
-                                "maximum": 2147483647,
-                                "type": "integer",
-                            },
-                            "name": {"title": "Name", "maxLength": 50, "type": "string"},
-                            "manager_id": {
-                                "title": "Manager Id",
-                                "minimum": -2147483648,
-                                "maximum": 2147483647,
-                                "nullable": True,
-                                "type": "integer",
-                            },
-                            "name_length": {"title": "Name Length", "type": "integer"},
-                            "team_size": {
-                                "title": "Team Size",
-                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
-                                "type": "integer",
-                            },
-                        },
-                        "required": ["id", "name", "name_length", "team_size"],
-                        "additionalProperties": False,
-                    },
-                    "Employee_f5fb07fd": {
+                    "Employee_4fgkwn": {
                         "title": "Employee",
                         "type": "object",
                         "properties": {
@@ -1018,7 +949,7 @@ class TestPydanticCycle(test.TestCase):
                             "talks_to": {
                                 "title": "Talks To",
                                 "type": "array",
-                                "items": {"$ref": "#/definitions/Employee_297c851f"},
+                                "items": {"$ref": "#/definitions/Employee_leaf"},
                             },
                             "manager_id": {
                                 "title": "Manager Id",
@@ -1030,7 +961,7 @@ class TestPydanticCycle(test.TestCase):
                             "team_members": {
                                 "title": "Team Members",
                                 "type": "array",
-                                "items": {"$ref": "#/definitions/Employee_db6253ef"},
+                                "items": {"$ref": "#/definitions/Employee_leaf"},
                             },
                             "name_length": {"title": "Name Length", "type": "integer"},
                             "team_size": {
