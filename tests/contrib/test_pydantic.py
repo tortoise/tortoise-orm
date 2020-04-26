@@ -41,17 +41,17 @@ class TestPydantic(test.TestCase):
                     "tournament": {
                         "title": "Tournament",
                         "description": "What tournaments is a happenin'",
-                        "allOf": [{"$ref": "#/definitions/Tournament_leaf"}],
+                        "allOf": [{"$ref": "#/definitions/tests.testmodels.Tournament.leaf"}],
                     },
                     "reporter": {
                         "title": "Reporter",
                         "nullable": True,
-                        "allOf": [{"$ref": "#/definitions/Reporter_leaf"}],
+                        "allOf": [{"$ref": "#/definitions/tests.testmodels.Reporter.leaf"}],
                     },
                     "participants": {
                         "title": "Participants",
                         "type": "array",
-                        "items": {"$ref": "#/definitions/Team_leaf"},
+                        "items": {"$ref": "#/definitions/tests.testmodels.Team.leaf"},
                     },
                     "modified": {
                         "title": "Modified",
@@ -70,13 +70,13 @@ class TestPydantic(test.TestCase):
                     "address": {
                         "title": "Address",
                         "nullable": True,
-                        "allOf": [{"$ref": "#/definitions/Address_leaf"}],
+                        "allOf": [{"$ref": "#/definitions/tests.testmodels.Address.leaf"}],
                     },
                 },
                 "required": ["event_id", "name", "tournament", "participants", "modified"],
                 "additionalProperties": False,
                 "definitions": {
-                    "Tournament_leaf": {
+                    "tests.testmodels.Tournament.leaf": {
                         "title": "Tournament",
                         "type": "object",
                         "properties": {
@@ -98,7 +98,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name", "created"],
                         "additionalProperties": False,
                     },
-                    "Reporter_leaf": {
+                    "tests.testmodels.Reporter.leaf": {
                         "title": "Reporter",
                         "description": "Whom is assigned as the reporter",
                         "type": "object",
@@ -114,7 +114,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name"],
                         "additionalProperties": False,
                     },
-                    "Team_leaf": {
+                    "tests.testmodels.Team.leaf": {
                         "title": "Team",
                         "description": "Team that is a playing",
                         "type": "object",
@@ -137,7 +137,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name"],
                         "additionalProperties": False,
                     },
-                    "Address_leaf": {
+                    "tests.testmodels.Address.leaf": {
                         "title": "Address",
                         "type": "object",
                         "properties": {
@@ -161,12 +161,12 @@ class TestPydantic(test.TestCase):
         self.assertEqual(
             self.Event_Pydantic_List.schema(),
             {
-                "title": "Events",
+                "title": "Event_list",
                 "description": "Events on the calendar",
                 "type": "array",
-                "items": {"$ref": "#/definitions/Event"},
+                "items": {"$ref": "#/definitions/tests.testmodels.Event"},
                 "definitions": {
-                    "Tournament_leaf": {
+                    "tests.testmodels.Tournament.leaf": {
                         "title": "Tournament",
                         "type": "object",
                         "properties": {
@@ -188,7 +188,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name", "created"],
                         "additionalProperties": False,
                     },
-                    "Reporter_leaf": {
+                    "tests.testmodels.Reporter.leaf": {
                         "title": "Reporter",
                         "description": "Whom is assigned as the reporter",
                         "type": "object",
@@ -204,7 +204,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name"],
                         "additionalProperties": False,
                     },
-                    "Team_leaf": {
+                    "tests.testmodels.Team.leaf": {
                         "title": "Team",
                         "description": "Team that is a playing",
                         "type": "object",
@@ -227,7 +227,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name"],
                         "additionalProperties": False,
                     },
-                    "Address_leaf": {
+                    "tests.testmodels.Address.leaf": {
                         "title": "Address",
                         "type": "object",
                         "properties": {
@@ -243,7 +243,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "city", "street"],
                         "additionalProperties": False,
                     },
-                    "Event": {
+                    "tests.testmodels.Event": {
                         "title": "Event",
                         "description": "Events on the calendar",
                         "type": "object",
@@ -258,17 +258,19 @@ class TestPydantic(test.TestCase):
                             "tournament": {
                                 "title": "Tournament",
                                 "description": "What tournaments is a happenin'",
-                                "allOf": [{"$ref": "#/definitions/Tournament_leaf"}],
+                                "allOf": [
+                                    {"$ref": "#/definitions/tests.testmodels.Tournament.leaf"}
+                                ],
                             },
                             "reporter": {
                                 "title": "Reporter",
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/definitions/Reporter_leaf"}],
+                                "allOf": [{"$ref": "#/definitions/tests.testmodels.Reporter.leaf"}],
                             },
                             "participants": {
                                 "title": "Participants",
                                 "type": "array",
-                                "items": {"$ref": "#/definitions/Team_leaf"},
+                                "items": {"$ref": "#/definitions/tests.testmodels.Team.leaf"},
                             },
                             "modified": {
                                 "title": "Modified",
@@ -287,7 +289,7 @@ class TestPydantic(test.TestCase):
                             "address": {
                                 "title": "Address",
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/definitions/Address_leaf"}],
+                                "allOf": [{"$ref": "#/definitions/tests.testmodels.Address.leaf"}],
                             },
                         },
                         "required": ["event_id", "name", "tournament", "participants", "modified"],
@@ -317,13 +319,13 @@ class TestPydantic(test.TestCase):
                         "title": "Events",
                         "description": "What tournaments is a happenin'",
                         "type": "array",
-                        "items": {"$ref": "#/definitions/Event_b4oydv"},
+                        "items": {"$ref": "#/definitions/tests.testmodels.Event.b4oydv"},
                     },
                 },
                 "required": ["id", "name", "created", "events"],
                 "additionalProperties": False,
                 "definitions": {
-                    "Reporter_leaf": {
+                    "tests.testmodels.Reporter.leaf": {
                         "title": "Reporter",
                         "description": "Whom is assigned as the reporter",
                         "type": "object",
@@ -339,7 +341,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name"],
                         "additionalProperties": False,
                     },
-                    "Team_leaf": {
+                    "tests.testmodels.Team.leaf": {
                         "title": "Team",
                         "description": "Team that is a playing",
                         "type": "object",
@@ -362,7 +364,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name"],
                         "additionalProperties": False,
                     },
-                    "Address_leaf": {
+                    "tests.testmodels.Address.leaf": {
                         "title": "Address",
                         "type": "object",
                         "properties": {
@@ -378,7 +380,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "city", "street"],
                         "additionalProperties": False,
                     },
-                    "Event_b4oydv": {
+                    "tests.testmodels.Event.b4oydv": {
                         "title": "Event",
                         "description": "Events on the calendar",
                         "type": "object",
@@ -393,12 +395,12 @@ class TestPydantic(test.TestCase):
                             "reporter": {
                                 "title": "Reporter",
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/definitions/Reporter_leaf"}],
+                                "allOf": [{"$ref": "#/definitions/tests.testmodels.Reporter.leaf"}],
                             },
                             "participants": {
                                 "title": "Participants",
                                 "type": "array",
-                                "items": {"$ref": "#/definitions/Team_leaf"},
+                                "items": {"$ref": "#/definitions/tests.testmodels.Team.leaf"},
                             },
                             "modified": {
                                 "title": "Modified",
@@ -417,7 +419,7 @@ class TestPydantic(test.TestCase):
                             "address": {
                                 "title": "Address",
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/definitions/Address_leaf"}],
+                                "allOf": [{"$ref": "#/definitions/tests.testmodels.Address.leaf"}],
                             },
                         },
                         "required": ["event_id", "name", "participants", "modified"],
@@ -447,13 +449,13 @@ class TestPydantic(test.TestCase):
                     "events": {
                         "title": "Events",
                         "type": "array",
-                        "items": {"$ref": "#/definitions/Event_dlqoeq"},
+                        "items": {"$ref": "#/definitions/tests.testmodels.Event.dlqoeq"},
                     },
                 },
                 "required": ["id", "name", "events"],
                 "additionalProperties": False,
                 "definitions": {
-                    "Tournament_leaf": {
+                    "tests.testmodels.Tournament.leaf": {
                         "title": "Tournament",
                         "type": "object",
                         "properties": {
@@ -475,7 +477,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name", "created"],
                         "additionalProperties": False,
                     },
-                    "Reporter_leaf": {
+                    "tests.testmodels.Reporter.leaf": {
                         "title": "Reporter",
                         "description": "Whom is assigned as the reporter",
                         "type": "object",
@@ -491,7 +493,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "name"],
                         "additionalProperties": False,
                     },
-                    "Address_leaf": {
+                    "tests.testmodels.Address.leaf": {
                         "title": "Address",
                         "type": "object",
                         "properties": {
@@ -507,7 +509,7 @@ class TestPydantic(test.TestCase):
                         "required": ["id", "city", "street"],
                         "additionalProperties": False,
                     },
-                    "Event_dlqoeq": {
+                    "tests.testmodels.Event.dlqoeq": {
                         "title": "Event",
                         "description": "Events on the calendar",
                         "type": "object",
@@ -522,12 +524,14 @@ class TestPydantic(test.TestCase):
                             "tournament": {
                                 "title": "Tournament",
                                 "description": "What tournaments is a happenin'",
-                                "allOf": [{"$ref": "#/definitions/Tournament_leaf"}],
+                                "allOf": [
+                                    {"$ref": "#/definitions/tests.testmodels.Tournament.leaf"}
+                                ],
                             },
                             "reporter": {
                                 "title": "Reporter",
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/definitions/Reporter_leaf"}],
+                                "allOf": [{"$ref": "#/definitions/tests.testmodels.Reporter.leaf"}],
                             },
                             "modified": {
                                 "title": "Modified",
@@ -546,7 +550,7 @@ class TestPydantic(test.TestCase):
                             "address": {
                                 "title": "Address",
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/definitions/Address_leaf"}],
+                                "allOf": [{"$ref": "#/definitions/tests.testmodels.Address.leaf"}],
                             },
                         },
                         "required": ["event_id", "name", "tournament", "modified"],
@@ -838,7 +842,7 @@ class TestPydanticCycle(test.TestCase):
                     "talks_to": {
                         "title": "Talks To",
                         "type": "array",
-                        "items": {"$ref": "#/definitions/Employee_5gupxf"},
+                        "items": {"$ref": "#/definitions/tests.testmodels.Employee.5gupxf"},
                     },
                     "manager_id": {
                         "title": "Manager Id",
@@ -850,7 +854,7 @@ class TestPydanticCycle(test.TestCase):
                     "team_members": {
                         "title": "Team Members",
                         "type": "array",
-                        "items": {"$ref": "#/definitions/Employee_4fgkwn"},
+                        "items": {"$ref": "#/definitions/tests.testmodels.Employee.4fgkwn"},
                     },
                     "name_length": {"title": "Name Length", "type": "integer"},
                     "team_size": {
@@ -862,7 +866,7 @@ class TestPydanticCycle(test.TestCase):
                 "required": ["id", "name", "talks_to", "team_members", "name_length", "team_size"],
                 "additionalProperties": False,
                 "definitions": {
-                    "Employee_leaf": {
+                    "tests.testmodels.Employee.leaf": {
                         "title": "Employee",
                         "type": "object",
                         "properties": {
@@ -890,7 +894,7 @@ class TestPydanticCycle(test.TestCase):
                         "required": ["id", "name", "name_length", "team_size"],
                         "additionalProperties": False,
                     },
-                    "Employee_5gupxf": {
+                    "tests.testmodels.Employee.5gupxf": {
                         "title": "Employee",
                         "type": "object",
                         "properties": {
@@ -904,7 +908,7 @@ class TestPydanticCycle(test.TestCase):
                             "talks_to": {
                                 "title": "Talks To",
                                 "type": "array",
-                                "items": {"$ref": "#/definitions/Employee_leaf"},
+                                "items": {"$ref": "#/definitions/tests.testmodels.Employee.leaf"},
                             },
                             "manager_id": {
                                 "title": "Manager Id",
@@ -916,7 +920,7 @@ class TestPydanticCycle(test.TestCase):
                             "team_members": {
                                 "title": "Team Members",
                                 "type": "array",
-                                "items": {"$ref": "#/definitions/Employee_leaf"},
+                                "items": {"$ref": "#/definitions/tests.testmodels.Employee.leaf"},
                             },
                             "name_length": {"title": "Name Length", "type": "integer"},
                             "team_size": {
@@ -935,7 +939,7 @@ class TestPydanticCycle(test.TestCase):
                         ],
                         "additionalProperties": False,
                     },
-                    "Employee_4fgkwn": {
+                    "tests.testmodels.Employee.4fgkwn": {
                         "title": "Employee",
                         "type": "object",
                         "properties": {
@@ -949,7 +953,7 @@ class TestPydanticCycle(test.TestCase):
                             "talks_to": {
                                 "title": "Talks To",
                                 "type": "array",
-                                "items": {"$ref": "#/definitions/Employee_leaf"},
+                                "items": {"$ref": "#/definitions/tests.testmodels.Employee.leaf"},
                             },
                             "manager_id": {
                                 "title": "Manager Id",
@@ -961,7 +965,7 @@ class TestPydanticCycle(test.TestCase):
                             "team_members": {
                                 "title": "Team Members",
                                 "type": "array",
-                                "items": {"$ref": "#/definitions/Employee_leaf"},
+                                "items": {"$ref": "#/definitions/tests.testmodels.Employee.leaf"},
                             },
                             "name_length": {"title": "Name Length", "type": "integer"},
                             "team_size": {

@@ -171,11 +171,11 @@ class TestBasic(test.TestCase):
                     "tournament": {
                         "title": "Tournament",
                         "nullable": True,
-                        "allOf": [{"$ref": "#/definitions/Tournament_leaf"}],
+                        "allOf": [{"$ref": "#/definitions/tests.test_early_init.Tournament.leaf"}],
                     },
                 },
                 "definitions": {
-                    "Tournament_leaf": {
+                    "tests.test_early_init.Tournament.leaf": {
                         "title": "Tournament",
                         "type": "object",
                         "properties": {

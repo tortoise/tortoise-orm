@@ -150,12 +150,14 @@ def pydantic_model_creator(
 
     # Fully qualified class name
     fqname = cls.__module__ + "." + cls.__qualname__
+    postfix = ""
 
     def get_name() -> str:
         # If arguments are specified (different from the defaults), we append a hash to the
         # class name, to make it unique
         # We don't check by stack, as cycles get explicitly renamed.
         # When called later, include is explicitly set, so fence passes.
+        nonlocal postfix
         is_default = (
             exclude == ()
             and include == ()
@@ -166,12 +168,12 @@ def pydantic_model_creator(
         hashval = (
             f"{fqname};{exclude};{include};{computed};{_stack}:{sort_alphabetically}:{allow_cycles}"
         )
-        h = (
-            "_" + b32encode(sha3_224(hashval.encode("utf-8")).digest()).decode("utf-8").lower()[:6]
+        postfix = (
+            "." + b32encode(sha3_224(hashval.encode("utf-8")).digest()).decode("utf-8").lower()[:6]
             if not is_default
             else ""
         )
-        return cls.__name__ + h
+        return fqname + postfix
 
     # We need separate model class for different exclude, include and computed parameters
     _name = name or get_name()
@@ -363,10 +365,9 @@ def pydantic_model_creator(
 
     # Here we endure that the name is unique, but complete objects are still labeled verbatim
     if not has_submodel and exclude:
-        _name = name or f"{cls.__name__}_leaf"
+        _name = name or f"{fqname}.leaf"
     elif has_submodel:
         _name = name or get_name()
-    # pconfig.title = _name
 
     # Here we de-dup to ensure that a uniquely named object is a unique object
     # This fixes some Pydantic constraints.
@@ -428,7 +429,7 @@ def pydantic_queryset_creator(
         allow_cycles=allow_cycles,
         sort_alphabetically=sort_alphabetically,
     )
-    lname = name or f"{submodel.__name__}s"
+    lname = name or f"{submodel.__name__}_list"
 
     properties = {"__annotations__": {"__root__": List[submodel]}}  # type: ignore
     # Creating Pydantic class for the properties generated before
@@ -436,7 +437,7 @@ def pydantic_queryset_creator(
     # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)
     # The title of the model to hide the hash postfix
-    setattr(model.__config__, "title", lname)
+    setattr(model.__config__, "title", name or f"{getattr(submodel.__config__,'title')}_list")
     # Store the base class & submodel
     setattr(model.__config__, "submodel", submodel)
 
