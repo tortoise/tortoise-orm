@@ -234,6 +234,10 @@ Removals:
 0.15
 ====
 
+0.15.24
+-------
+- Fixed regression where ``GROUP BY`` class is missing for an aggregate with a specified order.
+
 0.15.23
 -------
 - Fixed SQL injection issue in MySQL
@@ -252,7 +256,7 @@ Removals:
 * Fix joining with self by reverse-foreign-key for filtering and annotation
 
 0.15.20
-------
+-------
 * Default ``values()`` & ``values_list()`` now includes annotations.
 * Annotations over joins now work correctly with ``values()`` & ``values_list()``
 * Ensure ``GROUP BY`` precedes ``HAVING`` to ensure that filtering by aggregates work correctly.

@@ -302,14 +302,14 @@ class DatetimeField(Field, datetime.datetime):
     def to_db_value(
         self, value: Optional[datetime.datetime], instance: "Union[Type[Model], Model]"
     ) -> Optional[datetime.datetime]:
-        if hasattr(instance, "_saved_in_db"):
-            # Only do this if it is a Model instance, not class. Test for guaranteed instance var
-            if self.auto_now or (
-                self.auto_now_add and getattr(instance, self.model_field_name) is None
-            ):
-                value = datetime.datetime.utcnow()
-                setattr(instance, self.model_field_name, value)
-                return value
+        # Only do this if it is a Model instance, not class. Test for guaranteed instance var
+        if hasattr(instance, "_saved_in_db") and (
+            self.auto_now
+            or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
+        ):
+            value = datetime.datetime.utcnow()
+            setattr(instance, self.model_field_name, value)
+            return value
         return value
 
     @property
@@ -427,9 +427,8 @@ class UUIDField(Field, UUID):
         SQL_TYPE = "UUID"
 
     def __init__(self, **kwargs: Any) -> None:
-        if kwargs.get("pk", False):
-            if "default" not in kwargs:
-                kwargs["default"] = uuid4
+        if kwargs.get("pk", False) and "default" not in kwargs:
+            kwargs["default"] = uuid4
         super().__init__(**kwargs)
 
     def to_db_value(self, value: Any, instance: "Union[Type[Model], Model]") -> Optional[str]:
@@ -487,7 +486,7 @@ class IntEnumFieldInstance(SmallIntField):
     ) -> Union[int, None]:
         if isinstance(value, IntEnum):
             return int(value.value)
-        elif isinstance(value, int):
+        if isinstance(value, int):
             return int(self.enum_type(value))
         return value
 
@@ -548,7 +547,7 @@ class CharEnumFieldInstance(CharField):
     ) -> Union[str, None]:
         if isinstance(value, Enum):
             return str(value.value)
-        elif isinstance(value, str):
+        if isinstance(value, str):
             return str(self.enum_type(value).value)
         return value
 

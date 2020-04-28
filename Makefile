@@ -30,7 +30,7 @@ ifneq ($(shell which black),)
 endif
 	flake8 $(checkfiles)
 	mypy $(checkfiles)
-	pylint -E $(checkfiles)
+	pylint -d C,W,R $(checkfiles)
 	bandit -r $(checkfiles)
 	python setup.py check -mrs
 

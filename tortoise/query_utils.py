@@ -150,16 +150,17 @@ class QueryModifier:
             return QueryModifier(
                 joins=self.joins + other.joins, having_criterion=result_having_criterion
             )
+
         if self.where_criterion and other.where_criterion:
             return QueryModifier(
                 where_criterion=self.where_criterion | other.where_criterion,
                 joins=self.joins + other.joins,
             )
-        else:
-            return QueryModifier(
-                where_criterion=self.where_criterion or other.where_criterion,
-                joins=self.joins + other.joins,
-            )
+
+        return QueryModifier(
+            where_criterion=self.where_criterion or other.where_criterion,
+            joins=self.joins + other.joins,
+        )
 
     def __invert__(self) -> "QueryModifier":
         if not self.where_criterion and not self.having_criterion:

@@ -44,8 +44,7 @@ class F(Field):  # type: ignore
                     raise FieldError(
                         "Cannot use arithmetic expression between different field type"
                     )
-                else:
-                    field_object = left_field_object
+                field_object = left_field_object
 
             (
                 arithmetic_expression_or_field.right,
@@ -56,7 +55,6 @@ class F(Field):  # type: ignore
                     raise FieldError(
                         "Cannot use arithmetic expression between different field type"
                     )
-                else:
-                    field_object = right_field_object
+                field_object = right_field_object
 
         return arithmetic_expression_or_field, field_object

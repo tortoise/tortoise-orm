@@ -397,6 +397,8 @@ class BaseExecutor:
     async def _prefetch_direct_relation(
         self, instance_list: "List[Model]", field: str, related_query: "QuerySet"
     ) -> "List[Model]":
+        # TODO: This will only work if instance_list is all of same type
+        # TODO: If that's the case, then we can optimize the key resolver
         related_objects_for_fetch: Dict[str, list] = {}
         relation_key_field = f"{field}_id"
         for instance in instance_list:

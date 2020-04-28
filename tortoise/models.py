@@ -138,8 +138,8 @@ def _get_comments(cls: "Type[Model]") -> Dict[str, str]:
         return {}
     comments = {}
 
-    for cls in reversed(cls.__mro__):
-        if cls is object:
+    for cls_ in reversed(cls.__mro__):
+        if cls_ is object:
             continue
         matches = re.findall(rf"((?:(?!\n|^)[^\w\n]*#:.*?\n)+?)[^\w\n]*(\w+)\s*[:=]", source)
         for match in matches:
@@ -147,7 +147,7 @@ def _get_comments(cls: "Type[Model]") -> Dict[str, str]:
             # Extract text
             comment = re.sub(r"(^\s*#:\s*|\s*$)", "", match[0], flags=re.MULTILINE)
             # Class name template
-            comments[field_name] = comment.replace("{model}", cls.__name__)
+            comments[field_name] = comment.replace("{model}", cls_.__name__)
 
     return comments
 
@@ -261,7 +261,7 @@ class MetaInfo:
             raise ConfigurationError("No DB associated to model")
 
     @property
-    def ordering(self) -> Tuple[Tuple[str, str], ...]:
+    def ordering(self) -> Tuple[Tuple[str, Order], ...]:
         if not self._ordering_validated:
             unknown_fields = {f for f, _ in self._default_ordering} - self.fields
             raise ConfigurationError(

@@ -168,9 +168,9 @@ class AsyncpgDBClient(BaseDBAsyncClient):
                 except Exception:  # pragma: nocoverage
                     rows_affected = 0
                 return rows_affected, []
-            else:
-                rows = await connection.fetch(*params)
-                return len(rows), rows
+
+            rows = await connection.fetch(*params)
+            return len(rows), rows
 
     @translate_exceptions
     async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:

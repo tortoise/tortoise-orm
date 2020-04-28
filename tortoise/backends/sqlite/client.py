@@ -82,6 +82,7 @@ class SqliteClient(BaseDBAsyncClient):
             self._connection = None
 
     async def db_create(self) -> None:
+        # DB's are automatically created once accessed
         pass
 
     async def db_delete(self) -> None:
