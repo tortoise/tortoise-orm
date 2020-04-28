@@ -32,6 +32,9 @@ pytest<5.4
 nose2
 pytest-xdist
 pytest-cov
+# Fixes nose2 bug
+astroid<2.4
+pylint<2.5
 
 # Pypi
 twine
