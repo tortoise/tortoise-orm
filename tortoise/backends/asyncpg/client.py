@@ -34,7 +34,7 @@ def translate_exceptions(func: F) -> F:
     async def translate_exceptions_(self, *args):
         try:
             return await func(self, *args)
-        except asyncpg.SyntaxOrAccessError as exc:
+        except (asyncpg.SyntaxOrAccessError, asyncpg.exceptions.DataError) as exc:
             raise OperationalError(exc)
         except asyncpg.IntegrityConstraintViolationError as exc:
             raise IntegrityError(exc)
