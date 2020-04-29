@@ -506,6 +506,8 @@ def IntEnumField(
     The description of the field is set automatically if not specified to a multiline list of
     "name: value" pairs.
 
+    **Note**: Valid int value of ``enum_type`` is acceptable.
+
     ``enum_type``:
         The enum class
     ``description``:
@@ -568,6 +570,8 @@ def CharEnumField(
     **Warning**: If ``max_length`` is not specified or equals to zero, the size of represented
     char fields is automatically detected. So if later you update the enum, you need to update your
     table schema as well.
+
+    **Note**: Valid str value of ``enum_type`` is acceptable.
 
     ``enum_type``:
         The enum class
