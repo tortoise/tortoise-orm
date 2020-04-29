@@ -12,7 +12,6 @@ from pypika.terms import (
     Equality,
     Term,
     ValueWrapper,
-    basestring,
     date,
     format_quotes,
 )
@@ -41,7 +40,7 @@ def get_value_sql(self, **kwargs):  # pragma: nocoverage
     if isinstance(self.value, date):
         value = self.value.isoformat()
         return format_quotes(value, quote_char)
-    if isinstance(self.value, basestring):
+    if isinstance(self.value, str):
         value = self.value.replace(quote_char, quote_char * 2)
         if dialect == "mysql":
             value = value.replace("\\", "\\\\")

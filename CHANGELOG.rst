@@ -9,6 +9,10 @@ Changelog
 
 0.16
 ====
+0.16.10
+-------
+- Fix bad import of ``basestring``
+- Better handling of NULL characters in strings. Fixes SQLite, raises better error for PostgreSQL.
 
 0.16.9
 ------
