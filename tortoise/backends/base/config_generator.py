@@ -94,9 +94,8 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     if vmap.get("hostname"):
         params[vmap["hostname"]] = url.hostname or None
     try:
-        if vmap.get("port"):
-            if url.port:
-                params[vmap["port"]] = int(url.port)
+        if vmap.get("port") and url.port:
+            params[vmap["port"]] = int(url.port)
     except ValueError:
         raise ConfigurationError("Port is not an integer")
     if vmap.get("username"):

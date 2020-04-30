@@ -27,6 +27,16 @@ class TestGroupBy(test.TestCase):
             elif author_id == self.a2.pk:
                 self.assertEqual(count, 5)
 
+    async def test_count_group_by_with_join(self):
+        ret = (
+            await Book.annotate(count=Count("id"))
+            .group_by("author__name")
+            .values("author__name", "count")
+        )
+        self.assertEqual(
+            ret, [{"author__name": "author1", "count": 10}, {"author__name": "author2", "count": 5}]
+        )
+
     async def test_count_filter_group_by(self):
         ret = (
             await Book.annotate(count=Count("id"))
@@ -48,6 +58,17 @@ class TestGroupBy(test.TestCase):
                 self.assertEqual(sum_, 45.0)
             elif author_id == self.a2.pk:
                 self.assertEqual(sum_, 10.0)
+
+    async def test_sum_group_by_with_join(self):
+        ret = (
+            await Book.annotate(sum=Sum("rating"))
+            .group_by("author__name")
+            .values("author__name", "sum")
+        )
+        self.assertEqual(
+            ret,
+            [{"author__name": "author1", "sum": 45.0}, {"author__name": "author2", "sum": 10.0}],
+        )
 
     async def test_sum_filter_group_by(self):
         ret = (
@@ -71,6 +92,16 @@ class TestGroupBy(test.TestCase):
                 self.assertEqual(avg, 4.5)
             elif author_id == self.a2.pk:
                 self.assertEqual(avg, 2.0)
+
+    async def test_avg_group_by_with_join(self):
+        ret = (
+            await Book.annotate(avg=Avg("rating"))
+            .group_by("author__name")
+            .values("author__name", "avg")
+        )
+        self.assertEqual(
+            ret, [{"author__name": "author1", "avg": 4.5}, {"author__name": "author2", "avg": 2}]
+        )
 
     async def test_avg_filter_group_by(self):
         ret = (
@@ -97,6 +128,14 @@ class TestGroupBy(test.TestCase):
             elif author_id == self.a2.pk:
                 self.assertEqual(count, 5)
 
+    async def test_count_values_list_group_by_with_join(self):
+        ret = (
+            await Book.annotate(count=Count("id"))
+            .group_by("author__name")
+            .values_list("author__name", "count")
+        )
+        self.assertEqual(ret, [("author1", 10), ("author2", 5)])
+
     async def test_count_values_list_filter_group_by(self):
         ret = (
             await Book.annotate(count=Count("id"))
@@ -120,6 +159,14 @@ class TestGroupBy(test.TestCase):
                 self.assertEqual(sum_, 45.0)
             elif author_id == self.a2.pk:
                 self.assertEqual(sum_, 10.0)
+
+    async def test_sum_values_list_group_by_with_join(self):
+        ret = (
+            await Book.annotate(sum=Sum("rating"))
+            .group_by("author__name")
+            .values_list("author__name", "sum")
+        )
+        self.assertEqual(ret, [("author1", 45.0), ("author2", 10.0)])
 
     async def test_sum_values_list_filter_group_by(self):
         ret = (
@@ -145,6 +192,14 @@ class TestGroupBy(test.TestCase):
                 self.assertEqual(avg, 4.5)
             elif author_id == self.a2.pk:
                 self.assertEqual(avg, 2.0)
+
+    async def test_avg_values_list_group_by_with_join(self):
+        ret = (
+            await Book.annotate(avg=Avg("rating"))
+            .group_by("author__name")
+            .values_list("author__name", "avg")
+        )
+        self.assertEqual(ret, [("author1", 4.5), ("author2", 2.0)])
 
     async def test_avg_values_list_filter_group_by(self):
         ret = (

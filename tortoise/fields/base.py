@@ -142,6 +142,10 @@ class Field(metaclass=_FieldMeta):
         # TODO: Rename index to db_index, alias index, deprecate
         if not self.indexable and (unique or index):
             raise ConfigurationError(f"{self.__class__.__name__} can't be indexed")
+        if pk and null:
+            raise ConfigurationError(
+                f"{self.__class__.__name__} can't be both null=True and pk=True"
+            )
         if pk:
             index = True
             unique = True

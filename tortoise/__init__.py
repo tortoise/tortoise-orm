@@ -1,6 +1,5 @@
 import asyncio
 import importlib
-import inspect
 import json
 import logging
 import os
@@ -8,7 +7,7 @@ import warnings
 from contextvars import ContextVar
 from copy import deepcopy
 from inspect import isclass
-from typing import Any, Coroutine, Dict, List, Optional, Tuple, Type, Union, cast
+from typing import Coroutine, Dict, List, Optional, Tuple, Type, cast
 
 from pypika import Table
 
@@ -245,6 +244,7 @@ class Tortoise:
                     else:
                         key_o2o_object = deepcopy(related_model._meta.pk)
                         o2o_object.to_field_instance = related_model._meta.pk
+                        o2o_object.to_field = related_model._meta.pk_attr
 
                     key_field = f"{field}_id"
                     key_o2o_object.pk = o2o_object.pk
@@ -337,7 +337,7 @@ class Tortoise:
                     related_model._meta.add_field(backward_relation_name, m2m_relation)
 
     @classmethod
-    def _discover_client_class(cls, engine: str) -> BaseDBAsyncClient:
+    def _discover_client_class(cls, engine: str) -> Type[BaseDBAsyncClient]:
         # Let exception bubble up for transparency
         engine_module = importlib.import_module(engine)
 
@@ -379,7 +379,7 @@ class Tortoise:
             client_class = cls._discover_client_class(info.get("engine"))
             db_params = info["credentials"].copy()
             db_params.update({"connection_name": name})
-            connection = client_class(**db_params)  # type: ignore
+            connection = client_class(**db_params)
             if create_db:
                 await connection.db_create()
             await connection.create_connection(with_db=True)
@@ -638,4 +638,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.16.8"
+__version__ = "0.16.9"

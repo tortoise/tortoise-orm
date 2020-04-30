@@ -34,7 +34,7 @@ def translate_exceptions(func: F) -> F:
     async def translate_exceptions_(self, *args):
         try:
             return await func(self, *args)
-        except asyncpg.SyntaxOrAccessError as exc:
+        except (asyncpg.SyntaxOrAccessError, asyncpg.exceptions.DataError) as exc:
             raise OperationalError(exc)
         except asyncpg.IntegrityConstraintViolationError as exc:
             raise IntegrityError(exc)
@@ -168,9 +168,9 @@ class AsyncpgDBClient(BaseDBAsyncClient):
                 except Exception:  # pragma: nocoverage
                     rows_affected = 0
                 return rows_affected, []
-            else:
-                rows = await connection.fetch(*params)
-                return len(rows), rows
+
+            rows = await connection.fetch(*params)
+            return len(rows), rows
 
     @translate_exceptions
     async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:

@@ -89,7 +89,18 @@ class Address(Model):
     street = fields.CharField(max_length=128)
 
     event: fields.OneToOneRelation[Event] = fields.OneToOneField(
-        "models.Event", on_delete=fields.CASCADE, related_name="address", null=True
+        "models.Event", on_delete=fields.CASCADE, related_name="address", pk=True
+    )
+
+
+class Dest_null(Model):
+    name = fields.CharField(max_length=64)
+
+
+class O2O_null(Model):
+    name = fields.CharField(max_length=64)
+    event: fields.OneToOneRelation[Event] = fields.OneToOneField(
+        "models.Dest_null", on_delete=fields.CASCADE, related_name="address_null", null=True
     )
 
 
