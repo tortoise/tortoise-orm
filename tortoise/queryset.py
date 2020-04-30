@@ -948,6 +948,20 @@ class FieldSelectQuery(AwaitableQuery):
 
         raise FieldError(f'Unknown field "{field}" for model "{model}"')
 
+    def _resolve_group_bys(self, *field_names: str):
+        group_bys = []
+        for field_name in field_names:
+            field_split = field_name.split("__")
+            related_table, related_db_field = self._join_table_with_forwarded_fields(
+                model=self.model,
+                table=self.model._meta.basetable,
+                field=field_split[0],
+                forwarded_fields="__".join(field_split[1:]) if len(field_split) > 1 else "",
+            )
+            field = related_table[related_db_field].as_(field_name)
+            group_bys.append(field)
+        return group_bys
+
 
 class ValuesListQuery(FieldSelectQuery):
     __slots__ = (
@@ -1017,8 +1031,7 @@ class ValuesListQuery(FieldSelectQuery):
         if self.distinct:
             self.query._distinct = True
         if self.group_bys:
-            self.query._groupbys = []
-            self.query = self.query.groupby(*self.group_bys)
+            self.query._groupbys = self._resolve_group_bys(*self.group_bys)
 
     def __await__(self) -> Generator[Any, None, List[Any]]:
         if self._db is None:
@@ -1104,8 +1117,7 @@ class ValuesQuery(FieldSelectQuery):
         if self.distinct:
             self.query._distinct = True
         if self.group_bys:
-            self.query._groupbys = []
-            self.query = self.query.groupby(*self.group_bys)
+            self.query._groupbys = self._resolve_group_bys(*self.group_bys)
 
     def __await__(self) -> Generator[Any, None, List[dict]]:
         if self._db is None:
