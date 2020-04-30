@@ -956,7 +956,7 @@ class FieldSelectQuery(AwaitableQuery):
                 model=self.model,
                 table=self.model._meta.basetable,
                 field=field_split[0],
-                forwarded_fields="__".join(field_split[1:]) if len(field_split) > 1 else [],
+                forwarded_fields="__".join(field_split[1:]) if len(field_split) > 1 else "",
             )
             field = related_table[related_db_field].as_(field_name)
             group_bys.append(field)
