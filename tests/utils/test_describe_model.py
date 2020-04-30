@@ -218,7 +218,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
-                        "constraints": {"ge": -2147483648, "le": 2147483647},
+                        "constraints": {"ge": 1, "le": 2147483647},
                     },
                     {
                         "db_column": "o2o_id",
@@ -233,7 +233,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "nullable": True,
                         "python_type": "int",
                         "unique": True,
-                        "constraints": {"ge": -2147483648, "le": 2147483647},
+                        "constraints": {"ge": 1, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [
@@ -416,7 +416,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
-                        "constraints": {"ge": -2147483648, "le": 2147483647},
+                        "constraints": {"ge": 1, "le": 2147483647},
                     },
                     {
                         "name": "o2o_id",
@@ -431,7 +431,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "default": None,
                         "description": "Line",
                         "docstring": None,
-                        "constraints": {"ge": -2147483648, "le": 2147483647},
+                        "constraints": {"ge": 1, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [
@@ -614,7 +614,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
-                        "constraints": {"ge": -2147483648, "le": 2147483647},
+                        "constraints": {"ge": 1, "le": 2147483647},
                     },
                     {
                         "name": "o2o_id",
@@ -629,7 +629,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "default": None,
                         "description": "Line",
                         "docstring": None,
-                        "constraints": {"ge": -2147483648, "le": 2147483647},
+                        "constraints": {"ge": 1, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [
@@ -812,7 +812,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
-                        "constraints": {"ge": -2147483648, "le": 2147483647},
+                        "constraints": {"ge": 1, "le": 2147483647},
                     },
                     {
                         "name": "o2o_id",
@@ -827,7 +827,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "default": None,
                         "description": "Line",
                         "docstring": None,
-                        "constraints": {"ge": -2147483648, "le": 2147483647},
+                        "constraints": {"ge": 1, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [

@@ -171,11 +171,11 @@ class TestBasic(test.TestCase):
                     "tournament": {
                         "title": "Tournament",
                         "nullable": True,
-                        "allOf": [{"$ref": "#/definitions/Tournament"}],
+                        "allOf": [{"$ref": "#/definitions/tests.test_early_init.Tournament.leaf"}],
                     },
                 },
                 "definitions": {
-                    "Tournament": {
+                    "tests.test_early_init.Tournament.leaf": {
                         "title": "Tournament",
                         "type": "object",
                         "properties": {
@@ -270,7 +270,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
-                        "constraints": {"ge": -2147483648, "le": 2147483647},
+                        "constraints": {"ge": 1, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [

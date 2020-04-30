@@ -1,5 +1,6 @@
 import inspect
-from hashlib import sha256
+from base64 import b32encode
+from hashlib import sha3_224
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, cast
 
 import pydantic
@@ -10,6 +11,9 @@ from tortoise.contrib.pydantic.utils import get_annotations
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
+
+
+_MODEL_INDEX: Dict[str, Type[PydanticModel]] = {}
 
 
 class PydanticMeta:
@@ -146,24 +150,34 @@ def pydantic_model_creator(
 
     # Fully qualified class name
     fqname = cls.__module__ + "." + cls.__qualname__
+    postfix = ""
 
     def get_name() -> str:
         # If arguments are specified (different from the defaults), we append a hash to the
         # class name, to make it unique
         # We don't check by stack, as cycles get explicitly renamed.
         # When called later, include is explicitly set, so fence passes.
-        h = (
-            "_"
-            + sha256(
-                f"{fqname};{exclude};{include};{computed};{_stack}".encode("utf-8")
-            ).hexdigest()[:8]
-            if exclude != () or include != () or computed != ()
+        nonlocal postfix
+        is_default = (
+            exclude == ()
+            and include == ()
+            and computed == ()
+            and sort_alphabetically is None
+            and allow_cycles is None
+        )
+        hashval = (
+            f"{fqname};{exclude};{include};{computed};{_stack}:{sort_alphabetically}:{allow_cycles}"
+        )
+        postfix = (
+            "." + b32encode(sha3_224(hashval.encode("utf-8")).digest()).decode("utf-8").lower()[:6]
+            if not is_default
             else ""
         )
-        return cls.__name__ + h
+        return fqname + postfix
 
     # We need separate model class for different exclude, include and computed parameters
     _name = name or get_name()
+    has_submodel = False
 
     # Get settings and defaults
     meta = getattr(cls, "PydanticMeta", PydanticMeta)
@@ -203,25 +217,27 @@ def pydantic_model_creator(
     # Get model description
     model_description = cls.describe(serializable=False)
 
-    # if not stack:
-    #     stack = ((cls, '', max_recursion + 1),)
-
     # Field map we use
     field_map: Dict[str, dict] = {}
+    pk_raw_field: str = ""
 
     def field_map_update(keys: tuple, is_relation=True) -> None:
+        nonlocal pk_raw_field
+
         for key in keys:
             fds = model_description[key]
             if isinstance(fds, dict):
                 fds = [fds]
             for fd in fds:
                 n = fd["name"]
+                if key == "pk_field":
+                    pk_raw_field = n
                 # Include or exclude field
                 if (include and n not in include) or n in exclude:
                     continue
                 # Remove raw fields
                 raw_field = fd.get("raw_field", None)
-                if raw_field is not None and exclude_raw_fields:
+                if raw_field is not None and exclude_raw_fields and raw_field != pk_raw_field:
                     del field_map[raw_field]
                 field_map[n] = fd
 
@@ -261,7 +277,7 @@ def pydantic_model_creator(
 
         def get_submodel(_model: "Type[Model]") -> Optional[Type[PydanticModel]]:
             """ Get Pydantic model for the submodel """
-            nonlocal exclude, _name
+            nonlocal exclude, _name, has_submodel
 
             if _model:
                 new_stack = _stack + ((cls, fname, max_recursion),)
@@ -289,6 +305,8 @@ def pydantic_model_creator(
             # If the result is None it has been exluded and we need to exclude the field
             if pmodel is None:
                 exclude += (fname,)
+            else:
+                has_submodel = True
             # We need to rename if there are duplicate instances of this model
             if cls in (c[0] for c in _stack):
                 _name = name or get_name()
@@ -347,12 +365,26 @@ def pydantic_model_creator(
             fconfig["title"] = fname.replace("_", " ").title()
             pconfig.fields[fname] = fconfig
 
+    # Here we endure that the name is unique, but complete objects are still labeled verbatim
+    if not has_submodel and exclude:
+        _name = name or f"{fqname}.leaf"
+    elif has_submodel:
+        _name = name or get_name()
+
+    # Here we de-dup to ensure that a uniquely named object is a unique object
+    # This fixes some Pydantic constraints.
+    if _name in _MODEL_INDEX:
+        return _MODEL_INDEX[_name]
+
     # Creating Pydantic class for the properties generated before
     model = cast(Type[PydanticModel], type(_name, (PydanticModel,), properties))
     # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)
     # Store the base class
     setattr(model.__config__, "orig_model", cls)
+
+    # Store model reference so we can de-dup it later on if needed.
+    _MODEL_INDEX[_name] = model
 
     return model
 
@@ -364,7 +396,7 @@ def pydantic_queryset_creator(
     exclude: Tuple[str, ...] = (),
     include: Tuple[str, ...] = (),
     computed: Tuple[str, ...] = (),
-    allow_cycles: bool = False,
+    allow_cycles: Optional[bool] = None,
     sort_alphabetically: Optional[bool] = None,
 ) -> Type[PydanticListModel]:
     """
@@ -399,7 +431,7 @@ def pydantic_queryset_creator(
         allow_cycles=allow_cycles,
         sort_alphabetically=sort_alphabetically,
     )
-    lname = name or f"{submodel.__name__}s"
+    lname = name or f"{submodel.__name__}_list"
 
     properties = {"__annotations__": {"__root__": List[submodel]}}  # type: ignore
     # Creating Pydantic class for the properties generated before
@@ -407,7 +439,7 @@ def pydantic_queryset_creator(
     # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)
     # The title of the model to hide the hash postfix
-    setattr(model.__config__, "title", lname)
+    setattr(model.__config__, "title", name or f"{getattr(submodel.__config__,'title')}_list")
     # Store the base class & submodel
     setattr(model.__config__, "submodel", submodel)
 

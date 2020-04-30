@@ -1,10 +1,11 @@
 from uuid import uuid4
 
 from tests.testmodels import (
-    Address,
+    Dest_null,
     Event,
     IntFields,
     NoID,
+    O2O_null,
     Team,
     Tournament,
     UUIDFkRelatedNullModel,
@@ -242,8 +243,8 @@ class TestModelConstructor(test.TestCase):
             "You can't set backward one to one relations through init, "
             "change related model instead",
         ):
-            address = await Address.create(city="Santa Monica", street="Ocean")
-            await Event(name="a", address=address)
+            address = await O2O_null.create(name="Ocean")
+            await Dest_null(name="a", address_null=address)
 
     def test_fk_unsaved(self):
         with self.assertRaisesRegex(OperationalError, "You should first call .save()"):

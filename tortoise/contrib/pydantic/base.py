@@ -55,7 +55,7 @@ class PydanticModel(BaseModel):
         if callable(value):
             return value()
         # Convert ManyToManyRelation to list
-        elif isinstance(value, (fields.ManyToManyRelation, fields.ReverseRelation)):
+        if isinstance(value, (fields.ManyToManyRelation, fields.ReverseRelation)):
             return list(value)
         return value
 

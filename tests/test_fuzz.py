@@ -17,6 +17,10 @@ DODGY_STRINGS = [
     "%a%",
     "_a_",
     "WC[R]S123456",
+    "\x00",
+    "a\x00b",
+    "'\x00'",
+    "\\\x00\\",
     "\x01!\U00043198",
     "\x02\U0006501c",
     "\x03㊿\U000e90ff\U0007d718\x16'%\U000b712a(\x16",
@@ -94,6 +98,9 @@ class TestFuzz(test.TestCase):
     async def test_char_fuzz(self):
         for char in DODGY_STRINGS:
             # print(repr(char))
+            if "\x00" in char and self.__db__.capabilities.dialect == "postgres":
+                # PostgreSQL doesn't support null values as text. Ever. So skip these.
+                continue
 
             # Create
             obj1 = await CharFields.create(char=char)

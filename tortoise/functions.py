@@ -54,9 +54,7 @@ class Function:
     ):
         return self.database_func(field, *default_values)
 
-    def _resolve_field_for_model(
-        self, model: "Type[Model]", table: Table, field: str, *default_values: Any
-    ) -> dict:
+    def _resolve_field_for_model(self, model: "Type[Model]", table: Table, field: str) -> dict:
         joins = []
         fields = field.split("__")
 
@@ -114,14 +112,14 @@ class Function:
         """
 
         if isinstance(self.field, str):
-            function = self._resolve_field_for_model(model, table, self.field, *self.default_values)
+            function = self._resolve_field_for_model(model, table, self.field)
             function["field"] = self._get_function_field(function["field"], *self.default_values)
             return function
-        else:
-            field, field_object = F.resolver_arithmetic_expression(model, self.field)
-            if self.populate_field_object:
-                self.field_object = field_object
-            return {"joins": [], "field": self._get_function_field(field, *self.default_values)}
+
+        field, field_object = F.resolver_arithmetic_expression(model, self.field)
+        if self.populate_field_object:
+            self.field_object = field_object
+        return {"joins": [], "field": self._get_function_field(field, *self.default_values)}
 
 
 class Aggregate(Function):
@@ -151,13 +149,10 @@ class Aggregate(Function):
     ):
         if self.distinct:
             return self.database_func(field, *default_values).distinct()
-        else:
-            return self.database_func(field, *default_values)
+        return self.database_func(field, *default_values)
 
-    def _resolve_field_for_model(
-        self, model: "Type[Model]", table: Table, field: str, *default_values: Any
-    ) -> dict:
-        ret = super()._resolve_field_for_model(model, table, field, default_values)
+    def _resolve_field_for_model(self, model: "Type[Model]", table: Table, field: str) -> dict:
+        ret = super()._resolve_field_for_model(model, table, field)
         if self.filter:
             modifier = QueryModifier()
             modifier &= self.filter.resolve(model, {}, {}, model._meta.basetable)

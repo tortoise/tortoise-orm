@@ -82,6 +82,7 @@ class SqliteClient(BaseDBAsyncClient):
             self._connection = None
 
     async def db_create(self) -> None:
+        # DB's are automatically created once accessed
         pass
 
     async def db_delete(self) -> None:
@@ -121,6 +122,7 @@ class SqliteClient(BaseDBAsyncClient):
     async def execute_query(
         self, query: str, values: Optional[list] = None
     ) -> Tuple[int, Sequence[dict]]:
+        query = query.replace("\x00", "'||CHAR(0)||'")
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             start = connection.total_changes
@@ -129,6 +131,7 @@ class SqliteClient(BaseDBAsyncClient):
 
     @translate_exceptions
     async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+        query = query.replace("\x00", "'||CHAR(0)||'")
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             return list(map(dict, await connection.execute_fetchall(query, values)))
