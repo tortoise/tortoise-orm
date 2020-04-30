@@ -71,6 +71,15 @@ async def run():
     print(ret)
     # >>> [(1, 10), (2, 5)]
 
+    # group by with join
+    ret = (
+        await Book.annotate(count=Count("id"))
+        .group_by("author__name")
+        .values("author__name", "count")
+    )
+    print(ret)
+    # >>> [{"author__name": "author1", "count": 10}, {"author__name": "author2", "count": 5}]
+
 
 if __name__ == "__main__":
     run_async(run())

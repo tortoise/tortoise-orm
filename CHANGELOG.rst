@@ -13,6 +13,7 @@ Changelog
 -------
 - Fix bad import of ``basestring``
 - Better handling of NULL characters in strings. Fixes SQLite, raises better error for PostgreSQL.
+- Support ``.group_by()`` with join now
 
 0.16.9
 ------
