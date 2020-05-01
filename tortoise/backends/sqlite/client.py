@@ -91,6 +91,9 @@ class SqliteClient(BaseDBAsyncClient):
             os.remove(self.filename)
         except FileNotFoundError:  # pragma: nocoverage
             pass
+        except OSError as e:
+            if e.errno != 22:  # fix: "sqlite://:memory:" in Windows
+                raise e
 
     def acquire_connection(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._connection, self._lock)
