@@ -7,6 +7,7 @@ from tortoise.exceptions import ConfigurationError
 urlparse.uses_netloc.append("postgres")
 urlparse.uses_netloc.append("sqlite")
 urlparse.uses_netloc.append("mysql")
+urlparse.uses_netloc.append("oracle")
 DB_LOOKUP: Dict[str, Dict[str, Any]] = {
     "postgres": {
         "engine": "tortoise.backends.asyncpg",
@@ -47,6 +48,25 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
             "password": "password",
         },
         "defaults": {"port": 3306, "charset": "utf8mb4", "sql_mode": "STRICT_TRANS_TABLES"},
+        "cast": {
+            "minsize": int,
+            "maxsize": int,
+            "connect_timeout": float,
+            "echo": bool,
+            "no_delay": bool,
+            "use_unicode": bool,
+        },
+    },
+    "oracle": {
+        "engine": "tortoise.backends.aioodbc",
+        "vmap": {
+            "path": "database",
+            "hostname": "host",
+            "port": "port",
+            "username": "user",
+            "password": "password",
+        },
+        "defaults": {"port": 1521, "charset": "utf8mb4", "sql_mode": "STRICT_TRANS_TABLES"},
         "cast": {
             "minsize": int,
             "maxsize": int,
