@@ -38,12 +38,9 @@ class AioodbcSchemaGenerator(BaseSchemaGenerator):
     def quote(self, val: str) -> str:
         return f'"{val}"'
 
-    def _table_generate_extra(self, table: str) -> str:
-        return ""  # type: ignore
-
     @classmethod
     def _get_escape_translation_table(cls) -> List[str]:
-        """ Escape sequence taken based on 
+        """ Escape sequence taken based on
             https://docs.oracle.com/cd/B10501_01/text.920/a96518/cqspcl.htm """
         _escape_table = [chr(x) for x in range(128)]
         _escape_table[ord(",")] = "\\,"
@@ -114,7 +111,7 @@ class AioodbcSchemaGenerator(BaseSchemaGenerator):
     def _get_inner_statements(self) -> List[str]:
         inner = self._foreign_keys
         self._foreign_keys.clear()
-        return "".join(inner)
+        return inner
 
     async def generate_from_string(self, creation_string: str) -> None:
         """ Override to create Schema one statement at a time. """
