@@ -13,8 +13,8 @@ class AioodbcSchemaGenerator(BaseSchemaGenerator):
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX "{index_name}" ON "{table_name}" ({fields});'
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{index_name}" UNIQUE ({fields})'
-    GENERATED_PK_TEMPLATE = ('"{field_name}" {generated_sql} PRIMARY KEY')
-    PK_CONSTRAINT_TEMPLATE = ('CONSTRAINT "{table_name}_{field_name}" PRIMARY KEY ("{field_name}")')
+    GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql} PRIMARY KEY'
+    PK_CONSTRAINT_TEMPLATE = 'CONSTRAINT "{table_name}_{field_name}" PRIMARY KEY ("{field_name}")'
     FK_TEMPLATE = (
         'CONSTRAINT "{constraint_name}" FOREIGN KEY ("{db_column}")'
         ' REFERENCES "{table}" ("{field}") ON DELETE {on_delete}'
@@ -24,10 +24,10 @@ class AioodbcSchemaGenerator(BaseSchemaGenerator):
         '    "{backward_key}" {backward_type} NOT NULL,\n'
         '    "{forward_key}" {forward_type} NOT NULL,\n'
         '    FOREIGN KEY ("{backward_key}") REFERENCES "{backward_table}" ("{backward_field}")'
-        ' ON DELETE CASCADE,\n'
+        " ON DELETE CASCADE,\n"
         '    FOREIGN KEY ("{forward_key}") REFERENCES "{forward_table}" ("{forward_field}")'
-        ' ON DELETE CASCADE\n'
-        ');{extra}{comment}'
+        " ON DELETE CASCADE\n"
+        ");{extra}{comment}"
     )
 
     def __init__(self, client: "AioodbcDBClient") -> None:
@@ -69,8 +69,6 @@ class AioodbcSchemaGenerator(BaseSchemaGenerator):
         _escape_table[ord("'")] = "''"
         return _escape_table
 
-
-
     def _table_comment_generator(self, table: str, comment: str) -> str:
         return f"""\nCOMMENT ON TABLE "{table}" IS '{self._escape_comment(comment)}';"""
 
@@ -111,17 +109,17 @@ class AioodbcSchemaGenerator(BaseSchemaGenerator):
     def _table_generate_extra(self, table: str) -> str:
         extra = list(dict.fromkeys(self._field_indexes))
         self._field_indexes.clear()
-        return '\n'.join(extra)
-    
+        return "\n".join(extra)
+
     def _get_inner_statements(self) -> List[str]:
         inner = self._foreign_keys
         self._foreign_keys.clear()
-        return ''.join(inner)
+        return "".join(inner)
 
     async def generate_from_string(self, creation_string: str) -> None:
         """ Override to create Schema one statement at a time. """
-        queries = creation_string.split(';')
+        queries = creation_string.split(";")
         queries = [query for query in queries if query]
         for query in queries:
-            query = query + ';'
+            query = query + ";"
             await self.client.execute_script(query)

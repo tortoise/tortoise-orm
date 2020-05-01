@@ -246,6 +246,7 @@ class BooleanField(Field):
     class _db_oracle:
         SQL_TYPE = "NUMBER"
 
+
 class DecimalField(Field, Decimal):
     """
     Accurate decimal field.
@@ -437,6 +438,7 @@ class JSONField(Field, dict, list):  # type: ignore
 
     class _db_oracle:
         SQL_TYPE = "CLOB"
+
 
 class UUIDField(Field, UUID):
     """

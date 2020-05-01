@@ -41,12 +41,12 @@ def translate_exceptions(func: F) -> F:
             raise IntegrityError(exc)
         except pyodbc.Error as exc:
             tb = exc.__traceback__
-            if exc.args[0] == 'HY000':
+            if exc.args[0] == "HY000":
                 msg = list(exc.args[1])
-                msg = msg[:int(len(msg)/2-7)]
-                msg = str(''.join(msg))
+                msg = msg[: int(len(msg) / 2 - 7)]
+                msg = str("".join(msg))
             raise OperationalError(msg)
-                
+
     return translate_exceptions_  # type: ignore
 
 
@@ -175,24 +175,24 @@ class AioodbcDBClient(BaseDBAsyncClient):
         except pyodbc.ProgrammingError:  # pragma: nocoverage
             pass
         await self.close()
-        #await self.db_delete()
-        #await self.create_connection(with_db=False)
-        #await self.execute_script(f'CREATE DATABASE "{self.database}" OWNER "{self.user}"')
-        #await self.close()
+        # await self.db_delete()
+        # await self.create_connection(with_db=False)
+        # await self.execute_script(f'CREATE DATABASE "{self.database}" OWNER "{self.user}"')
+        # await self.close()
 
     async def db_delete(self) -> None:
-        #query = """
+        # query = """
         #    BEGIN
         #    FOR c IN (SELECT table_name FROM user_tables) LOOP
         #    EXECUTE IMMEDIATE ('DROP TABLE "' || c.table_name || '" CASCADE CONSTRAINTS');
         #    END LOOP;
         #    END; """
-        #await self.create_connection(with_db=True)
-        #try:
+        # await self.create_connection(with_db=True)
+        # try:
         #    await self.execute_script(query)
-        #except pyodbc.ProgrammingError:  # pragma: nocoverage
+        # except pyodbc.ProgrammingError:  # pragma: nocoverage
         #    pass
-        #await self.close()
+        # await self.close()
         pass
 
     def acquire_connection(self) -> Union["PoolConnectionWrapper", "ConnectionWrapper"]:
@@ -212,7 +212,7 @@ class AioodbcDBClient(BaseDBAsyncClient):
 
         # Parse table from query. (INSERT INTO "TABLE"...)
         table = query.split()[2].replace('"', "'")
-        data_default_query =  f"""
+        data_default_query = f"""
             SELECT DATA_DEFAULT FROM USER_TAB_COLUMNS 
             WHERE TABLE_NAME = {table} AND DATA_DEFAULT IS NOT NULL"""
         async with self.acquire_connection() as connection:
@@ -222,49 +222,49 @@ class AioodbcDBClient(BaseDBAsyncClient):
                 # Get sequence pointer for table.
                 await crsr.execute(data_default_query)
                 res = (await crsr.fetchone())[0]
-                seq_pointer = res.split('.')[1]
-            
+                seq_pointer = res.split(".")[1]
+
                 # Actual insertion.
                 params = [item for item in [query, values] if item]
                 logging.debug(params)
                 await crsr.execute(*params)
 
                 # Get current value of sequence post insertion.
-                currval_query = f'SELECT {seq_pointer}.currval FROM dual;'
+                currval_query = f"SELECT {seq_pointer}.currval FROM dual;"
                 await crsr.execute(currval_query)
                 return (await crsr.fetchone())[0]
 
-#    @translate_exceptions
-#    async def execute_many(self, query: str, values: list) -> None:
-#        async with self.acquire_connection() as cnxn:
-#            autocommit_orig = cnxn.autocommit
-#            cnxn.autocommit = False
-#            async with cnxn.cursor() as crsr:
-#                self.log.debug("%s: %s", query, values)
-#                try:
-#                    # Possibly useful for speedups.
-#                    # crsr.fast_executemany = True
-#                    await crsr.executemany(query, values)
-#                except pyodbc.DatabaseError:
-#                    cnxn.rollback()
-#                else:
-#                    cnxn.commit()
-#                finally:
-#                    cnxn.autocommit = autocommit_orig
+    #    @translate_exceptions
+    #    async def execute_many(self, query: str, values: list) -> None:
+    #        async with self.acquire_connection() as cnxn:
+    #            autocommit_orig = cnxn.autocommit
+    #            cnxn.autocommit = False
+    #            async with cnxn.cursor() as crsr:
+    #                self.log.debug("%s: %s", query, values)
+    #                try:
+    #                    # Possibly useful for speedups.
+    #                    # crsr.fast_executemany = True
+    #                    await crsr.executemany(query, values)
+    #                except pyodbc.DatabaseError:
+    #                    cnxn.rollback()
+    #                else:
+    #                    cnxn.commit()
+    #                finally:
+    #                    cnxn.autocommit = autocommit_orig
 
     @translate_exceptions
     async def execute_query(
         self, query: str, values: Optional[list] = None
     ) -> Tuple[int, List[dict]]:
-        print('#'*30)
+        print("#" * 30)
         print(query)
-        print('#'*30)
+        print("#" * 30)
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as crsr:
                 params = [item for item in [query, values] if item]
                 await crsr.execute(*params)
-                if 'UPDATE' in query:
+                if "UPDATE" in query:
                     return 1, []
                 rows = await crsr.fetchall()
                 if rows:
@@ -278,13 +278,13 @@ class AioodbcDBClient(BaseDBAsyncClient):
     @translate_exceptions
     async def execute_script(self, query: str) -> None:
         logging.debug("Executing script: ".format(query))
-        #queries = query.split(';')
-        #queries = [query for query in queries if query]
-        #for query in queries:
+        # queries = query.split(';')
+        # queries = [query for query in queries if query]
+        # for query in queries:
         #    query = query + ';'
-        print('#'*30)
+        print("#" * 30)
         print(query)
-        print('#'*30)
+        print("#" * 30)
         async with self.acquire_connection() as connection:
             async with connection.cursor() as crsr:
                 self.log.debug(query)
@@ -308,14 +308,14 @@ class TransactionWrapper(AioodbcDBClient, BaseTransactionWrapper):
     def acquire_connection(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._connection, self._lock)
 
-#    @translate_exceptions
-#    async def execute_many(self, query: str, values: list) -> None:
-#        async with self.acquire_connection() as cnxn:
-#            self._autocommit_orig = cnxn.autocommit
-#            cnxn.autocommit = False
-#            async with cnxn.cursor() as crsr:
-#                self.log.debug("%s: %s", query, values)
-#                await crsr.executemany(query, values)
+    #    @translate_exceptions
+    #    async def execute_many(self, query: str, values: list) -> None:
+    #        async with self.acquire_connection() as cnxn:
+    #            self._autocommit_orig = cnxn.autocommit
+    #            cnxn.autocommit = False
+    #            async with cnxn.cursor() as crsr:
+    #                self.log.debug("%s: %s", query, values)
+    #                await crsr.executemany(query, values)
 
     @translate_exceptions
     async def start(self) -> None:
