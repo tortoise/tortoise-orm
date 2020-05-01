@@ -55,8 +55,8 @@ class AioodbcExecutor(BaseExecutor):
     }
     EXPLAIN_PREFIX = "EXPLAIN FORMAT=JSON"
 
-    def Parameter(self, pos: int) -> Parameter:
-        return Parameter("%s")
+    def parameter(self, pos: int) -> Parameter:
+        return Parameter(f":{pos}")
 
     async def _process_insert_result(self, instance: Model, results: int) -> None:
         pk_field_object = self.model._meta.pk
