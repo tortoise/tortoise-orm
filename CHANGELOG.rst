@@ -9,6 +9,10 @@ Changelog
 
 0.16
 ====
+0.16.11
+-------
+- ``JSONField`` accept valid json str value
+
 0.16.10
 -------
 - Fix bad import of ``basestring``
