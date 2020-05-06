@@ -363,14 +363,14 @@ class TimeDeltaField(Field, datetime.timedelta):
     def to_python_value(self, value: Any) -> Optional[datetime.timedelta]:
         if value is None or isinstance(value, datetime.timedelta):
             return value
-        return datetime.timedelta(microseconds=value)
+        return datetime.timedelta(microseconds=int(value))
 
     def to_db_value(
         self, value: Optional[datetime.timedelta], instance: "Union[Type[Model], Model]"
     ) -> Optional[int]:
         if value is None:
             return None
-        return (value.days * 86400000000) + (value.seconds * 1000000) + value.microseconds
+        return str((value.days * 86400000000) + (value.seconds * 1000000) + value.microseconds)
 
     class _db_oracle:
         SQL_TYPE = "NUMERIC"
