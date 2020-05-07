@@ -168,14 +168,28 @@ class BaseExecutor:
             await self.db.execute_insert(self.insert_query_all, values)
 
     async def execute_bulk_insert(self, instances: "List[Model]") -> None:
-        values_lists = [
-            [
-                self.column_map[field_name](getattr(instance, field_name), instance)
-                for field_name in self.regular_columns
-            ]
-            for instance in instances
-        ]
-        await self.db.execute_many(self.insert_query, values_lists)
+        values_lists = []
+        values_lists_all = []
+        for instance in instances:
+            if not instance._custom_generated_pk:
+                values_lists.append(
+                    [
+                        self.column_map[field_name](getattr(instance, field_name), instance)
+                        for field_name in self.regular_columns
+                    ]
+                )
+            else:
+                values_lists_all.append(
+                    [
+                        self.column_map[field_name](getattr(instance, field_name), instance)
+                        for field_name in self.regular_columns_all
+                    ]
+                )
+
+        if values_lists:
+            await self.db.execute_many(self.insert_query, values_lists)
+        if values_lists_all:
+            await self.db.execute_many(self.insert_query_all, values_lists_all)
 
     def get_update_sql(
         self,
