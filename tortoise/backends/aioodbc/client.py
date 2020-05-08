@@ -31,6 +31,14 @@ from tortoise.exceptions import (
 FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
 
+def _translate_pyodbc_err(exc):
+    if 'ORA-01400' in exc.args[1]:  # Inserting null on text field.
+        return IntegrityError(exc)
+    if 'ORA-12514' in exc.args[1]:  # Could not connect.
+        return DBConnectionError(exc)
+    if 'ORA-01017' in exc.args[1]:
+        raise DBConnectionError(exc)
+    return  OperationalError(exc)
 
 def translate_exceptions(func: F) -> F:
     @wraps(func)
@@ -42,9 +50,8 @@ def translate_exceptions(func: F) -> F:
         except pyodbc.IntegrityError as exc:
             raise IntegrityError(exc)
         except pyodbc.Error as exc:
-            if 'ORA-01400' in exc.args[1]:  # Inserting null on text field.
-                raise IntegrityError(exc)
-            raise OperationalError(exc)
+            raise(_translate_pyodbc_err(exc))
+
         
     return translate_exceptions_  # type: ignore
 
@@ -134,14 +141,8 @@ class AioodbcDBClient(BaseDBAsyncClient):
                 loop=None, **self._template, after_created=conn_attributes, autocommit=True
             )
             self.log.debug("Created connection pool %s with params: %s", self._pool, self._template)
-        except pyodbc.OperationalError:
-            raise DBConnectionError(f"Can't establish connection to database {self.database}")
         except pyodbc.Error as exc:
-            if 'ORA-01017' in exc.args[1]:
-                self.log.error("Could't connect with string %s", self._template)
-                raise DBConnectionError(f"Can't establish connection to database {self.database}")
-            else:
-                raise exc
+            raise(_translate_pyodbc_err(exc))
 
     async def _expire_connections(self) -> None:
         if self._pool:  # pragma: nobranch
@@ -162,6 +163,9 @@ class AioodbcDBClient(BaseDBAsyncClient):
         self._template.clear()
 
     async def db_create(self) -> None:
+        print('12341234'*1000)
+        print('building db')
+        print('12341234'*1000)
         conn_str = "Driver={OracleODBC-12c};DBQ=localhost:1539/XE;Uid=sys;Pwd=pass123 as sysdba"
         conn = await aioodbc.connect(dsn=conn_str)
         create = f"""CREATE PLUGGABLE DATABASE "{self.database}" 
@@ -189,6 +193,9 @@ class AioodbcDBClient(BaseDBAsyncClient):
         await conn.close()
 
     async def db_delete(self) -> None:
+        print('12341234'*1000)
+        print('dropping db')
+        print('12341234'*1000)
         conn_str = "Driver={OracleODBC-12c};DBQ=localhost:1539/XE;Uid=sys;Pwd=pass123 as sysdba"
         conn = await aioodbc.connect(dsn=conn_str)
         close = f""" ALTER PLUGGABLE DATABASE "{self.database}" close immediate; """
