@@ -8,27 +8,27 @@ from tortoise.transactions import in_transaction
 
 class TestBulk(test.TruncationTestCase):
     async def test_bulk_create(self):
-        await UniqueName.bulk_create([UniqueName() for _ in range(100)])
+        await UniqueName.bulk_create([UniqueName() for _ in range(1000)])
         all_ = await UniqueName.all().values("id", "name")
         inc = all_[0]["id"]
-        self.assertEqual(all_, [{"id": val + inc, "name": None} for val in range(100)])
+        self.assertEqual(all_, [{"id": val + inc, "name": None} for val in range(1000)])
 
     async def test_bulk_create_with_specified(self):
-        await UniqueName.bulk_create([UniqueName(id=id_) for id_ in range(100, 200)])
+        await UniqueName.bulk_create([UniqueName(id=id_) for id_ in range(1000, 2000)])
         all_ = await UniqueName.all().values("id", "name")
-        self.assertEqual(all_, [{"id": id_, "name": None} for id_ in range(100, 200)])
+        self.assertEqual(all_, [{"id": id_, "name": None} for id_ in range(1000, 2000)])
 
     async def test_bulk_create_mix_specified(self):
         await UniqueName.bulk_create(
-            [UniqueName(id=id_) for id_ in range(200, 300)] + [UniqueName() for _ in range(100)]
+            [UniqueName(id=id_) for id_ in range(2000, 3000)] + [UniqueName() for _ in range(1000)]
         )
 
         all_ = await UniqueName.all().values("id", "name")
-        self.assertEqual(len(all_), 200)
+        self.assertEqual(len(all_), 2000)
 
-        self.assertEqual(all_[:100], [{"id": id_, "name": None} for id_ in range(200, 300)])
-        inc = all_[100]["id"]
-        self.assertEqual(all_[100:], [{"id": val + inc, "name": None} for val in range(100)])
+        self.assertEqual(all_[:1000], [{"id": id_, "name": None} for id_ in range(2000, 3000)])
+        inc = all_[1000]["id"]
+        self.assertEqual(all_[1000:], [{"id": val + inc, "name": None} for val in range(1000)])
 
     async def test_bulk_create_uuidpk(self):
         await UUIDPkModel.bulk_create([UUIDPkModel() for _ in range(1000)])
