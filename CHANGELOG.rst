@@ -12,6 +12,7 @@ Changelog
 0.16.11
 -------
 - fix: ``sqlite://:memory:`` in Windows thrown ``OSError: [WinError 123]``
+- Add ``queryset.exists()``.
 
 0.16.10
 -------
