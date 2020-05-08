@@ -20,7 +20,8 @@ class TestBulk(test.TruncationTestCase):
 
     async def test_bulk_create_mix_specified(self):
         await UniqueName.bulk_create(
-            [UniqueName(id=id_) for id_ in range(10000, 11000)] + [UniqueName() for _ in range(1000)]
+            [UniqueName(id=id_) for id_ in range(10000, 11000)]
+            + [UniqueName() for _ in range(1000)]
         )
 
         all_ = await UniqueName.all().values("id", "name")
