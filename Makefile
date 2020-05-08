@@ -54,7 +54,7 @@ test_postgres:
 	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="postgres://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" py.test --cov-append --cov-report=
 
 test_oracle:
-	$(py_warn) TORTOISE_TEST_DB="oracle://testuser:pass123@localhost:1539/XEPDB1?driver=/lib/libsqora.so.19.1" py.test --cov-append --cov-report=
+	$(py_warn) TORTOISE_TEST_DB="oracle://root:pass123@localhost:1539/test_\{\}?driver=/lib/libsqora.so.19.1" py.test --cov-append --cov-report=
 
 test_mysql_myisam:
 	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}?storage_engine=MYISAM" py.test --cov-append --cov-report=
