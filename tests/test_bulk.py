@@ -24,6 +24,8 @@ class TestBulk(test.TruncationTestCase):
         )
 
         all_ = await UniqueName.all().values("id", "name")
+        self.assertEqual(len(all_), 200)
+
         self.assertEqual(all_[:100], [{"id": id_, "name": None} for id_ in range(200, 300)])
         inc = all_[100]["id"]
         self.assertEqual(all_[100:], [{"id": val + inc, "name": None} for val in range(100)])
