@@ -850,7 +850,7 @@ class ExistsQuery(AwaitableQuery):
             custom_filters=self.custom_filters,
         )
         self.query._limit = 1
-        self.query._select_field_str(ValueWrapper("1"))
+        self.query._select_other(ValueWrapper(1))
 
     def __await__(self) -> Generator[Any, None, int]:
         if self._db is None:
