@@ -22,6 +22,19 @@ class TestQueryset(test.TestCase):
         self.assertEqual(await IntFields.all().count(), 30)
         self.assertEqual(await IntFields.filter(intnum_null=80).count(), 0)
 
+    async def test_exists(self):
+        ret = await IntFields.filter(intnum=0).exists()
+        self.assertFalse(ret)
+
+        ret = await IntFields.filter(intnum=10).exists()
+        self.assertTrue(ret)
+
+        ret = await IntFields.filter(intnum__gt=10).exists()
+        self.assertTrue(ret)
+
+        ret = await IntFields.filter(intnum__lt=10).exists()
+        self.assertFalse(ret)
+
     async def test_limit_count(self):
         self.assertEqual(await IntFields.all().limit(10).count(), 10)
 

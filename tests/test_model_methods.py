@@ -165,6 +165,14 @@ class TestModelMethods(test.TestCase):
         with self.assertRaises(MultipleObjectsReturned):
             await self.cls.get(name="Test")
 
+    async def test_exists(self):
+        await self.cls.create(name="Test")
+        ret = await self.cls.exists(name="Test")
+        self.assertTrue(ret)
+
+        ret = await self.cls.exists(name="XXX")
+        self.assertFalse(ret)
+
     async def test_get_or_none(self):
         mdl = await self.cls.get_or_none(name="Test")
         self.assertEqual(self.mdl.id, mdl.id)

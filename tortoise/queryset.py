@@ -22,7 +22,7 @@ from typing import (
 from pypika import JoinType, Order, Table
 from pypika.functions import Count
 from pypika.queries import QueryBuilder
-from pypika.terms import Term
+from pypika.terms import Term, ValueWrapper
 from typing_extensions import Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
@@ -536,6 +536,18 @@ class QuerySet(AwaitableQuery[MODEL]):
             offset=self._offset,
         )
 
+    def exists(self) -> "ExistsQuery":
+        """
+        Return True/False whether queryset exists.
+        """
+        return ExistsQuery(
+            db=self._db,
+            model=self.model,
+            q_objects=self._q_objects,
+            annotations=self._annotations,
+            custom_filters=self._custom_filters,
+        )
+
     def all(self) -> "QuerySet[MODEL]":
         """
         Return the whole QuerySet.
@@ -810,6 +822,45 @@ class DeleteQuery(AwaitableQuery):
 
     async def _execute(self) -> int:
         return (await self._db.execute_query(str(self.query)))[0]
+
+
+class ExistsQuery(AwaitableQuery):
+    __slots__ = ("q_objects", "annotations", "custom_filters")
+
+    def __init__(
+        self,
+        model: Type[MODEL],
+        db: BaseDBAsyncClient,
+        q_objects: List[Q],
+        annotations: Dict[str, Any],
+        custom_filters: Dict[str, Dict[str, Any]],
+    ) -> None:
+        super().__init__(model)
+        self.q_objects = q_objects
+        self.annotations = annotations
+        self.custom_filters = custom_filters
+        self._db = db
+
+    def _make_query(self) -> None:
+        self.query = copy(self.model._meta.basequery)
+        self.resolve_filters(
+            model=self.model,
+            q_objects=self.q_objects,
+            annotations=self.annotations,
+            custom_filters=self.custom_filters,
+        )
+        self.query._limit = 1
+        self.query._select_other(ValueWrapper(1))
+
+    def __await__(self) -> Generator[Any, None, int]:
+        if self._db is None:
+            self._db = self.model._meta.db  # type: ignore
+        self._make_query()
+        return self._execute().__await__()
+
+    async def _execute(self) -> bool:
+        result, _ = await self._db.execute_query(str(self.query))
+        return bool(result)
 
 
 class CountQuery(AwaitableQuery):

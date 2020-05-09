@@ -41,7 +41,7 @@ from tortoise.fields.relational import (
 )
 from tortoise.filters import get_filters_for_field
 from tortoise.functions import Function
-from tortoise.queryset import Q, QuerySet, QuerySetSingle
+from tortoise.queryset import ExistsQuery, Q, QuerySet, QuerySetSingle
 from tortoise.signals import Signals
 from tortoise.transactions import current_transaction_map, in_transaction
 
@@ -1014,6 +1014,20 @@ class Model(metaclass=ModelMeta):
         :raises DoesNotExist: If object can not be found.
         """
         return QuerySet(cls).get(*args, **kwargs)
+
+    @classmethod
+    def exists(cls: Type[MODEL], *args: Q, **kwargs: Any) -> ExistsQuery:
+        """
+        Return True/False whether record exists with the provided filter parameters.
+
+        .. code-block:: python3
+
+            result = await User.exists(username="foo")
+
+        :param args: Q funtions containing constraints. Will be AND'ed.
+        :param kwargs: Simple filter constraints.
+        """
+        return QuerySet(cls).filter(*args, **kwargs).exists()
 
     @classmethod
     def get_or_none(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySetSingle[Optional[MODEL]]:
