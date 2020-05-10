@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, List, Type
+from typing import TYPE_CHECKING, List, Type, Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
@@ -12,7 +12,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({fields}){extra}{comment};"
     INDEX_CREATE_TEMPLATE = "KEY `{index_name}` ({fields})"
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE KEY `{index_name}` ({fields})"
-    FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{primary}{comment}"
+    FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{primary}{comment}{default}"
     GENERATED_PK_TEMPLATE = "`{field_name}` {generated_sql}{comment}"
     FK_TEMPLATE = (
         "CONSTRAINT `{constraint_name}` FOREIGN KEY (`{db_column}`)"
@@ -48,6 +48,9 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     def _column_comment_generator(self, table: str, column: str, comment: str) -> str:
         return f" COMMENT '{self._escape_comment(comment)}'"
 
+    def _column_default_generator(self, table: str, column: str, default: Any) -> str:
+        return f" DEFAULT {default}"
+
     def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
         """ Get index SQLs, but keep them for ourselves """
         self._field_indexes.append(
@@ -61,13 +64,13 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         return ""
 
     def _create_fk_string(
-        self,
-        constraint_name: str,
-        db_column: str,
-        table: str,
-        field: str,
-        on_delete: str,
-        comment: str,
+            self,
+            constraint_name: str,
+            db_column: str,
+            table: str,
+            field: str,
+            on_delete: str,
+            comment: str,
     ) -> str:
         self._foreign_keys.append(
             self.FK_TEMPLATE.format(
