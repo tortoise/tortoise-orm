@@ -12,7 +12,8 @@ Changelog
 0.16.11
 -------
 - fix: ``sqlite://:memory:`` in Windows thrown ``OSError: [WinError 123]``
-- ``JSONField`` accept valid json str value
+- Support ``bulk_create()`` insertion of records with overridden primary key when the primary key is DB-generated
+- Add ``queryset.exists()`` and ``Model.exists()``.
 
 0.16.10
 -------
