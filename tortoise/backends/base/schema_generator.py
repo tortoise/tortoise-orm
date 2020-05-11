@@ -3,6 +3,7 @@ from hashlib import sha256
 from typing import TYPE_CHECKING, Any, List, Set, Type, cast
 
 from tortoise.exceptions import ConfigurationError
+from tortoise.fields import UUIDField
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
@@ -192,22 +193,25 @@ class BaseSchemaGenerator:
                 if field_object.description
                 else ""
             )
+
             default = field_object.default
             auto_now_add = getattr(field_object, "auto_now_add", False)
             auto_now = getattr(field_object, "auto_now", False)
             if default is not None or auto_now or auto_now_add:
-                if callable(default):
-                    default = default()
-                try:
-                    default = self._column_default_generator(
-                        model._meta.db_table,
-                        column_name,
-                        self._to_db_default_value(default),
-                        auto_now_add,
-                        auto_now,
-                    )
-                except NotImplementedError:
+                if callable(default) or isinstance(field_object, UUIDField):
                     default = ""
+                else:
+                    default = field_object.to_db_value(default, model)
+                    try:
+                        default = self._column_default_generator(
+                            model._meta.db_table,
+                            column_name,
+                            self._to_db_default_value(default),
+                            auto_now_add,
+                            auto_now,
+                        )
+                    except NotImplementedError:
+                        default = ""
             else:
                 default = ""
 

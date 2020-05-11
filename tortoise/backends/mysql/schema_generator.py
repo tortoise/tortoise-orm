@@ -58,7 +58,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         auto_now_add: bool = False,
         auto_now: bool = False,
     ) -> str:
-        default_str = "DEFAULT"
+        default_str = " DEFAULT"
         if not (auto_now or auto_now_add):
             default_str += f" {default}"
         else:
