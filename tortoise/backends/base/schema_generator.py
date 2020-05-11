@@ -1,6 +1,6 @@
 import logging
 from hashlib import sha256
-from typing import TYPE_CHECKING, List, Set, Type, cast, Any
+from typing import TYPE_CHECKING, Any, List, Set, Type, cast
 
 from tortoise.exceptions import ConfigurationError
 
@@ -35,14 +35,14 @@ class BaseSchemaGenerator:
         self.client = client
 
     def _create_string(
-            self,
-            db_column: str,
-            field_type: str,
-            nullable: str,
-            unique: str,
-            is_primary_key: bool,
-            comment: str,
-            default: str
+        self,
+        db_column: str,
+        field_type: str,
+        nullable: str,
+        unique: str,
+        is_primary_key: bool,
+        comment: str,
+        default: str,
     ) -> str:
         # children can override this function to customize their sql queries
 
@@ -53,17 +53,17 @@ class BaseSchemaGenerator:
             unique="" if is_primary_key else unique,
             comment=comment if self.client.capabilities.inline_comment else "",
             primary=" PRIMARY KEY" if is_primary_key else "",
-            default=default
+            default=default,
         ).strip()
 
     def _create_fk_string(
-            self,
-            constraint_name: str,
-            db_column: str,
-            table: str,
-            field: str,
-            on_delete: str,
-            comment: str,
+        self,
+        constraint_name: str,
+        db_column: str,
+        table: str,
+        field: str,
+        on_delete: str,
+        comment: str,
     ) -> str:
         return self.FK_TEMPLATE.format(
             db_column=db_column, table=table, field=field, on_delete=on_delete, comment=comment
@@ -74,10 +74,22 @@ class BaseSchemaGenerator:
         # needs to be implemented for each supported client
         raise NotImplementedError()  # pragma: nocoverage
 
-    def _column_default_generator(self, table: str, column: str, default: Any) -> str:
+    def _column_default_generator(
+        self,
+        table: str,
+        column: str,
+        default: Any,
+        auto_now_add: bool = False,
+        auto_now: bool = False,
+    ) -> str:
         # Databases have their own way of supporting default for column level
         # needs to be implemented for each supported client
         raise NotImplementedError()  # pragma: nocoverage
+
+    def _to_db_default_value(self, default: Any):
+        # Databases have their own way of supporting default value
+        # needs to be implemented for each supported client
+        raise NotImplementedError()
 
     def _column_comment_generator(self, table: str, column: str, comment: str) -> str:
         # Databases have their own way of supporting comments for column level
@@ -124,7 +136,7 @@ class BaseSchemaGenerator:
         return sha256(";".join(args).encode("utf-8")).hexdigest()[:length]
 
     def _generate_index_name(
-            self, prefix: str, model: "Type[Model]", field_names: List[str]
+        self, prefix: str, model: "Type[Model]", field_names: List[str]
     ) -> str:
         # NOTE: for compatibility, index name should not be longer than 30
         # characters (Oracle limit).
@@ -139,7 +151,7 @@ class BaseSchemaGenerator:
         return index_name
 
     def _generate_fk_name(
-            self, from_table: str, from_field: str, to_table: str, to_field: str
+        self, from_table: str, from_field: str, to_table: str, to_field: str
     ) -> str:
         # NOTE: for compatibility, index name should not be longer than 30
         # characters (Oracle limit).
@@ -181,14 +193,23 @@ class BaseSchemaGenerator:
                 else ""
             )
             default = field_object.default
-            if default is not None:
+            auto_now_add = getattr(field_object, "auto_now_add", False)
+            auto_now = getattr(field_object, "auto_now", False)
+            if default is not None or auto_now or auto_now_add:
                 if callable(default):
                     default = default()
-                default = self._column_default_generator(
-                    model._meta.db_table,
-                    column_name,
-                    default
-                )
+                try:
+                    default = self._column_default_generator(
+                        model._meta.db_table,
+                        column_name,
+                        self._to_db_default_value(default),
+                        auto_now_add,
+                        auto_now,
+                    )
+                except NotImplementedError:
+                    default = ""
+            else:
+                default = ""
 
             # TODO: PK generation needs to move out of schema generator.
             if field_object.pk:
@@ -230,7 +251,7 @@ class BaseSchemaGenerator:
                     unique=unique,
                     is_primary_key=field_object.pk,
                     comment="",
-                    default=default
+                    default=default,
                 ) + self._create_fk_string(
                     constraint_name=self._generate_fk_name(
                         model._meta.db_table,
@@ -253,7 +274,7 @@ class BaseSchemaGenerator:
                     unique=unique,
                     is_primary_key=field_object.pk,
                     comment=comment,
-                    default=default
+                    default=default,
                 )
 
             fields_to_create.append(field_creation_string)
