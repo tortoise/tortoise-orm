@@ -22,6 +22,7 @@ from pypika import Order, Query, Table
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import (
     ConfigurationError,
+    DoesNotExist,
     IncompleteInstanceError,
     IntegrityError,
     OperationalError,
@@ -602,6 +603,9 @@ class ModelMeta(type):
         meta.finalise_fields()
         return new_class
 
+    def __getitem__(cls: Type[MODEL], key: Any) -> QuerySetSingle[MODEL]:  # type: ignore
+        return cls._getbypk(key)  # type: ignore
+
 
 class Model(metaclass=ModelMeta):
     """
@@ -727,6 +731,13 @@ class Model(metaclass=ModelMeta):
     Alias to the models Primary Key.
     Can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc...
     """
+
+    @classmethod
+    async def _getbypk(cls: Type[MODEL], key: Any) -> MODEL:
+        try:
+            return await cls.get(pk=key)
+        except (DoesNotExist, ValueError):
+            raise KeyError(f"{cls._meta.full_name} has no object {repr(key)}")
 
     def update_from_dict(self, data: dict) -> MODEL:
         """
