@@ -9,6 +9,10 @@ Changelog
 
 0.16
 ====
+0.16.12
+-------
+- Make ``Field.default`` effect on db level when generate table, current only support ``MySQL``
+
 0.16.11
 -------
 - fix: ``sqlite://:memory:`` in Windows thrown ``OSError: [WinError 123]``

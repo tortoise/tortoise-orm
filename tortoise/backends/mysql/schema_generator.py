@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, List, Type
+from typing import TYPE_CHECKING, Any, List, Type
+
+from pymysql.converters import encoders
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
@@ -12,7 +14,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({fields}){extra}{comment};"
     INDEX_CREATE_TEMPLATE = "KEY `{index_name}` ({fields})"
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE KEY `{index_name}` ({fields})"
-    FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{primary}{comment}"
+    FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{primary}{comment}{default}"
     GENERATED_PK_TEMPLATE = "`{field_name}` {generated_sql}{comment}"
     FK_TEMPLATE = (
         "CONSTRAINT `{constraint_name}` FOREIGN KEY (`{db_column}`)"
@@ -47,6 +49,27 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
 
     def _column_comment_generator(self, table: str, column: str, comment: str) -> str:
         return f" COMMENT '{self._escape_comment(comment)}'"
+
+    def _column_default_generator(
+        self,
+        table: str,
+        column: str,
+        default: Any,
+        auto_now_add: bool = False,
+        auto_now: bool = False,
+    ) -> str:
+        default_str = " DEFAULT"
+        if not (auto_now or auto_now_add):
+            default_str += f" {default}"
+        else:
+            if auto_now_add:
+                default_str += " CURRENT_TIMESTAMP(6)"
+            if auto_now:
+                default_str += " ON UPDATE CURRENT_TIMESTAMP(6)"
+        return default_str
+
+    def _escape_default_value(self, default: Any):
+        return encoders.get(type(default))(default)
 
     def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
         """ Get index SQLs, but keep them for ourselves """
