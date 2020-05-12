@@ -15,7 +15,7 @@ matrix:
       - python -m pip install --upgrade pip setuptools wheel
       - choco install make
     env: PATH=/c/Python37:/c/Python37/Scripts:$PATH TEST_RUNNER=green
-    script: green
+    script: green -vv
     after_success: echo
   - python: 3.7
     env: TEST_RUNNER=green
