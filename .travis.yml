@@ -7,6 +7,16 @@ env:
     TORTOISE_TEST_MODULES=tests.testmodels
 matrix:
   include:
+  - name: Python 3.7 / Windows / Partial
+    os: windows
+    language: shell
+    before_install:
+      - choco install python --version 3.7.4
+      - python -m pip install --upgrade pip
+      - choco install make
+    env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
+    script: make testall
+    after_success: echo
   - python: 3.7
     env: TEST_RUNNER=green
     script: green
