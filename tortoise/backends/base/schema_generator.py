@@ -3,7 +3,7 @@ from hashlib import sha256
 from typing import TYPE_CHECKING, Any, List, Set, Type, cast
 
 from tortoise.exceptions import ConfigurationError
-from tortoise.fields import UUIDField
+from tortoise.fields import JSONField, TextField, UUIDField
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
@@ -87,7 +87,7 @@ class BaseSchemaGenerator:
         # needs to be implemented for each supported client
         raise NotImplementedError()  # pragma: nocoverage
 
-    def _to_db_default_value(self, default: Any):
+    def _escape_default_value(self, default: Any):
         # Databases have their own way of supporting default value
         # needs to be implemented for each supported client
         raise NotImplementedError()
@@ -198,7 +198,7 @@ class BaseSchemaGenerator:
             auto_now_add = getattr(field_object, "auto_now_add", False)
             auto_now = getattr(field_object, "auto_now", False)
             if default is not None or auto_now or auto_now_add:
-                if callable(default) or isinstance(field_object, UUIDField):
+                if callable(default) or isinstance(field_object, (UUIDField, TextField, JSONField)):
                     default = ""
                 else:
                     default = field_object.to_db_value(default, model)
@@ -206,7 +206,7 @@ class BaseSchemaGenerator:
                         default = self._column_default_generator(
                             model._meta.db_table,
                             column_name,
-                            self._to_db_default_value(default),
+                            self._escape_default_value(default),
                             auto_now_add,
                             auto_now,
                         )
