@@ -14,8 +14,8 @@ matrix:
       - choco install python --version 3.7.4
       - python -m pip install --upgrade pip setuptools wheel
       - choco install make
-    env: PATH=/c/Python37:/c/Python37/Scripts:$PATH TEST_RUNNER=green
-    script: green -vv
+    env: PATH=/c/Python37:/c/Python37/Scripts:$PATH TEST_RUNNER=nose2
+    script: "nose2 --plugin tortoise.contrib.test.nose2 --db-module tests.testmodels --db-url sqlite://:memory:"
     after_success: echo
   - python: 3.7
     env: TEST_RUNNER=green
