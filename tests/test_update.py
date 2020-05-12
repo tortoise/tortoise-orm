@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from tests.testmodels import Event, Tournament, DefaultUpdate
+from tests.testmodels import DefaultUpdate, Event, Tournament
 from tortoise.contrib import test
 
 

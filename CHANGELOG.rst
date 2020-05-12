@@ -9,13 +9,16 @@ Changelog
 
 0.16
 ====
+0.16.12
+-------
+- Make ``Field.default`` effect on db level when generate table, current only support ``MySQL``
+
 0.16.11
 -------
 - fix: ``sqlite://:memory:`` in Windows thrown ``OSError: [WinError 123]``
 - Support ``bulk_create()`` insertion of records with overridden primary key when the primary key is DB-generated
 - Add ``queryset.exists()`` and ``Model.exists()``.
 - Add model subscription lookup, ``Model[<pkval>]`` that will return the object or raise ``KeyError``
-- Make ``Field.default`` effect on db level when generate schema, current only support ``MySQL``
 
 0.16.10
 -------
