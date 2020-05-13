@@ -31,10 +31,10 @@ class SqliteSchemaGenerator(BaseSchemaGenerator):
         auto_now: bool = False,
     ) -> str:
         default_str = " DEFAULT"
-        if not (auto_now or auto_now_add):
-            default_str += f" {default}"
-        else:
+        if auto_now_add:
             default_str += " CURRENT_TIMESTAMP"
+        else:
+            default_str += f" {default}"
         return default_str
 
     def _escape_default_value(self, default: Any):
