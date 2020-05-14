@@ -11,7 +11,7 @@ Changelog
 ====
 0.16.12
 -------
-- Make ``Field.default`` effect on db level when generate table, current only support ``MySQL``
+- Make ``Field.default`` effect on db level when generate table
 
 0.16.11
 -------
