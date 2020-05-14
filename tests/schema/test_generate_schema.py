@@ -186,7 +186,7 @@ CREATE TABLE "teamaddress" (
 CREATE TABLE "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL  /* Tournament name */,
-    "created" TIMESTAMP NOT NULL  /* Created *\\/'`\\/* datetime */ DEFAULT CURRENT_TIMESTAMP
+    "created" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP /* Created *\\/'`\\/* datetime */
 ) /* What Tournaments *\\/'`\\/* we have */;
 CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
 CREATE TABLE "event" (
@@ -273,7 +273,7 @@ CREATE TABLE IF NOT EXISTS "teamaddress" (
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" VARCHAR(100) NOT NULL  /* Tournament name */,
-    "created" TIMESTAMP NOT NULL  /* Created *\\/'`\\/* datetime */ DEFAULT CURRENT_TIMESTAMP
+    "created" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP /* Created *\\/'`\\/* datetime */
 ) /* What Tournaments *\\/'`\\/* we have */;
 CREATE INDEX IF NOT EXISTS "idx_tournament_name_6fe200" ON "tournament" ("name");
 CREATE TABLE IF NOT EXISTS "event" (
