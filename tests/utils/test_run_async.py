@@ -25,6 +25,7 @@ class TestRunAsync(TestCase):
         self.assertEqual(Tortoise._connections, {})
         self.assertEqual(self.somevalue, 2)
 
+    @skipif(os.name == 'nt')
     def test_run_async_raised(self):
         self.assertEqual(Tortoise._connections, {})
         self.assertEqual(self.somevalue, 1)
