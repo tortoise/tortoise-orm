@@ -3,6 +3,7 @@ from unittest import TestCase
 from tortoise import Tortoise, run_async
 
 
+@skipif(os.name == "nt")
 class TestRunAsync(TestCase):
     def setUp(self):
         self.somevalue = 1
@@ -25,7 +26,6 @@ class TestRunAsync(TestCase):
         self.assertEqual(Tortoise._connections, {})
         self.assertEqual(self.somevalue, 2)
 
-    @skipif(os.name == 'nt')
     def test_run_async_raised(self):
         self.assertEqual(Tortoise._connections, {})
         self.assertEqual(self.somevalue, 1)
