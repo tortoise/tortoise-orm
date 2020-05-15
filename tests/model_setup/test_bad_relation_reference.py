@@ -1,4 +1,4 @@
-from tortoise import Tortoise
+from tortoise import ConnectionRepository, Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 
@@ -6,8 +6,8 @@ from tortoise.exceptions import ConfigurationError
 class TestBadReleationReferenceErrors(test.SimpleTestCase):
     async def setUp(self):
         try:
-            Tortoise.apps = {}
-            Tortoise._connections = {}
+            Tortoise.apps = None
+            Tortoise._connection_repository = ConnectionRepository()
             Tortoise._inited = False
         except ConfigurationError:
             pass

@@ -34,7 +34,7 @@ print("Relations are missing if models not initialized:")
 print(Event_TooEarly.schema_json(indent=4))
 
 
-Tortoise.init_models(["__main__"], "models")
+Tortoise.init_app("models", ["__main__"])
 
 Event_Pydantic = pydantic_model_creator(Event)
 print("\nRelations are now present:")

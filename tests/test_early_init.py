@@ -75,6 +75,7 @@ class TestBasic(test.TestCase):
                 "description": "The Event model docstring.",
                 "docstring": "The Event model docstring.\n\nThis is multiline docs.",
                 "unique_together": [],
+                "options": {"ordering": ["name"]},
                 "pk_field": {
                     "name": "id",
                     "field_type": "IntField",
@@ -145,7 +146,7 @@ class TestBasic(test.TestCase):
             },
         )
 
-        Tortoise.init_models(["tests.test_early_init"], "models")
+        Tortoise.init_app("models", ["tests.test_early_init"])
 
         Event_Pydantic = pydantic_model_creator(Event)
         self.assertEqual(
@@ -211,6 +212,7 @@ class TestBasic(test.TestCase):
                 "description": "The Event model docstring.",
                 "docstring": "The Event model docstring.\n\nThis is multiline docs.",
                 "unique_together": [],
+                "options": {"ordering": ["name"]},
                 "pk_field": {
                     "name": "id",
                     "field_type": "IntField",

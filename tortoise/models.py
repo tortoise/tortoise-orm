@@ -68,7 +68,7 @@ def prepare_default_ordering(meta: "Model.Meta") -> Tuple[Tuple[str, Order], ...
 
 
 def _fk_setter(
-    self: "Model", value: "Optional[Model]", _key: str, relation_field: str, to_field: str
+    self: "Model", value: "Optional[Model]", _key: str, relation_field: str, to_field: str,
 ) -> None:
     setattr(self, relation_field, getattr(value, to_field) if value else None)
     setattr(self, _key, value)
@@ -148,6 +148,22 @@ def _get_comments(cls: "Type[Model]") -> Dict[str, str]:
     return comments
 
 
+def get_options(meta: "Model.Meta") -> Dict[str, Any]:
+    return {
+        key: getattr(meta, key)
+        for key in (
+            "abstract",
+            "table",
+            "app",
+            "unique_together",
+            "indexes",
+            "ordering",
+            "pk_attr",
+        )
+        if getattr(meta, key, None)
+    }
+
+
 class MetaInfo:
     __slots__ = (
         "abstract",
@@ -182,6 +198,7 @@ class MetaInfo:
         "db_native_fields",
         "db_default_fields",
         "db_complex_fields",
+        "options",
         "_default_ordering",
         "_ordering_validated",
     )
@@ -192,6 +209,7 @@ class MetaInfo:
         self.app: Optional[str] = getattr(meta, "app", None)
         self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
         self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
+        self.options: Dict["str", Any] = get_options(meta)
         self._default_ordering: Tuple[Tuple[str, Order], ...] = prepare_default_ordering(meta)
         self._ordering_validated: bool = False
         self.fields: Set[str] = set()

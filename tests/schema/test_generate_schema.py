@@ -4,6 +4,7 @@ import re
 from asynctest.mock import CoroutineMock, patch
 
 from tortoise import Tortoise
+from tortoise.connection_repository import ConnectionRepository
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 from tortoise.utils import get_schema_sql
@@ -12,8 +13,8 @@ from tortoise.utils import get_schema_sql
 class TestGenerateSchema(test.SimpleTestCase):
     async def setUp(self):
         try:
-            Tortoise.apps = {}
-            Tortoise._connections = {}
+            Tortoise.apps = None
+            Tortoise._connection_repository = ConnectionRepository()
             Tortoise._inited = False
         except ConfigurationError:
             pass
@@ -25,12 +26,12 @@ class TestGenerateSchema(test.SimpleTestCase):
         ]
 
     async def tearDown(self):
-        Tortoise._connections = {}
+        Tortoise._connection_repository = ConnectionRepository()
         await Tortoise._reset_apps()
 
     async def init_for(self, module: str, safe=False) -> None:
         with patch(
-            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=CoroutineMock()
+            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=CoroutineMock(),
         ):
             await Tortoise.init(
                 {
@@ -43,7 +44,7 @@ class TestGenerateSchema(test.SimpleTestCase):
                     "apps": {"models": {"models": [module], "default_connection": "default"}},
                 }
             )
-            self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split(";\n")
+            self.sqls = get_schema_sql(Tortoise.get_connection("default"), safe).split(";\n")
 
     def get_sql(self, text: str) -> str:
         return re.sub(r"[ \t\n\r]+", " ", " ".join([sql for sql in self.sqls if text in sql]))
@@ -65,7 +66,7 @@ class TestGenerateSchema(test.SimpleTestCase):
 
         sql = self.get_sql('"minrelation_team"')
         self.assertIn(
-            '"minrelation_id" INT NOT NULL REFERENCES "minrelation" ("id") ON DELETE CASCADE', sql
+            '"minrelation_id" INT NOT NULL REFERENCES "minrelation" ("id") ON DELETE CASCADE', sql,
         )
         self.assertIn('"team_id" INT NOT NULL REFERENCES "team" ("id") ON DELETE CASCADE', sql)
 
@@ -106,7 +107,7 @@ class TestGenerateSchema(test.SimpleTestCase):
 
     async def test_fk_bad_null(self):
         with self.assertRaisesRegex(
-            ConfigurationError, "If on_delete is SET_NULL, then field must have null=True set"
+            ConfigurationError, "If on_delete is SET_NULL, then field must have null=True set",
         ):
             await self.init_for("tests.schema.models_fk_3")
 
@@ -118,7 +119,7 @@ class TestGenerateSchema(test.SimpleTestCase):
 
     async def test_o2o_bad_null(self):
         with self.assertRaisesRegex(
-            ConfigurationError, "If on_delete is SET_NULL, then field must have null=True set"
+            ConfigurationError, "If on_delete is SET_NULL, then field must have null=True set",
         ):
             await self.init_for("tests.schema.models_o2o_3")
 
@@ -333,7 +334,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
                         "apps": {"models": {"models": [module], "default_connection": "default"}},
                     }
                 )
-                self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+                self.sqls = get_schema_sql(Tortoise.get_connection("default"), safe).split("; ")
         except ImportError:
             raise test.SkipTest("aiomysql not installed")
 
@@ -353,14 +354,14 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
         sql = self.get_sql("`minrelation`")
         self.assertIn("`tournament_id` SMALLINT NOT NULL,", sql)
         self.assertIn(
-            "FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`id`) ON DELETE CASCADE", sql
+            "FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`id`) ON DELETE CASCADE", sql,
         )
         self.assertNotIn("participants", sql)
 
         sql = self.get_sql("`minrelation_team`")
         self.assertIn("`minrelation_id` INT NOT NULL", sql)
         self.assertIn(
-            "FOREIGN KEY (`minrelation_id`) REFERENCES `minrelation` (`id`) ON DELETE CASCADE", sql
+            "FOREIGN KEY (`minrelation_id`) REFERENCES `minrelation` (`id`) ON DELETE CASCADE", sql,
         )
         self.assertIn("`team_id` INT NOT NULL", sql)
         self.assertIn("FOREIGN KEY (`team_id`) REFERENCES `team` (`id`) ON DELETE CASCADE", sql)
@@ -594,7 +595,7 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
                         "apps": {"models": {"models": [module], "default_connection": "default"}},
                     }
                 )
-                self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+                self.sqls = get_schema_sql(Tortoise.get_connection("default"), safe).split("; ")
         except ImportError:
             raise test.SkipTest("asyncpg not installed")
 
@@ -614,7 +615,7 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
             sql,
         )
         self.assertIn(
-            'COMMENT ON COLUMN "comments"."multiline_comment" IS \'Some \\n comment\'', sql
+            'COMMENT ON COLUMN "comments"."multiline_comment" IS \'Some \\n comment\'', sql,
         )
 
     async def test_schema(self):

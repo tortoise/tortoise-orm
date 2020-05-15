@@ -309,11 +309,13 @@ class BaseSchemaGenerator:
     def _get_models_to_create(self, models_to_create: "List[Type[Model]]") -> None:
         from tortoise import Tortoise
 
-        for app in Tortoise.apps.values():
-            for model in app.values():
-                if model._meta.db == self.client:
-                    model.check()
-                    models_to_create.append(model)
+        if not Tortoise.apps:
+            return
+
+        for model in Tortoise.apps.get_models_iterable():
+            if model._meta.db == self.client:
+                model.check()
+                models_to_create.append(model)
 
     def get_create_schema_sql(self, safe: bool = True) -> str:
         models_to_create: "List[Type[Model]]" = []

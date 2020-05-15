@@ -20,13 +20,13 @@ def _get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
 
     if connection_name:
         connection = current_transaction_map[connection_name].get()
-    elif len(Tortoise._connections) == 1:
-        connection_name = list(Tortoise._connections.keys())[0]
+    elif len(Tortoise._connection_repository) == 1:
+        connection_name = list(Tortoise._connection_repository.connections)[0]
         connection = current_transaction_map[connection_name].get()
     else:
         raise ParamsError(
             "You are running with multiple databases, so you should specify"
-            f" connection_name: {list(Tortoise._connections.keys())}"
+            f" connection_name: {list(Tortoise._connection_repository.connections.keys())}"
         )
     return connection
 

@@ -6,7 +6,7 @@ import re
 
 from asynctest.mock import CoroutineMock, patch
 
-from tortoise import Tortoise
+from tortoise import ConnectionRepository, Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 from tortoise.utils import get_schema_sql
@@ -15,8 +15,8 @@ from tortoise.utils import get_schema_sql
 class TestGenerateSchema(test.SimpleTestCase):
     async def setUp(self):
         try:
-            Tortoise.apps = {}
-            Tortoise._connections = {}
+            Tortoise.apps = None
+            Tortoise._connection_repository = ConnectionRepository()
             Tortoise._inited = False
         except ConfigurationError:
             pass
@@ -28,14 +28,14 @@ class TestGenerateSchema(test.SimpleTestCase):
         ]
 
     async def tearDown(self):
-        Tortoise._connections = {}
+        Tortoise._connection_repository = ConnectionRepository()
         await Tortoise._reset_apps()
 
     async def init_for(self, module: str, safe=False) -> None:
         if self.engine != "tortoise.backends.sqlite":
             raise test.SkipTest("sqlite only")
         with patch(
-            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=CoroutineMock()
+            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=CoroutineMock(),
         ):
             await Tortoise.init(
                 {
@@ -48,7 +48,9 @@ class TestGenerateSchema(test.SimpleTestCase):
                     "apps": {"models": {"models": [module], "default_connection": "default"}},
                 }
             )
-            self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split(";\n")
+            self.sqls = get_schema_sql(Tortoise._connection_repository.get("default"), safe).split(
+                ";\n"
+            )
 
     def get_sql(self, text: str) -> str:
         return str(re.sub(r"[ \t\n\r]+", " ", [sql for sql in self.sqls if text in sql][0]))

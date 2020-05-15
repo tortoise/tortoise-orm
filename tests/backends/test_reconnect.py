@@ -9,11 +9,11 @@ class TestReconnect(test.IsolatedTestCase):
     async def test_reconnect(self):
         await Tournament.create(name="1")
 
-        await Tortoise._connections["models"]._expire_connections()
+        await Tortoise._connection_repository["models"]._expire_connections()
 
         await Tournament.create(name="2")
 
-        await Tortoise._connections["models"]._expire_connections()
+        await Tortoise._connection_repository["models"]._expire_connections()
 
         await Tournament.create(name="3")
 
@@ -26,12 +26,12 @@ class TestReconnect(test.IsolatedTestCase):
         async with in_transaction():
             await Tournament.create(name="1")
 
-        await Tortoise._connections["models"]._expire_connections()
+        await Tortoise._connection_repository["models"]._expire_connections()
 
         async with in_transaction():
             await Tournament.create(name="2")
 
-        await Tortoise._connections["models"]._expire_connections()
+        await Tortoise._connection_repository["models"]._expire_connections()
 
         async with in_transaction():
             self.assertEqual([f"{a.id}:{a.name}" for a in await Tournament.all()], ["1:1", "2:2"])

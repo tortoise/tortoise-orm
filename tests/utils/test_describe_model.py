@@ -44,7 +44,8 @@ class TestBasic(test.TestCase):
     async def test_describe_models_some(self):
         val = Tortoise.describe_models([Event, Tournament, Reporter, Team])
         self.assertEqual(
-            {"models.Event", "models.Tournament", "models.Reporter", "models.Team"}, set(val.keys())
+            {"models.Event", "models.Tournament", "models.Reporter", "models.Team"},
+            set(val.keys()),
         )
 
     async def test_describe_model_straight(self):
@@ -60,6 +61,7 @@ class TestBasic(test.TestCase):
                 "description": "Straight auto-mapped fields",
                 "docstring": None,
                 "unique_together": [["chars", "blip"]],
+                "options": {"unique_together": [["chars", "blip"]]},
                 "pk_field": {
                     "name": "eyedee",
                     "field_type": "IntField",
@@ -258,6 +260,7 @@ class TestBasic(test.TestCase):
                 "description": "Straight auto-mapped fields",
                 "docstring": None,
                 "unique_together": [["chars", "blip"]],
+                "options": {"unique_together": [["chars", "blip"]]},
                 "pk_field": {
                     "name": "eyedee",
                     "field_type": fields.IntField,
@@ -456,6 +459,7 @@ class TestBasic(test.TestCase):
                 "description": "Source mapped fields",
                 "docstring": "A Docstring.",
                 "unique_together": [["chars", "blip"]],
+                "options": {"table": "sometable", "unique_together": [["chars", "blip"]]},
                 "pk_field": {
                     "name": "eyedee",
                     "field_type": "IntField",
@@ -654,6 +658,7 @@ class TestBasic(test.TestCase):
                 "description": "Source mapped fields",
                 "docstring": "A Docstring.",
                 "unique_together": [["chars", "blip"]],
+                "options": {"table": "sometable", "unique_together": [["chars", "blip"]]},
                 "pk_field": {
                     "name": "eyedee",
                     "field_type": fields.IntField,
@@ -852,6 +857,7 @@ class TestBasic(test.TestCase):
                 "description": None,
                 "docstring": None,
                 "unique_together": [],
+                "options": {},
                 "pk_field": {
                     "name": "id",
                     "field_type": "UUIDField",
@@ -917,6 +923,7 @@ class TestBasic(test.TestCase):
                 "description": None,
                 "docstring": None,
                 "unique_together": [],
+                "options": {},
                 "pk_field": {
                     "name": "id",
                     "field_type": fields.UUIDField,
@@ -979,6 +986,7 @@ class TestBasic(test.TestCase):
                 "app": "models",
                 "backward_fk_fields": [],
                 "backward_o2o_fields": [],
+                "options": {},
                 "data_fields": [
                     {
                         "db_column": "name",
@@ -1095,6 +1103,7 @@ class TestBasic(test.TestCase):
                 "description": "This model contains many JSON blobs",
                 "docstring": "This model contains many JSON blobs",
                 "unique_together": [],
+                "options": {},
                 "pk_field": {
                     "name": "id",
                     "field_type": "IntField",
@@ -1178,6 +1187,7 @@ class TestBasic(test.TestCase):
                 "description": "This model contains many JSON blobs",
                 "docstring": "This model contains many JSON blobs",
                 "unique_together": [],
+                "options": {},
                 "pk_field": {
                     "name": "id",
                     "field_type": fields.IntField,

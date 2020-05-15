@@ -66,7 +66,7 @@ class Event(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
 
     tournament = fields.ForeignKeyField(
-        "models.Tournament", related_name="events", description="The Tournement this happens in"
+        "models.Tournament", related_name="events", description="The Tournement this happens in",
     )
 
     class Meta:
@@ -77,7 +77,7 @@ class Event(Model):
 
 
 # Initialise model structure early. This does not init any database structures
-Tortoise.init_models(["__main__"], "models")
+Tortoise.init_app("models", ["__main__"])
 Tournament_Pydantic = pydantic_model_creator(Tournament)
 
 

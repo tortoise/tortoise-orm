@@ -42,7 +42,7 @@ print(Tournament_Pydantic_Early.schema_json(indent=4))
 
 
 # Initialise model structure early. This does not init any database structures
-Tortoise.init_models(["__main__"], "models")
+Tortoise.init_app("models", ["__main__"])
 
 
 # We now have a complete model

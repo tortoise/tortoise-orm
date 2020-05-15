@@ -90,7 +90,7 @@ def register_tortoise(
     @app.on_event("startup")
     async def init_orm() -> None:  # pylint: disable=W0612
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
-        logging.info("Tortoise-ORM started, %s, %s", Tortoise._connections, Tortoise.apps)
+        logging.info("Tortoise-ORM started, %s, %s", Tortoise._connection_repository, Tortoise.apps)
         if generate_schemas:
             logging.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()

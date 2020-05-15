@@ -9,7 +9,7 @@ class TestConnectionParams(test.TestCase):
         with patch("aiomysql.create_pool", new=CoroutineMock()) as mysql_connect:
             await Tortoise._init_connections(
                 {
-                    "models": {
+                    "mysql": {
                         "engine": "tortoise.backends.mysql",
                         "credentials": {
                             "database": "test",
@@ -44,7 +44,7 @@ class TestConnectionParams(test.TestCase):
             with patch("asyncpg.create_pool", new=CoroutineMock()) as asyncpg_connect:
                 await Tortoise._init_connections(
                     {
-                        "models": {
+                        "postgres": {
                             "engine": "tortoise.backends.asyncpg",
                             "credentials": {
                                 "database": "test",

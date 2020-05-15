@@ -11,7 +11,8 @@ from asynctest import TestCase as _TestCase
 from asynctest import _fail_on
 from asynctest.case import _Policy
 
-from tortoise import Tortoise
+from tortoise import ConnectionRepository, Tortoise
+from tortoise.apps import Apps
 from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise.exceptions import DBConnectionError
 from tortoise.transactions import current_transaction_map
@@ -42,7 +43,7 @@ On success it will be marked as unexpected success.
 """
 
 _CONFIG: dict = {}
-_CONNECTIONS: dict = {}
+_CONNECTIONS: ConnectionRepository = ConnectionRepository()
 _SELECTOR = None
 _LOOP: AbstractEventLoop = None  # type: ignore
 _MODULES: List[str] = []
@@ -76,10 +77,10 @@ async def _init_db(config: dict) -> None:
 
 
 def _restore_default() -> None:
-    Tortoise.apps = {}
-    Tortoise._connections = _CONNECTIONS.copy()
+    Tortoise.apps = None
+    Tortoise._connection_repository = _CONNECTIONS.copy()
     current_transaction_map.update(_CONN_MAP)
-    Tortoise._init_apps(_CONFIG["apps"])
+    Tortoise.apps = Apps(_CONFIG["apps"], Tortoise._connection_repository)
     Tortoise._inited = True
 
 
@@ -110,10 +111,10 @@ def initializer(
     _LOOP = loop
     _SELECTOR = loop._selector  # type: ignore
     loop.run_until_complete(_init_db(_CONFIG))
-    _CONNECTIONS = Tortoise._connections.copy()
+    _CONNECTIONS = Tortoise._connection_repository.copy()
     _CONN_MAP = current_transaction_map.copy()
-    Tortoise.apps = {}
-    Tortoise._connections = {}
+    Tortoise.apps = None
+    Tortoise._connection_repository = ConnectionRepository()
     Tortoise._inited = False
 
 
@@ -202,8 +203,8 @@ class SimpleTestCase(_TestCase):  # type: ignore
         else:
             self.tearDown()
         await self._tearDownDB()
-        Tortoise.apps = {}
-        Tortoise._connections = {}
+        Tortoise.apps = None
+        Tortoise._connection_repository = ConnectionRepository()
         Tortoise._inited = False
 
         # post-test checks
@@ -313,10 +314,10 @@ class IsolatedTestCase(SimpleTestCase):
         config = getDBConfig(app_label="models", modules=self.tortoise_test_modules or _MODULES)
         await Tortoise.init(config, _create_db=True)
         await Tortoise.generate_schemas(safe=False)
-        self._connections = Tortoise._connections.copy()
+        self._connections = Tortoise._connection_repository.copy()
 
     async def _tearDownDB(self) -> None:
-        Tortoise._connections = self._connections.copy()
+        Tortoise._connection_repository = self._connections.copy()
         await Tortoise._drop_databases()
 
 
@@ -336,9 +337,11 @@ class TruncationTestCase(SimpleTestCase):
     async def _tearDownDB(self) -> None:
         _restore_default()
         # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys
-        for app in Tortoise.apps.values():
-            for model in app.values():
-                await model._meta.db.execute_script(f"DELETE FROM {model._meta.table}")  # nosec
+        if not Tortoise.apps:
+            raise ValueError("apps are not loaded")
+
+        for model in Tortoise.apps.get_models_iterable():
+            await model._meta.db.execute_script(f"DELETE FROM {model._meta.table}")  # nosec
 
 
 class TransactionTestContext:

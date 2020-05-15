@@ -4,6 +4,7 @@ from typing import Any, Callable, Dict, Optional, Type
 import tortoise
 
 if typing.TYPE_CHECKING:  # pragma: nocoverage
+    from tortoise.apps import TortoiseApplication  # noqa
     from tortoise.models import Model
 
 
@@ -14,5 +15,15 @@ def get_annotations(cls: "Type[Model]", method: Optional[Callable] = None) -> Di
     :param method: If specified, we try to get the annotations for the callable
     :return: The list of annotations
     """
-    globalns = tortoise.Tortoise.apps.get(cls._meta.app, None) if cls._meta.app else None
-    return typing.get_type_hints(method or cls, globalns=globalns)
+    application: Optional["TortoiseApplication"]
+    if (
+        tortoise.Tortoise.apps
+        and cls._meta.app
+        and cls._meta.app in tortoise.Tortoise.apps  # pylint: disable=E1135
+    ):
+        application = tortoise.Tortoise.apps[cls._meta.app]  # pylint: disable=E1136
+    else:
+        application = None
+    return typing.get_type_hints(
+        method or cls, globalns=application.models if application else None
+    )
