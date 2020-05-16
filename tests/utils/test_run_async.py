@@ -1,9 +1,9 @@
-from unittest import TestCase
+import os
+from unittest import TestCase, skipIf
 
 from tortoise import Tortoise, run_async
 
 
-@skipif(os.name == "nt")
 class TestRunAsync(TestCase):
     def setUp(self):
         self.somevalue = 1
@@ -19,6 +19,7 @@ class TestRunAsync(TestCase):
         self.assertNotEqual(Tortoise._connections, {})
         raise Exception("Some exception")
 
+    @skipIf(os.name == "nt", "stuck with windows : temporaily skip")
     def test_run_async(self):
         self.assertEqual(Tortoise._connections, {})
         self.assertEqual(self.somevalue, 1)
@@ -26,6 +27,7 @@ class TestRunAsync(TestCase):
         self.assertEqual(Tortoise._connections, {})
         self.assertEqual(self.somevalue, 2)
 
+    @skipIf(os.name == "nt", "stuck with windows : temporaily skip")
     def test_run_async_raised(self):
         self.assertEqual(Tortoise._connections, {})
         self.assertEqual(self.somevalue, 1)
