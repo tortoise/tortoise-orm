@@ -657,6 +657,12 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query
         )
 
+    async def sql(self) -> str:
+        """Return the actual SQL.
+        """
+        self._make_query()
+        return self.query.get_sql()
+
     def using_db(self, _db: BaseDBAsyncClient) -> "QuerySet[MODEL]":
         """
         Executes query in provided db client.
