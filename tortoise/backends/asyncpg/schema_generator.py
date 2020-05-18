@@ -1,6 +1,7 @@
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Any, List
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
+from tortoise.converters import encoders
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.asyncpg.client import AsyncpgDBClient
@@ -43,3 +44,21 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
         if val:
             return "\n" + val
         return ""
+
+    def _column_default_generator(
+        self,
+        table: str,
+        column: str,
+        default: Any,
+        auto_now_add: bool = False,
+        auto_now: bool = False,
+    ) -> str:
+        default_str = " DEFAULT"
+        if auto_now_add:
+            default_str += " CURRENT_TIMESTAMP"
+        else:
+            default_str += f" {default}"
+        return default_str
+
+    def _escape_default_value(self, default: Any):
+        return encoders.get(type(default))(default)  # type: ignore

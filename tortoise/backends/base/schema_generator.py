@@ -18,7 +18,7 @@ logger = logging.getLogger("tortoise")
 class BaseSchemaGenerator:
     DIALECT = "sql"
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment};'
-    FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{comment}{default}'
+    FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{default}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{index_name}" UNIQUE ({fields})'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}{comment}'
