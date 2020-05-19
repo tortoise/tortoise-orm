@@ -218,6 +218,12 @@ class AwaitableQuery(Generic[MODEL]):
 
         return any(info["field"].is_aggregate for info in annotation_info.values())
 
+    def sql(self) -> str:
+        """Return the actual SQL.
+        """
+        self._make_query()
+        return self.query.get_sql()
+
     def _make_query(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
@@ -656,12 +662,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         return await self._db.executor_class(model=self.model, db=self._db).execute_explain(
             self.query
         )
-
-    async def sql(self) -> str:
-        """Return the actual SQL.
-        """
-        self._make_query()
-        return self.query.get_sql()
 
     def using_db(self, _db: BaseDBAsyncClient) -> "QuerySet[MODEL]":
         """
