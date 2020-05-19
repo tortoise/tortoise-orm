@@ -1,8 +1,7 @@
 from typing import TYPE_CHECKING, Any, List, Type
 
-from pymysql.converters import encoders
-
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
+from tortoise.converters import encoders
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.mysql.client import MySQLClient
@@ -69,7 +68,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         return default_str
 
     def _escape_default_value(self, default: Any):
-        return encoders.get(type(default))(default)
+        return encoders.get(type(default))(default)  # type: ignore
 
     def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
         """ Get index SQLs, but keep them for ourselves """

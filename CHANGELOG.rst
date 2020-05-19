@@ -12,6 +12,7 @@ Changelog
 0.16.12
 -------
 - Make ``Field.default`` effect on db level when generate table
+- Add converters instead of importing from pymysql
 
 0.16.11
 -------

@@ -1,8 +1,7 @@
 from typing import TYPE_CHECKING, Any, List
 
-from pymysql.converters import encoders
-
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
+from tortoise.converters import encoders
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.asyncpg.client import AsyncpgDBClient
@@ -62,4 +61,4 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
         return default_str
 
     def _escape_default_value(self, default: Any):
-        return encoders.get(type(default))(default)
+        return encoders.get(type(default))(default)  # type: ignore
