@@ -61,4 +61,6 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
         return default_str
 
     def _escape_default_value(self, default: Any):
+        if isinstance(default, bool):
+            return default
         return encoders.get(type(default))(default)  # type: ignore
