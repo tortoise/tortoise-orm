@@ -15,6 +15,7 @@ Changelog
 - Add converters instead of importing from pymysql
 - Fix postgres BooleanField default value convent
 - Fix ``JSONField`` typed in ``pydantic_model_creator``
+- Add ``.sql()`` method on ``QuerySet``
 
 0.16.11
 -------

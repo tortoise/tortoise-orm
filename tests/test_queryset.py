@@ -314,3 +314,7 @@ class TestQueryset(test.TestCase):
     async def test_order_by_bad_value(self):
         with self.assertRaisesRegex(FieldError, "Unknown field badid for model IntFields"):
             await IntFields.all().order_by("badid").values_list()
+
+    async def test_get_raw_sql(self):
+        sql = IntFields.all().sql()
+        self.assertRegex(sql, r"^SELECT.+FROM.+")
