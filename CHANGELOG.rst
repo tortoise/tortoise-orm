@@ -14,6 +14,7 @@ Changelog
 - Make ``Field.default`` effect on db level when generate table
 - Add converters instead of importing from pymysql
 - Fix postgres BooleanField default value convent
+- Add ``.sql()`` method on ``QuerySet``
 
 0.16.11
 -------

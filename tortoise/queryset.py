@@ -218,6 +218,12 @@ class AwaitableQuery(Generic[MODEL]):
 
         return any(info["field"].is_aggregate for info in annotation_info.values())
 
+    def sql(self) -> str:
+        """Return the actual SQL.
+        """
+        self._make_query()
+        return self.query.get_sql()
+
     def _make_query(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
