@@ -1,4 +1,4 @@
-from tests.testmodels import Address, Employee, Event, Reporter, Team, Tournament
+from tests.testmodels import Address, Employee, Event, JSONFields, Reporter, Team, Tournament
 from tortoise.contrib import test
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
@@ -984,6 +984,22 @@ class TestPydantic(test.TestCase):
                 "alias",
                 "address",
             ],
+        )
+
+    async def test_json_field(self):
+        json_field_0 = await JSONFields.create(data={"a": 1})
+        json_field_1 = await JSONFields.create(data=[{"a": 1, "b": 2}])
+        json_field_0_get = await JSONFields.get(pk=json_field_0.pk)
+        json_field_1_get = await JSONFields.get(pk=json_field_1.pk)
+
+        creator = pydantic_model_creator(JSONFields)
+        ret0 = creator.from_orm(json_field_0_get).dict()
+        self.assertEqual(
+            ret0, {"id": 1, "data": {"a": 1}, "data_null": None, "data_default": {"a": 1}}
+        )
+        ret1 = creator.from_orm(json_field_1_get).dict()
+        self.assertEqual(
+            ret1, {"id": 2, "data": [{"a": 1, "b": 2}], "data_null": None, "data_default": {"a": 1}}
         )
 
 

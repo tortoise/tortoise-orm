@@ -344,7 +344,9 @@ def pydantic_model_creator(
             comment = _cleandoc(func)
             if annotation is not None:
                 pannotations[fname] = annotation
-
+        # Json fields
+        elif field_type is fields.JSONField:
+            pannotations[fname] = Any
         # Any other tortoise fields
         else:
             annotation = annotations.get(fname, None)
