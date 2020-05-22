@@ -317,4 +317,4 @@ class TestQueryset(test.TestCase):
 
     async def test_get_raw_sql(self):
         sql = IntFields.all().sql()
-        self.assertRegex(sql, r'^SELECT.+FROM.+')
+        self.assertRegex(sql, r"^SELECT.+FROM.+")
