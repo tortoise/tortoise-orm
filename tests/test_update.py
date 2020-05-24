@@ -1,4 +1,6 @@
-from tests.testmodels import Event, Tournament
+from datetime import datetime, timedelta
+
+from tests.testmodels import DefaultUpdate, Event, Tournament
 from tortoise.contrib import test
 
 
@@ -11,6 +13,16 @@ class TestUpdate(test.TestCase):
 
         tournament = await Tournament.first()
         self.assertEqual(tournament.name, "2")
+
+    async def test_update_auto_now(self):
+        obj = await DefaultUpdate.create()
+
+        now = datetime.now()
+        updated_at = now - timedelta(days=1)
+        await DefaultUpdate.filter(pk=obj.pk).update(updated_at=updated_at)
+
+        obj1 = await DefaultUpdate.get(pk=obj.pk)
+        self.assertEqual(obj1.updated_at.date(), updated_at.date())
 
     async def test_update_relation(self):
         tournament_first = await Tournament.create(name="1")

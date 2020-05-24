@@ -30,6 +30,7 @@ Contributors
 * ``@sm0k``
 * Lev Gorodetskiy ``@droserasprout``
 * Hao Gong  ``@dongfangtianyu``
+* Peng Gao ``@Priestch``
 
 Special Thanks
 ==============

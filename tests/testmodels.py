@@ -2,8 +2,10 @@
 This is the testing Models
 """
 import binascii
+import datetime
 import os
 import uuid
+from decimal import Decimal
 from enum import Enum, IntEnum
 
 from tortoise import fields
@@ -664,3 +666,20 @@ class Principal(Model):
 
 class Signals(Model):
     name = fields.CharField(max_length=255)
+
+
+class DefaultUpdate(Model):
+    created_at = fields.DatetimeField(auto_now_add=True)
+    updated_at = fields.DatetimeField(auto_now=True)
+
+
+class DefaultModel(Model):
+    int_default = fields.IntField(default=1)
+    float_default = fields.FloatField(default=1.5)
+    decimal_default = fields.DecimalField(max_digits=8, decimal_places=2, default=Decimal(1))
+    bool_default = fields.BooleanField(default=True)
+    char_default = fields.CharField(max_length=20, default="tortoise")
+    date_default = fields.DateField(default=datetime.date.fromisoformat("2020-05-20"))
+    datetime_default = fields.DatetimeField(
+        default=datetime.datetime.fromisoformat("2020-05-20 00:00:00")
+    )

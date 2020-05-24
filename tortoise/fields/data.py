@@ -285,7 +285,7 @@ class DatetimeField(Field, datetime.datetime):
     SQL_TYPE = "TIMESTAMP"
 
     class _db_mysql:
-        SQL_TYPE = "DATETIME"
+        SQL_TYPE = "DATETIME(6)"
 
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any) -> None:
         if auto_now_add and auto_now:

@@ -206,6 +206,18 @@ class TestModelMethods(test.TestCase):
         with self.assertRaises(ValueError):
             evt2.update_from_dict({"alias": "foo"})
 
+    async def test_index_access(self):
+        obj = await self.cls[self.mdl.pk]
+        self.assertEqual(obj, self.mdl)
+
+    async def test_index_badval(self):
+        with self.assertRaises(KeyError):
+            await self.cls[100000]
+
+    async def test_index_badtype(self):
+        with self.assertRaises(KeyError):
+            await self.cls["asdf"]
+
 
 class TestModelMethodsNoID(TestModelMethods):
     async def setUp(self):
