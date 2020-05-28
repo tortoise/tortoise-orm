@@ -23,8 +23,9 @@ models.py
 .. literalinclude::  ../../examples/fastapi/models.py
 
 tests.py
--------
+--------
 .. literalinclude::  ../../examples/fastapi/_tests.py
+
 main.py
 -------
 .. literalinclude::  ../../examples/fastapi/main.py
