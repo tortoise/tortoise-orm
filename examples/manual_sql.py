@@ -2,8 +2,8 @@
 This example demonstrates executing manual SQL queries
 """
 from tortoise import Tortoise, fields, run_async
-from tortoise.transactions import in_transaction
 from tortoise.models import Model
+from tortoise.transactions import in_transaction
 
 
 class Event(Model):
@@ -17,7 +17,7 @@ async def run():
     await Tortoise.generate_schemas()
 
     # Need to get a connection. Unless explicitly specified, the name should be 'default'
-    conn = Tortoise.get_connection('default')
+    conn = Tortoise.get_connection("default")
 
     # Now we can execute queries in the normal autocommit mode
     await conn.execute_query("INSERT INTO event (name) VALUES ('Foo')")
@@ -26,12 +26,12 @@ async def run():
     await conn.execute_query("INSERT INTO event (name) VALUES (?)", ["Bar"])
 
     # To do a transaction you'd need to use the in_transaction context manager
-    async with in_transaction('default') as tconn:
+    async with in_transaction("default") as tconn:
         await tconn.execute_query("INSERT INTO event (name) VALUES ('Moo')")
         # Unless an exception happens it should commit automatically
 
     # This transaction is rolled back
-    async with in_transaction('default') as tconn:
+    async with in_transaction("default") as tconn:
         await tconn.execute_query("INSERT INTO event (name) VALUES ('Sheep')")
         # Rollback to fail transaction
         await tconn.rollback()
