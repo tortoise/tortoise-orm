@@ -6,6 +6,7 @@ from tests.testmodels import (
     IntFields,
     NoID,
     O2O_null,
+    RequiredPKModel,
     Team,
     Tournament,
     UUIDFkRelatedNullModel,
@@ -17,6 +18,7 @@ from tortoise.exceptions import (
     IntegrityError,
     MultipleObjectsReturned,
     OperationalError,
+    ParamsError,
 )
 from tortoise.expressions import F
 from tortoise.models import NoneAwaitable
@@ -58,6 +60,24 @@ class TestModelCreate(test.TestCase):
         await UUIDFkRelatedNullModel.create(id=cid, name="TestOriginal")
         with self.assertRaises(IntegrityError):
             await UUIDFkRelatedNullModel.create(id=cid, name="Test")
+
+    async def test_clone_pk_required_error(self):
+        mdl = await RequiredPKModel.create(id="A", name="name_a")
+        with self.assertRaises(ParamsError):
+            mdl.clone()
+
+    async def test_clone_pk_required(self):
+        mdl = await RequiredPKModel.create(id="A", name="name_a")
+        mdl2 = mdl.clone(pk="B")
+        await mdl2.save()
+        mdls = list(await RequiredPKModel.all())
+        self.assertEqual(len(mdls), 2)
+
+    async def test_implicit_clone_pk_required_none(self):
+        mdl = await RequiredPKModel.create(id="A", name="name_a")
+        mdl.pk = None
+        with self.assertRaises(IntegrityError):
+            await mdl.save()
 
 
 class TestModelMethods(test.TestCase):
@@ -217,6 +237,29 @@ class TestModelMethods(test.TestCase):
     async def test_index_badtype(self):
         with self.assertRaises(KeyError):
             await self.cls["asdf"]
+
+    async def test_clone(self):
+        mdl2 = self.mdl.clone()
+        self.assertEqual(mdl2.pk, None)
+        await mdl2.save()
+        self.assertNotEqual(mdl2.pk, self.mdl.pk)
+        mdls = list(await self.cls.all())
+        self.assertEqual(len(mdls), 2)
+
+    async def test_clone_with_pk(self):
+        mdl2 = self.mdl.clone(pk=8888)
+        self.assertEqual(mdl2.pk, 8888)
+        await mdl2.save()
+        self.assertNotEqual(mdl2.pk, self.mdl.pk)
+        await mdl2.save()
+        mdls = list(await self.cls.all())
+        self.assertEqual(len(mdls), 2)
+
+    async def test_implicit_clone(self):
+        self.mdl.pk = None
+        await self.mdl.save()
+        mdls = list(await self.cls.all())
+        self.assertEqual(len(mdls), 2)
 
 
 class TestModelMethodsNoID(TestModelMethods):

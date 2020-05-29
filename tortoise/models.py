@@ -26,6 +26,7 @@ from tortoise.exceptions import (
     IncompleteInstanceError,
     IntegrityError,
     OperationalError,
+    ParamsError,
     TransactionManagementError,
 )
 from tortoise.fields.base import Field
@@ -47,6 +48,7 @@ from tortoise.signals import Signals
 from tortoise.transactions import current_transaction_map, in_transaction
 
 MODEL = TypeVar("MODEL", bound="Model")
+EMPTY = object()
 
 
 # TODO: Define Filter type object. Possibly tuple?
@@ -739,7 +741,30 @@ class Model(metaclass=ModelMeta):
         except (DoesNotExist, ValueError):
             raise KeyError(f"{cls._meta.full_name} has no object {repr(key)}")
 
-    def update_from_dict(self, data: dict) -> MODEL:
+    def clone(self: MODEL, pk: Any = EMPTY) -> MODEL:
+        """
+        Create a new clone of the object that when you do a ``.save()`` will create a new record.
+
+        :param pk: An optionally required value if the model doesn't generate its own primary key.
+            Any value you specify here will always be used.
+        :return: A copy of the current object without primary key information.
+        :raises ParamsError: If pk is required but not provided.
+        """
+        obj = copy(self)
+        if pk is EMPTY:
+            pk_field: Field = self._meta.pk
+            if pk_field.generated is False and pk_field.default is None:
+                raise ParamsError(
+                    f"{self._meta.full_name} requires explicit primary key. Please use .clone(pk=<value>)"
+                )
+            else:
+                obj.pk = None
+        else:
+            obj.pk = pk
+        obj._saved_in_db = False
+        return obj
+
+    def update_from_dict(self: MODEL, data: dict) -> MODEL:
         """
         Updates the current model with the provided dict.
         This can allow mass-updating a model from a dict, also ensuring that datatype conversions happen.
@@ -755,7 +780,7 @@ class Model(metaclass=ModelMeta):
         :raises ValueError: When a passed parameter is not type compatible
         """
         self._set_kwargs(data)
-        return self  # type: ignore
+        return self
 
     @classmethod
     def register_listener(cls, signal: Signals, listener: Callable):
@@ -844,9 +869,14 @@ class Model(metaclass=ModelMeta):
                     f"{self.__class__.__name__} is a partial model, can only be saved with the relevant update_field provided"
                 )
         await self._pre_save(using_db, update_fields)
+
         if self._saved_in_db:
-            await executor.execute_update(self, update_fields)
-            created = False
+            if self.pk is None:
+                await executor.execute_insert(self)
+                created = True
+            else:
+                await executor.execute_update(self, update_fields)
+                created = False
         else:
             await executor.execute_insert(self)
             created = True

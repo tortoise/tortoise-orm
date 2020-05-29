@@ -12,6 +12,9 @@ Changelog
 0.16.13
 -------
 - Default install of ``tortoise-orm`` now installs with no C-dependencies, if you want to use the C accelerators, please do a ``pip install tortoise-orm[accel]`` instead.
+- Added ``<instance>.clone()`` method that will create a cloned instance in memory. To persist it you still need to call ``.save()``
+- ``.clone()`` will raise a ``ParamsError`` if tortoise can't generate a primary key. In that case do a ``.clone(pk=<newval>)``
+- If manually setting the primary key value to ``None`` and the primary key can be automatically generated, this will create a new record. We however still recommend the ``.clone()`` method instead.
 
 0.16.12
 -------
