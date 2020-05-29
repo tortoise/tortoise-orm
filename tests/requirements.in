@@ -1,4 +1,5 @@
 -e ..
+-r ../requirements-accel.txt
 
 ## Database Drivers
 asyncpg
@@ -38,11 +39,6 @@ pylint<2.5
 
 # Pypi
 twine
-
-# Optional accelerators
-uvloop>=0.12.0; sys_platform != "win32" and implementation_name == "cpython"
-python-rapidjson; implementation_name == "cpython"
-iso8601
 
 # Sample integration - Quart
 quart

@@ -16,8 +16,8 @@ def version():
     return mob.group(1)
 
 
-def requirements():
-    return open("requirements.txt", "rt").read().splitlines()
+def requirements(fname):
+    return open(fname, "rt").read().splitlines()
 
 
 setup(
@@ -67,5 +67,8 @@ setup(
         "async asyncio aio"
     ),
     # Dependent packages (distributions)
-    install_requires=requirements(),
+    install_requires=requirements("requirements.txt"),
+    extras_require={
+        'accel': requirements("requirements-accel.txt")
+    }
 )

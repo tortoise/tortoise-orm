@@ -9,6 +9,10 @@ Changelog
 
 0.16
 ====
+0.16.13
+-------
+- Default install of ``tortoise-orm`` now installs with no C-dependencies, if you want to use the C accelerators, please do a ``pip install tortoise-orm[accel]`` instead.
+
 0.16.12
 -------
 - Make ``Field.default`` effect on db level when generate table

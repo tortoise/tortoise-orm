@@ -142,7 +142,7 @@ def _get_comments(cls: "Type[Model]") -> Dict[str, str]:
     for cls_ in reversed(cls.__mro__):
         if cls_ is object:
             continue
-        matches = re.findall(rf"((?:(?!\n|^)[^\w\n]*#:.*?\n)+?)[^\w\n]*(\w+)\s*[:=]", source)
+        matches = re.findall(r"((?:(?!\n|^)[^\w\n]*#:.*?\n)+?)[^\w\n]*(\w+)\s*[:=]", source)
         for match in matches:
             field_name = match[1]
             # Extract text
