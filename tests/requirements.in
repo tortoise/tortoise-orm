@@ -29,13 +29,10 @@ tox
 asynctest
 green
 coveralls
-pytest<5.4
+pytest<5.4 # Has annoying deprecation warning of itself?  >5.2, !=5.4.0, !=5.4.1
 nose2
 pytest-xdist
 pytest-cov
-# Fixes nose2 bug
-astroid<2.4
-pylint<2.5
 
 # Pypi
 twine
