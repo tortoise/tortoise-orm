@@ -1,5 +1,4 @@
 pypika>=0.36.5
-ciso8601>=2.1.2; sys_platform != "win32" and implementation_name == "cpython"
-iso8601>=0.1.12; sys_platform == "win32" or implementation_name != "cpython"
+iso8601>=0.1.12
 aiosqlite>=0.11.0
 typing-extensions>=3.7

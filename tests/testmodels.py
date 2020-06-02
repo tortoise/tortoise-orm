@@ -683,3 +683,8 @@ class DefaultModel(Model):
     datetime_default = fields.DatetimeField(
         default=datetime.datetime.fromisoformat("2020-05-20 00:00:00")
     )
+
+
+class RequiredPKModel(Model):
+    id = fields.CharField(pk=True, max_length=100)
+    name = fields.CharField(max_length=255)

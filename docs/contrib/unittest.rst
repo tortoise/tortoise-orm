@@ -85,7 +85,7 @@ Py.test
 
 .. note::
 
-    pytest 5.4 has a bug that stops it from working with async test cases. You may have to install ``pytest<5.4`` to get it to work.
+    pytest 5.4.0 & 5.4.1 has a bug that stops it from working with async test cases. You may have to install ``pytest>=5.4.2`` to get it to work.
 
 Run the initializer and finalizer in your ``conftest.py`` file:
 
