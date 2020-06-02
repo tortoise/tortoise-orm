@@ -129,3 +129,11 @@ Model Signals
 =============
 .. literalinclude::  ../../examples/signals.py
 
+
+.. rst-class:: html-toggle
+
+.. _example_manual_sql:
+
+Manual SQL
+==========
+.. literalinclude::  ../../examples/manual_sql.py

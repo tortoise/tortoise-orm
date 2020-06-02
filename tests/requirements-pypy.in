@@ -1,5 +1,4 @@
 -r ../requirements.txt
-iso8601
 
 ## Database Drivers
 aiomysql
