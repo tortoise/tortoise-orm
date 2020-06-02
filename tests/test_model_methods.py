@@ -261,6 +261,20 @@ class TestModelMethods(test.TestCase):
         mdls = list(await self.cls.all())
         self.assertEqual(len(mdls), 2)
 
+    async def test_force_create(self):
+        obj = self.cls(name="Test", id=self.mdl.id)
+        with self.assertRaises(IntegrityError):
+            await obj.save(force_create=True)
+
+    async def test_force_update(self):
+        obj = self.cls(name="Test3", id=self.mdl.id)
+        await obj.save(force_update=True)
+
+    async def test_force_update_raise(self):
+        obj = self.cls(name="Test3", id=self.mdl.id + 100)
+        with self.assertRaises(IntegrityError):
+            await obj.save(force_update=True)
+
 
 class TestModelMethodsNoID(TestModelMethods):
     async def setUp(self):
