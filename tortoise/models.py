@@ -839,6 +839,8 @@ class Model(metaclass=ModelMeta):
         self,
         using_db: Optional[BaseDBAsyncClient] = None,
         update_fields: Optional[List[str]] = None,
+        force_create: bool = False,
+        force_update: bool = False,
     ) -> None:
         """
         Creates/Updates the current model object.
@@ -848,8 +850,11 @@ class Model(metaclass=ModelMeta):
             This is the subset of fields that should be updated.
             If the object needs to be created ``update_fields`` will be ignored.
         :param using_db: Specific DB connection to use instead of default bound
+        :param force_create: Forces creation of the record
+        :param force_update: Forces updating of the record
 
         :raises IncompleteInstanceError: If the model is partial and the fields are not available for persistance.
+        :raises IntegrityError: If the model can't be created or updated (specifically if force_create or force_update has been set)
         """
         db = using_db or self._meta.db
         executor = db.executor_class(model=self.__class__, db=db)
@@ -870,17 +875,28 @@ class Model(metaclass=ModelMeta):
                 )
         await self._pre_save(using_db, update_fields)
 
-        if self._saved_in_db:
-            if self.pk is None:
-                await executor.execute_insert(self)
-                created = True
-            else:
-                await executor.execute_update(self, update_fields)
-                created = False
-        else:
+        if force_create:
             await executor.execute_insert(self)
             created = True
-            self._saved_in_db = True
+        elif force_update:
+            rows = await executor.execute_update(self, update_fields)
+            if rows == 0:
+                raise IntegrityError(f"Can't update object that doesn't exist. PK: {self.pk}")
+            created = False
+        else:
+            if self._saved_in_db or update_fields:
+                if self.pk is None:
+                    await executor.execute_insert(self)
+                    created = True
+                else:
+                    await executor.execute_update(self, update_fields)
+                    created = False
+            else:
+                # TODO: Do a merge/upsert operation here instead. Let the executor determine an optimal strategy for each DB engine.
+                await executor.execute_insert(self)
+                created = True
+
+        self._saved_in_db = True
         await self._post_save(using_db, created, update_fields)
 
     async def delete(self, using_db: Optional[BaseDBAsyncClient] = None) -> None:
@@ -963,7 +979,7 @@ class Model(metaclass=ModelMeta):
         instance = cls(**kwargs)
         instance._saved_in_db = False
         db = kwargs.get("using_db") or cls._meta.db
-        await instance.save(using_db=db)
+        await instance.save(using_db=db, force_create=True)
         return instance
 
     @classmethod
