@@ -15,6 +15,9 @@ Changelog
 - Added ``<instance>.clone()`` method that will create a cloned instance in memory. To persist it you still need to call ``.save()``
 - ``.clone()`` will raise a ``ParamsError`` if tortoise can't generate a primary key. In that case do a ``.clone(pk=<newval>)``
 - If manually setting the primary key value to ``None`` and the primary key can be automatically generated, this will create a new record. We however still recommend the ``.clone()`` method instead.
+- ``.save()`` can be forced to do a create by setting ``force_create=True``
+- ``.save()`` can be forced to do an update by setting ``force_update=True``
+- Setting ``update_fields`` for a ``.save()`` operation will strongly prefer to do an update if possible
 
 0.16.12
 -------
