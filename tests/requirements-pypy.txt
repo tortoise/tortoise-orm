@@ -37,5 +37,5 @@ requests==2.23.0          # via coveralls
 six==1.15.0               # via cryptography, packaging, pytest-xdist
 typing-extensions==3.7.4.2  # via -r ../requirements.txt
 urllib3==1.25.9           # via requests
-wcwidth==0.1.9            # via pytest
+wcwidth==0.2.3            # via pytest
 zipp==3.1.0               # via importlib-metadata

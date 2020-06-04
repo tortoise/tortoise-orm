@@ -324,7 +324,7 @@ def pydantic_model_creator(
                 if fdesc.get("nullable"):
                     fconfig["nullable"] = True
                 if fdesc.get("nullable") or fdesc.get("default"):
-                    model = Optional[model]
+                    model = Optional[model]  # type: ignore
 
                 pannotations[fname] = model
 
