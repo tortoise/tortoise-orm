@@ -98,10 +98,10 @@ class AwaitableQuery(Generic[MODEL]):
         """
         Builds the common filters for a QuerySet.
 
-        :param model: The Model this querysit is based on.
+        :param model: The Model this queryset is based on.
         :param q_objects: The Q expressions to apply.
         :param annotations: Extra annotations to add.
-        :param custom_filters: Pre-resolved filters to be passed though.
+        :param custom_filters: Pre-resolved filters to be passed through.
         """
         has_aggregate = self._resolve_annotate()
 
@@ -154,7 +154,7 @@ class AwaitableQuery(Generic[MODEL]):
         """
         Applies standard ordering to QuerySet.
 
-        :param model: The Model this querysit is based on.
+        :param model: The Model this queryset is based on.
         :param table: ``pypika.Table`` to keep track of the virtual SQL table
             (to allow self referential joins)
         :param orderings: What columns/order to order by
