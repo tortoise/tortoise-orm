@@ -11,7 +11,7 @@ from pypika import functions
 from pypika.enums import SqlTypes
 from pypika.terms import Term
 
-from tortoise.exceptions import ConfigurationError
+from tortoise.exceptions import ConfigurationError, FieldError
 from tortoise.fields.base import Field
 
 try:
@@ -307,7 +307,7 @@ class DatetimeField(Field, datetime.datetime):
             self.auto_now
             or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
         ):
-            value = datetime.datetime.utcnow()
+            value = datetime.datetime.now()
             setattr(instance, self.model_field_name, value)
             return value
         return value
@@ -402,14 +402,25 @@ class JSONField(Field, dict, list):  # type: ignore
         self.decoder = decoder
 
     def to_db_value(
-        self, value: Optional[Union[dict, list]], instance: "Union[Type[Model], Model]"
+        self, value: Optional[Union[dict, list, str]], instance: "Union[Type[Model], Model]"
     ) -> Optional[str]:
+        if isinstance(value, str):
+            try:
+                self.decoder(value)
+            except Exception:
+                raise FieldError(f"Value {value} is invalid json value.")
+            return value
         return None if value is None else self.encoder(value)
 
     def to_python_value(
         self, value: Optional[Union[str, dict, list]]
     ) -> Optional[Union[dict, list]]:
-        return self.decoder(value) if isinstance(value, str) else value
+        if isinstance(value, str):
+            try:
+                return self.decoder(value)
+            except Exception:
+                raise FieldError(f"Value {value} is invalid json value.")
+        return value
 
 
 class UUIDField(Field, UUID):
