@@ -1,5 +1,6 @@
 from tests.testmodels import Event, IntFields, Reporter, Team, Tournament
 from tortoise.contrib import test
+from tortoise.expressions import F
 from tortoise.functions import Coalesce, Count, Length, Lower, Max, Trim, Upper
 from tortoise.query_utils import Q
 
@@ -135,6 +136,15 @@ class TestFiltering(test.TestCase):
         tournaments = await Tournament.filter(~Q(name="1"))
         self.assertEqual(len(tournaments), 1)
         self.assertEqual(tournaments[0].name, "0")
+
+    async def test_filter_with_f_expression(self):
+        await IntFields.create(intnum=1, intnum_null=1)
+        await IntFields.create(intnum=2, intnum_null=1)
+        self.assertEqual(await IntFields.filter(intnum=F("intnum_null")).count(), 1)
+        self.assertEqual(await IntFields.filter(intnum__gte=F("intnum_null")).count(), 2)
+        self.assertEqual(
+            await IntFields.filter(intnum=F("intnum_null") + F("intnum_null")).count(), 1
+        )
 
     async def test_filter_not_with_or(self):
         await Tournament.create(name="0")
