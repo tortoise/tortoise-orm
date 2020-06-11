@@ -9,6 +9,10 @@ Changelog
 
 0.16
 ====
+0.16.14
+-------
+- Make ``F`` expression work with ``QuerySet.filter()``.
+
 0.16.13
 -------
 - Default install of ``tortoise-orm`` now installs with no C-dependencies, if you want to use the C accelerators, please do a ``pip install tortoise-orm[accel]`` instead.
