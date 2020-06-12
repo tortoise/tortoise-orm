@@ -2,7 +2,7 @@ from copy import copy
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, cast
 
 from pypika import Table
-from pypika.terms import Criterion
+from pypika.terms import Criterion, Term
 
 from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance, RelationalField
@@ -33,12 +33,15 @@ def _process_filter_kwarg(
             value = param["value_encoder"](value, model)
         criterion = param["operator"](param["table"][param["field"]], value)
     else:
-        field_object = model._meta.fields_map[param["field"]]
-        encoded_value = (
-            param["value_encoder"](value, model, field_object)
-            if param.get("value_encoder")
-            else model._meta.db.executor_class._field_to_db(field_object, value, model)
-        )
+        if isinstance(value, Term):
+            encoded_value = value
+        else:
+            field_object = model._meta.fields_map[param["field"]]
+            encoded_value = (
+                param["value_encoder"](value, model, field_object)
+                if param.get("value_encoder")
+                else model._meta.db.executor_class._field_to_db(field_object, value, model)
+            )
         criterion = param["operator"](table[param["source_field"]], encoded_value)
     return criterion, join
 
