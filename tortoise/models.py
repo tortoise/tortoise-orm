@@ -951,7 +951,7 @@ class Model(metaclass=ModelMeta):
             if instance:
                 return instance, False
             try:
-                return await cls.create(**defaults, **kwargs), True
+                return await cls.create(**defaults, **kwargs, using_db=using_db), True
             except (IntegrityError, TransactionManagementError):
                 # Let transaction close
                 pass
