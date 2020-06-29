@@ -35,7 +35,6 @@ setup(
     zip_safe=True,
     # Include additional files into the package
     include_package_data=True,
-    package_data={"tortoise": ["py.typed"]},
     # Details
     url="https://github.com/tortoise/tortoise-orm",
     description="Easy async ORM for python, built with relations in mind",
