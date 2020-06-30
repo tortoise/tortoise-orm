@@ -391,6 +391,9 @@ class JSONField(Field, dict, list):  # type: ignore
     class _db_postgres:
         SQL_TYPE = "JSONB"
 
+    class _db_mysql:
+        SQL_TYPE = "JSON"
+
     def __init__(
         self,
         encoder: JsonDumpsFunc = JSON_DUMPS,
