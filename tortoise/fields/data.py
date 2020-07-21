@@ -297,6 +297,8 @@ class DatetimeField(Field, datetime.datetime):
     def to_python_value(self, value: Any) -> Optional[datetime.datetime]:
         if value is None or isinstance(value, datetime.datetime):
             return value
+        if isinstance(value, int):
+            return datetime.datetime.fromtimestamp(value)
         return parse_datetime(value)
 
     def to_db_value(
