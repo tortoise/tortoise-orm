@@ -1,3 +1,4 @@
+import os
 from uuid import uuid4
 
 from tests.testmodels import (
@@ -205,6 +206,7 @@ class TestModelMethods(test.TestCase):
         with self.assertRaises(MultipleObjectsReturned):
             await self.cls.get_or_none(name="Test")
 
+    @test.skipIf(os.name == "nt", "timestamp issue on Windows")
     async def test_update_from_dict(self):
         evt1 = await Event.create(name="a", tournament=await Tournament.create(name="a"))
         orig_modified = evt1.modified

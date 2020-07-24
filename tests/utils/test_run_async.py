@@ -4,7 +4,7 @@ from unittest import TestCase, skipIf
 from tortoise import Tortoise, run_async
 
 
-@skipIf(os.name == "nt", "stuck with windows")
+@skipIf(os.name == "nt", "stuck with Windows")
 class TestRunAsync(TestCase):
     def setUp(self):
         self.somevalue = 1

@@ -320,11 +320,13 @@ class TestInitErrors(test.SimpleTestCase):
         ):
             await Tortoise.init(config_file="config.ini")
 
+    @test.skipIf(os.name == "nt", "path issue on Windows")
     async def test_init_json_file(self):
         await Tortoise.init(config_file=os.path.dirname(__file__) + "/init.json")
         self.assertIn("models", Tortoise.apps)
         self.assertIsNotNone(Tortoise.get_connection("default"))
 
+    @test.skipIf(os.name == "nt", "path issue on Windows")
     async def test_init_yaml_file(self):
         await Tortoise.init(config_file=os.path.dirname(__file__) + "/init.yaml")
         self.assertIn("models", Tortoise.apps)
