@@ -12,6 +12,7 @@ Changelog
 0.16.14
 -------
 - Make ``F`` expression work with ``QuerySet.filter()``.
+- Added ``datetime`` parsing from ``int`` for ``fields.DatetimeField``.
 
 0.16.13
 -------

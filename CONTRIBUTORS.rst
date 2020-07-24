@@ -31,6 +31,7 @@ Contributors
 * Lev Gorodetskiy ``@droserasprout``
 * Hao Gong  ``@dongfangtianyu``
 * Peng Gao ``@Priestch``
+* Mykola Solodukha ``@TrDex``
 
 Special Thanks
 ==============
