@@ -13,6 +13,7 @@ Changelog
 -------
 - Make ``F`` expression work with ``QuerySet.filter()``.
 - Added ``datetime`` parsing from ``int`` for ``fields.DatetimeField``.
+- ``get_or_create`` passes the ``using_db=`` on if provided.
 
 0.16.13
 -------

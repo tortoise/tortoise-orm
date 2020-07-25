@@ -32,6 +32,7 @@ Contributors
 * Hao Gong  ``@dongfangtianyu``
 * Peng Gao ``@Priestch``
 * Mykola Solodukha ``@TrDex``
+* Seo Jiyeon ``jiyeonseo``
 
 Special Thanks
 ==============
