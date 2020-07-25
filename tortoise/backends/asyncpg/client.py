@@ -50,6 +50,8 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     executor_class = AsyncpgExecutor
     schema_generator = AsyncpgSchemaGenerator
     capabilities = Capabilities("postgres")
+    connection_class = asyncpg.connection.Connection
+    loop = None
 
     def __init__(
         self, user: str, password: str, database: str, host: str, port: SupportsInt, **kwargs: Any
@@ -65,8 +67,8 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self.schema = self.extra.pop("schema", None)
         self.extra.pop("connection_name", None)
         self.extra.pop("fetch_inserted", None)
-        self.extra.pop("loop", None)
-        self.extra.pop("connection_class", None)
+        self.loop = self.extra.pop("loop", None)
+        self.connection_class = self.extra.pop("connection_class", self.connection_class)
         self.pool_minsize = int(self.extra.pop("minsize", 1))
         self.pool_maxsize = int(self.extra.pop("maxsize", 5))
 
@@ -82,6 +84,8 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             "database": self.database if with_db else None,
             "min_size": self.pool_minsize,
             "max_size": self.pool_maxsize,
+            "connection_class": self.connection_class,
+            "loop": self.loop,
             **self.extra,
         }
         if self.schema:

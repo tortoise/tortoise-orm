@@ -33,6 +33,7 @@ Contributors
 * Peng Gao ``@Priestch``
 * Mykola Solodukha ``@TrDex``
 * Seo Jiyeon ``jiyeonseo``
+* Blake Watters ``blakewatters``
 
 Special Thanks
 ==============
