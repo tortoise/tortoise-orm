@@ -26,7 +26,7 @@ class Tournament(Model):
         ordering = ["name"]
 
 
-# Create a lost of models for population from a queryset.
+# Create for population of models from a queryset.
 Tournament_Pydantic_List = pydantic_queryset_creator(Tournament)
 # Print JSON-schema
 print(Tournament_Pydantic_List.schema_json(indent=4))
