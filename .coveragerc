@@ -9,5 +9,6 @@ omit =
     tortoise/contrib/sanic/*
     tortoise/contrib/starlette/*
     tortoise/contrib/fastapi/*
+    tortoise/contrib/aiohttp/*
 [report]
 show_missing = True
