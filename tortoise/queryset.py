@@ -401,13 +401,13 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         :raises TypeError: Value of kwarg is expected to be a ``Function`` instance.
         """
+        from tortoise.models import get_filters_for_field
+
         queryset = self._clone()
         for key, annotation in kwargs.items():
             if not isinstance(annotation, Function):
                 raise TypeError("value is expected to be Function instance")
             queryset._annotations[key] = annotation
-            from tortoise.models import get_filters_for_field
-
             queryset._custom_filters.update(get_filters_for_field(key, None, key))
         return queryset
 

@@ -34,6 +34,7 @@ Contributors
 * Mykola Solodukha ``@TrDex``
 * Seo Jiyeon ``jiyeonseo``
 * Blake Watters ``blakewatters``
+* Alexey Tylindus ``@mirrorrim``
 * Rodrigo Oliveira ``@allrod5``
 
 Special Thanks
