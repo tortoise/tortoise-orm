@@ -34,6 +34,7 @@ Contributors
 * Mykola Solodukha ``@TrDex``
 * Seo Jiyeon ``jiyeonseo``
 * Blake Watters ``blakewatters``
+* ``@SnkSynthesis``
 
 Special Thanks
 ==============
