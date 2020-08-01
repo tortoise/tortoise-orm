@@ -6,6 +6,7 @@
 #
 -e .
 aiofiles==0.5.0           # via quart, sanic
+aiohttp==3.6.2            # via -r requirements.in
 aiomysql==0.0.20          # via -r requirements.in
 aiosqlite==0.15.0         # via -r ../docs/../requirements.txt, tortoise-orm
 alabaster==0.7.12         # via sphinx
