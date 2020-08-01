@@ -36,6 +36,7 @@ Contributors
 * Blake Watters ``blakewatters``
 * Alexey Tylindus ``@mirrorrim``
 * Rodrigo Oliveira ``@allrod5``
+* ``@SnkSynthesis``
 
 Special Thanks
 ==============
