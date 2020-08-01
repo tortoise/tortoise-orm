@@ -11,6 +11,7 @@ Contrib
    contrib/quart
    contrib/sanic
    contrib/starlette
+   contrib/aiohttp
 
 
 

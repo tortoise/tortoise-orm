@@ -52,3 +52,6 @@ pydantic
 
 # FastAPI support
 fastapi
+
+# Aiohttp support
+aiohttp
