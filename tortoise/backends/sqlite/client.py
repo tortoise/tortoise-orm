@@ -149,7 +149,7 @@ class SqliteClient(BaseDBAsyncClient):
 class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
     def __init__(self, connection: SqliteClient) -> None:
         self.connection_name = connection.connection_name
-        self._connection: aiosqlite.Connection = connection._connection
+        self._connection: aiosqlite.Connection = connection._connection  # type: ignore
         self._lock = asyncio.Lock()
         self._trxlock = connection._lock
         self.log = connection.log

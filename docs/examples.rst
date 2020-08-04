@@ -13,3 +13,4 @@ Examples
    examples/quart
    examples/sanic
    examples/starlette
+   examples/aiohttp

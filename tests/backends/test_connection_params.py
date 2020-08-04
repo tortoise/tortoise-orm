@@ -1,3 +1,4 @@
+import asyncpg
 from asynctest.mock import CoroutineMock, patch
 
 from tortoise import Tortoise
@@ -71,6 +72,8 @@ class TestConnectionParams(test.TestCase):
                     user="root",
                     max_size=5,
                     min_size=1,
+                    connection_class=asyncpg.connection.Connection,
+                    loop=None,
                 )
         except ImportError:
             self.skipTest("asyncpg not installed")
