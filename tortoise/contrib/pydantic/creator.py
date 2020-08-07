@@ -274,6 +274,7 @@ def pydantic_model_creator(
         fconfig: Dict[str, Any] = {}
 
         field_type = fdesc["field_type"]
+        field_default = fdesc.get("default")
 
         def get_submodel(_model: "Type[Model]") -> Optional[Type[PydanticModel]]:
             """ Get Pydantic model for the submodel """
@@ -323,7 +324,7 @@ def pydantic_model_creator(
             if model:
                 if fdesc.get("nullable"):
                     fconfig["nullable"] = True
-                if fdesc.get("nullable") or fdesc.get("default"):
+                if fdesc.get("nullable") or field_default is not None:
                     model = Optional[model]  # type: ignore
 
                 pannotations[fname] = model
@@ -354,7 +355,7 @@ def pydantic_model_creator(
             ptype = fdesc["python_type"]
             if fdesc.get("nullable"):
                 fconfig["nullable"] = True
-            if fdesc.get("nullable") or fdesc.get("default"):
+            if fdesc.get("nullable") or field_default is not None:
                 ptype = Optional[ptype]
             if not (exclude_readonly and fdesc["constraints"].get("readOnly") is True):
                 pannotations[fname] = annotation or ptype
@@ -365,6 +366,11 @@ def pydantic_model_creator(
             description = comment or _br_it(fdesc.get("docstring") or fdesc["description"] or "")
             fconfig["description"] = description
             fconfig["title"] = fname.replace("_", " ").title()
+            if field_default is not None:
+                if callable(field_default):
+                    fconfig["default_factory"] = field_default
+                else:
+                    properties[fname] = field_default
             pconfig.fields[fname] = fconfig
 
     # Here we endure that the name is unique, but complete objects are still labeled verbatim
