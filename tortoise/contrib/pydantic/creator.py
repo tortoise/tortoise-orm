@@ -324,7 +324,7 @@ def pydantic_model_creator(
             if model:
                 if fdesc.get("nullable"):
                     fconfig["nullable"] = True
-                if fdesc.get("nullable") or field_default:
+                if fdesc.get("nullable") or field_default is not None:
                     model = Optional[model]  # type: ignore
 
                 pannotations[fname] = model
@@ -369,6 +369,7 @@ def pydantic_model_creator(
             if field_default is not None:
                 if callable(field_default):
                     fconfig["default_factory"] = field_default
+                    properties[fname] = None
                 else:
                     properties[fname] = field_default
             pconfig.fields[fname] = fconfig
