@@ -9,6 +9,10 @@ Changelog
 
 0.16
 ====
+0.16.15
+-------
+- Make `DateField` accept valid date str.
+
 0.16.14
 -------
 - Make ``F`` expression work with ``QuerySet.filter()``.
