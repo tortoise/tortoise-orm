@@ -318,3 +318,10 @@ class TestQueryset(test.TestCase):
     async def test_get_raw_sql(self):
         sql = IntFields.all().sql()
         self.assertRegex(sql, r"^SELECT.+FROM.+")
+
+    async def test_select_for_update(self):
+        ret = await IntFields.first()
+        sql = IntFields.filter(pk=ret.pk).only("id").select_for_update().sql()
+        self.assertEqual(
+            sql, f'SELECT "id" "id" FROM "intfields" WHERE "id"={ret.pk} FOR UPDATE',
+        )

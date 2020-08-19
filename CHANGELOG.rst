@@ -12,6 +12,7 @@ Changelog
 0.16.15
 -------
 - Make `DateField` accept valid date str.
+- Add `QuerySet.select_for_update()`.
 
 0.16.14
 -------
