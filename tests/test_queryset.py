@@ -322,5 +322,5 @@ class TestQueryset(test.TestCase):
     async def test_select_for_update(self):
         sql = IntFields.filter(pk=1).only("id").select_for_update().sql()
         self.assertEqual(
-            sql, f'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE',
+            sql, 'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE',
         )
