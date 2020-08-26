@@ -110,5 +110,5 @@ def register_tortoise(
         async def integrityerror_exception_handler(request: Request, exc: IntegrityError):
             return JSONResponse(
                 status_code=422,
-                content={"detail": {"loc": [], "msg": str(exc), "type": "IntegrityError"}},
+                content={"detail": [{"loc": [], "msg": str(exc), "type": "IntegrityError"}]},
             )
