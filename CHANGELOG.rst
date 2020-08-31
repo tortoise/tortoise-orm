@@ -9,6 +9,11 @@ Changelog
 
 0.16
 ====
+0.16.15
+-------
+- check ``default`` for not ``None`` on pydantic model creation
+- propagate default to pydantic model
+
 0.16.14
 -------
 - Make ``F`` expression work with ``QuerySet.filter()``.

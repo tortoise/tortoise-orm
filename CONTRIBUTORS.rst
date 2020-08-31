@@ -38,6 +38,7 @@ Contributors
 * Rodrigo Oliveira ``@allrod5``
 * ``@SnkSynthesis``
 * Alex Sinichkin ``@AlwxSin``
+* ``@Yolley``
 
 Special Thanks
 ==============
