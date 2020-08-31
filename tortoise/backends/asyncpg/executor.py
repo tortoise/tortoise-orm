@@ -1,5 +1,5 @@
 import uuid
-from typing import List, Optional
+from typing import Optional, Sequence
 
 import asyncpg
 from pypika import Parameter
@@ -15,7 +15,7 @@ class AsyncpgExecutor(BaseExecutor):
     def parameter(self, pos: int) -> Parameter:
         return Parameter("$%d" % (pos + 1,))
 
-    def _prepare_insert_statement(self, columns: List[str], has_generated: bool = True) -> str:
+    def _prepare_insert_statement(self, columns: Sequence[str], has_generated: bool = True) -> str:
         query = (
             self.db.query_class.into(self.model._meta.basetable)
             .columns(*columns)
