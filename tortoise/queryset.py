@@ -858,7 +858,7 @@ class ExistsQuery(AwaitableQuery):
         self.query._limit = 1
         self.query._select_other(ValueWrapper(1))
 
-    def __await__(self) -> Generator[Any, None, int]:
+    def __await__(self) -> Generator[Any, None, bool]:
         if self._db is None:
             self._db = self.model._meta.db  # type: ignore
         self._make_query()
