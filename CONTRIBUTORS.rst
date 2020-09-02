@@ -39,7 +39,7 @@ Contributors
 * ``@SnkSynthesis``
 * Alex Sinichkin ``@AlwxSin``
 * ``@Yolley``
-* Weiliang Li `@kigawas`
+* Weiliang Li ``@kigawas``
 
 Special Thanks
 ==============
