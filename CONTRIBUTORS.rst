@@ -37,6 +37,7 @@ Contributors
 * Alexey Tylindus ``@mirrorrim``
 * Rodrigo Oliveira ``@allrod5``
 * ``@SnkSynthesis``
+* Weiliang Li `@kigawas`
 
 Special Thanks
 ==============

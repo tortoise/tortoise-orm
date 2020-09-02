@@ -9,6 +9,10 @@ Changelog
 
 0.16
 ====
+0.16.15
+-------
+- Fixed inconsistency in integrity error exception of FastAPI
+
 0.16.14
 -------
 - Make ``F`` expression work with ``QuerySet.filter()``.
