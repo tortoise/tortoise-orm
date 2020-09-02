@@ -11,6 +11,8 @@ Changelog
 ====
 0.16.15
 -------
+- check ``default`` for not ``None`` on pydantic model creation
+- propagate default to pydantic model
 - Fixed inconsistency in integrity error exception of FastAPI
 
 0.16.14
