@@ -7,6 +7,7 @@ from tortoise.exceptions import ConfigurationError
 urlparse.uses_netloc.append("postgres")
 urlparse.uses_netloc.append("sqlite")
 urlparse.uses_netloc.append("mysql")
+urlparse.uses_netloc.append("clickhouse")
 DB_LOOKUP: Dict[str, Dict[str, Any]] = {
     "postgres": {
         "engine": "tortoise.backends.asyncpg",
@@ -55,6 +56,18 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
             "no_delay": bool,
             "use_unicode": bool,
         },
+    },
+    "clickhouse": {
+        "engine": "tortoise.backends.asynch",
+        "vmap": {
+            "path": "database",
+            "hostname": "host",
+            "port": "port",
+            "username": "user",
+            "password": "password",
+        },
+        "defaults": {"port": 9000,},
+        "cast": {"minsize": int, "maxsize": int, "echo": bool,},
     },
 }
 

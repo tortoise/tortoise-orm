@@ -69,3 +69,9 @@ class DBConnectionError(BaseORMException, ConnectionError):
     """
     The DBConnectionError is raised when problems with connecting to db occurs
     """
+
+
+class NotSupportError(OperationalError):
+    """
+    The NotSupportError is raised when use features not support.
+    """

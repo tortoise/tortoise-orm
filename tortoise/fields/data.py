@@ -91,6 +91,9 @@ class IntField(Field, int):
     class _db_mysql:
         GENERATED_SQL = "INT NOT NULL PRIMARY KEY AUTO_INCREMENT"
 
+    class _db_clickhouse:
+        SQL_TYPE = "Int16"
+
 
 class BigIntField(Field, int):
     """
@@ -123,6 +126,9 @@ class BigIntField(Field, int):
 
     class _db_mysql:
         GENERATED_SQL = "BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT"
+
+    class _db_clickhouse:
+        SQL_TYPE = "Int64"
 
 
 class SmallIntField(Field, int):
@@ -157,6 +163,9 @@ class SmallIntField(Field, int):
     class _db_mysql:
         GENERATED_SQL = "SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT"
 
+    class _db_clickhouse:
+        SQL_TYPE = "Int8"
+
 
 class CharField(Field, str):  # type: ignore
     """
@@ -183,6 +192,9 @@ class CharField(Field, str):  # type: ignore
     @property
     def SQL_TYPE(self) -> str:  # type: ignore
         return f"VARCHAR({self.max_length})"
+
+    class _db_clickhosue:
+        SQL_TYPE = "String"
 
 
 class TextField(Field, str):  # type: ignore
@@ -287,6 +299,9 @@ class DatetimeField(Field, datetime.datetime):
     class _db_mysql:
         SQL_TYPE = "DATETIME(6)"
 
+    class _db_clickhouse:
+        SQL_TYPE = "DateTime"
+
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any) -> None:
         if auto_now_add and auto_now:
             raise ConfigurationError("You can choose only 'auto_now' or 'auto_now_add'")
@@ -355,6 +370,9 @@ class TimeDeltaField(Field, datetime.timedelta):
             return None
         return (value.days * 86400000000) + (value.seconds * 1000000) + value.microseconds
 
+    class _db_clickhouse:
+        SQL_TYPE = "Int64"
+
 
 class FloatField(Field, float):
     """
@@ -368,6 +386,9 @@ class FloatField(Field, float):
 
     class _db_mysql:
         SQL_TYPE = "DOUBLE"
+
+    class _db_clickhouse:
+        SQL_TYPE = "Float64"
 
 
 class JSONField(Field, dict, list):  # type: ignore

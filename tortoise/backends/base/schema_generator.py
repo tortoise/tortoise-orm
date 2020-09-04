@@ -122,7 +122,7 @@ class BaseSchemaGenerator:
         # overwritten if required to match the database specific escaping.
         return comment.translate(self._get_escape_translation_table())
 
-    def _table_generate_extra(self, table: str) -> str:
+    def _table_generate_extra(self, model: "Type[Model]") -> str:
         return ""
 
     def _get_inner_statements(self) -> List[str]:
@@ -330,7 +330,7 @@ class BaseSchemaGenerator:
             table_name=model._meta.db_table,
             fields=table_fields_string,
             comment=table_comment,
-            extra=self._table_generate_extra(table=model._meta.db_table),
+            extra=self._table_generate_extra(model=model),
         )
 
         table_create_string = "\n".join([table_create_string, *field_indexes_sqls])
@@ -354,7 +354,7 @@ class BaseSchemaGenerator:
                 forward_type=field_object.related_model._meta.pk.get_for_dialect(
                     self.DIALECT, "SQL_TYPE"
                 ),
-                extra=self._table_generate_extra(table=field_object.through),
+                extra=self._table_generate_extra(model=model),
                 comment=self._table_comment_generator(
                     table=field_object.through, comment=field_object.description
                 )
@@ -415,5 +415,5 @@ class BaseSchemaGenerator:
         return schema_creation_string
 
     async def generate_from_string(self, creation_string: str) -> None:
-        # print(creation_string)
+        print(creation_string)
         await self.client.execute_script(creation_string)

@@ -403,3 +403,19 @@ class TestConfigGenerator(test.SimpleTestCase):
                 },
             },
         )
+
+    def test_clickhouse_basic(self):
+        res = expand_db_url("clickhouse://default:@127.0.0.1:9000/test")
+        self.assertEqual(
+            res,
+            {
+                "engine": "tortoise.backends.asynch",
+                "credentials": {
+                    "database": "test",
+                    "host": "127.0.0.1",
+                    "password": "",
+                    "port": 9000,
+                    "user": "default",
+                },
+            },
+        )
