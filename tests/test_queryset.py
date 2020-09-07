@@ -319,6 +319,7 @@ class TestQueryset(test.TestCase):
         sql = IntFields.all().sql()
         self.assertRegex(sql, r"^SELECT.+FROM.+")
 
+    @test.requireCapability(support_for_update=True)
     async def test_select_for_update(self):
         sql = IntFields.filter(pk=1).only("id").select_for_update().sql()
         self.assertEqual(

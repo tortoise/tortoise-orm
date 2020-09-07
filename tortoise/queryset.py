@@ -405,9 +405,11 @@ class QuerySet(AwaitableQuery[MODEL]):
         Returns a queryset that will lock rows until the end of the transaction,
         generating a SELECT ... FOR UPDATE SQL statement on supported databases.
         """
-        queryset = self._clone()
-        queryset._select_for_update = True
-        return queryset
+        if self.capabilities.support_for_update:
+            queryset = self._clone()
+            queryset._select_for_update = True
+            return queryset
+        return self
 
     def annotate(self, **kwargs: Function) -> "QuerySet[MODEL]":
         """
