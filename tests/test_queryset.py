@@ -1,4 +1,5 @@
 from tests.testmodels import IntFields, MinRelation, Tournament
+from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import (
     DoesNotExist,
@@ -17,6 +18,7 @@ class TestQueryset(test.TestCase):
     async def setUp(self):
         # Build large dataset
         self.intfields = [await IntFields.create(intnum=val) for val in range(10, 100, 3)]
+        self.db = Tortoise.get_connection("models")
 
     async def test_all_count(self):
         self.assertEqual(await IntFields.all().count(), 30)
@@ -322,6 +324,12 @@ class TestQueryset(test.TestCase):
     @test.requireCapability(support_for_update=True)
     async def test_select_for_update(self):
         sql = IntFields.filter(pk=1).only("id").select_for_update().sql()
-        self.assertEqual(
-            sql, 'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE',
-        )
+        dialect = self.db.schema_generator.DIALECT
+        if dialect == "postgres":
+            self.assertEqual(
+                sql, 'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE',
+            )
+        elif dialect == "mysql":
+            self.assertEqual(
+                sql, "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE",
+            )
