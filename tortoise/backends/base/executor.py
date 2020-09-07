@@ -3,7 +3,21 @@ import datetime
 import decimal
 from copy import copy
 from functools import partial
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, Type, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 from pypika import JoinType, Parameter, Query, Table
 from pypika.terms import ArithmeticExpression
@@ -135,7 +149,7 @@ class BaseExecutor:
             return cls.TO_DB_OVERRIDE[field_object.__class__](field_object, attr, instance)
         return field_object.to_db_value(attr, instance)
 
-    def _prepare_insert_statement(self, columns: List[str], has_generated: bool = True) -> str:
+    def _prepare_insert_statement(self, columns: Sequence[str], has_generated: bool = True) -> str:
         # Insert should implement returning new id to saved object
         # Each db has it's own methods for it, so each implementation should
         # go to descendant executors
@@ -167,7 +181,7 @@ class BaseExecutor:
             ]
             await self.db.execute_insert(self.insert_query_all, values)
 
-    async def execute_bulk_insert(self, instances: "List[Model]") -> None:
+    async def execute_bulk_insert(self, instances: "Iterable[Model]") -> None:
         values_lists_all = []
         values_lists = []
         for instance in instances:
@@ -193,7 +207,7 @@ class BaseExecutor:
 
     def get_update_sql(
         self,
-        update_fields: Optional[List[str]],
+        update_fields: Optional[Iterable[str]],
         arithmetic: Optional[Dict[str, ArithmeticExpression]],
     ) -> str:
         """
@@ -223,7 +237,7 @@ class BaseExecutor:
         return sql
 
     async def execute_update(
-        self, instance: "Union[Type[Model], Model]", update_fields: Optional[List[str]]
+        self, instance: "Union[Type[Model], Model]", update_fields: Optional[Iterable[str]]
     ) -> int:
         values = []
         arithmetic = {}
@@ -248,8 +262,8 @@ class BaseExecutor:
         )[0]
 
     async def _prefetch_reverse_relation(
-        self, instance_list: "List[Model]", field: str, related_query: "QuerySet"
-    ) -> list:
+        self, instance_list: "Iterable[Model]", field: str, related_query: "QuerySet"
+    ) -> "Iterable[Model]":
         related_objects_for_fetch: Dict[str, list] = {}
         related_field: BackwardFKRelation = self.model._meta.fields_map[field]  # type: ignore
         related_field_name = related_field.to_field_instance.model_field_name
@@ -288,8 +302,8 @@ class BaseExecutor:
         return instance_list
 
     async def _prefetch_reverse_o2o_relation(
-        self, instance_list: list, field: str, related_query: "QuerySet"
-    ) -> list:
+        self, instance_list: "Iterable[Model]", field: str, related_query: "QuerySet"
+    ) -> "Iterable[Model]":
         related_objects_for_fetch: Dict[str, list] = {}
         related_field: BackwardOneToOneRelation = self.model._meta.fields_map[field]  # type: ignore
         related_field_name = related_field.to_field_instance.model_field_name
@@ -325,8 +339,8 @@ class BaseExecutor:
         return instance_list
 
     async def _prefetch_m2m_relation(
-        self, instance_list: "List[Model]", field: str, related_query: "QuerySet"
-    ) -> list:
+        self, instance_list: "Iterable[Model]", field: str, related_query: "QuerySet"
+    ) -> "Iterable[Model]":
         instance_id_set: set = {
             self._field_to_db(instance._meta.pk, instance.pk, instance)
             for instance in instance_list
@@ -409,8 +423,8 @@ class BaseExecutor:
         return instance_list
 
     async def _prefetch_direct_relation(
-        self, instance_list: "List[Model]", field: str, related_query: "QuerySet"
-    ) -> "List[Model]":
+        self, instance_list: "Iterable[Model]", field: str, related_query: "QuerySet"
+    ) -> "Iterable[Model]":
         # TODO: This will only work if instance_list is all of same type
         # TODO: If that's the case, then we can optimize the key resolver
         related_objects_for_fetch: Dict[str, list] = {}
@@ -449,8 +463,8 @@ class BaseExecutor:
             self._prefetch_queries[field_name] = related_query
 
     async def _do_prefetch(
-        self, instance_id_list: "List[Model]", field: str, related_query: "QuerySet"
-    ) -> "List[Model]":
+        self, instance_id_list: "Iterable[Model]", field: str, related_query: "QuerySet"
+    ) -> "Iterable[Model]":
         if field in self.model._meta.backward_fk_fields:
             return await self._prefetch_reverse_relation(instance_id_list, field, related_query)
 
@@ -461,7 +475,9 @@ class BaseExecutor:
             return await self._prefetch_m2m_relation(instance_id_list, field, related_query)
         return await self._prefetch_direct_relation(instance_id_list, field, related_query)
 
-    async def _execute_prefetch_queries(self, instance_list: "List[Model]") -> "List[Model]":
+    async def _execute_prefetch_queries(
+        self, instance_list: "Iterable[Model]"
+    ) -> "Iterable[Model]":
         if instance_list and (self.prefetch_map or self._prefetch_queries):
             self._make_prefetch_queries()
             prefetch_tasks = [
@@ -472,7 +488,9 @@ class BaseExecutor:
 
         return instance_list
 
-    async def fetch_for_list(self, instance_list: "List[Model]", *args: str) -> "List[Model]":
+    async def fetch_for_list(
+        self, instance_list: "Iterable[Model]", *args: str
+    ) -> "Iterable[Model]":
         self.prefetch_map = {}
         for relation in args:
             relation_split = relation.split("__")

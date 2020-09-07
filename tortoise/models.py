@@ -9,6 +9,7 @@ from typing import (
     Callable,
     Dict,
     Generator,
+    Iterable,
     List,
     Optional,
     Set,
@@ -815,7 +816,7 @@ class Model(metaclass=ModelMeta):
     async def _pre_save(
         self,
         using_db: Optional[BaseDBAsyncClient] = None,
-        update_fields: Optional[List[str]] = None,
+        update_fields: Optional[Iterable[str]] = None,
     ) -> None:
         listeners = []
         cls_listeners = self._listeners.get(Signals.pre_save, {}).get(self.__class__, [])
@@ -827,7 +828,7 @@ class Model(metaclass=ModelMeta):
         self,
         using_db: Optional[BaseDBAsyncClient] = None,
         created: bool = False,
-        update_fields: Optional[List[str]] = None,
+        update_fields: Optional[Iterable[str]] = None,
     ) -> None:
         listeners = []
         cls_listeners = self._listeners.get(Signals.post_save, {}).get(self.__class__, [])
@@ -838,7 +839,7 @@ class Model(metaclass=ModelMeta):
     async def save(
         self,
         using_db: Optional[BaseDBAsyncClient] = None,
-        update_fields: Optional[List[str]] = None,
+        update_fields: Optional[Iterable[str]] = None,
         force_create: bool = False,
         force_update: bool = False,
     ) -> None:
@@ -984,7 +985,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def bulk_create(
-        cls: Type[MODEL], objects: List[MODEL], using_db: Optional[BaseDBAsyncClient] = None,
+        cls: Type[MODEL], objects: Iterable[MODEL], using_db: Optional[BaseDBAsyncClient] = None,
     ) -> None:
         """
         Bulk insert operation:
@@ -1010,7 +1011,7 @@ class Model(metaclass=ModelMeta):
         :param using_db: Specific DB connection to use instead of default bound
         """
         db = using_db or cls._meta.db
-        await db.executor_class(model=cls, db=db).execute_bulk_insert(objects)  # type: ignore
+        await db.executor_class(model=cls, db=db).execute_bulk_insert(objects)
 
     @classmethod
     def first(cls: Type[MODEL]) -> QuerySetSingle[Optional[MODEL]]:
@@ -1102,7 +1103,10 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def fetch_for_list(
-        cls, instance_list: "List[Model]", *args: Any, using_db: Optional[BaseDBAsyncClient] = None,
+        cls,
+        instance_list: "Iterable[Model]",
+        *args: Any,
+        using_db: Optional[BaseDBAsyncClient] = None,
     ) -> None:
         """
         Fetches related models for provided list of Model objects.

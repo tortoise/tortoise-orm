@@ -13,6 +13,8 @@ Changelog
 -------
 - Make `DateField` accept valid date str.
 - Add `QuerySet.select_for_update()`.
+- check ``default`` for not ``None`` on pydantic model creation
+- propagate default to pydantic model
 
 0.16.14
 -------
