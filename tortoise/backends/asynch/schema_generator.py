@@ -1,6 +1,6 @@
-from typing import Any, List, Type
+from typing import Any, List, Type, cast
 
-from tortoise import Model
+from tortoise import ManyToManyFieldInstance, Model
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
 
@@ -9,12 +9,22 @@ class AsynchSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "clickhouse"
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists} "{table_name}" ({fields}){extra};'
     FIELD_TEMPLATE = "{name} {type} {default}{comment}"
+    M2M_TABLE_TEMPLATE = (
+        'CREATE TABLE {exists}"{table_name}" (\n'
+        '    "{backward_key}" {backward_type},'
+        '    "{forward_key}" {forward_type}'
+        "){extra}{comment};"
+    )
 
     def _table_comment_generator(self, table: str, comment: str) -> str:
         return ""
 
-    def _table_generate_extra(self, model: "Type[Model]") -> str:
-        return f"ENGINE = MergeTree ORDER BY {model._meta.pk_attr}"  # type: ignore
+    def _table_generate_extra(
+        self, model: "Type[Model]", m2m_field: ManyToManyFieldInstance = None
+    ) -> str:
+        if m2m_field:
+            return f"ENGINE = MergeTree ORDER BY ({m2m_field.backward_key},{m2m_field.forward_key})"  # type: ignore
+        return f"ENGINE = MergeTree ORDER BY {model._meta.pk.source_field or model._meta.pk_attr}"  # type: ignore
 
     def _create_fk_string(
         self,
@@ -69,3 +79,6 @@ class AsynchSchemaGenerator(BaseSchemaGenerator):
             comment=comment if self.client.capabilities.inline_comment else "",
             default=default,
         ).strip()
+
+    def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
+        return ""

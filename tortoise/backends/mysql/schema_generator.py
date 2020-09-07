@@ -38,7 +38,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     def quote(self, val: str) -> str:
         return f"`{val}`"
 
-    def _table_generate_extra(self, table: str) -> str:
+    def _table_generate_extra(self, model: "Type[Model]", m2m: bool = False) -> str:
         return (
             f" CHARACTER SET {self.client.charset}" if self.client.charset else ""  # type: ignore
         )

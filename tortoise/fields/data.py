@@ -193,7 +193,7 @@ class CharField(Field, str):  # type: ignore
     def SQL_TYPE(self) -> str:  # type: ignore
         return f"VARCHAR({self.max_length})"
 
-    class _db_clickhosue:
+    class _db_clickhouse:
         SQL_TYPE = "String"
 
 
@@ -225,6 +225,9 @@ class TextField(Field, str):  # type: ignore
 
     class _db_mysql:
         SQL_TYPE = "LONGTEXT"
+
+    class _db_clickhouse:
+        SQL_TYPE = "String"
 
 
 class BooleanField(Field):
@@ -350,6 +353,9 @@ class DateField(Field, datetime.date):
             return value
         return parse_datetime(value).date()
 
+    class _db_clickhouse:
+        SQL_TYPE = "Date"
+
 
 class TimeDeltaField(Field, datetime.timedelta):
     """
@@ -447,6 +453,9 @@ class UUIDField(Field, UUID):
     SQL_TYPE = "CHAR(36)"
 
     class _db_postgres:
+        SQL_TYPE = "UUID"
+
+    class _db_clickhouse:
         SQL_TYPE = "UUID"
 
     def __init__(self, **kwargs: Any) -> None:

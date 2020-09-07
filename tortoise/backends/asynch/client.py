@@ -115,6 +115,7 @@ class AsynchDBClient(BaseDBAsyncClient):
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
+                print(query)
                 return await cursor.execute(query, values)
 
     @translate_exceptions
@@ -144,7 +145,8 @@ class AsynchDBClient(BaseDBAsyncClient):
             self.log.debug(query)
             async with connection.cursor() as cursor:
                 for sub_query in query.split(";"):
-                    await cursor.execute(sub_query)
+                    if sub_query:
+                        await cursor.execute(sub_query)
 
     @translate_exceptions
     async def execute_many(self, query: str, values: List[list]) -> None:
