@@ -249,6 +249,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_having",
         "_custom_filters",
         "_group_bys",
+        "_select_for_update",
     )
 
     def __init__(self, model: Type[MODEL]) -> None:
@@ -268,6 +269,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._custom_filters: Dict[str, dict] = {}
         self._fields_for_select: Tuple[str, ...] = ()
         self._group_bys: Tuple[str, ...] = ()
+        self._select_for_update: bool = False
 
     def _clone(self) -> "QuerySet[MODEL]":
         queryset = QuerySet.__new__(QuerySet)
@@ -292,6 +294,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._having = copy(self._having)
         queryset._custom_filters = copy(self._custom_filters)
         queryset._group_bys = copy(self._group_bys)
+        queryset._select_for_update = self._select_for_update
         return queryset
 
     def _filter_or_exclude(self, *args: Q, negate: bool, **kwargs: Any) -> "QuerySet[MODEL]":
@@ -394,6 +397,19 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset = self._clone()
         queryset._distinct = True
         return queryset
+
+    def select_for_update(self) -> "QuerySet[MODEL]":
+        """
+        Make QuerySet select for update.
+
+        Returns a queryset that will lock rows until the end of the transaction,
+        generating a SELECT ... FOR UPDATE SQL statement on supported databases.
+        """
+        if self.capabilities.support_for_update:
+            queryset = self._clone()
+            queryset._select_for_update = True
+            return queryset
+        return self
 
     def annotate(self, **kwargs: Function) -> "QuerySet[MODEL]":
         """
@@ -697,6 +713,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query._offset = self._offset
         if self._distinct:
             self.query._distinct = True
+        if self._select_for_update:
+            self.query._for_update = True
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
         if self._db is None:

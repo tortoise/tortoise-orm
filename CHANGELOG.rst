@@ -11,6 +11,8 @@ Changelog
 ====
 0.16.15
 -------
+- Make `DateField` accept valid date str.
+- Add `QuerySet.select_for_update()`.
 - check ``default`` for not ``None`` on pydantic model creation
 - propagate default to pydantic model
 

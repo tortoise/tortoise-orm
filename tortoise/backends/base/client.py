@@ -27,6 +27,7 @@ class Capabilities:
     :param inline_comment: Indicates that comments should be rendered in line with the
         DDL statement, and not as a separate statement.
     :param supports_transactions: Indicates that this DB supports transactions.
+    :param support_for_update: Indicates that this DB supports SELECT ... FOR UPDATE SQL statement.
     """
 
     def __init__(
@@ -39,6 +40,7 @@ class Capabilities:
         requires_limit: bool = False,
         inline_comment: bool = False,
         supports_transactions: bool = True,
+        support_for_update: bool = True,
     ) -> None:
         super().__setattr__("_mutable", True)
 
@@ -47,7 +49,7 @@ class Capabilities:
         self.requires_limit = requires_limit
         self.inline_comment = inline_comment
         self.supports_transactions = supports_transactions
-
+        self.support_for_update = support_for_update
         super().__setattr__("_mutable", False)
 
     def __setattr__(self, attr: str, value: Any) -> None:
