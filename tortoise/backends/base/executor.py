@@ -55,11 +55,13 @@ class BaseExecutor:
         db: "BaseDBAsyncClient",
         prefetch_map: "Optional[Dict[str, Set[Union[str, Prefetch]]]]" = None,
         prefetch_queries: Optional[Dict[str, "QuerySet"]] = None,
+        prefetch_to_attrs: Optional[Dict[str, str]] = None,
     ) -> None:
         self.model = model
         self.db: "BaseDBAsyncClient" = db
         self.prefetch_map = prefetch_map or {}
         self._prefetch_queries = prefetch_queries or {}
+        self._prefetch_to_attrs = prefetch_to_attrs or {}
 
         key = f"{self.db.connection_name}:{self.model._meta.db_table}"
         if key not in EXECUTOR_CACHE:
@@ -297,7 +299,8 @@ class BaseExecutor:
         for instance in instance_list:
             relation_container = getattr(instance, field)
             relation_container._set_result_for_query(
-                related_object_map.get(getattr(instance, related_field_name), [])
+                related_object_map.get(getattr(instance, related_field_name), []),
+                self._prefetch_to_attrs.get(field),
             )
         return instance_list
 
@@ -419,7 +422,9 @@ class BaseExecutor:
 
         for instance in instance_list:
             relation_container = getattr(instance, field)
-            relation_container._set_result_for_query(relation_map.get(instance.pk, []))
+            relation_container._set_result_for_query(
+                relation_map.get(instance.pk, []), self._prefetch_to_attrs.get(field)
+            )
         return instance_list
 
     async def _prefetch_direct_relation(

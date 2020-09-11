@@ -148,9 +148,11 @@ class ReverseRelation(Generic[MODEL]):
         """
         return self._query.offset(offset)
 
-    def _set_result_for_query(self, sequence: List[MODEL]) -> None:
+    def _set_result_for_query(self, sequence: List[MODEL], attr: Optional[str] = None) -> None:
         self._fetched = True
         self.related_objects = sequence
+        if attr:
+            setattr(self.instance, attr, sequence)
 
     def _raise_if_not_fetched(self) -> None:
         if not self._fetched:

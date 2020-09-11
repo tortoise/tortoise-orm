@@ -391,11 +391,13 @@ class Prefetch:
 
     :param relation: Related field name.
     :param queryset: Custom QuerySet to use for prefetching.
+    :param to_attr: Sets the result of the prefetch operation to a custom attribute.
     """
 
-    __slots__ = ("relation", "queryset")
+    __slots__ = ("relation", "queryset", "to_attr")
 
-    def __init__(self, relation: str, queryset: "QuerySet") -> None:
+    def __init__(self, relation: str, queryset: "QuerySet", to_attr: Optional[str] = None) -> None:
+        self.to_attr = to_attr
         self.relation = relation
         self.queryset = queryset
         self.queryset.query = copy(self.queryset.model._meta.basequery)
