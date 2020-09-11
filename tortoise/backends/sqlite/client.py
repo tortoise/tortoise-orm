@@ -57,8 +57,7 @@ class SqliteClient(BaseDBAsyncClient):
     async def create_connection(self, with_db: bool) -> None:
         if not self._connection:  # pragma: no branch
             self._connection = aiosqlite.connect(self.filename, isolation_level=None)
-            self._connection.start()
-            await self._connection._connect()
+            await self._connection
             self._connection._conn.row_factory = sqlite3.Row
             for pragma, val in self.pragmas.items():
                 cursor = await self._connection.execute(f"PRAGMA {pragma}={val}")
