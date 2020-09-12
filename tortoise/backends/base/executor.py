@@ -54,7 +54,7 @@ class BaseExecutor:
         model: "Type[Model]",
         db: "BaseDBAsyncClient",
         prefetch_map: "Optional[Dict[str, Set[Union[str, Prefetch]]]]" = None,
-        prefetch_queries: Optional[Dict[str, List[Tuple[str, "QuerySet"]]]] = None,
+        prefetch_queries: Optional[Dict[str, List[Tuple[Optional[str], "QuerySet"]]]] = None,
     ) -> None:
         self.model = model
         self.db: "BaseDBAsyncClient" = db
@@ -262,7 +262,10 @@ class BaseExecutor:
         )[0]
 
     async def _prefetch_reverse_relation(
-        self, instance_list: "Iterable[Model]", field: str, related_query: Tuple[str, "QuerySet"]
+        self,
+        instance_list: "Iterable[Model]",
+        field: str,
+        related_query: Tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
         to_attr, related_query = related_query
         related_objects_for_fetch: Dict[str, list] = {}
@@ -303,7 +306,10 @@ class BaseExecutor:
         return instance_list
 
     async def _prefetch_reverse_o2o_relation(
-        self, instance_list: "Iterable[Model]", field: str, related_query: Tuple[str, "QuerySet"]
+        self,
+        instance_list: "Iterable[Model]",
+        field: str,
+        related_query: Tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
         to_attr, related_query = related_query
         related_objects_for_fetch: Dict[str, list] = {}
@@ -336,11 +342,15 @@ class BaseExecutor:
             setattr(
                 instance, f"_{field}", obj,
             )
-            to_attr and setattr(instance, to_attr, obj)
+            if to_attr:
+                setattr(instance, to_attr, obj)
         return instance_list
 
     async def _prefetch_m2m_relation(
-        self, instance_list: "Iterable[Model]", field: str, related_query: Tuple[str, "QuerySet"]
+        self,
+        instance_list: "Iterable[Model]",
+        field: str,
+        related_query: Tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
         to_attr, related_query = related_query
         instance_id_set: set = {
@@ -425,7 +435,10 @@ class BaseExecutor:
         return instance_list
 
     async def _prefetch_direct_relation(
-        self, instance_list: "Iterable[Model]", field: str, related_query: Tuple[str, "QuerySet"]
+        self,
+        instance_list: "Iterable[Model]",
+        field: str,
+        related_query: Tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
         # TODO: This will only work if instance_list is all of same type
         # TODO: If that's the case, then we can optimize the key resolver
@@ -449,7 +462,8 @@ class BaseExecutor:
             for instance in instance_list:
                 obj = related_object_map.get(getattr(instance, relation_key_field))
                 setattr(instance, field, obj)
-                to_attr and setattr(instance, to_attr, obj)
+                if to_attr:
+                    setattr(instance, to_attr, obj)
         return instance_list
 
     def _make_prefetch_queries(self) -> None:
@@ -467,7 +481,10 @@ class BaseExecutor:
             self._prefetch_queries.setdefault(field_name, []).append((to_attr, related_query))
 
     async def _do_prefetch(
-        self, instance_id_list: "Iterable[Model]", field: str, related_query: Tuple[str, "QuerySet"]
+        self,
+        instance_id_list: "Iterable[Model]",
+        field: str,
+        related_query: Tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
         if field in self.model._meta.backward_fk_fields:
             return await self._prefetch_reverse_relation(instance_id_list, field, related_query)
