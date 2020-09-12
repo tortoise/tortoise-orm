@@ -420,7 +420,9 @@ class Prefetch:
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()
             queryset._prefetch_map[first_level_field].add(
-                Prefetch(forwarded_prefetch, self.queryset)
+                Prefetch(forwarded_prefetch, self.queryset, to_attr=self.to_attr)
             )
         else:
-            queryset._prefetch_queries[first_level_field] = self.queryset
+            queryset._prefetch_queries.setdefault(first_level_field, []).append(
+                (self.to_attr, self.queryset)
+            )

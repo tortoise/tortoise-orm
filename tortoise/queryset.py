@@ -236,7 +236,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         "fields",
         "_prefetch_map",
         "_prefetch_queries",
-        "_prefetch_to_attrs",
         "_single",
         "_raise_does_not_exist",
         "_db",
@@ -257,8 +256,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         super().__init__(model)
         self.fields: Set[str] = model._meta.db_fields
         self._prefetch_map: Dict[str, Set[Union[str, Prefetch]]] = {}
-        self._prefetch_queries: Dict[str, QuerySet] = {}
-        self._prefetch_to_attrs: Dict[str, str] = {}
+        self._prefetch_queries: Dict[str, Set[Tuple[str, QuerySet]]] = {}
         self._single: bool = False
         self._raise_does_not_exist: bool = False
         self._limit: Optional[int] = None
@@ -281,7 +279,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset.capabilities = self.capabilities
         queryset._prefetch_map = copy(self._prefetch_map)
         queryset._prefetch_queries = copy(self._prefetch_queries)
-        queryset._prefetch_to_attrs = copy(self._prefetch_to_attrs)
         queryset._single = self._single
         queryset._raise_does_not_exist = self._raise_does_not_exist
         queryset._db = self._db
@@ -641,8 +638,6 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         for relation in args:
             if isinstance(relation, Prefetch):
-                if relation.to_attr:
-                    queryset._prefetch_to_attrs[relation.relation] = relation.to_attr
                 relation.resolve_for_queryset(queryset)
                 continue
             relation_split = relation.split("__")
@@ -737,7 +732,6 @@ class QuerySet(AwaitableQuery[MODEL]):
             db=self._db,
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
-            prefetch_to_attrs=self._prefetch_to_attrs,
         ).execute_select(self.query, custom_fields=list(self._annotations.keys()))
         if self._single:
             if len(instance_list) == 1:
