@@ -15,6 +15,7 @@ Changelog
 - Add `QuerySet.select_for_update()`.
 - check ``default`` for not ``None`` on pydantic model creation
 - propagate default to pydantic model
+- Add custom attribute name for Prefetch instruction.
 
 0.16.14
 -------
