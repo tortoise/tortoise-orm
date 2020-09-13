@@ -55,12 +55,13 @@ class BaseExecutor:
         db: "BaseDBAsyncClient",
         prefetch_map: "Optional[Dict[str, Set[Union[str, Prefetch]]]]" = None,
         prefetch_queries: Optional[Dict[str, "QuerySet"]] = None,
+        select_related_idx: Optional[List[Tuple["Type[Model]", int, str, "Type[Model]"]]] = None,
     ) -> None:
         self.model = model
         self.db: "BaseDBAsyncClient" = db
         self.prefetch_map = prefetch_map or {}
         self._prefetch_queries = prefetch_queries or {}
-
+        self.select_related_idx = select_related_idx
         key = f"{self.db.connection_name}:{self.model._meta.db_table}"
         if key not in EXECUTOR_CACHE:
             self.regular_columns, columns = self._prepare_insert_columns()
@@ -122,7 +123,34 @@ class BaseExecutor:
         _, raw_results = await self.db.execute_query(query.get_sql())
         instance_list = []
         for row in raw_results:
-            instance: "Model" = self.model._init_from_db(**row)
+            if self.select_related_idx:
+                _, current_idx, _, _ = self.select_related_idx[0]
+                dict_row = dict(row)
+                keys = list(dict_row.keys())
+                values = list(dict_row.values())
+                instance: "Model" = self.model._init_from_db(
+                    **dict(zip(keys[:current_idx], values[:current_idx]))
+                )
+                instances = [instance]
+                for model, index, model_name, parent_model in self.select_related_idx[1:]:
+                    obj = model._init_from_db(
+                        **dict(
+                            zip(
+                                map(
+                                    lambda x: x.split(".")[1],
+                                    keys[current_idx : current_idx + index],  # noqa
+                                ),
+                                values[current_idx : current_idx + index],  # noqa
+                            )
+                        )
+                    )
+                    for ins in instances:
+                        if isinstance(ins, parent_model):
+                            setattr(ins, model_name, obj)
+                    instances.append(obj)
+                    current_idx += index
+            else:
+                instance = self.model._init_from_db(**row)
             if custom_fields:
                 for field in custom_fields:
                     setattr(instance, field, row[field])
