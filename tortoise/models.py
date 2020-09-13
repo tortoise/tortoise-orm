@@ -138,7 +138,7 @@ def _get_comments(cls: "Type[Model]") -> Dict[str, str]:
     """
     try:
         source = inspect.getsource(cls)
-    except (TypeError, OsError):  # pragma: nocoverage
+    except (TypeError, OSError):  # pragma: nocoverage
         return {}
     comments = {}
 
