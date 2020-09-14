@@ -258,7 +258,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         super().__init__(model)
         self.fields: Set[str] = model._meta.db_fields
         self._prefetch_map: Dict[str, Set[Union[str, Prefetch]]] = {}
-        self._prefetch_queries: Dict[str, QuerySet] = {}
+        self._prefetch_queries: Dict[str, List[Tuple[Optional[str], QuerySet]]] = {}
         self._single: bool = False
         self._raise_does_not_exist: bool = False
         self._limit: Optional[int] = None

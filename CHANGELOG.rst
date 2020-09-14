@@ -16,6 +16,7 @@ Changelog
 - check ``default`` for not ``None`` on pydantic model creation
 - propagate default to pydantic model
 - Add `QuerySet.select_related()`.
+- Add custom attribute name for Prefetch instruction.
 
 0.16.14
 -------
