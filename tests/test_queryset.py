@@ -1,4 +1,4 @@
-from tests.testmodels import IntFields, MinRelation, Tournament
+from tests.testmodels import Event, IntFields, MinRelation, Reporter, Tournament
 from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import (
@@ -333,3 +333,11 @@ class TestQueryset(test.TestCase):
             self.assertEqual(
                 sql, "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE",
             )
+
+    async def test_select_related(self):
+        tournament = await Tournament.create(name="1")
+        reporter = await Reporter.create(name="Reporter")
+        event = await Event.create(name="1", tournament=tournament, reporter=reporter)
+        event = await Event.all().select_related("tournament", "reporter").get(pk=event.pk)
+        self.assertEqual(event.tournament.pk, tournament.pk)
+        self.assertEqual(event.reporter.pk, reporter.pk)

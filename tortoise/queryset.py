@@ -250,6 +250,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_custom_filters",
         "_group_bys",
         "_select_for_update",
+        "_select_related",
+        "_select_related_idx",
     )
 
     def __init__(self, model: Type[MODEL]) -> None:
@@ -270,6 +272,10 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._fields_for_select: Tuple[str, ...] = ()
         self._group_bys: Tuple[str, ...] = ()
         self._select_for_update: bool = False
+        self._select_related: Set[str] = set()
+        self._select_related_idx: List[
+            Tuple["Type[Model]", int, str, "Type[Model]"]
+        ] = []  # format with: model,idx,model_name,parent_model
 
     def _clone(self) -> "QuerySet[MODEL]":
         queryset = QuerySet.__new__(QuerySet)
@@ -295,6 +301,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._custom_filters = copy(self._custom_filters)
         queryset._group_bys = copy(self._group_bys)
         queryset._select_for_update = self._select_for_update
+        queryset._select_related = self._select_related
+        queryset._select_related_idx = self._select_related_idx
         return queryset
 
     def _filter_or_exclude(self, *args: Q, negate: bool, **kwargs: Any) -> "QuerySet[MODEL]":
@@ -627,6 +635,19 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._fields_for_select = fields_for_select
         return queryset
 
+    def select_related(self, *fields: str) -> "QuerySet[MODEL]":
+        """
+        Return a new QuerySet instance that will select related objects.
+
+        If fields are specified, they must be ForeignKey fields and only those
+        related objects are included in the selection.
+        """
+
+        queryset = self._clone()
+        for field in fields:
+            queryset._select_related.add(field)
+        return queryset
+
     def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySet[MODEL]":
         """
         Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
@@ -688,9 +709,43 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._db = _db
         return queryset
 
+    def _join_table_with_select_related(
+        self, model: "Type[Model]", table: Table, field: str, forwarded_fields: str
+    ) -> Tuple[Table, str]:
+        if field in model._meta.fields_db_projection and forwarded_fields:
+            raise FieldError(f'Field "{field}" for model "{model.__name__}" is not relation')
+
+        field_object = cast(RelationalField, model._meta.fields_map.get(field))
+        if not field_object:
+            raise FieldError(f'Unknown field "{field}" for model "{model.__name__}"')
+
+        table = self._join_table_by_field(table, field, field_object)
+        related_fields = field_object.related_model._meta.db_fields
+        self._select_related_idx.append(
+            (field_object.related_model, len(related_fields), field, model)
+        )
+        for related_field in related_fields:
+            self.query = self.query.select(
+                table[related_field].as_(f"{table._table_name}.{related_field}")
+            )
+        if forwarded_fields:
+            forwarded_fields_split = forwarded_fields.split("__")
+            self.query = self._join_table_with_select_related(
+                model=field_object.related_model,
+                table=table,
+                field=forwarded_fields_split[0],
+                forwarded_fields="__".join(forwarded_fields_split[1:]),
+            )
+            return self.query
+        return self.query
+
     def _make_query(self) -> None:
+        self._select_related_idx = []
+        table = self.model._meta.basetable
         if self._fields_for_select:
-            table = self.model._meta.basetable
+            self._select_related_idx.append(
+                (self.model, len(self._fields_for_select), table, self.model)
+            )
             db_fields_for_select = [
                 table[self.model._meta.fields_db_projection[field]].as_(field)
                 for field in self._fields_for_select
@@ -698,6 +753,9 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query = copy(self.model._meta.basequery).select(*db_fields_for_select)
         else:
             self.query = copy(self.model._meta.basequery_all_fields)
+            self._select_related_idx.append(
+                (self.model, len(self.model._meta.db_fields), table, self.model)
+            )
         self.resolve_ordering(
             self.model, self.model._meta.basetable, self._orderings, self._annotations
         )
@@ -715,6 +773,15 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query._distinct = True
         if self._select_for_update:
             self.query._for_update = True
+        if self._select_related:
+            for field in self._select_related:
+                field_split = field.split("__")
+                self.query = self._join_table_with_select_related(
+                    model=self.model,
+                    table=self.model._meta.basetable,
+                    field=field_split[0],
+                    forwarded_fields="__".join(field_split[1:]) if len(field_split) > 1 else "",
+                )
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
         if self._db is None:
@@ -732,6 +799,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             db=self._db,
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
+            select_related_idx=self._select_related_idx,
         ).execute_select(self.query, custom_fields=list(self._annotations.keys()))
         if self._single:
             if len(instance_list) == 1:
