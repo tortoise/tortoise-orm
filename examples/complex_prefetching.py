@@ -52,6 +52,19 @@ async def run():
     print(tournament_with_filtered)
     print(await Tournament.first().prefetch_related("events"))
 
+    tournament_with_filtered_to_attr = (
+        await Tournament.all()
+        .prefetch_related(
+            Prefetch("events", queryset=Event.filter(name="First"), to_attr="to_attr_events_first"),
+            Prefetch(
+                "events", queryset=Event.filter(name="Second"), to_attr="to_attr_events_second"
+            ),
+        )
+        .first()
+    )
+    print(tournament_with_filtered_to_attr.to_attr_events_first)
+    print(tournament_with_filtered_to_attr.to_attr_events_second)
+
 
 if __name__ == "__main__":
     run_async(run())
