@@ -274,7 +274,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._select_for_update: bool = False
         self._select_related: Set[str] = set()
         self._select_related_idx: List[
-            Tuple[Type[Model], int, str, Type[Model]]
+            Tuple["Type[Model]", int, str, "Type[Model]"]
         ] = []  # format with: model,idx,model_name,parent_model
 
     def _clone(self) -> "QuerySet[MODEL]":
