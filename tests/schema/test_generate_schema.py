@@ -135,6 +135,46 @@ class TestGenerateSchema(test.SimpleTestCase):
         self.assertRegex(sql, r".*\\n.*")
         self.assertIn("\\/", sql)
 
+    async def test_schema_no_db_constraint(self):
+        self.maxDiff = None
+        await self.init_for("tests.schema.models_no_db_constraint")
+        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        self.assertEqual(
+            sql.strip(),
+            r"""CREATE TABLE "team" (
+    "name" VARCHAR(50) NOT NULL  PRIMARY KEY /* The TEAM name (and PK) */,
+    "key" INT NOT NULL,
+    "manager_id" VARCHAR(50)
+) /* The TEAMS! */;
+CREATE INDEX "idx_team_manager_676134" ON "team" ("manager_id", "key");
+CREATE INDEX "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
+CREATE TABLE "tournament" (
+    "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "name" VARCHAR(100) NOT NULL  /* Tournament name */,
+    "created" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP /* Created *\/'`\/* datetime */
+) /* What Tournaments *\/'`\/* we have */;
+CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
+CREATE TABLE "event" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,
+    "name" TEXT NOT NULL,
+    "modified" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP,
+    "prize" VARCHAR(40),
+    "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
+    "key" VARCHAR(100) NOT NULL,
+    "tournament_id" SMALLINT NOT NULL,
+    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
+    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
+) /* This table contains a list of all the events */;
+CREATE TABLE "team_team" (
+    "team_rel_id" VARCHAR(50) NOT NULL,
+    "team_id" VARCHAR(50) NOT NULL
+);
+CREATE TABLE "teamevents" (
+    "event_id" BIGINT NOT NULL,
+    "team_id" VARCHAR(50) NOT NULL
+) /* How participants relate */;""",
+        )
+
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
@@ -372,6 +412,46 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
         self.assertIn("COMMENT 'This column acts as it\\'s own comment'", sql)
         self.assertRegex(sql, r".*\\n.*")
         self.assertRegex(sql, r".*it\\'s.*")
+
+    async def test_schema_no_db_constraint(self):
+        self.maxDiff = None
+        await self.init_for("tests.schema.models_no_db_constraint")
+        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        self.assertEqual(
+            sql.strip(),
+            r"""CREATE TABLE `team` (
+    `name` VARCHAR(50) NOT NULL  PRIMARY KEY COMMENT 'The TEAM name (and PK)',
+    `key` INT NOT NULL,
+    `manager_id` VARCHAR(50),
+    KEY `idx_team_manager_676134` (`manager_id`, `key`),
+    KEY `idx_team_manager_ef8f69` (`manager_id`, `name`)
+) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';
+CREATE TABLE `tournament` (
+    `tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `name` VARCHAR(100) NOT NULL  COMMENT 'Tournament name',
+    `created` DATETIME(6) NOT NULL  COMMENT 'Created */\'`/* datetime' DEFAULT CURRENT_TIMESTAMP(6),
+    KEY `idx_tournament_name_6fe200` (`name`)
+) CHARACTER SET utf8mb4 COMMENT='What Tournaments */\'`/* we have';
+CREATE TABLE `event` (
+    `id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',
+    `name` LONGTEXT NOT NULL,
+    `modified` DATETIME(6) NOT NULL  DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
+    `prize` DECIMAL(10,2),
+    `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
+    `key` VARCHAR(100) NOT NULL,
+    `tournament_id` SMALLINT NOT NULL,
+    UNIQUE KEY `uid_event_name_c6f89f` (`name`, `prize`),
+    UNIQUE KEY `uid_event_tournam_a5b730` (`tournament_id`, `key`)
+) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
+CREATE TABLE `team_team` (
+    `team_rel_id` VARCHAR(50) NOT NULL,
+    `team_id` VARCHAR(50) NOT NULL
+) CHARACTER SET utf8mb4;
+CREATE TABLE `teamevents` (
+    `event_id` BIGINT NOT NULL,
+    `team_id` VARCHAR(50) NOT NULL
+) CHARACTER SET utf8mb4 COMMENT='How participants relate';""",
+        )
 
     async def test_schema(self):
         self.maxDiff = None
@@ -615,6 +695,56 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
         )
         self.assertIn(
             'COMMENT ON COLUMN "comments"."multiline_comment" IS \'Some \\n comment\'', sql
+        )
+
+    async def test_schema_no_db_constraint(self):
+        self.maxDiff = None
+        await self.init_for("tests.schema.models_no_db_constraint")
+        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        self.assertEqual(
+            sql.strip(),
+            r"""CREATE TABLE "team" (
+    "name" VARCHAR(50) NOT NULL  PRIMARY KEY,
+    "key" INT NOT NULL,
+    "manager_id" VARCHAR(50)
+);
+CREATE INDEX "idx_team_manager_676134" ON "team" ("manager_id", "key");
+CREATE INDEX "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
+COMMENT ON COLUMN "team"."name" IS 'The TEAM name (and PK)';
+COMMENT ON TABLE "team" IS 'The TEAMS!';
+CREATE TABLE "tournament" (
+    "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
+    "name" VARCHAR(100) NOT NULL,
+    "created" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
+COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
+COMMENT ON COLUMN "tournament"."created" IS 'Created */''`/* datetime';
+COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
+CREATE TABLE "event" (
+    "id" BIGSERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "modified" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP,
+    "prize" DECIMAL(10,2),
+    "token" VARCHAR(100) NOT NULL UNIQUE,
+    "key" VARCHAR(100) NOT NULL,
+    "tournament_id" SMALLINT NOT NULL,
+    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
+    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
+);
+COMMENT ON COLUMN "event"."id" IS 'Event ID';
+COMMENT ON COLUMN "event"."token" IS 'Unique token';
+COMMENT ON COLUMN "event"."tournament_id" IS 'FK to tournament';
+COMMENT ON TABLE "event" IS 'This table contains a list of all the events';
+CREATE TABLE "team_team" (
+    "team_rel_id" VARCHAR(50) NOT NULL,
+    "team_id" VARCHAR(50) NOT NULL
+);
+CREATE TABLE "teamevents" (
+    "event_id" BIGINT NOT NULL,
+    "team_id" VARCHAR(50) NOT NULL
+);
+COMMENT ON TABLE "teamevents" IS 'How participants relate';""",
         )
 
     async def test_schema(self):
