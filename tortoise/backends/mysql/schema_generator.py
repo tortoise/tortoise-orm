@@ -16,17 +16,15 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{primary}{comment}{default}"
     GENERATED_PK_TEMPLATE = "`{field_name}` {generated_sql}{comment}"
     FK_TEMPLATE = (
-        "CONSTRAINT `{constraint_name}` FOREIGN KEY (`{db_column}`)"
+        "{constraint}FOREIGN KEY (`{db_column}`)"
         " REFERENCES `{table}` (`{field}`) ON DELETE {on_delete}"
     )
     M2M_TABLE_TEMPLATE = (
         "CREATE TABLE {exists}`{table_name}` (\n"
         "    `{backward_key}` {backward_type} NOT NULL,\n"
         "    `{forward_key}` {forward_type} NOT NULL,\n"
-        "    FOREIGN KEY (`{backward_key}`) REFERENCES `{backward_table}` (`{backward_field}`)"
-        " ON DELETE CASCADE,\n"
-        "    FOREIGN KEY (`{forward_key}`) REFERENCES `{forward_table}` (`{forward_field}`)"
-        " ON DELETE CASCADE\n"
+        "    {backward_fk},\n"
+        "    {forward_fk}\n"
         "){extra}{comment};"
     )
 
@@ -91,16 +89,20 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         on_delete: str,
         comment: str,
     ) -> str:
-        self._foreign_keys.append(
-            self.FK_TEMPLATE.format(
-                constraint_name=constraint_name,
-                db_column=db_column,
-                table=table,
-                field=field,
-                on_delete=on_delete,
-            )
+        constraint = ""
+        if constraint_name:
+            constraint = f"CONSTRAINT `{constraint_name}` "
+        fk = self.FK_TEMPLATE.format(
+            constraint=constraint,
+            db_column=db_column,
+            table=table,
+            field=field,
+            on_delete=on_delete,
         )
-        return comment
+        if constraint_name:
+            self._foreign_keys.append(fk)
+            return comment
+        return fk
 
     def _get_inner_statements(self) -> List[str]:
         extra = self._foreign_keys + list(dict.fromkeys(self._field_indexes))

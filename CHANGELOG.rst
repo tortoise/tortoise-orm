@@ -17,6 +17,7 @@ Changelog
 - propagate default to pydantic model
 - Add `QuerySet.select_related()`.
 - Add custom attribute name for Prefetch instruction.
+- Add `db_constraint` for `RelationalField` family.
 
 0.16.14
 -------
