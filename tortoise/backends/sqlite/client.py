@@ -38,7 +38,9 @@ def translate_exceptions(func: F) -> F:
 class SqliteClient(BaseDBAsyncClient):
     executor_class = SqliteExecutor
     schema_generator = SqliteSchemaGenerator
-    capabilities = Capabilities("sqlite", daemon=False, requires_limit=True, inline_comment=True)
+    capabilities = Capabilities(
+        "sqlite", daemon=False, requires_limit=True, inline_comment=True, support_for_update=False
+    )
 
     def __init__(self, file_path: str, **kwargs: Any) -> None:
         super().__init__(**kwargs)

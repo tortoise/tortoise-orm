@@ -120,3 +120,33 @@ class TestPrefetching(test.TestCase):
         )
         self.assertEqual(len(event.participants), 1)
         self.assertEqual(list(event.participants), [team_second])
+
+    async def test_prefetch_m2m_to_attr(self):
+        tournament = await Tournament.create(name="tournament")
+        team = await Team.create(name="1")
+        team_second = await Team.create(name="2")
+        event = await Event.create(name="First", tournament=tournament)
+        await event.participants.add(team, team_second)
+        event = await Event.first().prefetch_related(
+            Prefetch("participants", Team.filter(name="1"), to_attr="to_attr_participants_1"),
+            Prefetch("participants", Team.filter(name="2"), to_attr="to_attr_participants_2"),
+        )
+        self.assertEqual(list(event.to_attr_participants_1), [team])
+        self.assertEqual(list(event.to_attr_participants_2), [team_second])
+
+    async def test_prefetch_o2o_to_attr(self):
+        tournament = await Tournament.create(name="tournament")
+        event = await Event.create(name="First", tournament=tournament)
+        address = await Address.create(city="Santa Monica", street="Ocean", event=event)
+        event = await Event.get(pk=event.pk).prefetch_related(
+            Prefetch("address", to_attr="to_address", queryset=Address.all())
+        )
+        self.assertEqual(address.pk, event.to_address.pk)
+
+    async def test_prefetch_direct_relation_to_attr(self):
+        tournament = await Tournament.create(name="tournament")
+        await Event.create(name="First", tournament=tournament)
+        event = await Event.first().prefetch_related(
+            Prefetch("tournament", queryset=Tournament.all(), to_attr="to_attr_tournament")
+        )
+        self.assertEqual(event.to_attr_tournament.id, tournament.id)

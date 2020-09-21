@@ -335,6 +335,13 @@ class DateField(Field, datetime.date):
             return value
         return parse_datetime(value).date()
 
+    def to_db_value(
+        self, value: Optional[Union[datetime.date, str]], instance: "Union[Type[Model], Model]"
+    ) -> Optional[datetime.date]:
+        if value is None or isinstance(value, datetime.date):
+            return value
+        return parse_datetime(value).date()
+
 
 class TimeDeltaField(Field, datetime.timedelta):
     """

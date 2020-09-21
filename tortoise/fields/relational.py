@@ -148,9 +148,11 @@ class ReverseRelation(Generic[MODEL]):
         """
         return self._query.offset(offset)
 
-    def _set_result_for_query(self, sequence: List[MODEL]) -> None:
+    def _set_result_for_query(self, sequence: List[MODEL], attr: Optional[str] = None) -> None:
         self._fetched = True
         self.related_objects = sequence
+        if attr:
+            setattr(self.instance, attr, sequence)
 
     def _raise_if_not_fetched(self) -> None:
         if not self._fetched:
@@ -289,12 +291,17 @@ class RelationalField(Field):
     has_db_field = False
 
     def __init__(
-        self, related_model: "Type[Model]", to_field: Optional[str] = None, **kwargs: Any
+        self,
+        related_model: "Type[Model]",
+        to_field: Optional[str] = None,
+        db_constraint: bool = True,
+        **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self.related_model: "Type[Model]" = related_model
         self.to_field: str = to_field  # type: ignore
         self.to_field_instance: Field = None  # type: ignore
+        self.db_constraint = db_constraint
 
     def describe(self, serializable: bool) -> dict:
         desc = super().describe(serializable)
@@ -390,6 +397,7 @@ def OneToOneField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
     on_delete: str = CASCADE,
+    db_constraint: bool = True,
     **kwargs: Any,
 ) -> OneToOneRelation:
     """
@@ -424,15 +432,21 @@ def OneToOneField(
     ``to_field``:
         The attribute name on the related model to establish foreign key relationship.
         If not set, pk is used
+    ``db_constraint``:
+        Controls whether or not a constraint should be created in the database for this foreign key.
+        The default is True, and that’s almost certainly what you want; setting this to False can be very bad for data integrity.
     """
 
-    return OneToOneFieldInstance(model_name, related_name, on_delete, **kwargs)
+    return OneToOneFieldInstance(
+        model_name, related_name, on_delete, db_constraint=db_constraint, **kwargs
+    )
 
 
 def ForeignKeyField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
     on_delete: str = CASCADE,
+    db_constraint: bool = True,
     **kwargs: Any,
 ) -> ForeignKeyRelation:
     """
@@ -467,9 +481,14 @@ def ForeignKeyField(
     ``to_field``:
         The attribute name on the related model to establish foreign key relationship.
         If not set, pk is used
+    ``db_constraint``:
+        Controls whether or not a constraint should be created in the database for this foreign key.
+        The default is True, and that’s almost certainly what you want; setting this to False can be very bad for data integrity.
     """
 
-    return ForeignKeyFieldInstance(model_name, related_name, on_delete, **kwargs)
+    return ForeignKeyFieldInstance(
+        model_name, related_name, on_delete, db_constraint=db_constraint, **kwargs
+    )
 
 
 def ManyToManyField(
@@ -478,6 +497,7 @@ def ManyToManyField(
     forward_key: Optional[str] = None,
     backward_key: str = "",
     related_name: str = "",
+    db_constraint: bool = True,
     **kwargs: Any,
 ) -> "ManyToManyRelation":
     """
@@ -505,8 +525,17 @@ def ManyToManyField(
         The default is normally safe.
     ``related_name``:
         The attribute name on the related model to reverse resolve the many to many.
+    ``db_constraint``:
+        Controls whether or not a constraint should be created in the database for this foreign key.
+        The default is True, and that’s almost certainly what you want; setting this to False can be very bad for data integrity.
     """
 
     return ManyToManyFieldInstance(  # type: ignore
-        model_name, through, forward_key, backward_key, related_name, **kwargs
+        model_name,
+        through,
+        forward_key,
+        backward_key,
+        related_name,
+        db_constraint=db_constraint,
+        **kwargs,
     )

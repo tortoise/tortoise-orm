@@ -54,13 +54,14 @@ class BaseExecutor:
         model: "Type[Model]",
         db: "BaseDBAsyncClient",
         prefetch_map: "Optional[Dict[str, Set[Union[str, Prefetch]]]]" = None,
-        prefetch_queries: Optional[Dict[str, "QuerySet"]] = None,
+        prefetch_queries: Optional[Dict[str, List[Tuple[Optional[str], "QuerySet"]]]] = None,
+        select_related_idx: Optional[List[Tuple["Type[Model]", int, str, "Type[Model]"]]] = None,
     ) -> None:
         self.model = model
         self.db: "BaseDBAsyncClient" = db
         self.prefetch_map = prefetch_map or {}
         self._prefetch_queries = prefetch_queries or {}
-
+        self.select_related_idx = select_related_idx
         key = f"{self.db.connection_name}:{self.model._meta.db_table}"
         if key not in EXECUTOR_CACHE:
             self.regular_columns, columns = self._prepare_insert_columns()
@@ -122,7 +123,34 @@ class BaseExecutor:
         _, raw_results = await self.db.execute_query(query.get_sql())
         instance_list = []
         for row in raw_results:
-            instance: "Model" = self.model._init_from_db(**row)
+            if self.select_related_idx:
+                _, current_idx, _, _ = self.select_related_idx[0]
+                dict_row = dict(row)
+                keys = list(dict_row.keys())
+                values = list(dict_row.values())
+                instance: "Model" = self.model._init_from_db(
+                    **dict(zip(keys[:current_idx], values[:current_idx]))
+                )
+                instances = [instance]
+                for model, index, model_name, parent_model in self.select_related_idx[1:]:
+                    obj = model._init_from_db(
+                        **dict(
+                            zip(
+                                map(
+                                    lambda x: x.split(".")[1],
+                                    keys[current_idx : current_idx + index],  # noqa
+                                ),
+                                values[current_idx : current_idx + index],  # noqa
+                            )
+                        )
+                    )
+                    for ins in instances:
+                        if isinstance(ins, parent_model):
+                            setattr(ins, model_name, obj)
+                    instances.append(obj)
+                    current_idx += index
+            else:
+                instance = self.model._init_from_db(**row)
             if custom_fields:
                 for field in custom_fields:
                     setattr(instance, field, row[field])
@@ -262,8 +290,12 @@ class BaseExecutor:
         )[0]
 
     async def _prefetch_reverse_relation(
-        self, instance_list: "Iterable[Model]", field: str, related_query: "QuerySet"
+        self,
+        instance_list: "Iterable[Model]",
+        field: str,
+        related_query: Tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
+        to_attr, related_query = related_query
         related_objects_for_fetch: Dict[str, list] = {}
         related_field: BackwardFKRelation = self.model._meta.fields_map[field]  # type: ignore
         related_field_name = related_field.to_field_instance.model_field_name
@@ -297,13 +329,17 @@ class BaseExecutor:
         for instance in instance_list:
             relation_container = getattr(instance, field)
             relation_container._set_result_for_query(
-                related_object_map.get(getattr(instance, related_field_name), [])
+                related_object_map.get(getattr(instance, related_field_name), []), to_attr,
             )
         return instance_list
 
     async def _prefetch_reverse_o2o_relation(
-        self, instance_list: "Iterable[Model]", field: str, related_query: "QuerySet"
+        self,
+        instance_list: "Iterable[Model]",
+        field: str,
+        related_query: Tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
+        to_attr, related_query = related_query
         related_objects_for_fetch: Dict[str, list] = {}
         related_field: BackwardOneToOneRelation = self.model._meta.fields_map[field]  # type: ignore
         related_field_name = related_field.to_field_instance.model_field_name
@@ -330,17 +366,21 @@ class BaseExecutor:
             related_object_map[object_id] = entry
 
         for instance in instance_list:
+            obj = related_object_map.get(getattr(instance, related_field_name), None)
             setattr(
-                instance,
-                f"_{field}",
-                related_object_map.get(getattr(instance, related_field_name), None),
+                instance, f"_{field}", obj,
             )
-
+            if to_attr:
+                setattr(instance, to_attr, obj)
         return instance_list
 
     async def _prefetch_m2m_relation(
-        self, instance_list: "Iterable[Model]", field: str, related_query: "QuerySet"
+        self,
+        instance_list: "Iterable[Model]",
+        field: str,
+        related_query: Tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
+        to_attr, related_query = related_query
         instance_id_set: set = {
             self._field_to_db(instance._meta.pk, instance.pk, instance)
             for instance in instance_list
@@ -419,14 +459,18 @@ class BaseExecutor:
 
         for instance in instance_list:
             relation_container = getattr(instance, field)
-            relation_container._set_result_for_query(relation_map.get(instance.pk, []))
+            relation_container._set_result_for_query(relation_map.get(instance.pk, []), to_attr)
         return instance_list
 
     async def _prefetch_direct_relation(
-        self, instance_list: "Iterable[Model]", field: str, related_query: "QuerySet"
+        self,
+        instance_list: "Iterable[Model]",
+        field: str,
+        related_query: Tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
         # TODO: This will only work if instance_list is all of same type
         # TODO: If that's the case, then we can optimize the key resolver
+        to_attr, related_query = related_query
         related_objects_for_fetch: Dict[str, list] = {}
         relation_key_field = f"{field}_id"
         for instance in instance_list:
@@ -444,15 +488,17 @@ class BaseExecutor:
             )
             related_object_map = {getattr(obj, key): obj for obj in related_object_list}
             for instance in instance_list:
-                setattr(
-                    instance, field, related_object_map.get(getattr(instance, relation_key_field))
-                )
+                obj = related_object_map.get(getattr(instance, relation_key_field))
+                setattr(instance, field, obj)
+                if to_attr:
+                    setattr(instance, to_attr, obj)
         return instance_list
 
     def _make_prefetch_queries(self) -> None:
         for field_name, forwarded_prefetches in self.prefetch_map.items():
+            to_attr = None
             if field_name in self._prefetch_queries:
-                related_query = self._prefetch_queries[field_name]
+                to_attr, related_query = self._prefetch_queries[field_name][0]
             else:
                 relation_field = self.model._meta.fields_map[field_name]
                 related_model: "Type[Model]" = relation_field.related_model  # type: ignore
@@ -460,10 +506,13 @@ class BaseExecutor:
                 related_query.query = copy(related_query.model._meta.basequery)
             if forwarded_prefetches:
                 related_query = related_query.prefetch_related(*forwarded_prefetches)
-            self._prefetch_queries[field_name] = related_query
+            self._prefetch_queries.setdefault(field_name, []).append((to_attr, related_query))
 
     async def _do_prefetch(
-        self, instance_id_list: "Iterable[Model]", field: str, related_query: "QuerySet"
+        self,
+        instance_id_list: "Iterable[Model]",
+        field: str,
+        related_query: Tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
         if field in self.model._meta.backward_fk_fields:
             return await self._prefetch_reverse_relation(instance_id_list, field, related_query)
@@ -480,10 +529,10 @@ class BaseExecutor:
     ) -> "Iterable[Model]":
         if instance_list and (self.prefetch_map or self._prefetch_queries):
             self._make_prefetch_queries()
-            prefetch_tasks = [
-                self._do_prefetch(instance_list, field, related_query)
-                for field, related_query in self._prefetch_queries.items()
-            ]
+            prefetch_tasks = []
+            for field, related_queries in self._prefetch_queries.items():
+                for related_query in related_queries:
+                    prefetch_tasks.append(self._do_prefetch(instance_list, field, related_query))
             await asyncio.gather(*prefetch_tasks)
 
         return instance_list

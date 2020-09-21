@@ -1,4 +1,14 @@
-from tests.testmodels import Address, DoubleFK, Employee, Event, Reporter, Team, Tournament
+from tests.testmodels import (
+    Address,
+    Author,
+    BookNoConstraint,
+    DoubleFK,
+    Employee,
+    Event,
+    Reporter,
+    Team,
+    Tournament,
+)
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError, NoValuesFetched
 from tortoise.functions import Count
@@ -270,6 +280,12 @@ class TestRelations(test.TestCase):
 
         self.assertFalse(event1.reporter)
         self.assertTrue(event2.reporter)
+
+    async def test_db_constraint(self):
+        author = await Author.create(name="Some One")
+        book = await BookNoConstraint.create(name="First!", author=author, rating=4)
+        book = await BookNoConstraint.all().select_related("author").get(pk=book.pk)
+        self.assertEqual(author.pk, book.author.pk)
 
 
 class TestDoubleFK(test.TestCase):

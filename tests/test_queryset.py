@@ -1,4 +1,5 @@
-from tests.testmodels import IntFields, MinRelation, Tournament
+from tests.testmodels import Event, IntFields, MinRelation, Reporter, Tournament
+from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import (
     DoesNotExist,
@@ -17,6 +18,7 @@ class TestQueryset(test.TestCase):
     async def setUp(self):
         # Build large dataset
         self.intfields = [await IntFields.create(intnum=val) for val in range(10, 100, 3)]
+        self.db = Tortoise.get_connection("models")
 
     async def test_all_count(self):
         self.assertEqual(await IntFields.all().count(), 30)
@@ -318,3 +320,24 @@ class TestQueryset(test.TestCase):
     async def test_get_raw_sql(self):
         sql = IntFields.all().sql()
         self.assertRegex(sql, r"^SELECT.+FROM.+")
+
+    @test.requireCapability(support_for_update=True)
+    async def test_select_for_update(self):
+        sql = IntFields.filter(pk=1).only("id").select_for_update().sql()
+        dialect = self.db.schema_generator.DIALECT
+        if dialect == "postgres":
+            self.assertEqual(
+                sql, 'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE',
+            )
+        elif dialect == "mysql":
+            self.assertEqual(
+                sql, "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE",
+            )
+
+    async def test_select_related(self):
+        tournament = await Tournament.create(name="1")
+        reporter = await Reporter.create(name="Reporter")
+        event = await Event.create(name="1", tournament=tournament, reporter=reporter)
+        event = await Event.all().select_related("tournament", "reporter").get(pk=event.pk)
+        self.assertEqual(event.tournament.pk, tournament.pk)
+        self.assertEqual(event.reporter.pk, reporter.pk)
