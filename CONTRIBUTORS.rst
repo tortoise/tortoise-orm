@@ -40,6 +40,7 @@ Contributors
 * Alex Sinichkin ``@AlwxSin``
 * ``@Yolley``
 * Weiliang Li ``@kigawas``
+* Bogdan Evstratenko ``@evstratbg``
 
 Special Thanks
 ==============
