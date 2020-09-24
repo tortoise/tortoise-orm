@@ -39,6 +39,7 @@ Contributors
 * ``@SnkSynthesis``
 * Alex Sinichkin ``@AlwxSin``
 * ``@Yolley``
+* Bogdan Evstratenko ``@evstratbg``
 
 Special Thanks
 ==============
