@@ -15,6 +15,7 @@ Changelog
 - Add `QuerySet.select_for_update()`.
 - check ``default`` for not ``None`` on pydantic model creation
 - propagate default to pydantic model
+- Fixed inconsistency in integrity error exception of FastAPI
 - Add `QuerySet.select_related()`.
 - Add custom attribute name for Prefetch instruction.
 - Add `db_constraint` for `RelationalField` family.
