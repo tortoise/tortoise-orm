@@ -49,7 +49,11 @@ class TestPydantic(test.TestCase):
                         "maximum": 9223372036854775807,
                         "type": "integer",
                     },
-                    "name": {"title": "Name", "description": "The name", "type": "string"},
+                    "name": {
+                        "title": "Name",
+                        "description": "The name",
+                        "type": "string",
+                    },
                     "tournament": {
                         "title": "Tournament",
                         "description": "What tournaments is a happenin'",
@@ -85,7 +89,13 @@ class TestPydantic(test.TestCase):
                         "allOf": [{"$ref": "#/definitions/tests.testmodels.Address.leaf"}],
                     },
                 },
-                "required": ["event_id", "name", "tournament", "participants", "modified"],
+                "required": [
+                    "event_id",
+                    "name",
+                    "tournament",
+                    "participants",
+                    "modified",
+                ],
                 "additionalProperties": False,
                 "definitions": {
                     "tests.testmodels.Tournament.leaf": {
@@ -98,8 +108,16 @@ class TestPydantic(test.TestCase):
                                 "maximum": 32767,
                                 "type": "integer",
                             },
-                            "name": {"title": "Name", "maxLength": 255, "type": "string"},
-                            "desc": {"title": "Desc", "nullable": True, "type": "string"},
+                            "name": {
+                                "title": "Name",
+                                "maxLength": 255,
+                                "type": "string",
+                            },
+                            "desc": {
+                                "title": "Desc",
+                                "nullable": True,
+                                "type": "string",
+                            },
                             "created": {
                                 "title": "Created",
                                 "readOnly": True,
@@ -159,8 +177,16 @@ class TestPydantic(test.TestCase):
                                 "maximum": 9223372036854775807,
                                 "type": "integer",
                             },
-                            "city": {"title": "City", "maxLength": 64, "type": "string"},
-                            "street": {"title": "Street", "maxLength": 128, "type": "string"},
+                            "city": {
+                                "title": "City",
+                                "maxLength": 64,
+                                "type": "string",
+                            },
+                            "street": {
+                                "title": "Street",
+                                "maxLength": 128,
+                                "type": "string",
+                            },
                         },
                         "required": ["city", "street", "event_id"],
                         "additionalProperties": False,
@@ -188,8 +214,16 @@ class TestPydantic(test.TestCase):
                                 "maximum": 32767,
                                 "type": "integer",
                             },
-                            "name": {"title": "Name", "maxLength": 255, "type": "string"},
-                            "desc": {"title": "Desc", "nullable": True, "type": "string"},
+                            "name": {
+                                "title": "Name",
+                                "maxLength": 255,
+                                "type": "string",
+                            },
+                            "desc": {
+                                "title": "Desc",
+                                "nullable": True,
+                                "type": "string",
+                            },
                             "created": {
                                 "title": "Created",
                                 "readOnly": True,
@@ -249,8 +283,16 @@ class TestPydantic(test.TestCase):
                                 "maximum": 9223372036854775807,
                                 "type": "integer",
                             },
-                            "city": {"title": "City", "maxLength": 64, "type": "string"},
-                            "street": {"title": "Street", "maxLength": 128, "type": "string"},
+                            "city": {
+                                "title": "City",
+                                "maxLength": 64,
+                                "type": "string",
+                            },
+                            "street": {
+                                "title": "Street",
+                                "maxLength": 128,
+                                "type": "string",
+                            },
                         },
                         "required": ["city", "street", "event_id"],
                         "additionalProperties": False,
@@ -266,7 +308,11 @@ class TestPydantic(test.TestCase):
                                 "maximum": 9223372036854775807,
                                 "type": "integer",
                             },
-                            "name": {"title": "Name", "description": "The name", "type": "string"},
+                            "name": {
+                                "title": "Name",
+                                "description": "The name",
+                                "type": "string",
+                            },
                             "tournament": {
                                 "title": "Tournament",
                                 "description": "What tournaments is a happenin'",
@@ -304,7 +350,13 @@ class TestPydantic(test.TestCase):
                                 "allOf": [{"$ref": "#/definitions/tests.testmodels.Address.leaf"}],
                             },
                         },
-                        "required": ["event_id", "name", "tournament", "participants", "modified"],
+                        "required": [
+                            "event_id",
+                            "name",
+                            "tournament",
+                            "participants",
+                            "modified",
+                        ],
                         "additionalProperties": False,
                     },
                 },
@@ -344,8 +396,16 @@ class TestPydantic(test.TestCase):
                                 "maximum": 32767,
                                 "type": "integer",
                             },
-                            "name": {"title": "Name", "maxLength": 255, "type": "string"},
-                            "desc": {"title": "Desc", "nullable": True, "type": "string"},
+                            "name": {
+                                "title": "Name",
+                                "maxLength": 255,
+                                "type": "string",
+                            },
+                            "desc": {
+                                "title": "Desc",
+                                "nullable": True,
+                                "type": "string",
+                            },
                             "created": {
                                 "title": "Created",
                                 "readOnly": True,
@@ -406,7 +466,11 @@ class TestPydantic(test.TestCase):
                                 "maximum": 9223372036854775807,
                                 "type": "integer",
                             },
-                            "name": {"title": "Name", "description": "The name", "type": "string"},
+                            "name": {
+                                "title": "Name",
+                                "description": "The name",
+                                "type": "string",
+                            },
                             "tournament": {
                                 "title": "Tournament",
                                 "description": "What tournaments is a happenin'",
@@ -439,7 +503,13 @@ class TestPydantic(test.TestCase):
                                 "type": "integer",
                             },
                         },
-                        "required": ["event_id", "name", "tournament", "participants", "modified"],
+                        "required": [
+                            "event_id",
+                            "name",
+                            "tournament",
+                            "participants",
+                            "modified",
+                        ],
                         "additionalProperties": False,
                     },
                 },
@@ -453,7 +523,12 @@ class TestPydantic(test.TestCase):
                 "title": "Tournament",
                 "type": "object",
                 "properties": {
-                    "id": {"title": "Id", "minimum": 1, "maximum": 32767, "type": "integer"},
+                    "id": {
+                        "title": "Id",
+                        "minimum": 1,
+                        "maximum": 32767,
+                        "type": "integer",
+                    },
                     "name": {"title": "Name", "maxLength": 255, "type": "string"},
                     "desc": {"title": "Desc", "nullable": True, "type": "string"},
                     "created": {
@@ -521,8 +596,16 @@ class TestPydantic(test.TestCase):
                                 "maximum": 9223372036854775807,
                                 "type": "integer",
                             },
-                            "city": {"title": "City", "maxLength": 64, "type": "string"},
-                            "street": {"title": "Street", "maxLength": 128, "type": "string"},
+                            "city": {
+                                "title": "City",
+                                "maxLength": 64,
+                                "type": "string",
+                            },
+                            "street": {
+                                "title": "Street",
+                                "maxLength": 128,
+                                "type": "string",
+                            },
                         },
                         "required": ["city", "street", "event_id"],
                         "additionalProperties": False,
@@ -538,7 +621,11 @@ class TestPydantic(test.TestCase):
                                 "maximum": 9223372036854775807,
                                 "type": "integer",
                             },
-                            "name": {"title": "Name", "description": "The name", "type": "string"},
+                            "name": {
+                                "title": "Name",
+                                "description": "The name",
+                                "type": "string",
+                            },
                             "reporter": {
                                 "title": "Reporter",
                                 "nullable": True,
@@ -584,7 +671,12 @@ class TestPydantic(test.TestCase):
                 "description": "Team that is a playing",
                 "type": "object",
                 "properties": {
-                    "id": {"title": "Id", "minimum": 1, "maximum": 2147483647, "type": "integer"},
+                    "id": {
+                        "title": "Id",
+                        "minimum": 1,
+                        "maximum": 2147483647,
+                        "type": "integer",
+                    },
                     "name": {"title": "Name", "type": "string"},
                     "alias": {
                         "title": "Alias",
@@ -612,8 +704,16 @@ class TestPydantic(test.TestCase):
                                 "maximum": 32767,
                                 "type": "integer",
                             },
-                            "name": {"title": "Name", "maxLength": 255, "type": "string"},
-                            "desc": {"title": "Desc", "nullable": True, "type": "string"},
+                            "name": {
+                                "title": "Name",
+                                "maxLength": 255,
+                                "type": "string",
+                            },
+                            "desc": {
+                                "title": "Desc",
+                                "nullable": True,
+                                "type": "string",
+                            },
                             "created": {
                                 "title": "Created",
                                 "readOnly": True,
@@ -650,8 +750,16 @@ class TestPydantic(test.TestCase):
                                 "maximum": 9223372036854775807,
                                 "type": "integer",
                             },
-                            "city": {"title": "City", "maxLength": 64, "type": "string"},
-                            "street": {"title": "Street", "maxLength": 128, "type": "string"},
+                            "city": {
+                                "title": "City",
+                                "maxLength": 64,
+                                "type": "string",
+                            },
+                            "street": {
+                                "title": "Street",
+                                "maxLength": 128,
+                                "type": "string",
+                            },
                         },
                         "required": ["city", "street", "event_id"],
                         "additionalProperties": False,
@@ -667,7 +775,11 @@ class TestPydantic(test.TestCase):
                                 "maximum": 9223372036854775807,
                                 "type": "integer",
                             },
-                            "name": {"title": "Name", "description": "The name", "type": "string"},
+                            "name": {
+                                "title": "Name",
+                                "description": "The name",
+                                "type": "string",
+                            },
                             "tournament": {
                                 "title": "Tournament",
                                 "description": "What tournaments is a happenin'",
@@ -794,7 +906,11 @@ class TestPydantic(test.TestCase):
                     {"id": self.team1.id, "name": "Onesies", "alias": None},
                     {"id": self.team2.id, "name": "T-Shirts", "alias": None},
                 ],
-                "address": {"event_id": self.address.pk, "city": "Santa Monica", "street": "Ocean"},
+                "address": {
+                    "event_id": self.address.pk,
+                    "city": "Santa Monica",
+                    "street": "Ocean",
+                },
             },
         )
 
@@ -999,20 +1115,18 @@ class TestPydantic(test.TestCase):
 
     async def test_enum_field(self):
         enum_field_0 = await EnumFields.create(service=2, currency="USD")
-        enum_field_1 = await EnumFields.create(service=Service.database_design, currency=Currency.USD)
+        enum_field_1 = await EnumFields.create(
+            service=Service.database_design, currency=Currency.USD
+        )
         enum_field_0_get = await EnumFields.get(pk=enum_field_0.pk)
         enum_field_1_get = await EnumFields.get(pk=enum_field_1.pk)
 
         EnumFieldsPydantic = pydantic_model_creator(EnumFields)
 
         ret0 = EnumFieldsPydantic.from_orm(enum_field_0_get).dict()
-        self.assertEqual(
-            ret0, {"id": 1, "service": 2, "currency": "USD"}
-        )
+        self.assertEqual(ret0, {"id": 1, "service": 2, "currency": "USD"})
         ret1 = EnumFieldsPydantic.from_orm(enum_field_1_get).dict()
-        self.assertEqual(
-            ret1, {"id": 2, "service": 2, "currency": "USD"}
-        )
+        self.assertEqual(ret1, {"id": 2, "service": 2, "currency": "USD"})
 
     async def test_json_field(self):
         json_field_0 = await JSONFields.create(data={"a": 1})
@@ -1023,11 +1137,18 @@ class TestPydantic(test.TestCase):
         creator = pydantic_model_creator(JSONFields)
         ret0 = creator.from_orm(json_field_0_get).dict()
         self.assertEqual(
-            ret0, {"id": 1, "data": {"a": 1}, "data_null": None, "data_default": {"a": 1}}
+            ret0,
+            {"id": 1, "data": {"a": 1}, "data_null": None, "data_default": {"a": 1}},
         )
         ret1 = creator.from_orm(json_field_1_get).dict()
         self.assertEqual(
-            ret1, {"id": 2, "data": [{"a": 1, "b": 2}], "data_null": None, "data_default": {"a": 1}}
+            ret1,
+            {
+                "id": 2,
+                "data": [{"a": 1, "b": 2}],
+                "data_null": None,
+                "data_default": {"a": 1},
+            },
         )
 
 
@@ -1055,7 +1176,12 @@ class TestPydanticCycle(test.TestCase):
                 "title": "Employee",
                 "type": "object",
                 "properties": {
-                    "id": {"title": "Id", "minimum": 1, "maximum": 2147483647, "type": "integer"},
+                    "id": {
+                        "title": "Id",
+                        "minimum": 1,
+                        "maximum": 2147483647,
+                        "type": "integer",
+                    },
                     "name": {"title": "Name", "maxLength": 50, "type": "string"},
                     "talks_to": {
                         "title": "Talks To",
@@ -1081,7 +1207,14 @@ class TestPydanticCycle(test.TestCase):
                         "type": "integer",
                     },
                 },
-                "required": ["id", "name", "talks_to", "team_members", "name_length", "team_size"],
+                "required": [
+                    "id",
+                    "name",
+                    "talks_to",
+                    "team_members",
+                    "name_length",
+                    "team_size",
+                ],
                 "additionalProperties": False,
                 "definitions": {
                     "tests.testmodels.Employee.leaf": {
@@ -1094,7 +1227,11 @@ class TestPydanticCycle(test.TestCase):
                                 "maximum": 2147483647,
                                 "type": "integer",
                             },
-                            "name": {"title": "Name", "maxLength": 50, "type": "string"},
+                            "name": {
+                                "title": "Name",
+                                "maxLength": 50,
+                                "type": "string",
+                            },
                             "manager_id": {
                                 "title": "Manager Id",
                                 "minimum": 1,
@@ -1122,7 +1259,11 @@ class TestPydanticCycle(test.TestCase):
                                 "maximum": 2147483647,
                                 "type": "integer",
                             },
-                            "name": {"title": "Name", "maxLength": 50, "type": "string"},
+                            "name": {
+                                "title": "Name",
+                                "maxLength": 50,
+                                "type": "string",
+                            },
                             "talks_to": {
                                 "title": "Talks To",
                                 "type": "array",
@@ -1167,7 +1308,11 @@ class TestPydanticCycle(test.TestCase):
                                 "maximum": 2147483647,
                                 "type": "integer",
                             },
-                            "name": {"title": "Name", "maxLength": 50, "type": "string"},
+                            "name": {
+                                "title": "Name",
+                                "maxLength": 50,
+                                "type": "string",
+                            },
                             "talks_to": {
                                 "title": "Talks To",
                                 "type": "array",
