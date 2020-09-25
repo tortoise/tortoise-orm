@@ -9,6 +9,10 @@ Changelog
 
 0.16
 ====
+0.16.17
+-------
+- Auto resolve `Enum` values.
+
 0.16.16
 -------
 - Fixed inconsistency in integrity error exception of FastAPI

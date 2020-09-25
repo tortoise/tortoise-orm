@@ -47,6 +47,7 @@ class PydanticModel(BaseModel):
 
     class Config:
         orm_mode = True  # It should be in ORM mode to convert tortoise data to pydantic
+        use_enum_values = True  # Auto resolve Enum values
 
     # noinspection PyMethodParameters
     @pydantic.validator("*", pre=True, each_item=False)  # It is a classmethod!
