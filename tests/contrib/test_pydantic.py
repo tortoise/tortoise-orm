@@ -1,4 +1,15 @@
-from tests.testmodels import Address, Employee, Event, JSONFields, Reporter, Team, Tournament
+from tests.testmodels import (
+    Address,
+    Currency,
+    Employee,
+    EnumFields,
+    Event,
+    JSONFields,
+    Reporter,
+    Service,
+    Team,
+    Tournament,
+)
 from tortoise.contrib import test
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
@@ -984,6 +995,23 @@ class TestPydantic(test.TestCase):
                 "alias",
                 "address",
             ],
+        )
+
+    async def test_enum_field(self):
+        enum_field_0 = await EnumFields.create(service=2, currency="USD")
+        enum_field_1 = await EnumFields.create(service=Service.database_design, currency=Currency.USD)
+        enum_field_0_get = await EnumFields.get(pk=enum_field_0.pk)
+        enum_field_1_get = await EnumFields.get(pk=enum_field_1.pk)
+
+        EnumFieldsPydantic = pydantic_model_creator(EnumFields)
+
+        ret0 = EnumFieldsPydantic.from_orm(enum_field_0_get).dict()
+        self.assertEqual(
+            ret0, {"id": 1, "service": 2, "currency": "USD"}
+        )
+        ret1 = EnumFieldsPydantic.from_orm(enum_field_1_get).dict()
+        self.assertEqual(
+            ret1, {"id": 2, "service": 2, "currency": "USD"}
         )
 
     async def test_json_field(self):
