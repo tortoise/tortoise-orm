@@ -11,7 +11,7 @@ Changelog
 ====
 0.16.17
 -------
-- Auto resolve `Enum` values.
+- Auto resolve `Enum` values when creating Pydantic models via `pydantic_model_creator`.
 
 0.16.16
 -------
