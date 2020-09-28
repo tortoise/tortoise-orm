@@ -377,6 +377,7 @@ class ManyToManyFieldInstance(RelationalField):
         forward_key: Optional[str] = None,
         backward_key: str = "",
         related_name: str = "",
+        on_delete: str = CASCADE,
         field_type: "Type[Model]" = None,  # type: ignore
         **kwargs: Any,
     ) -> None:
@@ -391,6 +392,7 @@ class ManyToManyFieldInstance(RelationalField):
         self.backward_key: str = backward_key
         self.through: str = through  # type: ignore
         self._generated: bool = False
+        self.on_delete = on_delete
 
 
 def OneToOneField(
@@ -497,6 +499,7 @@ def ManyToManyField(
     forward_key: Optional[str] = None,
     backward_key: str = "",
     related_name: str = "",
+    on_delete: str = CASCADE,
     db_constraint: bool = True,
     **kwargs: Any,
 ) -> "ManyToManyRelation":
@@ -528,6 +531,19 @@ def ManyToManyField(
     ``db_constraint``:
         Controls whether or not a constraint should be created in the database for this foreign key.
         The default is True, and that’s almost certainly what you want; setting this to False can be very bad for data integrity.
+    ``on_delete``:
+        One of:
+            ``field.CASCADE``:
+                Indicate that the model should be cascade deleted if related model gets deleted.
+            ``field.RESTRICT``:
+                Indicate that the related model delete will be restricted as long as a
+                foreign key points to it.
+            ``field.SET_NULL``:
+                Resets the field to NULL in case the related model gets deleted.
+                Can only be set if field has ``null=True`` set.
+            ``field.SET_DEFAULT``:
+                Resets the field to ``default`` value in case the related model gets deleted.
+                Can only be set is field has a ``default`` set.
     """
 
     return ManyToManyFieldInstance(  # type: ignore
@@ -536,6 +552,7 @@ def ManyToManyField(
         forward_key,
         backward_key,
         related_name,
+        on_delete=on_delete,
         db_constraint=db_constraint,
         **kwargs,
     )

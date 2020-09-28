@@ -3,7 +3,7 @@ from hashlib import sha256
 from typing import TYPE_CHECKING, Any, List, Set, Type, cast
 
 from tortoise.exceptions import ConfigurationError
-from tortoise.fields import CASCADE, JSONField, TextField, UUIDField
+from tortoise.fields import JSONField, TextField, UUIDField
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
@@ -351,7 +351,7 @@ class BaseSchemaGenerator:
                     field_object.backward_key,
                     model._meta.db_table,
                     model._meta.db_pk_column,
-                    CASCADE,
+                    field_object.on_delete,
                     "",
                 )
                 if field_object.db_constraint
@@ -361,7 +361,7 @@ class BaseSchemaGenerator:
                     field_object.forward_key,
                     field_object.related_model._meta.db_table,
                     field_object.related_model._meta.db_pk_column,
-                    CASCADE,
+                    field_object.on_delete,
                     "",
                 )
                 if field_object.db_constraint
