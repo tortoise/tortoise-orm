@@ -4,6 +4,7 @@ This example demonstrates SQL Schema generation for each DB type supported.
 from uuid import uuid4
 
 from tortoise import fields
+from tortoise.fields import SET_NULL
 from tortoise.models import Model
 
 
@@ -27,6 +28,7 @@ class Event(Model):
         related_name="events",
         through="teamevents",
         description="How participants relate",
+        on_delete=SET_NULL,
     )
     modified = fields.DatetimeField(auto_now=True)
     prize = fields.DecimalField(max_digits=10, decimal_places=2, null=True)
