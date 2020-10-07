@@ -32,7 +32,7 @@ async def get_user(user_id: int):
     return await User_Pydantic.from_queryset_single(Users.get(id=user_id))
 
 
-@app.post(
+@app.put(
     "/user/{user_id}", response_model=User_Pydantic, responses={404: {"model": HTTPNotFoundError}}
 )
 async def update_user(user_id: int, user: UserIn_Pydantic):
