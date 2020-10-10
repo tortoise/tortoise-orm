@@ -57,6 +57,7 @@ setup(
         "Topic :: Database",
         "Operating System :: POSIX",
         "Operating System :: MacOS :: MacOS X",
+        "Operating System :: Microsoft :: Windows",
     ],
     keywords=(
         "sql mysql postgres psql "
