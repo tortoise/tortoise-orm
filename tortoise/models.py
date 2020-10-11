@@ -16,9 +16,11 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
+    Union,
 )
 
 from pypika import Order, Query, Table
+from pypika.terms import Term
 
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import (
@@ -1041,9 +1043,9 @@ class Model(metaclass=ModelMeta):
         return QuerySet(cls).exclude(*args, **kwargs)
 
     @classmethod
-    def annotate(cls: Type[MODEL], **kwargs: Function) -> QuerySet[MODEL]:
+    def annotate(cls: Type[MODEL], **kwargs: Union[Function, Term]) -> QuerySet[MODEL]:
         """
-        Annotates the result set with extra Functions/Aggregations.
+        Annotates the result set with extra Functions/Aggregations/Expressions.
 
         :param kwargs: Parameter name and the Function/Aggregation to annotate with.
         """

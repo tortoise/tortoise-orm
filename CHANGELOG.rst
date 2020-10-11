@@ -12,6 +12,7 @@ Changelog
 0.16.17
 -------
 - Add `on_delete` in `ManyToManyField`.
+- Support `F` expression in `annotate`.
 
 0.16.16
 -------
