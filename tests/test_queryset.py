@@ -323,8 +323,8 @@ class TestQueryset(test.TestCase):
             .order_by("-idp")
             .first()
             .values_list("id", "idp")
-        )
-        self.assertEqual(data, [(30, 31)])
+        )[0]
+        self.assertEqual(data[0] + 1, data[1])
 
     async def test_get_raw_sql(self):
         sql = IntFields.all().sql()
