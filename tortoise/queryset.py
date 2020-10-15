@@ -732,7 +732,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         )
         for related_field in related_fields:
             self.query = self.query.select(
-                table[related_field].as_(f"{table._table_name}.{related_field}")
+                table[related_field].as_(f"{table.get_table_name()}.{related_field}")
             )
         if forwarded_fields:
             forwarded_fields_split = forwarded_fields.split("__")

@@ -92,6 +92,15 @@ class Event(Model):
         return self.name
 
 
+class Node(Model):
+    name = fields.CharField(max_length=10)
+
+
+class Tree(Model):
+    parent = fields.ForeignKeyField("models.Node", related_name="parent_trees")
+    child = fields.ForeignKeyField("models.Node", related_name="children_trees")
+
+
 class Address(Model):
     city = fields.CharField(max_length=64)
     street = fields.CharField(max_length=128)
