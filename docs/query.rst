@@ -264,7 +264,7 @@ When using ``.filter()`` method you can use number of modifiers to field names t
 - ``istartswith`` - case insensitive ``startswith``
 - ``endswith`` - if field ends with value
 - ``iendswith`` - case insensitive ``endswith``
-- ``iequals`` - case insensitive equals
+- ``iexact`` - case insensitive equals
 
 
 Complex prefetch
