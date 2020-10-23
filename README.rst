@@ -193,6 +193,10 @@ After that you can start using your models:
         events__name__in=['Test', 'Prod']
     ).order_by('-events__participants__name').distinct()
 
+Migration
+=========
+
+Please have a look at `aerich <https://github.com/tortoise/aerich>`_
 
 Contributing
 ============

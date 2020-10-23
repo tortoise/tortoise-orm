@@ -27,6 +27,12 @@ class Book(Model):
     rating = fields.FloatField()
 
 
+class BookNoConstraint(Model):
+    name = fields.CharField(max_length=255)
+    author = fields.ForeignKeyField("models.Author", db_constraint=False)
+    rating = fields.FloatField()
+
+
 class Tournament(Model):
     id = fields.SmallIntField(pk=True)
     name = fields.CharField(max_length=255)

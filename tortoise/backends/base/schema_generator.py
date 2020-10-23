@@ -3,7 +3,7 @@ from hashlib import sha256
 from typing import TYPE_CHECKING, Any, List, Set, Type, cast
 
 from tortoise.exceptions import ConfigurationError
-from tortoise.fields import JSONField, TextField, UUIDField
+from tortoise.fields import CASCADE, JSONField, TextField, UUIDField
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
@@ -25,10 +25,8 @@ class BaseSchemaGenerator:
     FK_TEMPLATE = ' REFERENCES "{table}" ("{field}") ON DELETE {on_delete}{comment}'
     M2M_TABLE_TEMPLATE = (
         'CREATE TABLE {exists}"{table_name}" (\n'
-        '    "{backward_key}" {backward_type} NOT NULL REFERENCES "{backward_table}"'
-        ' ("{backward_field}") ON DELETE CASCADE,\n'
-        '    "{forward_key}" {forward_type} NOT NULL REFERENCES "{forward_table}"'
-        ' ("{forward_field}") ON DELETE CASCADE\n'
+        '    "{backward_key}" {backward_type} NOT NULL{backward_fk},\n'
+        '    "{forward_key}" {forward_type} NOT NULL{forward_fk}\n'
         "){extra}{comment};"
     )
 
@@ -256,18 +254,22 @@ class BaseSchemaGenerator:
                     is_primary_key=field_object.pk,
                     comment="",
                     default=default,
-                ) + self._create_fk_string(
-                    constraint_name=self._generate_fk_name(
-                        model._meta.db_table,
-                        column_name,
-                        reference.related_model._meta.db_table,
-                        to_field_name,
-                    ),
-                    db_column=column_name,
-                    table=reference.related_model._meta.db_table,
-                    field=to_field_name,
-                    on_delete=reference.on_delete,
-                    comment=comment,
+                ) + (
+                    self._create_fk_string(
+                        constraint_name=self._generate_fk_name(
+                            model._meta.db_table,
+                            column_name,
+                            reference.related_model._meta.db_table,
+                            to_field_name,
+                        ),
+                        db_column=column_name,
+                        table=reference.related_model._meta.db_table,
+                        field=to_field_name,
+                        on_delete=reference.on_delete,
+                        comment=comment,
+                    )
+                    if reference.db_constraint
+                    else ""
                 )
                 references.add(reference.related_model._meta.db_table)
             else:
@@ -344,10 +346,26 @@ class BaseSchemaGenerator:
             m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
                 exists="IF NOT EXISTS " if safe else "",
                 table_name=field_object.through,
-                backward_table=model._meta.db_table,
-                forward_table=field_object.related_model._meta.db_table,
-                backward_field=model._meta.db_pk_column,
-                forward_field=field_object.related_model._meta.db_pk_column,
+                backward_fk=self._create_fk_string(
+                    "",
+                    field_object.backward_key,
+                    model._meta.db_table,
+                    model._meta.db_pk_column,
+                    CASCADE,
+                    "",
+                )
+                if field_object.db_constraint
+                else "",
+                forward_fk=self._create_fk_string(
+                    "",
+                    field_object.forward_key,
+                    field_object.related_model._meta.db_table,
+                    field_object.related_model._meta.db_pk_column,
+                    CASCADE,
+                    "",
+                )
+                if field_object.db_constraint
+                else "",
                 backward_key=field_object.backward_key,
                 backward_type=model._meta.pk.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                 forward_key=field_object.forward_key,
@@ -361,6 +379,13 @@ class BaseSchemaGenerator:
                 if field_object.description
                 else "",
             )
+            if not field_object.db_constraint:
+                m2m_create_string = m2m_create_string.replace(
+                    """,
+    ,
+    """,
+                    "",
+                )  # may have better way
             m2m_create_string += self._post_table_hook()
             m2m_tables_for_create.append(m2m_create_string)
 
