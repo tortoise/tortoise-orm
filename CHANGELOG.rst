@@ -14,6 +14,7 @@ Changelog
 - Add `on_delete` in `ManyToManyField`. (#508)
 - Support `F` expression in `annotate`. (#475)
 - Fix `QuerySet.select_related` in case of join same table twice. (#525)
+- Integrate Aerich into the install. (#530)
 
 0.16.16
 -------
