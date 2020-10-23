@@ -184,8 +184,11 @@ class AwaitableQuery(Generic[MODEL]):
                 )
             elif field_name in annotations:
                 annotation = annotations[field_name]
-                annotation_info = annotation.resolve(self.model, table)
-                self.query = self.query.orderby(annotation_info["field"], order=ordering[1])
+                if isinstance(annotation, Term):
+                    self.query = self.query.orderby(annotation, order=ordering[1])
+                else:
+                    annotation_info = annotation.resolve(self.model, table)
+                    self.query = self.query.orderby(annotation_info["field"], order=ordering[1])
             else:
                 field_object = model._meta.fields_map.get(field_name)
 
@@ -209,7 +212,10 @@ class AwaitableQuery(Generic[MODEL]):
         table = self.model._meta.basetable
         annotation_info = {}
         for key, annotation in self._annotations.items():
-            annotation_info[key] = annotation.resolve(self.model, table)
+            if isinstance(annotation, Term):
+                annotation_info[key] = {"joins": [], "field": annotation}
+            else:
+                annotation_info[key] = annotation.resolve(self.model, table)
 
         for key, info in annotation_info.items():
             for join in info["joins"]:
@@ -429,8 +435,8 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         queryset = self._clone()
         for key, annotation in kwargs.items():
-            if not isinstance(annotation, Function):
-                raise TypeError("value is expected to be Function instance")
+            if not isinstance(annotation, (Function, Term)):
+                raise TypeError("value is expected to be Function/Term instance")
             queryset._annotations[key] = annotation
             queryset._custom_filters.update(get_filters_for_field(key, None, key))
         return queryset
@@ -726,7 +732,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         )
         for related_field in related_fields:
             self.query = self.query.select(
-                table[related_field].as_(f"{table._table_name}.{related_field}")
+                table[related_field].as_(f"{table.get_table_name()}.{related_field}")
             )
         if forwarded_fields:
             forwarded_fields_split = forwarded_fields.split("__")
@@ -1076,7 +1082,8 @@ class FieldSelectQuery(AwaitableQuery):
             return lambda x: x
 
         if field in self.annotations:
-            field_object = self.annotations[field].field_object
+            annotation = self.annotations[field]
+            field_object = getattr(annotation, "field_object", None)
             if field_object:
                 return field_object.to_python_value
             return lambda x: x

@@ -303,7 +303,7 @@ def pydantic_model_creator(
             else:
                 pmodel = None
 
-            # If the result is None it has been exluded and we need to exclude the field
+            # If the result is None it has been excluded and we need to exclude the field
             if pmodel is None:
                 exclude += (fname,)
             else:
@@ -375,7 +375,7 @@ def pydantic_model_creator(
             pconfig.fields[fname] = fconfig
 
     # Here we endure that the name is unique, but complete objects are still labeled verbatim
-    if not has_submodel and exclude:
+    if not has_submodel:
         _name = name or f"{fqname}.leaf"
     elif has_submodel:
         _name = name or get_name()

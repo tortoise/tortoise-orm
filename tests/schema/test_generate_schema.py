@@ -256,8 +256,8 @@ CREATE TABLE "team_team" (
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
 );
 CREATE TABLE "teamevents" (
-    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE CASCADE,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE SET NULL,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE SET NULL
 ) /* How participants relate */;
 """.strip(),
         )
@@ -343,8 +343,8 @@ CREATE TABLE IF NOT EXISTS "team_team" (
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS "teamevents" (
-    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE CASCADE,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE SET NULL,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE SET NULL
 ) /* How participants relate */;
 """.strip(),
         )
@@ -546,8 +546,8 @@ CREATE TABLE `team_team` (
 CREATE TABLE `teamevents` (
     `event_id` BIGINT NOT NULL,
     `team_id` VARCHAR(50) NOT NULL,
-    FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
+    FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE SET NULL,
+    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
 """.strip(),
         )
@@ -646,8 +646,8 @@ CREATE TABLE IF NOT EXISTS `team_team` (
 CREATE TABLE IF NOT EXISTS `teamevents` (
     `event_id` BIGINT NOT NULL,
     `team_id` VARCHAR(50) NOT NULL,
-    FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE CASCADE,
-    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
+    FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE SET NULL,
+    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
 """.strip(),
         )
@@ -842,8 +842,8 @@ CREATE TABLE "team_team" (
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
 );
 CREATE TABLE "teamevents" (
-    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE CASCADE,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE SET NULL,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE SET NULL
 );
 COMMENT ON TABLE "teamevents" IS 'How participants relate';
 """.strip(),
@@ -944,8 +944,8 @@ CREATE TABLE IF NOT EXISTS "team_team" (
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS "teamevents" (
-    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE CASCADE,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE SET NULL,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE SET NULL
 );
 COMMENT ON TABLE "teamevents" IS 'How participants relate';
 """.strip(),

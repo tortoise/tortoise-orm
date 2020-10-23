@@ -1,4 +1,4 @@
-from tests.testmodels import Event, IntFields, MinRelation, Reporter, Tournament
+from tests.testmodels import Event, IntFields, MinRelation, Node, Reporter, Tournament, Tree
 from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import (
@@ -317,6 +317,15 @@ class TestQueryset(test.TestCase):
         with self.assertRaisesRegex(FieldError, "Unknown field badid for model IntFields"):
             await IntFields.all().order_by("badid").values_list()
 
+    async def test_annotate_order_expression(self):
+        data = (
+            await IntFields.annotate(idp=F("id") + 1)
+            .order_by("-idp")
+            .first()
+            .values_list("id", "idp")
+        )[0]
+        self.assertEqual(data[0] + 1, data[1])
+
     async def test_get_raw_sql(self):
         sql = IntFields.all().sql()
         self.assertRegex(sql, r"^SELECT.+FROM.+")
@@ -341,3 +350,13 @@ class TestQueryset(test.TestCase):
         event = await Event.all().select_related("tournament", "reporter").get(pk=event.pk)
         self.assertEqual(event.tournament.pk, tournament.pk)
         self.assertEqual(event.reporter.pk, reporter.pk)
+
+    async def test_select_related_with_two_same_models(self):
+        parent_node = await Node.create(name="1")
+        child_node = await Node.create(name="2")
+        tree = await Tree.create(parent=parent_node, child=child_node)
+        tree = await Tree.all().select_related("parent", "child").get(pk=tree.pk)
+        self.assertEqual(tree.parent.pk, parent_node.pk)
+        self.assertEqual(tree.parent.name, parent_node.name)
+        self.assertEqual(tree.child.pk, child_node.pk)
+        self.assertEqual(tree.child.name, child_node.name)

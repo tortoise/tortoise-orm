@@ -264,7 +264,7 @@ When using ``.filter()`` method you can use number of modifiers to field names t
 - ``istartswith`` - case insensitive ``startswith``
 - ``endswith`` - if field ends with value
 - ``iendswith`` - case insensitive ``endswith``
-- ``iequals`` - case insensitive equals
+- ``iexact`` - case insensitive equals
 
 
 Complex prefetch
@@ -287,7 +287,7 @@ You can view full example here:  :ref:`example_prefetching`
 F expression
 ================
 
-An F() object represents the value of a model field. It makes it possible to refer to model field values and perform database operations using them without actually having to pull them out of the database into Python memory.
+An `F` object represents the value of a model field. It makes it possible to refer to model field values and perform database operations using them without actually having to pull them out of the database into Python memory.
 
 For example to use ``F`` to update user balance atomic:
 
@@ -301,3 +301,9 @@ For example to use ``F`` to update user balance atomic:
     user = await User.get(id=1)
     user.balance = F('balance') - 10
     await user.save(update_fields=['balance'])
+
+And you can also use `F` in `annotate`.
+
+.. code-block:: python3
+
+    data = await User.annotate(idp=F("id") + 1).values_list("id", "idp")

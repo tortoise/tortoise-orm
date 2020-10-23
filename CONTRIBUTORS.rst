@@ -41,6 +41,8 @@ Contributors
 * ``@Yolley``
 * Weiliang Li ``@kigawas``
 * Bogdan Evstratenko ``@evstratbg``
+* Mike Ryan ``@devsetgo``
+* Eugene Dubovskoy ``@drjackild``
 
 Special Thanks
 ==============

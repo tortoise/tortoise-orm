@@ -196,7 +196,7 @@ After that you can start using your models:
 Migration
 =========
 
-Please have a look at `aerich <https://github.com/tortoise/aerich>`_
+Now `Aerich` install automatically as Tortoise ORM requirement, see more detail at `docs <https://tortoise-orm.readthedocs.io/en/latest/migration.html>`_.
 
 Contributing
 ============
