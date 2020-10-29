@@ -184,6 +184,10 @@ def pydantic_model_creator(
     default_include: Tuple[str, ...] = tuple(getattr(meta, "include", PydanticMeta.include))
     default_exclude: Tuple[str, ...] = tuple(getattr(meta, "exclude", PydanticMeta.exclude))
     default_computed: Tuple[str, ...] = tuple(getattr(meta, "computed", PydanticMeta.computed))
+    backward_relations: bool = bool(
+        getattr(meta, "backward_relations", PydanticMeta.backward_relations)
+    )
+
     max_recursion: int = int(getattr(meta, "max_recursion", PydanticMeta.max_recursion))
     exclude_raw_fields: bool = bool(
         getattr(meta, "exclude_raw_fields", PydanticMeta.exclude_raw_fields)
@@ -248,10 +252,15 @@ def pydantic_model_creator(
         field_map_update(("pk_field",), is_relation=False)
     field_map_update(("data_fields",), is_relation=False)
     if not exclude_readonly:
-        field_map_update(
-            ("fk_fields", "o2o_fields", "m2m_fields", "backward_fk_fields", "backward_o2o_fields")
+        included_fields: tuple = (
+            "fk_fields",
+            "o2o_fields",
+            "m2m_fields",
         )
+        if backward_relations:
+            included_fields = (*included_fields, "backward_fk_fields", "backward_o2o_fields")
 
+        field_map_update(included_fields)
         # Add possible computed fields
         field_map.update(
             {
