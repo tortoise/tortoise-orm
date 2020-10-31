@@ -1,7 +1,11 @@
 from datetime import datetime, timedelta
+from typing import Any
 
-from tests.testmodels import DefaultUpdate, Event, Tournament
+from pypika.terms import Function
+
+from tests.testmodels import DefaultUpdate, Event, JSONFields, Tournament
 from tortoise.contrib import test
+from tortoise.expressions import F
 
 
 class TestUpdate(test.TestCase):
@@ -32,3 +36,25 @@ class TestUpdate(test.TestCase):
         await Event.all().update(tournament=tournament_second)
         event = await Event.first()
         self.assertEqual(event.tournament_id, tournament_second.id)
+
+    @test.requireCapability(dialect="mysql")
+    @test.requireCapability(dialect="sqlite")
+    async def test_update_with_custom_function(self):
+        class JsonSet(Function):
+            def __init__(self, field: F, expression: str, value: Any):
+                super().__init__("JSON_SET", field, expression, value)
+
+        json = await JSONFields.create(data={})
+        self.assertEqual(json.data_default, {"a": 1})
+
+        json.data_default = JsonSet(F("data_default"), "$.a", 2)
+        await json.save()
+
+        json_update = await JSONFields.get(pk=json.pk)
+        self.assertEqual(json_update.data_default, {"a": 2})
+
+        await JSONFields.filter(pk=json.pk).update(
+            data_default=JsonSet(F("data_default"), "$.a", 3)
+        )
+        json_update = await JSONFields.get(pk=json.pk)
+        self.assertEqual(json_update.data_default, {"a": 3})
