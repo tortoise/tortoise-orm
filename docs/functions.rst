@@ -72,3 +72,21 @@ You can custom functions which not builtin, such as ``TruncMonth`` and ``JsonExt
     sql = Task.all().annotate(date=TruncMonth('created_at', '%Y-%m-%d')).values('date').sql()
     print(sql)
     # SELECT DATE_FORMAT(`created_at`,'%Y-%m-%d') `date` FROM `task`
+
+And you can also use functions in update.
+
+.. code-block:: python3
+
+    from tortoise.expressions import F
+    from pypika.terms import Function
+
+    class JsonSet(Function):
+        def __init__(self, field: F, expression: str, value: Any):
+            super().__init__("JSON_SET", field, expression, value)
+
+    json = await JSONFields.create(data_default={"a": 1})
+    json.data_default = JsonSet(F("data_default"), "$.a", 2)
+    await json.save()
+
+    # or use queryset.update()
+    await JSONFields.filter(pk=json.pk).update(data_default=JsonSet(F("data_default"), "$.a", 3))

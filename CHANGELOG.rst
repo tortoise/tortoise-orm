@@ -9,6 +9,10 @@ Changelog
 
 0.16
 ====
+0.16.18
+-------
+- Support custom function in update. (#537)
+
 0.16.17
 -------
 - Add `on_delete` in `ManyToManyField`. (#508)
