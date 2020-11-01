@@ -73,7 +73,7 @@ You can custom functions which not builtin, such as ``TruncMonth`` and ``JsonExt
     print(sql)
     # SELECT DATE_FORMAT(`created_at`,'%Y-%m-%d') `date` FROM `task`
 
-And you can also use functions in update.
+And you can also use functions in update, the example is only suitable for MySQL and SQLite, but PostgreSQL is the same.
 
 .. code-block:: python3
 
@@ -89,4 +89,6 @@ And you can also use functions in update.
     await json.save()
 
     # or use queryset.update()
-    await JSONFields.filter(pk=json.pk).update(data_default=JsonSet(F("data_default"), "$.a", 3))
+    sql = JSONFields.filter(pk=json.pk).update(data_default=JsonSet(F("data_default"), "$.a", 3)).sql()
+    print(sql)
+    # UPDATE jsonfields SET data_default=JSON_SET(`data_default`,'$.a',3) where id=1
