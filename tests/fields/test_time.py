@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from time import sleep
 
 from iso8601 import ParseError
@@ -15,6 +15,21 @@ class TestDatetimeFields(test.TestCase):
             ConfigurationError, "You can choose only 'auto_now' or 'auto_now_add'"
         ):
             fields.DatetimeField(auto_now=True, auto_now_add=True)
+
+    async def test_timezone_aware(self):
+        _, now = datetime.now(), datetime.now()
+        utc_utc = await testmodels.DatetimeFields.create(datetime=_, datetime_tz_aware=now)
+        self.assertEqual(utc_utc.datetime_tz_aware.utcoffset().total_seconds(), 19800.0)
+
+    def test_timezone_aware_bad(self):
+        with self.assertRaisesRegex(
+            ConfigurationError, "Please specify a valid timezone to both 'tz' and 'db_tz'"
+        ):
+            fields.DatetimeField(tz=None, db_tz=timezone(timedelta(hours=5)))
+        with self.assertRaisesRegex(
+            ConfigurationError, "Please specify a valid timezone to both 'tz' and 'db_tz'"
+        ):
+            fields.DatetimeField(tz=timezone(timedelta(hours=5)), db_tz=None)
 
     async def test_empty(self):
         with self.assertRaises(IntegrityError):

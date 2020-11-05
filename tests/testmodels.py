@@ -3,6 +3,7 @@ This is the testing Models
 """
 import binascii
 import datetime
+from datetime import timedelta, timezone
 import os
 import uuid
 from decimal import Decimal
@@ -225,6 +226,8 @@ class DatetimeFields(Model):
     datetime_null = fields.DatetimeField(null=True)
     datetime_auto = fields.DatetimeField(auto_now=True)
     datetime_add = fields.DatetimeField(auto_now_add=True)
+    datetime_tz_aware = fields.DatetimeField(null=True, tz=timezone(timedelta(hours=5)),
+                                             db_tz=timezone(timedelta(hours=0)))
 
 
 class TimeDeltaFields(Model):
