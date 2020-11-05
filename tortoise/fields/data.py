@@ -275,6 +275,13 @@ class DatetimeField(Field, datetime.datetime):
     ``auto_now`` and ``auto_now_add`` is exclusive.
     You can opt to set neither or only ONE of them.
 
+
+    After setting both ``tz`` and ``db_tz`` you can pass datetime aware objects in any timezone and
+    it will get automatically converted to ``db_tz`` and stored in database and attribute will be
+    accessible with timezone ``tz``. If you pass native datetime objects, the timezone of datetime
+    is assumed to be in ``db_tz``.
+
+
     ``auto_now`` (bool):
         Always set to ``datetime.utcnow()`` on save.
     ``auto_now_add`` (bool):
@@ -285,18 +292,25 @@ class DatetimeField(Field, datetime.datetime):
         The timezone offset with which field is stored in the database.
     """
 
-    skip_to_python_if_native = True
+    skip_to_python_if_native = False
     SQL_TYPE = "TIMESTAMP"
 
     class _db_mysql:
         SQL_TYPE = "DATETIME(6)"
 
-    def __init__(self, auto_now: bool = False, auto_now_add: bool = False,
-                 tz: datetime.tzinfo = None, db_tz: datetime.tzinfo = None, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        auto_now: bool = False,
+        auto_now_add: bool = False,
+        tz: datetime.tzinfo = None,
+        db_tz: datetime.tzinfo = None,
+        **kwargs: Any,
+    ) -> None:
         if auto_now_add and auto_now:
             raise ConfigurationError("You can choose only 'auto_now' or 'auto_now_add'")
-        if (tz is not None or db_tz is not None) and\
-                (not isinstance(tz, datetime.tzinfo) or not isinstance(db_tz, datetime.tzinfo)):
+        if (tz is not None or db_tz is not None) and (
+            not isinstance(tz, datetime.tzinfo) or not isinstance(db_tz, datetime.tzinfo)
+        ):
             raise ConfigurationError("Please specify a valid timezone to both 'tz' and 'db_tz'")
 
         super().__init__(**kwargs)
@@ -309,13 +323,15 @@ class DatetimeField(Field, datetime.datetime):
         if value is None:
             return value
         if isinstance(value, datetime.datetime):
+            if hasattr(value, "tzinfo") and value.tzinfo is not None:
+                return value
             native = value
         elif isinstance(value, int):
             native = datetime.datetime.fromtimestamp(value)
         else:
             native = parse_datetime(value)
-        if self.tz:
-            return native.replace(tzinfo=self.db_tz).astimezone(self.tz)
+        if self.tz is not None:
+            native = native.replace(tzinfo=self.db_tz).astimezone(self.tz)
         return native
 
     def to_db_value(
@@ -328,8 +344,12 @@ class DatetimeField(Field, datetime.datetime):
         ):
             value = datetime.datetime.now()
             setattr(instance, self.model_field_name, value)
-        if self.tz:
-            value = value.replace(tzinfo=self.tz).astimezone(self.db_tz)
+        if self.tz is not None and value is not None:
+            if hasattr(value, "tzinfo") and value.tzinfo is not None:
+                value = value.astimezone(self.db_tz)
+            else:
+                value = value.replace(tzinfo=self.tz).astimezone(self.db_tz)
+            return value.replace(tzinfo=None)
         return value
 
     @property
