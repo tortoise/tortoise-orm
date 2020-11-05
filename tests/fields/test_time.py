@@ -18,7 +18,8 @@ class TestDatetimeFields(test.TestCase):
 
     async def test_timezone_aware(self):
         _, now = datetime.now(), datetime.now()
-        utc_utc = await testmodels.DatetimeFields.create(datetime=_, datetime_tz_aware=now)
+        utc_utc0 = await testmodels.DatetimeFields.create(datetime=_, datetime_tz_aware=now)
+        utc_utc = await testmodels.DatetimeFields.get(pk=utc_utc0.id)
         self.assertEqual(utc_utc.datetime_tz_aware.utcoffset().total_seconds(), 19800.0)
 
     def test_timezone_aware_bad(self):
@@ -36,23 +37,31 @@ class TestDatetimeFields(test.TestCase):
             await testmodels.DatetimeFields.create()
 
     async def test_create(self):
-        now = datetime.utcnow()
-        obj0 = await testmodels.DatetimeFields.create(datetime=now)
+        utc_now = datetime.utcnow()
+        tz = timezone(timedelta(hours=3))
+        now = datetime.now(tz)
+        auto_now = datetime.now()
+        obj0 = await testmodels.DatetimeFields.create(datetime=utc_now, datetime_tz_aware=now)
         obj = await testmodels.DatetimeFields.get(id=obj0.id)
-        self.assertEqual(obj.datetime, now)
+        self.assertEqual(obj.datetime, utc_now)
         self.assertEqual(obj.datetime_null, None)
-        self.assertLess(obj.datetime_auto - now, timedelta(microseconds=20000))
-        self.assertLess(obj.datetime_add - now, timedelta(microseconds=20000))
+        self.assertLess(obj.datetime_auto - auto_now, timedelta(microseconds=20000))
+        self.assertLess(obj.datetime_add - auto_now, timedelta(microseconds=20000))
+        self.assertEqual(obj.datetime_tz_aware.utcoffset().total_seconds(), 19800.0)
+        self.assertLess(
+            obj.datetime_tz_aware - now.astimezone(timezone(timedelta(hours=5, minutes=30))),
+            timedelta(microseconds=20000),
+        )
         datetime_auto = obj.datetime_auto
         sleep(0.012)
         await obj.save()
         obj2 = await testmodels.DatetimeFields.get(id=obj.id)
-        self.assertEqual(obj2.datetime, now)
+        self.assertEqual(obj2.datetime, utc_now)
         self.assertEqual(obj2.datetime_null, None)
         self.assertEqual(obj2.datetime_auto, obj.datetime_auto)
         self.assertNotEqual(obj2.datetime_auto, datetime_auto)
-        self.assertGreater(obj2.datetime_auto - now, timedelta(microseconds=10000))
-        self.assertLess(obj2.datetime_auto - now, timedelta(seconds=1))
+        self.assertGreater(obj2.datetime_auto - auto_now, timedelta(microseconds=10000))
+        self.assertLess(obj2.datetime_auto - auto_now, timedelta(seconds=1))
         self.assertEqual(obj2.datetime_add, obj.datetime_add)
 
     async def test_update(self):
