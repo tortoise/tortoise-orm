@@ -42,10 +42,14 @@ def to_db_datetime(
         self.auto_now
         or (self.auto_now_add and getattr(instance, self.model_field_name, None) is None)
     ):
-        value = datetime.datetime.utcnow()
+        value = datetime.datetime.now()
         setattr(instance, self.model_field_name, value)
-        return value.isoformat(" ")
     if isinstance(value, datetime.datetime):
+        if self.tz is not None and value is not None:
+            if hasattr(value, "tzinfo") and value.tzinfo is not None:
+                value = value.astimezone(self.db_tz)
+            else:
+                value = value.replace(tzinfo=self.tz).astimezone(self.db_tz)
         return value.isoformat(" ")
     return None
 
