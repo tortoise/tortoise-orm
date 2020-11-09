@@ -625,6 +625,7 @@ class Model(metaclass=ModelMeta):
         Signals.pre_delete: {},
         Signals.post_delete: {},
     }
+    queryset = QuerySet
 
     def __init__(self, **kwargs: Any) -> None:
         # self._meta is a very common attribute lookup, lets cache it.
@@ -1020,7 +1021,7 @@ class Model(metaclass=ModelMeta):
         """
         Generates a QuerySet that returns the first record.
         """
-        return QuerySet(cls).first()
+        return cls.queryset(cls).first()
 
     @classmethod
     def filter(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySet[MODEL]:
@@ -1030,7 +1031,7 @@ class Model(metaclass=ModelMeta):
         :param args: Q funtions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
         """
-        return QuerySet(cls).filter(*args, **kwargs)
+        return cls.queryset(cls).filter(*args, **kwargs)
 
     @classmethod
     def exclude(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySet[MODEL]:
@@ -1040,7 +1041,7 @@ class Model(metaclass=ModelMeta):
         :param args: Q funtions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
         """
-        return QuerySet(cls).exclude(*args, **kwargs)
+        return cls.queryset(cls).exclude(*args, **kwargs)
 
     @classmethod
     def annotate(cls: Type[MODEL], **kwargs: Union[Function, Term]) -> QuerySet[MODEL]:
@@ -1049,14 +1050,14 @@ class Model(metaclass=ModelMeta):
 
         :param kwargs: Parameter name and the Function/Aggregation to annotate with.
         """
-        return QuerySet(cls).annotate(**kwargs)
+        return cls.queryset(cls).annotate(**kwargs)
 
     @classmethod
     def all(cls: Type[MODEL]) -> QuerySet[MODEL]:
         """
         Returns the complete QuerySet.
         """
-        return QuerySet(cls)
+        return cls.queryset(cls)
 
     @classmethod
     def get(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySetSingle[MODEL]:
@@ -1073,7 +1074,7 @@ class Model(metaclass=ModelMeta):
         :raises MultipleObjectsReturned: If provided search returned more than one object.
         :raises DoesNotExist: If object can not be found.
         """
-        return QuerySet(cls).get(*args, **kwargs)
+        return cls.queryset(cls).get(*args, **kwargs)
 
     @classmethod
     def exists(cls: Type[MODEL], *args: Q, **kwargs: Any) -> ExistsQuery:
@@ -1087,7 +1088,7 @@ class Model(metaclass=ModelMeta):
         :param args: Q funtions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
         """
-        return QuerySet(cls).filter(*args, **kwargs).exists()
+        return cls.queryset(cls).filter(*args, **kwargs).exists()
 
     @classmethod
     def get_or_none(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySetSingle[Optional[MODEL]]:
@@ -1101,7 +1102,7 @@ class Model(metaclass=ModelMeta):
         :param args: Q funtions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
         """
-        return QuerySet(cls).get_or_none(*args, **kwargs)
+        return cls.queryset(cls).get_or_none(*args, **kwargs)
 
     @classmethod
     async def fetch_for_list(

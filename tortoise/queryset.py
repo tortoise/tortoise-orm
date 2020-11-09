@@ -284,7 +284,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         ] = []  # format with: model,idx,model_name,parent_model
 
     def _clone(self) -> "QuerySet[MODEL]":
-        queryset = QuerySet.__new__(QuerySet)
+        queryset = self.__class__.__new__(self.__class__)
         queryset.fields = self.fields
         queryset.model = self.model
         queryset.query = self.query
