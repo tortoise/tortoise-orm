@@ -21,7 +21,7 @@ class TestDatetimeFields(test.TestCase):
             await testmodels.DatetimeFields.create()
 
     async def test_create(self):
-        now = datetime.now()
+        now = datetime.utcnow()
         obj0 = await testmodels.DatetimeFields.create(datetime=now)
         obj = await testmodels.DatetimeFields.get(id=obj0.id)
         self.assertEqual(obj.datetime, now)

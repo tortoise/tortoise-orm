@@ -15,6 +15,7 @@ pip-tools
 
 ## Linter tools
 mypy
+importlib_metadata # required by flake8
 flake8-isort
 flake8-comprehensions
 darglint

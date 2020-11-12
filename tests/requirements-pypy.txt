@@ -20,6 +20,7 @@ cryptography==3.2.1       # via pymysql
 docopt==0.6.2             # via coveralls
 execnet==1.7.1            # via pytest-xdist
 idna==2.10                # via requests
+importlib-metadata==2.0.0  # via pluggy, pytest
 iniconfig==1.1.1          # via pytest
 iso8601==0.1.13           # via -r ../requirements.txt, tortoise-orm
 packaging==20.4           # via pytest
@@ -40,3 +41,4 @@ toml==0.10.2              # via pytest
 tortoise-orm==0.16.17     # via aerich
 typing-extensions==3.7.4.3  # via -r ../requirements.txt, aiosqlite, tortoise-orm
 urllib3==1.26.1           # via requests
+zipp==3.4.0               # via importlib-metadata

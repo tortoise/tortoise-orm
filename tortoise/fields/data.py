@@ -309,7 +309,7 @@ class DatetimeField(Field, datetime.datetime):
             self.auto_now
             or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
         ):
-            value = datetime.datetime.now()
+            value = datetime.datetime.utcnow()
             setattr(instance, self.model_field_name, value)
             return value
         return value

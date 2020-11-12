@@ -56,6 +56,7 @@ hypercorn==0.11.1         # via quart
 hyperframe==6.0.0         # via h2
 idna==2.10                # via requests, rfc3986, yarl
 imagesize==1.2.0          # via sphinx
+importlib-metadata==2.0.0  # via -r requirements.in, flake8, flake8-comprehensions, keyring, pluggy, pytest, stevedore, tox, twine, virtualenv
 iniconfig==1.1.1          # via pytest
 iso8601==0.1.13           # via -r ../docs/../requirements.txt, tortoise-orm
 isort==5.6.4              # via flake8-isort, pylint
@@ -115,8 +116,8 @@ toml==0.10.2              # via black, hypercorn, pylint, pytest, quart, tox
 tox==3.20.1               # via -r requirements.in
 tqdm==4.51.0              # via twine
 twine==3.2.0              # via -r requirements.in
-typed-ast==1.4.1          # via black, mypy
-typing-extensions==3.7.4.3  # via -r ../docs/../requirements.txt, aiohttp, aiosqlite, black, mypy, tortoise-orm
+typed-ast==1.4.1          # via astroid, black, mypy
+typing-extensions==3.7.4.3  # via -r ../docs/../requirements.txt, aiohttp, aiosqlite, black, hypercorn, mypy, tortoise-orm, uvicorn, yarl
 ujson==4.0.1              # via sanic
 unidecode==1.1.1          # via green
 urllib3==1.26.1           # via requests
@@ -129,6 +130,7 @@ werkzeug==1.0.1           # via quart
 wrapt==1.12.1             # via astroid
 wsproto==0.15.0           # via hypercorn
 yarl==1.6.2               # via aiohttp
+zipp==3.4.0               # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # pip
