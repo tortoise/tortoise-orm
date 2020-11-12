@@ -65,17 +65,17 @@ class TestUpdate(test.TestCase):
         int_field_in_db.intnum = F("intnum") + 1
         await int_field_in_db.save(update_fields=["intnum"])
         self.assertIsNot(int_field_in_db.intnum, 2)
-        self.assertIs(int_field_in_db.intnum_null.intnum, 2)
+        self.assertIs(int_field_in_db.intnum_null, 2)
 
         await int_field_in_db.refresh_from_db(fields=["intnum"])
         self.assertIs(int_field_in_db.intnum, 2)
-        self.assertIs(int_field_in_db.intnum_null.intnum, 2)
+        self.assertIs(int_field_in_db.intnum_null, 2)
 
         int_field_in_db.intnum = F("intnum") + 1
         await int_field_in_db.save()
         self.assertIsNot(int_field_in_db.intnum, 3)
-        self.assertIs(int_field_in_db.intnum_null.intnum, 2)
+        self.assertIs(int_field_in_db.intnum_null, 2)
 
         await int_field_in_db.refresh_from_db()
         self.assertIs(int_field_in_db.intnum, 3)
-        self.assertIs(int_field_in_db.intnum_null.intnum, 2)
+        self.assertIs(int_field_in_db.intnum_null, 2)
