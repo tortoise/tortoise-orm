@@ -3,7 +3,7 @@ from typing import Any
 
 from pypika.terms import Function
 
-from tests.testmodels import DefaultUpdate, Event, JSONFields, Tournament
+from tests.testmodels import DefaultUpdate, Event, IntFields, JSONFields, Tournament
 from tortoise.contrib import test
 from tortoise.expressions import F
 
@@ -58,3 +58,24 @@ class TestUpdate(test.TestCase):
         )
         json_update = await JSONFields.get(pk=json.pk)
         self.assertEqual(json_update.data_default, {"a": 3})
+
+    async def test_refresh_from_db(self):
+        int_field = await IntFields.create(intnum=1, intnum_null=2)
+        int_field_in_db = await IntFields.get(pk=int_field.pk)
+        int_field_in_db.intnum = F("intnum") + 1
+        await int_field_in_db.save(update_fields=["intnum"])
+        self.assertIsNot(int_field_in_db.intnum, 2)
+        self.assertIs(int_field_in_db.intnum_null.intnum, 2)
+
+        await int_field_in_db.refresh_from_db(fields=["intnum"])
+        self.assertIs(int_field_in_db.intnum, 2)
+        self.assertIs(int_field_in_db.intnum_null.intnum, 2)
+
+        int_field_in_db.intnum = F("intnum") + 1
+        await int_field_in_db.save()
+        self.assertIsNot(int_field_in_db.intnum, 3)
+        self.assertIs(int_field_in_db.intnum_null.intnum, 2)
+
+        await int_field_in_db.refresh_from_db()
+        self.assertIs(int_field_in_db.intnum, 3)
+        self.assertIs(int_field_in_db.intnum_null.intnum, 2)
