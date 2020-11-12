@@ -1,9 +1,9 @@
 # pylint: disable=E0401,E0611
 import logging
 
+from models import Users
 from sanic import Sanic, response
 
-from models import Users
 from tortoise.contrib.sanic import register_tortoise
 
 logging.basicConfig(level=logging.DEBUG)

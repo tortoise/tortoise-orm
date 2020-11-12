@@ -20,9 +20,9 @@ from tortoise.exceptions import ConfigurationError, NoValuesFetched, Operational
 from tortoise.fields.base import CASCADE, RESTRICT, SET_NULL, Field
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.models import Model
-    from tortoise.queryset import QuerySet, Q
     from tortoise.backends.base.client import BaseDBAsyncClient
+    from tortoise.models import Model
+    from tortoise.queryset import Q, QuerySet
 
 MODEL = TypeVar("MODEL", bound="Model")
 
@@ -68,7 +68,11 @@ class ReverseRelation(Generic[MODEL]):
     """
 
     def __init__(
-        self, remote_model: Type[MODEL], relation_field: str, instance: "Model", from_field: str,
+        self,
+        remote_model: Type[MODEL],
+        relation_field: str,
+        instance: "Model",
+        from_field: str,
     ) -> None:
         self.remote_model = remote_model
         self.relation_field = relation_field
@@ -196,7 +200,8 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
             .select(self.field.backward_key, self.field.forward_key)
         )
         query = db.query_class.into(through_table).columns(
-            through_table[self.field.forward_key], through_table[self.field.backward_key],
+            through_table[self.field.forward_key],
+            through_table[self.field.backward_key],
         )
 
         if len(instances) == 1:

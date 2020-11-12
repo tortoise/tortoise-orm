@@ -70,7 +70,7 @@ docs: deps
 	python setup.py build_sphinx -E
 
 style: deps
-	isort -rc $(checkfiles)
+	isort -src $(checkfiles)
 	black $(black_opts) $(checkfiles)
 
 publish: deps

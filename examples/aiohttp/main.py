@@ -2,8 +2,8 @@
 import logging
 
 from aiohttp import web
-
 from models import Users
+
 from tortoise.contrib.aiohttp import register_tortoise
 
 logging.basicConfig(level=logging.DEBUG)

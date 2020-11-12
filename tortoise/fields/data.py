@@ -515,7 +515,9 @@ IntEnumType = TypeVar("IntEnumType", bound=IntEnum)
 
 
 def IntEnumField(
-    enum_type: Type[IntEnumType], description: Optional[str] = None, **kwargs: Any,
+    enum_type: Type[IntEnumType],
+    description: Optional[str] = None,
+    **kwargs: Any,
 ) -> IntEnumType:
     """
     Enum Field

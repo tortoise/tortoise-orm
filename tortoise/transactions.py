@@ -6,10 +6,7 @@ from tortoise.exceptions import ParamsError
 current_transaction_map: dict = {}
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.backends.base.client import (
-        BaseDBAsyncClient,
-        TransactionContext,
-    )
+    from tortoise.backends.base.client import BaseDBAsyncClient, TransactionContext
 
 FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)

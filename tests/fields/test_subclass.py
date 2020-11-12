@@ -4,10 +4,14 @@ from tortoise.contrib import test
 
 async def create_participants():
     test1 = await RaceParticipant.create(
-        first_name="Alex", place=RacePlacingEnum.FIRST, predicted_place=RacePlacingEnum.THIRD,
+        first_name="Alex",
+        place=RacePlacingEnum.FIRST,
+        predicted_place=RacePlacingEnum.THIRD,
     )
     test2 = await RaceParticipant.create(
-        first_name="Ben", place=RacePlacingEnum.SECOND, predicted_place=RacePlacingEnum.FIRST,
+        first_name="Ben",
+        place=RacePlacingEnum.SECOND,
+        predicted_place=RacePlacingEnum.FIRST,
     )
     test3 = await RaceParticipant.create(first_name="Chris", place=RacePlacingEnum.THIRD)
     test4 = await RaceParticipant.create(first_name="Bill")

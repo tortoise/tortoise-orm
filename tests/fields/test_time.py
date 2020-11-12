@@ -21,7 +21,7 @@ class TestDatetimeFields(test.TestCase):
             await testmodels.DatetimeFields.create()
 
     async def test_create(self):
-        now = datetime.utcnow()
+        now = datetime.now()
         obj0 = await testmodels.DatetimeFields.create(datetime=now)
         obj = await testmodels.DatetimeFields.get(id=obj0.id)
         self.assertEqual(obj.datetime, now)
@@ -94,7 +94,9 @@ class TestDatetimeFields(test.TestCase):
         obj0 = await testmodels.DateFields.create(date="2020-08-17")
         obj1 = await testmodels.DateFields.get(date="2020-08-17")
         self.assertEqual(obj0.date, obj1.date)
-        with self.assertRaises((ParseError, ValueError),):
+        with self.assertRaises(
+            (ParseError, ValueError),
+        ):
             await testmodels.DateFields.create(date="2020-08-xx")
         await testmodels.DateFields.filter(date="2020-08-17").update(date="2020-08-18")
         obj2 = await testmodels.DateFields.get(date="2020-08-18")

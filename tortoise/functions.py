@@ -11,8 +11,8 @@ from tortoise.fields.relational import BackwardFKRelation, ForeignKeyFieldInstan
 from tortoise.query_utils import Q, QueryModifier
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.models import Model
     from tortoise.fields.base import Field
+    from tortoise.models import Model
 
 
 ##############################################################################

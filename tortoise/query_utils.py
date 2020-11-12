@@ -93,7 +93,10 @@ def _get_joins_for_related_field(
 
         related_table = related_table.as_(f"{table.get_table_name()}__{related_field_name}")
         required_joins.append(
-            (related_table, related_table[to_field_source_field] == table[from_field_source_field],)
+            (
+                related_table,
+                related_table[to_field_source_field] == table[from_field_source_field],
+            )
         )
     return required_joins
 

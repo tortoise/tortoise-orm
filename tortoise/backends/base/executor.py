@@ -33,8 +33,8 @@ from tortoise.fields.relational import (
 from tortoise.query_utils import QueryModifier
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.models import Model
     from tortoise.backends.base.client import BaseDBAsyncClient
+    from tortoise.models import Model
     from tortoise.query_utils import Prefetch
     from tortoise.queryset import QuerySet
 
@@ -331,7 +331,8 @@ class BaseExecutor:
         for instance in instance_list:
             relation_container = getattr(instance, field)
             relation_container._set_result_for_query(
-                related_object_map.get(getattr(instance, related_field_name), []), to_attr,
+                related_object_map.get(getattr(instance, related_field_name), []),
+                to_attr,
             )
         return instance_list
 
@@ -370,7 +371,9 @@ class BaseExecutor:
         for instance in instance_list:
             obj = related_object_map.get(getattr(instance, related_field_name), None)
             setattr(
-                instance, f"_{field}", obj,
+                instance,
+                f"_{field}",
+                obj,
             )
             if to_attr:
                 setattr(instance, to_attr, obj)
@@ -388,9 +391,7 @@ class BaseExecutor:
             for instance in instance_list
         }
 
-        field_object: ManyToManyFieldInstance = self.model._meta.fields_map[  # type: ignore
-            field
-        ]
+        field_object: ManyToManyFieldInstance = self.model._meta.fields_map[field]  # type: ignore
 
         through_table = Table(field_object.through)
 

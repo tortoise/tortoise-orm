@@ -11,6 +11,7 @@ Reference
    schema
    query
    functions
+   expressions
    transactions
    exceptions
    signal

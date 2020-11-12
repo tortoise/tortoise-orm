@@ -188,9 +188,11 @@ def pydantic_model_creator(
     exclude_raw_fields: bool = bool(
         getattr(meta, "exclude_raw_fields", PydanticMeta.exclude_raw_fields)
     )
-    _sort_fields: bool = bool(
-        getattr(meta, "sort_alphabetically", PydanticMeta.sort_alphabetically)
-    ) if sort_alphabetically is None else sort_alphabetically
+    _sort_fields: bool = (
+        bool(getattr(meta, "sort_alphabetically", PydanticMeta.sort_alphabetically))
+        if sort_alphabetically is None
+        else sort_alphabetically
+    )
     _allow_cycles: bool = bool(
         getattr(meta, "allow_cycles", PydanticMeta.allow_cycles)
         if allow_cycles is None

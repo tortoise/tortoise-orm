@@ -12,7 +12,9 @@ if TYPE_CHECKING:  # pragma: nocoverage
 class F(Field):  # type: ignore
     @classmethod
     def resolver_arithmetic_expression(
-        cls, model: "Type[Model]", arithmetic_expression_or_field: Term,
+        cls,
+        model: "Type[Model]",
+        arithmetic_expression_or_field: Term,
     ) -> Tuple[Term, Optional[Field]]:
         field_object = None
 

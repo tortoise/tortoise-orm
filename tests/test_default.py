@@ -16,7 +16,9 @@ class TestDefault(test.TestCase):
                 "insert into defaultmodel (`int_default`,`float_default`,`decimal_default`,`bool_default`,`char_default`,`date_default`,`datetime_default`) values (DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT)",
             )
         elif isinstance(connection, SqliteClient):
-            await connection.execute_query("insert into defaultmodel default values",)
+            await connection.execute_query(
+                "insert into defaultmodel default values",
+            )
         elif isinstance(connection, AsyncpgDBClient):
             await connection.execute_query(
                 'insert into defaultmodel ("int_default","float_default","decimal_default","bool_default","char_default","date_default","datetime_default") values (DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT)',

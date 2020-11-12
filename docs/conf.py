@@ -24,8 +24,8 @@ sys.path.insert(0, os.path.abspath('..'))
 
 
 project = 'Tortoise ORM'
-copyright = '2018-2019, Andrey Bondar & Nickolas Grigoriadis'  # pylint: disable=W0622
-author = 'Andrey Bondar & Nickolas Grigoriadis'
+copyright = '2018-2020, Andrey Bondar & Nickolas Grigoriadis & long2ice'  # pylint: disable=W0622
+author = 'Andrey Bondar & Nickolas Grigoriadis & long2ice'
 
 
 def get_version():
