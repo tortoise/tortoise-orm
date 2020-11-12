@@ -931,6 +931,29 @@ class Model(metaclass=ModelMeta):
         db = using_db or self._meta.db
         await db.executor_class(model=self.__class__, db=db).fetch_for_list([self], *args)
 
+    async def refresh_from_db(
+        self, fields: Optional[Iterable[str]] = None, using_db: Optional[BaseDBAsyncClient] = None
+    ) -> None:
+        """
+        Refresh latest data from db.
+
+        .. code-block:: python3
+
+            user.refresh_from_db(fields=['name'])
+
+        :param fields: The special fields that to be refreshed.
+        :param using_db: Specific DB connection to use instead of default bound.
+
+        :raises OperationalError: If object has never been persisted.
+        """
+        if not self._saved_in_db:
+            raise OperationalError("Can't refresh unpersisted record")
+        qs = QuerySet(self.__class__).only(*(fields or []))
+        using_db and qs.using_db(using_db)
+        obj = await qs.get(pk=self.pk)
+        for field in fields or self._meta.fields_map:
+            setattr(self, field, getattr(obj, field, None))
+
     @classmethod
     async def get_or_create(
         cls: Type[MODEL],
