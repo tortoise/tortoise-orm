@@ -42,19 +42,19 @@ endif
 	twine check dist/*
 
 test: deps
-	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: py.test
+	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: pytest
 
 test_sqlite:
-	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: py.test --cov-report=
+	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: pytest --cov-report=
 
 test_postgres:
-	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="postgres://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" py.test --cov-append --cov-report=
+	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="postgres://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" pytest --cov-append --cov-report=
 
 test_mysql_myisam:
-	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}?storage_engine=MYISAM" py.test --cov-append --cov-report=
+	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}?storage_engine=MYISAM" pytest --cov-append --cov-report=
 
 test_mysql:
-	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}" py.test --cov-append --cov-report=
+	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}" pytest --cov-append --cov-report=
 
 _testall: test_sqlite test_postgres test_mysql_myisam test_mysql
 
