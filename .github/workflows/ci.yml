@@ -1,7 +1,7 @@
 name: ci
 on: [ push ]
 jobs:
-  ci:
+  test:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -18,7 +18,7 @@ jobs:
       TORTOISE_POSTGRES_PASS: 123456
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8, 3.9, pypy3 ]
+        python-version: [ 3.7, 3.8, 3.9 ]
     steps:
       - name: Start MySQL
         run: sudo systemctl start mysql.service
@@ -39,5 +39,17 @@ jobs:
         run: make deps
       - name: Run ci
         run: make ci
-      - name: After success
-        run: coveralls
+      - name: Coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  finish:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Coveralls Finished
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.github_token }}
+        parallel-finished: true
