@@ -14,15 +14,14 @@ jobs:
         options: --health-cmd=pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     env:
       TORTOISE_TEST_MODULES: tests.testmodels
+      TORTOISE_MYSQL_PASS: root
+      TORTOISE_POSTGRES_PASS: 123456
     strategy:
       matrix:
         python-version: [ 3.7, 3.8, 3.9, pypy3 ]
     steps:
       - name: Start MySQL
         run: sudo systemctl start mysql.service
-      - env:
-          TORTOISE_MYSQL_PASS: root
-          TORTOISE_POSTGRES_PASS: 123456
 
       - uses: actions/cache@v2
         with:
@@ -30,7 +29,6 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/poetry.lock') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v1
         with:
