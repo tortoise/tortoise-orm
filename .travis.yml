@@ -34,7 +34,8 @@ services:
   - mysql
 cache: pip
 install:
-  - pip install .
+  - pip install poetry
+  - make deps
 script:
   - make ci
 after_success:
