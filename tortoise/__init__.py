@@ -495,10 +495,10 @@ class Tortoise:
                                 }
                             },
                             # Using a DB_URL string
-                            'default': 'postgres://postgres:qwerty123@localhost:5432/events'
+                            'default': 'postgres://postgres:qwerty123@localhost:5432/test'
                         },
                         'apps': {
-                            'models': {
+                            'my_app': {
                                 'models': ['__main__'],
                                 # If no default_connection specified, defaults to 'default'
                                 'default_connection': 'default',
