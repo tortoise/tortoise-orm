@@ -78,7 +78,6 @@ quart = "*"
 sanic = "*"
 # Sample integration - Starlette
 starlette = "*"
-uvicorn = "*"
 # Pydantic support
 pydantic = "*"
 # FastAPI support
