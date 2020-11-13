@@ -1,0 +1,46 @@
+name: ci
+on: [ push ]
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:latest
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: 123456
+          POSTGRES_USER: postgres
+        options: --health-cmd=pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    env:
+      TORTOISE_TEST_MODULES: tests.testmodels
+    strategy:
+      matrix:
+        python-version: [ 3.7, 3.8, 3.9, pypy3 ]
+    steps:
+      - name: Start MySQL
+        run: sudo systemctl start mysql.service
+
+      - uses: actions/cache@v2
+          with:
+            path: ~/.cache/pip
+            key: ${{ runner.os }}-pip-${{ hashFiles('**/poetry.lock') }}
+            restore-keys: |
+              ${{ runner.os }}-pip-
+
+      - env:
+          TORTOISE_MYSQL_PASS: root
+          TORTOISE_POSTGRES_PASS: 123456
+
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: ${{ matrix.python-version }}
+      - uses: dschep/install-poetry-action@v1.3
+
+      - name: Install requirements
+        run: make deps
+      - name: Run ci
+        run: make ci
+      - name: After success
+        run: coveralls
