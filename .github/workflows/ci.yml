@@ -18,7 +18,7 @@ jobs:
       TORTOISE_POSTGRES_PASS: 123456
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8, 3.9 ]
+        python-version: [ 3.7, 3.8 ]
     steps:
       - name: Start MySQL
         run: sudo systemctl start mysql.service
@@ -48,8 +48,8 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-    - name: Coveralls Finished
-      uses: coverallsapp/github-action@master
-      with:
-        github-token: ${{ secrets.github_token }}
-        parallel-finished: true
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.github_token }}
+          parallel-finished: true

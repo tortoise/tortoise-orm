@@ -84,7 +84,6 @@ pydantic = "*"
 fastapi = "*"
 # Aiohttp support
 aiohttp = "*"
-uvloop = "0.14.0rc1"
 
 [tool.poetry.extras]
 accel = ["ciso8601", "uvloop", "python-rapidjson"]
