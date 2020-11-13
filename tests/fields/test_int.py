@@ -14,7 +14,7 @@ class TestIntFields(test.TestCase):
         obj = await testmodels.IntFields.get(id=obj0.id)
         self.assertEqual(obj.intnum, 2147483647)
         self.assertEqual(obj.intnum_null, None)
-        await obj.save()
+
         obj2 = await testmodels.IntFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
 
@@ -34,7 +34,7 @@ class TestIntFields(test.TestCase):
         obj = await testmodels.IntFields.get(id=obj0.id)
         self.assertEqual(obj.intnum, -2147483648)
         self.assertEqual(obj.intnum_null, None)
-        await obj.save()
+
         obj2 = await testmodels.IntFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
 
