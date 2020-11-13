@@ -1445,6 +1445,14 @@ optional = false
 python-versions = "*"
 
 [[package]]
+name = "uvloop"
+version = "0.14.0rc1"
+description = "Fast implementation of asyncio event loop on top of libuv"
+category = "dev"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "virtualenv"
 version = "20.1.0"
 description = "Virtual Python Environment builder"
@@ -1543,7 +1551,7 @@ asyncpg = ["asyncpg"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "3a40c19e8b6495cea645fcfdbf4e73dcef59e2b4b3d85ee8eb23d4bca98882c7"
+content-hash = "033b2e59ec4051783df2fb2d3eef1bd9223ccff654a875b1616a74039892db6f"
 
 [metadata.files]
 aerich = [
@@ -1733,6 +1741,7 @@ cloud-sptheme = [
 ]
 colorama = [
     {file = "colorama-0.4.4-py2.py3-none-any.whl", hash = "sha256:9f47eda37229f68eee03b24b9748937c7dc3868f906e8ba69fbcbdd3bc5dc3e2"},
+    {file = "colorama-0.4.4.tar.gz", hash = "sha256:5941b2b48a20143d2267e95b1c2a7603ce057ee39fd88e7329b0c292aa16869b"},
 ]
 coverage = [
     {file = "coverage-5.3-cp27-cp27m-macosx_10_13_intel.whl", hash = "sha256:bd3166bb3b111e76a4f8e2980fa1addf2920a4ca9b2b8ca36a3bc3dedc618270"},
@@ -1903,6 +1912,7 @@ importlib-metadata = [
     {file = "importlib_metadata-2.0.0.tar.gz", hash = "sha256:77a540690e24b0305878c37ffd421785a6f7e53c8b5720d211b211de8d0e95da"},
 ]
 iniconfig = [
+    {file = "iniconfig-1.1.1-py2.py3-none-any.whl", hash = "sha256:011e24c64b7f47f6ebd835bb12a743f2fbe9a26d4cecaa7f53bc4f35ee9da8b3"},
     {file = "iniconfig-1.1.1.tar.gz", hash = "sha256:bc3af051d7d14b2ee5ef9969666def0cd1a000e121eaea580d4a313df4b37f32"},
 ]
 iso8601 = [
@@ -1984,6 +1994,7 @@ lxml = [
     {file = "lxml-4.6.1-cp38-cp38-manylinux2014_aarch64.whl", hash = "sha256:e65c221b2115a91035b55a593b6eb94aa1206fa3ab374f47c6dc10d364583ff9"},
     {file = "lxml-4.6.1-cp38-cp38-win32.whl", hash = "sha256:d6f8c23f65a4bfe4300b85f1f40f6c32569822d08901db3b6454ab785d9117cc"},
     {file = "lxml-4.6.1-cp38-cp38-win_amd64.whl", hash = "sha256:573b2f5496c7e9f4985de70b9bbb4719ffd293d5565513e04ac20e42e6e5583f"},
+    {file = "lxml-4.6.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:098fb713b31050463751dcc694878e1d39f316b86366fb9fe3fbbe5396ac9fab"},
     {file = "lxml-4.6.1-cp39-cp39-manylinux1_i686.whl", hash = "sha256:1d87936cb5801c557f3e981c9c193861264c01209cb3ad0964a16310ca1b3301"},
     {file = "lxml-4.6.1-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:2d5896ddf5389560257bbe89317ca7bcb4e54a02b53a3e572e1ce4226512b51b"},
     {file = "lxml-4.6.1-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:9b06690224258db5cd39a84e993882a6874676f5de582da57f3df3a82ead9174"},
@@ -2019,11 +2030,6 @@ markupsafe = [
     {file = "MarkupSafe-1.1.1-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:ba59edeaa2fc6114428f1637ffff42da1e311e29382d81b339c1817d37ec93c6"},
     {file = "MarkupSafe-1.1.1-cp37-cp37m-win32.whl", hash = "sha256:b00c1de48212e4cc9603895652c5c410df699856a2853135b3967591e4beebc2"},
     {file = "MarkupSafe-1.1.1-cp37-cp37m-win_amd64.whl", hash = "sha256:9bf40443012702a1d2070043cb6291650a0841ece432556f784f004937f0f32c"},
-    {file = "MarkupSafe-1.1.1-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:6788b695d50a51edb699cb55e35487e430fa21f1ed838122d722e0ff0ac5ba15"},
-    {file = "MarkupSafe-1.1.1-cp38-cp38-manylinux1_i686.whl", hash = "sha256:cdb132fc825c38e1aeec2c8aa9338310d29d337bebbd7baa06889d09a60a1fa2"},
-    {file = "MarkupSafe-1.1.1-cp38-cp38-manylinux1_x86_64.whl", hash = "sha256:13d3144e1e340870b25e7b10b98d779608c02016d5184cfb9927a9f10c689f42"},
-    {file = "MarkupSafe-1.1.1-cp38-cp38-win32.whl", hash = "sha256:596510de112c685489095da617b5bcbbac7dd6384aeebeda4df6025d0256a81b"},
-    {file = "MarkupSafe-1.1.1-cp38-cp38-win_amd64.whl", hash = "sha256:e8313f01ba26fbbe36c7be1966a7b7424942f670f38e666995b88d012765b9be"},
     {file = "MarkupSafe-1.1.1.tar.gz", hash = "sha256:29872e92839765e546828bb7754a68c418d927cd064fd4708fab9fe9c8bb116b"},
 ]
 mccabe = [
@@ -2453,6 +2459,15 @@ uvloop = [
     {file = "uvloop-0.12.2-cp37-cp37m-manylinux1_i686.whl", hash = "sha256:0fcd894f6fc3226a962ee7ad895c4f52e3f5c3c55098e21efb17c071849a0573"},
     {file = "uvloop-0.12.2-cp37-cp37m-manylinux1_x86_64.whl", hash = "sha256:459e4649fcd5ff719523de33964aa284898e55df62761e7773d088823ccbd3e0"},
     {file = "uvloop-0.12.2.tar.gz", hash = "sha256:c48692bf4587ce281d641087658eca275a5ad3b63c78297bbded96570ae9ce8f"},
+    {file = "uvloop-0.14.0rc1-cp35-cp35m-macosx_10_11_x86_64.whl", hash = "sha256:2a0268553d2920108b05250c9711060313851daa60b1052c38b6520320aa50b1"},
+    {file = "uvloop-0.14.0rc1-cp35-cp35m-manylinux2010_x86_64.whl", hash = "sha256:32d2fe6ee6be28a99661e1f02bf6cedb99711df1065a3fb7ba7dd73ccb85f768"},
+    {file = "uvloop-0.14.0rc1-cp36-cp36m-macosx_10_11_x86_64.whl", hash = "sha256:448b13a1adfc47745b880b5d5b34c975c7851b1cd3b0eafe2569b2250190c797"},
+    {file = "uvloop-0.14.0rc1-cp36-cp36m-manylinux2010_x86_64.whl", hash = "sha256:9967fd537f3164607d153900aaae036e9a18015d8478f84406ba58b183f5abfc"},
+    {file = "uvloop-0.14.0rc1-cp37-cp37m-macosx_10_11_x86_64.whl", hash = "sha256:c1d55b6926d956a29cf5d7cc891004602ea7cd006b0b80354b9b3d973ca9027f"},
+    {file = "uvloop-0.14.0rc1-cp37-cp37m-manylinux2010_x86_64.whl", hash = "sha256:682fa2ab24a758831f531dca122f128373c3dd95a3c8885b5fd1c48775d0024f"},
+    {file = "uvloop-0.14.0rc1-cp38-cp38-macosx_10_11_x86_64.whl", hash = "sha256:469e0e3b80f245ed32f054174e6a69e6a01715dbbb24eb917733fe5af09ad306"},
+    {file = "uvloop-0.14.0rc1-cp38-cp38-manylinux2010_x86_64.whl", hash = "sha256:9ab030794432c47b78199d3f268ac2c898ae85fb9f09e10ae03dd7af62904b0e"},
+    {file = "uvloop-0.14.0rc1.tar.gz", hash = "sha256:182617c2992a79b268bfd193691c4aacb93634e9d8d96edf560a842a6206411d"},
 ]
 virtualenv = [
     {file = "virtualenv-20.1.0-py2.py3-none-any.whl", hash = "sha256:b0011228208944ce71052987437d3843e05690b2f23d1c7da4263fde104c97a2"},
