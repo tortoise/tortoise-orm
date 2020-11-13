@@ -34,7 +34,7 @@ services:
   - mysql
 cache: pip
 install:
-  - pip install -r tests/requirements.txt
+  - make deps
 script:
   - make ci
 after_success:
