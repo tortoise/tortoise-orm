@@ -20,17 +20,16 @@ jobs:
     steps:
       - name: Start MySQL
         run: sudo systemctl start mysql.service
-
-      - uses: actions/cache@v2
-          with:
-            path: ~/.cache/pip
-            key: ${{ runner.os }}-pip-${{ hashFiles('**/poetry.lock') }}
-            restore-keys: |
-              ${{ runner.os }}-pip-
-
       - env:
           TORTOISE_MYSQL_PASS: root
           TORTOISE_POSTGRES_PASS: 123456
+
+      - uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v1
