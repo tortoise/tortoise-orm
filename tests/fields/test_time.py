@@ -146,7 +146,7 @@ class TestDateFields(test.TestCase):
         obj0 = await testmodels.DateFields.create(date="2020-08-17")
         obj1 = await testmodels.DateFields.get(date="2020-08-17")
         self.assertEqual(obj0.date, obj1.date)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(Exception):
             await testmodels.DateFields.create(date="2020-08-xx")
         await testmodels.DateFields.filter(date="2020-08-17").update(date="2020-08-18")
         obj2 = await testmodels.DateFields.get(date="2020-08-18")

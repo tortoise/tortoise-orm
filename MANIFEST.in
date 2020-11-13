@@ -1,5 +1,0 @@
-include LICENSE.txt
-include README.rst
-include requirements.txt
-include requirements-accel.txt
-include tortoise/py.typed
