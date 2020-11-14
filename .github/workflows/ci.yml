@@ -3,19 +3,10 @@ on: [ push ]
 jobs:
   test:
     runs-on: ${{ matrix.os }}
-    services:
-      postgres:
-        image: postgres:latest
-        ports:
-          - 5432:5432
-        env:
-          POSTGRES_PASSWORD: 123456
-          POSTGRES_USER: postgres
-        options: --health-cmd=pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     env:
       TORTOISE_TEST_MODULES: tests.testmodels
       TORTOISE_MYSQL_PASS: root
-      TORTOISE_POSTGRES_PASS: 123456
+      TORTOISE_POSTGRES_PASS: root
     strategy:
       matrix:
         os: [ ubuntu-latest, windows-latest ]
@@ -24,8 +15,10 @@ jobs:
             - os: windows-latest
               python-version: 3.8
     steps:
-      - name: Start MySQL
-        run: sudo systemctl start mysql.service
+      - name: Start MySQL & PostgreSQL
+        run: |
+          sudo systemctl start mysql.service
+          sudo systemctl start postgres.service
 
       - uses: actions/cache@v2
         with:
