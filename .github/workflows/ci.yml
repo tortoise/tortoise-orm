@@ -2,7 +2,7 @@ name: ci
 on: [ push ]
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     services:
       postgres:
         image: postgres:latest
@@ -18,7 +18,11 @@ jobs:
       TORTOISE_POSTGRES_PASS: 123456
     strategy:
       matrix:
+        os: [ ubuntu-latest, windows-latest ]
         python-version: [ 3.7, 3.8 ]
+        exclude:
+            - os: windows-latest
+              python-version: 3.8
     steps:
       - name: Start MySQL
         run: sudo systemctl start mysql.service
@@ -36,7 +40,10 @@ jobs:
       - uses: dschep/install-poetry-action@v1.3
 
       - name: Install requirements
-        run: make deps
+        run: |
+          if [ "$RUNNER_OS" == "windows-latest" ]; then
+                choco install make
+          make deps
       - name: Run ci
         run: make ci
       - name: Upload Coverage
@@ -50,8 +57,11 @@ jobs:
     name: Finish Coveralls
     needs: test
     runs-on: ubuntu-latest
+    container: python:3-slim
     steps:
       - name: Finished
-        run: coveralls --finish
+        run: |
+          pip3 install --upgrade coveralls
+          coveralls --finish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
