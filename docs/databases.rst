@@ -162,7 +162,7 @@ MySQL optional parameters are pass-though parameters to the driver, see `here <h
     Set to ``True`` to set TCP NO_DELAY to disable Nagle's algorithm on the socket.
 ``charset`` (defaults to ``utf8mb4``):
     Sets the character set in use
-``ssl`` (defaults to ''False``):
+``ssl`` (defaults to ``False``):
     Either ``True`` or a custom SSL context for self-signed certificates. See :ref:`db_ssl` for more info.
 
 .. _db_ssl:
