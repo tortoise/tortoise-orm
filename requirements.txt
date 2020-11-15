@@ -1,5 +1,0 @@
-pypika>=0.44.0
-iso8601>=0.1.13
-aiosqlite>=0.16.0
-typing-extensions>=3.7.4.3
-aerich>=0.3.3

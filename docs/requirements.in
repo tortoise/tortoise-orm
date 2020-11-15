@@ -1,6 +1,0 @@
--r ../requirements.txt
-
-sphinx<2
-cloud_sptheme>=1.10
-Pygments==2.5.1
-docutils==0.14
