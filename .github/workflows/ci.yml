@@ -3,23 +3,25 @@ on: [ push ]
 jobs:
   test:
     runs-on: ${{ matrix.os }}
+    services:
+      postgres:
+        image: postgres:latest
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: 123456
+          POSTGRES_USER: postgres
+        options: --health-cmd=pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
     env:
       TORTOISE_TEST_MODULES: tests.testmodels
       TORTOISE_MYSQL_PASS: root
       TORTOISE_POSTGRES_PASS: root
     strategy:
       matrix:
-        os: [ ubuntu-latest, windows-latest ]
         python-version: [ 3.7, 3.8 ]
-        exclude:
-            - os: windows-latest
-              python-version: 3.8
     steps:
-      - name: Start MySQL & PostgreSQL
-        run: |
-          sudo systemctl start mysql.service
-          sudo systemctl start postgres.service
-
+      - name: Start MySQL
+        run: sudo systemctl start mysql.service
       - uses: actions/cache@v2
         with:
           path: ~/.cache/pip
@@ -31,12 +33,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - uses: dschep/install-poetry-action@v1.3
-
       - name: Install requirements
-        run: |
-          if [ "$RUNNER_OS" == "windows-latest" ]; then
-                choco install make
-          make deps
+        run: make deps
       - name: Run ci
         run: make ci
       - name: Upload Coverage
