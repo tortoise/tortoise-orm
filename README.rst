@@ -10,8 +10,8 @@ Tortoise ORM
    :target: http://tortoise-orm.readthedocs.io/en/latest/
 .. image:: https://pepy.tech/badge/tortoise-orm/month
    :target: https://pepy.tech/project/tortoise-orm/month
-.. image:: https://travis-ci.com/tortoise/tortoise-orm.svg?branch=master
-   :target: https://travis-ci.com/tortoise/tortoise-orm
+.. image:: https://github.com/tortoise/tortoise-orm/workflows/ci/badge.svg
+   :target: https://github.com/tortoise/tortoise-orm/actions?query=workflow:ci
 .. image:: https://coveralls.io/repos/github/tortoise/tortoise-orm/badge.svg
    :target: https://coveralls.io/github/tortoise/tortoise-orm
 .. image:: https://api.codacy.com/project/badge/Grade/b5b77021ba284e4a9e0c033a4611b046
