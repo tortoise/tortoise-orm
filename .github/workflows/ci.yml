@@ -2,7 +2,7 @@ name: ci
 on: [ push ]
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:latest
