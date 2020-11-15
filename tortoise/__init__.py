@@ -467,6 +467,8 @@ class Tortoise:
         _create_db: bool = False,
         db_url: Optional[str] = None,
         modules: Optional[Dict[str, List[str]]] = None,
+        use_tz: bool = False,
+        timezone: str = "UTC",
     ) -> None:
         """
         Sets up Tortoise-ORM.
@@ -503,7 +505,9 @@ class Tortoise:
                                 # If no default_connection specified, defaults to 'default'
                                 'default_connection': 'default',
                             }
-                        }
+                        },
+                        'use_tz': False,
+                        'timezone': UTC
                     }
 
         :param config_file:
@@ -517,6 +521,10 @@ class Tortoise:
         :param _create_db:
             If ``True`` tries to create database for specified connections,
             could be used for testing purposes.
+        :param use_tz:
+            A boolean that specifies if datetime will be timezone-aware by default or not.
+        :param timezone:
+            Timezone to use, default is UTC.
 
         :raises ConfigurationError: For any configuration error
         """
@@ -546,12 +554,16 @@ class Tortoise:
         except KeyError:
             raise ConfigurationError('Config must define "apps" section')
 
+        use_tz = config.get("use_tz", use_tz)  # type: ignore
+        timezone = config.get("timezone", timezone)  # type: ignore
+
         logger.info(
             "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
             str(connections_config),
             str(apps_config),
         )
 
+        cls._init_timezone(use_tz, timezone)
         await cls._init_connections(connections_config, _create_db)
         cls._init_apps(apps_config)
 
@@ -610,6 +622,11 @@ class Tortoise:
             await connection.db_delete()
         cls._connections = {}
         await cls._reset_apps()
+
+    @classmethod
+    def _init_timezone(cls, use_tz: bool, timezone: str) -> None:
+        os.environ["USE_TZ"] = str(use_tz)
+        os.environ["TZ"] = timezone
 
 
 def run_async(coro: Coroutine) -> None:

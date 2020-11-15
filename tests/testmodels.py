@@ -8,6 +8,8 @@ import uuid
 from decimal import Decimal
 from enum import Enum, IntEnum
 
+import pytz
+
 from tortoise import fields
 from tortoise.exceptions import NoValuesFetched
 from tortoise.models import Model
@@ -696,7 +698,7 @@ class DefaultModel(Model):
     char_default = fields.CharField(max_length=20, default="tortoise")
     date_default = fields.DateField(default=datetime.date.fromisoformat("2020-05-20"))
     datetime_default = fields.DatetimeField(
-        default=datetime.datetime.fromisoformat("2020-05-20 00:00:00")
+        default=datetime.datetime(year=2020, month=5, day=20, tzinfo=pytz.utc)
     )
 
 

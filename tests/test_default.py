@@ -1,6 +1,8 @@
 import datetime
 from decimal import Decimal
 
+import pytz
+
 from tests.testmodels import DefaultModel
 from tortoise.backends.asyncpg import AsyncpgDBClient
 from tortoise.backends.mysql import MySQLClient
@@ -33,5 +35,6 @@ class TestDefault(test.TestCase):
         self.assertEqual(default_model.char_default, "tortoise")
         self.assertEqual(default_model.date_default, datetime.date.fromisoformat("2020-05-20"))
         self.assertEqual(
-            default_model.datetime_default, datetime.datetime.fromisoformat("2020-05-20 00:00:00")
+            default_model.datetime_default,
+            datetime.datetime(year=2020, month=5, day=20, tzinfo=pytz.utc),
         )
