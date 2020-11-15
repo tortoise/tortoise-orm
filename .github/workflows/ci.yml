@@ -15,7 +15,7 @@ jobs:
     env:
       TORTOISE_TEST_MODULES: tests.testmodels
       TORTOISE_MYSQL_PASS: root
-      TORTOISE_POSTGRES_PASS: root
+      TORTOISE_POSTGRES_PASS: 123456
     strategy:
       matrix:
         python-version: [ 3.7, 3.8 ]
