@@ -44,11 +44,9 @@ class TestDatetimeFields(test.TestCase):
         self.assertEqual(obj2.datetime_add, obj.datetime_add)
 
     async def test_update(self):
-        obj0 = await testmodels.DatetimeFields.create(
-            datetime=datetime(2019, 9, 1, 0, 0, 0, tzinfo=get_default_timezone())
-        )
+        obj0 = await testmodels.DatetimeFields.create(datetime=datetime(2019, 9, 1, 0, 0, 0))
         await testmodels.DatetimeFields.filter(id=obj0.id).update(
-            datetime=datetime(2019, 9, 1, 6, 0, 8, tzinfo=get_default_timezone())
+            datetime=datetime(2019, 9, 1, 6, 0, 8)
         )
         obj = await testmodels.DatetimeFields.get(id=obj0.id)
         self.assertEqual(obj.datetime, datetime(2019, 9, 1, 6, 0, 8, tzinfo=get_default_timezone()))
