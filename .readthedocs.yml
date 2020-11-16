@@ -1,11 +1,12 @@
 version: 2
 
-build:
-   image: latest
+sphinx:
+  configuration: docs/conf.py
 
 python:
-   version: 3.7
-   install:
-      - method: pip
-        path: .
-   system_packages: true
+  version: 3.7
+  install:
+    - method: pip
+      path: .
+      extra_requirements:
+        - docs

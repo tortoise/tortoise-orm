@@ -43,13 +43,13 @@ uvloop = { version = "^0.12.0", markers = "sys_platform != 'win32' and implement
 python-rapidjson = { version = "*", optional = true }
 asyncpg = { version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
+# Documentation tools
+sphinx = { version = "*", optional = true }
+cloud_sptheme = { version = "*", optional = true }
+Pygments = { version = "*", optional = true }
+docutils = { version = "*", optional = true }
 
 [tool.poetry.dev-dependencies]
-# Documentation tools
-sphinx = "*"
-cloud_sptheme = "*"
-Pygments = "*"
-docutils = "*"
 # Linter tools
 mypy = "*"
 importlib_metadata = "*" # required by flake8
@@ -88,6 +88,7 @@ aiohttp = "*"
 accel = ["ciso8601", "uvloop", "python-rapidjson"]
 asyncpg = ["asyncpg"]
 aiomysql = ["aiomysql"]
+docs = ["sphinx", "cloud_sptheme", "Pygments", "docutils"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
