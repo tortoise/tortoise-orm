@@ -1,5 +1,4 @@
 import asyncio
-import os
 from functools import wraps
 from typing import Any, Callable, List, Optional, SupportsInt, Tuple, TypeVar, Union
 
@@ -8,6 +7,7 @@ import pymysql
 from pymysql.charset import charset_by_name
 from pypika import MySQLQuery
 
+from tortoise import timezone
 from tortoise.backends.base.client import (
     BaseDBAsyncClient,
     BaseTransactionWrapper,
@@ -114,7 +114,9 @@ class MySQLClient(BaseDBAsyncClient):
                             )
                             if self.storage_engine.lower() != "innodb":  # pragma: nobranch
                                 self.capabilities.__dict__["supports_transactions"] = False
-                        await cursor.execute(f"SET SESSION time_zone='{os.environ['TZ']}';")
+                        hours = timezone.now().utcoffset().seconds / 3600  # type: ignore
+                        tz = "{:+d}:{:02d}".format(int(hours), int((hours % 1) * 60))
+                        await cursor.execute(f"SET SESSION time_zone='{tz}';")
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
         except pymysql.err.OperationalError:
             raise DBConnectionError(f"Can't connect to MySQL server: {self._template}")
