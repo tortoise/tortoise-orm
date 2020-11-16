@@ -1001,7 +1001,7 @@ name = "pytz"
 version = "2020.4"
 description = "World timezone definitions, modern and historical"
 category = "main"
-optional = true
+optional = false
 python-versions = "*"
 
 [[package]]
@@ -1528,7 +1528,7 @@ docs = ["sphinx", "cloud_sptheme", "Pygments", "docutils"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "63198f3f28a6a64a696a905418a6f80529b0099e32fdfd20f3162b058802159d"
+content-hash = "ed54eae4d1ad7fc1daa1fd290d96fe4859f7c45d403bc33f0a44980e2e517afc"
 
 [metadata.files]
 aiofiles = [

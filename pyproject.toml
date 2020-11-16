@@ -37,13 +37,13 @@ python = "^3.7"
 pypika = "^0.44.0"
 iso8601 = "^0.1.13"
 aiosqlite = "^0.16.0"
-typing-extensions = "^3.7.4.3"
+pytz = "^2020.4"
 ciso8601 = { version = "^2.1.2", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
 uvloop = { version = "^0.12.0", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
 python-rapidjson = { version = "*", optional = true }
 asyncpg = { version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
-# Documentation tools
+# Documentation tools, which should in dev-dependencies but has bug, https://github.com/readthedocs/readthedocs.org/issues/4912
 sphinx = { version = "*", optional = true }
 cloud_sptheme = { version = "*", optional = true }
 Pygments = { version = "*", optional = true }

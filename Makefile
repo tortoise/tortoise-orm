@@ -19,7 +19,7 @@ up:
 	@poetry update
 
 deps:
-	@poetry install -E asyncpg -E aiomysql
+	@poetry install -E asyncpg -E aiomysql -E docs
 
 check: deps build
 ifneq ($(shell which black),)
