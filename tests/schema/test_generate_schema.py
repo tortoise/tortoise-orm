@@ -715,7 +715,7 @@ COMMENT ON TABLE "team" IS 'The TEAMS!';
 CREATE TABLE "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
-    "created" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP
+    "created" TIMESTAMPTZ NOT NULL  DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
 COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
@@ -724,7 +724,7 @@ COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
 CREATE TABLE "event" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "modified" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP,
+    "modified" TIMESTAMPTZ NOT NULL  DEFAULT CURRENT_TIMESTAMP,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "key" VARCHAR(100) NOT NULL,
@@ -804,7 +804,7 @@ COMMENT ON TABLE "teamaddress" IS 'The Team''s address';
 CREATE TABLE "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
-    "created" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP
+    "created" TIMESTAMPTZ NOT NULL  DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
 COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
@@ -813,7 +813,7 @@ COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
 CREATE TABLE "event" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "modified" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP,
+    "modified" TIMESTAMPTZ NOT NULL  DEFAULT CURRENT_TIMESTAMP,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "key" VARCHAR(100) NOT NULL,
@@ -906,7 +906,7 @@ COMMENT ON TABLE "teamaddress" IS 'The Team''s address';
 CREATE TABLE IF NOT EXISTS "tournament" (
     "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
     "name" VARCHAR(100) NOT NULL,
-    "created" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP
+    "created" TIMESTAMPTZ NOT NULL  DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS "idx_tournament_name_6fe200" ON "tournament" ("name");
 COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
@@ -915,7 +915,7 @@ COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
 CREATE TABLE IF NOT EXISTS "event" (
     "id" BIGSERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "modified" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP,
+    "modified" TIMESTAMPTZ NOT NULL  DEFAULT CURRENT_TIMESTAMP,
     "prize" DECIMAL(10,2),
     "token" VARCHAR(100) NOT NULL UNIQUE,
     "key" VARCHAR(100) NOT NULL,

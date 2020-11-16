@@ -13,6 +13,7 @@ Changelog
 -------
 - Support custom function in update. (#537)
 - Add `Model.refresh_from_db`. (#549)
+- Add timezone support. (#335)
 
 0.16.17
 -------

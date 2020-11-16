@@ -695,9 +695,7 @@ class DefaultModel(Model):
     bool_default = fields.BooleanField(default=True)
     char_default = fields.CharField(max_length=20, default="tortoise")
     date_default = fields.DateField(default=datetime.date.fromisoformat("2020-05-20"))
-    datetime_default = fields.DatetimeField(
-        default=datetime.datetime.fromisoformat("2020-05-20 00:00:00")
-    )
+    datetime_default = fields.DatetimeField(default=datetime.datetime(year=2020, month=5, day=20))
 
 
 class RequiredPKModel(Model):

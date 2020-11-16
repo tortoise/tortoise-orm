@@ -1,12 +1,15 @@
+import os
 from datetime import date, datetime, timedelta
 from time import sleep
 
+import pytz
 from iso8601 import ParseError
 
 from tests import testmodels
-from tortoise import fields
+from tortoise import fields, timezone
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError, IntegrityError
+from tortoise.timezone import get_default_timezone
 
 
 class TestDatetimeFields(test.TestCase):
@@ -21,7 +24,7 @@ class TestDatetimeFields(test.TestCase):
             await testmodels.DatetimeFields.create()
 
     async def test_create(self):
-        now = datetime.utcnow()
+        now = timezone.now()
         obj0 = await testmodels.DatetimeFields.create(datetime=now)
         obj = await testmodels.DatetimeFields.get(id=obj0.id)
         self.assertEqual(obj.datetime, now)
@@ -46,41 +49,41 @@ class TestDatetimeFields(test.TestCase):
             datetime=datetime(2019, 9, 1, 6, 0, 8)
         )
         obj = await testmodels.DatetimeFields.get(id=obj0.id)
-        self.assertEqual(obj.datetime, datetime(2019, 9, 1, 6, 0, 8))
+        self.assertEqual(obj.datetime, datetime(2019, 9, 1, 6, 0, 8, tzinfo=get_default_timezone()))
         self.assertEqual(obj.datetime_null, None)
 
     async def test_cast(self):
-        now = datetime.utcnow()
+        now = timezone.now()
         obj0 = await testmodels.DatetimeFields.create(datetime=now.isoformat())
         obj = await testmodels.DatetimeFields.get(id=obj0.id)
         self.assertEqual(obj.datetime, now)
 
     async def test_values(self):
-        now = datetime.utcnow()
+        now = timezone.now()
         obj0 = await testmodels.DatetimeFields.create(datetime=now)
         values = await testmodels.DatetimeFields.get(id=obj0.id).values("datetime")
         self.assertEqual(values[0]["datetime"], now)
 
     async def test_values_list(self):
-        now = datetime.utcnow()
+        now = timezone.now()
         obj0 = await testmodels.DatetimeFields.create(datetime=now)
         values = await testmodels.DatetimeFields.get(id=obj0.id).values_list("datetime", flat=True)
         self.assertEqual(values[0], now)
 
     async def test_get_utcnow(self):
-        now = datetime.utcnow()
+        now = datetime.utcnow().replace(tzinfo=get_default_timezone())
         await testmodels.DatetimeFields.create(datetime=now)
         obj = await testmodels.DatetimeFields.get(datetime=now)
         self.assertEqual(obj.datetime, now)
 
     async def test_get_now(self):
-        now = datetime.now()
+        now = timezone.now()
         await testmodels.DatetimeFields.create(datetime=now)
         obj = await testmodels.DatetimeFields.get(datetime=now)
         self.assertEqual(obj.datetime, now)
 
     async def test_count(self):
-        now = datetime.now()
+        now = timezone.now()
         obj = await testmodels.DatetimeFields.create(datetime=now)
         self.assertEqual(await testmodels.DatetimeFields.filter(datetime=obj.datetime).count(), 1)
         self.assertEqual(
@@ -101,6 +104,46 @@ class TestDatetimeFields(test.TestCase):
         await testmodels.DateFields.filter(date="2020-08-17").update(date="2020-08-18")
         obj2 = await testmodels.DateFields.get(date="2020-08-18")
         self.assertEqual(obj2.date, date(year=2020, month=8, day=18))
+
+    async def test_default_timezone(self):
+        now = timezone.now()
+        obj = await testmodels.DatetimeFields.create(datetime=now)
+        self.assertEqual(obj.datetime.tzinfo.zone, "UTC")
+
+        obj_get = await testmodels.DatetimeFields.get(pk=obj.pk)
+        self.assertEqual(obj_get.datetime.tzinfo.zone, "UTC")
+        self.assertEqual(obj_get.datetime, now)
+
+    async def test_set_timezone(self):
+        old_tz = os.environ["TZ"]
+        tz = "Asia/Shanghai"
+        os.environ["TZ"] = tz
+        now = datetime.now(pytz.timezone(tz))
+        obj = await testmodels.DatetimeFields.create(datetime=now)
+        self.assertEqual(obj.datetime.tzinfo.zone, tz)
+
+        obj_get = await testmodels.DatetimeFields.get(pk=obj.pk)
+        self.assertEqual(obj_get.datetime.tzinfo.zone, tz)
+        self.assertEqual(obj_get.datetime, now)
+
+        os.environ["TZ"] = old_tz
+
+    async def test_timezone(self):
+        old_tz = os.environ["TZ"]
+        old_use_tz = os.environ["USE_TZ"]
+        tz = "Asia/Shanghai"
+        os.environ["TZ"] = tz
+        os.environ["USE_TZ"] = "True"
+
+        now = datetime.now(pytz.timezone(tz))
+        obj = await testmodels.DatetimeFields.create(datetime=now)
+        self.assertEqual(obj.datetime.tzinfo.zone, tz)
+        obj_get = await testmodels.DatetimeFields.get(pk=obj.pk)
+        self.assertEqual(obj.datetime.tzinfo.zone, tz)
+        self.assertEqual(obj_get.datetime, now)
+
+        os.environ["TZ"] = old_tz
+        os.environ["USE_TZ"] = old_use_tz
 
 
 class TestDateFields(test.TestCase):

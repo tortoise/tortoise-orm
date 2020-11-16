@@ -11,8 +11,10 @@ from pypika import functions
 from pypika.enums import SqlTypes
 from pypika.terms import Term
 
+from tortoise import timezone
 from tortoise.exceptions import ConfigurationError, FieldError
 from tortoise.fields.base import Field
+from tortoise.timezone import get_timezone, get_use_tz, localtime
 
 try:
     from ciso8601 import parse_datetime
@@ -281,11 +283,13 @@ class DatetimeField(Field, datetime.datetime):
         Set to ``datetime.utcnow()`` on first save only.
     """
 
-    skip_to_python_if_native = True
     SQL_TYPE = "TIMESTAMP"
 
     class _db_mysql:
         SQL_TYPE = "DATETIME(6)"
+
+    class _db_postgres:
+        SQL_TYPE = "TIMESTAMPTZ"
 
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any) -> None:
         if auto_now_add and auto_now:
@@ -295,11 +299,19 @@ class DatetimeField(Field, datetime.datetime):
         self.auto_now_add = auto_now | auto_now_add
 
     def to_python_value(self, value: Any) -> Optional[datetime.datetime]:
-        if value is None or isinstance(value, datetime.datetime):
+        if value is None:
             return value
-        if isinstance(value, int):
-            return datetime.datetime.fromtimestamp(value)
-        return parse_datetime(value)
+        if isinstance(value, datetime.datetime):
+            datetime_value = value
+        elif isinstance(value, int):
+            datetime_value = datetime.datetime.fromtimestamp(value)
+        else:
+            datetime_value = parse_datetime(value)
+        if timezone.is_naive(datetime_value):
+            datetime_value = timezone.make_aware(datetime_value, get_timezone())
+        else:
+            datetime_value = localtime(datetime_value)
+        return datetime_value
 
     def to_db_value(
         self, value: Optional[datetime.datetime], instance: "Union[Type[Model], Model]"
@@ -309,9 +321,18 @@ class DatetimeField(Field, datetime.datetime):
             self.auto_now
             or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
         ):
-            value = datetime.datetime.utcnow()
+            value = timezone.now()
             setattr(instance, self.model_field_name, value)
             return value
+        if value is not None:
+            if get_use_tz():
+                if timezone.is_naive(value):
+                    warnings.warn(
+                        "DateTimeField %s received a naive datetime (%s)"
+                        " while time zone support is active." % (self.model_field_name, value),
+                        RuntimeWarning,
+                    )
+                    value = timezone.make_aware(value, "UTC")
         return value
 
     @property

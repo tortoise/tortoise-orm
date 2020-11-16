@@ -223,10 +223,10 @@ class TestModelMethods(test.TestCase):
         self.assertNotEqual(orig_modified, evt1.modified)
 
         with self.assertRaises(ConfigurationError):
-            evt2.update_from_dict({"participants": []})
+            await evt2.update_from_dict({"participants": []})
 
         with self.assertRaises(ValueError):
-            evt2.update_from_dict({"alias": "foo"})
+            await evt2.update_from_dict({"alias": "foo"})
 
     async def test_index_access(self):
         obj = await self.cls[self.mdl.pk]
