@@ -71,11 +71,18 @@ First you have to install tortoise like this:
 
     pip install tortoise-orm
 
-Then you should install your db driver
+You can also install with your db driver (`aiosqlite` is builtin):
 
 .. code-block:: bash
 
-    pip install asyncpg aiosqlite aiomysql
+    pip install tortoise-orm[asyncpg]
+
+
+Or MySQL:
+
+.. code-block:: bash
+
+    pip install tortoise-orm[aiomysql]
 
 
 Quick Tutorial
@@ -196,7 +203,7 @@ After that you can start using your models:
 Migration
 =========
 
-Tortoise ORM use `Aerich <https://github.com/tortoise/aerich>`_ as database migrations tool, see more detail at `docs <https://tortoise-orm.readthedocs.io/en/latest/migration.html>`_.
+Tortoise ORM use `Aerich <https://github.com/tortoise/aerich>`_ as database migrations tool, see more detail at it's `docs <https://tortoise-orm.readthedocs.io/en/latest/migration.html>`_.
 
 Contributing
 ============
