@@ -2,9 +2,10 @@ import datetime
 from decimal import Decimal
 from typing import Optional, Type, Union
 
+import pytz
 from pypika import Parameter
 
-from tortoise import Model, fields
+from tortoise import Model, fields, timezone
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.fields import (
     BigIntField,
@@ -42,7 +43,10 @@ def to_db_datetime(
         self.auto_now
         or (self.auto_now_add and getattr(instance, self.model_field_name, None) is None)
     ):
-        value = datetime.datetime.utcnow()
+        if timezone.get_use_tz():
+            value = datetime.datetime.now(tz=pytz.utc)
+        else:
+            value = datetime.datetime.now(tz=timezone.get_default_timezone())
         setattr(instance, self.model_field_name, value)
         return value.isoformat(" ")
     if isinstance(value, datetime.datetime):
