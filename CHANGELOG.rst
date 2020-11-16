@@ -13,7 +13,8 @@ Changelog
 -------
 - Support custom function in update. (#537)
 - Add `Model.refresh_from_db`. (#549)
-- Add timezone support. (#335)
+- Add timezone support, **be careful to upgrade to this version**, see `docs <https://tortoise-orm.readthedocs.io/en/latest/timezone.html>`_ for details. (#335)
+- Remove `aerich` in case of cyclic dependency. (#558)
 
 0.16.17
 -------

@@ -8,8 +8,6 @@ This document describes how to use `Aerich` to make migrations.
 
 You can see `https://github.com/tortoise/aerich <https://github.com/tortoise/aerich>`_ for more details.
 
-From version `0.16.17` you don't need install `Aerich` manual since which install automatically as tortoise requirement.
-
 Quick Start
 ===========
 
