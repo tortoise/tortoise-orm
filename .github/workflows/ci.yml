@@ -32,7 +32,10 @@ jobs:
       - uses: actions/setup-python@v1
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: dschep/install-poetry-action@v1.3
+      - name: Install and configure Poetry
+        uses: snok/install-poetry@v1.1.1
+        with:
+          virtualenvs-create: false
       - name: Install requirements
         run: make deps
       - name: Run ci
