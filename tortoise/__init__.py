@@ -3,7 +3,6 @@ import importlib
 import json
 import logging
 import os
-import re
 import warnings
 from contextvars import ContextVar
 from copy import deepcopy
@@ -563,12 +562,19 @@ class Tortoise:
         for name, info in connections_config.items():
             if isinstance(info, str):
                 info = expand_db_url(info)
-            passwords.append(info.get('credentials', {}).get('password'))
+            passwords.append(info.get("credentials", {}).get("password"))
+
+        str_connection_config = str(connections_config)
+        for password in passwords:
+            str_connection_config = str_connection_config.replace(
+                password,
+                # Show one third of the password at beginning (may be better for debugging purposes)
+                f"{password[0:len(password) // 3]}***"
+            )
 
         logger.debug(
             "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
-            re.sub(r'|'.join(passwords), lambda m: f'{m.group(0)[0:len(m.group(0)) // 3]}***', str(connections_config))
-            if all(passwords) else str(connections_config),
+            str_connection_config,
             str(apps_config),
         )
 
