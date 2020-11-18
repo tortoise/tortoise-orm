@@ -59,7 +59,7 @@ darglint = "*"
 pylint = "*"
 pygments = "*"
 bandit = "*"
-black = "*"
+black = "^20.8b1"
 # Test tools
 tox = "*"
 asynctest = "*"
