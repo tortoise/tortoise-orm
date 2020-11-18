@@ -3,6 +3,7 @@ import importlib
 import json
 import logging
 import os
+import re
 import warnings
 from contextvars import ContextVar
 from copy import deepcopy
@@ -557,9 +558,16 @@ class Tortoise:
         use_tz = config.get("use_tz", use_tz)  # type: ignore
         timezone = config.get("timezone", timezone)  # type: ignore
 
-        logger.info(
+        # Mask passwords in logs output
+        passwords = []
+        for name, info in connections_config.items():
+            if isinstance(info, str):
+                info = expand_db_url(info)
+            passwords.append(info.get('credentials', {}).get('password'))
+
+        logger.debug(
             "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
-            str(connections_config),
+            re.sub(r'|'.join(passwords), lambda m: f'{m.group(0)[0:len(m.group(0)) // 3]}***', str(connections_config)),
             str(apps_config),
         )
 
