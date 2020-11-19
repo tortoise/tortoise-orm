@@ -35,10 +35,7 @@ class TestCharFieldFilters(test.TestCase):
         )
 
     async def test_in_empty(self):
-        self.assertEqual(
-            await CharFields.filter(char__in=[]).values_list("char", flat=True),
-            [],
-        )
+        self.assertEqual(await CharFields.filter(char__in=[]).values_list("char", flat=True), [])
 
     async def test_not_in(self):
         self.assertSetEqual(
