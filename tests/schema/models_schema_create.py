@@ -109,9 +109,7 @@ class Employee(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
     company: fields.ForeignKeyRelation[Company] = fields.ForeignKeyField(
-        "models.Company",
-        related_name="employees",
-        to_field="uuid",
+        "models.Company", related_name="employees", to_field="uuid"
     )
 
 

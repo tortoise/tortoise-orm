@@ -331,8 +331,7 @@ class BaseExecutor:
         for instance in instance_list:
             relation_container = getattr(instance, field)
             relation_container._set_result_for_query(
-                related_object_map.get(getattr(instance, related_field_name), []),
-                to_attr,
+                related_object_map.get(getattr(instance, related_field_name), []), to_attr
             )
         return instance_list
 
@@ -370,11 +369,7 @@ class BaseExecutor:
 
         for instance in instance_list:
             obj = related_object_map.get(getattr(instance, related_field_name), None)
-            setattr(
-                instance,
-                f"_{field}",
-                obj,
-            )
+            setattr(instance, f"_{field}", obj)
             if to_attr:
                 setattr(instance, to_attr, obj)
         return instance_list

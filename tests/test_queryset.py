@@ -335,15 +335,9 @@ class TestQueryset(test.TestCase):
         sql = IntFields.filter(pk=1).only("id").select_for_update().sql()
         dialect = self.db.schema_generator.DIALECT
         if dialect == "postgres":
-            self.assertEqual(
-                sql,
-                'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE',
-            )
+            self.assertEqual(sql, 'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE')
         elif dialect == "mysql":
-            self.assertEqual(
-                sql,
-                "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE",
-            )
+            self.assertEqual(sql, "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE")
 
     async def test_select_related(self):
         tournament = await Tournament.create(name="1")

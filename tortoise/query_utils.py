@@ -25,10 +25,7 @@ def _process_filter_kwarg(
 
     pk_db_field = model._meta.db_pk_column
     if param.get("table"):
-        join = (
-            param["table"],
-            table[pk_db_field] == param["table"][param["backward_key"]],
-        )
+        join = (param["table"], table[pk_db_field] == param["table"][param["backward_key"]])
         if param.get("value_encoder"):
             value = param["value_encoder"](value, model)
         criterion = param["operator"](param["table"][param["field"]], value)
@@ -88,15 +85,14 @@ def _get_joins_for_related_field(
             or related_field.to_field_instance.model_field_name
         )
 
-        from_field = related_field.model._meta.fields_map[related_field.source_field]  # type: ignore
+        from_field = related_field.model._meta.fields_map[
+            related_field.source_field
+        ]  # type: ignore
         from_field_source_field = from_field.source_field or from_field.model_field_name
 
         related_table = related_table.as_(f"{table.get_table_name()}__{related_field_name}")
         required_joins.append(
-            (
-                related_table,
-                related_table[to_field_source_field] == table[from_field_source_field],
-            )
+            (related_table, related_table[to_field_source_field] == table[from_field_source_field])
         )
     return required_joins
 
