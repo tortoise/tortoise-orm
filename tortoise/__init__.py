@@ -396,7 +396,7 @@ class Tortoise:
         cls,
         models_paths: Iterable[Union[ModuleType, str]],
         app_label: str,
-        _init_relations: bool = True
+        _init_relations: bool = True,
     ) -> None:
         """
         Early initialisation of Tortoise ORM Models.
