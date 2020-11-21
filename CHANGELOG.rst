@@ -9,6 +9,11 @@ Changelog
 
 0.16
 ====
+
+0.16.19
+-------
+- Replace set `TZ` environment variable to `TIMEZONE` to avoid affecting global timezone.
+
 0.16.18
 -------
 - Support custom function in update. (#537)

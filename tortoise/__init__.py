@@ -626,7 +626,7 @@ class Tortoise:
     @classmethod
     def _init_timezone(cls, use_tz: bool, timezone: str) -> None:
         os.environ["USE_TZ"] = str(use_tz)
-        os.environ["TZ"] = timezone
+        os.environ["TIMEZONE"] = timezone
 
 
 def run_async(coro: Coroutine) -> None:
@@ -655,4 +655,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.16.18"
+__version__ = "0.16.19"

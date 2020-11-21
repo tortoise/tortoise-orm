@@ -16,7 +16,7 @@ def get_timezone() -> str:
     """
     Get timezone from env set in Tortoise config.
     """
-    return os.environ.get("TZ") or "UTC"
+    return os.environ.get("TIMEZONE") or "UTC"
 
 
 def now() -> datetime:
