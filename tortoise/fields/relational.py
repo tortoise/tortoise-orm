@@ -68,7 +68,11 @@ class ReverseRelation(Generic[MODEL]):
     """
 
     def __init__(
-        self, remote_model: Type[MODEL], relation_field: str, instance: "Model", from_field: str
+        self,
+        remote_model: Type[MODEL],
+        relation_field: str,
+        instance: "Model",
+        from_field: str,
     ) -> None:
         self.remote_model = remote_model
         self.relation_field = relation_field
@@ -167,9 +171,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
     """
 
     def __init__(self, instance: "Model", m2m_field: "ManyToManyFieldInstance") -> None:
-        super().__init__(
-            m2m_field.related_model, m2m_field.related_name, instance, "pk"
-        )  # type: ignore
+        super().__init__(m2m_field.related_model, m2m_field.related_name, instance, "pk")  # type: ignore
         self.field = m2m_field
         self.instance = instance
 
@@ -198,7 +200,8 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
             .select(self.field.backward_key, self.field.forward_key)
         )
         query = db.query_class.into(through_table).columns(
-            through_table[self.field.forward_key], through_table[self.field.backward_key]
+            through_table[self.field.forward_key],
+            through_table[self.field.backward_key],
         )
 
         if len(instances) == 1:

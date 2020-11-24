@@ -577,7 +577,7 @@ class Tortoise:
             str_connection_config = str_connection_config.replace(
                 password,
                 # Show one third of the password at beginning (may be better for debugging purposes)
-                f"{password[0:len(password) // 3]}***",
+                f"{password[0:len(password) // 3]}***"
             )
 
         logger.debug(

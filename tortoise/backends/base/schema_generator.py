@@ -220,7 +220,9 @@ class BaseSchemaGenerator:
                     if generated_sql:  # pragma: nobranch
                         fields_to_create.append(
                             self.GENERATED_PK_TEMPLATE.format(
-                                field_name=column_name, generated_sql=generated_sql, comment=comment
+                                field_name=column_name,
+                                generated_sql=generated_sql,
+                                comment=comment,
                             )
                         )
                         continue
