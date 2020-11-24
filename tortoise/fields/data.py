@@ -79,7 +79,10 @@ class IntField(Field, int):
 
     @property
     def constraints(self) -> dict:
-        return {"ge": 1 if self.generated or self.reference else -2147483648, "le": 2147483647}
+        return {
+            "ge": 1 if self.generated or self.reference else -2147483648,
+            "le": 2147483647,
+        }
 
     class _db_postgres:
         GENERATED_SQL = "SERIAL NOT NULL PRIMARY KEY"
@@ -142,7 +145,10 @@ class SmallIntField(Field, int):
 
     @property
     def constraints(self) -> dict:
-        return {"ge": 1 if self.generated or self.reference else -32768, "le": 32767}
+        return {
+            "ge": 1 if self.generated or self.reference else -32768,
+            "le": 32767,
+        }
 
     class _db_postgres:
         GENERATED_SQL = "SMALLSERIAL NOT NULL PRIMARY KEY"
@@ -172,7 +178,9 @@ class CharField(Field, str):  # type: ignore
 
     @property
     def constraints(self) -> dict:
-        return {"max_length": self.max_length}
+        return {
+            "max_length": self.max_length,
+        }
 
     @property
     def SQL_TYPE(self) -> str:  # type: ignore
@@ -528,7 +536,9 @@ IntEnumType = TypeVar("IntEnumType", bound=IntEnum)
 
 
 def IntEnumField(
-    enum_type: Type[IntEnumType], description: Optional[str] = None, **kwargs: Any
+    enum_type: Type[IntEnumType],
+    description: Optional[str] = None,
+    **kwargs: Any,
 ) -> IntEnumType:
     """
     Enum Field

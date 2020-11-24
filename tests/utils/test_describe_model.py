@@ -479,7 +479,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "raw_field": "o2o_id",
                         "unique": True,
                         "constraints": {},
-                    }
+                    },
                 ],
                 "backward_o2o_fields": [
                     {
@@ -494,7 +494,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "python_type": StraightFields,
                         "unique": False,
                         "constraints": {},
-                    }
+                    },
                 ],
                 "m2m_fields": [
                     {
@@ -966,7 +966,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "description": None,
                         "docstring": None,
                         "constraints": {},
-                    }
+                    },
                 ],
                 "o2o_fields": [],
                 "backward_o2o_fields": [],
@@ -1031,7 +1031,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "description": None,
                         "docstring": None,
                         "constraints": {},
-                    }
+                    },
                 ],
                 "o2o_fields": [],
                 "backward_o2o_fields": [],
