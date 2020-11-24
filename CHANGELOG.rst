@@ -13,6 +13,7 @@ Changelog
 0.16.19
 -------
 - Replace set `TZ` environment variable to `TIMEZONE` to avoid affecting global timezone.
+- Allow passing module objects to `models_paths` param of `Tortoise.init_models()`. (#561)
 
 0.16.18
 -------

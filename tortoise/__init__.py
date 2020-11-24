@@ -7,7 +7,8 @@ import warnings
 from contextvars import ContextVar
 from copy import deepcopy
 from inspect import isclass
-from typing import Coroutine, Dict, List, Optional, Tuple, Type, cast
+from types import ModuleType
+from typing import Coroutine, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
 
 from pypika import Table
 
@@ -23,7 +24,6 @@ from tortoise.fields.relational import (
 )
 from tortoise.filters import get_m2m_filters
 from tortoise.models import Model
-from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
 from tortoise.utils import generate_schema_for_client
 
@@ -348,11 +348,16 @@ class Tortoise:
         return client_class
 
     @classmethod
-    def _discover_models(cls, models_path: str, app_label: str) -> List[Type[Model]]:
-        try:
-            module = importlib.import_module(models_path)
-        except ImportError:
-            raise ConfigurationError(f'Module "{models_path}" not found')
+    def _discover_models(
+        cls, models_path: Union[ModuleType, str], app_label: str
+    ) -> List[Type[Model]]:
+        if isinstance(models_path, ModuleType):
+            module = models_path
+        else:
+            try:
+                module = importlib.import_module(models_path)
+            except ImportError:
+                raise ConfigurationError(f'Module "{models_path}" not found')
         discovered_models = []
         possible_models = getattr(module, "__models__", None)
         try:
@@ -388,7 +393,10 @@ class Tortoise:
 
     @classmethod
     def init_models(
-        cls, models_paths: List[str], app_label: str, _init_relations: bool = True
+        cls,
+        models_paths: Iterable[Union[ModuleType, str]],
+        app_label: str,
+        _init_relations: bool = True,
     ) -> None:
         """
         Early initialisation of Tortoise ORM Models.
@@ -396,14 +404,14 @@ class Tortoise:
         Initialise the relationships between Models.
         This does not initialise any database connection.
 
-        :param models_paths: A list of model paths to initialise
+        :param models_paths: Models paths to initialise
         :param app_label: The app label, e.g. 'models'
 
         :raises ConfigurationError: If models are invalid.
         """
         app_models: List[Type[Model]] = []
-        for module in models_paths:
-            app_models += cls._discover_models(module, app_label)
+        for models_path in models_paths:
+            app_models += cls._discover_models(models_path, app_label)
 
         cls.apps[app_label] = {model.__name__: model for model in app_models}
 
