@@ -46,7 +46,7 @@ class Tortoise:
 
     @classmethod
     def describe_model(
-            cls, model: Type[Model], serializable: bool = True
+        cls, model: Type[Model], serializable: bool = True
     ) -> dict:  # pragma: nocoverage
         """
         Describes the given list of models or ALL registered models.
@@ -72,7 +72,7 @@ class Tortoise:
 
     @classmethod
     def describe_models(
-            cls, models: Optional[List[Type[Model]]] = None, serializable: bool = True
+        cls, models: Optional[List[Type[Model]]] = None, serializable: bool = True
     ) -> Dict[str, dict]:
         """
         Describes the given list of models or ALL registered models.
@@ -470,14 +470,14 @@ class Tortoise:
 
     @classmethod
     async def init(
-            cls,
-            config: Optional[dict] = None,
-            config_file: Optional[str] = None,
-            _create_db: bool = False,
-            db_url: Optional[str] = None,
-            modules: Optional[Dict[str, List[str]]] = None,
-            use_tz: bool = False,
-            timezone: str = "UTC",
+        cls,
+        config: Optional[dict] = None,
+        config_file: Optional[str] = None,
+        _create_db: bool = False,
+        db_url: Optional[str] = None,
+        modules: Optional[Dict[str, List[str]]] = None,
+        use_tz: bool = False,
+        timezone: str = "UTC",
     ) -> None:
         """
         Sets up Tortoise-ORM.
@@ -578,7 +578,7 @@ class Tortoise:
             str_connection_config = str_connection_config.replace(
                 password,
                 # Show one third of the password at beginning (may be better for debugging purposes)
-                f"{password[0:len(password) // 3]}***"
+                f"{password[0:len(password) // 3]}***",
             )
 
         logger.debug(
