@@ -393,10 +393,7 @@ class Tortoise:
 
     @classmethod
     def init_models(
-        cls,
-        models_paths: Iterable[Union[ModuleType, str]],
-        app_label: str,
-        _init_relations: bool = True,
+        cls, models_paths: List[str], app_label: str, _init_relations: bool = True
     ) -> None:
         """
         Early initialisation of Tortoise ORM Models.
