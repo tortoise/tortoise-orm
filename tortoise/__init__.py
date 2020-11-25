@@ -571,7 +571,9 @@ class Tortoise:
         for name, info in connections_config.items():
             if isinstance(info, str):
                 info = expand_db_url(info)
-            passwords.append(info.get("credentials", {}).get("password"))
+            password = info.get("credentials", {}).get("password")
+            if password:
+                passwords.append(password)
 
         str_connection_config = str(connections_config)
         for password in passwords:
