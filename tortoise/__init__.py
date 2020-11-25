@@ -406,7 +406,7 @@ class Tortoise:
 
         :param models_paths: Models paths to initialise
         :param app_label: The app label, e.g. 'models'
-        :param _init_relations:
+        :param _init_relations: Whether to init relations or not
 
         :raises ConfigurationError: If models are invalid.
         """
