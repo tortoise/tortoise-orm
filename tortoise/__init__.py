@@ -393,7 +393,10 @@ class Tortoise:
 
     @classmethod
     def init_models(
-        cls, models_paths: List[str], app_label: str, _init_relations: bool = True
+        cls,
+        models_paths: Iterable[Union[ModuleType, str]],
+        app_label: str,
+        _init_relations: bool = True,
     ) -> None:
         """
         Early initialisation of Tortoise ORM Models.
@@ -403,6 +406,7 @@ class Tortoise:
 
         :param models_paths: Models paths to initialise
         :param app_label: The app label, e.g. 'models'
+        :param _init_relations:
 
         :raises ConfigurationError: If models are invalid.
         """
