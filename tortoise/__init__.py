@@ -406,6 +406,7 @@ class Tortoise:
 
         :param models_paths: Models paths to initialise
         :param app_label: The app label, e.g. 'models'
+        :param _init_relations: Whether to init relations or not
 
         :raises ConfigurationError: If models are invalid.
         """
@@ -565,9 +566,26 @@ class Tortoise:
         use_tz = config.get("use_tz", use_tz)  # type: ignore
         timezone = config.get("timezone", timezone)  # type: ignore
 
-        logger.info(
+        # Mask passwords in logs output
+        passwords = []
+        for name, info in connections_config.items():
+            if isinstance(info, str):
+                info = expand_db_url(info)
+            password = info.get("credentials", {}).get("password")
+            if password:
+                passwords.append(password)
+
+        str_connection_config = str(connections_config)
+        for password in passwords:
+            str_connection_config = str_connection_config.replace(
+                password,
+                # Show one third of the password at beginning (may be better for debugging purposes)
+                f"{password[0:len(password) // 3]}***",
+            )
+
+        logger.debug(
             "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
-            str(connections_config),
+            str_connection_config,
             str(apps_config),
         )
 
