@@ -36,6 +36,10 @@ async def run():
     print(ret)
     # >>> [{'author_id': 1, 'count': 10}]
 
+    ret = (await Book.annotate(sum=Sum("rating")).values_list("sum", flat=True))[0]
+    print(ret)
+    # >>> 55.0
+
     ret = await Book.annotate(sum=Sum("rating")).group_by("author_id").values("author_id", "sum")
     print(ret)
     # >>> [{'author_id': 1, 'sum': 45.0}, {'author_id': 2, 'sum': 10.0}]
