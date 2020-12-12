@@ -17,7 +17,7 @@ async def list_all(request):
     return response.json({"users": [user.to_json() for user in users]})
 
 
-@app.route("/user", methods=['POST'])
+@app.route("/user", methods=["POST"])
 async def add_user(request):
     user = await User.create(name="New User")
     return response.json(user.to_json())
