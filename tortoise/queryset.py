@@ -902,14 +902,13 @@ class DeleteQuery(AwaitableQuery):
         self._db = db
 
     def _make_query(self) -> None:
-        self.query = copy(self.model._meta.basequery)
+        self.query = copy(self.model._meta.basequery).select(self.model._meta.db_pk_column)
         self.resolve_filters(
             model=self.model,
             q_objects=self.q_objects,
             annotations=self.annotations,
             custom_filters=self.custom_filters,
         )
-        self.query._delete_from = True
 
     def __await__(self) -> Generator[Any, None, int]:
         if self._db is None:
@@ -918,7 +917,11 @@ class DeleteQuery(AwaitableQuery):
         return self._execute().__await__()
 
     async def _execute(self) -> int:
-        return (await self._db.execute_query(str(self.query)))[0]
+        return (await self._db.executor_class(
+                model=self.model,
+                db=self._db,
+            )..execute_delete(self.query)
+        )[0]
 
 
 class ExistsQuery(AwaitableQuery):
