@@ -89,11 +89,11 @@ class AwaitableQuery(Generic[MODEL]):
         self._annotations: Dict[str, Function] = {}
 
     def resolve_filters(
-            self,
-            model: "Type[Model]",
-            q_objects: List[Q],
-            annotations: Dict[str, Any],
-            custom_filters: Dict[str, Dict[str, Any]],
+        self,
+        model: "Type[Model]",
+        q_objects: List[Q],
+        annotations: Dict[str, Any],
+        custom_filters: Dict[str, Dict[str, Any]],
     ) -> None:
         """
         Builds the common filters for a QuerySet.
@@ -124,7 +124,7 @@ class AwaitableQuery(Generic[MODEL]):
             )
 
     def _join_table_by_field(
-            self, table: Table, related_field_name: str, related_field: RelationalField
+        self, table: Table, related_field_name: str, related_field: RelationalField
     ) -> Table:
         joins = _get_joins_for_related_field(table, related_field, related_field_name)
         for join in joins:
@@ -145,11 +145,11 @@ class AwaitableQuery(Generic[MODEL]):
         return field_name, order_type
 
     def resolve_ordering(
-            self,
-            model: "Type[Model]",
-            table: Table,
-            orderings: Iterable[Tuple[str, str]],
-            annotations: Dict[str, Any],
+        self,
+        model: "Type[Model]",
+        table: Table,
+        orderings: Iterable[Tuple[str, str]],
+        annotations: Dict[str, Any],
     ) -> None:
         """
         Applies standard ordering to QuerySet.
@@ -364,8 +364,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             field_name, order_type = self._resolve_ordering_string(ordering)
 
             if not (
-                    field_name.split("__")[0] in self.model._meta.fields
-                    or field_name in self._annotations
+                field_name.split("__")[0] in self.model._meta.fields
+                or field_name in self._annotations
             ):
                 raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
             new_ordering.append((field_name, order_type))
@@ -465,12 +465,12 @@ class QuerySet(AwaitableQuery[MODEL]):
             q_objects=self._q_objects,
             flat=flat,
             fields_for_select_list=fields_  # type: ignore
-                                   or [
-                                       field
-                                       for field in self.model._meta.fields_map.keys()
-                                       if field in self.model._meta.db_fields
-                                   ]
-                                   + list(self._annotations.keys()),
+            or [
+                field
+                for field in self.model._meta.fields_map.keys()
+                if field in self.model._meta.db_fields
+            ]
+            + list(self._annotations.keys()),
             distinct=self._distinct,
             limit=self._limit,
             offset=self._offset,
@@ -503,10 +503,10 @@ class QuerySet(AwaitableQuery[MODEL]):
                 fields_for_select[return_as] = field
         else:
             _fields = [
-                          field
-                          for field in self.model._meta.fields_map.keys()
-                          if field in self.model._meta.db_fields
-                      ] + list(self._annotations.keys())
+                field
+                for field in self.model._meta.fields_map.keys()
+                if field in self.model._meta.db_fields
+            ] + list(self._annotations.keys())
 
             fields_for_select = {field: field for field in _fields}
 
@@ -715,7 +715,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         return queryset
 
     def _join_table_with_select_related(
-            self, model: "Type[Model]", table: Table, field: str, forwarded_fields: str
+        self, model: "Type[Model]", table: Table, field: str, forwarded_fields: str
     ) -> Tuple[Table, str]:
         if field in model._meta.fields_db_projection and forwarded_fields:
             raise FieldError(f'Field "{field}" for model "{model.__name__}" is not relation')
@@ -821,13 +821,13 @@ class UpdateQuery(AwaitableQuery):
     __slots__ = ("update_kwargs", "q_objects", "annotations", "custom_filters")
 
     def __init__(
-            self,
-            model: Type[MODEL],
-            update_kwargs: Dict[str, Any],
-            db: BaseDBAsyncClient,
-            q_objects: List[Q],
-            annotations: Dict[str, Any],
-            custom_filters: Dict[str, Dict[str, Any]],
+        self,
+        model: Type[MODEL],
+        update_kwargs: Dict[str, Any],
+        db: BaseDBAsyncClient,
+        q_objects: List[Q],
+        annotations: Dict[str, Any],
+        custom_filters: Dict[str, Dict[str, Any]],
     ) -> None:
         super().__init__(model)
         self.update_kwargs = update_kwargs
@@ -888,12 +888,12 @@ class DeleteQuery(AwaitableQuery):
     __slots__ = ("q_objects", "annotations", "custom_filters")
 
     def __init__(
-            self,
-            model: Type[MODEL],
-            db: BaseDBAsyncClient,
-            q_objects: List[Q],
-            annotations: Dict[str, Any],
-            custom_filters: Dict[str, Dict[str, Any]],
+        self,
+        model: Type[MODEL],
+        db: BaseDBAsyncClient,
+        q_objects: List[Q],
+        annotations: Dict[str, Any],
+        custom_filters: Dict[str, Dict[str, Any]],
     ) -> None:
         super().__init__(model)
         self.q_objects = q_objects
@@ -917,23 +917,22 @@ class DeleteQuery(AwaitableQuery):
         return self._execute().__await__()
 
     async def _execute(self) -> int:
-        return (await self._db.executor_class(
+        return await self._db.executor_class(
             model=self.model,
             db=self._db,
         ).execute_delete_related_filter(self.query)
-                )
 
 
 class ExistsQuery(AwaitableQuery):
     __slots__ = ("q_objects", "annotations", "custom_filters")
 
     def __init__(
-            self,
-            model: Type[MODEL],
-            db: BaseDBAsyncClient,
-            q_objects: List[Q],
-            annotations: Dict[str, Any],
-            custom_filters: Dict[str, Dict[str, Any]],
+        self,
+        model: Type[MODEL],
+        db: BaseDBAsyncClient,
+        q_objects: List[Q],
+        annotations: Dict[str, Any],
+        custom_filters: Dict[str, Dict[str, Any]],
     ) -> None:
         super().__init__(model)
         self.q_objects = q_objects
@@ -967,14 +966,14 @@ class CountQuery(AwaitableQuery):
     __slots__ = ("q_objects", "annotations", "custom_filters", "limit", "offset")
 
     def __init__(
-            self,
-            model: Type[MODEL],
-            db: BaseDBAsyncClient,
-            q_objects: List[Q],
-            annotations: Dict[str, Any],
-            custom_filters: Dict[str, Dict[str, Any]],
-            limit: Optional[int],
-            offset: Optional[int],
+        self,
+        model: Type[MODEL],
+        db: BaseDBAsyncClient,
+        q_objects: List[Q],
+        annotations: Dict[str, Any],
+        custom_filters: Dict[str, Dict[str, Any]],
+        limit: Optional[int],
+        offset: Optional[int],
     ) -> None:
         super().__init__(model)
         self.q_objects = q_objects
@@ -1017,7 +1016,7 @@ class FieldSelectQuery(AwaitableQuery):
         self.annotations = annotations
 
     def _join_table_with_forwarded_fields(
-            self, model: Type[MODEL], table: Table, field: str, forwarded_fields: str
+        self, model: Type[MODEL], table: Table, field: str, forwarded_fields: str
     ) -> Tuple[Table, str]:
         if field in model._meta.fields_db_projection and not forwarded_fields:
             return table, model._meta.fields_db_projection[field]
@@ -1131,19 +1130,19 @@ class ValuesListQuery(FieldSelectQuery):
     )
 
     def __init__(
-            self,
-            model: Type[MODEL],
-            db: BaseDBAsyncClient,
-            q_objects: List[Q],
-            fields_for_select_list: List[str],
-            limit: Optional[int],
-            offset: Optional[int],
-            distinct: bool,
-            orderings: List[Tuple[str, str]],
-            flat: bool,
-            annotations: Dict[str, Any],
-            custom_filters: Dict[str, Dict[str, Any]],
-            group_bys: Tuple[str, ...],
+        self,
+        model: Type[MODEL],
+        db: BaseDBAsyncClient,
+        q_objects: List[Q],
+        fields_for_select_list: List[str],
+        limit: Optional[int],
+        offset: Optional[int],
+        distinct: bool,
+        orderings: List[Tuple[str, str]],
+        flat: bool,
+        annotations: Dict[str, Any],
+        custom_filters: Dict[str, Dict[str, Any]],
+        group_bys: Tuple[str, ...],
     ) -> None:
         super().__init__(model, annotations)
         if flat and (len(fields_for_select_list) != 1):
@@ -1224,18 +1223,18 @@ class ValuesQuery(FieldSelectQuery):
     )
 
     def __init__(
-            self,
-            model: Type[MODEL],
-            db: BaseDBAsyncClient,
-            q_objects: List[Q],
-            fields_for_select: Dict[str, str],
-            limit: Optional[int],
-            offset: Optional[int],
-            distinct: bool,
-            orderings: List[Tuple[str, str]],
-            annotations: Dict[str, Any],
-            custom_filters: Dict[str, Dict[str, Any]],
-            group_bys: Tuple[str, ...],
+        self,
+        model: Type[MODEL],
+        db: BaseDBAsyncClient,
+        q_objects: List[Q],
+        fields_for_select: Dict[str, str],
+        limit: Optional[int],
+        offset: Optional[int],
+        distinct: bool,
+        orderings: List[Tuple[str, str]],
+        annotations: Dict[str, Any],
+        custom_filters: Dict[str, Dict[str, Any]],
+        group_bys: Tuple[str, ...],
     ) -> None:
         super().__init__(model, annotations)
         self.fields_for_select = fields_for_select
