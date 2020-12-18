@@ -290,6 +290,15 @@ class BaseExecutor:
                 self.delete_query, [self.model._meta.pk.to_db_value(instance.pk, instance)]
             )
         )[0]
+    
+    async def execute_delete(self, query: Query) -> int:
+        table = self.model._meta.basetable
+        delete_all = str(self.model._meta.basequery.where(
+            table[self.model._meta.db_pk_column].isin(query)
+        ).delete())
+        return (
+            await self.db.execute_query(delete_all)
+        )[0]
 
     async def _prefetch_reverse_relation(
         self,
