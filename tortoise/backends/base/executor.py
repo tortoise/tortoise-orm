@@ -293,7 +293,7 @@ class BaseExecutor:
 
     async def execute_delete_related_filter(self, query: Query) -> int:
         _, raw_results = await self.db.execute_query(query.get_sql())
-        result_ids = [row.get(self.model._meta.db_pk_column) for row in raw_results]
+        result_ids = [dict(row).get(self.model._meta.db_pk_column) for row in raw_results]
         if len(result_ids) == 0:
             return 0
 
