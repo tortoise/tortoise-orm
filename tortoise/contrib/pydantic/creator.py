@@ -125,6 +125,7 @@ def pydantic_model_creator(
     sort_alphabetically: Optional[bool] = None,
     _stack: tuple = (),
     exclude_readonly: bool = False,
+    meta_override: Optional[Type] = None,
 ) -> Type[PydanticModel]:
     """
     Function to build `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ off Tortoise Model.
@@ -146,6 +147,7 @@ def pydantic_model_creator(
             * order of reverse relations (as discovered) +
             * order of computed functions (as provided).
     :param exclude_readonly: Build a subset model that excludes any readonly fields
+    :param meta_override: A PydanticMeta class to override model's values.
     """
 
     # Fully qualified class name
@@ -181,26 +183,29 @@ def pydantic_model_creator(
 
     # Get settings and defaults
     meta = getattr(cls, "PydanticMeta", PydanticMeta)
-    default_include: Tuple[str, ...] = tuple(getattr(meta, "include", PydanticMeta.include))
-    default_exclude: Tuple[str, ...] = tuple(getattr(meta, "exclude", PydanticMeta.exclude))
-    default_computed: Tuple[str, ...] = tuple(getattr(meta, "computed", PydanticMeta.computed))
-    backward_relations: bool = bool(
-        getattr(meta, "backward_relations", PydanticMeta.backward_relations)
-    )
 
-    max_recursion: int = int(getattr(meta, "max_recursion", PydanticMeta.max_recursion))
-    exclude_raw_fields: bool = bool(
-        getattr(meta, "exclude_raw_fields", PydanticMeta.exclude_raw_fields)
-    )
+    def get_param(attr: str) -> Any:
+        if meta_override:
+            return getattr(
+                meta_override, attr, getattr(meta, attr, getattr(PydanticMeta, attr))
+            )
+        return getattr(meta, attr, getattr(PydanticMeta, attr))
+
+    default_include: Tuple[str, ...] = tuple(get_param("include"))
+    default_exclude: Tuple[str, ...] = tuple(get_param("exclude"))
+    default_computed: Tuple[str, ...] = tuple(get_param("computed"))
+
+    backward_relations: bool = bool(get_param("backward_relations"))
+
+    max_recursion: int = int(get_param("max_recursion"))
+    exclude_raw_fields: bool = bool(get_param("exclude_raw_fields"))
     _sort_fields: bool = (
-        bool(getattr(meta, "sort_alphabetically", PydanticMeta.sort_alphabetically))
+        bool(get_param("sort_alphabetically"))
         if sort_alphabetically is None
         else sort_alphabetically
     )
     _allow_cycles: bool = bool(
-        getattr(meta, "allow_cycles", PydanticMeta.allow_cycles)
-        if allow_cycles is None
-        else allow_cycles
+        get_param("allow_cycles") if allow_cycles is None else allow_cycles
     )
 
     # Update parameters with defaults
@@ -258,7 +263,11 @@ def pydantic_model_creator(
             "m2m_fields",
         )
         if backward_relations:
-            included_fields = (*included_fields, "backward_fk_fields", "backward_o2o_fields")
+            included_fields = (
+                *included_fields,
+                "backward_fk_fields",
+                "backward_o2o_fields",
+            )
 
         field_map_update(included_fields)
         # Add possible computed fields
