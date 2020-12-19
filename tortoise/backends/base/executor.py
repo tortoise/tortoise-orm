@@ -292,11 +292,15 @@ class BaseExecutor:
         )[0]
 
     async def execute_delete_related_filter(self, query: Query) -> int:
+        _, raw_results = await self.db.execute_query(query.get_sql())
+        result_ids = [row.get(self.model._meta.db_pk_column) for row in raw_results]
+        if len(result_ids) == 0:
+            return 0
 
         table = self.model._meta.basetable
         delete_all = str(
             self.model._meta.basequery.where(
-                table[self.model._meta.db_pk_column].isin(query)
+                table[self.model._meta.db_pk_column].isin(result_ids)
             ).delete()
         )
         return (await self.db.execute_query(delete_all))[0]
