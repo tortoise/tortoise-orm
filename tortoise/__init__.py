@@ -516,7 +516,7 @@ class Tortoise:
                             }
                         },
                         'use_tz': False,
-                        'timezone': UTC
+                        'timezone': 'UTC'
                     }
 
         :param config_file:
