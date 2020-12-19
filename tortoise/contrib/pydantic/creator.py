@@ -186,9 +186,7 @@ def pydantic_model_creator(
 
     def get_param(attr: str) -> Any:
         if meta_override:
-            return getattr(
-                meta_override, attr, getattr(meta, attr, getattr(PydanticMeta, attr))
-            )
+            return getattr(meta_override, attr, getattr(meta, attr, getattr(PydanticMeta, attr)))
         return getattr(meta, attr, getattr(PydanticMeta, attr))
 
     default_include: Tuple[str, ...] = tuple(get_param("include"))
@@ -204,9 +202,7 @@ def pydantic_model_creator(
         if sort_alphabetically is None
         else sort_alphabetically
     )
-    _allow_cycles: bool = bool(
-        get_param("allow_cycles") if allow_cycles is None else allow_cycles
-    )
+    _allow_cycles: bool = bool(get_param("allow_cycles") if allow_cycles is None else allow_cycles)
 
     # Update parameters with defaults
     include = tuple(include) + default_include
