@@ -16,6 +16,7 @@ Changelog
 - Allow passing module objects to `models_paths` param of `Tortoise.init_models()`. (#561)
 - Implement `PydanticMeta.backward_relations`. (#536)
 - Allow overriding `PydanticMeta` in `PydanticModelCreator`. (#536)
+- Fixed make_native typo to make_naive in timezone module
 
 0.16.18
 -------

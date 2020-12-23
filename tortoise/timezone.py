@@ -108,7 +108,7 @@ def make_aware(
         return value.replace(tzinfo=tz)
 
 
-def make_native(value: datetime, timezone: Optional[str] = None) -> datetime:
+def make_naive(value: datetime, timezone: Optional[str] = None) -> datetime:
     """
     Make an aware datetime.datetime naive in a given time zone.
 
