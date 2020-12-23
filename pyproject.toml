@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tortoise-orm"
-version = "0.16.18"
+version = "0.16.19"
 description = "Easy async ORM for python, built with relations in mind"
 authors = ["Andrey Bondar <andrey@bondar.ru>", "Nickolas Grigoriadis <nagrigoriadis@gmail.com>", "long2ice <long2ice@gmail.com>"]
 license = "Apache-2.0"
@@ -39,7 +39,7 @@ iso8601 = "^0.1.13"
 aiosqlite = "^0.16.0"
 pytz = "^2020.4"
 ciso8601 = { version = "^2.1.2", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
-uvloop = { version = "^0.12.0", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
+uvloop = { version = "^0.14.0", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
 python-rapidjson = { version = "*", optional = true }
 asyncpg = { version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
@@ -59,7 +59,7 @@ darglint = "*"
 pylint = "*"
 pygments = "*"
 bandit = "*"
-black = "*"
+black = "^20.8b1"
 # Test tools
 tox = "*"
 asynctest = "*"

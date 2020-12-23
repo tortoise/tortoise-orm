@@ -43,6 +43,8 @@ Contributors
 * Bogdan Evstratenko ``@evstratbg``
 * Mike Ryan ``@devsetgo``
 * Eugene Dubovskoy ``@drjackild``
+* Lương Quang Mạnh ``@lqmanh``
+* Mykyta Holubakha ``@Hummer12007``
 
 Special Thanks
 ==============

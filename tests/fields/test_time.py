@@ -115,9 +115,9 @@ class TestDatetimeFields(test.TestCase):
         self.assertEqual(obj_get.datetime, now)
 
     async def test_set_timezone(self):
-        old_tz = os.environ["TZ"]
+        old_tz = os.environ["TIMEZONE"]
         tz = "Asia/Shanghai"
-        os.environ["TZ"] = tz
+        os.environ["TIMEZONE"] = tz
         now = datetime.now(pytz.timezone(tz))
         obj = await testmodels.DatetimeFields.create(datetime=now)
         self.assertEqual(obj.datetime.tzinfo.zone, tz)
@@ -126,13 +126,13 @@ class TestDatetimeFields(test.TestCase):
         self.assertEqual(obj_get.datetime.tzinfo.zone, tz)
         self.assertEqual(obj_get.datetime, now)
 
-        os.environ["TZ"] = old_tz
+        os.environ["TIMEZONE"] = old_tz
 
     async def test_timezone(self):
-        old_tz = os.environ["TZ"]
+        old_tz = os.environ["TIMEZONE"]
         old_use_tz = os.environ["USE_TZ"]
         tz = "Asia/Shanghai"
-        os.environ["TZ"] = tz
+        os.environ["TIMEZONE"] = tz
         os.environ["USE_TZ"] = "True"
 
         now = datetime.now(pytz.timezone(tz))
@@ -142,7 +142,7 @@ class TestDatetimeFields(test.TestCase):
         self.assertEqual(obj.datetime.tzinfo.zone, tz)
         self.assertEqual(obj_get.datetime, now)
 
-        os.environ["TZ"] = old_tz
+        os.environ["TIMEZONE"] = old_tz
         os.environ["USE_TZ"] = old_use_tz
 
 

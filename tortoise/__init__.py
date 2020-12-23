@@ -7,7 +7,8 @@ import warnings
 from contextvars import ContextVar
 from copy import deepcopy
 from inspect import isclass
-from typing import Coroutine, Dict, List, Optional, Tuple, Type, cast
+from types import ModuleType
+from typing import Coroutine, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
 
 from pypika import Table
 
@@ -23,7 +24,6 @@ from tortoise.fields.relational import (
 )
 from tortoise.filters import get_m2m_filters
 from tortoise.models import Model
-from tortoise.queryset import QuerySet
 from tortoise.transactions import current_transaction_map
 from tortoise.utils import generate_schema_for_client
 
@@ -348,11 +348,16 @@ class Tortoise:
         return client_class
 
     @classmethod
-    def _discover_models(cls, models_path: str, app_label: str) -> List[Type[Model]]:
-        try:
-            module = importlib.import_module(models_path)
-        except ImportError:
-            raise ConfigurationError(f'Module "{models_path}" not found')
+    def _discover_models(
+        cls, models_path: Union[ModuleType, str], app_label: str
+    ) -> List[Type[Model]]:
+        if isinstance(models_path, ModuleType):
+            module = models_path
+        else:
+            try:
+                module = importlib.import_module(models_path)
+            except ImportError:
+                raise ConfigurationError(f'Module "{models_path}" not found')
         discovered_models = []
         possible_models = getattr(module, "__models__", None)
         try:
@@ -388,7 +393,10 @@ class Tortoise:
 
     @classmethod
     def init_models(
-        cls, models_paths: List[str], app_label: str, _init_relations: bool = True
+        cls,
+        models_paths: Iterable[Union[ModuleType, str]],
+        app_label: str,
+        _init_relations: bool = True,
     ) -> None:
         """
         Early initialisation of Tortoise ORM Models.
@@ -396,14 +404,15 @@ class Tortoise:
         Initialise the relationships between Models.
         This does not initialise any database connection.
 
-        :param models_paths: A list of model paths to initialise
+        :param models_paths: Models paths to initialise
         :param app_label: The app label, e.g. 'models'
+        :param _init_relations: Whether to init relations or not
 
         :raises ConfigurationError: If models are invalid.
         """
         app_models: List[Type[Model]] = []
-        for module in models_paths:
-            app_models += cls._discover_models(module, app_label)
+        for models_path in models_paths:
+            app_models += cls._discover_models(models_path, app_label)
 
         cls.apps[app_label] = {model.__name__: model for model in app_models}
 
@@ -507,7 +516,7 @@ class Tortoise:
                             }
                         },
                         'use_tz': False,
-                        'timezone': UTC
+                        'timezone': 'UTC'
                     }
 
         :param config_file:
@@ -557,9 +566,26 @@ class Tortoise:
         use_tz = config.get("use_tz", use_tz)  # type: ignore
         timezone = config.get("timezone", timezone)  # type: ignore
 
-        logger.info(
+        # Mask passwords in logs output
+        passwords = []
+        for name, info in connections_config.items():
+            if isinstance(info, str):
+                info = expand_db_url(info)
+            password = info.get("credentials", {}).get("password")
+            if password:
+                passwords.append(password)
+
+        str_connection_config = str(connections_config)
+        for password in passwords:
+            str_connection_config = str_connection_config.replace(
+                password,
+                # Show one third of the password at beginning (may be better for debugging purposes)
+                f"{password[0:len(password) // 3]}***",
+            )
+
+        logger.debug(
             "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
-            str(connections_config),
+            str_connection_config,
             str(apps_config),
         )
 
@@ -626,7 +652,7 @@ class Tortoise:
     @classmethod
     def _init_timezone(cls, use_tz: bool, timezone: str) -> None:
         os.environ["USE_TZ"] = str(use_tz)
-        os.environ["TZ"] = timezone
+        os.environ["TIMEZONE"] = timezone
 
 
 def run_async(coro: Coroutine) -> None:
@@ -655,4 +681,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.16.18"
+__version__ = "0.16.19"
