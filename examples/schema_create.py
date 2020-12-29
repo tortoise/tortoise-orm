@@ -49,19 +49,19 @@ class Team(Model):
 async def run():
     print("SQLite:\n")
     await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
-    sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+    sql = get_schema_sql(Tortoise.get_connection(), safe=False)
     print(sql)
 
     print("\n\nMySQL:\n")
     await Tortoise.init(db_url="mysql://root:@127.0.0.1:3306/", modules={"models": ["__main__"]})
-    sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+    sql = get_schema_sql(Tortoise.get_connection(), safe=False)
     print(sql)
 
     print("\n\nPostgreSQL:\n")
     await Tortoise.init(
         db_url="postgres://postgres:@127.0.0.1:5432/", modules={"models": ["__main__"]}
     )
-    sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+    sql = get_schema_sql(Tortoise.get_connection(), safe=False)
     print(sql)
 
 

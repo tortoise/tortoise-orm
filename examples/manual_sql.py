@@ -16,8 +16,8 @@ async def run():
     await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
     await Tortoise.generate_schemas()
 
-    # Need to get a connection. Unless explicitly specified, the name should be 'default'
-    conn = Tortoise.get_connection("default")
+    # Retrieve database connection. Unless explicitly specified, 'default' connection will be used
+    conn = Tortoise.get_connection()
 
     # Now we can execute queries in the normal autocommit mode
     await conn.execute_query("INSERT INTO event (name) VALUES ('Foo')")
