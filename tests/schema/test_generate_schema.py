@@ -138,7 +138,7 @@ class TestGenerateSchema(test.SimpleTestCase):
     async def test_schema_no_db_constraint(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_no_db_constraint")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(Tortoise.get_connection(), safe=False)
         self.assertEqual(
             sql.strip(),
             r"""CREATE TABLE "team" (
@@ -178,7 +178,7 @@ CREATE TABLE "teamevents" (
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(Tortoise.get_connection(), safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -265,7 +265,7 @@ CREATE TABLE "teamevents" (
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = get_schema_sql(Tortoise.get_connection(), safe=True)
         self.assertEqual(
             sql.strip(),
             """
@@ -416,7 +416,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def test_schema_no_db_constraint(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_no_db_constraint")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(Tortoise.get_connection(), safe=False)
         self.assertEqual(
             sql.strip(),
             r"""CREATE TABLE `team` (
@@ -456,7 +456,7 @@ CREATE TABLE `teamevents` (
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(Tortoise.get_connection(), safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -555,7 +555,7 @@ CREATE TABLE `teamevents` (
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = get_schema_sql(Tortoise.get_connection(), safe=True)
 
         self.assertEqual(
             sql.strip(),
@@ -700,7 +700,7 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     async def test_schema_no_db_constraint(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_no_db_constraint")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(Tortoise.get_connection(), safe=False)
         self.assertEqual(
             sql.strip(),
             r"""CREATE TABLE "team" (
@@ -750,7 +750,7 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';""",
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(Tortoise.get_connection(), safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -852,7 +852,7 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = get_schema_sql(Tortoise.get_connection(), safe=True)
         self.assertEqual(
             sql.strip(),
             """
