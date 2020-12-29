@@ -36,10 +36,12 @@ class Tortoise:
     _inited: bool = False
 
     @classmethod
-    def get_connection(cls, connection_name: str) -> BaseDBAsyncClient:
+    def get_connection(cls, connection_name: str = "default") -> BaseDBAsyncClient:
         """
         Returns the connection by name.
 
+        :param connection_name: Name of the connection to retrieve.
+        :return: An instance of a database connection.
         :raises KeyError: If connection name does not exist.
         """
         return cls._connections[connection_name]
