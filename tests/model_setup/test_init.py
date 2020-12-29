@@ -237,6 +237,22 @@ class TestInitErrors(test.SimpleTestCase):
         self.assertIn("models", Tortoise.apps)
         self.assertIsNotNone(Tortoise.get_connection())
 
+    async def test_default_connection(self):
+        await Tortoise.init(
+            db_url=f"sqlite://{':memory:'}", modules={"models": ["tests.testmodels"]}
+        )
+        self.assertIn("models", Tortoise.apps)
+        self.assertIsNotNone(Tortoise.get_connection("default"))
+
+    async def test_non_existing_connection(self):
+        await Tortoise.init(
+            db_url=f"sqlite://{':memory:'}", modules={"models": ["tests.testmodels"]}
+        )
+        self.assertIn("models", Tortoise.apps)
+
+        with self.assertRaises(KeyError):
+            Tortoise.get_connection("a_non_existing_connection")
+
     async def test_init_wrong_connection_engine(self):
         with self.assertRaisesRegex(ImportError, "tortoise.backends.test"):
             await Tortoise.init(
