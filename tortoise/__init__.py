@@ -113,7 +113,7 @@ class Tortoise:
         def get_related_model(related_app_name: str, related_model_name: str) -> Type[Model]:
             """
             Test, if app and model really exist. Throws a ConfigurationError with a hopefully
-            helpful message. If successfull, returns the requested model.
+            helpful message. If successful, returns the requested model.
 
             :raises ConfigurationError: If no such app exists.
             """
@@ -130,7 +130,7 @@ class Tortoise:
         def split_reference(reference: str) -> Tuple[str, str]:
             """
             Test, if reference follow the official naming conventions. Throws a
-            ConfigurationError with a hopefully helpful message. If successfull,
+            ConfigurationError with a hopefully helpful message. If successful,
             returns the app and the model name.
 
             :raises ConfigurationError: If no model reference is invalid.
