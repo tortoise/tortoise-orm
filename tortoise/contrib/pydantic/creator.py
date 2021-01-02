@@ -12,7 +12,6 @@ from tortoise.contrib.pydantic.utils import get_annotations
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
-
 _MODEL_INDEX: Dict[str, Type[PydanticModel]] = {}
 
 
@@ -69,15 +68,15 @@ def _cleandoc(obj: Any) -> str:
 
 
 def _pydantic_recursion_protector(
-    cls: "Type[Model]",
-    *,
-    stack: tuple,
-    exclude: Tuple[str, ...] = (),
-    include: Tuple[str, ...] = (),
-    computed: Tuple[str, ...] = (),
-    name=None,
-    allow_cycles: bool = False,
-    sort_alphabetically: Optional[bool] = None,
+        cls: "Type[Model]",
+        *,
+        stack: tuple,
+        exclude: Tuple[str, ...] = (),
+        include: Tuple[str, ...] = (),
+        computed: Tuple[str, ...] = (),
+        name=None,
+        allow_cycles: bool = False,
+        sort_alphabetically: Optional[bool] = None,
 ) -> Optional[Type[PydanticModel]]:
     """
     It is an inner function to protect pydantic model creator against cyclic recursion
@@ -115,17 +114,17 @@ def _pydantic_recursion_protector(
 
 
 def pydantic_model_creator(
-    cls: "Type[Model]",
-    *,
-    name=None,
-    exclude: Tuple[str, ...] = (),
-    include: Tuple[str, ...] = (),
-    computed: Tuple[str, ...] = (),
-    allow_cycles: Optional[bool] = None,
-    sort_alphabetically: Optional[bool] = None,
-    _stack: tuple = (),
-    exclude_readonly: bool = False,
-    meta_override: Optional[Type] = None,
+        cls: "Type[Model]",
+        *,
+        name=None,
+        exclude: Tuple[str, ...] = (),
+        include: Tuple[str, ...] = (),
+        computed: Tuple[str, ...] = (),
+        allow_cycles: Optional[bool] = None,
+        sort_alphabetically: Optional[bool] = None,
+        _stack: tuple = (),
+        exclude_readonly: bool = False,
+        meta_override: Optional[Type] = None,
 ) -> Type[PydanticModel]:
     """
     Function to build `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ off Tortoise Model.
@@ -161,11 +160,11 @@ def pydantic_model_creator(
         # When called later, include is explicitly set, so fence passes.
         nonlocal postfix
         is_default = (
-            exclude == ()
-            and include == ()
-            and computed == ()
-            and sort_alphabetically is None
-            and allow_cycles is None
+                exclude == ()
+                and include == ()
+                and computed == ()
+                and sort_alphabetically is None
+                and allow_cycles is None
         )
         hashval = (
             f"{fqname};{exclude};{include};{computed};{_stack}:{sort_alphabetically}:{allow_cycles}"
@@ -180,7 +179,14 @@ def pydantic_model_creator(
     # We need separate model class for different exclude, include and computed parameters
     _name = name or get_name()
     has_submodel = False
-
+    if not has_submodel:
+        _name = name or f"{fqname}.leaf"
+    elif has_submodel:
+        _name = name or get_name()
+    # Here we de-dup to ensure that a uniquely named object is a unique object
+    # This fixes some Pydantic constraints.
+    if _name in _MODEL_INDEX:
+        return _MODEL_INDEX[_name]
     # Get settings and defaults
     meta = getattr(cls, "PydanticMeta", PydanticMeta)
 
@@ -332,9 +338,9 @@ def pydantic_model_creator(
 
         # Foreign keys and OneToOne fields are embedded schemas
         if (
-            field_type is fields.relational.ForeignKeyFieldInstance
-            or field_type is fields.relational.OneToOneFieldInstance
-            or field_type is fields.relational.BackwardOneToOneRelation
+                field_type is fields.relational.ForeignKeyFieldInstance
+                or field_type is fields.relational.OneToOneFieldInstance
+                or field_type is fields.relational.BackwardOneToOneRelation
         ):
             model = get_submodel(fdesc["python_type"])
             if model:
@@ -347,8 +353,8 @@ def pydantic_model_creator(
 
         # Backward FK and ManyToMany fields are list of embedded schemas
         elif (
-            field_type is fields.relational.BackwardFKRelation
-            or field_type is fields.relational.ManyToManyFieldInstance
+                field_type is fields.relational.BackwardFKRelation
+                or field_type is fields.relational.ManyToManyFieldInstance
         ):
             model = get_submodel(fdesc["python_type"])
             if model:
@@ -391,15 +397,6 @@ def pydantic_model_creator(
             pconfig.fields[fname] = fconfig
 
     # Here we endure that the name is unique, but complete objects are still labeled verbatim
-    if not has_submodel:
-        _name = name or f"{fqname}.leaf"
-    elif has_submodel:
-        _name = name or get_name()
-
-    # Here we de-dup to ensure that a uniquely named object is a unique object
-    # This fixes some Pydantic constraints.
-    if _name in _MODEL_INDEX:
-        return _MODEL_INDEX[_name]
 
     # Creating Pydantic class for the properties generated before
     model = cast(Type[PydanticModel], type(_name, (PydanticModel,), properties))
@@ -415,14 +412,14 @@ def pydantic_model_creator(
 
 
 def pydantic_queryset_creator(
-    cls: "Type[Model]",
-    *,
-    name=None,
-    exclude: Tuple[str, ...] = (),
-    include: Tuple[str, ...] = (),
-    computed: Tuple[str, ...] = (),
-    allow_cycles: Optional[bool] = None,
-    sort_alphabetically: Optional[bool] = None,
+        cls: "Type[Model]",
+        *,
+        name=None,
+        exclude: Tuple[str, ...] = (),
+        include: Tuple[str, ...] = (),
+        computed: Tuple[str, ...] = (),
+        allow_cycles: Optional[bool] = None,
+        sort_alphabetically: Optional[bool] = None,
 ) -> Type[PydanticListModel]:
     """
     Function to build a `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ list off Tortoise Model.
@@ -464,7 +461,7 @@ def pydantic_queryset_creator(
     # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)
     # The title of the model to hide the hash postfix
-    setattr(model.__config__, "title", name or f"{getattr(submodel.__config__,'title')}_list")
+    setattr(model.__config__, "title", name or f"{getattr(submodel.__config__, 'title')}_list")
     # Store the base class & submodel
     setattr(model.__config__, "submodel", submodel)
 
