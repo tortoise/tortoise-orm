@@ -69,3 +69,9 @@ class DBConnectionError(BaseORMException, ConnectionError):
     """
     The DBConnectionError is raised when problems with connecting to db occurs
     """
+
+
+class ValidationError(BaseORMException):
+    """
+    The ValidationError is raised when validators of field validate failed.
+    """

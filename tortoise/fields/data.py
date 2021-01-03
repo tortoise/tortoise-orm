@@ -15,6 +15,7 @@ from tortoise import timezone
 from tortoise.exceptions import ConfigurationError, FieldError
 from tortoise.fields.base import Field
 from tortoise.timezone import get_timezone, get_use_tz, localtime
+from tortoise.validators import MaxLengthValidator
 
 try:
     from ciso8601 import parse_datetime
@@ -175,6 +176,7 @@ class CharField(Field, str):  # type: ignore
             raise ConfigurationError("'max_length' must be >= 1")
         self.max_length = int(max_length)
         super().__init__(**kwargs)
+        self.validators.append(MaxLengthValidator(max_length))
 
     @property
     def constraints(self) -> dict:
@@ -255,9 +257,13 @@ class DecimalField(Field, Decimal):
         self.quant = Decimal("1" if decimal_places == 0 else f"1.{('0' * decimal_places)}")
 
     def to_python_value(self, value: Any) -> Optional[Decimal]:
+
         if value is None:
-            return None
-        return Decimal(value).quantize(self.quant).normalize()
+            value = None
+        else:
+            value = Decimal(value).quantize(self.quant).normalize()
+        self.validate(value)
+        return value
 
     @property
     def SQL_TYPE(self) -> str:  # type: ignore
@@ -300,22 +306,25 @@ class DatetimeField(Field, datetime.datetime):
 
     def to_python_value(self, value: Any) -> Optional[datetime.datetime]:
         if value is None:
-            return value
-        if isinstance(value, datetime.datetime):
-            datetime_value = value
-        elif isinstance(value, int):
-            datetime_value = datetime.datetime.fromtimestamp(value)
+            value = None
         else:
-            datetime_value = parse_datetime(value)
-        if timezone.is_naive(datetime_value):
-            datetime_value = timezone.make_aware(datetime_value, get_timezone())
-        else:
-            datetime_value = localtime(datetime_value)
-        return datetime_value
+            if isinstance(value, datetime.datetime):
+                value = value
+            elif isinstance(value, int):
+                value = datetime.datetime.fromtimestamp(value)
+            else:
+                value = parse_datetime(value)
+            if timezone.is_naive(value):
+                value = timezone.make_aware(value, get_timezone())
+            else:
+                value = localtime(value)
+        self.validate(value)
+        return value
 
     def to_db_value(
         self, value: Optional[datetime.datetime], instance: "Union[Type[Model], Model]"
     ) -> Optional[datetime.datetime]:
+
         # Only do this if it is a Model instance, not class. Test for guaranteed instance var
         if hasattr(instance, "_saved_in_db") and (
             self.auto_now
@@ -333,6 +342,7 @@ class DatetimeField(Field, datetime.datetime):
                         RuntimeWarning,
                     )
                     value = timezone.make_aware(value, "UTC")
+        self.validate(value)
         return value
 
     @property
@@ -352,16 +362,22 @@ class DateField(Field, datetime.date):
     SQL_TYPE = "DATE"
 
     def to_python_value(self, value: Any) -> Optional[datetime.date]:
-        if value is None or isinstance(value, datetime.date):
-            return value
-        return parse_datetime(value).date()
+
+        if value is not None and not isinstance(value, datetime.date):
+            value = parse_datetime(value).date()
+        self.validate(value)
+        return value
 
     def to_db_value(
         self, value: Optional[Union[datetime.date, str]], instance: "Union[Type[Model], Model]"
     ) -> Optional[datetime.date]:
-        if value is None or isinstance(value, datetime.date):
-            return value
-        return parse_datetime(value).date()
+
+        if value is not None and not isinstance(value, datetime.date):
+            return_value = parse_datetime(value).date()
+        else:
+            return_value = value
+        self.validate(return_value)
+        return return_value
 
 
 class TimeDeltaField(Field, datetime.timedelta):
@@ -372,6 +388,8 @@ class TimeDeltaField(Field, datetime.timedelta):
     SQL_TYPE = "BIGINT"
 
     def to_python_value(self, value: Any) -> Optional[datetime.timedelta]:
+        self.validate(value)
+
         if value is None or isinstance(value, datetime.timedelta):
             return value
         return datetime.timedelta(microseconds=value)
@@ -379,6 +397,8 @@ class TimeDeltaField(Field, datetime.timedelta):
     def to_db_value(
         self, value: Optional[datetime.timedelta], instance: "Union[Type[Model], Model]"
     ) -> Optional[int]:
+        self.validate(value)
+
         if value is None:
             return None
         return (value.days * 86400000000) + (value.seconds * 1000000) + value.microseconds
@@ -434,6 +454,8 @@ class JSONField(Field, dict, list):  # type: ignore
     def to_db_value(
         self, value: Optional[Union[dict, list, str]], instance: "Union[Type[Model], Model]"
     ) -> Optional[str]:
+        self.validate(value)
+
         if isinstance(value, str):
             try:
                 self.decoder(value)
@@ -445,6 +467,8 @@ class JSONField(Field, dict, list):  # type: ignore
     def to_python_value(
         self, value: Optional[Union[str, dict, list]]
     ) -> Optional[Union[dict, list]]:
+        self.validate(value)
+
         if isinstance(value, str):
             try:
                 return self.decoder(value)
@@ -520,15 +544,20 @@ class IntEnumFieldInstance(SmallIntField):
         self.enum_type = enum_type
 
     def to_python_value(self, value: Union[int, None]) -> Union[IntEnum, None]:
-        return self.enum_type(value) if value is not None else None
+
+        value = self.enum_type(value) if value is not None else None
+        self.validate(value)
+        return value
 
     def to_db_value(
         self, value: Union[IntEnum, None, int], instance: "Union[Type[Model], Model]"
     ) -> Union[int, None]:
+
         if isinstance(value, IntEnum):
-            return int(value.value)
+            value = int(value.value)
         if isinstance(value, int):
-            return int(self.enum_type(value))
+            value = int(self.enum_type(value))
+        self.validate(value)
         return value
 
 
@@ -583,11 +612,14 @@ class CharEnumFieldInstance(CharField):
         self.enum_type = enum_type
 
     def to_python_value(self, value: Union[str, None]) -> Union[Enum, None]:
+        self.validate(value)
+
         return self.enum_type(value) if value is not None else None
 
     def to_db_value(
         self, value: Union[Enum, None, str], instance: "Union[Type[Model], Model]"
     ) -> Union[str, None]:
+        self.validate(value)
         if isinstance(value, Enum):
             return str(value.value)
         if isinstance(value, str):
