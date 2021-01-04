@@ -18,7 +18,7 @@ jobs:
       TORTOISE_POSTGRES_PASS: 123456
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8 ]
+        python-version: [ 3.7, 3.8, 3.9 ]
     steps:
       - name: Start MySQL
         run: sudo systemctl start mysql.service
