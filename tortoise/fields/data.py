@@ -373,7 +373,7 @@ class DateField(Field, datetime.date):
     ) -> Optional[datetime.date]:
 
         if value is not None and not isinstance(value, datetime.date):
-            return_value = parse_datetime(value).date()
+            return_value: Optional[datetime.date] = parse_datetime(value).date()
         else:
             return_value = value
         self.validate(return_value)
