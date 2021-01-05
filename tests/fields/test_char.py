@@ -1,7 +1,7 @@
 from tests import testmodels
 from tortoise import fields
 from tortoise.contrib import test
-from tortoise.exceptions import ConfigurationError, IntegrityError
+from tortoise.exceptions import ConfigurationError, ValidationError
 
 
 class TestCharFields(test.TestCase):
@@ -16,7 +16,7 @@ class TestCharFields(test.TestCase):
             fields.CharField(max_length=0)
 
     async def test_empty(self):
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(ValidationError):
             await testmodels.CharFields.create()
 
     async def test_create(self):

@@ -9,6 +9,9 @@ Changelog
 
 0.16
 ====
+0.16.20
+-------
+- Add model field validators.
 
 0.16.19
 -------
