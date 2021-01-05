@@ -68,15 +68,15 @@ def _cleandoc(obj: Any) -> str:
 
 
 def _pydantic_recursion_protector(
-        cls: "Type[Model]",
-        *,
-        stack: tuple,
-        exclude: Tuple[str, ...] = (),
-        include: Tuple[str, ...] = (),
-        computed: Tuple[str, ...] = (),
-        name=None,
-        allow_cycles: bool = False,
-        sort_alphabetically: Optional[bool] = None,
+    cls: "Type[Model]",
+    *,
+    stack: tuple,
+    exclude: Tuple[str, ...] = (),
+    include: Tuple[str, ...] = (),
+    computed: Tuple[str, ...] = (),
+    name=None,
+    allow_cycles: bool = False,
+    sort_alphabetically: Optional[bool] = None,
 ) -> Optional[Type[PydanticModel]]:
     """
     It is an inner function to protect pydantic model creator against cyclic recursion
@@ -114,17 +114,17 @@ def _pydantic_recursion_protector(
 
 
 def pydantic_model_creator(
-        cls: "Type[Model]",
-        *,
-        name=None,
-        exclude: Tuple[str, ...] = (),
-        include: Tuple[str, ...] = (),
-        computed: Tuple[str, ...] = (),
-        allow_cycles: Optional[bool] = None,
-        sort_alphabetically: Optional[bool] = None,
-        _stack: tuple = (),
-        exclude_readonly: bool = False,
-        meta_override: Optional[Type] = None,
+    cls: "Type[Model]",
+    *,
+    name=None,
+    exclude: Tuple[str, ...] = (),
+    include: Tuple[str, ...] = (),
+    computed: Tuple[str, ...] = (),
+    allow_cycles: Optional[bool] = None,
+    sort_alphabetically: Optional[bool] = None,
+    _stack: tuple = (),
+    exclude_readonly: bool = False,
+    meta_override: Optional[Type] = None,
 ) -> Type[PydanticModel]:
     """
     Function to build `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ off Tortoise Model.
@@ -160,11 +160,11 @@ def pydantic_model_creator(
         # When called later, include is explicitly set, so fence passes.
         nonlocal postfix
         is_default = (
-                exclude == ()
-                and include == ()
-                and computed == ()
-                and sort_alphabetically is None
-                and allow_cycles is None
+            exclude == ()
+            and include == ()
+            and computed == ()
+            and sort_alphabetically is None
+            and allow_cycles is None
         )
         hashval = (
             f"{fqname};{exclude};{include};{computed};{_stack}:{sort_alphabetically}:{allow_cycles}"
@@ -338,9 +338,9 @@ def pydantic_model_creator(
 
         # Foreign keys and OneToOne fields are embedded schemas
         if (
-                field_type is fields.relational.ForeignKeyFieldInstance
-                or field_type is fields.relational.OneToOneFieldInstance
-                or field_type is fields.relational.BackwardOneToOneRelation
+            field_type is fields.relational.ForeignKeyFieldInstance
+            or field_type is fields.relational.OneToOneFieldInstance
+            or field_type is fields.relational.BackwardOneToOneRelation
         ):
             model = get_submodel(fdesc["python_type"])
             if model:
@@ -353,8 +353,8 @@ def pydantic_model_creator(
 
         # Backward FK and ManyToMany fields are list of embedded schemas
         elif (
-                field_type is fields.relational.BackwardFKRelation
-                or field_type is fields.relational.ManyToManyFieldInstance
+            field_type is fields.relational.BackwardFKRelation
+            or field_type is fields.relational.ManyToManyFieldInstance
         ):
             model = get_submodel(fdesc["python_type"])
             if model:
@@ -412,14 +412,14 @@ def pydantic_model_creator(
 
 
 def pydantic_queryset_creator(
-        cls: "Type[Model]",
-        *,
-        name=None,
-        exclude: Tuple[str, ...] = (),
-        include: Tuple[str, ...] = (),
-        computed: Tuple[str, ...] = (),
-        allow_cycles: Optional[bool] = None,
-        sort_alphabetically: Optional[bool] = None,
+    cls: "Type[Model]",
+    *,
+    name=None,
+    exclude: Tuple[str, ...] = (),
+    include: Tuple[str, ...] = (),
+    computed: Tuple[str, ...] = (),
+    allow_cycles: Optional[bool] = None,
+    sort_alphabetically: Optional[bool] = None,
 ) -> Type[PydanticListModel]:
     """
     Function to build a `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ list off Tortoise Model.

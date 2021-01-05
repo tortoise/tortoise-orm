@@ -90,6 +90,12 @@ asyncpg = ["asyncpg"]
 aiomysql = ["aiomysql"]
 docs = ["sphinx", "cloud_sptheme", "Pygments", "docutils"]
 
+
+[[tool.poetry.source]]
+url = "https://mirrors.aliyun.com/pypi/simple/"
+name = "aliyun"
+default = true
+
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
