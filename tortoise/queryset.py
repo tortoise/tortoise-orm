@@ -1100,6 +1100,9 @@ class FieldSelectQuery(AwaitableQuery):
     def _resolve_group_bys(self, *field_names: str):
         group_bys = []
         for field_name in field_names:
+            if field_name in self._annotations:
+                group_bys.append(Term(field_name))
+                continue
             field_split = field_name.split("__")
             related_table, related_db_field = self._join_table_with_forwarded_fields(
                 model=self.model,

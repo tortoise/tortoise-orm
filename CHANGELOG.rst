@@ -12,6 +12,7 @@ Changelog
 0.16.20
 -------
 - Add model field validators.
+- Allow function results in group by. (#608)
 
 0.16.19
 -------
