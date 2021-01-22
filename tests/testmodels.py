@@ -4,6 +4,7 @@ This is the testing Models
 import binascii
 import datetime
 import os
+import re
 import uuid
 from decimal import Decimal
 from enum import Enum, IntEnum
@@ -11,6 +12,12 @@ from enum import Enum, IntEnum
 from tortoise import fields
 from tortoise.exceptions import NoValuesFetched
 from tortoise.models import Model
+from tortoise.validators import (
+    CommaSeparatedIntegerListValidator,
+    RegexValidator,
+    validate_ipv4_address,
+    validate_ipv6_address,
+)
 
 
 def generate_token():
@@ -701,3 +708,13 @@ class DefaultModel(Model):
 class RequiredPKModel(Model):
     id = fields.CharField(pk=True, max_length=100)
     name = fields.CharField(max_length=255)
+
+
+class ValidatorModel(Model):
+    regex = fields.CharField(max_length=100, null=True, validators=[RegexValidator("abc.+", re.I)])
+    max_length = fields.CharField(max_length=5, null=True)
+    ipv4 = fields.CharField(max_length=100, null=True, validators=[validate_ipv4_address])
+    ipv6 = fields.CharField(max_length=100, null=True, validators=[validate_ipv6_address])
+    comma_separated_integer_list = fields.CharField(
+        max_length=100, null=True, validators=[CommaSeparatedIntegerListValidator()]
+    )
