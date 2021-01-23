@@ -9,6 +9,10 @@ Changelog
 
 0.16
 ====
+0.16.21
+-------
+- Allow serializing Enum fields with Pydantic. (#576)
+
 0.16.20
 -------
 - Add model field validators.

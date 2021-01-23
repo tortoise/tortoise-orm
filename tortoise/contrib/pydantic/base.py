@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import TYPE_CHECKING, List, Type, Union
 
 import pydantic
@@ -57,6 +58,9 @@ class PydanticModel(BaseModel):
         # Convert ManyToManyRelation to list
         if isinstance(value, (fields.ManyToManyRelation, fields.ReverseRelation)):
             return list(value)
+        # Get value from Enums
+        if isinstance(value, Enum):
+            return value.value
         return value
 
     @classmethod

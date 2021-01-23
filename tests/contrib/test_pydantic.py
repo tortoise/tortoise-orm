@@ -1,6 +1,17 @@
 import copy
 
-from tests.testmodels import Address, Employee, Event, JSONFields, Reporter, Team, Tournament
+from tests.testmodels import (
+    Address,
+    Currency,
+    Employee,
+    EnumFields,
+    Event,
+    JSONFields,
+    Reporter,
+    Service,
+    Team,
+    Tournament,
+)
 from tortoise.contrib import test
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
@@ -1018,6 +1029,15 @@ class TestPydantic(test.TestCase):
         self.assertEqual(
             ret1, {"id": 2, "data": [{"a": 1, "b": 2}], "data_null": None, "data_default": {"a": 1}}
         )
+
+    async def test_enum_field(self):
+        creator = pydantic_model_creator(EnumFields)
+        enum_field = await EnumFields.create(
+            service=Service.python_programming, currency=Currency.HUF
+        )
+
+        ret0 = creator.from_orm(enum_field).dict()
+        self.assertEqual(ret0, {"id": 1, "service": 1, "currency": "HUF"})
 
 
 class TestPydanticCycle(test.TestCase):
