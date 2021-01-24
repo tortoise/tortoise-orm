@@ -176,7 +176,7 @@ class CharField(Field, str):  # type: ignore
             raise ConfigurationError("'max_length' must be >= 1")
         self.max_length = int(max_length)
         super().__init__(**kwargs)
-        self.validators.append(MaxLengthValidator(max_length))
+        self.validators.append(MaxLengthValidator(self.max_length))
 
     @property
     def constraints(self) -> dict:
