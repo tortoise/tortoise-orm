@@ -9,6 +9,10 @@ Changelog
 
 0.16
 ====
+0.16.21
+-------
+- Fixed validating JSON before decoding. (#623)
+
 0.16.20
 -------
 - Add model field validators.
