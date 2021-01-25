@@ -467,13 +467,13 @@ class JSONField(Field, dict, list):  # type: ignore
     def to_python_value(
         self, value: Optional[Union[str, dict, list]]
     ) -> Optional[Union[dict, list]]:
-        self.validate(value)
-
         if isinstance(value, str):
             try:
                 return self.decoder(value)
             except Exception:
                 raise FieldError(f"Value {value} is invalid json value.")
+
+        self.validate(value)
         return value
 
 
