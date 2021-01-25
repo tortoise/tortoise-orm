@@ -82,3 +82,18 @@ class TestJSONFields(test.TestCase):
     def test_index_fail(self):
         with self.assertRaisesRegex(ConfigurationError, "can't be indexed"):
             JSONField(index=True)
+
+    async def test_validate_str(self):
+        obj0 = await testmodels.JSONFields.create(data=[], data_validate='["text", 5]')
+        obj = await testmodels.JSONFields.get(id=obj0.id)
+        self.assertEqual(obj.data_validate, ["text", 5])
+
+    async def test_validate_dict(self):
+        obj0 = await testmodels.JSONFields.create(data=[], data_validate={"some": ["text", 3]})
+        obj = await testmodels.JSONFields.get(id=obj0.id)
+        self.assertEqual(obj.data_validate, {"some": ["text", 3]})
+
+    async def test_validate_list(self):
+        obj0 = await testmodels.JSONFields.create(data=[], data_validate=["text", 3])
+        obj = await testmodels.JSONFields.get(id=obj0.id)
+        self.assertEqual(obj.data_validate, ["text", 3])

@@ -8,9 +8,10 @@ import re
 import uuid
 from decimal import Decimal
 from enum import Enum, IntEnum
+from typing import Union
 
 from tortoise import fields
-from tortoise.exceptions import NoValuesFetched
+from tortoise.exceptions import NoValuesFetched, ValidationError
 from tortoise.models import Model
 from tortoise.validators import (
     CommaSeparatedIntegerListValidator,
@@ -257,10 +258,16 @@ class JSONFields(Model):
     This model contains many JSON blobs
     """
 
+    @staticmethod
+    def dict_or_list(value: Union[dict, list]):
+        if not isinstance(value, (dict, list)):
+            raise ValidationError("Value must be a dict or list.")
+
     id = fields.IntField(pk=True)
     data = fields.JSONField()
     data_null = fields.JSONField(null=True)
     data_default = fields.JSONField(default={"a": 1})
+    data_validate = fields.JSONField(null=True, validators=[lambda v: JSONFields.dict_or_list(v)])
 
 
 class UUIDFields(Model):

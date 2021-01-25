@@ -1012,11 +1012,25 @@ class TestPydantic(test.TestCase):
         creator = pydantic_model_creator(JSONFields)
         ret0 = creator.from_orm(json_field_0_get).dict()
         self.assertEqual(
-            ret0, {"id": 1, "data": {"a": 1}, "data_null": None, "data_default": {"a": 1}}
+            ret0,
+            {
+                "id": 1,
+                "data": {"a": 1},
+                "data_null": None,
+                "data_default": {"a": 1},
+                "data_validate": None,
+            },
         )
         ret1 = creator.from_orm(json_field_1_get).dict()
         self.assertEqual(
-            ret1, {"id": 2, "data": [{"a": 1, "b": 2}], "data_null": None, "data_default": {"a": 1}}
+            ret1,
+            {
+                "id": 2,
+                "data": [{"a": 1, "b": 2}],
+                "data_null": None,
+                "data_default": {"a": 1},
+                "data_validate": None,
+            },
         )
 
 
