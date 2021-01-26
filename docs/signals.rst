@@ -1,6 +1,6 @@
-======
-Signal
-======
+=======
+Signals
+=======
 
 .. automodule:: tortoise.signals
     :members:

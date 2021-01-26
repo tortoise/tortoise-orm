@@ -15,6 +15,7 @@ Reference
    expressions
    transactions
    exceptions
-   signal
+   signals
    migration
    validators
+   logging
