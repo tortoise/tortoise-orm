@@ -11,6 +11,7 @@ Changelog
 ====
 0.16.21
 -------
+- Fixed validating JSON before decoding. (#623)
 - Allow serializing Enum fields with Pydantic. (#576)
 
 0.16.20

@@ -176,7 +176,7 @@ class CharField(Field, str):  # type: ignore
             raise ConfigurationError("'max_length' must be >= 1")
         self.max_length = int(max_length)
         super().__init__(**kwargs)
-        self.validators.append(MaxLengthValidator(max_length))
+        self.validators.append(MaxLengthValidator(self.max_length))
 
     @property
     def constraints(self) -> dict:
@@ -467,13 +467,13 @@ class JSONField(Field, dict, list):  # type: ignore
     def to_python_value(
         self, value: Optional[Union[str, dict, list]]
     ) -> Optional[Union[dict, list]]:
-        self.validate(value)
-
         if isinstance(value, str):
             try:
                 return self.decoder(value)
             except Exception:
                 raise FieldError(f"Value {value} is invalid json value.")
+
+        self.validate(value)
         return value
 
 
