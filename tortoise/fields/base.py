@@ -167,6 +167,7 @@ class Field(metaclass=_FieldMeta):
         # TODO: consider making this not be set from constructor
         self.model: Type["Model"] = model  # type: ignore
         self.reference: "Optional[Field]" = None
+        self.kwargs = kwargs
 
     def to_db_value(self, value: Any, instance: "Union[Type[Model], Model]") -> Any:
         """

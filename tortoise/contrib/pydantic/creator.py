@@ -12,7 +12,6 @@ from tortoise.contrib.pydantic.utils import get_annotations
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
-
 _MODEL_INDEX: Dict[str, Type[PydanticModel]] = {}
 
 
@@ -180,7 +179,14 @@ def pydantic_model_creator(
     # We need separate model class for different exclude, include and computed parameters
     _name = name or get_name()
     has_submodel = False
-
+    if not has_submodel:
+        _name = name or f"{fqname}.leaf"
+    elif has_submodel:
+        _name = name or get_name()
+    # Here we de-dup to ensure that a uniquely named object is a unique object
+    # This fixes some Pydantic constraints.
+    if _name in _MODEL_INDEX:
+        return _MODEL_INDEX[_name]
     # Get settings and defaults
     meta = getattr(cls, "PydanticMeta", PydanticMeta)
 
@@ -391,15 +397,6 @@ def pydantic_model_creator(
             pconfig.fields[fname] = fconfig
 
     # Here we endure that the name is unique, but complete objects are still labeled verbatim
-    if not has_submodel:
-        _name = name or f"{fqname}.leaf"
-    elif has_submodel:
-        _name = name or get_name()
-
-    # Here we de-dup to ensure that a uniquely named object is a unique object
-    # This fixes some Pydantic constraints.
-    if _name in _MODEL_INDEX:
-        return _MODEL_INDEX[_name]
 
     # Creating Pydantic class for the properties generated before
     model = cast(Type[PydanticModel], type(_name, (PydanticModel,), properties))
@@ -464,7 +461,7 @@ def pydantic_queryset_creator(
     # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)
     # The title of the model to hide the hash postfix
-    setattr(model.__config__, "title", name or f"{getattr(submodel.__config__,'title')}_list")
+    setattr(model.__config__, "title", name or f"{getattr(submodel.__config__, 'title')}_list")
     # Store the base class & submodel
     setattr(model.__config__, "submodel", submodel)
 
