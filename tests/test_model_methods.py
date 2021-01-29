@@ -20,6 +20,7 @@ from tortoise.exceptions import (
     MultipleObjectsReturned,
     OperationalError,
     ParamsError,
+    ValidationError,
 )
 from tortoise.expressions import F
 from tortoise.models import NoneAwaitable
@@ -77,7 +78,7 @@ class TestModelCreate(test.TestCase):
     async def test_implicit_clone_pk_required_none(self):
         mdl = await RequiredPKModel.create(id="A", name="name_a")
         mdl.pk = None
-        with self.assertRaises(IntegrityError):
+        with self.assertRaises(ValidationError):
             await mdl.save()
 
 

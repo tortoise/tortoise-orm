@@ -20,6 +20,8 @@ class EnumField(CharField):
         self.enum_type = enum_type
 
     def to_db_value(self, value, instance):
+        self.validate(value)
+
         if value is None:
             return None
 
@@ -29,6 +31,8 @@ class EnumField(CharField):
         return value.value
 
     def to_python_value(self, value):
+        self.validate(value)
+
         if value is None or isinstance(value, self.enum_type):
             return value
 
@@ -53,6 +57,8 @@ class IntEnumField(IntField):
         self.enum_type = enum_type
 
     def to_db_value(self, value: Any, instance) -> Any:
+        self.validate(value)
+
         if value is None:
             return value
         if not isinstance(value, self.enum_type):
@@ -61,6 +67,8 @@ class IntEnumField(IntField):
         return value.value
 
     def to_python_value(self, value: Any) -> Any:
+        self.validate(value)
+
         if value is None or isinstance(value, self.enum_type):
             return value
 

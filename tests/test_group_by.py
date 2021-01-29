@@ -1,6 +1,6 @@
 from tests.testmodels import Author, Book
 from tortoise.contrib import test
-from tortoise.functions import Avg, Count, Sum
+from tortoise.functions import Avg, Count, Sum, Upper
 
 
 class TestGroupBy(test.TestCase):
@@ -214,3 +214,13 @@ class TestGroupBy(test.TestCase):
     async def test_implicit_group_by(self):
         ret = await Author.annotate(count=Count("books")).filter(count__gt=6)
         self.assertEqual(ret[0].count, 10)
+
+    async def test_group_by_annotate_result(self):
+        ret = (
+            await Book.annotate(upper_name=Upper("author__name"), count=Count("id"))
+            .group_by("upper_name")
+            .values("upper_name", "count")
+        )
+        self.assertEqual(
+            ret, [{"upper_name": "AUTHOR1", "count": 10}, {"upper_name": "AUTHOR2", "count": 5}]
+        )

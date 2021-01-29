@@ -203,7 +203,7 @@ After that you can start using your models:
 Migration
 =========
 
-Tortoise ORM use `Aerich <https://github.com/tortoise/aerich>`_ as database migrations tool, see more detail at it's `docs <https://tortoise-orm.readthedocs.io/en/latest/migration.html>`_.
+Tortoise ORM use `Aerich <https://github.com/tortoise/aerich>`_ as database migrations tool, see more detail at it's `docs <https://github.com/tortoise/aerich>`_.
 
 Contributing
 ============

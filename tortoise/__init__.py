@@ -604,8 +604,10 @@ class Tortoise:
         else your event loop may never complete
         as it is waiting for the connections to die.
         """
+        tasks = []
         for connection in cls._connections.values():
-            await connection.close()
+            tasks.append(connection.close())
+        await asyncio.gather(*tasks)
         cls._connections = {}
         logger.info("Tortoise-ORM shutdown")
 
@@ -681,4 +683,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.16.19"
+__version__ = "0.16.20"

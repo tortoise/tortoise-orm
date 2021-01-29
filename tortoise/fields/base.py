@@ -1,8 +1,10 @@
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from pypika.terms import Term
 
 from tortoise.exceptions import ConfigurationError
+from tortoise.validators import Validator
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -43,6 +45,7 @@ class Field(metaclass=_FieldMeta):
     :param index: Should this field be indexed by itself?
     :param description: Field description. Will also appear in ``Tortoise.describe_model()``
         and as DB comments in the generated DDL.
+    :param validators: Validators for this field.
 
     **Class Attributes:**
     These attributes needs to be defined when defining an actual field type.
@@ -136,6 +139,7 @@ class Field(metaclass=_FieldMeta):
         index: bool = False,
         description: Optional[str] = None,
         model: "Optional[Model]" = None,
+        validators: Optional[List[Union[Validator, Callable]]] = None,
         **kwargs: Any,
     ) -> None:
         # TODO: Rename pk to primary_key, alias pk, deprecate
@@ -159,6 +163,7 @@ class Field(metaclass=_FieldMeta):
         self.model_field_name = ""
         self.description = description
         self.docstring: Optional[str] = None
+        self.validators: List[Union[Validator, Callable]] = validators or []
         # TODO: consider making this not be set from constructor
         self.model: Type["Model"] = model  # type: ignore
         self.reference: "Optional[Field]" = None
@@ -176,9 +181,10 @@ class Field(metaclass=_FieldMeta):
 
                 if hasattr(instance, "_saved_in_db"):
         """
-        if value is None or isinstance(value, self.field_type):
-            return value
-        return self.field_type(value)  # pylint: disable=E1102
+        if value is not None and not isinstance(value, self.field_type):
+            value = self.field_type(value)  # pylint: disable=E1102
+        self.validate(value)
+        return value
 
     def to_python_value(self, value: Any) -> Any:
         """
@@ -186,9 +192,24 @@ class Field(metaclass=_FieldMeta):
 
         :param value: Value from DB
         """
-        if value is None or isinstance(value, self.field_type):
-            return value
-        return self.field_type(value)  # pylint: disable=E1102
+        if value is not None and not isinstance(value, self.field_type):
+            value = self.field_type(value)  # pylint: disable=E1102
+        self.validate(value)
+        return value
+
+    def validate(self, value: Any):
+        """
+        Validate whether given value is valid
+
+        :param value: Value to be validation
+        """
+        for v in self.validators:
+            if self.null and value is None:
+                continue
+            elif isinstance(value, Enum):
+                v(value.value)
+            else:
+                v(value)
 
     @property
     def required(self) -> bool:
