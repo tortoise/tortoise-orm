@@ -50,7 +50,7 @@ jobs:
         run: |
           nose2 --plugin tortoise.contrib.test.nose2 --db-module tests.testmodels --db-url sqlite://:memory:
       - name: Upload Coverage
-        run: coveralls
+        run: coveralls --service=github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
@@ -65,6 +65,6 @@ jobs:
       - name: Finished
         run: |
           pip3 install --upgrade coveralls
-          coveralls --finish --service=github
+          coveralls --finish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
