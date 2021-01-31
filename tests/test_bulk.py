@@ -13,6 +13,12 @@ class TestBulk(test.TruncationTestCase):
         inc = all_[0]["id"]
         self.assertEqual(all_, [{"id": val + inc, "name": None} for val in range(1000)])
 
+    async def test_bulk_create_with_batch_size(self):
+        await UniqueName.bulk_create([UniqueName() for _ in range(1000)], batch_size=100)
+        all_ = await UniqueName.all().values("id", "name")
+        inc = all_[0]["id"]
+        self.assertEqual(all_, [{"id": val + inc, "name": None} for val in range(1000)])
+
     async def test_bulk_create_with_specified(self):
         await UniqueName.bulk_create([UniqueName(id=id_) for id_ in range(1000, 2000)])
         all_ = await UniqueName.all().values("id", "name")

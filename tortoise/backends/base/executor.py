@@ -209,29 +209,43 @@ class BaseExecutor:
             ]
             await self.db.execute_insert(self.insert_query_all, values)
 
-    async def execute_bulk_insert(self, instances: "Iterable[Model]") -> None:
-        values_lists_all = []
-        values_lists = []
-        for instance in instances:
-            if instance._custom_generated_pk:
-                values_lists_all.append(
-                    [
-                        self.column_map[field_name](getattr(instance, field_name), instance)
-                        for field_name in self.regular_columns_all
-                    ]
-                )
-            else:
-                values_lists.append(
-                    [
-                        self.column_map[field_name](getattr(instance, field_name), instance)
-                        for field_name in self.regular_columns
-                    ]
-                )
+    @staticmethod
+    def _chunk(instances: "Iterable[Model]", batch_size: Optional[int] = None):
+        if not batch_size:
+            yield instances
+        else:
+            instances = list(instances)
+            for i in range(0, len(instances), batch_size):
+                yield instances[i : i + batch_size]  # noqa:E203
 
-        if values_lists_all:
-            await self.db.execute_many(self.insert_query_all, values_lists_all)
-        if values_lists:
-            await self.db.execute_many(self.insert_query, values_lists)
+    async def execute_bulk_insert(
+        self,
+        instances: "Iterable[Model]",
+        batch_size: Optional[int] = None,
+    ) -> None:
+        for instance_chunk in self._chunk(instances, batch_size):
+            values_lists_all = []
+            values_lists = []
+            for instance in instance_chunk:
+                if instance._custom_generated_pk:
+                    values_lists_all.append(
+                        [
+                            self.column_map[field_name](getattr(instance, field_name), instance)
+                            for field_name in self.regular_columns_all
+                        ]
+                    )
+                else:
+                    values_lists.append(
+                        [
+                            self.column_map[field_name](getattr(instance, field_name), instance)
+                            for field_name in self.regular_columns
+                        ]
+                    )
+
+            if values_lists_all:
+                await self.db.execute_many(self.insert_query_all, values_lists_all)
+            if values_lists:
+                await self.db.execute_many(self.insert_query, values_lists)
 
     def get_update_sql(
         self,

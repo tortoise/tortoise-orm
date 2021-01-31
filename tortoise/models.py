@@ -1009,6 +1009,36 @@ class Model(metaclass=ModelMeta):
         return await cls.get(**kwargs), False
 
     @classmethod
+    async def update_or_create(
+        cls: Type[MODEL],
+        defaults: Optional[dict] = None,
+        using_db: Optional[BaseDBAsyncClient] = None,
+        **kwargs: Any,
+    ) -> Tuple[MODEL, bool]:
+        """
+        A convenience method for updating an object with the given kwargs, creating a new one if necessary.
+
+        :param defaults: Default values used to update the object.
+        :param using_db: Specific DB connection to use instead of default bound
+        :param kwargs: Query parameters.
+        """
+        if not defaults:
+            defaults = {}
+        db = using_db if using_db else cls._meta.db
+        async with in_transaction(connection_name=db.connection_name):
+            instance = await cls.filter(**kwargs).first()
+            if instance:
+                await instance.update_from_dict(defaults)
+                return instance, False
+            try:
+                return await cls.create(**defaults, **kwargs, using_db=using_db), True
+            except (IntegrityError, TransactionManagementError):
+                # Let transaction close
+                pass
+        # Try after transaction in case transaction error
+        return await cls.get(**kwargs), False
+
+    @classmethod
     async def create(cls: Type[MODEL], **kwargs: Any) -> MODEL:
         """
         Create a record in the DB and returns the object.
@@ -1036,6 +1066,7 @@ class Model(metaclass=ModelMeta):
     async def bulk_create(
         cls: Type[MODEL],
         objects: Iterable[MODEL],
+        batch_size: Optional[int] = None,
         using_db: Optional[BaseDBAsyncClient] = None,
     ) -> None:
         """
@@ -1059,10 +1090,11 @@ class Model(metaclass=ModelMeta):
             ])
 
         :param objects: List of objects to bulk create
+        :param batch_size: How many objects are created in a single query
         :param using_db: Specific DB connection to use instead of default bound
         """
         db = using_db or cls._meta.db
-        await db.executor_class(model=cls, db=db).execute_bulk_insert(objects)
+        await db.executor_class(model=cls, db=db).execute_bulk_insert(objects, batch_size)
 
     @classmethod
     def first(cls: Type[MODEL]) -> QuerySetSingle[Optional[MODEL]]:
