@@ -272,7 +272,9 @@ class BaseExecutor:
                     query = query.set(db_column, self.parameter(count))
                     count += 1
                 else:
-                    value = F.resolver_arithmetic_expression(self.model, arithmetic_or_function.get(field))[0]
+                    value = F.resolver_arithmetic_expression(
+                        self.model, arithmetic_or_function.get(field)
+                    )[0]
                     query = query.set(db_column, value)
 
         query = query.where(table[self.model._meta.db_pk_column] == self.parameter(count))
