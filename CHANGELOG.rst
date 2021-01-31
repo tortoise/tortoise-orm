@@ -12,6 +12,8 @@ Changelog
 0.16.21
 -------
 - Fixed validating JSON before decoding. (#623)
+- Add model method `update_or_create`.
+- Add `batch_size` parameter for `bulk_create` method.
 
 0.16.20
 -------

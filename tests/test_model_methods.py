@@ -160,6 +160,16 @@ class TestModelMethods(test.TestCase):
         mdl2 = await self.cls.get(name="Test2")
         self.assertEqual(mdl, mdl2)
 
+    async def test_update_or_create(self):
+        mdl, created = await self.cls.update_or_create(name="Test")
+        self.assertFalse(created)
+        self.assertEqual(self.mdl, mdl)
+        mdl, created = await self.cls.update_or_create(name="Test2")
+        self.assertTrue(created)
+        self.assertNotEqual(self.mdl, mdl)
+        mdl2 = await self.cls.get(name="Test2")
+        self.assertEqual(mdl, mdl2)
+
     async def test_first(self):
         mdl = await self.cls.first()
         self.assertEqual(self.mdl.id, mdl.id)
