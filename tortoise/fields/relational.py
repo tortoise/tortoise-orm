@@ -336,6 +336,7 @@ class ForeignKeyFieldInstance(RelationalField):
     def describe(self, serializable: bool) -> dict:
         desc = super().describe(serializable)
         desc["raw_field"] = self.source_field
+        desc["on_delete"] = self.on_delete
         return desc
 
 
