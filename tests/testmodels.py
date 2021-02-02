@@ -725,3 +725,7 @@ class ValidatorModel(Model):
     comma_separated_integer_list = fields.CharField(
         max_length=100, null=True, validators=[CommaSeparatedIntegerListValidator()]
     )
+
+
+class NumberSourceField(Model):
+    number = fields.IntField(source_field="counter", default=0)
