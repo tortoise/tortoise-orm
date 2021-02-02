@@ -1028,7 +1028,7 @@ class Model(metaclass=ModelMeta):
         async with in_transaction(connection_name=db.connection_name):
             instance = await cls.filter(**kwargs).first()
             if instance:
-                await instance.update_from_dict(defaults)
+                await instance.update_from_dict(defaults).save()
                 return instance, False
             try:
                 return await cls.create(**defaults, **kwargs, using_db=using_db), True
