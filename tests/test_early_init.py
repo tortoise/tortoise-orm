@@ -37,7 +37,6 @@ class Event(Model):
 
 class TestBasic(test.TestCase):
     def test_early_init(self):
-
         self.maxDiff = None
         Event_TooEarly = pydantic_model_creator(Event)
         self.assertEqual(
@@ -79,7 +78,6 @@ class TestBasic(test.TestCase):
                     "name": "id",
                     "field_type": "IntField",
                     "db_column": "id",
-                    "db_field_types": {"": "INT"},
                     "python_type": "int",
                     "generated": True,
                     "nullable": False,
@@ -89,13 +87,13 @@ class TestBasic(test.TestCase):
                     "description": None,
                     "docstring": None,
                     "constraints": {"ge": 1, "le": 2147483647},
+                    "db_field_types": {"": "INT"},
                 },
                 "data_fields": [
                     {
                         "name": "name",
                         "field_type": "CharField",
                         "db_column": "name",
-                        "db_field_types": {"": "VARCHAR(255)"},
                         "python_type": "str",
                         "generated": False,
                         "nullable": False,
@@ -105,16 +103,12 @@ class TestBasic(test.TestCase):
                         "description": "The Event NAME",
                         "docstring": "The Event NAME\nIt's pretty important",
                         "constraints": {"max_length": 255},
+                        "db_field_types": {"": "VARCHAR(255)"},
                     },
                     {
                         "name": "created_at",
                         "field_type": "DatetimeField",
                         "db_column": "created_at",
-                        "db_field_types": {
-                            "": "TIMESTAMP",
-                            "mysql": "DATETIME(6)",
-                            "postgres": "TIMESTAMPTZ",
-                        },
                         "python_type": "datetime.datetime",
                         "generated": False,
                         "nullable": False,
@@ -124,23 +118,30 @@ class TestBasic(test.TestCase):
                         "description": None,
                         "docstring": None,
                         "constraints": {"readOnly": True},
+                        "db_field_types": {
+                            "": "TIMESTAMP",
+                            "mysql": "DATETIME(6)",
+                            "postgres": "TIMESTAMPTZ",
+                        },
+                        "auto_now_add": True,
+                        "auto_now": False,
                     },
                 ],
                 "fk_fields": [
                     {
                         "name": "tournament",
                         "field_type": "ForeignKeyFieldInstance",
-                        "raw_field": None,
                         "python_type": "None",
                         "generated": False,
                         "nullable": True,
-                        "on_delete": "CASCADE",
                         "unique": False,
                         "indexed": False,
                         "default": None,
                         "description": None,
                         "docstring": None,
                         "constraints": {},
+                        "raw_field": None,
+                        "on_delete": "CASCADE",
                     }
                 ],
                 "backward_fk_fields": [],
@@ -265,6 +266,8 @@ class TestBasic(test.TestCase):
                         "description": None,
                         "docstring": None,
                         "constraints": {"readOnly": True},
+                        "auto_now_add": True,
+                        "auto_now": False,
                     },
                     {
                         "name": "tournament_id",

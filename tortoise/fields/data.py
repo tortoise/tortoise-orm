@@ -352,6 +352,12 @@ class DatetimeField(Field, datetime.datetime):
             data["readOnly"] = True
         return data
 
+    def describe(self, serializable: bool) -> dict:
+        desc = super().describe(serializable)
+        desc["auto_now_add"] = self.auto_now_add
+        desc["auto_now"] = self.auto_now
+        return desc
+
 
 class DateField(Field, datetime.date):
     """
