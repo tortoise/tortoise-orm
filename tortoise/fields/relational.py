@@ -400,6 +400,17 @@ class ManyToManyFieldInstance(RelationalField):
         self._generated: bool = False
         self.on_delete = on_delete
 
+    def describe(self, serializable: bool) -> dict:
+        desc = super().describe(serializable)
+        desc["model_name"] = self.model_name
+        desc["related_name"] = self.related_name
+        desc["forward_key"] = self.forward_key
+        desc["backward_key"] = self.backward_key
+        desc["through"] = self.through
+        desc["on_delete"] = self.on_delete
+        desc["_generated"] = self._generated
+        return desc
+
 
 def OneToOneField(
     model_name: str,
