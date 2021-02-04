@@ -23,6 +23,7 @@ from pypika import JoinType, Parameter, Query, Table
 from pypika.terms import ArithmeticExpression, Function
 
 from tortoise.exceptions import OperationalError
+from tortoise.expressions import F
 from tortoise.fields.base import Field
 from tortoise.fields.relational import (
     BackwardFKRelation,
@@ -267,11 +268,14 @@ class BaseExecutor:
             db_column = self.model._meta.fields_db_projection[field]
             field_object = self.model._meta.fields_map[field]
             if not field_object.pk:
-                if db_column not in arithmetic_or_function.keys():
+                if field not in arithmetic_or_function.keys():
                     query = query.set(db_column, self.parameter(count))
                     count += 1
                 else:
-                    query = query.set(db_column, arithmetic_or_function.get(db_column))
+                    value = F.resolver_arithmetic_expression(
+                        self.model, arithmetic_or_function.get(field)
+                    )[0]
+                    query = query.set(db_column, value)
 
         query = query.where(table[self.model._meta.db_pk_column] == self.parameter(count))
 

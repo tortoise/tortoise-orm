@@ -4,7 +4,7 @@ This module does a series of use tests on a non-source_field model,
 
 This is to test that behaviour doesn't change when one defined source_field parameters.
 """
-from tests.testmodels import SourceFields, StraightFields
+from tests.testmodels import NumberSourceField, SourceFields, StraightFields
 from tortoise.contrib import test
 from tortoise.expressions import F
 from tortoise.functions import Coalesce, Count, Length, Lower, Trim, Upper
@@ -259,3 +259,18 @@ class StraightFieldTests(test.TestCase):
 class SourceFieldTests(StraightFieldTests):
     def setUp(self) -> None:
         self.model = SourceFields  # type: ignore
+
+
+class NumberSourceFieldTests(test.TestCase):
+    def setUp(self) -> None:
+        self.model = NumberSourceField
+
+    async def test_f_expression_save(self):
+        obj1 = await self.model.create()
+        obj1.number = F("number") + 1
+        await obj1.save()
+
+    async def test_f_expression_save_update_fields(self):
+        obj1 = await self.model.create()
+        obj1.number = F("number") + 1
+        await obj1.save(update_fields=["number"])
