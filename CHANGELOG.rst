@@ -14,6 +14,7 @@ Changelog
 - Fixed validating JSON before decoding. (#623)
 - Add model method `update_or_create`.
 - Add `batch_size` parameter for `bulk_create` method.
+- Fix save with F expression and field with source_field.
 
 0.16.20
 -------
