@@ -9,6 +9,10 @@ Changelog
 
 0.16
 ====
+0.16.22
+-------
+- Add date part extract filtering.
+
 0.16.21
 -------
 - Fixed validating JSON before decoding. (#623)

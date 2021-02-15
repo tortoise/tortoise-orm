@@ -3,8 +3,8 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple
 
 from pypika import Table
-from pypika.enums import SqlTypes
-from pypika.functions import Cast, Upper
+from pypika.enums import DatePart, SqlTypes
+from pypika.functions import Cast, Extract, Upper
 from pypika.terms import (
     BasicCriterion,
     Criterion,
@@ -21,6 +21,7 @@ from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstan
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
+
 
 ##############################################################################
 # Here we monkey-patch PyPika Valuewrapper to behave differently for MySQL
@@ -53,6 +54,8 @@ def get_value_sql(self, **kwargs):  # pragma: nocoverage
 
 
 ValueWrapper.get_value_sql = get_value_sql
+
+
 ##############################################################################
 
 
@@ -178,6 +181,42 @@ def insensitive_ends_with(field: Term, value: str) -> Criterion:
     return Like(
         Upper(Cast(field, SqlTypes.VARCHAR)), field.wrap_constant(Upper(f"%{escape_like(value)}"))
     )
+
+
+def extract_year_equal(field: Term, value: int) -> Criterion:
+    return Extract(DatePart.year, field).eq(value)
+
+
+def extract_quarter_equal(field: Term, value: int) -> Criterion:
+    return Extract(DatePart.quarter, field).eq(value)
+
+
+def extract_month_equal(field: Term, value: int) -> Criterion:
+    return Extract(DatePart.month, field).eq(value)
+
+
+def extract_week_equal(field: Term, value: int) -> Criterion:
+    return Extract(DatePart.week, field).eq(value)
+
+
+def extract_day_equal(field: Term, value: int) -> Criterion:
+    return Extract(DatePart.day, field).eq(value)
+
+
+def extract_hour_equal(field: Term, value: int) -> Criterion:
+    return Extract(DatePart.hour, field).eq(value)
+
+
+def extract_minute_equal(field: Term, value: int) -> Criterion:
+    return Extract(DatePart.minute, field).eq(value)
+
+
+def extract_second_equal(field: Term, value: int) -> Criterion:
+    return Extract(DatePart.second, field).eq(value)
+
+
+def extract_microsecond_equal(field: Term, value: int) -> Criterion:
+    return Extract(DatePart.microsecond, field).eq(value)
 
 
 ##############################################################################
@@ -365,5 +404,50 @@ def get_filters_for_field(
             "source_field": source_field,
             "operator": insensitive_ends_with,
             "value_encoder": string_encoder,
+        },
+        f"{field_name}__year": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": extract_year_equal,
+        },
+        f"{field_name}__quarter": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": extract_quarter_equal,
+        },
+        f"{field_name}__month": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": extract_month_equal,
+        },
+        f"{field_name}__week": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": extract_week_equal,
+        },
+        f"{field_name}__day": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": extract_day_equal,
+        },
+        f"{field_name}__hour": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": extract_hour_equal,
+        },
+        f"{field_name}__minute": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": extract_minute_equal,
+        },
+        f"{field_name}__second": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": extract_second_equal,
+        },
+        f"{field_name}__microsecond": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": extract_microsecond_equal,
         },
     }

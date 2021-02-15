@@ -266,6 +266,22 @@ When using ``.filter()`` method you can use number of modifiers to field names t
 - ``iendswith`` - case insensitive ``endswith``
 - ``iexact`` - case insensitive equals
 
+Specially, you can filter date part with one of following:
+
+.. code-block:: python3
+
+    class DatePart(Enum):
+        year = "YEAR"
+        quarter = "QUARTER"
+        month = "MONTH"
+        week = "WEEK"
+        day = "DAY"
+        hour = "HOUR"
+        minute = "MINUTE"
+        second = "SECOND"
+        microsecond = "MICROSECOND"
+
+    teams = await Team.filter(created_at__year=2020)
 
 Complex prefetch
 ================
