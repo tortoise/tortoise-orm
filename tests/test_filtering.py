@@ -1,4 +1,6 @@
-from tests.testmodels import Event, IntFields, Reporter, Team, Tournament
+import datetime
+
+from tests.testmodels import DatetimeFields, Event, IntFields, Reporter, Team, Tournament
 from tortoise.contrib import test
 from tortoise.expressions import F
 from tortoise.functions import Coalesce, Count, Length, Lower, Max, Trim, Upper
@@ -154,6 +156,24 @@ class TestFiltering(test.TestCase):
         tournaments = await Tournament.filter(Q(name="1") | ~Q(name="2"))
         self.assertEqual(len(tournaments), 2)
         self.assertSetEqual({t.name for t in tournaments}, {"0", "1"})
+
+    @test.requireCapability(dialect="mysql")
+    @test.requireCapability(dialect="postgres")
+    async def test_filter_exact(self):
+        await DatetimeFields.create(
+            datetime=datetime.datetime(
+                year=2020, month=5, day=20, hour=0, minute=0, second=0, microsecond=0
+            )
+        )
+        self.assertEqual(await DatetimeFields.filter(datetime__year=2020).count(), 1)
+        self.assertEqual(await DatetimeFields.filter(datetime__quarter=2).count(), 1)
+        self.assertEqual(await DatetimeFields.filter(datetime__month=5).count(), 1)
+        self.assertEqual(await DatetimeFields.filter(datetime__week=20).count(), 1)
+        self.assertEqual(await DatetimeFields.filter(datetime__day=20).count(), 1)
+        self.assertEqual(await DatetimeFields.filter(datetime__hour=0).count(), 1)
+        self.assertEqual(await DatetimeFields.filter(datetime__minute=0).count(), 1)
+        self.assertEqual(await DatetimeFields.filter(datetime__second=0).count(), 1)
+        self.assertEqual(await DatetimeFields.filter(datetime__microsecond=0).count(), 1)
 
     async def test_filter_by_aggregation_field(self):
         tournament = await Tournament.create(name="0")
