@@ -12,6 +12,7 @@ Changelog
 0.16.22
 -------
 - Add date part extract filtering.
+- Add `Manager`.
 
 0.16.21
 -------

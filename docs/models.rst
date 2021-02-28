@@ -229,6 +229,16 @@ The ``Meta`` class
 
             ordering = ["name", "-score"]
 
+    .. attribute:: manager
+        :annotation: = tortoise.manager.Manager
+
+        Specify ``manager`` to override the default manager.
+        It should be instance of ``tortoise.manager.Manager`` or subclass.
+
+        .. code-block:: python3
+
+            manager = CustomManager()
+
 ``ForeignKeyField``
 -------------------
 

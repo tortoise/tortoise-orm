@@ -11,6 +11,7 @@ Reference
    timezone
    schema
    query
+   manager
    functions
    expressions
    transactions
