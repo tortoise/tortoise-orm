@@ -383,9 +383,7 @@ def pydantic_model_creator(
             fconfig["description"] = description
             fconfig["title"] = fname.replace("_", " ").title()
             if field_default is not None:
-                if callable(field_default):
-                    properties[fname] = None
-                else:
+                if not callable(field_default):
                     properties[fname] = field_default
             pconfig.fields[fname] = fconfig
 
