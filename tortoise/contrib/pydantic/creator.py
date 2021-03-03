@@ -455,6 +455,7 @@ def pydantic_queryset_creator(
         computed=computed,
         allow_cycles=allow_cycles,
         sort_alphabetically=sort_alphabetically,
+        name=name,
     )
     lname = name or f"{submodel.__name__}_list"
 
