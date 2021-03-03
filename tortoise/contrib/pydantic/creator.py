@@ -382,9 +382,8 @@ def pydantic_model_creator(
             description = comment or _br_it(fdesc.get("docstring") or fdesc["description"] or "")
             fconfig["description"] = description
             fconfig["title"] = fname.replace("_", " ").title()
-            if field_default is not None:
-                if not callable(field_default):
-                    properties[fname] = field_default
+            if field_default is not None and not callable(field_default):
+                properties[fname] = field_default
             pconfig.fields[fname] = fconfig
 
     # Here we endure that the name is unique, but complete objects are still labeled verbatim
