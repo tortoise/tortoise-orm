@@ -663,7 +663,7 @@ class Model(metaclass=ModelMeta):
                 passed_fields.add(meta.fields_map[key].source_field)
             elif key in meta.fields_db_projection:
                 field_object = meta.fields_map[key]
-                if field_object.generated:
+                if field_object.pk and field_object.generated:
                     self._custom_generated_pk = True
                 if value is None and not field_object.null:
                     raise ValueError(f"{key} is non nullable field, but null was passed")
