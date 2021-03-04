@@ -11,7 +11,7 @@ There is one default Manager for every tortoise model.
 Usage
 =====
 
-There are two ways to use a Manager, one is use `manager` in `Meta` to override the global `manager`, another is define manager in model:
+There are two ways to use a Manager, one is use `manager` in `Meta` to override the default `manager`, another is define manager in model:
 
 .. code-block:: python3
 
@@ -32,7 +32,7 @@ There are two ways to use a Manager, one is use `manager` in `Meta` to override 
 
 After override default manager, all queries like `Model.get()`, `Model.filter()` will be comply with the behavior of custom manager.
 
-In the example above, you can never get the objects which status is equal to `1` with default manager, but you can use the manager `all_objects` defined in model to get all objects.
+In the example above, you can never get the objects which status is equal to `0` with default manager, but you can use the manager `all_objects` defined in model to get all objects.
 
 .. code-block:: python3
 
