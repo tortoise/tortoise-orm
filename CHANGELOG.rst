@@ -7,13 +7,16 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.16
+0.17
 ====
-0.16.22
+0.17.0
 -------
 - Add date part extract filtering.
-- Add `Manager`.
+- Add `Manager` support.
+- Add db router support.
 
+0.16
+====
 0.16.21
 -------
 - Fixed validating JSON before decoding. (#623)
