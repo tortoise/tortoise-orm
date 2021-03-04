@@ -1,6 +1,4 @@
-from typing import Type, Optional
-
-from tortoise.queryset import MODEL, QuerySet
+from tortoise.queryset import QuerySet
 
 
 class Manager:
@@ -10,7 +8,7 @@ class Manager:
     There is one default Manager for every tortoise model.
     """
 
-    def __init__(self, model: Optional[Type[MODEL]] = None) -> None:
+    def __init__(self, model=None) -> None:
         self._model = model
 
     def get_queryset(self) -> QuerySet:
