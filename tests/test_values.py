@@ -138,7 +138,7 @@ class TestValues(test.TestCase):
         tournaments = await Tournament.annotate(name_length=Length("name")).values_list(
             "name", "name_length"
         )
-        self.assertEqual(tournaments, [("Championship", 12), ("Super Bowl", 10)])
+        self.assertListSortEqual(tournaments, [("Championship", 12), ("Super Bowl", 10)])
 
     async def test_values_annotations_length(self):
         await Tournament.create(name="Championship")
@@ -147,7 +147,7 @@ class TestValues(test.TestCase):
         tournaments = await Tournament.annotate(name_slength=Length("name")).values(
             "name", "name_slength"
         )
-        self.assertEqual(
+        self.assertListSortEqual(
             tournaments,
             [
                 {"name": "Championship", "name_slength": 12},
@@ -162,13 +162,13 @@ class TestValues(test.TestCase):
         tournaments = await Tournament.annotate(name_trim=Trim("name")).values_list(
             "name", "name_trim"
         )
-        self.assertEqual(tournaments, [("  x", "x"), (" y ", "y")])
+        self.assertListSortEqual(tournaments, [("  x", "x"), (" y ", "y")])
 
     async def test_values_annotations_trim(self):
         await Tournament.create(name="  x")
         await Tournament.create(name=" y ")
 
         tournaments = await Tournament.annotate(name_trim=Trim("name")).values("name", "name_trim")
-        self.assertEqual(
+        self.assertListSortEqual(
             tournaments, [{"name": "  x", "name_trim": "x"}, {"name": " y ", "name_trim": "y"}]
         )

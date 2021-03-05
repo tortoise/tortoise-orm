@@ -65,7 +65,7 @@ class TestGroupBy(test.TestCase):
             .group_by("author__name")
             .values("author__name", "sum")
         )
-        self.assertEqual(
+        self.assertListSortEqual(
             ret,
             [{"author__name": "author1", "sum": 45.0}, {"author__name": "author2", "sum": 10.0}],
         )
@@ -166,7 +166,7 @@ class TestGroupBy(test.TestCase):
             .group_by("author__name")
             .values_list("author__name", "sum")
         )
-        self.assertEqual(ret, [("author1", 45.0), ("author2", 10.0)])
+        self.assertListSortEqual(ret, [("author1", 45.0), ("author2", 10.0)])
 
     async def test_sum_values_list_filter_group_by(self):
         ret = (

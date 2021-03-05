@@ -11,7 +11,7 @@ from asynctest import TestCase as _TestCase
 from asynctest import _fail_on
 from asynctest.case import _Policy
 
-from tortoise import Tortoise
+from tortoise import Model, Tortoise
 from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise.exceptions import DBConnectionError
 from tortoise.transactions import current_transaction_map
@@ -403,6 +403,14 @@ class TestCase(TruncationTestCase):
             _restore_default()
         else:
             await super()._tearDownDB()
+
+    def assertListSortEqual(self, list1: List[Any], list2: List[Any], msg: Any = ...) -> None:
+        if isinstance(list1[0], Model):
+            super().assertListEqual(
+                sorted(list1, key=lambda x: x.pk), sorted(list2, key=lambda x: x.pk)
+            )
+        elif isinstance(list1[0], tuple):
+            super().assertListEqual(sorted(list1), sorted(list2))
 
 
 def requireCapability(connection_name: str = "models", **conditions: Any):
