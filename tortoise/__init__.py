@@ -611,7 +611,7 @@ class Tortoise:
             if isinstance(r, str):
                 try:
                     module_name, class_name = r.rsplit(".", 2)
-                    router_cls.append(getattr(module_name, class_name))
+                    router_cls.append(getattr(importlib.import_module(module_name), class_name))
                 except Exception:
                     raise ConfigurationError(f"Can't import router from `{r}`")
             elif isinstance(r, type):

@@ -20,3 +20,4 @@ Reference
    migration
    validators
    logging
+   router
