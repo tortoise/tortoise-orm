@@ -332,17 +332,45 @@ class TestQueryset(test.TestCase):
 
     @test.requireCapability(support_for_update=True)
     async def test_select_for_update(self):
-        sql = IntFields.filter(pk=1).only("id").select_for_update().sql()
+        sql1 = IntFields.filter(pk=1).only("id").select_for_update().sql()
+        sql2 = IntFields.filter(pk=1).only("id").select_for_update(nowait=True).sql()
+        sql3 = IntFields.filter(pk=1).only("id").select_for_update(skip_locked=True).sql()
+        sql4 = IntFields.filter(pk=1).only("id").select_for_update(of=("intfields",)).sql()
+
         dialect = self.db.schema_generator.DIALECT
         if dialect == "postgres":
             self.assertEqual(
-                sql,
+                sql1,
                 'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE',
+            )
+            self.assertEqual(
+                sql2,
+                'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE NOWAIT',
+            )
+            self.assertEqual(
+                sql3,
+                'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE SKIP LOCKED',
+            )
+            self.assertEqual(
+                sql4,
+                'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE OF "intfields"',
             )
         elif dialect == "mysql":
             self.assertEqual(
-                sql,
+                sql1,
                 "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE",
+            )
+            self.assertEqual(
+                sql2,
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE NOWAIT",
+            )
+            self.assertEqual(
+                sql3,
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE SKIP LOCKED",
+            )
+            self.assertEqual(
+                sql4,
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE OF `intfields`",
             )
 
     async def test_select_related(self):

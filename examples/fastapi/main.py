@@ -1,4 +1,4 @@
-# pylint: disable=E0611
+# pylint: disable=E0611,E0401
 from typing import List
 
 from fastapi import FastAPI, HTTPException

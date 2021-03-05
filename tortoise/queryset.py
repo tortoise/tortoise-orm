@@ -271,6 +271,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_custom_filters",
         "_group_bys",
         "_select_for_update",
+        "_select_for_update_nowait",
+        "_select_for_update_skip_locked",
+        "_select_for_update_of",
         "_select_related",
         "_select_related_idx",
     )
@@ -293,6 +296,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._fields_for_select: Tuple[str, ...] = ()
         self._group_bys: Tuple[str, ...] = ()
         self._select_for_update: bool = False
+        self._select_for_update_nowait: bool = False
+        self._select_for_update_skip_locked: bool = False
+        self._select_for_update_of: Set[str] = set()
         self._select_related: Set[str] = set()
         self._select_related_idx: List[
             Tuple["Type[Model]", int, str, "Type[Model]"]
@@ -322,6 +328,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._custom_filters = copy(self._custom_filters)
         queryset._group_bys = copy(self._group_bys)
         queryset._select_for_update = self._select_for_update
+        queryset._select_for_update_nowait = self._select_for_update_nowait
+        queryset._select_for_update_skip_locked = self._select_for_update_skip_locked
+        queryset._select_for_update_of = self._select_for_update_of
         queryset._select_related = self._select_related
         queryset._select_related_idx = self._select_related_idx
         return queryset
@@ -427,7 +436,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._distinct = True
         return queryset
 
-    def select_for_update(self) -> "QuerySet[MODEL]":
+    def select_for_update(
+        self, nowait: bool = False, skip_locked: bool = False, of: Tuple[str, ...] = ()
+    ) -> "QuerySet[MODEL]":
         """
         Make QuerySet select for update.
 
@@ -437,6 +448,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         if self.capabilities.support_for_update:
             queryset = self._clone()
             queryset._select_for_update = True
+            queryset._select_for_update_nowait = nowait
+            queryset._select_for_update_skip_locked = skip_locked
+            queryset._select_for_update_of = set(of)
             return queryset
         return self
 
@@ -793,7 +807,11 @@ class QuerySet(AwaitableQuery[MODEL]):
         if self._distinct:
             self.query._distinct = True
         if self._select_for_update:
-            self.query._for_update = True
+            self.query = self.query.for_update(
+                self._select_for_update_nowait,
+                self._select_for_update_skip_locked,
+                self._select_for_update_of,
+            )
         if self._select_related:
             for field in self._select_related:
                 field_split = field.split("__")
