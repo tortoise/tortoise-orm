@@ -1,5 +1,5 @@
 # mypy: no-disallow-untyped-decorators
-# pylint: disable=E0611
+# pylint: disable=E0611,E0401
 import asyncio
 from typing import Generator
 

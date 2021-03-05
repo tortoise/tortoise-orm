@@ -14,6 +14,7 @@ Changelog
 - Add date part extract filtering.
 - Add `Manager` support.
 - Add db router support.
+- Add `nowait`, `skip_locked`, `of` parameters to `queryset.select_for_update`.
 
 0.16
 ====

@@ -921,12 +921,19 @@ optional = false
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [[package]]
-name = "pypika"
-version = "0.44.1"
+name = "PyPika"
+version = "0.47.6"
 description = "A SQL query builder API for Python"
 category = "main"
 optional = false
 python-versions = "*"
+develop = false
+
+[package.source]
+type = "git"
+url = "https://github.com/long2ice/pypika.git"
+reference = "master"
+resolved_reference = "0e08cdb658cf192ac096a5ffedcc53271e996be3"
 
 [[package]]
 name = "pytest"
@@ -1536,7 +1543,7 @@ docs = ["sphinx", "cloud_sptheme", "Pygments", "docutils"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "bb6c1bd4b1634c40bdfdec5d9ff3aec0e4f1137395b9ebaf23eb6df9f74dd09a"
+content-hash = "03f1fdc46cfd62e0136f066b960ec69a23f9daf6d5f02df6e3f9f35cb813315b"
 
 [metadata.files]
 aiofiles = [
@@ -2178,9 +2185,7 @@ pyparsing = [
     {file = "pyparsing-2.4.7-py2.py3-none-any.whl", hash = "sha256:ef9d7589ef3c200abe66653d3f1ab1033c3c419ae9b9bdb1240a85b024efc88b"},
     {file = "pyparsing-2.4.7.tar.gz", hash = "sha256:c203ec8783bf771a155b207279b9bccb8dea02d8f0c9e5f8ead507bc3246ecc1"},
 ]
-pypika = [
-    {file = "pypika-0.44.1.tar.gz", hash = "sha256:316839144d3ad7656405a10cdd26d2181f16bb8ff7e256d616ffb50335ca1fcb"},
-]
+PyPika = []
 pytest = [
     {file = "pytest-6.2.2-py3-none-any.whl", hash = "sha256:b574b57423e818210672e07ca1fa90aaf194a4f63f3ab909a2c67ebb22913839"},
     {file = "pytest-6.2.2.tar.gz", hash = "sha256:9d1edf9e7d0b84d72ea3dbcdfd22b35fb543a5e8f2a60092dd578936bf63d7f9"},
