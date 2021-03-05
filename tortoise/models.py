@@ -48,6 +48,7 @@ from tortoise.filters import get_filters_for_field
 from tortoise.functions import Function
 from tortoise.manager import Manager
 from tortoise.queryset import ExistsQuery, Q, QuerySet, QuerySetSingle
+from tortoise.router import router
 from tortoise.signals import Signals
 from tortoise.transactions import current_transaction_map, in_transaction
 
@@ -940,7 +941,7 @@ class Model(metaclass=ModelMeta):
 
         :raises OperationalError: If object has never been persisted.
         """
-        db = using_db or self._meta.db
+        db = using_db or self._choose_db(True)
         if not self._saved_in_db:
             raise OperationalError("Can't delete unpersisted record")
         await self._pre_delete(using_db)
@@ -958,7 +959,7 @@ class Model(metaclass=ModelMeta):
         :param args: The related fields that should be fetched.
         :param using_db: Specific DB connection to use instead of default bound
         """
-        db = using_db or self._meta.db
+        db = using_db or self._choose_db()
         await db.executor_class(model=self.__class__, db=db).fetch_for_list([self], *args)
 
     async def refresh_from_db(
@@ -985,6 +986,20 @@ class Model(metaclass=ModelMeta):
             setattr(self, field, getattr(obj, field, None))
 
     @classmethod
+    def _choose_db(cls, for_write: bool = False):
+        """
+        Return the connection that will be used if this query is executed now.
+
+        :param for_write: Whether this query for write.
+        :return: BaseDBAsyncClient:
+        """
+        if for_write:
+            db = router.db_for_write(cls)
+        else:
+            db = router.db_for_read(cls)
+        return db or cls._meta.db
+
+    @classmethod
     async def get_or_create(
         cls: Type[MODEL],
         defaults: Optional[dict] = None,
@@ -1001,7 +1016,7 @@ class Model(metaclass=ModelMeta):
         """
         if not defaults:
             defaults = {}
-        db = using_db if using_db else cls._meta.db
+        db = using_db if using_db else cls._choose_db(True)
         async with in_transaction(connection_name=db.connection_name):
             instance = await cls.filter(**kwargs).first()
             if instance:
@@ -1030,7 +1045,7 @@ class Model(metaclass=ModelMeta):
         """
         if not defaults:
             defaults = {}
-        db = using_db if using_db else cls._meta.db
+        db = using_db if using_db else cls._choose_db(True)
         async with in_transaction(connection_name=db.connection_name):
             instance = await cls.filter(**kwargs).first()
             if instance:
@@ -1064,7 +1079,7 @@ class Model(metaclass=ModelMeta):
         """
         instance = cls(**kwargs)
         instance._saved_in_db = False
-        db = kwargs.get("using_db") or cls._meta.db
+        db = kwargs.get("using_db") or cls._choose_db(True)
         await instance.save(using_db=db, force_create=True)
         return instance
 
@@ -1099,7 +1114,7 @@ class Model(metaclass=ModelMeta):
         :param batch_size: How many objects are created in a single query
         :param using_db: Specific DB connection to use instead of default bound
         """
-        db = using_db or cls._meta.db
+        db = using_db or cls._choose_db(True)
         await db.executor_class(model=cls, db=db).execute_bulk_insert(objects, batch_size)
 
     @classmethod
@@ -1204,7 +1219,7 @@ class Model(metaclass=ModelMeta):
         :param args: Relation names to fetch.
         :param using_db: DO NOT USE
         """
-        db = using_db or cls._meta.db
+        db = using_db or cls._choose_db()
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
 
     @classmethod

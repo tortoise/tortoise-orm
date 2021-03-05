@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tortoise-orm"
-version = "0.16.22"
+version = "0.17.0"
 description = "Easy async ORM for python, built with relations in mind"
 authors = ["Andrey Bondar <andrey@bondar.ru>", "Nickolas Grigoriadis <nagrigoriadis@gmail.com>", "long2ice <long2ice@gmail.com>"]
 license = "Apache-2.0"
@@ -34,7 +34,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-pypika = "^0.44.0"
+pypika = { git = "https://github.com/long2ice/pypika.git" } # temporary, wait https://github.com/kayak/pypika/pull/565
 iso8601 = "^0.1.13"
 aiosqlite = "^0.16.0"
 pytz = "^2020.4"
