@@ -9,7 +9,7 @@ class ConnectionRouter:
         self._routers: List[type] = None  # type: ignore
 
     def init_routers(self, routers: List[type]):
-        self._routers = routers
+        self._routers = [r() for r in routers]
 
     def _router_func(self, model: Type["Model"], action: str):
         for r in self._routers:

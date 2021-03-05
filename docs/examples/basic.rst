@@ -137,3 +137,13 @@ Model Signals
 Manual SQL
 ==========
 .. literalinclude::  ../../examples/manual_sql.py
+
+
+Router
+======
+.. literalinclude::  ../../examples/router.py
+
+
+.. rst-class:: html-toggle
+
+.. _example_router:
