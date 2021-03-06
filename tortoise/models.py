@@ -890,7 +890,7 @@ class Model(metaclass=ModelMeta):
         :raises IncompleteInstanceError: If the model is partial and the fields are not available for persistance.
         :raises IntegrityError: If the model can't be created or updated (specifically if force_create or force_update has been set)
         """
-        db = using_db or self._meta.db
+        db = using_db or self._choose_db(True)
         executor = db.executor_class(model=self.__class__, db=db)
         if self._partial:
             if update_fields:
@@ -907,7 +907,7 @@ class Model(metaclass=ModelMeta):
                 raise IncompleteInstanceError(
                     f"{self.__class__.__name__} is a partial model, can only be saved with the relevant update_field provided"
                 )
-        await self._pre_save(using_db, update_fields)
+        await self._pre_save(db, update_fields)
 
         if force_create:
             await executor.execute_insert(self)
@@ -931,7 +931,7 @@ class Model(metaclass=ModelMeta):
                 created = True
 
         self._saved_in_db = True
-        await self._post_save(using_db, created, update_fields)
+        await self._post_save(db, created, update_fields)
 
     async def delete(self, using_db: Optional[BaseDBAsyncClient] = None) -> None:
         """
@@ -944,9 +944,9 @@ class Model(metaclass=ModelMeta):
         db = using_db or self._choose_db(True)
         if not self._saved_in_db:
             raise OperationalError("Can't delete unpersisted record")
-        await self._pre_delete(using_db)
+        await self._pre_delete(db)
         await db.executor_class(model=self.__class__, db=db).execute_delete(self)
-        await self._post_delete(using_db)
+        await self._post_delete(db)
 
     async def fetch_related(self, *args: Any, using_db: Optional[BaseDBAsyncClient] = None) -> None:
         """
@@ -979,8 +979,8 @@ class Model(metaclass=ModelMeta):
         """
         if not self._saved_in_db:
             raise OperationalError("Can't refresh unpersisted record")
-        qs = QuerySet(self.__class__).only(*(fields or []))
-        using_db and qs.using_db(using_db)
+        db = using_db or self._choose_db()
+        qs = QuerySet(self.__class__).using_db(db).only(*(fields or []))
         obj = await qs.get(pk=self.pk)
         for field in fields or self._meta.fields_map:
             setattr(self, field, getattr(obj, field, None))
@@ -1016,7 +1016,7 @@ class Model(metaclass=ModelMeta):
         """
         if not defaults:
             defaults = {}
-        db = using_db if using_db else cls._choose_db(True)
+        db = using_db or cls._choose_db(True)
         async with in_transaction(connection_name=db.connection_name):
             instance = await cls.filter(**kwargs).first()
             if instance:
@@ -1045,7 +1045,7 @@ class Model(metaclass=ModelMeta):
         """
         if not defaults:
             defaults = {}
-        db = using_db if using_db else cls._choose_db(True)
+        db = using_db or cls._choose_db(True)
         async with in_transaction(connection_name=db.connection_name):
             instance = await cls.filter(**kwargs).first()
             if instance:
