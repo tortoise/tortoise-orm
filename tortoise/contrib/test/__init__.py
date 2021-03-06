@@ -43,7 +43,6 @@ On success it will be marked as unexpected success.
 
 _CONFIG: dict = {}
 _CONNECTIONS: dict = {}
-_SELECTOR = None
 _LOOP: AbstractEventLoop = None  # type: ignore
 _MODULES: List[str] = []
 _CONN_MAP: dict = {}
@@ -100,7 +99,6 @@ def initializer(
     # pylint: disable=W0603
     global _CONFIG
     global _CONNECTIONS
-    global _SELECTOR
     global _LOOP
     global _TORTOISE_TEST_DB
     global _MODULES
@@ -112,7 +110,6 @@ def initializer(
 
     loop = loop or asyncio.get_event_loop()
     _LOOP = loop
-    _SELECTOR = loop._selector  # type: ignore
     loop.run_until_complete(_init_db(_CONFIG))
     _CONNECTIONS = Tortoise._connections.copy()
     _CONN_MAP = current_transaction_map.copy()
@@ -127,7 +124,6 @@ def finalizer() -> None:
     """
     _restore_default()
     loop = _LOOP
-    loop._selector = _SELECTOR  # type: ignore
     loop.run_until_complete(Tortoise._drop_databases())
 
 
