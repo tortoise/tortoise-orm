@@ -146,7 +146,7 @@ Source to example: :ref:`example_pydantic_tut2`
 
 .. code-block:: py3
 
-    from tortoise.contrib.pydantic import pydantic_model_creator
+    from tortoise.contrib.pydantic import pydantic_queryset_creator
 
     Tournament_Pydantic_List = pydantic_queryset_creator(Tournament)
 
