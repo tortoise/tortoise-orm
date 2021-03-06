@@ -33,7 +33,7 @@ class TestGroupBy(test.TestCase):
             .group_by("author__name")
             .values("author__name", "count")
         )
-        self.assertEqual(
+        self.assertListSortEqual(
             ret, [{"author__name": "author1", "count": 10}, {"author__name": "author2", "count": 5}]
         )
 
@@ -99,7 +99,7 @@ class TestGroupBy(test.TestCase):
             .group_by("author__name")
             .values("author__name", "avg")
         )
-        self.assertEqual(
+        self.assertListSortEqual(
             ret, [{"author__name": "author1", "avg": 4.5}, {"author__name": "author2", "avg": 2}]
         )
 
@@ -134,7 +134,7 @@ class TestGroupBy(test.TestCase):
             .group_by("author__name")
             .values_list("author__name", "count")
         )
-        self.assertEqual(ret, [("author1", 10), ("author2", 5)])
+        self.assertListSortEqual(ret, [("author1", 10), ("author2", 5)])
 
     async def test_count_values_list_filter_group_by(self):
         ret = (
@@ -199,7 +199,7 @@ class TestGroupBy(test.TestCase):
             .group_by("author__name")
             .values_list("author__name", "avg")
         )
-        self.assertEqual(ret, [("author1", 4.5), ("author2", 2.0)])
+        self.assertListSortEqual(ret, [("author1", 4.5), ("author2", 2.0)])
 
     async def test_avg_values_list_filter_group_by(self):
         ret = (
@@ -221,6 +221,6 @@ class TestGroupBy(test.TestCase):
             .group_by("upper_name")
             .values("upper_name", "count")
         )
-        self.assertEqual(
+        self.assertListSortEqual(
             ret, [{"upper_name": "AUTHOR1", "count": 10}, {"upper_name": "AUTHOR2", "count": 5}]
         )

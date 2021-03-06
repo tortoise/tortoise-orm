@@ -283,6 +283,14 @@ class SimpleTestCase(_TestCase):  # type: ignore
             # clear the outcome, no more needed
             self._outcome = None
 
+    def assertListSortEqual(self, list1: List[Any], list2: List[Any], msg: Any = ...) -> None:
+        if isinstance(list1[0], Model):
+            super().assertListEqual(
+                sorted(list1, key=lambda x: x.pk), sorted(list2, key=lambda x: x.pk)
+            )
+        elif isinstance(list1[0], tuple):
+            super().assertListEqual(sorted(list1), sorted(list2))
+
     async def _run_outcome(self, outcome, expecting_failure: bool, testMethod: Callable) -> None:
         with outcome.testPartExecutor(self):
             await self._setUp()
@@ -403,14 +411,6 @@ class TestCase(TruncationTestCase):
             _restore_default()
         else:
             await super()._tearDownDB()
-
-    def assertListSortEqual(self, list1: List[Any], list2: List[Any], msg: Any = ...) -> None:
-        if isinstance(list1[0], Model):
-            super().assertListEqual(
-                sorted(list1, key=lambda x: x.pk), sorted(list2, key=lambda x: x.pk)
-            )
-        elif isinstance(list1[0], tuple):
-            super().assertListEqual(sorted(list1), sorted(list2))
 
 
 def requireCapability(connection_name: str = "models", **conditions: Any):
