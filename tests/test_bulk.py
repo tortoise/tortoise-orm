@@ -22,7 +22,7 @@ class TestBulk(test.TruncationTestCase):
     async def test_bulk_create_with_specified(self):
         await UniqueName.bulk_create([UniqueName(id=id_) for id_ in range(1000, 2000)])
         all_ = await UniqueName.all().values("id", "name")
-        self.assertEqual(all_, [{"id": id_, "name": None} for id_ in range(1000, 2000)])
+        self.assertListSortEqual(all_, [{"id": id_, "name": None} for id_ in range(1000, 2000)])
 
     async def test_bulk_create_mix_specified(self):
         await UniqueName.bulk_create(
