@@ -1,5 +1,6 @@
 # pylint: disable=C0301
 import re
+from importlib.util import find_spec
 
 from asynctest.mock import CoroutineMock, patch
 
@@ -353,7 +354,8 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
 class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
         try:
-            with patch("aiomysql.create_pool", new=CoroutineMock()):
+            model = "asyncmy" if find_spec("asyncmy") else "aiomysql"
+            with patch(f"{model}.create_pool", new=CoroutineMock()):
                 await Tortoise.init(
                     {
                         "connections": {

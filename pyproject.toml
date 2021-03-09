@@ -43,6 +43,7 @@ uvloop = { version = "^0.14.0", markers = "sys_platform != 'win32' and implement
 python-rapidjson = { version = "*", optional = true }
 asyncpg = { version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
+asyncmy = { version = "*", optional = true }
 # Documentation tools, which should in dev-dependencies but has bug, https://github.com/readthedocs/readthedocs.org/issues/4912
 sphinx = { version = "*", optional = true }
 cloud_sptheme = { version = "*", optional = true }
@@ -88,6 +89,7 @@ aiohttp = "*"
 accel = ["ciso8601", "uvloop", "python-rapidjson"]
 asyncpg = ["asyncpg"]
 aiomysql = ["aiomysql"]
+asyncmy = ["asyncmy"]
 docs = ["sphinx", "cloud_sptheme", "Pygments", "docutils"]
 
 [build-system]

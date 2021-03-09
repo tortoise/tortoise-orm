@@ -95,7 +95,7 @@ class MySQLClient(BaseDBAsyncClient):
         self._connection = None
 
     async def create_connection(self, with_db: bool) -> None:
-        if charset_by_name(self.charset) is None:  # type: ignore
+        if charset_by_name(self.charset) is None:
             raise DBConnectionError(f"Unknown charset {self.charset}")
         self._template = {
             "host": self.host,
