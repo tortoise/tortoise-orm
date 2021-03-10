@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Ty
 
 from pypika.terms import Term
 
-from tortoise.exceptions import ConfigurationError
+from tortoise.exceptions import ConfigurationError, ValidationError
 from tortoise.validators import Validator
 
 if TYPE_CHECKING:  # pragma: nocoverage
