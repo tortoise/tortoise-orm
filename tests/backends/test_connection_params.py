@@ -1,5 +1,3 @@
-from importlib.util import find_spec
-
 import asyncpg
 from asynctest.mock import CoroutineMock, patch
 
@@ -9,8 +7,7 @@ from tortoise.contrib import test
 
 class TestConnectionParams(test.TestCase):
     async def test_mysql_connection_params(self):
-        model = "asyncmy" if find_spec("asyncmy") else "aiomysql"
-        with patch(f"{model}.create_pool", new=CoroutineMock()) as mysql_connect:
+        with patch("asyncmy.create_pool", new=CoroutineMock()) as mysql_connect:
             await Tortoise._init_connections(
                 {
                     "models": {

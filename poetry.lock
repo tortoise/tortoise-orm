@@ -97,7 +97,7 @@ python-versions = ">=3.5.3"
 
 [[package]]
 name = "asyncmy"
-version = "0.1.1"
+version = "0.1.2"
 description = "A fast asyncio MySQL driver"
 category = "main"
 optional = true
@@ -1628,8 +1628,8 @@ async-timeout = [
     {file = "async_timeout-3.0.1-py3-none-any.whl", hash = "sha256:4291ca197d287d274d0b6cb5d6f8f8f82d434ed288f962539ff18cc9012f9ea3"},
 ]
 asyncmy = [
-    {file = "asyncmy-0.1.1-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:06064f6b6ccbe2c4e03ee7dca74f3298f8d9098484a9498c328a38cab1aa9132"},
-    {file = "asyncmy-0.1.1.tar.gz", hash = "sha256:44ce538d78b7c3277b47c7c06659808f8165f091216727adda1ff5f6665270a5"},
+    {file = "asyncmy-0.1.2-cp39-cp39-manylinux2014_x86_64.whl", hash = "sha256:c08ee81eabe48380a917a6a23a2dc1820d7d8b4570dce8104ac19b8557f330a2"},
+    {file = "asyncmy-0.1.2.tar.gz", hash = "sha256:fbef6561120091ca85c7fab83ad55a2dadad89a71358a7d64380119ad6113825"},
 ]
 asyncpg = [
     {file = "asyncpg-0.22.0-cp35-cp35m-macosx_10_14_x86_64.whl", hash = "sha256:ccd75cfb4710c7e8debc19516e2e1d4c9863cce3f7a45a3822980d04b16f4fdd"},
