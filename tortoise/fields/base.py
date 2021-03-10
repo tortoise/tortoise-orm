@@ -206,10 +206,13 @@ class Field(metaclass=_FieldMeta):
         for v in self.validators:
             if self.null and value is None:
                 continue
-            elif isinstance(value, Enum):
-                v(value.value)
-            else:
-                v(value)
+            try:
+                if isinstance(value, Enum):
+                    v(value.value)
+                else:
+                    v(value)
+            except ValidationError as exc:
+                raise ValidationError(f"{self.model_field_name}: {exc}")
 
     @property
     def required(self) -> bool:
