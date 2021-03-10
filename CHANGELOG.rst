@@ -15,6 +15,7 @@ Changelog
 - Add `Manager` support.
 - Add db router support.
 - Add `nowait`, `skip_locked`, `of` parameters to `queryset.select_for_update`.
+- Add field name to validation exceptions.
 
 0.16
 ====
