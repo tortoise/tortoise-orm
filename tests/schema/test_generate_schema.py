@@ -354,8 +354,7 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
 class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
         try:
-            model = "asyncmy" if find_spec("asyncmy") else "aiomysql"
-            with patch(f"{model}.create_pool", new=CoroutineMock()):
+            with patch("asyncmy.create_pool", new=CoroutineMock()):
                 await Tortoise.init(
                     {
                         "connections": {
