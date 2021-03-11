@@ -16,7 +16,7 @@ from pypika.terms import (
     format_quotes,
 )
 
-from tortoise.fields import Field
+from tortoise.fields import Field, JSONField
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -107,6 +107,10 @@ def bool_encoder(value: Any, instance: "Model", field: Field) -> bool:
 
 def string_encoder(value: Any, instance: "Model", field: Field) -> str:
     return str(value)
+
+
+def json_encoder(value: Any, instance: "Model", field: Field) -> Dict:
+    return value
 
 
 ##############################################################################
@@ -224,6 +228,21 @@ def extract_microsecond_equal(field: Term, value: int) -> Criterion:
     return Extract(DatePart.microsecond, field).eq(value)
 
 
+def json_contains(field: Term, value: str) -> Criterion:
+    # will be override in each executor
+    pass
+
+
+def json_contained_by(field: Term, value: str) -> Criterion:
+    # will be override in each executor
+    pass
+
+
+def json_filter(field: Term, value: Dict) -> Criterion:
+    # will be override in each executor
+    pass
+
+
 ##############################################################################
 # Filter resolvers
 ##############################################################################
@@ -309,6 +328,50 @@ def get_backward_fk_filters(field_name: str, field: BackwardFKRelation) -> Dict[
     }
 
 
+def get_json_filter(field_name: str, source_field: str):
+    actual_field_name = field_name
+    return {
+        field_name: {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": operator.eq,
+        },
+        f"{field_name}__not": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": not_equal,
+        },
+        f"{field_name}__isnull": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": is_null,
+            "value_encoder": bool_encoder,
+        },
+        f"{field_name}__not_isnull": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": not_null,
+            "value_encoder": bool_encoder,
+        },
+        f"{field_name}__contains": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": json_contains,
+        },
+        f"{field_name}__contained_by": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": json_contained_by,
+        },
+        f"{field_name}__filter": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": json_filter,
+            "value_encoder": json_encoder,
+        },
+    }
+
+
 def get_filters_for_field(
     field_name: str, field: Optional[Field], source_field: str
 ) -> Dict[str, dict]:
@@ -316,6 +379,9 @@ def get_filters_for_field(
         return get_m2m_filters(field_name, field)
     if isinstance(field, BackwardFKRelation):
         return get_backward_fk_filters(field_name, field)
+    if isinstance(field, JSONField):
+        return get_json_filter(field_name, source_field)
+
     actual_field_name = field_name
     if field_name == "pk" and field:
         actual_field_name = field.model_field_name

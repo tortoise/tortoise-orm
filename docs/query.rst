@@ -286,6 +286,46 @@ Specially, you can filter date part with one of following, note that current onl
     teams = await Team.filter(created_at__month=12)
     teams = await Team.filter(created_at__day=5)
 
+In PostgreSQL and MYSQL, you can use the ``contains``, ``contained_by`` and ``filter`` options in ``JSONField``:
+
+.. code-block:: python3
+
+    class JSONModel:
+        data = fields.JSONField()
+
+    await JSONModel.create(data=["text", 3, {"msg": "msg2"}])
+    obj = await JSONModel.filter(data__contains=[{"msg": "msg2"}]).first()
+
+    await JSONModel.create(data=["text"])
+    await JSONModel.create(data=["tortoise", "msg"])
+    await JSONModel.create(data=["tortoise"])
+
+    objects = await JSONModel.filter(data__contained_by=["text", "tortoise", "msg"])
+
+.. code-block:: python3
+
+    class JSONModel:
+        data = fields.JSONField()
+
+    await JSONModel.create(data={"breed": "labrador",
+                                 "owner": {
+                                     "name": "Boby",
+                                     "last": None,
+                                     "other_pets": [
+                                         {
+                                             "name": "Fishy",
+                                         }
+                                     ],
+                                 },
+                             })
+
+    obj1 = await JSONModel.filter(data__filter={"breed": "labrador"}).first()
+    obj2 = await JSONModel.filter(data__filter={"owner__name": "Boby"}).first()
+    obj3 = await JSONModel.filter(data__filter={"owner__other_pets__0__name": "Fishy"}).first()
+    obj4 = await JSONModel.filter(data__filter={"breed__not": "a"}).first()
+    obj5 = await JSONModel.filter(data__filter={"owner__name__isnull": True}).first()
+    obj6 = await JSONModel.filter(data__filter={"owner__last__not_isnull": False}).first()
+
 Complex prefetch
 ================
 
