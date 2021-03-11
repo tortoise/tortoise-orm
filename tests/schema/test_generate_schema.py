@@ -1,6 +1,5 @@
 # pylint: disable=C0301
 import re
-from importlib.util import find_spec
 
 from asynctest.mock import CoroutineMock, patch
 
