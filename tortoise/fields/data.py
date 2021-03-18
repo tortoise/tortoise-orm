@@ -314,10 +314,8 @@ class DatetimeField(Field, datetime.datetime):
                 value = datetime.datetime.fromtimestamp(value)
             else:
                 value = parse_datetime(value)
-            if timezone.is_naive(value):
+            if get_use_tz():
                 value = timezone.make_aware(value, get_timezone())
-            else:
-                value = localtime(value)
         self.validate(value)
         return value
 
