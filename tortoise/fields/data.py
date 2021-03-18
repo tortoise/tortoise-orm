@@ -284,9 +284,9 @@ class DatetimeField(Field, datetime.datetime):
     You can opt to set neither or only ONE of them.
 
     ``auto_now`` (bool):
-        Always set to ``datetime.utcnow()`` on save.
+        Always set to ``tortoise.timezone.now()`` on save.
     ``auto_now_add`` (bool):
-        Set to ``datetime.utcnow()`` on first save only.
+        Set to ``tortoise.timezone.now()`` on first save only.
     """
 
     SQL_TYPE = "TIMESTAMP"
@@ -295,7 +295,7 @@ class DatetimeField(Field, datetime.datetime):
         SQL_TYPE = "DATETIME(6)"
 
     class _db_postgres:
-        SQL_TYPE = "TIMESTAMPTZ"
+        SQL_TYPE = "TIMESTAMPTZ" if get_use_tz() else "TIMESTAMP"
 
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any) -> None:
         if auto_now_add and auto_now:

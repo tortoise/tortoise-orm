@@ -24,9 +24,9 @@ def now() -> datetime:
     Return an aware datetime.datetime, depending on use_tz and timezone.
     """
     if get_use_tz():
-        return datetime.now(tz=pytz.utc)
+        return datetime.now(tz=get_default_timezone())
     else:
-        return datetime.now(get_default_timezone())
+        return datetime.utcnow()
 
 
 def get_default_timezone() -> tzinfo:
