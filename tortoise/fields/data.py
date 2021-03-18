@@ -14,7 +14,7 @@ from pypika.terms import Term
 from tortoise import timezone
 from tortoise.exceptions import ConfigurationError, FieldError
 from tortoise.fields.base import Field
-from tortoise.timezone import get_timezone, get_use_tz, localtime
+from tortoise.timezone import get_timezone, get_use_tz
 from tortoise.validators import MaxLengthValidator
 
 try:
