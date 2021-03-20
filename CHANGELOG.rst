@@ -17,6 +17,7 @@ Changelog
 - Add `nowait`, `skip_locked`, `of` parameters to `queryset.select_for_update`.
 - Add field name to validation exceptions.
 - Compatible with `asyncmy <https://github.com/long2ice/asyncmy>`_.
+- Replace pypika to `pypika-tortoise <https://github.com/tortoise/pypika-tortoise>`_.
 
 0.16
 ====

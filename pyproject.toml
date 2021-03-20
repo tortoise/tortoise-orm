@@ -34,7 +34,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-pypika = { git = "https://github.com/long2ice/pypika.git" } # temporary, wait https://github.com/kayak/pypika/pull/565
+pypika-tortoise = "^0.1.0"
 iso8601 = "^0.1.13"
 aiosqlite = "^0.16.0"
 pytz = "^2020.4"
