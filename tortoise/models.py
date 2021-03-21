@@ -1198,7 +1198,7 @@ class Model(metaclass=ModelMeta):
 
         .. code-block:: python3
 
-            user = await User.get(username="foo")
+            user = await User.get_or_none(username="foo")
 
         :param args: Q funtions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
