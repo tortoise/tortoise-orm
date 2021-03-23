@@ -9,6 +9,10 @@ Changelog
 
 0.17
 ====
+0.17.1
+------
+- Fix type for modules.
+
 0.17.0
 -------
 - Add date part extract filtering.

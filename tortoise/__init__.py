@@ -475,7 +475,7 @@ class Tortoise:
         config_file: Optional[str] = None,
         _create_db: bool = False,
         db_url: Optional[str] = None,
-        modules: Optional[Dict[str, List[str]]] = None,
+        modules: Optional[Dict[str, Iterable[Union[str, ModuleType]]]] = None,
         use_tz: bool = False,
         timezone: str = "UTC",
         routers: Optional[List[Union[str, Type]]] = None,

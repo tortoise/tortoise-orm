@@ -3,7 +3,8 @@ import os as _os
 import unittest
 from asyncio.events import AbstractEventLoop
 from functools import wraps
-from typing import Any, Callable, List, Optional
+from types import ModuleType
+from typing import Any, Callable, Iterable, List, Optional, Union
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 from unittest.result import TestResult
 
@@ -45,11 +46,11 @@ _CONFIG: dict = {}
 _CONNECTIONS: dict = {}
 _SELECTOR = None
 _LOOP: AbstractEventLoop = None  # type: ignore
-_MODULES: List[str] = []
+_MODULES: Iterable[Union[str, ModuleType]] = []
 _CONN_MAP: dict = {}
 
 
-def getDBConfig(app_label: str, modules: List[str]) -> dict:
+def getDBConfig(app_label: str, modules: Iterable[Union[str, ModuleType]]) -> dict:
     """
     DB Config factory, for use in testing.
 
@@ -84,7 +85,7 @@ def _restore_default() -> None:
 
 
 def initializer(
-    modules: List[str],
+    modules: Iterable[Union[str, ModuleType]],
     db_url: Optional[str] = None,
     app_label: str = "models",
     loop: Optional[AbstractEventLoop] = None,
@@ -326,7 +327,7 @@ class IsolatedTestCase(SimpleTestCase):
     If you define a ``tortoise_test_modules`` list, it overrides the DB setup module for the tests.
     """
 
-    tortoise_test_modules: List[str] = []
+    tortoise_test_modules: Iterable[Union[str, ModuleType]] = []
 
     async def _setUpDB(self) -> None:
         config = getDBConfig(app_label="models", modules=self.tortoise_test_modules or _MODULES)

@@ -1,5 +1,6 @@
 import logging
-from typing import Dict, List, Optional
+from types import ModuleType
+from typing import Dict, Iterable, Optional, Union
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -18,7 +19,7 @@ def register_tortoise(
     config: Optional[dict] = None,
     config_file: Optional[str] = None,
     db_url: Optional[str] = None,
-    modules: Optional[Dict[str, List[str]]] = None,
+    modules: Optional[Dict[str, Iterable[Union[str, ModuleType]]]] = None,
     generate_schemas: bool = False,
     add_exception_handlers: bool = False,
 ) -> None:
