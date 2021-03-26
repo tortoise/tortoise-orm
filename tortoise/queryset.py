@@ -756,9 +756,9 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         table = self._join_table_by_field(table, field, field_object)
         related_fields = field_object.related_model._meta.db_fields
-        self._select_related_idx.append(
-            (field_object.related_model, len(related_fields), field, model)
-        )
+        append_item = (field_object.related_model, len(related_fields), field, model)
+        if append_item not in self._select_related_idx:
+            self._select_related_idx.append(append_item)
         for related_field in related_fields:
             self.query = self.query.select(
                 table[related_field].as_(f"{table.get_table_name()}.{related_field}")
@@ -778,9 +778,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._select_related_idx = []
         table = self.model._meta.basetable
         if self._fields_for_select:
-            self._select_related_idx.append(
-                (self.model, len(self._fields_for_select), table, self.model)
-            )
+            append_item = (self.model, len(self._fields_for_select), table, self.model)
+            if append_item not in self._select_related_idx:
+                self._select_related_idx.append(append_item)
             db_fields_for_select = [
                 table[self.model._meta.fields_db_projection[field]].as_(field)
                 for field in self._fields_for_select
@@ -788,9 +788,9 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query = copy(self.model._meta.basequery).select(*db_fields_for_select)
         else:
             self.query = copy(self.model._meta.basequery_all_fields)
-            self._select_related_idx.append(
-                (self.model, len(self.model._meta.db_fields), table, self.model)
-            )
+            append_item = (self.model, len(self.model._meta.db_fields), table, self.model)
+            if append_item not in self._select_related_idx:
+                self._select_related_idx.append(append_item)
         self.resolve_ordering(
             self.model, self.model._meta.basetable, self._orderings, self._annotations
         )

@@ -12,6 +12,7 @@ Changelog
 0.17.1
 ------
 - Fix type for modules.
+- Fix `select_related` when related model specified more than once. (#679)
 
 0.17.0
 -------
