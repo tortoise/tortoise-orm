@@ -414,20 +414,22 @@ class Tortoise:
         for models_path in models_paths:
             app_models += cls._discover_models(models_path, app_label)
 
+        model_name_set = set()
+        for model in app_models:
+            if model.__name__ in model_name_set:
+                raise ValueError(f"The model of the {model.__name__} cannot be created twice.")
+            model_name_set.add(model.__name__)
+
         cls.apps[app_label] = {model.__name__: model for model in app_models}
 
         if _init_relations:
             cls._init_relations()
-        table_set = set()
-        for model in app_models:
-            if model._meta.db_table in table_set:
-                raise ValueError(f"The table of the {model._meta.db_table} cannot be named twice.")
-            table_set.add(model._meta.db_table)
-        return table_set
+
+        return model_name_set
 
     @classmethod
     def _init_apps(cls, apps_config: dict) -> None:
-        app_tables_dict: Dict[str, Set] = {}
+        app_model_name_dict: Dict[str, Set] = {}
         for name, info in apps_config.items():
             db_name = info.get("default_connection", "default")
             try:
@@ -438,15 +440,15 @@ class Tortoise:
                         info.get("default_connection", "default"), name
                     )
                 )
-            table_set = cls.init_models(info["models"], name, _init_relations=False)
-            if app_tables_dict.get(db_name):
-                for table_name in table_set:
-                    if table_name in app_tables_dict.get(db_name):
-                        raise ValueError(f"The table of the {table_name} cannot be named twice.")
+            model_name_set = cls.init_models(info["models"], name, _init_relations=False)
+            if app_model_name_dict.get(db_name):
+                for model_name in model_name_set:
+                    if model_name in app_model_name_dict.get(db_name):
+                        raise ValueError(f"The model of the {model_name} cannot be created twice.")
                 else:
-                    app_tables_dict[db_name] = app_tables_dict[db_name] | table_set
+                    app_model_name_dict[db_name] = app_model_name_dict[db_name] | model_name_set
             else:
-                app_tables_dict[db_name] = table_set
+                app_model_name_dict[db_name] = model_name_set
 
             for model in cls.apps[name].values():
                 model._meta.default_connection = info.get("default_connection", "default")
