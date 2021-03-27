@@ -12,7 +12,7 @@ FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
 
 
-def _get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
+def get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
     from tortoise import Tortoise
 
     if connection_name:
@@ -38,7 +38,7 @@ def in_transaction(connection_name: Optional[str] = None) -> "TransactionContext
     :param connection_name: name of connection to run with, optional if you have only
                             one db connection
     """
-    connection = _get_connection(connection_name)
+    connection = get_connection(connection_name)
     return connection._in_transaction()
 
 
@@ -56,8 +56,7 @@ def atomic(connection_name: Optional[str] = None) -> Callable[[F], F]:
     def wrapper(func: F) -> F:
         @wraps(func)
         async def wrapped(*args, **kwargs):
-            connection = _get_connection(connection_name)
-            async with connection._in_transaction():
+            async with in_transaction(connection_name):
                 return await func(*args, **kwargs)
 
         return cast(F, wrapped)

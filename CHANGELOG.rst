@@ -13,6 +13,8 @@ Changelog
 ------
 - Fix type for modules.
 - Fix `select_related` when related model specified more than once. (#679)
+- Add `__iter__` to model, now can just return model/models in `fastapi` response.
+- Fix `in_transaction` bug caused by 'router'. (#677) (#678)
 
 0.17.0
 -------

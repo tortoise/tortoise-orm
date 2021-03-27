@@ -1,5 +1,8 @@
 from typing import TYPE_CHECKING, List, Optional, Type
 
+from tortoise.exceptions import ParamsError
+from tortoise.transactions import get_connection
+
 if TYPE_CHECKING:
     from tortoise import BaseDBAsyncClient, Model
 
@@ -22,14 +25,11 @@ class ConnectionRouter:
                 chosen_db = method(model)
                 if chosen_db:
                     return chosen_db
-        return "default"
 
     def _db_route(self, model: Type["Model"], action: str):
-        from tortoise import Tortoise  # preventing circular references
-
         try:
-            return Tortoise.get_connection(self._router_func(model, action))
-        except KeyError:
+            return get_connection(self._router_func(model, action))
+        except ParamsError:
             return None
 
     def db_for_read(self, model: Type["Model"]) -> Optional["BaseDBAsyncClient"]:

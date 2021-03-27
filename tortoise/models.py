@@ -735,6 +735,10 @@ class Model(metaclass=ModelMeta):
             raise TypeError("Model instances without id are unhashable")
         return hash(self.pk)
 
+    def __iter__(self):
+        for field in self._meta.fields_map:
+            yield field, getattr(self, field)
+
     def __eq__(self, other: object) -> bool:
         return type(other) is type(self) and self.pk == other.pk  # type: ignore
 
@@ -887,7 +891,7 @@ class Model(metaclass=ModelMeta):
         :param force_create: Forces creation of the record
         :param force_update: Forces updating of the record
 
-        :raises IncompleteInstanceError: If the model is partial and the fields are not available for persistance.
+        :raises IncompleteInstanceError: If the model is partial and the fields are not available for persistence.
         :raises IntegrityError: If the model can't be created or updated (specifically if force_create or force_update has been set)
         """
         db = using_db or self._choose_db(True)
