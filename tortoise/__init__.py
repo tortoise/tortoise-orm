@@ -8,7 +8,7 @@ from contextvars import ContextVar
 from copy import deepcopy
 from inspect import isclass
 from types import ModuleType
-from typing import Coroutine, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
+from typing import Coroutine, Dict, Iterable, List, Optional, Set, Tuple, Type, Union, cast
 
 from pypika import Table
 
@@ -397,7 +397,7 @@ class Tortoise:
         models_paths: Iterable[Union[ModuleType, str]],
         app_label: str,
         _init_relations: bool = True,
-    ) -> None:
+    ) -> Set[str]:
         """
         Early initialisation of Tortoise ORM Models.
 
@@ -418,20 +418,35 @@ class Tortoise:
 
         if _init_relations:
             cls._init_relations()
+        table_set = set()
+        for model in app_models:
+            if model._meta.db_table in table_set:
+                raise ValueError(f"The table of the {model._meta.db_table} cannot be named twice.")
+            table_set.add(model._meta.db_table)
+        return table_set
 
     @classmethod
     def _init_apps(cls, apps_config: dict) -> None:
+        app_tables_dict: Dict[str, Set] = {}
         for name, info in apps_config.items():
+            db_name = info.get("default_connection", "default")
             try:
-                cls.get_connection(info.get("default_connection", "default"))
+                cls.get_connection(db_name)
             except KeyError:
                 raise ConfigurationError(
                     'Unknown connection "{}" for app "{}"'.format(
                         info.get("default_connection", "default"), name
                     )
                 )
-
-            cls.init_models(info["models"], name, _init_relations=False)
+            table_set = cls.init_models(info["models"], name, _init_relations=False)
+            if app_tables_dict.get(db_name):
+                for table_name in table_set:
+                    if table_name in app_tables_dict.get(db_name):
+                        raise ValueError(f"The table of the {table_name} cannot be named twice.")
+                else:
+                    app_tables_dict[db_name] = app_tables_dict[db_name] | table_set
+            else:
+                app_tables_dict[db_name] = table_set
 
             for model in cls.apps[name].values():
                 model._meta.default_connection = info.get("default_connection", "default")
