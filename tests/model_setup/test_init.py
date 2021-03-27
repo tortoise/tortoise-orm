@@ -361,7 +361,9 @@ class TestInitErrors(test.SimpleTestCase):
             )
 
     async def test_init_duplicate_model_name(self):
-        with self.assertRaisesRegex(ValueError, "The model of the Author cannot be created twice."):
+        with self.assertRaisesRegex(
+            ConfigurationError, "The model of the Author cannot be created twice."
+        ):
             await Tortoise.init(
                 {
                     "connections": {
@@ -376,10 +378,11 @@ class TestInitErrors(test.SimpleTestCase):
                             "default_connection": "default",
                         }
                     },
-                },
-                config_file="file.json",
+                }
             )
-        with self.assertRaisesRegex(ValueError, "The model of the Author cannot be created twice."):
+        with self.assertRaisesRegex(
+            ConfigurationError, "The model of the Author cannot be created twice."
+        ):
             await Tortoise.init(
                 {
                     "connections": {
@@ -398,6 +401,5 @@ class TestInitErrors(test.SimpleTestCase):
                             "default_connection": "default",
                         },
                     },
-                },
-                config_file="file.json",
+                }
             )

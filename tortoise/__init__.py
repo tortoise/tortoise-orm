@@ -417,7 +417,9 @@ class Tortoise:
         model_name_set = set()
         for model in app_models:
             if model.__name__ in model_name_set:
-                raise ValueError(f"The model of the {model.__name__} cannot be created twice.")
+                raise ConfigurationError(
+                    f"The model of the {model.__name__} cannot be created twice."
+                )
             model_name_set.add(model.__name__)
 
         cls.apps[app_label] = {model.__name__: model for model in app_models}
@@ -444,7 +446,9 @@ class Tortoise:
             if app_model_name_dict.get(db_name):
                 for model_name in model_name_set:
                     if model_name in app_model_name_dict.get(db_name):
-                        raise ValueError(f"The model of the {model_name} cannot be created twice.")
+                        raise ConfigurationError(
+                            f"The model of the {model_name} cannot be created twice."
+                        )
                 else:
                     app_model_name_dict[db_name] = app_model_name_dict[db_name] | model_name_set
             else:
