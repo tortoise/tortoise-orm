@@ -454,7 +454,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             return queryset
         return self
 
-    def annotate(self, **kwargs: Function) -> "QuerySet[MODEL]":
+    def annotate(self, **kwargs: Union[Function, Term]) -> "QuerySet[MODEL]":
         """
         Annotate result with aggregation or function result.
 
