@@ -431,7 +431,7 @@ class Tortoise:
 
     @classmethod
     def _init_apps(cls, apps_config: dict) -> None:
-        app_model_name_dict: Dict[str, Set] = {}
+        app_model_name_dict: Dict[str, Set[str]] = {}
         for name, info in apps_config.items():
             db_name = info.get("default_connection", "default")
             try:
@@ -445,7 +445,7 @@ class Tortoise:
             model_name_set = cls.init_models(info["models"], name, _init_relations=False)
             if app_model_name_dict.get(db_name):
                 for model_name in model_name_set:
-                    if model_name in app_model_name_dict.get(db_name):
+                    if model_name in app_model_name_dict.get(db_name):# type: ignore
                         raise ConfigurationError(
                             f"The model of the {model_name} cannot be created twice."
                         )
