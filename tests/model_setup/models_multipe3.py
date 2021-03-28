@@ -5,5 +5,5 @@ from tortoise import fields
 from tortoise.models import Model
 
 
-class Author(Model):
+class Author2(Model):
     name = fields.CharField(max_length=255)
