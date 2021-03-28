@@ -445,7 +445,7 @@ class Tortoise:
             model_name_set = cls.init_models(info["models"], name, _init_relations=False)
             if app_model_name_dict.get(db_name):
                 for model_name in model_name_set:
-                    if model_name in app_model_name_dict.get(db_name):# type: ignore
+                    if model_name in app_model_name_dict.get(db_name):  # type: ignore
                         raise ConfigurationError(
                             f"The model of the {model_name} cannot be created twice."
                         )
