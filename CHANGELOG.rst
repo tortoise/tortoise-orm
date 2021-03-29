@@ -9,6 +9,10 @@ Changelog
 
 0.17
 ====
+0.17.2
+------
+- Add more `index` types.
+
 0.17.1
 ------
 - Fix type for modules.
