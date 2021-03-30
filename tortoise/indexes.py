@@ -8,7 +8,10 @@ if TYPE_CHECKING:
 
 
 class Index:
-    INDEX_CREATE_TEMPLATE = "CREATE INDEX {index_name} ON {table_name} ({fields});"
+    INDEX_TYPE = ""
+    INDEX_CREATE_TEMPLATE = (
+        "CREATE{index_type}INDEX {index_name} ON {table_name} ({fields}){extra};"
+    )
 
     def __init__(
         self,
@@ -33,6 +36,7 @@ class Index:
             )
         self.name = name
         self.expressions = expressions
+        self.extra = ""
 
     def get_sql(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool):
         if self.fields:
@@ -41,8 +45,10 @@ class Index:
                 index_name=schema_generator.quote(
                     self.name or schema_generator._generate_index_name("idx", model, self.fields)
                 ),
+                index_type=f" {self.INDEX_TYPE} ",
                 table_name=schema_generator.quote(model._meta.db_table),
                 fields=", ".join([schema_generator.quote(f) for f in self.fields]),
+                extra=self.extra,
             )
         else:
             expressions = [f"({expression.get_sql()})" for expression in self.expressions]
@@ -51,6 +57,8 @@ class Index:
                 index_name=schema_generator.quote(
                     self.name or schema_generator._generate_index_name("idx", model, expressions)
                 ),
+                index_type=f" {self.INDEX_TYPE} ",
                 table_name=schema_generator.quote(model._meta.db_table),
                 fields=", ".join(expressions),
+                extra=self.extra,
             )
