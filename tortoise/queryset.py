@@ -276,6 +276,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_select_for_update_of",
         "_select_related",
         "_select_related_idx",
+        "_use_indexes",
+        "_force_indexes",
     )
 
     def __init__(self, model: Type[MODEL]) -> None:
@@ -303,6 +305,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._select_related_idx: List[
             Tuple["Type[Model]", int, str, "Type[Model]"]
         ] = []  # format with: model,idx,model_name,parent_model
+        self._force_indexes: Set[str] = set()
+        self._use_indexes: Set[str] = set()
 
     def _clone(self) -> "QuerySet[MODEL]":
         queryset = QuerySet.__new__(QuerySet)
@@ -333,6 +337,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._select_for_update_of = self._select_for_update_of
         queryset._select_related = self._select_related
         queryset._select_related_idx = self._select_related_idx
+        queryset._force_indexes = self._force_indexes
+        queryset._use_indexes = self._use_indexes
         return queryset
 
     def _filter_or_exclude(self, *args: Q, negate: bool, **kwargs: Any) -> "QuerySet[MODEL]":
@@ -683,6 +689,29 @@ class QuerySet(AwaitableQuery[MODEL]):
             queryset._select_related.add(field)
         return queryset
 
+    def force_index(self, *index_names: str) -> "QuerySet[MODEL]":
+        """
+        The FORCE INDEX hint acts like USE INDEX (index_list),
+        with the addition that a table scan is assumed to be very expensive.
+        """
+        if self.capabilities.support_index_hint:
+            queryset = self._clone()
+            for index_name in index_names:
+                queryset._force_indexes.add(index_name)
+            return queryset
+        return self
+
+    def use_index(self, *index_names: str) -> "QuerySet[MODEL]":
+        """
+        The USE INDEX (index_list) hint tells MySQL to use only one of the named indexes to find rows in the table.
+        """
+        if self.capabilities.support_index_hint:
+            queryset = self._clone()
+            for index_name in index_names:
+                queryset._use_indexes.add(index_name)
+            return queryset
+        return self
+
     def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySet[MODEL]":
         """
         Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
@@ -821,6 +850,10 @@ class QuerySet(AwaitableQuery[MODEL]):
                     field=field_split[0],
                     forwarded_fields="__".join(field_split[1:]) if len(field_split) > 1 else "",
                 )
+        if self._force_indexes:
+            self.query = self.query.force_index(*self._force_indexes)
+        if self._use_indexes:
+            self.query = self.query.use_index(*self._use_indexes)
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
         if self._db is None:

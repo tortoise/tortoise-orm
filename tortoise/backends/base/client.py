@@ -41,6 +41,8 @@ class Capabilities:
         inline_comment: bool = False,
         supports_transactions: bool = True,
         support_for_update: bool = True,
+        # Support force index or use index?
+        support_index_hint: bool = False,
     ) -> None:
         super().__setattr__("_mutable", True)
 
@@ -50,6 +52,7 @@ class Capabilities:
         self.inline_comment = inline_comment
         self.supports_transactions = supports_transactions
         self.support_for_update = support_for_update
+        self.support_index_hint = support_index_hint
         super().__setattr__("_mutable", False)
 
     def __setattr__(self, attr: str, value: Any) -> None:

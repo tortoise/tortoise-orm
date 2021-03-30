@@ -12,6 +12,7 @@ Changelog
 0.17.2
 ------
 - Add more `index` types.
+- Add `force_index`, `use_index` to `queryset`.
 
 0.17.1
 ------
