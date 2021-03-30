@@ -59,7 +59,7 @@ MySQL
     :members: GeometryField
 
 Postgres
-^^^^^
+^^^^^^^^
 
 .. automodule:: tortoise.contrib.postgres.fields
     :members: TSVectorField
