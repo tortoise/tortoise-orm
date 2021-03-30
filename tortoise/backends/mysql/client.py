@@ -60,7 +60,9 @@ class MySQLClient(BaseDBAsyncClient):
     query_class = MySQLQuery
     executor_class = MySQLExecutor
     schema_generator = MySQLSchemaGenerator
-    capabilities = Capabilities("mysql", requires_limit=True, inline_comment=True)
+    capabilities = Capabilities(
+        "mysql", requires_limit=True, inline_comment=True, support_index_hint=True
+    )
 
     def __init__(
         self,

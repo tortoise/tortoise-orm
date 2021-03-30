@@ -46,6 +46,7 @@ from tortoise.fields.relational import (
 )
 from tortoise.filters import get_filters_for_field
 from tortoise.functions import Function
+from tortoise.indexes import Index
 from tortoise.manager import Manager
 from tortoise.queryset import ExistsQuery, Q, QuerySet, QuerySetSingle
 from tortoise.router import router
@@ -1247,12 +1248,14 @@ class Model(metaclass=ModelMeta):
         if not isinstance(_together, (tuple, list)):
             raise ConfigurationError(f"'{cls.__name__}.{together}' must be a list or tuple.")
 
-        if any(not isinstance(unique_fields, (tuple, list)) for unique_fields in _together):
+        if any(not isinstance(unique_fields, (tuple, list, Index)) for unique_fields in _together):
             raise ConfigurationError(
                 f"All '{cls.__name__}.{together}' elements must be lists or tuples."
             )
 
         for fields_tuple in _together:
+            if isinstance(fields_tuple, Index):
+                fields_tuple = fields_tuple.fields
             for field_name in fields_tuple:
                 field = cls._meta.fields_map.get(field_name)
 
