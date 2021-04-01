@@ -258,7 +258,7 @@ class BaseExecutor:
         Result is cached for performance.
         """
         key = ",".join(update_fields) if update_fields else ""
-        if key in self.update_cache:
+        if not arithmetic_or_function and key in self.update_cache:
             return self.update_cache[key]
         arithmetic_or_function = arithmetic_or_function or {}
         table = self.model._meta.basetable
@@ -279,7 +279,9 @@ class BaseExecutor:
 
         query = query.where(table[self.model._meta.db_pk_column] == self.parameter(count))
 
-        sql = self.update_cache[key] = query.get_sql()
+        sql = query.get_sql()
+        if not arithmetic_or_function:
+            self.update_cache[key] = sql
         return sql
 
     async def execute_update(

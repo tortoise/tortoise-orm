@@ -13,6 +13,7 @@ Changelog
 ------
 - Add more `index` types.
 - Add `force_index`, `use_index` to `queryset`.
+- Fix `F` in update error with `update_fields`.
 
 0.17.1
 ------
