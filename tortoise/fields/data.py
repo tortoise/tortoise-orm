@@ -39,6 +39,7 @@ __all__ = (
     "FloatField",
     "IntEnumField",
     "IntField",
+    "FileField",
     "JSONField",
     "SmallIntField",
     "TextField",
@@ -188,6 +189,33 @@ class CharField(Field, str):  # type: ignore
     def SQL_TYPE(self) -> str:  # type: ignore
         return f"VARCHAR({self.max_length})"
 
+
+class FileField(Field, str):  # type: ignore
+    """
+    Character field.
+
+    You must provide the following:
+
+    ``max_length`` (int):
+        Maximum length of the field in characters.
+    """
+
+    def __init__(self, max_length: int, **kwargs: Any) -> None:
+        if int(max_length) < 1:
+            raise ConfigurationError("'max_length' must be >= 1")
+        self.max_length = int(max_length)
+        super().__init__(**kwargs)
+        self.validators.append(MaxLengthValidator(self.max_length))
+
+    @property
+    def constraints(self) -> dict:
+        return {
+            "max_length": self.max_length,
+        }
+
+    @property
+    def SQL_TYPE(self) -> str:  # type: ignore
+        return f"VARCHAR({self.max_length})"
 
 class TextField(Field, str):  # type: ignore
     """
