@@ -11,6 +11,7 @@ from tortoise.fields.data import (
     FloatField,
     IntEnumField,
     IntField,
+    FileField,
     JSONField,
     SmallIntField,
     TextField,
