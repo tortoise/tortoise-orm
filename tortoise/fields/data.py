@@ -200,8 +200,12 @@ class ImageField(Field, str):  # type: ignore
         Path to upload the image.
     """
 
-    #def __init__(self, upload_to: str = 'images/' ,**kwargs: Any) -> None:
-    #    pass
+    def __init__(self, upload_to: str = 'images/' ,**kwargs: Any) -> None:
+        pass
+
+    @property
+    def SQL_TYPE(self) -> str:
+        pass
 
 
 class TextField(Field, str):  # type: ignore
