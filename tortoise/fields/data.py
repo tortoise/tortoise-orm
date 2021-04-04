@@ -200,7 +200,7 @@ class ImageField(Field, str):  # type: ignore
         Path to upload the image.
     """
 
-    def __init__(self, upload_to: str ,**kwargs: Any) -> None:
+    def __init__(self, pk: bool = False, unique: bool = False, index: bool = False, upload_to: str ,**kwargs: Any) -> None:
         pass
 
 
