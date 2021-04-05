@@ -230,6 +230,16 @@ class TestQueryset(test.TestCase):
         #     [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
         # )
 
+    async def test_delete_limit(self):
+        await IntFields.all().limit(1).delete()
+        self.assertEqual(await IntFields.all().count(), 29)
+
+    async def test_delete_limit_order_by(self):
+        await IntFields.all().limit(1).order_by("-id").delete()
+        self.assertEqual(await IntFields.all().count(), 29)
+        with self.assertRaises(DoesNotExist):
+            await IntFields.get(intnum=97)
+
     async def test_async_iter(self):
         counter = 0
         async for _ in IntFields.all():

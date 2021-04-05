@@ -570,6 +570,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             q_objects=self._q_objects,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
+            limit=self._limit,
+            orderings=self._orderings,
         )
 
     def update(self, **kwargs: Any) -> "UpdateQuery":
@@ -952,7 +954,7 @@ class UpdateQuery(AwaitableQuery):
 
 
 class DeleteQuery(AwaitableQuery):
-    __slots__ = ("q_objects", "annotations", "custom_filters")
+    __slots__ = ("q_objects", "annotations", "custom_filters", "orderings", "limit")
 
     def __init__(
         self,
@@ -961,15 +963,22 @@ class DeleteQuery(AwaitableQuery):
         q_objects: List[Q],
         annotations: Dict[str, Any],
         custom_filters: Dict[str, Dict[str, Any]],
+        limit: Optional[int],
+        orderings: List[Tuple[str, str]],
     ) -> None:
         super().__init__(model)
         self.q_objects = q_objects
         self.annotations = annotations
         self.custom_filters = custom_filters
         self._db = db
+        self.limit = limit
+        self.orderings = orderings
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
+        self.resolve_ordering(
+            self.model, self.model._meta.basetable, self.orderings, self.annotations
+        )
         self.resolve_filters(
             model=self.model,
             q_objects=self.q_objects,
@@ -977,6 +986,8 @@ class DeleteQuery(AwaitableQuery):
             custom_filters=self.custom_filters,
         )
         self.query._delete_from = True
+        if self.limit:
+            self.query._limit = self.limit
 
     def __await__(self) -> Generator[Any, None, int]:
         if self._db is None:
