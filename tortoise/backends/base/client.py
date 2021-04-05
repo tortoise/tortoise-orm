@@ -43,6 +43,8 @@ class Capabilities:
         support_for_update: bool = True,
         # Support force index or use index?
         support_index_hint: bool = False,
+        # support update/delete with limit and order by
+        support_update_limit_order_by: bool = True,
     ) -> None:
         super().__setattr__("_mutable", True)
 
@@ -53,6 +55,7 @@ class Capabilities:
         self.supports_transactions = supports_transactions
         self.support_for_update = support_for_update
         self.support_index_hint = support_index_hint
+        self.support_update_limit_order_by = support_update_limit_order_by
         super().__setattr__("_mutable", False)
 
     def __setattr__(self, attr: str, value: Any) -> None:

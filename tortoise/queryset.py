@@ -564,15 +564,21 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         Delete all objects in QuerySet.
         """
-        return DeleteQuery(
+        kwargs = dict(
             db=self._db,
             model=self.model,
             q_objects=self._q_objects,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
-            limit=self._limit,
-            orderings=self._orderings,
         )
+        if self.capabilities.support_update_limit_order_by:
+            kwargs.update(
+                dict(
+                    limit=self._limit,
+                    orderings=self._orderings,
+                )
+            )
+        return DeleteQuery(**kwargs)
 
     def update(self, **kwargs: Any) -> "UpdateQuery":
         """
@@ -963,8 +969,8 @@ class DeleteQuery(AwaitableQuery):
         q_objects: List[Q],
         annotations: Dict[str, Any],
         custom_filters: Dict[str, Dict[str, Any]],
-        limit: Optional[int],
-        orderings: List[Tuple[str, str]],
+        limit: Optional[int] = None,
+        orderings: List[Tuple[str, str]] = None,
     ) -> None:
         super().__init__(model)
         self.q_objects = q_objects
@@ -976,9 +982,10 @@ class DeleteQuery(AwaitableQuery):
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
-        self.resolve_ordering(
-            self.model, self.model._meta.basetable, self.orderings, self.annotations
-        )
+        if self.orderings:
+            self.resolve_ordering(
+                self.model, self.model._meta.basetable, self.orderings, self.annotations
+            )
         self.resolve_filters(
             model=self.model,
             q_objects=self.q_objects,
