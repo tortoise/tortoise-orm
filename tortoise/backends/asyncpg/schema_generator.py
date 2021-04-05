@@ -9,7 +9,9 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 class AsyncpgSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "postgres"
-    TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment}{partition_by};'
+    TABLE_CREATE_TEMPLATE = (
+        'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment}{partition_by};'
+    )
     TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE \"{table}\" IS '{comment}';"
     COLUMN_COMMNET_TEMPLATE = 'COMMENT ON COLUMN "{table}"."{column}" IS \'{comment}\';'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}'
@@ -17,7 +19,6 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
     def __init__(self, client: "AsyncpgDBClient") -> None:
         super().__init__(client)
         self.comments_array: List[str] = []
-
 
     def _table_generate_partition(self, partition_by: tuple) -> str:
         partition_string = ""
