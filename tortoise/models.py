@@ -197,6 +197,7 @@ class MetaInfo:
         "db_complex_fields",
         "_default_ordering",
         "_ordering_validated",
+        "partition_by",
     )
 
     def __init__(self, meta: "Model.Meta") -> None:
@@ -232,6 +233,7 @@ class MetaInfo:
         self.table_description: str = getattr(meta, "table_description", "")
         self.pk: Field = None  # type: ignore
         self.db_pk_column: str = ""
+        self.partition_by: tuple = getattr(meta, "partition_by", ())
         self.db_native_fields: List[Tuple[str, str, Field]] = []
         self.db_default_fields: List[Tuple[str, str, Field]] = []
         self.db_complex_fields: List[Tuple[str, str, Field]] = []

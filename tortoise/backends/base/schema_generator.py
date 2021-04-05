@@ -17,7 +17,7 @@ logger = logging.getLogger("tortoise")
 
 class BaseSchemaGenerator:
     DIALECT = "sql"
-    TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment};'
+    TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment}{partition_by};'
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{default}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{index_name}" UNIQUE ({fields})'
@@ -327,14 +327,19 @@ class BaseSchemaGenerator:
             else ""
         )
 
+        if model._meta.partition_by:
+            partition_type, partition_by = model._meta.partition_by[0].upper(), model._meta.partition_by[1]
         table_create_string = self.TABLE_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
-            table_name=model._meta.db_table,
+            table_name=model._meta.partition_by,
             fields=table_fields_string,
             comment=table_comment,
             extra=self._table_generate_extra(table=model._meta.db_table),
+            partition_by=f" PARTITION BY {partition_type} ({partition_by})" if model._meta.partition_by else ""
         )
 
+        print(model._meta.partition_by)
+        print(table_create_string)
         table_create_string = "\n".join([table_create_string, *field_indexes_sqls])
 
         table_create_string += self._post_table_hook()

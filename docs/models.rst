@@ -177,6 +177,19 @@ The ``Meta`` class
 
 .. autoclass:: tortoise.models.Model.Meta
 
+    .. attribute:: partition_by
+        :annotation: = None
+
+        Specify ``partition_by`` to set up PARTITION BY statement
+
+        It should be a tuple of two elements
+
+        .. code-block:: python3
+
+            partition_by=("hash", "field_a")
+            partition_by=("range", "field_a")
+            partition_by=("list", "field_a")
+
     .. attribute:: abstract
         :annotation: = False
 
