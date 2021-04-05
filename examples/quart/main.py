@@ -3,9 +3,9 @@ import asyncio
 import logging
 from random import choice
 
+from models import Users, Workers
 from quart import Quart, jsonify
 
-from models import Users, Workers
 from tortoise.contrib.quart import register_tortoise
 
 logging.basicConfig(level=logging.DEBUG)
