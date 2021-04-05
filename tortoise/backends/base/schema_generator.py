@@ -123,6 +123,10 @@ class BaseSchemaGenerator:
     def _table_generate_extra(self, table: str) -> str:
         return ""
 
+
+    def _table_generate_partition(self, table: str) -> str:
+        return ""
+
     def _get_inner_statements(self) -> List[str]:
         return []
 
@@ -327,19 +331,15 @@ class BaseSchemaGenerator:
             else ""
         )
 
-        if model._meta.partition_by:
-            partition_type, partition_by = model._meta.partition_by[0].upper(), model._meta.partition_by[1]
         table_create_string = self.TABLE_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
-            table_name=model._meta.partition_by,
+            table_name=model._meta.db_table,
             fields=table_fields_string,
             comment=table_comment,
             extra=self._table_generate_extra(table=model._meta.db_table),
-            partition_by=f" PARTITION BY {partition_type} ({partition_by})" if model._meta.partition_by else ""
+            partition_by=self._table_generate_partition(model._meta.partition_by)
         )
 
-        print(model._meta.partition_by)
-        print(table_create_string)
         table_create_string = "\n".join([table_create_string, *field_indexes_sqls])
 
         table_create_string += self._post_table_hook()
