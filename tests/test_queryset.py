@@ -230,10 +230,12 @@ class TestQueryset(test.TestCase):
         #     [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
         # )
 
+    @test.requireCapability(support_update_limit_order_by=True)
     async def test_delete_limit(self):
         await IntFields.all().limit(1).delete()
         self.assertEqual(await IntFields.all().count(), 29)
 
+    @test.requireCapability(support_update_limit_order_by=True)
     async def test_delete_limit_order_by(self):
         await IntFields.all().limit(1).order_by("-id").delete()
         self.assertEqual(await IntFields.all().count(), 29)

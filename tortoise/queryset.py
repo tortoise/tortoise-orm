@@ -564,21 +564,15 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         Delete all objects in QuerySet.
         """
-        kwargs = dict(
+        return DeleteQuery(
             db=self._db,
             model=self.model,
             q_objects=self._q_objects,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
+            limit=self._limit,
+            orderings=self._orderings,
         )
-        if self.capabilities.support_update_limit_order_by:
-            kwargs.update(
-                dict(
-                    limit=self._limit,
-                    orderings=self._orderings,
-                )
-            )
-        return DeleteQuery(**kwargs)
 
     def update(self, **kwargs: Any) -> "UpdateQuery":
         """
@@ -969,8 +963,8 @@ class DeleteQuery(AwaitableQuery):
         q_objects: List[Q],
         annotations: Dict[str, Any],
         custom_filters: Dict[str, Dict[str, Any]],
-        limit: Optional[int] = None,
-        orderings: List[Tuple[str, str]] = None,
+        limit: Optional[int],
+        orderings: List[Tuple[str, str]],
     ) -> None:
         super().__init__(model)
         self.q_objects = q_objects
@@ -982,10 +976,12 @@ class DeleteQuery(AwaitableQuery):
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
-        if self.orderings:
+        if self.capabilities.support_update_limit_order_by:
             self.resolve_ordering(
                 self.model, self.model._meta.basetable, self.orderings, self.annotations
             )
+            if self.limit:
+                self.query._limit = self.limit
         self.resolve_filters(
             model=self.model,
             q_objects=self.q_objects,
@@ -993,8 +989,6 @@ class DeleteQuery(AwaitableQuery):
             custom_filters=self.custom_filters,
         )
         self.query._delete_from = True
-        if self.limit:
-            self.query._limit = self.limit
 
     def __await__(self) -> Generator[Any, None, int]:
         if self._db is None:

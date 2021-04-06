@@ -49,7 +49,7 @@ class AsyncpgDBClient(BaseDBAsyncClient):
     query_class = PostgreSQLQuery
     executor_class = AsyncpgExecutor
     schema_generator = AsyncpgSchemaGenerator
-    capabilities = Capabilities("postgres")
+    capabilities = Capabilities("postgres", support_update_limit_order_by=False)
     connection_class = asyncpg.connection.Connection
     loop = None
 
