@@ -8,9 +8,11 @@ Reference
    databases
    models
    fields
+   indexes
    timezone
    schema
    query
+   manager
    functions
    expressions
    transactions
@@ -19,3 +21,4 @@ Reference
    migration
    validators
    logging
+   router

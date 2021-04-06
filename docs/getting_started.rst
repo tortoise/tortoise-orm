@@ -30,6 +30,14 @@ Or MySQL:
 
 ..
 
+Or another driver `asyncmy <https://github.com/long2ice/asyncmy>`_ for MySQL:
+
+.. code-block:: bash
+
+    pip install tortoise-orm[asyncmy]
+
+..
+
 Apart from ``asyncpg`` there is also support for ``sqlite`` through ``aiosqlite`` and
 ``mysql`` through ``aiomysql``.
 You can easily implement more backends if there is appropriate ``asyncio`` driver for this db.

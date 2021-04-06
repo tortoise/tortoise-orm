@@ -49,6 +49,21 @@ Relational Fields
     :members: ForeignKeyField, OneToOneField, ManyToManyField
     :exclude-members: to_db_value, to_python_value
 
+DB Specific Fields
+------------------
+
+MySQL
+^^^^^
+
+.. automodule:: tortoise.contrib.mysql.fields
+    :members: GeometryField
+
+Postgres
+^^^^^^^^
+
+.. automodule:: tortoise.contrib.postgres.fields
+    :members: TSVectorField
+
 Extending A Field
 =================
 

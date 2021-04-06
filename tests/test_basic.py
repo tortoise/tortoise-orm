@@ -12,7 +12,7 @@ class TestBasic(test.TestCase):
         self.assertEqual(
             await Tournament.all().values_list("id", flat=True), [tournament.id, tournament.id + 1]
         )
-        self.assertEqual(
+        self.assertListSortEqual(
             await Tournament.all().values("id", "name"),
             [
                 {"id": tournament.id, "name": "Updated name"},

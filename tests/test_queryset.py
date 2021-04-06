@@ -230,6 +230,18 @@ class TestQueryset(test.TestCase):
         #     [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
         # )
 
+    @test.requireCapability(support_update_limit_order_by=True)
+    async def test_delete_limit(self):
+        await IntFields.all().limit(1).delete()
+        self.assertEqual(await IntFields.all().count(), 29)
+
+    @test.requireCapability(support_update_limit_order_by=True)
+    async def test_delete_limit_order_by(self):
+        await IntFields.all().limit(1).order_by("-id").delete()
+        self.assertEqual(await IntFields.all().count(), 29)
+        with self.assertRaises(DoesNotExist):
+            await IntFields.get(intnum=97)
+
     async def test_async_iter(self):
         counter = 0
         async for _ in IntFields.all():
@@ -330,19 +342,63 @@ class TestQueryset(test.TestCase):
         sql = IntFields.all().sql()
         self.assertRegex(sql, r"^SELECT.+FROM.+")
 
+    @test.requireCapability(support_index_hint=True)
+    async def test_force_index(self):
+        sql = IntFields.filter(pk=1).only("id").force_index("index_name").sql()
+        self.assertEqual(
+            sql,
+            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+    @test.requireCapability(support_index_hint=True)
+    async def test_use_index(self):
+        sql = IntFields.filter(pk=1).only("id").use_index("index_name").sql()
+        self.assertEqual(
+            sql,
+            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+        )
+
     @test.requireCapability(support_for_update=True)
     async def test_select_for_update(self):
-        sql = IntFields.filter(pk=1).only("id").select_for_update().sql()
+        sql1 = IntFields.filter(pk=1).only("id").select_for_update().sql()
+        sql2 = IntFields.filter(pk=1).only("id").select_for_update(nowait=True).sql()
+        sql3 = IntFields.filter(pk=1).only("id").select_for_update(skip_locked=True).sql()
+        sql4 = IntFields.filter(pk=1).only("id").select_for_update(of=("intfields",)).sql()
+
         dialect = self.db.schema_generator.DIALECT
         if dialect == "postgres":
             self.assertEqual(
-                sql,
+                sql1,
                 'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE',
+            )
+            self.assertEqual(
+                sql2,
+                'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE NOWAIT',
+            )
+            self.assertEqual(
+                sql3,
+                'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE SKIP LOCKED',
+            )
+            self.assertEqual(
+                sql4,
+                'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE OF "intfields"',
             )
         elif dialect == "mysql":
             self.assertEqual(
-                sql,
+                sql1,
                 "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE",
+            )
+            self.assertEqual(
+                sql2,
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE NOWAIT",
+            )
+            self.assertEqual(
+                sql3,
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE SKIP LOCKED",
+            )
+            self.assertEqual(
+                sql4,
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE OF `intfields`",
             )
 
     async def test_select_related(self):

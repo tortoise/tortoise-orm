@@ -2,9 +2,15 @@ import asyncio
 from functools import wraps
 from typing import Any, Callable, List, Optional, SupportsInt, Tuple, TypeVar, Union
 
-import aiomysql
-import pymysql
-from pymysql.charset import charset_by_name
+try:
+    import asyncmy as mysql
+    from asyncmy import errors
+    from asyncmy.charset import charset_by_name
+except ImportError:
+    import aiomysql as mysql
+    from pymysql.charset import charset_by_name
+    from pymysql import err as errors
+
 from pypika import MySQLQuery
 
 from tortoise import timezone
@@ -37,14 +43,14 @@ def translate_exceptions(func: F) -> F:
         try:
             return await func(self, *args)
         except (
-            pymysql.err.OperationalError,
-            pymysql.err.ProgrammingError,
-            pymysql.err.DataError,
-            pymysql.err.InternalError,
-            pymysql.err.NotSupportedError,
+            errors.OperationalError,
+            errors.ProgrammingError,
+            errors.DataError,
+            errors.InternalError,
+            errors.NotSupportedError,
         ) as exc:
             raise OperationalError(exc)
-        except pymysql.err.IntegrityError as exc:
+        except errors.IntegrityError as exc:
             raise IntegrityError(exc)
 
     return translate_exceptions_  # type: ignore
@@ -54,7 +60,9 @@ class MySQLClient(BaseDBAsyncClient):
     query_class = MySQLQuery
     executor_class = MySQLExecutor
     schema_generator = MySQLSchemaGenerator
-    capabilities = Capabilities("mysql", requires_limit=True, inline_comment=True)
+    capabilities = Capabilities(
+        "mysql", requires_limit=True, inline_comment=True, support_index_hint=True
+    )
 
     def __init__(
         self,
@@ -85,11 +93,11 @@ class MySQLClient(BaseDBAsyncClient):
         self.pool_maxsize = int(self.extra.pop("maxsize", 5))
 
         self._template: dict = {}
-        self._pool: Optional[aiomysql.Pool] = None
+        self._pool: Optional[mysql.Pool] = None
         self._connection = None
 
     async def create_connection(self, with_db: bool) -> None:
-        if charset_by_name(self.charset) is None:  # type: ignore
+        if charset_by_name(self.charset) is None:
             raise DBConnectionError(f"Unknown charset {self.charset}")
         self._template = {
             "host": self.host,
@@ -103,9 +111,9 @@ class MySQLClient(BaseDBAsyncClient):
             **self.extra,
         }
         try:
-            self._pool = await aiomysql.create_pool(password=self.password, **self._template)
+            self._pool = await mysql.create_pool(password=self.password, **self._template)
 
-            if isinstance(self._pool, aiomysql.Pool):
+            if isinstance(self._pool, mysql.Pool):
                 async with self.acquire_connection() as connection:
                     async with connection.cursor() as cursor:
                         if self.storage_engine:
@@ -118,7 +126,7 @@ class MySQLClient(BaseDBAsyncClient):
                         tz = "{:+d}:{:02d}".format(int(hours), int((hours % 1) * 60))
                         await cursor.execute(f"SET SESSION time_zone='{tz}';")
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
-        except pymysql.err.OperationalError:
+        except errors.OperationalError:
             raise DBConnectionError(f"Can't connect to MySQL server: {self._template}")
 
     async def _expire_connections(self) -> None:
@@ -146,7 +154,7 @@ class MySQLClient(BaseDBAsyncClient):
         await self.create_connection(with_db=False)
         try:
             await self.execute_script(f"DROP DATABASE {self.database}")
-        except pymysql.err.DatabaseError:  # pragma: nocoverage
+        except errors.DatabaseError:  # pragma: nocoverage
             pass
         await self.close()
 
@@ -209,7 +217,7 @@ class MySQLClient(BaseDBAsyncClient):
 class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
     def __init__(self, connection: MySQLClient) -> None:
         self.connection_name = connection.connection_name
-        self._connection: aiomysql.Connection = connection._connection
+        self._connection: mysql.Connection = connection._connection
         self._lock = asyncio.Lock()
         self._trxlock = asyncio.Lock()
         self.log = connection.log

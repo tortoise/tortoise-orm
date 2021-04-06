@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING, Any, List, Set, Type, cast
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields import JSONField, TextField, UUIDField
+from tortoise.indexes import Index
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
@@ -307,12 +308,15 @@ class BaseSchemaGenerator:
 
         if model._meta.indexes:
             for indexes_list in model._meta.indexes:
-                indexes_to_create = []
-                for field in indexes_list:
-                    field_object = model._meta.fields_map[field]
-                    indexes_to_create.append(field_object.source_field or field)
+                if not isinstance(indexes_list, Index):
+                    indexes_to_create = []
+                    for field in indexes_list:
+                        field_object = model._meta.fields_map[field]
+                        indexes_to_create.append(field_object.source_field or field)
 
-                _indexes.append(self._get_index_sql(model, indexes_to_create, safe=safe))
+                    _indexes.append(self._get_index_sql(model, indexes_to_create, safe=safe))
+                else:
+                    _indexes.append(indexes_list.get_sql(self, model, safe))
 
         field_indexes_sqls = [val for val in list(dict.fromkeys(_indexes)) if val]
 

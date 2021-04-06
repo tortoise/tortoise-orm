@@ -21,7 +21,7 @@ class StraightFieldTests(test.TestCase):
         obj2 = await self.model.create(chars="bbb")
 
         objs = await self.model.all()
-        self.assertEqual(objs, [obj1, obj2])
+        self.assertListSortEqual(objs, [obj1, obj2])
 
     async def test_get_by_pk(self):
         obj = await self.model.create(chars="aaa")
@@ -58,7 +58,7 @@ class StraightFieldTests(test.TestCase):
         obj3 = await self.model.create(chars="ccc", fk=obj1)
 
         obj1a = await self.model.get(eyedee=obj1.eyedee)
-        self.assertEqual(await obj1a.fkrev, [obj2, obj3])
+        self.assertListSortEqual(await obj1a.fkrev, [obj2, obj3])
 
     async def test_get_fk_reverse_filter(self):
         obj1 = await self.model.create(chars="aaa")
@@ -66,7 +66,7 @@ class StraightFieldTests(test.TestCase):
         obj3 = await self.model.create(chars="ccc", fk=obj1)
 
         objs = await self.model.filter(fk=obj1)
-        self.assertEqual(objs, [obj2, obj3])
+        self.assertListSortEqual(objs, [obj2, obj3])
 
     async def test_get_fk_reverse_async_for(self):
         obj1 = await self.model.create(chars="aaa")
@@ -77,7 +77,7 @@ class StraightFieldTests(test.TestCase):
         objs = []
         async for obj in obj1a.fkrev:
             objs.append(obj)
-        self.assertEqual(objs, [obj2, obj3])
+        self.assertListSortEqual(objs, [obj2, obj3])
 
     async def test_get_fk_reverse_fetch_related(self):
         obj1 = await self.model.create(chars="aaa")
@@ -86,7 +86,7 @@ class StraightFieldTests(test.TestCase):
 
         obj1a = await self.model.get(eyedee=obj1.eyedee)
         await obj1a.fetch_related("fkrev")
-        self.assertEqual(list(obj1a.fkrev), [obj2, obj3])
+        self.assertListSortEqual(list(obj1a.fkrev), [obj2, obj3])
 
     async def test_get_fk_reverse_prefetch_related(self):
         obj1 = await self.model.create(chars="aaa")
@@ -94,7 +94,7 @@ class StraightFieldTests(test.TestCase):
         obj3 = await self.model.create(chars="ccc", fk=obj1)
 
         obj1a = await self.model.get(eyedee=obj1.eyedee).prefetch_related("fkrev")
-        self.assertEqual(list(obj1a.fkrev), [obj2, obj3])
+        self.assertListSortEqual(list(obj1a.fkrev), [obj2, obj3])
 
     async def test_get_m2m_forward_await(self):
         obj1 = await self.model.create(chars="aaa")

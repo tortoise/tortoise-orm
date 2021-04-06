@@ -7,12 +7,34 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.16
+0.17
 ====
-0.16.22
+0.17.2
+------
+- Add more `index` types.
+- Add `force_index`, `use_index` to `queryset`.
+- Fix `F` in update error with `update_fields`.
+- Make `delete` query work with `limit` and `order_by`. (#697)
+
+0.17.1
+------
+- Fix type for modules.
+- Fix `select_related` when related model specified more than once. (#679)
+- Add `__iter__` to model, now can just return model/models in `fastapi` response.
+- Fix `in_transaction` bug caused by 'router'. (#677) (#678)
+
+0.17.0
 -------
 - Add date part extract filtering.
+- Add `Manager` support.
+- Add db router support.
+- Add `nowait`, `skip_locked`, `of` parameters to `queryset.select_for_update`.
+- Add field name to validation exceptions.
+- Compatible with `asyncmy <https://github.com/long2ice/asyncmy>`_.
+- Replace pypika to `pypika-tortoise <https://github.com/tortoise/pypika-tortoise>`_.
 
+0.16
+====
 0.16.21
 -------
 - Fixed validating JSON before decoding. (#623)

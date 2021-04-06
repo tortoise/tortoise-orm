@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Ty
 
 from pypika.terms import Term
 
-from tortoise.exceptions import ConfigurationError
+from tortoise.exceptions import ConfigurationError, ValidationError
 from tortoise.validators import Validator
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -202,14 +202,18 @@ class Field(metaclass=_FieldMeta):
         Validate whether given value is valid
 
         :param value: Value to be validation
+        :raises ValidationError: If validator check is not passed
         """
         for v in self.validators:
             if self.null and value is None:
                 continue
-            elif isinstance(value, Enum):
-                v(value.value)
-            else:
-                v(value)
+            try:
+                if isinstance(value, Enum):
+                    v(value.value)
+                else:
+                    v(value)
+            except ValidationError as exc:
+                raise ValidationError(f"{self.model_field_name}: {exc}")
 
     @property
     def required(self) -> bool:

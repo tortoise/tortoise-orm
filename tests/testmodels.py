@@ -12,6 +12,7 @@ from typing import Union
 
 from tortoise import fields
 from tortoise.exceptions import NoValuesFetched, ValidationError
+from tortoise.manager import Manager
 from tortoise.models import Model
 from tortoise.validators import (
     CommaSeparatedIntegerListValidator,
@@ -729,3 +730,16 @@ class ValidatorModel(Model):
 
 class NumberSourceField(Model):
     number = fields.IntField(source_field="counter", default=0)
+
+
+class StatusManager(Manager):
+    def get_queryset(self):
+        return super(StatusManager, self).get_queryset().filter(status=1)
+
+
+class ManagerModel(Model):
+    status = fields.IntField(default=0)
+    all_objects = Manager()
+
+    class Meta:
+        manager = StatusManager()

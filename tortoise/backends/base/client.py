@@ -28,6 +28,8 @@ class Capabilities:
         DDL statement, and not as a separate statement.
     :param supports_transactions: Indicates that this DB supports transactions.
     :param support_for_update: Indicates that this DB supports SELECT ... FOR UPDATE SQL statement.
+    :param support_index_hint: Support force index or use index.
+    :param support_update_limit_order_by: support update/delete with limit and order by.
     """
 
     def __init__(
@@ -41,6 +43,10 @@ class Capabilities:
         inline_comment: bool = False,
         supports_transactions: bool = True,
         support_for_update: bool = True,
+        # Support force index or use index?
+        support_index_hint: bool = False,
+        # support update/delete with limit and order by
+        support_update_limit_order_by: bool = True,
     ) -> None:
         super().__setattr__("_mutable", True)
 
@@ -50,6 +56,8 @@ class Capabilities:
         self.inline_comment = inline_comment
         self.supports_transactions = supports_transactions
         self.support_for_update = support_for_update
+        self.support_index_hint = support_index_hint
+        self.support_update_limit_order_by = support_update_limit_order_by
         super().__setattr__("_mutable", False)
 
     def __setattr__(self, attr: str, value: Any) -> None:

@@ -78,12 +78,17 @@ You can also install with your db driver (`aiosqlite` is builtin):
     pip install tortoise-orm[asyncpg]
 
 
-Or MySQL:
+Or for MySQL:
 
 .. code-block:: bash
 
     pip install tortoise-orm[aiomysql]
 
+Or another asyncio MySQL driver `asyncmy <https://github.com/long2ice/asyncmy>`_:
+
+.. code-block:: bash
+
+    pip install tortoise-orm[asyncmy]
 
 Quick Tutorial
 --------------

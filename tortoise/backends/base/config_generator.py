@@ -1,6 +1,7 @@
 import urllib.parse as urlparse
 import uuid
-from typing import Any, Dict, List, Optional
+from types import ModuleType
+from typing import Any, Dict, Iterable, Optional, Union
 
 from tortoise.exceptions import ConfigurationError
 
@@ -115,7 +116,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
 
 def generate_config(
     db_url: str,
-    app_modules: Dict[str, List[str]],
+    app_modules: Dict[str, Iterable[Union[str, ModuleType]]],
     connection_label: Optional[str] = None,
     testing: bool = False,
 ) -> dict:
