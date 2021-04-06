@@ -28,6 +28,8 @@ class Capabilities:
         DDL statement, and not as a separate statement.
     :param supports_transactions: Indicates that this DB supports transactions.
     :param support_for_update: Indicates that this DB supports SELECT ... FOR UPDATE SQL statement.
+    :param support_index_hint: Support force index or use index.
+    :param support_update_limit_order_by: support update/delete with limit and order by.
     """
 
     def __init__(
