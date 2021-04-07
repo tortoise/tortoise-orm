@@ -3,9 +3,9 @@ from decimal import Decimal
 from tests.testmodels import (
     BooleanFields,
     CharFields,
-    DecimalFields,
-    CharPkModel,
     CharFkRelatedModel,
+    CharPkModel,
+    DecimalFields,
 )
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError
