@@ -1,11 +1,14 @@
 from enum import Enum
-from typing import Any, Set
+from typing import Any, Optional, Set
 
 from pypika.enums import Comparator
-from pypika.terms import BasicCriterion, Function
+from pypika.terms import BasicCriterion
+from pypika.terms import Function as PypikaFunction
+
+from tortoise.functions import Function
 
 
-class Comp(Comparator):
+class Comp(Comparator):  # type: ignore
     search = " "
 
 
@@ -16,20 +19,26 @@ class Mode(Enum):
     WITH_QUERY_EXPRESSION = "WITH QUERY EXPANSION"
 
 
-class Match(Function):
-    def __init__(self, columns: Set[str], **kwargs):
-        super(Match, self).__init__("MATCH", ", ".join(columns), **kwargs)
+class Match(PypikaFunction):  # type: ignore
+    def __init__(self, columns: str):
+        super(Match, self).__init__("MATCH", columns)
 
 
-class Against(Function):
-    def __init__(self, expr: str, mode: Mode, **kwargs):
-        super(Against, self).__init__("AGAINST", expr, **kwargs)
+class Against(PypikaFunction):  # type: ignore
+    def __init__(self, expr: str, mode: Optional[Mode] = None):
+        super(Against, self).__init__("AGAINST", expr)
         self.mode = mode
 
     def get_special_params_sql(self, **kwargs: Any) -> Any:
+        if not self.mode:
+            return ""
         return self.mode.value
 
 
-class Search(BasicCriterion):
-    def __init__(self, columns: Set[str], expr: str, mode: Mode = ""):
+class SearchCriterion(BasicCriterion):
+    def __init__(self, columns: str, expr: str, mode: Optional[Mode] = None):
         super().__init__(Comp.search, Match(columns), Against(expr, mode))
+
+
+class Search(Function):  # type: ignore
+    database_func = SearchCriterion

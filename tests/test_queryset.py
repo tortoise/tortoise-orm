@@ -418,3 +418,10 @@ class TestQueryset(test.TestCase):
         self.assertEqual(tree.parent.name, parent_node.name)
         self.assertEqual(tree.child.pk, child_node.pk)
         self.assertEqual(tree.child.name, child_node.name)
+
+    @test.requireCapability(dialect="mysql")
+    async def test_mysql_search(self):
+        desc = "hello world"
+        await Tournament.create(desc=desc)
+        ret = await Tournament.filter(desc__search="hello").first()
+        self.assertEqual(ret.desc, desc)
