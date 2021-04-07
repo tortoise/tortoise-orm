@@ -1,6 +1,12 @@
 from decimal import Decimal
 
-from tests.testmodels import BooleanFields, CharFields, DecimalFields, CharPkModel, CharFkRelatedModel
+from tests.testmodels import (
+    BooleanFields,
+    CharFields,
+    DecimalFields,
+    CharPkModel,
+    CharFkRelatedModel,
+)
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError
 
@@ -282,9 +288,7 @@ class TestCharFkFieldFilters(test.TestCase):
 
     async def test_not_in(self):
         self.assertSetEqual(
-            set(
-                await CharPkModel.filter(id__not_in=[17, 12]).values_list("id", flat=True)
-            ),
+            set(await CharPkModel.filter(id__not_in=[17, 12]).values_list("id", flat=True)),
             {"2001"},
         )
 
@@ -301,7 +305,11 @@ class TestCharFkFieldFilters(test.TestCase):
         )
         self.assertSetEqual(
             set(await CharPkModel.filter(children__isnull=False).values_list("id", flat=True)),
-            {"17", "17", "12"},  # TODO: [4/7/2021 by Mykola] Not sure if this is an expected behavior
+            {
+                "17",
+                "17",
+                "12",
+            },  # TODO: [4/7/2021 by Mykola] Not sure if this is an expected behavior
         )
 
     async def test_not_isnull(self):
@@ -310,9 +318,7 @@ class TestCharFkFieldFilters(test.TestCase):
             {"17", "17", "12"},
         )
         self.assertSetEqual(
-            set(
-                await CharPkModel.filter(children__not_isnull=False).values_list("id", flat=True)
-            ),
+            set(await CharPkModel.filter(children__not_isnull=False).values_list("id", flat=True)),
             {"2001"},
         )
 
