@@ -30,7 +30,6 @@ from tortoise.exceptions import (
     IntegrityError,
     OperationalError,
     ParamsError,
-    TransactionManagementError,
 )
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntField
@@ -1018,6 +1017,7 @@ class Model(metaclass=ModelMeta):
         :param defaults: Default values to be added to a created instance if it can't be fetched.
         :param using_db: Specific DB connection to use instead of default bound
         :param kwargs: Query parameters.
+        :raises IntegrityError: If create failed
         """
         if not defaults:
             defaults = {}
