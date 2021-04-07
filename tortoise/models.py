@@ -1028,11 +1028,12 @@ class Model(metaclass=ModelMeta):
                 return instance, False
             try:
                 return await cls.create(**defaults, **kwargs, using_db=using_db), True
-            except (IntegrityError, TransactionManagementError):
-                # Let transaction close
-                pass
-        # Try after transaction in case transaction error
-        return await cls.get(**kwargs), False
+            except IntegrityError:
+                try:
+                    return await cls.get(**kwargs), False
+                except DoesNotExist:
+                    pass
+                raise
 
     @classmethod
     async def update_or_create(
@@ -1052,17 +1053,11 @@ class Model(metaclass=ModelMeta):
             defaults = {}
         db = using_db or cls._choose_db(True)
         async with in_transaction(connection_name=db.connection_name):
-            instance = await cls.filter(**kwargs).first()
+            instance = await cls.filter(**kwargs).select_for_update().first()
             if instance:
-                await instance.update_from_dict(defaults).save()
+                await instance.update_from_dict(defaults).save(using_db=db)
                 return instance, False
-            try:
-                return await cls.create(**defaults, **kwargs, using_db=using_db), True
-            except (IntegrityError, TransactionManagementError):
-                # Let transaction close
-                pass
-        # Try after transaction in case transaction error
-        return await cls.get(**kwargs), False
+        return await cls.get_or_create(defaults, db, **kwargs)
 
     @classmethod
     async def create(cls: Type[MODEL], **kwargs: Any) -> MODEL:

@@ -15,6 +15,7 @@ Changelog
 - Add `force_index`, `use_index` to `queryset`.
 - Fix `F` in update error with `update_fields`.
 - Make `delete` query work with `limit` and `order_by`. (#697)
+- Add `select_for_update` in `update_or_create`. (#702)
 
 0.17.1
 ------
