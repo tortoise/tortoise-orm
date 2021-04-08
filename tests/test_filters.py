@@ -1,6 +1,12 @@
 from decimal import Decimal
 
-from tests.testmodels import BooleanFields, CharFields, DecimalFields
+from tests.testmodels import (
+    BooleanFields,
+    CharFields,
+    CharFkRelatedModel,
+    CharPkModel,
+    DecimalFields,
+)
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError
 
@@ -239,4 +245,111 @@ class TestDecimalFieldFilters(test.TestCase):
                 decimal__range=(Decimal("1.2344"), Decimal("1.2346"))
             ).values_list("decimal", flat=True),
             [Decimal("1.2345")],
+        )
+
+
+class TestCharFkFieldFilters(test.TestCase):
+    async def setUp(self):
+        model1 = await CharPkModel.create(id=17)
+        model2 = await CharPkModel.create(id=12)
+        await CharPkModel.create(id=2001)
+        await CharFkRelatedModel.create(model=model1)
+        await CharFkRelatedModel.create(model=model1)
+        await CharFkRelatedModel.create(model=model2)
+
+    async def test_bad_param(self):
+        with self.assertRaisesRegex(
+            FieldError, "Unknown filter param 'bad_param'. Allowed base values are"
+        ):
+            await CharPkModel.filter(bad_param="moo")
+
+    async def test_equal(self):
+        self.assertEqual(
+            set(await CharPkModel.filter(id=2001).values_list("id", flat=True)), {"2001"}
+        )
+
+    async def test_not(self):
+        self.assertEqual(
+            set(await CharPkModel.filter(id__not=2001).values_list("id", flat=True)),
+            {"17", "12"},
+        )
+
+    async def test_in(self):
+        self.assertSetEqual(
+            set(await CharPkModel.filter(id__in=[17, 12]).values_list("id", flat=True)),
+            {"17", "12"},
+        )
+
+    async def test_in_empty(self):
+        self.assertEqual(
+            await CharPkModel.filter(id__in=[]).values_list("id", flat=True),
+            [],
+        )
+
+    async def test_not_in(self):
+        self.assertSetEqual(
+            set(await CharPkModel.filter(id__not_in=[17, 12]).values_list("id", flat=True)),
+            {"2001"},
+        )
+
+    async def test_not_in_empty(self):
+        self.assertSetEqual(
+            set(await CharPkModel.filter(id__not_in=[]).values_list("id", flat=True)),
+            {"17", "12", "2001"},
+        )
+
+    async def test_isnull(self):
+        self.assertSetEqual(
+            set(await CharPkModel.filter(children__isnull=True).values_list("id", flat=True)),
+            {"2001"},
+        )
+        self.assertSetEqual(
+            set(await CharPkModel.filter(children__isnull=False).values_list("id", flat=True)),
+            {
+                "17",
+                "17",
+                "12",
+            },  # TODO: [4/7/2021 by Mykola] Not sure if this is an expected behavior
+        )
+
+    async def test_not_isnull(self):
+        self.assertSetEqual(
+            set(await CharPkModel.filter(children__not_isnull=True).values_list("id", flat=True)),
+            {"17", "17", "12"},
+        )
+        self.assertSetEqual(
+            set(await CharPkModel.filter(children__not_isnull=False).values_list("id", flat=True)),
+            {"2001"},
+        )
+
+    async def test_gte(self):
+        self.assertSetEqual(
+            set(await CharPkModel.filter(id__gte=17).values_list("id", flat=True)),
+            {"17", "2001"},
+        )
+
+    async def test_lte(self):
+        self.assertSetEqual(
+            set(await CharPkModel.filter(id__lte=17).values_list("id", flat=True)),
+            {"12", "17"},
+        )
+
+    async def test_gt(self):
+        self.assertSetEqual(
+            set(await CharPkModel.filter(id__gt=17).values_list("id", flat=True)), {"2001"}
+        )
+
+    async def test_lt(self):
+        self.assertSetEqual(
+            set(await CharPkModel.filter(id__lt=17).values_list("id", flat=True)), {"12"}
+        )
+
+    async def test_sorting(self):
+        self.assertEqual(
+            await CharPkModel.all().order_by("id").values_list("id", flat=True),
+            ["12", "17", "2001"],
+        )
+        self.assertEqual(
+            await CharPkModel.all().order_by("-id").values_list("id", flat=True),
+            ["2001", "17", "12"],
         )
