@@ -1036,6 +1036,18 @@ class Model(metaclass=ModelMeta):
                 raise
 
     @classmethod
+    def select_for_update(
+        cls, nowait: bool = False, skip_locked: bool = False, of: Tuple[str, ...] = ()
+    ) -> QuerySet[MODEL]:
+        """
+        Make QuerySet select for update.
+
+        Returns a queryset that will lock rows until the end of the transaction,
+        generating a SELECT ... FOR UPDATE SQL statement on supported databases.
+        """
+        return cls._meta.manager.get_queryset().select_for_update(nowait, skip_locked, of)
+
+    @classmethod
     async def update_or_create(
         cls: Type[MODEL],
         defaults: Optional[dict] = None,
@@ -1053,9 +1065,9 @@ class Model(metaclass=ModelMeta):
             defaults = {}
         db = using_db or cls._choose_db(True)
         async with in_transaction(connection_name=db.connection_name):
-            instance = await cls.filter(**kwargs).select_for_update().first()
+            instance = await cls.select_for_update().get_or_none(**kwargs)
             if instance:
-                await instance.update_from_dict(defaults).save(using_db=db)
+                await instance.update_from_dict(defaults).save(using_db=db)  # type:ignore
                 return instance, False
         return await cls.get_or_create(defaults, db, **kwargs)
 
