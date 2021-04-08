@@ -30,7 +30,6 @@ from tortoise.exceptions import (
     IntegrityError,
     OperationalError,
     ParamsError,
-    TransactionManagementError,
 )
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntField
@@ -1018,6 +1017,7 @@ class Model(metaclass=ModelMeta):
         :param defaults: Default values to be added to a created instance if it can't be fetched.
         :param using_db: Specific DB connection to use instead of default bound
         :param kwargs: Query parameters.
+        :raises IntegrityError: If create failed
         """
         if not defaults:
             defaults = {}
@@ -1028,11 +1028,24 @@ class Model(metaclass=ModelMeta):
                 return instance, False
             try:
                 return await cls.create(**defaults, **kwargs, using_db=using_db), True
-            except (IntegrityError, TransactionManagementError):
-                # Let transaction close
-                pass
-        # Try after transaction in case transaction error
-        return await cls.get(**kwargs), False
+            except IntegrityError:
+                try:
+                    return await cls.get(**kwargs), False
+                except DoesNotExist:
+                    pass
+                raise
+
+    @classmethod
+    def select_for_update(
+        cls, nowait: bool = False, skip_locked: bool = False, of: Tuple[str, ...] = ()
+    ) -> QuerySet[MODEL]:
+        """
+        Make QuerySet select for update.
+
+        Returns a queryset that will lock rows until the end of the transaction,
+        generating a SELECT ... FOR UPDATE SQL statement on supported databases.
+        """
+        return cls._meta.manager.get_queryset().select_for_update(nowait, skip_locked, of)
 
     @classmethod
     async def update_or_create(
@@ -1052,17 +1065,11 @@ class Model(metaclass=ModelMeta):
             defaults = {}
         db = using_db or cls._choose_db(True)
         async with in_transaction(connection_name=db.connection_name):
-            instance = await cls.filter(**kwargs).first()
+            instance = await cls.select_for_update().get_or_none(**kwargs)
             if instance:
-                await instance.update_from_dict(defaults).save()
+                await instance.update_from_dict(defaults).save(using_db=db)  # type:ignore
                 return instance, False
-            try:
-                return await cls.create(**defaults, **kwargs, using_db=using_db), True
-            except (IntegrityError, TransactionManagementError):
-                # Let transaction close
-                pass
-        # Try after transaction in case transaction error
-        return await cls.get(**kwargs), False
+        return await cls.get_or_create(defaults, db, **kwargs)
 
     @classmethod
     async def create(cls: Type[MODEL], **kwargs: Any) -> MODEL:

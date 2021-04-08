@@ -16,6 +16,8 @@ Changelog
 - Fix `F` in update error with `update_fields`.
 - Make `delete` query work with `limit` and `order_by`. (#697)
 - Filter backward FK fields with `IS NULL` and `NOT IS NULL` filters (#700)
+- Add `select_for_update` in `update_or_create`. (#702)
+- Add `Model.select_for_update`.
 
 0.17.1
 ------
