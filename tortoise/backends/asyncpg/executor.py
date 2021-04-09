@@ -3,14 +3,21 @@ from typing import Optional, Sequence
 
 import asyncpg
 from pypika import Parameter
+from pypika.terms import Term
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
+from tortoise.filters import search
+
+
+def postgres_search(field: Term, value: str):
+    pass
 
 
 class AsyncpgExecutor(BaseExecutor):
     EXPLAIN_PREFIX = "EXPLAIN (FORMAT JSON, VERBOSE)"
     DB_NATIVE = BaseExecutor.DB_NATIVE | {bool, uuid.UUID}
+    FILTER_FUNC_OVERRIDE = {search: postgres_search}
 
     def parameter(self, pos: int) -> Parameter:
         return Parameter("$%d" % (pos + 1,))

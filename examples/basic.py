@@ -2,6 +2,8 @@
 This example demonstrates most basic operations with single model
 """
 from tortoise import Tortoise, fields, run_async
+from tortoise.contrib.mysql.indexes import FullTextIndex
+from tortoise.contrib.mysql.search import SearchCriterion
 from tortoise.models import Model
 
 
@@ -12,26 +14,20 @@ class Event(Model):
 
     class Meta:
         table = "event"
+        indexes = [FullTextIndex(fields={"name"})]
 
     def __str__(self):
         return self.name
 
 
 async def run():
-    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
-    await Tortoise.generate_schemas()
+    await Tortoise.init(
+        db_url="mysql://root:123456@127.0.0.1:3306/test", modules={"models": ["__main__"]}
+    )
+    # await Tortoise.generate_schemas()
 
-    event = await Event.create(name="Test")
-    await Event.filter(id=event.id).update(name="Updated name")
-
-    print(await Event.filter(name="Updated name").first())
-    # >>> Updated name
-
-    await Event(name="Test 2").save()
-    print(await Event.all().values_list("id", flat=True))
-    # >>> [1, 2]
-    print(await Event.all().values("id", "name"))
-    # >>> [{'id': 1, 'name': 'Updated name'}, {'id': 2, 'name': 'Test 2'}]
+    ret = Event.filter(id__search="test").sql()
+    print(ret)
 
 
 if __name__ == "__main__":

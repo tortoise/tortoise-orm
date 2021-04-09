@@ -1,11 +1,10 @@
 from enum import Enum
-from typing import Any, Optional, Set
+from typing import Any, Optional
 
 from pypika.enums import Comparator
 from pypika.terms import BasicCriterion
 from pypika.terms import Function as PypikaFunction
-
-from tortoise.functions import Function
+from pypika.terms import Term
 
 
 class Comp(Comparator):  # type: ignore
@@ -20,12 +19,12 @@ class Mode(Enum):
 
 
 class Match(PypikaFunction):  # type: ignore
-    def __init__(self, columns: str):
-        super(Match, self).__init__("MATCH", columns)
+    def __init__(self, *columns: Term):
+        super(Match, self).__init__("MATCH", *columns)
 
 
 class Against(PypikaFunction):  # type: ignore
-    def __init__(self, expr: str, mode: Optional[Mode] = None):
+    def __init__(self, expr: Term, mode: Optional[Mode] = None):
         super(Against, self).__init__("AGAINST", expr)
         self.mode = mode
 
@@ -36,9 +35,5 @@ class Against(PypikaFunction):  # type: ignore
 
 
 class SearchCriterion(BasicCriterion):
-    def __init__(self, columns: str, expr: str, mode: Optional[Mode] = None):
-        super().__init__(Comp.search, Match(columns), Against(expr, mode))
-
-
-class Search(Function):  # type: ignore
-    database_func = SearchCriterion
+    def __init__(self, *columns: Term, expr: Term, mode: Optional[Mode] = None):
+        super().__init__(Comp.search, Match(*columns), Against(expr, mode))
