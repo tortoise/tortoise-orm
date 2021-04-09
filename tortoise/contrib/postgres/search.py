@@ -9,5 +9,5 @@ class Comp(Comparator):  # type: ignore
 
 
 class SearchCriterion(BasicCriterion):  # type: ignore
-    def __init__(self, *columns: Term, expr: Term):
-        super().__init__(Comp.search, ToTsVector(*columns), ToTsQuery(expr))
+    def __init__(self, field: Term, expr: Term):
+        super().__init__(Comp.search, ToTsVector(field), ToTsQuery(expr))
