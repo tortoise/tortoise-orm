@@ -1,13 +1,4 @@
-from tests.testmodels import (
-    Event,
-    IntFields,
-    MinRelation,
-    MySQLIndex,
-    Node,
-    Reporter,
-    Tournament,
-    Tree,
-)
+from tests.testmodels import Event, IntFields, MinRelation, Node, Reporter, Tournament, Tree
 from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import (
