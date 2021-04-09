@@ -86,6 +86,9 @@ aiohttp = "*"
 
 [tool.poetry.extras]
 accel = ["ciso8601", "uvloop", "python-rapidjson"]
+ciso8601 = ["ciso8601"]
+uvloop = ["uvloop"]
+rapidjson = ["python-rapidjson"]
 asyncpg = ["asyncpg"]
 aiomysql = ["aiomysql"]
 docs = ["sphinx", "cloud_sptheme", "Pygments", "docutils"]
