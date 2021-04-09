@@ -18,6 +18,7 @@ Changelog
 - Filter backward FK fields with `IS NULL` and `NOT IS NULL` filters (#700)
 - Add `select_for_update` in `update_or_create`. (#702)
 - Add `Model.select_for_update`.
+- Add `__search` full text search to queryset.
 
 0.17.1
 ------

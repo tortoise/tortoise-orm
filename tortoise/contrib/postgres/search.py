@@ -4,10 +4,10 @@ from pypika.terms import BasicCriterion, Term
 from tortoise.contrib.postgres.functions import ToTsQuery, ToTsVector
 
 
-class Comp(Comparator):
-    search = "@@"
+class Comp(Comparator):  # type: ignore
+    search = " @@ "
 
 
-class SearchCriterion(BasicCriterion):
+class SearchCriterion(BasicCriterion):  # type: ignore
     def __init__(self, *columns: Term, expr: Term):
         super().__init__(Comp.search, ToTsVector(*columns), ToTsQuery(expr))

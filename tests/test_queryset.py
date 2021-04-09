@@ -1,4 +1,13 @@
-from tests.testmodels import Event, IntFields, MinRelation, Node, Reporter, Tournament, Tree
+from tests.testmodels import (
+    Event,
+    IntFields,
+    MinRelation,
+    MySQLIndex,
+    Node,
+    Reporter,
+    Tournament,
+    Tree,
+)
 from tortoise import Tortoise
 from tortoise.contrib import test
 from tortoise.exceptions import (
@@ -419,8 +428,8 @@ class TestQueryset(test.TestCase):
         self.assertEqual(tree.child.pk, child_node.pk)
         self.assertEqual(tree.child.name, child_node.name)
 
-    @test.requireCapability(dialect="mysql")
-    async def test_mysql_search(self):
+    @test.requireCapability(dialect="postgres")
+    async def test_postgres_search(self):
         desc = "hello world"
         await Tournament.create(desc=desc)
         ret = await Tournament.filter(desc__search="hello").first()

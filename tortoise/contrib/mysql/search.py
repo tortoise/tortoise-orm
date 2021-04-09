@@ -34,6 +34,10 @@ class Against(PypikaFunction):  # type: ignore
         return self.mode.value
 
 
-class SearchCriterion(BasicCriterion):
+class SearchCriterion(BasicCriterion):  # type: ignore
+    """
+    Only support for CharField, TextField with full search indexes.
+    """
+
     def __init__(self, *columns: Term, expr: Term, mode: Optional[Mode] = None):
         super().__init__(Comp.search, Match(*columns), Against(expr, mode))
