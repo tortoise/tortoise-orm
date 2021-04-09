@@ -421,7 +421,7 @@ class TestQueryset(test.TestCase):
 
     @test.requireCapability(dialect="postgres")
     async def test_postgres_search(self):
-        desc = "hello world"
-        await Tournament.create(desc=desc)
-        ret = await Tournament.filter(desc__search="hello").first()
-        self.assertEqual(ret.desc, desc)
+        name = "hello world"
+        await Tournament.create(name=name)
+        ret = await Tournament.filter(name__search="hello").first()
+        self.assertEqual(ret.name, name)
