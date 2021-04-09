@@ -4,6 +4,7 @@ from pypika.terms import Criterion
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
+from tortoise.contrib.mysql.search import SearchCriterion
 from tortoise.fields import BigIntField, IntField, SmallIntField
 from tortoise.filters import (
     Like,
@@ -16,6 +17,7 @@ from tortoise.filters import (
     insensitive_ends_with,
     insensitive_exact,
     insensitive_starts_with,
+    search,
     starts_with,
 )
 
@@ -81,6 +83,10 @@ def mysql_insensitive_ends_with(field: Term, value: str) -> Criterion:
     )
 
 
+def mysql_search(field: Term, value: str):
+    return SearchCriterion(field, expr=StrWrapper(value))
+
+
 class MySQLExecutor(BaseExecutor):
     FILTER_FUNC_OVERRIDE = {
         contains: mysql_contains,
@@ -90,6 +96,7 @@ class MySQLExecutor(BaseExecutor):
         insensitive_contains: mysql_insensitive_contains,
         insensitive_starts_with: mysql_insensitive_starts_with,
         insensitive_ends_with: mysql_insensitive_ends_with,
+        search: mysql_search,
     }
     EXPLAIN_PREFIX = "EXPLAIN FORMAT=JSON"
 

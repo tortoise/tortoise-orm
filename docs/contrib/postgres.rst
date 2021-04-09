@@ -22,3 +22,16 @@ Fields
 Postgres specific fields.
 
 .. autoclass:: tortoise.contrib.postgres.fields.TSVectorField
+
+Functions
+=========
+
+.. autoclass:: tortoise.contrib.postgres.functions.ToTsVector
+.. autoclass:: tortoise.contrib.postgres.functions.ToTsQuery
+
+Search
+======
+
+Postgres full text search.
+
+.. autoclass:: tortoise.contrib.postgres.search.SearchCriterion

@@ -153,6 +153,11 @@ def contains(field: Term, value: str) -> Criterion:
     return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"%{escape_like(value)}%"))
 
 
+def search(field: Term, value: str):
+    # will be override in each executor
+    pass
+
+
 def starts_with(field: Term, value: str) -> Criterion:
     return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"{escape_like(value)}%"))
 
@@ -385,6 +390,12 @@ def get_filters_for_field(
             "field": actual_field_name,
             "source_field": source_field,
             "operator": starts_with,
+            "value_encoder": string_encoder,
+        },
+        f"{field_name}__search": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": search,
             "value_encoder": string_encoder,
         },
         f"{field_name}__endswith": {

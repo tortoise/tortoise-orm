@@ -18,3 +18,10 @@ Fields
 MySQL specific fields.
 
 .. autoclass:: tortoise.contrib.mysql.fields.GeometryField
+
+Search
+======
+
+MySQL full text search.
+
+.. autoclass:: tortoise.contrib.mysql.search.SearchCriterion

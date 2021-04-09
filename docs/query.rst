@@ -265,6 +265,7 @@ When using ``.filter()`` method you can use number of modifiers to field names t
 - ``endswith`` - if field ends with value
 - ``iendswith`` - case insensitive ``endswith``
 - ``iexact`` - case insensitive equals
+- ``search`` - full text search
 
 Specially, you can filter date part with one of following, note that current only support PostgreSQL and MySQL, but not sqlite:
 
