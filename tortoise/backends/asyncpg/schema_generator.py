@@ -17,6 +17,14 @@ class AsyncpgSchemaGenerator(BaseSchemaGenerator):
         super().__init__(client)
         self.comments_array: List[str] = []
 
+    @staticmethod
+    def _table_generate_partition(partition_by: tuple) -> str:
+         partition_string = ""
+         if partition_by:
+             partition_type, partition_by = partition_by[0].upper(), partition_by[1]
+             partition_string = f" PARTITION BY {partition_type} ({partition_by})"
+         return partition_string
+
     @classmethod
     def _get_escape_translation_table(cls) -> List[str]:
         table = super()._get_escape_translation_table()

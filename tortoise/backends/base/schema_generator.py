@@ -18,7 +18,9 @@ logger = logging.getLogger("tortoise")
 
 class BaseSchemaGenerator:
     DIALECT = "sql"
-    TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment};'
+    TABLE_CREATE_TEMPLATE = (
+        'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment}{partition_by};'
+    )
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{default}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{index_name}" UNIQUE ({fields})'
@@ -33,6 +35,10 @@ class BaseSchemaGenerator:
 
     def __init__(self, client: "BaseDBAsyncClient") -> None:
         self.client = client
+
+    @staticmethod
+    def _table_generate_partition(table: str) -> str:
+         return ""
 
     def _create_string(
         self,
@@ -337,6 +343,7 @@ class BaseSchemaGenerator:
             fields=table_fields_string,
             comment=table_comment,
             extra=self._table_generate_extra(table=model._meta.db_table),
+            partition_by=self._table_generate_partition(model._meta.partition_by),
         )
 
         table_create_string = "\n".join([table_create_string, *field_indexes_sqls])
