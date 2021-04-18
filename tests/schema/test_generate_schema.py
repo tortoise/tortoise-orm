@@ -715,7 +715,7 @@ CREATE SPATIAL INDEX `idx_index_geometr_0b4dfb` ON `index` (`geometry`);""",
         sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
         self.assertEqual(
             sql.strip(),
-            """CREATE TABLE `team` (
+            r"""CREATE TABLE `team` (
     `name` VARCHAR(50) NOT NULL  PRIMARY KEY COMMENT 'The TEAM name (and PK)',
     `key` INT NOT NULL,
     `manager_id` VARCHAR(50),
