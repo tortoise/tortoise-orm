@@ -45,6 +45,8 @@ Contributors
 * Eugene Dubovskoy ``@drjackild``
 * Lương Quang Mạnh ``@lqmanh``
 * Mykyta Holubakha ``@Hummer12007``
+* Tiago Barrionuevo ``@tiabogar``
+* Isaque Alves ``@isaquealves``
 
 Special Thanks
 ==============
