@@ -154,7 +154,7 @@ class Tortoise:
                     model._meta.db_table = model.__name__.lower()
 
                 # TODO: refactor to share logic between FK & O2O
-                for field in model._meta.fk_fields:
+                for field in sorted(model._meta.fk_fields):
                     fk_object = cast(ForeignKeyFieldInstance, model._meta.fields_map[field])
                     reference = fk_object.model_name
                     related_app_name, related_model_name = split_reference(reference)

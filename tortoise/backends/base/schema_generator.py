@@ -182,7 +182,10 @@ class BaseSchemaGenerator:
         fields_with_index = []
         m2m_tables_for_create = []
         references = set()
+        models_to_create: "List[Type[Model]]" = []
 
+        self._get_models_to_create(models_to_create)
+        models_tables = [model._meta.db_table for model in models_to_create]
         for field_name, column_name in model._meta.fields_db_projection.items():
             field_object = model._meta.fields_map[field_name]
             comment = (
@@ -345,7 +348,7 @@ class BaseSchemaGenerator:
 
         for m2m_field in model._meta.m2m_fields:
             field_object = cast("ManyToManyFieldInstance", model._meta.fields_map[m2m_field])
-            if field_object._generated:
+            if field_object._generated or field_object.through in models_tables:
                 continue
             m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
                 exists="IF NOT EXISTS " if safe else "",
