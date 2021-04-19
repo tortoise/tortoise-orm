@@ -11,6 +11,7 @@ from tortoise.exceptions import DoesNotExist, IntegrityError
 
 logger = logging.getLogger("tortoise-fastapi")
 
+
 class HTTPNotFoundError(BaseModel):
     detail: str
 
