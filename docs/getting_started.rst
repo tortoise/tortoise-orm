@@ -127,7 +127,7 @@ You can do it like this:
         await Tortoise.generate_schemas()
 
 
-Here we create connection to PostgresQL database with default ``asyncpg`` client and then we discover & initialise models.
+Here we create a connection to a SQLite DB database with the default ``aiosqlite`` client and then we discover & initialise models.
 
 ``generate_schema`` generates schema on empty database, you shouldn't run it on every app init, run it just once, maybe out of your main code.
 
