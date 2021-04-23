@@ -1022,12 +1022,12 @@ class Model(metaclass=ModelMeta):
         if not defaults:
             defaults = {}
         db = using_db or cls._choose_db(True)
-        async with in_transaction(connection_name=db.connection_name):
+        async with in_transaction(connection_name=db.connection_name) as conn:
             instance = await cls.filter(**kwargs).first()
             if instance:
                 return instance, False
             try:
-                return await cls.create(**defaults, **kwargs, using_db=using_db), True
+                return await cls.create(**defaults, **kwargs, using_db=conn), True
             except IntegrityError:
                 try:
                     return await cls.get(**kwargs), False
@@ -1064,10 +1064,10 @@ class Model(metaclass=ModelMeta):
         if not defaults:
             defaults = {}
         db = using_db or cls._choose_db(True)
-        async with in_transaction(connection_name=db.connection_name):
+        async with in_transaction(connection_name=db.connection_name) as conn:
             instance = await cls.select_for_update().get_or_none(**kwargs)
             if instance:
-                await instance.update_from_dict(defaults).save(using_db=db)  # type:ignore
+                await instance.update_from_dict(defaults).save(using_db=conn)  # type:ignore
                 return instance, False
         return await cls.get_or_create(defaults, db, **kwargs)
 
