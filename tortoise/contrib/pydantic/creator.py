@@ -166,6 +166,8 @@ def pydantic_model_creator(
             and computed == ()
             and sort_alphabetically is None
             and allow_cycles is None
+            and not exclude_readonly
+            and meta_override is None
         )
         hashval = (
             f"{fqname};{exclude};{include};{computed};{_stack}:{sort_alphabetically}:{allow_cycles}"
@@ -183,6 +185,15 @@ def pydantic_model_creator(
 
     # Get settings and defaults
     meta = getattr(cls, "PydanticMeta", PydanticMeta)
+
+    is_default = (
+        exclude == ()
+        and include == ()
+        and computed == ()
+        and sort_alphabetically is None
+        and not exclude_readonly
+        and meta_override is None
+    )
 
     def get_param(attr: str) -> Any:
         if meta_override:
@@ -387,10 +398,10 @@ def pydantic_model_creator(
             pconfig.fields[fname] = fconfig
 
     # Here we endure that the name is unique, but complete objects are still labeled verbatim
-    if not has_submodel:
-        _name = name or f"{fqname}.leaf"
-    elif has_submodel:
+    if has_submodel or not is_default:
         _name = name or get_name()
+    else:
+        _name = name or f"{fqname}.leaf"
 
     # Here we de-dup to ensure that a uniquely named object is a unique object
     # This fixes some Pydantic constraints.

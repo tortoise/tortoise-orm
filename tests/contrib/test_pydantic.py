@@ -1302,42 +1302,53 @@ class TestPydanticCycle(test.TestCase):
         )
 
 
-def test_pydantic_model_creator_multiple_uses_with_backwards():
-    Author_Pydantic = pydantic_model_creator(Author)
-    Author_Pydantic2 = pydantic_model_creator(Author)
-    Author_PydanticExclude = pydantic_model_creator(Author, exclude=("id",))
+class TestPydanticMutlipleUses(test.TestCase):
+    async def setUp(self) -> None:
+        self.Author_Pydantic = pydantic_model_creator(Author)
+        self.Animal_Pydantic = pydantic_model_creator(Animal)
 
-    assert Author_Pydantic2 is Author_Pydantic
-    assert "id" in Author_Pydantic.schema()["required"]
+    def test_pydantic_model_creator_multiple_uses(self):
+        Author_Pydantic2 = pydantic_model_creator(Author)
 
-    assert Author_PydanticExclude is not Author_Pydantic
-    assert "id" not in Author_PydanticExclude.schema()["required"]
+        self.assertIs(Author_Pydantic2, self.Author_Pydantic)
 
+    def test_pydantic_model_creator_multiple_uses_exclude(self):
+        Author_PydanticExclude = pydantic_model_creator(Author, exclude=("id",))
 
-def test_pydantic_model_creator_multiple_uses_no_backwards():
-    class PydanticMetaOverride:
-        backward_relations = False
+        self.assertIn("id", self.Author_Pydantic.schema()["required"])
+        self.assertNotIn("id", Author_PydanticExclude.schema()["required"])
+        self.assertIsNot(Author_PydanticExclude, self.Author_Pydantic)
 
-    Author_Pydantic = pydantic_model_creator(Author, meta_override=PydanticMetaOverride)
-    Author_Pydantic2 = pydantic_model_creator(Author, meta_override=PydanticMetaOverride)
-    Author_PydanticExclude = pydantic_model_creator(
-        Author, exclude=("id",), meta_override=PydanticMetaOverride
-    )
+    def test_pydantic_model_creator_multiple_uses_w_exclude(self):
+        Author_PydanticExclude = pydantic_model_creator(Author, exclude=("id",))
+        Author_PydanticExclude2 = pydantic_model_creator(Author, exclude=("id",))
 
-    assert "id" in Author_Pydantic.schema()["required"]
-    assert Author_Pydantic2 is Author_Pydantic
+        self.assertIs(Author_PydanticExclude2, Author_PydanticExclude)
 
-    assert "id" not in Author_PydanticExclude.schema()["required"]
-    assert Author_PydanticExclude is not Author_Pydantic
+    def test_pydantic_model_creator_multiple_uses_no_backwards(self):
+        class PydanticMetaOverride:
+            backward_relations = False
 
+        Author_Pydantic_non_backward = pydantic_model_creator(
+            Author, meta_override=PydanticMetaOverride
+        )
 
-def test_pydantic_model_creator_multiple_uses_no_references():
-    Animal_Pydantic = pydantic_model_creator(Animal)
-    Animal_Pydantic2 = pydantic_model_creator(Animal)
-    Animal_PydanticExclude = pydantic_model_creator(Animal, exclude=("id",))
+        self.assertIn("books", self.Author_Pydantic.schema()["required"])
+        self.assertNotIn("books", Author_Pydantic_non_backward.schema()["required"])
+        self.assertIsNot(Author_Pydantic_non_backward, self.Author_Pydantic)
 
-    assert "id" in Animal_Pydantic.schema()["required"]
-    assert Animal_Pydantic2 is Animal_Pydantic
+    def test_pydantic_model_creator_multiple_uses_exclude_readonly(self):
+        Author_PydanticExcludeReadonly = pydantic_model_creator(Author, exclude_readonly=True)
 
-    assert "id" not in Animal_PydanticExclude.schema()["required"]
-    assert Animal_PydanticExclude is not Animal_Pydantic
+        self.assertIn("id", self.Author_Pydantic.schema()["required"])
+        self.assertIn("books", self.Author_Pydantic.schema()["required"])
+        self.assertNotIn("id", Author_PydanticExcludeReadonly.schema()["required"])
+        self.assertNotIn("books", Author_PydanticExcludeReadonly.schema()["required"])
+        self.assertIsNot(Author_PydanticExcludeReadonly, self.Author_Pydantic)
+
+    def test_pydantic_model_creator_multiple_uses_no_references(self):
+        Animal_PydanticExclude = pydantic_model_creator(Animal, exclude=("id",))
+
+        self.assertIn("id", self.Animal_Pydantic.schema()["required"])
+        self.assertNotIn("id", Animal_PydanticExclude.schema()["required"])
+        self.assertIsNot(Animal_PydanticExclude, self.Animal_Pydantic)
