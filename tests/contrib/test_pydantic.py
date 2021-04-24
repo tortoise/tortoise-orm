@@ -1,6 +1,16 @@
 import copy
 
-from tests.testmodels import Address, Employee, Event, JSONFields, Reporter, Team, Tournament
+from tests.testmodels import (
+    Address,
+    Animal,
+    Author,
+    Employee,
+    Event,
+    JSONFields,
+    Reporter,
+    Team,
+    Tournament,
+)
 from tortoise.contrib import test
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
@@ -1290,3 +1300,44 @@ class TestPydanticCycle(test.TestCase):
                 "team_size": 2,
             },
         )
+
+
+def test_pydantic_model_creator_multiple_uses_with_backwards():
+    Author_Pydantic = pydantic_model_creator(Author)
+    Author_Pydantic2 = pydantic_model_creator(Author)
+    Author_PydanticExclude = pydantic_model_creator(Author, exclude=("id",))
+
+    assert Author_Pydantic2 is Author_Pydantic
+    assert "id" in Author_Pydantic.schema()["required"]
+
+    assert Author_PydanticExclude is not Author_Pydantic
+    assert "id" not in Author_PydanticExclude.schema()["required"]
+
+
+def test_pydantic_model_creator_multiple_uses_no_backwards():
+    class PydanticMetaOverride:
+        backward_relations = False
+
+    Author_Pydantic = pydantic_model_creator(Author, meta_override=PydanticMetaOverride)
+    Author_Pydantic2 = pydantic_model_creator(Author, meta_override=PydanticMetaOverride)
+    Author_PydanticExclude = pydantic_model_creator(
+        Author, exclude=("id",), meta_override=PydanticMetaOverride
+    )
+
+    assert "id" in Author_Pydantic.schema()["required"]
+    assert Author_Pydantic2 is Author_Pydantic
+
+    assert "id" not in Author_PydanticExclude.schema()["required"]
+    assert Author_PydanticExclude is not Author_Pydantic
+
+
+def test_pydantic_model_creator_multiple_uses_no_references():
+    Animal_Pydantic = pydantic_model_creator(Animal)
+    Animal_Pydantic2 = pydantic_model_creator(Animal)
+    Animal_PydanticExclude = pydantic_model_creator(Animal, exclude=("id",))
+
+    assert "id" in Animal_Pydantic.schema()["required"]
+    assert Animal_Pydantic2 is Animal_Pydantic
+
+    assert "id" not in Animal_PydanticExclude.schema()["required"]
+    assert Animal_PydanticExclude is not Animal_Pydantic
