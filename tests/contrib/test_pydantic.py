@@ -11,6 +11,7 @@ from tests.testmodels import (
     Team,
     Tournament,
 )
+from tortoise import Model, fields
 from tortoise.contrib import test
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
@@ -1302,7 +1303,7 @@ class TestPydanticCycle(test.TestCase):
         )
 
 
-class TestPydanticMutlipleUses(test.TestCase):
+class TestPydanticMutlipleUsesInitiated(test.TestCase):
     async def setUp(self) -> None:
         self.Author_Pydantic = pydantic_model_creator(Author)
         self.Animal_Pydantic = pydantic_model_creator(Animal)
@@ -1324,6 +1325,12 @@ class TestPydanticMutlipleUses(test.TestCase):
         Author_PydanticExclude2 = pydantic_model_creator(Author, exclude=("id",))
 
         self.assertIs(Author_PydanticExclude2, Author_PydanticExclude)
+
+    def test_pydantic_model_creator_multiple_uses_w_exclude_diff(self):
+        Author_PydanticExcludeId = pydantic_model_creator(Author, exclude=("id",))
+        Author_PydanticExcludeName = pydantic_model_creator(Author, exclude=("name",))
+
+        self.assertIsNot(Author_PydanticExcludeId, Author_PydanticExcludeName)
 
     def test_pydantic_model_creator_multiple_uses_no_backwards(self):
         class PydanticMetaOverride:
@@ -1348,6 +1355,68 @@ class TestPydanticMutlipleUses(test.TestCase):
 
     def test_pydantic_model_creator_multiple_uses_no_references(self):
         Animal_PydanticExclude = pydantic_model_creator(Animal, exclude=("id",))
+
+        self.assertIn("id", self.Animal_Pydantic.schema()["required"])
+        self.assertNotIn("id", Animal_PydanticExclude.schema()["required"])
+        self.assertIsNot(Animal_PydanticExclude, self.Animal_Pydantic)
+
+
+class TestPydanticMutlipleUses(test.TestCase):
+    async def setUp(self) -> None:
+        # Create models that are are not initiated
+        class Animal(Model):
+            """Model with no relation"""
+
+            id = fields.IntField(pk=True, generated=True)
+            name = fields.CharField(max_length=10)
+
+        class Author(Model):
+            name = fields.CharField(max_length=255)
+
+        class Book(Model):
+            name = fields.CharField(max_length=255)
+            author = fields.ForeignKeyField("models.Author", related_name="books")
+            rating = fields.FloatField()
+
+        self.Animal = Animal
+        self.Author = Author
+        self.Author_Pydantic = pydantic_model_creator(self.Author)
+        self.Animal_Pydantic = pydantic_model_creator(Animal)
+
+    def test_pydantic_model_creator_multiple_uses(self):
+        Author_Pydantic2 = pydantic_model_creator(self.Author)
+
+        self.assertIs(Author_Pydantic2, self.Author_Pydantic)
+
+    def test_pydantic_model_creator_multiple_uses_exclude(self):
+        Author_PydanticExclude = pydantic_model_creator(self.Author, exclude=("id",))
+
+        self.assertIn("id", self.Author_Pydantic.schema()["required"])
+        self.assertNotIn("id", Author_PydanticExclude.schema()["required"])
+        self.assertIsNot(Author_PydanticExclude, self.Author_Pydantic)
+
+    def test_pydantic_model_creator_multiple_uses_w_exclude(self):
+        Author_PydanticExclude = pydantic_model_creator(self.Author, exclude=("id",))
+        Author_PydanticExclude2 = pydantic_model_creator(self.Author, exclude=("id",))
+
+        self.assertNotIn("id", Author_PydanticExclude.schema()["required"])
+        self.assertIs(Author_PydanticExclude2, Author_PydanticExclude)
+
+    def test_pydantic_model_creator_multiple_uses_w_exclude_diff(self):
+        Author_PydanticExcludeId = pydantic_model_creator(self.Author, exclude=("id",))
+        Author_PydanticExcludeName = pydantic_model_creator(self.Author, exclude=("name",))
+
+        self.assertIsNot(Author_PydanticExcludeId, Author_PydanticExcludeName)
+
+    def test_pydantic_model_creator_multiple_uses_exclude_readonly(self):
+        Author_PydanticExcludeReadonly = pydantic_model_creator(self.Author, exclude_readonly=True)
+
+        self.assertIn("id", self.Author_Pydantic.schema()["required"])
+        self.assertNotIn("id", Author_PydanticExcludeReadonly.schema()["required"])
+        self.assertIsNot(Author_PydanticExcludeReadonly, self.Author_Pydantic)
+
+    def test_pydantic_model_creator_multiple_uses_no_references(self):
+        Animal_PydanticExclude = pydantic_model_creator(self.Animal, exclude=("id",))
 
         self.assertIn("id", self.Animal_Pydantic.schema()["required"])
         self.assertNotIn("id", Animal_PydanticExclude.schema()["required"])
