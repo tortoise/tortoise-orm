@@ -1023,14 +1023,14 @@ class Model(metaclass=ModelMeta):
             defaults = {}
         db = using_db or cls._choose_db(True)
         async with in_transaction(connection_name=db.connection_name):
-            instance = await cls.filter(**kwargs).first()
+            instance = await cls.filter(**kwargs).using_db(db).first()
             if instance:
                 return instance, False
             try:
-                return await cls.create(**defaults, **kwargs, using_db=using_db), True
+                return await cls.create(**defaults, **kwargs, using_db=db), True
             except IntegrityError:
                 try:
-                    return await cls.get(**kwargs), False
+                    return await cls.filter(**kwargs).using_db(db).get(), False
                 except DoesNotExist:
                     pass
                 raise
@@ -1065,7 +1065,7 @@ class Model(metaclass=ModelMeta):
             defaults = {}
         db = using_db or cls._choose_db(True)
         async with in_transaction(connection_name=db.connection_name):
-            instance = await cls.select_for_update().get_or_none(**kwargs)
+            instance = await cls.select_for_update().using_db(db).get_or_none(**kwargs)
             if instance:
                 await instance.update_from_dict(defaults).save(using_db=db)  # type:ignore
                 return instance, False
