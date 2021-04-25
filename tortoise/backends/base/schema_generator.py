@@ -419,27 +419,36 @@ class BaseSchemaGenerator:
         self._get_models_to_create(models_to_create)
 
         tables_to_create = []
+        tables_name_to_create = []
         for model in models_to_create:
-            tables_to_create.append(self._get_table_sql(model, safe))
+            table_dict = self._get_table_sql(model, safe)
+            tables_to_create.append(table_dict)
+            tables_name_to_create.append(table_dict["table"])
 
         tables_to_create_count = len(tables_to_create)
 
-        created_tables: Set[dict] = set()
+        created_tables_name: Set[str] = set()
         ordered_tables_for_create: List[str] = []
         m2m_tables_to_create: List[str] = []
         while True:
-            if len(created_tables) == tables_to_create_count:
+            if len(created_tables_name) == tables_to_create_count:
                 break
             try:
                 next_table_for_create = next(
                     t
                     for t in tables_to_create
-                    if t["references"].issubset(created_tables | {t["table"]})
+                    if t["references"].issubset(created_tables_name | {t["table"]})
                 )
             except StopIteration:
-                raise ConfigurationError("Can't create schema due to cyclic fk references")
+                raise ConfigurationError(
+                    f"Can't create schema due to cyclic fk references. Please check"
+                    f"\n"
+                    f"tables_name_to_create: {','.join(tables_name_to_create)}"
+                    f"\n"
+                    f"created_tables_name: {','.join(created_tables_name)}"
+                )
             tables_to_create.remove(next_table_for_create)
-            created_tables.add(next_table_for_create["table"])
+            created_tables_name.add(next_table_for_create["table"])
             ordered_tables_for_create.append(next_table_for_create["table_creation_string"])
             m2m_tables_to_create += next_table_for_create["m2m_tables"]
 
@@ -447,5 +456,4 @@ class BaseSchemaGenerator:
         return schema_creation_string
 
     async def generate_from_string(self, creation_string: str) -> None:
-        # print(creation_string)
         await self.client.execute_script(creation_string)
