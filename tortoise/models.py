@@ -1031,6 +1031,7 @@ class Model(metaclass=ModelMeta):
         :param using_db: Specific DB connection to use instead of default bound
         :param kwargs: Query parameters.
         :raises IntegrityError: If create failed
+        :raises TransactionManagementError: If transaction error
         """
         if not defaults:
             defaults = {}
