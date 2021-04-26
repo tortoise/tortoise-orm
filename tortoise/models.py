@@ -80,7 +80,11 @@ def prepare_default_ordering(meta: "Model.Meta") -> Tuple[Tuple[str, Order], ...
 
 
 def _fk_setter(
-    self: "Model", value: "Optional[Model]", _key: str, relation_field: str, to_field: str
+    self: "Model",
+    value: "Optional[Model]",
+    _key: str,
+    relation_field: str,
+    to_field: str,
 ) -> None:
     setattr(self, relation_field, getattr(value, to_field) if value else None)
     setattr(self, _key, value)
@@ -710,7 +714,11 @@ class Model(metaclass=ModelMeta):
             #  as we already know what we will be doing.
             for key, model_field, field in meta.db_default_fields:
                 value = kwargs[key]
-                setattr(self, model_field, None if value is None else field.field_type(value))
+                setattr(
+                    self,
+                    model_field,
+                    None if value is None else field.field_type(value),
+                )
             # These fields need manual .to_python_value()
             for key, model_field, field in meta.db_complex_fields:
                 setattr(self, model_field, field.to_python_value(kwargs[key]))
@@ -736,7 +744,7 @@ class Model(metaclass=ModelMeta):
         return hash(self.pk)
 
     def __iter__(self):
-        for field in self._meta.fields_map:
+        for field in self._meta.db_fields:
             yield field, getattr(self, field)
 
     def __eq__(self, other: object) -> bool:
@@ -967,10 +975,13 @@ class Model(metaclass=ModelMeta):
         await db.executor_class(model=self.__class__, db=db).fetch_for_list([self], *args)
 
     async def refresh_from_db(
-        self, fields: Optional[Iterable[str]] = None, using_db: Optional[BaseDBAsyncClient] = None
+        self,
+        fields: Optional[Iterable[str]] = None,
+        using_db: Optional[BaseDBAsyncClient] = None,
     ) -> None:
         """
-        Refresh latest data from db.
+        Refresh latest data from db. When this method is called without arguments
+        all db fields of the model are updated to the values currently present in the database.
 
         .. code-block:: python3
 
@@ -986,7 +997,8 @@ class Model(metaclass=ModelMeta):
         db = using_db or self._choose_db()
         qs = QuerySet(self.__class__).using_db(db).only(*(fields or []))
         obj = await qs.get(pk=self.pk)
-        for field in fields or self._meta.fields_map:
+
+        for field in fields or self._meta.db_fields:
             setattr(self, field, getattr(obj, field, None))
 
     @classmethod
@@ -1021,19 +1033,26 @@ class Model(metaclass=ModelMeta):
         """
         if not defaults:
             defaults = {}
-        db = using_db or cls._choose_db(True)
-        async with in_transaction(connection_name=db.connection_name):
-            instance = await cls.filter(**kwargs).using_db(db).first()
-            if instance:
-                return instance, False
-            try:
-                return await cls.create(**defaults, **kwargs, using_db=db), True
-            except IntegrityError:
+        try:
+            return await cls.get(**kwargs), False
+        except DoesNotExist:
+            db = using_db or cls._choose_db(True)
+            async with in_transaction(connection_name=db.connection_name) as connection:
                 try:
-                    return await cls.filter(**kwargs).using_db(db).get(), False
-                except DoesNotExist:
-                    pass
-                raise
+                    return (
+                        await cls.create(
+                            using_db=connection,
+                            **defaults,
+                            **kwargs,
+                        ),
+                        True,
+                    )
+                except IntegrityError:
+                    try:
+                        return await cls.filter(**kwargs).using_db(connection).get(), False
+                    except DoesNotExist:
+                        pass
+                    raise
 
     @classmethod
     def select_for_update(
@@ -1064,12 +1083,12 @@ class Model(metaclass=ModelMeta):
         if not defaults:
             defaults = {}
         db = using_db or cls._choose_db(True)
-        async with in_transaction(connection_name=db.connection_name):
-            instance = await cls.select_for_update().using_db(db).get_or_none(**kwargs)
+        async with in_transaction(connection_name=db.connection_name) as connection:
+            instance = await cls.select_for_update().using_db(connection).get_or_none(**kwargs)
             if instance:
-                await instance.update_from_dict(defaults).save(using_db=db)  # type:ignore
+                await instance.update_from_dict(defaults).save(using_db=connection)  # type:ignore
                 return instance, False
-        return await cls.get_or_create(defaults, db, **kwargs)
+        return await cls.get_or_create(defaults, connection, **kwargs)
 
     @classmethod
     async def create(cls: Type[MODEL], **kwargs: Any) -> MODEL:
