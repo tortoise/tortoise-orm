@@ -30,6 +30,7 @@ from tortoise.exceptions import (
     IntegrityError,
     OperationalError,
     ParamsError,
+    TransactionManagementError,
 )
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntField
@@ -1033,26 +1034,19 @@ class Model(metaclass=ModelMeta):
         """
         if not defaults:
             defaults = {}
+        db = using_db or cls._choose_db(True)
         try:
-            return await cls.get(**kwargs), False
-        except DoesNotExist:
-            db = using_db or cls._choose_db(True)
-            async with in_transaction(connection_name=db.connection_name) as connection:
-                try:
-                    return (
-                        await cls.create(
-                            using_db=connection,
-                            **defaults,
-                            **kwargs,
-                        ),
-                        True,
-                    )
-                except IntegrityError:
-                    try:
-                        return await cls.filter(**kwargs).using_db(connection).get(), False
-                    except DoesNotExist:
-                        pass
-                    raise
+            async with in_transaction(connection_name=db.connection_name):
+                instance = await cls.filter(**kwargs).first()
+                if instance:
+                    return instance, False
+                return await cls.create(**defaults, **kwargs), True
+        except (IntegrityError, TransactionManagementError):
+            try:
+                return await cls.get(**kwargs), False
+            except DoesNotExist:
+                pass
+            raise
 
     @classmethod
     def select_for_update(
