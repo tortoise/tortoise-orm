@@ -880,7 +880,7 @@ class QuerySet(AwaitableQuery[MODEL]):
                 return instance_list[0]
             if not instance_list:
                 if self._raise_does_not_exist:
-                    raise DoesNotExist("Object does not exist")
+                    raise DoesNotExist(self.model)
                 return None  # type: ignore
             raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
         return instance_list
