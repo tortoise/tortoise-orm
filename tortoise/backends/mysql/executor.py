@@ -24,7 +24,7 @@ from tortoise.filters import (
 
 class StrWrapper(ValueWrapper):  # type: ignore
     """
-    Naive str wrapper that doesn't use the monkey-patched pypika ValueWraper for MySQL
+    Naive str wrapper that doesn't use the monkey-patched pypika ValueWrapper for MySQL
     """
 
     def get_value_sql(self, **kwargs):

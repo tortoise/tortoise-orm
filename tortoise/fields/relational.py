@@ -535,7 +535,7 @@ def ManyToManyField(
     The following is optional:
 
     ``through``:
-        The DB table that represents the trough table.
+        The DB table that represents the through table.
         The default is normally safe.
     ``forward_key``:
         The forward lookup key on the through table.
