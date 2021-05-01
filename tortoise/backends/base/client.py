@@ -170,7 +170,7 @@ class BaseDBAsyncClient:
 
         :param query: The SQL string, pre-parametrized for the target DB dialect.
         :param values: A sequence of positional DB parameters.
-        :return: A tuple of: (The nunber of rows affected, The resultset)
+        :return: A tuple of: (The number of rows affected, The resultset)
         """
         raise NotImplementedError()  # pragma: nocoverage
 

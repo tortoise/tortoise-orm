@@ -1151,7 +1151,7 @@ class Model(metaclass=ModelMeta):
         """
         Generates a QuerySet with the filter applied.
 
-        :param args: Q funtions containing constraints. Will be AND'ed.
+        :param args: Q functions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
         """
         return cls._meta.manager.get_queryset().filter(*args, **kwargs)
@@ -1161,7 +1161,7 @@ class Model(metaclass=ModelMeta):
         """
         Generates a QuerySet with the exclude applied.
 
-        :param args: Q funtions containing constraints. Will be AND'ed.
+        :param args: Q functions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
         """
         return cls._meta.manager.get_queryset().exclude(*args, **kwargs)
@@ -1191,7 +1191,7 @@ class Model(metaclass=ModelMeta):
 
             user = await User.get(username="foo")
 
-        :param args: Q funtions containing constraints. Will be AND'ed.
+        :param args: Q functions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
 
         :raises MultipleObjectsReturned: If provided search returned more than one object.
@@ -1208,7 +1208,7 @@ class Model(metaclass=ModelMeta):
 
             result = await User.exists(username="foo")
 
-        :param args: Q funtions containing constraints. Will be AND'ed.
+        :param args: Q functions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
         """
         return cls._meta.manager.get_queryset().filter(*args, **kwargs).exists()
@@ -1222,7 +1222,7 @@ class Model(metaclass=ModelMeta):
 
             user = await User.get_or_none(username="foo")
 
-        :param args: Q funtions containing constraints. Will be AND'ed.
+        :param args: Q functions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
         """
         return cls._meta.manager.get_queryset().get_or_none(*args, **kwargs)
@@ -1294,7 +1294,7 @@ class Model(metaclass=ModelMeta):
 
         :param serializable:
             ``False`` if you want raw python objects,
-            ``True`` for JSON-serialisable data. (Defaults to ``True``)
+            ``True`` for JSON-serializable data. (Defaults to ``True``)
 
         :return:
             A dictionary containing the model description.

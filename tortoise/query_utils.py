@@ -257,7 +257,7 @@ class Q:
 
     def negate(self) -> None:
         """
-        Negates the curent Q object. (mutation)
+        Negates the current Q object. (mutation)
         """
         self._is_negated = not self._is_negated
 
