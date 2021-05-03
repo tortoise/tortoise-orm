@@ -1,4 +1,5 @@
 import logging
+from functools import partial
 from types import ModuleType
 from typing import Dict, Iterable, Optional, Union
 
@@ -9,9 +10,30 @@ from pydantic import BaseModel  # pylint: disable=E0611
 from tortoise import Tortoise
 from tortoise.exceptions import DoesNotExist, IntegrityError
 
+logger = logging.getLogger("tortoise-fastapi")
+
 
 class HTTPNotFoundError(BaseModel):
     detail: str
+
+
+async def startup_tortoise(
+    config: Optional[dict] = None,
+    config_file: Optional[str] = None,
+    db_url: Optional[str] = None,
+    modules: Optional[Dict[str, Iterable[Union[str, ModuleType]]]] = None,
+    generate_schemas: bool = False,
+) -> None:  # pylint: disable=W0612
+    await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
+    logger.info("Tortoise-ORM started, %s, %s", Tortoise._connections, Tortoise.apps)
+    if generate_schemas:
+        logger.info("Tortoise-ORM generating schema")
+        await Tortoise.generate_schemas()
+
+
+async def shutdown_tortoise() -> None:  # pylint: disable=W0612
+    await Tortoise.close_connections()
+    logger.info("Tortoise-ORM shutdown")
 
 
 def register_tortoise(
@@ -88,18 +110,10 @@ def register_tortoise(
         For any configuration error
     """
 
-    @app.on_event("startup")
-    async def init_orm() -> None:  # pylint: disable=W0612
-        await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
-        logging.info("Tortoise-ORM started, %s, %s", Tortoise._connections, Tortoise.apps)
-        if generate_schemas:
-            logging.info("Tortoise-ORM generating schema")
-            await Tortoise.generate_schemas()
-
-    @app.on_event("shutdown")
-    async def close_orm() -> None:  # pylint: disable=W0612
-        await Tortoise.close_connections()
-        logging.info("Tortoise-ORM shutdown")
+    app.on_event("startup")(
+        partial(startup_tortoise(config, config_file, db_url, modules, generate_schemas))
+    )
+    app.on_event("shutdown")(shutdown_tortoise)
 
     if add_exception_handlers:
 
