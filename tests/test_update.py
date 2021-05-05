@@ -79,3 +79,11 @@ class TestUpdate(test.TestCase):
         await int_field_in_db.refresh_from_db()
         self.assertIs(int_field_in_db.intnum, 3)
         self.assertIs(int_field_in_db.intnum_null, 2)
+
+    @test.requireCapability(support_update_limit_order_by=True)
+    async def test_update_with_limit_ordering(self):
+        await Tournament.create(name="1")
+        t2 = await Tournament.create(name="1")
+        await Tournament.filter(name="1").limit(1).order_by("-id").update(name="2")
+        self.assertIs((await Tournament.get(pk=t2.pk)).name, "2")
+        self.assertEqual(await Tournament.filter(name="1").count(), 1)
