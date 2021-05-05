@@ -14,6 +14,7 @@ F = TypeVar("F", bound=FuncType)
 
 def get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
     from tortoise import Tortoise
+    from tortoise.backends.base.client import BaseTransactionWrapper
 
     if connection_name:
         connection = current_transaction_map[connection_name].get()
@@ -25,6 +26,13 @@ def get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
             "You are running with multiple databases, so you should specify"
             f" connection_name: {list(Tortoise._connections.keys())}"
         )
+
+    # Detect already finalized transactions and reset the current transaction map
+    # This happens when the current context is copied and
+    #   the original context is reset but the copied context still has the initially copied value
+    if isinstance(connection, BaseTransactionWrapper) and connection._finalized:
+        return Tortoise._connections[connection_name]
+
     return connection
 
 
