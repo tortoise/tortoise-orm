@@ -5,6 +5,7 @@ from functools import wraps
 from typing import Any, Callable, List, Optional, Sequence, Tuple, TypeVar
 
 import aiosqlite
+from pypika import SQLLiteQuery
 
 from tortoise.backends.base.client import (
     BaseDBAsyncClient,
@@ -37,6 +38,7 @@ def translate_exceptions(func: F) -> F:
 
 class SqliteClient(BaseDBAsyncClient):
     executor_class = SqliteExecutor
+    query_class = SQLLiteQuery
     schema_generator = SqliteSchemaGenerator
     capabilities = Capabilities(
         "sqlite", daemon=False, requires_limit=True, inline_comment=True, support_for_update=False

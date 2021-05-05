@@ -222,14 +222,6 @@ class TestQueryset(test.TestCase):
 
         self.assertEqual(await IntFields.all().count(), 19)
 
-        # TODO: Should DELETE honour limit and offset?
-        # await IntFields.all().order_by('intnum').limit(10).delete()
-        #
-        # self.assertEqual(
-        #     await IntFields.all().order_by('intnum').values_list('intnum', flat=True),
-        #     [10, 13, 16, 19, 22, 25, 28, 31, 34, 37]
-        # )
-
     @test.requireCapability(support_update_limit_order_by=True)
     async def test_delete_limit(self):
         await IntFields.all().limit(1).delete()

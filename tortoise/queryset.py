@@ -242,6 +242,8 @@ class AwaitableQuery(Generic[MODEL]):
 
     def sql(self) -> str:
         """Return the actual SQL."""
+        if self._db is None:
+            self._db = self._choose_db()  # type: ignore
         self._make_query()
         return self.query.get_sql()
 
@@ -593,6 +595,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             q_objects=self._q_objects,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
+            limit=self._limit,
+            orderings=self._orderings,
         )
 
     def count(self) -> "CountQuery":
@@ -887,7 +891,14 @@ class QuerySet(AwaitableQuery[MODEL]):
 
 
 class UpdateQuery(AwaitableQuery):
-    __slots__ = ("update_kwargs", "q_objects", "annotations", "custom_filters")
+    __slots__ = (
+        "update_kwargs",
+        "q_objects",
+        "annotations",
+        "custom_filters",
+        "orderings",
+        "limit",
+    )
 
     def __init__(
         self,
@@ -897,6 +908,8 @@ class UpdateQuery(AwaitableQuery):
         q_objects: List[Q],
         annotations: Dict[str, Any],
         custom_filters: Dict[str, Dict[str, Any]],
+        limit: Optional[int],
+        orderings: List[Tuple[str, str]],
     ) -> None:
         super().__init__(model)
         self.update_kwargs = update_kwargs
@@ -904,10 +917,16 @@ class UpdateQuery(AwaitableQuery):
         self.annotations = annotations
         self.custom_filters = custom_filters
         self._db = db
+        self.limit = limit
+        self.orderings = orderings
 
     def _make_query(self) -> None:
         table = self.model._meta.basetable
         self.query = self._db.query_class.update(table)
+        if self.capabilities.support_update_limit_order_by and self.limit:
+            self.query._limit = self.limit
+            self.resolve_ordering(self.model, table, self.orderings, self.annotations)
+
         self.resolve_filters(
             model=self.model,
             q_objects=self.q_objects,
@@ -976,12 +995,11 @@ class DeleteQuery(AwaitableQuery):
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
-        if self.capabilities.support_update_limit_order_by:
+        if self.capabilities.support_update_limit_order_by and self.limit:
+            self.query._limit = self.limit
             self.resolve_ordering(
                 self.model, self.model._meta.basetable, self.orderings, self.annotations
             )
-            if self.limit:
-                self.query._limit = self.limit
         self.resolve_filters(
             model=self.model,
             q_objects=self.q_objects,
