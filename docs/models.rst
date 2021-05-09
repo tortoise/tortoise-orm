@@ -288,7 +288,7 @@ or by directly accessing the DB-backing field:
     somemodel.tournament_id=the_tournament.pk
 
 
-Querying a relationship is typicall done by appending a double underscore, and then the foreign object's field. Then a normal query attr can be appended.
+Querying a relationship is typically done by appending a double underscore, and then the foreign object's field. Then a normal query attr can be appended.
 This can be chained if the next key is also a foreign object:
 
     :samp:`{FKNAME}__{FOREIGNFIELD}__gt=3`
@@ -297,9 +297,9 @@ This can be chained if the next key is also a foreign object:
 
     :samp:`{FKNAME}__{FOREIGNFK}__{VERYFOREIGNFIELD}__gt=3`
 
-There is however one major limiatation. We don't want to restrict foreign column names, or have ambiguity (e.g. a foreign object may have a field called ``isnull``)
+There is however one major limitation. We don't want to restrict foreign column names, or have ambiguity (e.g. a foreign object may have a field called ``isnull``)
 
-Then this would be entierly ambugious:
+Then this would be entirely ambigous:
 
     :samp:`{FKNAME}__isnull`
 
