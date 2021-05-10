@@ -14,6 +14,7 @@ For example to use ``F`` to update user balance atomic:
 .. code-block:: python3
 
     from tortoise.expressions import F
+
     await User.filter(id=1).update(balance = F('balance') - 10)
     await User.filter(id=1).update(balance = F('balance') + F('award'), award = 0)
 
@@ -37,3 +38,15 @@ And you can also use `F` in `annotate`.
 .. code-block:: python3
 
     data = await User.annotate(idp=F("id") + 1).values_list("id", "idp")
+
+Subquery
+========
+
+You can use subquery in `filter()` and `annotate()`.
+
+.. code-block:: python3
+
+    from tortoise.expressions import Subquery
+
+    await Tournament.annotate(ids=Subquery(Tournament.all().limit(1).values("id"))).values("ids", "id")
+    await Tournament.filter(pk=Subquery(Tournament.filter(pk=t1.pk).values("id"))).first()

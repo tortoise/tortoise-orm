@@ -1,12 +1,14 @@
-from typing import TYPE_CHECKING, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Type
 
 from pypika import Field
+from pypika.queries import Selectable
 from pypika.terms import ArithmeticExpression, Term
 
 from tortoise.exceptions import FieldError
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
+    from tortoise.queryset import AwaitableQuery
 
 
 class F(Field):  # type: ignore
@@ -60,3 +62,15 @@ class F(Field):  # type: ignore
                 field_object = right_field_object
 
         return arithmetic_expression_or_field, field_object
+
+
+class Subquery(Term):  # type: ignore
+    def __init__(self, query: "AwaitableQuery"):
+        super().__init__()
+        self.query = query
+
+    def get_sql(self, **kwargs: Any) -> str:
+        return self.query.as_query().get_sql(**kwargs)
+
+    def as_(self, alias: str) -> "Selectable":
+        return self.query.as_query().as_(alias)
