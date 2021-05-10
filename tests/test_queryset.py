@@ -419,15 +419,15 @@ class TestQueryset(test.TestCase):
         self.assertEqual(ret.name, name)
 
     async def test_subquery_select(self):
-        await Tournament.create(name="1")
-        await Tournament.create(name="1")
-        ret = await Tournament.annotate(
-            ids=Subquery(Tournament.all().limit(1).values("id"))
-        ).values("ids", "id")
-        self.assertEqual(ret, [{"id": 1, "ids": 1}, {"id": 2, "ids": 1}])
+        t1 = await Tournament.create(name="1")
+        ret = (
+            await Tournament.filter(pk=t1.pk)
+            .annotate(ids=Subquery(Tournament.filter(pk=t1.pk).values("id")))
+            .values("ids", "id")
+        )
+        self.assertEqual(ret, [{"id": t1.pk, "ids": t1.pk}])
 
     async def test_subquery_filter(self):
         t1 = await Tournament.create(name="1")
-        await Tournament.create(name="1")
         ret = await Tournament.filter(pk=Subquery(Tournament.filter(pk=t1.pk).values("id"))).first()
         self.assertEqual(ret, t1)
