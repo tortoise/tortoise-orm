@@ -240,12 +240,16 @@ class AwaitableQuery(Generic[MODEL]):
 
         return any(info["field"].is_aggregate for info in annotation_info.values())
 
-    def sql(self) -> str:
+    def sql(self, **kwargs) -> str:
         """Return the actual SQL."""
+        return self.as_query().get_sql(**kwargs)
+
+    def as_query(self) -> QUERY:
+        """Return the actual query."""
         if self._db is None:
             self._db = self._choose_db()  # type: ignore
         self._make_query()
-        return self.query.get_sql()
+        return self.query
 
     def _make_query(self) -> None:
         raise NotImplementedError()  # pragma: nocoverage
@@ -472,8 +476,8 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         queryset = self._clone()
         for key, annotation in kwargs.items():
-            if not isinstance(annotation, (Function, Term)):
-                raise TypeError("value is expected to be Function/Term instance")
+            # if not isinstance(annotation, (Function, Term)):
+            #     raise TypeError("value is expected to be Function/Term instance")
             queryset._annotations[key] = annotation
             queryset._custom_filters.update(get_filters_for_field(key, None, key))
         return queryset

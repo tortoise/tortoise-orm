@@ -15,6 +15,7 @@ Changelog
 - Fix `update_or_create` and `get_or_create`. (#721)
 - Fix `refresh_from_db` without fields pass. (#734)
 - Make `update` query work with `limit` and `order_by`. (#748)
+- Add `Subquery` expression. (#756) (#9) (#337)
 
 0.17.2
 ------

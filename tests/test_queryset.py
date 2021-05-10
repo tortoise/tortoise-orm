@@ -8,7 +8,7 @@ from tortoise.exceptions import (
     MultipleObjectsReturned,
     ParamsError,
 )
-from tortoise.expressions import F
+from tortoise.expressions import F, Subquery
 
 # TODO: Test the many exceptions in QuerySet
 # TODO: .filter(intnum_null=None) does not work as expected
@@ -417,3 +417,17 @@ class TestQueryset(test.TestCase):
         await Tournament.create(name=name)
         ret = await Tournament.filter(name__search="hello").first()
         self.assertEqual(ret.name, name)
+
+    async def test_subquery_select(self):
+        await Tournament.create(name="1")
+        await Tournament.create(name="1")
+        ret = await Tournament.annotate(
+            ids=Subquery(Tournament.all().limit(1).values("id"))
+        ).values("ids", "id")
+        self.assertEqual(ret, [{"id": 1, "ids": 1}, {"id": 2, "ids": 1}])
+
+    async def test_subquery_filter(self):
+        t1 = await Tournament.create(name="1")
+        await Tournament.create(name="1")
+        ret = await Tournament.filter(pk=Subquery(Tournament.filter(pk=t1.pk).values("id"))).first()
+        self.assertEqual(ret, t1)
