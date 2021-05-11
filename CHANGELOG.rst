@@ -16,6 +16,7 @@ Changelog
 - Fix `refresh_from_db` without fields pass. (#734)
 - Make `update` query work with `limit` and `order_by`. (#748)
 - Add `Subquery` expression. (#756) (#9) (#337)
+- Use JSON in JSONField.
 
 0.17.2
 ------
