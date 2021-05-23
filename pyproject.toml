@@ -34,7 +34,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-pypika-tortoise = { git = "https://github.com/tortoise/pypika-tortoise.git", rev = "main" }
+pypika-tortoise = "^0.1.1"
 iso8601 = "^0.1.13"
 aiosqlite = "^0.16.0"
 pytz = "*"
