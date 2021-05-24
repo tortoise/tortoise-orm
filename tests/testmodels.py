@@ -26,6 +26,13 @@ def generate_token():
     return binascii.hexlify(os.urandom(16)).decode("ascii")
 
 
+class Animal(Model):
+    """Model with no relation"""
+
+    id = fields.IntField(pk=True, generated=True)
+    name = fields.CharField(max_length=10)
+
+
 class Author(Model):
     name = fields.CharField(max_length=255)
 
