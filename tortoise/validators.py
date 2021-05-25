@@ -27,7 +27,7 @@ class RegexValidator(Validator):
 
     def __call__(self, value: Any):
         if not self.regex.match(value):
-            raise ValidationError(f"Value '{value}' not match regex '{self.regex.pattern}'")
+            raise ValidationError(f"Value '{value}' does not match regex '{self.regex.pattern}'")
 
 
 class MaxLengthValidator(Validator):
