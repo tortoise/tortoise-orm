@@ -1041,7 +1041,7 @@ class Model(metaclass=ModelMeta):
                 return await cls.filter(**kwargs).using_db(connection).get(), False
             except DoesNotExist:
                 try:
-                    return await cls.create(using_db=using_db, **defaults, **kwargs), True
+                    return await cls.create(using_db=connection, **defaults, **kwargs), True
                 except (IntegrityError, TransactionManagementError):
                     return await cls.filter(**kwargs).using_db(connection).get(), False
 
@@ -1079,7 +1079,7 @@ class Model(metaclass=ModelMeta):
             if instance:
                 await instance.update_from_dict(defaults).save(using_db=connection)  # type:ignore
                 return instance, False
-        return await cls.get_or_create(defaults, connection, **kwargs)
+        return await cls.get_or_create(defaults, db, **kwargs)
 
     @classmethod
     async def create(cls: Type[MODEL], **kwargs: Any) -> MODEL:

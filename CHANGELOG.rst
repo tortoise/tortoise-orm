@@ -9,6 +9,10 @@ Changelog
 
 0.17
 ====
+0.17.4
+------
+- Fix `update_or_create`. (#782)
+
 0.17.3
 ------
 - Fix duplicates when using custom through association class on M2M relations
