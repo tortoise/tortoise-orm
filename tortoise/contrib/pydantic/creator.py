@@ -184,6 +184,14 @@ def pydantic_model_creator(
     # Get settings and defaults
     meta = getattr(cls, "PydanticMeta", PydanticMeta)
 
+    # Get Pydandic Config
+    pydantic_config = getattr(meta, "config_class", None)
+    if pydantic_config:
+        del meta.config_class
+    pydantic_config = pydantic_config or PydanticModel.Config
+
+    pydantic_config.orm_mode = True  # It should be in ORM mode to convert tortoise data to pydantic
+
     def get_param(attr: str) -> Any:
         if meta_override:
             return getattr(meta_override, attr, getattr(meta, attr, getattr(PydanticMeta, attr)))
@@ -215,7 +223,7 @@ def pydantic_model_creator(
     # Properties and their annotations` store
     pconfig: Type[pydantic.main.BaseConfig] = type(
         "Config",
-        (PydanticModel.Config,),
+        (pydantic_config,),
         {"title": name or cls.__name__, "extra": pydantic.main.Extra.forbid, "fields": {}},
     )
     pannotations: Dict[str, Optional[Type]] = {}
@@ -382,6 +390,7 @@ def pydantic_model_creator(
             description = comment or _br_it(fdesc.get("docstring") or fdesc["description"] or "")
             fconfig["description"] = description
             fconfig["title"] = fname.replace("_", " ").title()
+            fconfig["alias"] = fdesc.get("alias")
             if field_default is not None and not callable(field_default):
                 properties[fname] = field_default
             pconfig.fields[fname] = fconfig

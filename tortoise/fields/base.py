@@ -137,9 +137,11 @@ class Field(metaclass=_FieldMeta):
         default: Any = None,
         unique: bool = False,
         index: bool = False,
+        alias: Optional[str] = None,
         description: Optional[str] = None,
         model: "Optional[Model]" = None,
         validators: Optional[List[Union[Validator, Callable]]] = None,
+
         **kwargs: Any,
     ) -> None:
         # TODO: Rename pk to primary_key, alias pk, deprecate
@@ -161,6 +163,7 @@ class Field(metaclass=_FieldMeta):
         self.unique = unique
         self.index = index
         self.model_field_name = ""
+        self.alias = alias
         self.description = description
         self.docstring: Optional[str] = None
         self.validators: List[Union[Validator, Callable]] = validators or []
@@ -352,6 +355,7 @@ class Field(metaclass=_FieldMeta):
             "unique": self.unique,
             "indexed": self.index or self.unique,
             "default": default_name(self.default) if serializable else self.default,
+            "alias": self.alias,
             "description": self.description,
             "docstring": self.docstring,
             "constraints": self.constraints,
