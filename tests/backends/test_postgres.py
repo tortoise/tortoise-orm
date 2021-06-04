@@ -72,3 +72,17 @@ class TestPostgreSQL(test.SimpleTestCase):
             await Tortoise.init(self.db_config, _create_db=True)
         except ConnectionError:
             pass
+
+    async def test_application_name(self):
+        self.db_config["connections"]["models"]["credentials"][
+            "application_name"
+        ] = "mytest_application"
+        await Tortoise.init(self.db_config, _create_db=True)
+
+        conn = Tortoise.get_connection("models")
+        _, res = await conn.execute_query(
+            "SELECT application_name FROM pg_stat_activity WHERE pid = pg_backend_pid()"
+        )
+
+        self.assertEqual(len(res), 1)
+        self.assertEqual("mytest_application", res[0][0])
