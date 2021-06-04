@@ -74,6 +74,7 @@ class TestConnectionParams(test.TestCase):
                     min_size=1,
                     connection_class=asyncpg.connection.Connection,
                     loop=None,
+                    server_settings={},
                 )
         except ImportError:
             self.skipTest("asyncpg not installed")
