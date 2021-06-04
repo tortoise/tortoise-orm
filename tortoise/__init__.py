@@ -180,7 +180,7 @@ class Tortoise:
                         key_fk_object = deepcopy(related_model._meta.pk)
                         fk_object.to_field_instance = related_model._meta.pk
                         fk_object.to_field = related_model._meta.pk_attr
-
+                    fk_object.field_type = fk_object.to_field_instance.field_type
                     key_field = f"{field}_id"
                     key_fk_object.pk = False
                     key_fk_object.unique = False
@@ -245,6 +245,8 @@ class Tortoise:
                         key_o2o_object = deepcopy(related_model._meta.pk)
                         o2o_object.to_field_instance = related_model._meta.pk
                         o2o_object.to_field = related_model._meta.pk_attr
+
+                    o2o_object.field_type = o2o_object.to_field_instance.field_type
 
                     key_field = f"{field}_id"
                     key_o2o_object.pk = o2o_object.pk
@@ -708,4 +710,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.17.4"
+__version__ = "0.17.5"
