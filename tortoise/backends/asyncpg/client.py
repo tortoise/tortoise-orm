@@ -64,7 +64,11 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self.host = host
         self.port = int(port)  # make sure port is int type
         self.extra = kwargs.copy()
+        # we can't deep copy kwargs because of ssl context
+        # since server_settings is a dict, we copy it again
+        self.server_settings = (self.extra.pop("server_settings", None) or {}).copy()
         self.schema = self.extra.pop("schema", None)
+        self.application_name = self.extra.pop("application_name", None)
         self.extra.pop("connection_name", None)
         self.extra.pop("fetch_inserted", None)
         self.loop = self.extra.pop("loop", None)
@@ -77,6 +81,12 @@ class AsyncpgDBClient(BaseDBAsyncClient):
         self._connection = None
 
     async def create_connection(self, with_db: bool) -> None:
+        if self.schema:
+            self.server_settings["search_path"] = self.schema
+
+        if self.application_name:
+            self.server_settings["application_name"] = self.application_name
+
         self._template = {
             "host": self.host,
             "port": self.port,
@@ -86,10 +96,9 @@ class AsyncpgDBClient(BaseDBAsyncClient):
             "max_size": self.pool_maxsize,
             "connection_class": self.connection_class,
             "loop": self.loop,
+            "server_settings": self.server_settings,
             **self.extra,
         }
-        if self.schema:
-            self._template["server_settings"] = {"search_path": self.schema}
         try:
             self._pool = await asyncpg.create_pool(None, password=self.password, **self._template)
             self.log.debug("Created connection pool %s with params: %s", self._pool, self._template)
