@@ -6,15 +6,19 @@ Timezone
 
 Introduction
 ============
-The design of timezone is inspired by `Django` but also has differences. There are two config items `use_tz` and `timezone` affect timezone in tortoise, which can be set when call `Tortoise.init`. And in different DBMS there also are different behaviors.
+The design of timezone is inspired by `Django` but also has differences. There are two config items `use_tz` and `timezone` affect timezone in tortois. They can be set in `Tortoise.init` or as global environment variables. 
 
 use_tz
 ------
-When set `use_tz = True`, `tortoise` will always store `UTC` time in database no matter what `timezone` set. And `MySQL` use field type `DATETIME(6)`, `PostgreSQL` use `TIMESTAMPTZ`, `SQLite` use `TIMESTAMP` when generate schema.
+
+When `use_tz = True`, `tortoise` will expect all datetimes to be timezone aware. Which timezone these are stored in the database can be specified with the `timezone` setting. If `timezone` is not set, `UTC` will be used.
+When `use_tz = False`, `tortoise` will expect all datetimes to be timezone naive. Thy will be stored in the database without any timezone information. `auto_now` and `auto_now_add` will use `datetime.utcnow()`
 
 timezone
 --------
-The `timezone` determine what `timezone` is when select datetime field from database, no matter what `timezone` your database is. And you should use `tortoise.timezone.now()` get aware time instead of native time `datetime.datetime.now()`.
+The `timezone` setting determins which datetime `tortoise` will coerce timezone-aware datetimes to. This will also be the timezone that timestamps will be stored with in the database, regardless of which timezone the database is in. You should use `tortoise.timezone.now()` to get timezone-aware time. 
+
+If no `timezone` is set, `UTC` will be used. The `timezone` setting is ineffective when `use_tz = False` as all datetimes are timezone naive. 
 
 Reference
 =========

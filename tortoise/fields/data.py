@@ -292,10 +292,10 @@ class DatetimeField(Field, datetime.datetime):
     SQL_TYPE = "TIMESTAMP"
 
     class _db_mysql:
-        SQL_TYPE = "DATETIME(6)"
+        SQL_TYPE = "DATETIME(6)" if should_use_tz() else "TIMESTAMP"
 
     class _db_postgres:
-        SQL_TYPE = "TIMESTAMPTZ" if should_use_tz() else "TIMESTAMP WITHOUT TIME ZONE"
+        SQL_TYPE = "TIMESTAMP WITH TIME ZONE" if should_use_tz() else "TIMESTAMP WITHOUT TIME ZONE"
 
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any) -> None:
         if auto_now_add and auto_now:
@@ -315,7 +315,7 @@ class DatetimeField(Field, datetime.datetime):
 
             # check that USE_TZ setting matches the datetime passed in
             if should_use_tz() == timezone.is_naive(value):
-                raise TimezoneError(f"Datetime value is incompatible with global USE_TZ setting. USE_TZ: {should_use_tz()}, Value is tz-naive: {timezone.is_naive(value)} ")
+                raise TimezoneError(f"Value is incompatible with USE_TZ setting. USE_TZ: {should_use_tz()}, Value is tz-naive: {timezone.is_naive(value)}")
         self.validate(value)
         return value
 
@@ -334,7 +334,7 @@ class DatetimeField(Field, datetime.datetime):
 
         # check that USE_TZ setting matches the datetime passed in
         if value and should_use_tz() == timezone.is_naive(value):
-            raise TimezoneError(f"Datetime value is incompatible with global USE_TZ setting. USE_TZ: {should_use_tz()}, Value is tz-naive: {timezone.is_naive(value)} ")
+            raise TimezoneError(f"Value is incompatible with  USE_TZ setting. USE_TZ: {should_use_tz()}, Value is tz-naive: {timezone.is_naive(value)} ")
         self.validate(value)
         return value
 
