@@ -7,8 +7,13 @@ from pypika.terms import Term
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
+from tortoise.contrib.postgres.json_functions import (
+    postgres_json_contained_by,
+    postgres_json_contains,
+    postgres_json_filter,
+)
 from tortoise.contrib.postgres.search import SearchCriterion
-from tortoise.filters import search
+from tortoise.filters import json_contained_by, json_contains, json_filter, search
 
 
 def postgres_search(field: Term, value: Term):
@@ -18,7 +23,12 @@ def postgres_search(field: Term, value: Term):
 class AsyncpgExecutor(BaseExecutor):
     EXPLAIN_PREFIX = "EXPLAIN (FORMAT JSON, VERBOSE)"
     DB_NATIVE = BaseExecutor.DB_NATIVE | {bool, uuid.UUID}
-    FILTER_FUNC_OVERRIDE = {search: postgres_search}
+    FILTER_FUNC_OVERRIDE = {
+        search: postgres_search,
+        json_contains: postgres_json_contains,
+        json_contained_by: postgres_json_contained_by,
+        json_filter: postgres_json_filter,
+    }
 
     def parameter(self, pos: int) -> Parameter:
         return Parameter("$%d" % (pos + 1,))

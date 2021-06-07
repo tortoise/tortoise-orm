@@ -4,6 +4,11 @@ from pypika.terms import Criterion
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
+from tortoise.contrib.mysql.json_functions import (
+    mysql_json_contained_by,
+    mysql_json_contains,
+    mysql_json_filter,
+)
 from tortoise.contrib.mysql.search import SearchCriterion
 from tortoise.fields import BigIntField, IntField, SmallIntField
 from tortoise.filters import (
@@ -17,6 +22,9 @@ from tortoise.filters import (
     insensitive_ends_with,
     insensitive_exact,
     insensitive_starts_with,
+    json_contained_by,
+    json_contains,
+    json_filter,
     search,
     starts_with,
 )
@@ -97,6 +105,9 @@ class MySQLExecutor(BaseExecutor):
         insensitive_starts_with: mysql_insensitive_starts_with,
         insensitive_ends_with: mysql_insensitive_ends_with,
         search: mysql_search,
+        json_contains: mysql_json_contains,
+        json_contained_by: mysql_json_contained_by,
+        json_filter: mysql_json_filter,
     }
     EXPLAIN_PREFIX = "EXPLAIN FORMAT=JSON"
 

@@ -16,6 +16,7 @@ Changelog
 0.17.4
 ------
 - Fix `update_or_create`. (#782)
+- Add `contains`, `contained_by` and `filter` to `JSONField`
 
 0.17.3
 ------
