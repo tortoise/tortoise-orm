@@ -295,7 +295,7 @@ class DatetimeField(Field, datetime.datetime):
         SQL_TYPE = "DATETIME(6)"
 
     class _db_postgres:
-        SQL_TYPE = "TIMESTAMPTZ"
+        SQL_TYPE = "TIMESTAMPTZ" if should_use_tz() else "TIMESTAMP WITHOUT TIME ZONE"
 
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any) -> None:
         if auto_now_add and auto_now:
@@ -305,19 +305,17 @@ class DatetimeField(Field, datetime.datetime):
         self.auto_now_add = auto_now | auto_now_add
 
     def to_python_value(self, value: Any) -> Optional[datetime.datetime]:
-        if value is None:
-            value = None
-        else:
+        if value:
             if isinstance(value, datetime.datetime):
                 value = value
             elif isinstance(value, int):
                 value = datetime.datetime.fromtimestamp(value)
             else:
                 value = parse_datetime(value)
-            if timezone.is_naive(value):
-                value = timezone.make_aware(value, get_timezone())
-            else:
-                value = localtime(value)
+
+            # check that USE_TZ setting matches the datetime passed in
+            if should_use_tz() == timezone.is_naive(value):
+                raise TimezoneError(f"Datetime value is incompatible with global USE_TZ setting. USE_TZ: {should_use_tz()}, Value is tz-naive: {timezone.is_naive(value)} ")
         self.validate(value)
         return value
 
