@@ -43,10 +43,7 @@ def to_db_datetime(
         self.auto_now
         or (self.auto_now_add and getattr(instance, self.model_field_name, None) is None)
     ):
-        if timezone.get_use_tz():
-            value = datetime.datetime.now(tz=pytz.utc)
-        else:
-            value = datetime.datetime.now(tz=timezone.get_default_timezone())
+        value = timezone.now()
         setattr(instance, self.model_field_name, value)
         return value.isoformat(" ")
     if isinstance(value, datetime.datetime):

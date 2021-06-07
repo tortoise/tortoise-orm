@@ -5,7 +5,7 @@ from typing import Optional
 import pytz
 
 
-def get_use_tz() -> bool:
+def should_use_tz() -> bool:
     """
     Get use_tz from env set in Tortoise config.
     """
@@ -23,10 +23,10 @@ def now() -> datetime:
     """
     Return an aware datetime.datetime, depending on use_tz and timezone.
     """
-    if get_use_tz():
-        return datetime.now(tz=pytz.utc)
-    else:
+    if should_use_tz():
         return datetime.now(get_default_timezone())
+    else:
+        return datetime.utcnow()
 
 
 def get_default_timezone() -> tzinfo:

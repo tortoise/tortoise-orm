@@ -75,3 +75,9 @@ class ValidationError(BaseORMException):
     """
     The ValidationError is raised when validators of field validate failed.
     """
+
+class TimezoneError(BaseORMException):
+    """
+    The TimezoneError is raised when a timezone-naive datetime is used with timezone support enabled
+    or when a timezone-aware datetime is used with timezone support disabled
+    """
