@@ -12,6 +12,7 @@ Changelog
 0.17.5
 ------
 - Set `field_type` of fk and o2o same to which relation field type. (#443)
+- Fix error sql for `.sql()` call more than once. (#796)
 
 0.17.4
 ------

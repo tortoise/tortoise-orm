@@ -814,7 +814,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         return self.query
 
     def _make_query(self) -> None:
+        # clean tmp records first
         self._select_related_idx = []
+        self._joined_tables = []
         table = self.model._meta.basetable
         if self._fields_for_select:
             append_item = (self.model, len(self._fields_for_select), table, self.model)
