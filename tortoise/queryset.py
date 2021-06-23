@@ -392,6 +392,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             .order_by('name', '-tournament__name')
 
         Supports ordering by related models too.
+        A '-' before the name will result in descending sort order, default is ascending.
 
         :raises FieldError: If unknown field has been provided.
         """
