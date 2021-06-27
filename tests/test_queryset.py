@@ -330,6 +330,10 @@ class TestQueryset(test.TestCase):
         )[0]
         self.assertEqual(data[0] + 1, data[1])
 
+    async def test_annotate_expression_filter(self):
+        count = await IntFields.annotate(idp=F("id") + 1).filter(idp__gt=30).count()
+        self.assertEqual(count, 1)
+
     async def test_get_raw_sql(self):
         sql = IntFields.all().sql()
         self.assertRegex(sql, r"^SELECT.+FROM.+")

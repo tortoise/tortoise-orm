@@ -13,7 +13,8 @@ Changelog
 ------
 - Set `field_type` of fk and o2o same to which relation field type. (#443)
 - Fix error sql for `.sql()` call more than once. (#796)
-- Fixed incorrect splitting of the import route when using Router (#798)
+- Fix incorrect splitting of the import route when using Router (#798)
+- Fix `filter` error after `annotate` with `F`. (#806)
 
 0.17.4
 ------
