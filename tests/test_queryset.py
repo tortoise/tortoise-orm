@@ -331,8 +331,8 @@ class TestQueryset(test.TestCase):
         self.assertEqual(data[0] + 1, data[1])
 
     async def test_annotate_expression_filter(self):
-        count = await IntFields.annotate(idp=F("id") + 1).filter(idp__gt=30).count()
-        self.assertEqual(count, 1)
+        count = await IntFields.annotate(intnum=F("intnum") + 1).filter(intnum__gt=30).count()
+        self.assertEqual(count, 23)
 
     async def test_get_raw_sql(self):
         sql = IntFields.all().sql()
