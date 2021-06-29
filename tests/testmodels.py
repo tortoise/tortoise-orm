@@ -743,3 +743,10 @@ class ManagerModel(Model):
 
     class Meta:
         manager = StatusManager()
+
+
+class User(Model):
+    id = fields.IntField(pk=True)
+    username = fields.CharField(max_length=32)
+    mail = fields.CharField(max_length=64)
+    bio = fields.TextField()
