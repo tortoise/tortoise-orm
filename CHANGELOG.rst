@@ -15,6 +15,7 @@ Changelog
 - Fix error sql for `.sql()` call more than once. (#796)
 - Fix incorrect splitting of the import route when using Router (#798)
 - Fix `filter` error after `annotate` with `F`. (#806)
+- Fix `select_related` for reverse relation. (#808)
 
 0.17.4
 ------

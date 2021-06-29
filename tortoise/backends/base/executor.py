@@ -147,7 +147,7 @@ class BaseExecutor:
                     )
                     for ins in instances:
                         if isinstance(ins, parent_model):
-                            setattr(ins, model_name, obj)
+                            setattr(ins, f"_{model_name}", obj)
                     instances.append(obj)
                     current_idx += index
             else:
