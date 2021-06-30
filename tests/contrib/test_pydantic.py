@@ -1310,31 +1310,31 @@ class TestPydanticUpdate(test.TestCase):
         self.assertEqual(
             self.UserCreate_Pydantic.schema(),
             {
-                'title': 'UserCreate',
-                'type': 'object',
-                'properties': {
-                    'username': {
-                        'title': 'Username',
-                        'maxLength': 32,
-                        'type': 'string'
+                "title": "UserCreate",
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "title": "Username",
+                        "maxLength": 32,
+                        "type": "string",
                     },
-                    'mail': {
-                        'title': 'Mail',
-                        'maxLength': 64,
-                        'type': 'string'
+                    "mail": {
+                        "title": "Mail",
+                        "maxLength": 64,
+                        "type": "string",
                     },
-                    'bio': {
-                        'title': 'Bio',
-                        'type': 'string'
-                    }
+                    "bio": {
+                        "title": "Bio",
+                        "type": "string",
+                    },
                 },
-                'required': [
-                    'username',
-                    'mail',
-                    'bio'
+                "required": [
+                    "username",
+                    "mail",
+                    "bio",
                 ],
-                'additionalProperties': False
-            }
+                "additionalProperties": False,
+            },
         )
 
     def test_update_schema(self):
@@ -1348,25 +1348,24 @@ class TestPydanticUpdate(test.TestCase):
         self.assertEqual(
             self.UserUpdate_Pydantic.schema(),
             {
-                'title': 'UserUpdate',
-                'type': 'object',
-                'properties': {
-                    'username': {
-                        'title': 'Username',
-                        'maxLength': 32,
-                        'type': 'string'
+                "title": "UserUpdate",
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "title": "Username",
+                        "maxLength": 32,
+                        "type": "string",
                     },
-                    'mail': {
-                        'title': 'Mail',
-                        'maxLength': 64,
-                        'type': 'string'
+                    "mail": {
+                        "title": "Mail",
+                        "maxLength": 64,
+                        "type": "string",
                     },
-                    'bio': {
-                        'title': 'Bio',
-                        'type': 'string'
-                    }
+                    "bio": {
+                        "title": "Bio",
+                        "type": "string",
+                    },
                 },
-                'additionalProperties': False
-            }
+                "additionalProperties": False,
+            },
         )
-
