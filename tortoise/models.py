@@ -606,11 +606,11 @@ class ModelMeta(type):
         if not fields_map:
             meta.abstract = True
 
-        new_class: Type["Model"] = super().__new__(mcs, name, bases, attrs)
+        new_class = super().__new__(mcs, name, bases, attrs)
         for field in meta.fields_map.values():
-            field.model = new_class
+            field.model = new_class  # type: ignore
 
-        for fname, comment in _get_comments(new_class).items():
+        for fname, comment in _get_comments(new_class).items():  # type: ignore
             if fname in fields_map:
                 fields_map[fname].docstring = comment
                 if fields_map[fname].description is None:
@@ -621,7 +621,7 @@ class ModelMeta(type):
         for key, value in attrs.items():
             if isinstance(value, Manager):
                 value._model = new_class
-        meta._model = new_class
+        meta._model = new_class  # type: ignore
         meta.manager._model = new_class
         meta.finalise_fields()
         return new_class

@@ -69,7 +69,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         return encoders.get(type(default))(default)  # type: ignore
 
     def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
-        """ Get index SQLs, but keep them for ourselves """
+        """Get index SQLs, but keep them for ourselves"""
         self._field_indexes.append(
             self.INDEX_CREATE_TEMPLATE.format(
                 exists="IF NOT EXISTS " if safe else "",

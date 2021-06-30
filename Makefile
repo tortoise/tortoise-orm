@@ -10,7 +10,6 @@ help:
 	@echo  "    up      Updates dev/test dependencies"
 	@echo  "    deps    Ensure dev/test dependencies are installed"
 	@echo  "    check	Checks that build is sane"
-	@echo  "    lint	Reports all linter violations"
 	@echo  "    test	Runs all tests"
 	@echo  "    docs 	Builds the documentation"
 	@echo  "    style   Auto-formats the code"
@@ -27,7 +26,7 @@ ifneq ($(shell which black),)
 endif
 	flake8 $(checkfiles)
 	mypy $(checkfiles)
-	pylint -d C,W,R $(checkfiles)
+	#pylint -d C,W,R $(checkfiles)
 	bandit -r $(checkfiles)
 	twine check dist/*
 
@@ -37,7 +36,7 @@ ifneq ($(shell which black),)
 endif
 	flake8 $(checkfiles)
 	mypy $(checkfiles)
-	pylint $(checkfiles)
+	#pylint $(checkfiles)
 	bandit -r $(checkfiles)
 	twine check dist/*
 

@@ -57,10 +57,10 @@ importlib_metadata = "*" # required by flake8
 flake8-isort = "*"
 flake8-comprehensions = "*"
 darglint = "*"
-pylint = "2.7.2"
+pylint = "*"
 pygments = "*"
 bandit = "*"
-black = "^20.8b1"
+black = "*"
 # Test tools
 tox = "*"
 asynctest = "*"
@@ -84,6 +84,10 @@ pydantic = "*"
 fastapi = "*"
 # Aiohttp support
 aiohttp = "*"
+# mypy
+types-PyYAML = "*"
+types-pytz = "*"
+types-PyMySQL = "*"
 
 [tool.poetry.extras]
 accel = ["ciso8601", "uvloop", "python-rapidjson"]

@@ -60,7 +60,7 @@ class Tournament(Model):
 
 
 class Reporter(Model):
-    """ Whom is assigned as the reporter """
+    """Whom is assigned as the reporter"""
 
     id = fields.IntField(pk=True)
     name = fields.TextField()
@@ -75,7 +75,7 @@ class Reporter(Model):
 
 
 class Event(Model):
-    """ Events on the calendar """
+    """Events on the calendar"""
 
     event_id = fields.BigIntField(pk=True)
     #: The name
