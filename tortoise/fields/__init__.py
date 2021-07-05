@@ -30,3 +30,37 @@ from tortoise.fields.relational import (
     OneToOneRelation,
     ReverseRelation,
 )
+
+
+__all__ = (
+    # data
+    "BigIntField",
+    "BinaryField",
+    "BooleanField",
+    "CharEnumField",
+    "CharField",
+    "DateField",
+    "DatetimeField",
+    "DecimalField",
+    "FloatField",
+    "IntEnumField",
+    "IntField",
+    "JSONField",
+    "SmallIntField",
+    "TextField",
+    "TimeDeltaField",
+    "UUIDField",
+    # relational
+    "BackwardFKRelation",
+    "BackwardOneToOneRelation",
+    "ForeignKeyField",
+    "ForeignKeyNullableRelation",
+    "ForeignKeyRelation",
+    "ManyToManyField",
+    "ManyToManyRelation",
+    "OneToOneField",
+    "OneToOneNullableRelation",
+    "OneToOneRelation",
+    "ReverseRelation",
+)
+
