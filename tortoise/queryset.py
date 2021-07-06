@@ -66,6 +66,9 @@ class QuerySetSingle(Protocol[T_co]):
     def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySetSingle[MODEL]":
         ...  # pragma: nocoverage
 
+    def select_related(self, *args: str) -> "QuerySetSingle[Model]":
+        ...  # pragma: nocoverage
+
     def annotate(self, **kwargs: Function) -> "QuerySetSingle[MODEL]":
         ...  # pragma: nocoverage
 
