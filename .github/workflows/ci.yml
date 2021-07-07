@@ -1,5 +1,11 @@
 name: ci
-on: [ push, pull_request ]
+on:
+  push:
+    branches-ignore:
+      - master
+  pull_request:
+    branches-ignore:
+      - master
 jobs:
   test:
     runs-on: ubuntu-20.04
