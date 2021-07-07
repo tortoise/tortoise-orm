@@ -2,12 +2,10 @@
 Tortoise ORM
 ============
 
-.. image:: https://badges.gitter.im/tortoise/community.png
-   :target: https://gitter.im/tortoise/community
 .. image:: https://img.shields.io/pypi/v/tortoise-orm.svg?style=flat
    :target: https://pypi.python.org/pypi/tortoise-orm
-.. image:: https://readthedocs.org/projects/tortoise-orm/badge/?version=latest
-   :target: http://tortoise-orm.readthedocs.io/en/latest/
+.. image:: https://github.com/tortoise/tortoise-orm/workflows/gh-pages/badge.svg
+   :target: https://github.com/tortoise/tortoise-orm/actions?query=workflow:gh-pages
 .. image:: https://pepy.tech/badge/tortoise-orm/month
    :target: https://pepy.tech/project/tortoise-orm
 .. image:: https://github.com/tortoise/tortoise-orm/workflows/ci/badge.svg

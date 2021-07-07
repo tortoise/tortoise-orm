@@ -24,7 +24,7 @@ sys.path.insert(0, os.path.abspath('..'))
 
 
 project = 'Tortoise ORM'
-copyright = f'2018-{datetime.today().year}, Andrey Bondar & Nickolas Grigoriadis & long2ice'  # pylint: disable=W0622
+copyright = f'2018 - {datetime.today().year}, Andrey Bondar & Nickolas Grigoriadis & long2ice'  # pylint: disable=W0622
 author = 'Andrey Bondar & Nickolas Grigoriadis & long2ice'
 
 
