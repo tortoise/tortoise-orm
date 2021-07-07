@@ -61,6 +61,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
+    "sphinx_copybutton"
 ]
 autosummary_generate = True
 autoclass_content = "class"

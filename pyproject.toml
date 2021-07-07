@@ -49,6 +49,7 @@ sphinx = { version = "*", optional = true }
 sphinx-material = { version = "*", optional = true }
 Pygments = { version = "*", optional = true }
 docutils = { version = "*", optional = true }
+sphinx-copybutton = { version = "*", optional = true }
 
 [tool.poetry.dev-dependencies]
 # Linter tools
@@ -94,7 +95,7 @@ accel = ["ciso8601", "uvloop", "python-rapidjson"]
 asyncpg = ["asyncpg"]
 aiomysql = ["aiomysql"]
 asyncmy = ["asyncmy"]
-docs = ["sphinx", "sphinx-material", "Pygments", "docutils"]
+docs = ["sphinx", "sphinx-material", "Pygments", "docutils", "sphinx-copybutton"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
