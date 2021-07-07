@@ -4,10 +4,10 @@ Tortoise ORM
 
 .. image:: https://img.shields.io/pypi/v/tortoise-orm.svg?style=flat
    :target: https://pypi.python.org/pypi/tortoise-orm
-.. image:: https://github.com/tortoise/tortoise-orm/workflows/gh-pages/badge.svg
-   :target: https://github.com/tortoise/tortoise-orm/actions?query=workflow:gh-pages
 .. image:: https://pepy.tech/badge/tortoise-orm/month
    :target: https://pepy.tech/project/tortoise-orm
+.. image:: https://github.com/tortoise/tortoise-orm/workflows/gh-pages/badge.svg
+   :target: https://github.com/tortoise/tortoise-orm/actions?query=workflow:gh-pages
 .. image:: https://github.com/tortoise/tortoise-orm/workflows/ci/badge.svg
    :target: https://github.com/tortoise/tortoise-orm/actions?query=workflow:ci
 .. image:: https://coveralls.io/repos/github/tortoise/tortoise-orm/badge.svg
@@ -23,11 +23,11 @@ Tortoise ORM is an easy-to-use ``asyncio`` ORM *(Object Relational Mapper)* insp
 Tortoise ORM was built with relations in mind and admiration for the excellent and popular Django ORM.
 It's engraved in its design that you are working not with just tables, you work with relational data.
 
-You can find the docs at `ReadTheDocs <http://tortoise-orm.readthedocs.io/en/latest/>`_
+You can find the docs at `Documentation <https://tortoise.github.io>`_
 
 .. note::
    Tortoise ORM is a young project and breaking changes are to be expected.
-   We keep a `Changelog <http://tortoise-orm.readthedocs.io/en/latest/CHANGELOG.html>`_ and it will have possible breakage clearly documented.
+   We keep a `Changelog <https://tortoise.github.io/CHANGELOG.html>`_ and it will have possible breakage clearly documented.
 
 Tortoise ORM is supported on CPython >= 3.7 for SQLite, MySQL and PostgreSQL.
 
