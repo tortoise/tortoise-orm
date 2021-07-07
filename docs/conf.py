@@ -134,7 +134,7 @@ html_theme_options = {
 
     # Specify a base_url used to generate sitemap.xml. If not
     # specified, then no sitemap will be built.
-    'base_url': 'https://tortoise-orm.readthedocs.io',
+    'base_url': 'https://tortoise.github.io',
 
     # Set the color and the accent color
     'color_primary': 'green',
@@ -168,7 +168,7 @@ html_short_title = "%s %s Documentation" % (project, version)
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
 #
-html_logo = os.path.join("_static", "tortoise.png")
+html_favicon = html_logo = os.path.join("_static", "tortoise.png")
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
