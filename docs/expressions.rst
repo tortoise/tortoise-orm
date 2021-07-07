@@ -42,7 +42,7 @@ And you can also use `F` in `annotate`.
 Subquery
 ========
 
-You can use subquery in `filter()` and `annotate()`.
+You can use `Subquery` in `filter()` and `annotate()`.
 
 .. code-block:: python3
 
@@ -50,3 +50,16 @@ You can use subquery in `filter()` and `annotate()`.
 
     await Tournament.annotate(ids=Subquery(Tournament.all().limit(1).values("id"))).values("ids", "id")
     await Tournament.filter(pk=Subquery(Tournament.filter(pk=t1.pk).values("id"))).first()
+
+RawSQL
+======
+
+`RawSQL` just like `Subquery` but provides the ability to write raw sql.
+
+You can use `RawSQL` in `filter()` and `annotate()`.
+
+.. code-block:: python3
+
+    await Tournament.filter(pk=1).annotate(count=RawSQL('count(*)')).values("count")
+    await Tournament.filter(pk=1).annotate(idp=RawSQL('id + 1')).filter(idp=2).values("idp")
+    await Tournament.filter(pk=RawSQL("id + 1"))

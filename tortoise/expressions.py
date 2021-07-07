@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Any, Optional, Tuple, Type
 from pypika import Field
 from pypika.queries import Selectable
 from pypika.terms import ArithmeticExpression, Term
+from pypika.utils import format_alias_sql
 
 from tortoise.exceptions import FieldError
 
@@ -74,3 +75,14 @@ class Subquery(Term):  # type: ignore
 
     def as_(self, alias: str) -> "Selectable":
         return self.query.as_query().as_(alias)
+
+
+class RawSQL(Term):  # type: ignore
+    def __init__(self, sql: str):
+        super().__init__()
+        self.sql = sql
+
+    def get_sql(self, with_alias: bool = False, **kwargs: Any) -> str:
+        if with_alias:
+            return format_alias_sql(sql=self.sql, alias=self.alias, **kwargs)
+        return self.sql

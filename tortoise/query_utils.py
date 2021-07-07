@@ -2,7 +2,7 @@ from copy import copy
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, cast
 
 from pypika import Table
-from pypika.terms import ArithmeticExpression, Criterion, Term
+from pypika.terms import Criterion, Term
 
 from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance, RelationalField
@@ -281,7 +281,7 @@ class Q:
     ) -> QueryModifier:
         having_info = self._custom_filters[key]
         annotation = self._annotations[having_info["field"]]
-        if isinstance(annotation, ArithmeticExpression):
+        if isinstance(annotation, Term):
             annotation_info = {"field": annotation}
         else:
             annotation_info = annotation.resolve(model, table)
