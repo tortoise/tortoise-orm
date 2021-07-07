@@ -15,16 +15,16 @@
 import os
 import re
 import sys
+from datetime import datetime
 
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('..'))
-
 
 # -- Project information -----------------------------------------------------
 
 
 project = 'Tortoise ORM'
-copyright = '2018-2020, Andrey Bondar & Nickolas Grigoriadis & long2ice'  # pylint: disable=W0622
+copyright = f'2018-{datetime.today().year}, Andrey Bondar & Nickolas Grigoriadis & long2ice'  # pylint: disable=W0622
 author = 'Andrey Bondar & Nickolas Grigoriadis & long2ice'
 
 
@@ -56,14 +56,14 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx_autodoc_typehints',
     'sphinx.ext.todo',
-
-    # cloud's extensions
-    'cloud_sptheme.ext.autodoc_sections',
-    'cloud_sptheme.ext.relbar_links',
-    'cloud_sptheme.ext.escaped_samp_literals',
-    'cloud_sptheme.ext.table_styling',
+    "sphinx.ext.doctest",
+    "sphinx.ext.extlinks",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.viewcode",
 ]
-
+autosummary_generate = True
+autoclass_content = "class"
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -112,27 +112,50 @@ napoleon_use_param = True
 napoleon_use_rtype = True
 
 # -- Options for HTML output -------------------------------------------------
-import cloud_sptheme as csp
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'greencloud'
+html_theme = 'sphinx_material'
+html_show_sourcelink = True
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
 html_theme_options = {
-    'borderless_decor': True,
-    'roottarget': index_doc,
-    'sidebarwidth': '3in',
-    'hyphenation_language': 'en',
-    'max_width': '1180px',
+
+    # Set the name of the project to appear in the navigation.
+    'nav_title': project,
+
+    # Set you GA account ID to enable tracking
+    # 'google_analytics_account': 'UA-XXXXX',
+
+    # Specify a base_url used to generate sitemap.xml. If not
+    # specified, then no sitemap will be built.
+    'base_url': 'https://tortoise-orm.readthedocs.io',
+
+    # Set the color and the accent color
+    'color_primary': 'green',
+    'color_accent': 'light-green',
+
+    # Set the repo location to get a badge with stats
+    'repo_url': 'https://github.com/tortoise/tortoise-orm',
+    'repo_name': 'tortoise-orm',
+
+    # Visible levels of the global TOC; -1 means unlimited
+    'globaltoc_depth': -1,
+    # If False, expand all TOC entries
+    'globaltoc_collapse': True,
+    # If True, show hidden TOC entries
+    'globaltoc_includehidden': True,
+    "html_minify": False,
+    "html_prettify": True,
+    "css_minify": True,
+    "master_doc": False,
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = [csp.get_theme_dir()]
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
@@ -160,11 +183,7 @@ html_static_path = ['_static']
 # 'searchbox.html']``.
 #
 html_sidebars = {
-    '**': [
-        'searchbox.html',
-        'space.html',
-        'globaltoc.html',
-    ]
+    "**": ["logo-text.html", "globaltoc.html", "localtoc.html", "searchbox.html"]
 }
 
 # -- Options for HTMLHelp output ---------------------------------------------
