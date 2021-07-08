@@ -2,10 +2,10 @@ name: gh-pages
 on:
   push:
     branches:
-      - 'dev'
+      - 'develop'
   pull_request:
     branches:
-      - 'dev'
+      - 'develop'
 jobs:
   gh-pages:
     runs-on: ubuntu-latest
