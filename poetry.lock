@@ -173,7 +173,7 @@ name = "beautifulsoup4"
 version = "4.9.3"
 description = "Screen-scraping library"
 category = "dev"
-optional = true
+optional = false
 python-versions = "*"
 
 [package.dependencies]
@@ -334,7 +334,7 @@ name = "css-html-js-minify"
 version = "2.5.5"
 description = "CSS HTML JS Minifier"
 category = "dev"
-optional = true
+optional = false
 python-versions = ">=3.6"
 
 [[package]]
@@ -993,7 +993,7 @@ name = "python-slugify"
 version = "5.0.2"
 description = "A Python Slugify application that handles Unicode"
 category = "dev"
-optional = true
+optional = false
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -1186,7 +1186,7 @@ name = "soupsieve"
 version = "2.2.1"
 description = "A modern CSS selector implementation for Beautiful Soup."
 category = "dev"
-optional = true
+optional = false
 python-versions = ">=3.6"
 
 [[package]]
@@ -1237,10 +1237,10 @@ rtd = ["sphinx", "ipython", "sphinx-book-theme"]
 
 [[package]]
 name = "sphinx-material"
-version = "0.0.32+7.g6ca4442"
+version = "0.0.32+8.g7cf7a96"
 description = "Material sphinx theme"
 category = "dev"
-optional = true
+optional = false
 python-versions = ">=3.6"
 develop = false
 
@@ -1256,9 +1256,9 @@ dev = ["black (==19.10b0)"]
 
 [package.source]
 type = "git"
-url = "https://github.com/long2ice/sphinx-material.git"
+url = "https://github.com/bashtage/sphinx-material.git"
 reference = "master"
-resolved_reference = "6ca444280254a31efeed4bfefe543b0361462dca"
+resolved_reference = "7cf7a969224cbe6e53fd2b8b9e6880fe228f2821"
 
 [[package]]
 name = "sphinxcontrib-applehelp"
@@ -1372,7 +1372,7 @@ name = "text-unidecode"
 version = "1.3"
 description = "The most basic Text::Unidecode port"
 category = "dev"
-optional = true
+optional = false
 python-versions = "*"
 
 [[package]]
@@ -1617,7 +1617,7 @@ asyncpg = ["asyncpg"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "dd2ffde375852b69964dc17b9230135f84fff598a22faa2b81223800b0c50f82"
+content-hash = "1af5be0fb9fd32f686166e32b215d1561f1c6a4acc34bd05418c10518df0bd73"
 
 [metadata.files]
 aiofiles = [

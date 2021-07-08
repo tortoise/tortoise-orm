@@ -85,7 +85,7 @@ types-pytz = "*"
 types-PyMySQL = "*"
 # Documentation tools
 sphinx = "*"
-sphinx-material = { git = "https://github.com/long2ice/sphinx-material.git", optional = true }
+sphinx-material = { git = "https://github.com/bashtage/sphinx-material.git" }
 Pygments = "*"
 docutils = "*"
 sphinx-copybutton = "*"
