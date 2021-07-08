@@ -5,9 +5,13 @@ from tests.testmodels import (
     DoubleFK,
     Employee,
     Event,
+    Extra,
+    Pair,
     Reporter,
+    Single,
     Team,
     Tournament,
+    UUIDFkRelatedNullModel,
 )
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError, NoValuesFetched
@@ -300,6 +304,58 @@ class TestRelations(test.TestCase):
         self.assertEqual(event.reporter, reporter)
         self.assertTrue(hasattr(event, "tournament_name"))
         self.assertEqual(event.tournament_name, tournament.name)
+
+    async def test_select_related_sets_null_for_null_fk(self):
+        """Test that select related yields null for fields with nulled fk cols."""
+        related_dude = await UUIDFkRelatedNullModel.create(name="Some model")
+        await related_dude.fetch_related("parent")  # that is strange :)
+        related_dude_fresh = (
+            await UUIDFkRelatedNullModel.all().select_related("parent").get(id=related_dude.id)
+        )
+        self.assertIsNone(related_dude_fresh.parent)
+        self.assertEqual(related_dude_fresh.parent, related_dude.parent)
+
+    async def test_select_related_sets_valid_nulls(self) -> None:
+        """When we select related objects, the data we get from db should be set to corresponding attribute."""
+        left_2nd_lvl = await DoubleFK.create(name="second leaf")
+        left_1st_lvl = await DoubleFK.create(name="1st", left=left_2nd_lvl)
+        root = await DoubleFK.create(name="root", left=left_1st_lvl)
+
+        retrieved_root = (
+            await DoubleFK.all()
+            .select_related("left__left__left", "right")
+            .get(id=getattr(root, "id"))  # noqa
+        )
+        self.assertIsNone(retrieved_root.right)  # ignore
+        self.assertEqual(retrieved_root.left, left_1st_lvl)  # ignore
+        self.assertEqual(retrieved_root.left.left, left_2nd_lvl)  # type: ignore
+
+    async def test_no_ambiguous_fk_relations_set(self):
+        """Basic select_related test cases provided by @https://github.com/Terrance.
+
+        The idea was that on the moment of writing this feature, there were no way to correctly set attributes for
+        select_related fields attributes.
+        src: https://github.com/tortoise/tortoise-orm/pull/826#issuecomment-883341557
+        """
+
+        extra = await Extra.create()
+        single = await Single.create(extra=extra)
+        await Pair.create(right=single)
+        pair = (
+            await Pair.filter(id=1)
+            .select_related("left", "left__extra", "right", "right__extra")
+            .get()
+        )
+        self.assertIsNone(pair.left)
+        self.assertEqual(pair.right.extra, extra)
+        single = await Single.create()
+        await Pair.create(right=single)
+        pair = (
+            await Pair.filter(id=2)
+            .select_related("left", "left__extra", "right", "right__extra")
+            .get()
+        )
+        self.assertIsNone(pair.right.extra)  # should be None
 
 
 class TestDoubleFK(test.TestCase):

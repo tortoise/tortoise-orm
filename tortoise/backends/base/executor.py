@@ -56,7 +56,9 @@ class BaseExecutor:
         db: "BaseDBAsyncClient",
         prefetch_map: "Optional[Dict[str, Set[Union[str, Prefetch]]]]" = None,
         prefetch_queries: Optional[Dict[str, List[Tuple[Optional[str], "QuerySet"]]]] = None,
-        select_related_idx: Optional[List[Tuple["Type[Model]", int, str, "Type[Model]"]]] = None,
+        select_related_idx: Optional[
+            List[Tuple["Type[Model]", int, str, "Type[Model]", Iterable[Optional[str]]]]
+        ] = None,
     ) -> None:
         self.model = model
         self.db: "BaseDBAsyncClient" = db
@@ -125,30 +127,42 @@ class BaseExecutor:
         instance_list = []
         for row in raw_results:
             if self.select_related_idx:
-                _, current_idx, _, _ = self.select_related_idx[0]
+                _, current_idx, _, _, path = self.select_related_idx[0]
                 dict_row = dict(row)
                 keys = list(dict_row.keys())
                 values = list(dict_row.values())
                 instance: "Model" = self.model._init_from_db(
                     **dict(zip(keys[:current_idx], values[:current_idx]))
                 )
-                instances = [instance]
-                for model, index, model_name, parent_model in self.select_related_idx[1:]:
-                    obj = model._init_from_db(
-                        **dict(
-                            zip(
-                                map(
-                                    lambda x: x.split(".")[1],
-                                    keys[current_idx : current_idx + index],  # noqa
-                                ),
-                                values[current_idx : current_idx + index],  # noqa
+                instances: dict[Any, Any] = {path: instance}
+                for (
+                    model,
+                    index,
+                    model_name,
+                    parent_model,
+                    full_path,
+                ) in self.select_related_idx[1:]:
+                    (*path, attr) = full_path
+                    related_values = values[current_idx : current_idx + index]  # noqa
+                    if not any(related_values):
+                        obj = None
+                    else:
+                        obj = model._init_from_db(
+                            **dict(
+                                zip(
+                                    map(
+                                        lambda x: x.split(".")[1],
+                                        keys[current_idx : current_idx + index],  # noqa
+                                    ),
+                                    related_values,
+                                )
                             )
                         )
-                    )
-                    for ins in instances:
-                        if isinstance(ins, parent_model):
-                            setattr(ins, f"_{model_name}", obj)
-                    instances.append(obj)
+                    target = instances.get(tuple(path))
+                    if target is not None:
+                        setattr(target, f"_{attr}", obj)
+                    if obj is not None:
+                        instances[(*path, attr)] = obj
                     current_idx += index
             else:
                 instance = self.model._init_from_db(**row)

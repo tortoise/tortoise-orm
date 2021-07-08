@@ -312,7 +312,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._select_for_update_of: Set[str] = set()
         self._select_related: Set[str] = set()
         self._select_related_idx: List[
-            Tuple["Type[Model]", int, str, "Type[Model]"]
+            Tuple["Type[Model]", int, str, "Type[Model]", Iterable[Optional[str]]]
         ] = []  # format with: model,idx,model_name,parent_model
         self._force_indexes: Set[str] = set()
         self._use_indexes: Set[str] = set()
@@ -788,7 +788,12 @@ class QuerySet(AwaitableQuery[MODEL]):
         return queryset
 
     def _join_table_with_select_related(
-        self, model: "Type[Model]", table: Table, field: str, forwarded_fields: str
+        self,
+        model: "Type[Model]",
+        table: Table,
+        field: str,
+        forwarded_fields: str,
+        path: Iterable[Optional[str]],
     ) -> Tuple[Table, str]:
         if field in model._meta.fields_db_projection and forwarded_fields:
             raise FieldError(f'Field "{field}" for model "{model.__name__}" is not relation')
@@ -799,7 +804,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         table = self._join_table_by_field(table, field, field_object)
         related_fields = field_object.related_model._meta.db_fields
-        append_item = (field_object.related_model, len(related_fields), field, model)
+        append_item = (field_object.related_model, len(related_fields), field, model, path)
         if append_item not in self._select_related_idx:
             self._select_related_idx.append(append_item)
         for related_field in related_fields:
@@ -807,12 +812,13 @@ class QuerySet(AwaitableQuery[MODEL]):
                 table[related_field].as_(f"{table.get_table_name()}.{related_field}")
             )
         if forwarded_fields:
-            forwarded_fields_split = forwarded_fields.split("__")
+            field, *forwarded_fields_ = forwarded_fields.split("__")
             self.query = self._join_table_with_select_related(
                 model=field_object.related_model,
                 table=table,
-                field=forwarded_fields_split[0],
-                forwarded_fields="__".join(forwarded_fields_split[1:]),
+                field=field,
+                forwarded_fields="__".join(forwarded_fields_),
+                path=(*path, field),
             )
             return self.query
         return self.query
@@ -823,7 +829,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._joined_tables = []
         table = self.model._meta.basetable
         if self._fields_for_select:
-            append_item = (self.model, len(self._fields_for_select), table, self.model)
+            append_item = (self.model, len(self._fields_for_select), table, self.model, (None,))
             if append_item not in self._select_related_idx:
                 self._select_related_idx.append(append_item)
             db_fields_for_select = [
@@ -838,6 +844,7 @@ class QuerySet(AwaitableQuery[MODEL]):
                 len(self.model._meta.db_fields) + len(self._annotations),
                 table,
                 self.model,
+                (None,),
             )
             if append_item not in self._select_related_idx:
                 self._select_related_idx.append(append_item)
@@ -864,12 +871,13 @@ class QuerySet(AwaitableQuery[MODEL]):
             )
         if self._select_related:
             for field in self._select_related:
-                field_split = field.split("__")
+                field, *forwarded_fields = field.split("__")
                 self.query = self._join_table_with_select_related(
                     model=self.model,
                     table=self.model._meta.basetable,
-                    field=field_split[0],
-                    forwarded_fields="__".join(field_split[1:]) if len(field_split) > 1 else "",
+                    field=field,
+                    forwarded_fields="__".join(forwarded_fields),
+                    path=(None, field),
                 )
         if self._force_indexes:
             self.query = self.query.force_index(*self._force_indexes)
