@@ -203,7 +203,7 @@ The ``Meta`` class
 
             unique_together=("field_a", "field_b")
             unique_together=(("field_a", "field_b"), )
-            unique_together=(("field_a", "field_b"), ("field_c", "field_d", "field_e")
+            unique_together=(("field_a", "field_b"), ("field_c", "field_d", "field_e"))
 
     .. attribute:: indexes
         :annotation: = None
@@ -216,7 +216,7 @@ The ``Meta`` class
 
             indexes=("field_a", "field_b")
             indexes=(("field_a", "field_b"), )
-            indexes=(("field_a", "field_b"), ("field_c", "field_d", "field_e")
+            indexes=(("field_a", "field_b"), ("field_c", "field_d", "field_e"))
 
     .. attribute:: ordering
         :annotation: = None
