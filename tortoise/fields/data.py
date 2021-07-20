@@ -62,7 +62,7 @@ except ImportError:  # pragma: nocoverage
     pass
 
 
-class IntField(Field, int):
+class IntField(Field[int], int):
     """
     Integer field. (32-bit signed)
 
@@ -95,7 +95,7 @@ class IntField(Field, int):
         GENERATED_SQL = "INT NOT NULL PRIMARY KEY AUTO_INCREMENT"
 
 
-class BigIntField(Field, int):
+class BigIntField(Field[int], int):
     """
     Big integer field. (64-bit signed)
 
@@ -128,7 +128,7 @@ class BigIntField(Field, int):
         GENERATED_SQL = "BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT"
 
 
-class SmallIntField(Field, int):
+class SmallIntField(Field[int], int):
     """
     Small integer field. (16-bit signed)
 
@@ -161,7 +161,7 @@ class SmallIntField(Field, int):
         GENERATED_SQL = "SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT"
 
 
-class CharField(Field, str):  # type: ignore
+class CharField(Field[str], str):  # type: ignore
     """
     Character field.
 
@@ -189,7 +189,7 @@ class CharField(Field, str):  # type: ignore
         return f"VARCHAR({self.max_length})"
 
 
-class TextField(Field, str):  # type: ignore
+class TextField(Field[str], str):  # type: ignore
     """
     Large Text field.
     """
@@ -219,7 +219,7 @@ class TextField(Field, str):  # type: ignore
         SQL_TYPE = "LONGTEXT"
 
 
-class BooleanField(Field):
+class BooleanField(Field[bool]):
     """
     Boolean field.
     """
@@ -232,7 +232,7 @@ class BooleanField(Field):
         SQL_TYPE = "INT"
 
 
-class DecimalField(Field, Decimal):
+class DecimalField(Field[Decimal], Decimal):
     """
     Accurate decimal field.
 
@@ -276,7 +276,7 @@ class DecimalField(Field, Decimal):
             return functions.Cast(term, SqlTypes.NUMERIC)
 
 
-class DatetimeField(Field, datetime.datetime):
+class DatetimeField(Field[datetime.datetime], datetime.datetime):
     """
     Datetime field.
 
@@ -359,7 +359,7 @@ class DatetimeField(Field, datetime.datetime):
         return desc
 
 
-class DateField(Field, datetime.date):
+class DateField(Field[datetime.date], datetime.date):
     """
     Date field.
     """
@@ -386,7 +386,7 @@ class DateField(Field, datetime.date):
         return return_value
 
 
-class TimeDeltaField(Field, datetime.timedelta):
+class TimeDeltaField(Field[datetime.timedelta], datetime.timedelta):
     """
     A field for storing time differences.
     """
@@ -410,7 +410,7 @@ class TimeDeltaField(Field, datetime.timedelta):
         return (value.days * 86400000000) + (value.seconds * 1000000) + value.microseconds
 
 
-class FloatField(Field, float):
+class FloatField(Field[float], float):
     """
     Float (double) field.
     """
@@ -424,7 +424,7 @@ class FloatField(Field, float):
         SQL_TYPE = "DOUBLE"
 
 
-class JSONField(Field, dict, list):  # type: ignore
+class JSONField(Field[Union[dict, list]], dict, list):  # type: ignore
     """
     JSON field.
 
@@ -483,7 +483,7 @@ class JSONField(Field, dict, list):  # type: ignore
         return value
 
 
-class UUIDField(Field, UUID):
+class UUIDField(Field[UUID], UUID):
     """
     UUID Field
 
@@ -511,7 +511,7 @@ class UUIDField(Field, UUID):
         return UUID(value)
 
 
-class BinaryField(Field, bytes):  # type: ignore
+class BinaryField(Field[bytes], bytes):  # type: ignore
     """
     Binary field.
 
