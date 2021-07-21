@@ -12,7 +12,7 @@ Changelog
 0.17.6
 ------
 - Add `RawSQL` expression.
-- Fix columns count with annotations in `_make_query`
+- Fix columns count with annotations in `_make_query`. (#776)
 
 0.17.5
 ------
