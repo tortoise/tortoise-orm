@@ -44,7 +44,9 @@ class Function:
     # Enable populate_field_object where we want to try and preserve the field type.
     populate_field_object = False
 
-    def __init__(self, field: Union[str, F, ArithmeticExpression], *default_values: Any) -> None:
+    def __init__(
+        self, field: Union[str, F, ArithmeticExpression, "Function"], *default_values: Any
+    ) -> None:
         self.field = field
         self.field_object: "Optional[Field]" = None
         self.default_values = default_values
@@ -113,6 +115,10 @@ class Function:
 
         if isinstance(self.field, str):
             function = self._resolve_field_for_model(model, table, self.field)
+            function["field"] = self._get_function_field(function["field"], *self.default_values)
+            return function
+        elif isinstance(self.field, Function):
+            function = self.field.resolve(model, table)
             function["field"] = self._get_function_field(function["field"], *self.default_values)
             return function
 

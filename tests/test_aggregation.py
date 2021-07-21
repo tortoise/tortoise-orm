@@ -1,7 +1,7 @@
 from tests.testmodels import Author, Book, Event, MinRelation, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
-from tortoise.functions import Avg, Count, Min, Sum
+from tortoise.functions import Avg, Count, Lower, Max, Min, Sum
 from tortoise.query_utils import Q
 
 
@@ -140,3 +140,11 @@ class TestAggregation(test.TestCase):
             .values_list("id", "name", "average_rating")
         )
         self.assertAlmostEqual(authors[0][2], 3.3333333333)
+
+    async def test_nested_functions(self):
+        author = await Author.create(name="Some One")
+        await Book.create(name="First!", author=author, rating=4)
+        await Book.create(name="Second!", author=author, rating=3)
+        await Book.create(name="Third!", author=author, rating=3)
+        ret = await Book.all().annotate(max_name=Lower(Max("name"))).values("max_name")
+        self.assertEqual(ret, [{"max_name": "third!"}])
