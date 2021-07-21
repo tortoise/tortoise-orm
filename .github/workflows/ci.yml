@@ -3,15 +3,9 @@ on:
   push:
     branches-ignore:
       - master
-    paths:
-      - 'tests'
-      - 'tortoise'
   pull_request:
     branches-ignore:
       - master
-    paths:
-      - 'tests'
-      - 'tortoise'
 jobs:
   test:
     runs-on: ubuntu-20.04
