@@ -833,7 +833,12 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query = copy(self.model._meta.basequery).select(*db_fields_for_select)
         else:
             self.query = copy(self.model._meta.basequery_all_fields)
-            append_item = (self.model, len(self.model._meta.db_fields), table, self.model)
+            append_item = (
+                self.model,
+                len(self.model._meta.db_fields) + len(self._annotations),
+                table,
+                self.model,
+            )
             if append_item not in self._select_related_idx:
                 self._select_related_idx.append(append_item)
         self.resolve_ordering(

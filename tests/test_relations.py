@@ -11,7 +11,7 @@ from tests.testmodels import (
 )
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError, NoValuesFetched
-from tortoise.functions import Count
+from tortoise.functions import Count, Trim
 
 
 class TestRelations(test.TestCase):
@@ -286,6 +286,20 @@ class TestRelations(test.TestCase):
         book = await BookNoConstraint.create(name="First!", author=author, rating=4)
         book = await BookNoConstraint.all().select_related("author").get(pk=book.pk)
         self.assertEqual(author.pk, book.author.pk)
+
+    async def test_select_related_with_annotation(self):
+        tournament = await Tournament.create(name="New Tournament")
+        reporter = await Reporter.create(name="Reporter")
+        event = await Event.create(name="With reporter", tournament=tournament, reporter=reporter)
+        event = (
+            await Event.filter(pk=event.pk)
+            .select_related("reporter")
+            .annotate(tournament_name=Trim("tournament__name"))
+            .first()
+        )
+        self.assertEqual(event.reporter, reporter)
+        self.assertTrue(hasattr(event, "tournament_name"))
+        self.assertEqual(event.tournament_name, tournament.name)
 
 
 class TestDoubleFK(test.TestCase):
