@@ -130,7 +130,7 @@ html_theme_options = {
     'nav_title': project,
 
     # Set you GA account ID to enable tracking
-    # 'google_analytics_account': 'UA-XXXXX',
+    'google_analytics_account': 'G-MJ7RHW2FRB',
 
     # Specify a base_url used to generate sitemap.xml. If not
     # specified, then no sitemap will be built.

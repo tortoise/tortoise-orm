@@ -44,12 +44,6 @@ python-rapidjson = { version = "*", optional = true }
 asyncpg = { version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
 asyncmy = { version = "*", optional = true }
-# Documentation tools, which should in dev-dependencies but has bug, https://github.com/readthedocs/readthedocs.org/issues/4912
-sphinx = { version = "*", optional = true }
-sphinx-material = { version = "*", optional = true }
-Pygments = { version = "*", optional = true }
-docutils = { version = "*", optional = true }
-sphinx-copybutton = { version = "*", optional = true }
 
 [tool.poetry.dev-dependencies]
 # Linter tools
@@ -89,13 +83,18 @@ aiohttp = "*"
 types-PyYAML = "*"
 types-pytz = "*"
 types-PyMySQL = "*"
+# Documentation tools
+sphinx = "*"
+sphinx-material = { git = "https://github.com/bashtage/sphinx-material.git" }
+Pygments = "*"
+docutils = "*"
+sphinx-copybutton = "*"
 
 [tool.poetry.extras]
 accel = ["ciso8601", "uvloop", "python-rapidjson"]
 asyncpg = ["asyncpg"]
 aiomysql = ["aiomysql"]
 asyncmy = ["asyncmy"]
-docs = ["sphinx", "sphinx-material", "Pygments", "docutils", "sphinx-copybutton"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
