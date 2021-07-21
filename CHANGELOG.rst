@@ -13,6 +13,7 @@ Changelog
 ------
 - Add `RawSQL` expression.
 - Fix columns count with annotations in `_make_query`. (#776)
+- Make functions nested. (#828)
 
 0.17.5
 ------
