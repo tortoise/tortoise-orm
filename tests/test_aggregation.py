@@ -1,7 +1,7 @@
 from tests.testmodels import Author, Book, Event, MinRelation, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
-from tortoise.functions import Avg, Count, Lower, Max, Min, Sign, Sum
+from tortoise.functions import Avg, Count, Lower, Max, Min, Sum
 from tortoise.query_utils import Q
 
 
