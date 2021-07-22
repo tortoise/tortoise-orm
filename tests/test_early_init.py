@@ -142,6 +142,7 @@ class TestBasic(test.TestCase):
                         "constraints": {},
                         "raw_field": None,
                         "on_delete": "CASCADE",
+                        "db_constraint": True,
                     }
                 ],
                 "backward_fk_fields": [],
@@ -300,6 +301,7 @@ class TestBasic(test.TestCase):
                         "description": None,
                         "docstring": None,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "backward_fk_fields": [],

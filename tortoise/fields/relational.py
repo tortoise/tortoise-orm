@@ -310,6 +310,7 @@ class RelationalField(Field):
 
     def describe(self, serializable: bool) -> dict:
         desc = super().describe(serializable)
+        desc["db_constraint"] = self.db_constraint
         del desc["db_column"]
         return desc
 
