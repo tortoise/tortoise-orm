@@ -22,3 +22,4 @@ Reference
    validators
    logging
    router
+   cli
