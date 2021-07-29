@@ -256,6 +256,10 @@ In event model we got some more fields, that could be interesting for us.
 ``related_name``
     Is keyword argument, that defines field for related query on referenced models, so with that you could fetch all tournaments's events with like this:
 
+.. code-block:: python3
+
+    await Tournament.first().prefetch_related("events")
+
 The DB-backing field
 ^^^^^^^^^^^^^^^^^^^^
 
