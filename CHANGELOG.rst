@@ -9,13 +9,16 @@ Changelog
 
 0.17
 ====
+0.17.7
+------
+- Fix `select_related` behaviour for forward relation. (#825)
+
 0.17.6
 ------
 - Add `RawSQL` expression.
 - Fix columns count with annotations in `_make_query`. (#776)
 - Make functions nested. (#828)
 - Add `db_constraint` in field describe.
-- Fix `select_related` behaviour for forward relation. (#825)
 
 0.17.5
 ------
