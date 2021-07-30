@@ -9,6 +9,10 @@ Changelog
 
 0.17
 ====
+0.17.7
+------
+- Fix `select_related` behaviour for forward relation. (#825)
+
 0.17.6
 ------
 - Add `RawSQL` expression.

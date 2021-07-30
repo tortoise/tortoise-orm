@@ -305,6 +305,7 @@ class NoID(Model):
 
 
 class UniqueName(Model):
+    id = fields.IntField(pk=True)
     name = fields.CharField(max_length=20, null=True, unique=True)
 
 
@@ -743,3 +744,32 @@ class ManagerModel(Model):
 
     class Meta:
         manager = StatusManager()
+
+
+class Extra(Model):
+    """Dumb model, has no fk.
+    src: https://github.com/tortoise/tortoise-orm/pull/826#issuecomment-883341557
+    """
+
+    id = fields.IntField(pk=True)
+    # currently, tortoise don't save models with single pk field for some reason \_0_/
+    some_name = fields.CharField(default=lambda: str(uuid.uuid4()), max_length=64)
+
+
+class Single(Model):
+    """Dumb model, having single fk
+    src: https://github.com/tortoise/tortoise-orm/pull/826#issuecomment-883341557
+    """
+
+    id = fields.IntField(pk=True)
+    extra = fields.ForeignKeyField("models.Extra", related_name="singles", null=True)
+
+
+class Pair(Model):
+    """Dumb model, having double fk
+    src: https://github.com/tortoise/tortoise-orm/pull/826#issuecomment-883341557
+    """
+
+    id = fields.IntField(pk=True)
+    left = fields.ForeignKeyField("models.Single", related_name="lefts", null=True)
+    right = fields.ForeignKeyField("models.Single", related_name="rights", null=True)
