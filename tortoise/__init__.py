@@ -642,7 +642,8 @@ class Tortoise:
     async def _reset_apps(cls) -> None:
         for app in cls.apps.values():
             for model in app.values():
-                model._meta.default_connection = None
+                if isinstance(model, ModelMeta):
+                    model._meta.default_connection = None
         cls.apps.clear()
         current_transaction_map.clear()
 
