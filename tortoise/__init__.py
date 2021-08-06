@@ -23,7 +23,7 @@ from tortoise.fields.relational import (
     OneToOneFieldInstance,
 )
 from tortoise.filters import get_m2m_filters
-from tortoise.models import Model
+from tortoise.models import Model, ModelMeta
 from tortoise.transactions import current_transaction_map
 from tortoise.utils import generate_schema_for_client
 
