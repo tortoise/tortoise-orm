@@ -39,7 +39,7 @@ The supported ``DB_TYPE``:
 ``postgres``:
     Typically in the form of :samp:`postgres://postgres:pass@db.host:5432/somedb`
 ``mysql``:
-    Typically in the form of :samp:`mysql://myuser:mypass:pass@db.host:3306/somedb`
+    Typically in the form of :samp:`mysql://myuser:mypass@db.host:3306/somedb`
 
 Capabilities
 ============
@@ -129,7 +129,7 @@ In case any of ``user``, ``password``, ``host``, ``port`` parameters is missing,
 MySQL/MariaDB
 =============
 
-DB URL is typically in the form of :samp:`mysql://myuser:mypass:pass@db.host:3306/somedb`
+DB URL is typically in the form of :samp:`mysql://myuser:mypass@db.host:3306/somedb`
 
 Required Parameters
 -------------------
