@@ -8,7 +8,18 @@ from contextvars import ContextVar
 from copy import deepcopy
 from inspect import isclass
 from types import ModuleType
-from typing import Coroutine, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
+from typing import (
+    Any,
+    Coroutine,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 from pypika import Table
 
@@ -473,14 +484,14 @@ class Tortoise:
     @classmethod
     async def init(
         cls,
-        config: Optional[dict] = None,
+        config: Optional[Dict[str, Any]] = None,
         config_file: Optional[str] = None,
         _create_db: bool = False,
         db_url: Optional[str] = None,
         modules: Optional[Dict[str, Iterable[Union[str, ModuleType]]]] = None,
         use_tz: bool = False,
         timezone: str = "UTC",
-        routers: Optional[List[Union[str, Type]]] = None,
+        routers: Optional[List[Union[str, ModuleType]]] = None,
     ) -> None:
         """
         Sets up Tortoise-ORM.
