@@ -48,6 +48,7 @@ Contributors
 * Tiago Barrionuevo ``@tiabogar``
 * Isaque Alves ``@isaquealves``
 * Vinay Karanam ``@vinayinvicible``
+* Aleksandr Rozum ``@rozumalex``
 
 Special Thanks
 ==============

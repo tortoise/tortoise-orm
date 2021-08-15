@@ -79,6 +79,8 @@ pydantic = "*"
 fastapi = "*"
 # Aiohttp support
 aiohttp = "*"
+# BlackSheep support
+blacksheep = "^1.0.9"
 # mypy
 types-PyYAML = "*"
 types-pytz = "*"
