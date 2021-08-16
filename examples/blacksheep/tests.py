@@ -29,7 +29,7 @@ async def api():
 
 
 @pytest.mark.asyncio
-async def test_create_user(client: TestClient) -> None:
+async def test_create_user(client: TestClient) -> None:  # nosec
     username = "john"
 
     response = await client.post("/", content=JSONContent({"username": username}))
@@ -46,7 +46,7 @@ async def test_create_user(client: TestClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_get_uses_list(client: TestClient) -> None:
+async def test_get_uses_list(client: TestClient) -> None:  # nosec
     username = "john"
     await Users.create(username=username)
 
@@ -67,7 +67,7 @@ async def test_get_uses_list(client: TestClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_update_user(client: TestClient) -> None:
+async def test_update_user(client: TestClient) -> None:  # nosec
     user = await Users.create(username="john")
 
     username = "john_doe"
@@ -85,7 +85,7 @@ async def test_update_user(client: TestClient) -> None:
 
 
 @pytest.mark.asyncio
-async def test_delete_user(client: TestClient) -> None:
+async def test_delete_user(client: TestClient) -> None:  # nosec
     user = await Users.create(username="john")
 
     response = await client.delete(f"/{user.id}")
