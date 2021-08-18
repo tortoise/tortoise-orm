@@ -22,10 +22,10 @@ models.py
 ---------
 .. literalinclude::  ../../examples/blacksheep/models.py
 
-tests.py
+test_api.py
 --------
-.. literalinclude::  ../../examples/blacksheep/tests.py
+.. literalinclude::  ../../examples/blacksheep/test_api.py
 
-main.py
+server.py
 -------
 .. literalinclude::  ../../examples/blacksheep/server.py

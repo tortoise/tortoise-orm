@@ -29,41 +29,37 @@ async def api():
 
 
 @pytest.mark.asyncio
-async def test_create_user(client: TestClient) -> None:  # nosec
+async def test_create_user(client: TestClient) -> None:
     username = "john"
 
     response = await client.post("/", content=JSONContent({"username": username}))
-    assert response is not None
-    assert response.status == 201
+    assert response.status == 201  # nosec
 
     data = await response.json()
-    assert data["username"] == username
-    assert "id" in data
+    assert data["username"] == username  # nosec
     user_id = data["id"]
 
     user_obj = await Users.get(id=user_id)
-    assert str(user_obj.id) == user_id
+    assert str(user_obj.id) == user_id  # nosec
 
 
 @pytest.mark.asyncio
-async def test_get_uses_list(client: TestClient) -> None:  # nosec
+async def test_get_uses_list(client: TestClient) -> None:
     username = "john"
     await Users.create(username=username)
 
     response = await client.get("/")
-    assert response is not None
-    assert response.status == 200
+    assert response.status == 200  # nosec
 
     data = await response.json()
-    assert len(data) == 1
+    assert len(data) == 1  # nosec
 
     user_data = data[0]
-    assert user_data["username"] == username
-    assert "id" in user_data
+    assert user_data["username"] == username  # nosec
     user_id = user_data["id"]
 
     user_obj = await Users.get(id=user_id)
-    assert str(user_obj.id) == user_id
+    assert str(user_obj.id) == user_id  # nosec
 
 
 @pytest.mark.asyncio
@@ -72,27 +68,24 @@ async def test_update_user(client: TestClient) -> None:  # nosec
 
     username = "john_doe"
     response = await client.put(f"/{user.id}", content=JSONContent({"username": username}))
-    assert response is not None
-    assert response.status == 200
+    assert response.status == 200  # nosec
 
     data = await response.json()
-    assert data["username"] == username
-    assert "id" in data
+    assert data["username"] == username  # nosec
     user_id = data["id"]
 
     user_obj = await Users.get(id=user_id)
-    assert str(user_obj.id) == user_id
+    assert str(user_obj.id) == user_id  # nosec
 
 
 @pytest.mark.asyncio
-async def test_delete_user(client: TestClient) -> None:  # nosec
+async def test_delete_user(client: TestClient) -> None:
     user = await Users.create(username="john")
 
     response = await client.delete(f"/{user.id}")
-    assert response is not None
-    assert response.status == 204
+    assert response.status == 204  # nosec
 
     data = await response.json()
-    assert data is None
+    assert data is None  # nosec
 
-    assert await Users.filter(id=user.id).exists() is False
+    assert await Users.filter(id=user.id).exists() is False  # nosec

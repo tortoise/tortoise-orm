@@ -1,3 +1,4 @@
+# pylint: disable=E0401,E0611
 from typing import Union
 from uuid import UUID
 
