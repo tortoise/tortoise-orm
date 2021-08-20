@@ -754,11 +754,11 @@ class AbstractManagerModel(Model):
 
     class Meta:
         abstract = True
-        manager = StatusManager(queryset_cls=StatusQuerySet)
 
 
 class ManagerModel(AbstractManagerModel):
-    pass
+    class Meta:
+        manager = StatusManager(queryset_cls=StatusQuerySet)
 
 
 class ManagerModelExtra(AbstractManagerModel):

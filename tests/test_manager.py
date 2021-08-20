@@ -1,4 +1,4 @@
-from tests.testmodels import ManagerModel,ManagerModelExtra
+from tests.testmodels import ManagerModel, ManagerModelExtra
 from tortoise.contrib import test
 
 
@@ -14,7 +14,6 @@ class TestManager(test.TestCase):
         self.assertIsNotNone(await ManagerModel.all_objects.get_or_none(pk=m1.pk))
         self.assertIsNotNone(await ManagerModel.get_or_none(pk=m2.pk))
 
-        await ManagerModelExtra.create(extra='extra')
-        print(ManagerModelExtra.all().count().sql())
+        await ManagerModelExtra.create(extra="extra")
         self.assertEqual(await ManagerModelExtra.all_objects.count(), 1)
-        self.assertEqual(await ManagerModelExtra.all().count(), 0)
+        self.assertEqual(await ManagerModelExtra.all().count(), 1)

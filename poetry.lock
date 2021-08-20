@@ -539,7 +539,7 @@ smmap = ">=3.0.1,<5"
 
 [[package]]
 name = "gitpython"
-version = "3.1.19"
+version = "3.1.20"
 description = "Python Git Library"
 category = "dev"
 optional = false
@@ -1234,7 +1234,7 @@ python-versions = "*"
 
 [[package]]
 name = "sanic"
-version = "21.6.0"
+version = "21.6.1"
 description = "A web server and web framework that's written to go fast. Build fast. Run fast."
 category = "dev"
 optional = false
@@ -1244,20 +1244,20 @@ python-versions = ">=3.7"
 aiofiles = ">=0.6.0"
 httptools = ">=0.0.10"
 multidict = ">=5.0,<6.0"
-sanic-routing = "0.7.0"
+sanic-routing = ">=0.7,<1.0"
 ujson = {version = ">=1.35", markers = "sys_platform != \"win32\" and implementation_name == \"cpython\""}
 uvloop = {version = ">=0.5.3", markers = "sys_platform != \"win32\" and implementation_name == \"cpython\""}
 websockets = ">=9.0"
 
 [package.extras]
-all = ["sanic-testing (>=0.6.0)", "pytest (==5.2.1)", "multidict (>=5.0,<6.0)", "gunicorn (==20.0.4)", "pytest-cov", "beautifulsoup4", "pytest-sanic", "pytest-sugar", "pytest-benchmark", "aiofiles", "tox", "black", "flake8", "bandit", "towncrier", "sphinx (>=2.1.2)", "sphinx-rtd-theme", "recommonmark (>=0.5.0)", "docutils", "pygments", "uvloop (>=0.5.3)", "ujson (>=1.35)"]
-dev = ["sanic-testing (>=0.6.0)", "pytest (==5.2.1)", "multidict (>=5.0,<6.0)", "gunicorn (==20.0.4)", "pytest-cov", "beautifulsoup4", "pytest-sanic", "pytest-sugar", "pytest-benchmark", "aiofiles", "tox", "black", "flake8", "bandit", "towncrier", "uvloop (>=0.5.3)", "ujson (>=1.35)"]
+all = ["sanic-testing (>=0.7.0b1)", "pytest (==5.2.1)", "multidict (>=5.0,<6.0)", "gunicorn (==20.0.4)", "pytest-cov", "beautifulsoup4", "pytest-sanic", "pytest-sugar", "pytest-benchmark", "aiofiles", "tox", "black", "flake8", "bandit", "towncrier", "sphinx (>=2.1.2)", "sphinx-rtd-theme", "recommonmark (>=0.5.0)", "docutils", "pygments", "uvloop (>=0.5.3)", "ujson (>=1.35)"]
+dev = ["sanic-testing (>=0.7.0b1)", "pytest (==5.2.1)", "multidict (>=5.0,<6.0)", "gunicorn (==20.0.4)", "pytest-cov", "beautifulsoup4", "pytest-sanic", "pytest-sugar", "pytest-benchmark", "aiofiles", "tox", "black", "flake8", "bandit", "towncrier", "uvloop (>=0.5.3)", "ujson (>=1.35)"]
 docs = ["sphinx (>=2.1.2)", "sphinx-rtd-theme", "recommonmark (>=0.5.0)", "docutils", "pygments"]
-test = ["sanic-testing (>=0.6.0)", "pytest (==5.2.1)", "multidict (>=5.0,<6.0)", "gunicorn (==20.0.4)", "pytest-cov", "beautifulsoup4", "pytest-sanic", "pytest-sugar", "pytest-benchmark", "uvloop (>=0.5.3)", "ujson (>=1.35)"]
+test = ["sanic-testing (>=0.7.0b1)", "pytest (==5.2.1)", "multidict (>=5.0,<6.0)", "gunicorn (==20.0.4)", "pytest-cov", "beautifulsoup4", "pytest-sanic", "pytest-sugar", "pytest-benchmark", "uvloop (>=0.5.3)", "ujson (>=1.35)"]
 
 [[package]]
 name = "sanic-routing"
-version = "0.7.0"
+version = "0.7.1"
 description = "Core routing component for Sanic"
 category = "dev"
 optional = false
@@ -1309,7 +1309,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "sphinx"
-version = "4.1.1"
+version = "4.1.2"
 description = "Python documentation generator"
 category = "dev"
 optional = false
@@ -2112,8 +2112,8 @@ gitdb = [
     {file = "gitdb-4.0.7.tar.gz", hash = "sha256:96bf5c08b157a666fec41129e6d327235284cca4c81e92109260f353ba138005"},
 ]
 gitpython = [
-    {file = "GitPython-3.1.19-py3-none-any.whl", hash = "sha256:17690588e36bd0cee21921ce621fad1e8be45a37afa486ff846fb8efcf53c34c"},
-    {file = "GitPython-3.1.19.tar.gz", hash = "sha256:18f4039b96b5567bc4745eb851737ce456a2d499cecd71e84f5c0950e92d0e53"},
+    {file = "GitPython-3.1.20-py3-none-any.whl", hash = "sha256:b1e1c269deab1b08ce65403cf14e10d2ef1f6c89e33ea7c5e5bb0222ea593b8a"},
+    {file = "GitPython-3.1.20.tar.gz", hash = "sha256:df0e072a200703a65387b0cfdf0466e3bab729c0458cf6b7349d0e9877636519"},
 ]
 green = [
     {file = "green-3.3.0.tar.gz", hash = "sha256:a4d86f2dfa4ccbc86f24bcb9c9ab8bf34219c876c24e9f0603aab4dfe73bb575"},
@@ -2659,12 +2659,12 @@ rodi = [
     {file = "rodi-1.1.1.tar.gz", hash = "sha256:8d73539614c0335120ed42b9a92aae522dca937071e75c8ba207fa2b85ebb5c3"},
 ]
 sanic = [
-    {file = "sanic-21.6.0-py3-none-any.whl", hash = "sha256:bc79831325b149a9eade5f9913d78da6a7f3682b98f2700117d1dafe530cb4fe"},
-    {file = "sanic-21.6.0.tar.gz", hash = "sha256:eeae886e94f8ee9cee61bf7e3a9c1974cb9cfd666002d2a0a4b82e007aa4f2dd"},
+    {file = "sanic-21.6.1-py3-none-any.whl", hash = "sha256:9afaeba4ddc8f25df30bdc80d6376ee28f9495da781c59e8594ed2a69adbe74d"},
+    {file = "sanic-21.6.1.tar.gz", hash = "sha256:1425d750f6400ce3f8206a53bb5f1391e1e669f8de66c84c95ac3bfcb36ed66e"},
 ]
 sanic-routing = [
-    {file = "sanic-routing-0.7.0.tar.gz", hash = "sha256:bd6e30b9252d3500e0224e9bb64ba52561638991cefa1f7281c3ba75795c7df9"},
-    {file = "sanic_routing-0.7.0-py3-none-any.whl", hash = "sha256:278771ba4182ff60e75dbf8b674158409283f133eb19948a3df7dff02f642719"},
+    {file = "sanic-routing-0.7.1.tar.gz", hash = "sha256:35b09a12aceecc4e295bddb0ed39cff90363dd1504f9831c6b0b01f6f026635d"},
+    {file = "sanic_routing-0.7.1-py3-none-any.whl", hash = "sha256:0c08f5f65a55fdca259d9149d89c39fd2377a651b408065fd643bdabdb6ba293"},
 ]
 secretstorage = [
     {file = "SecretStorage-3.3.1-py3-none-any.whl", hash = "sha256:422d82c36172d88d6a0ed5afdec956514b189ddbfb72fefab0c8a1cee4eaf71f"},
@@ -2687,8 +2687,8 @@ soupsieve = [
     {file = "soupsieve-2.2.1.tar.gz", hash = "sha256:052774848f448cf19c7e959adf5566904d525f33a3f8b6ba6f6f8f26ec7de0cc"},
 ]
 sphinx = [
-    {file = "Sphinx-4.1.1-py3-none-any.whl", hash = "sha256:3d513088236eef51e5b0adb78b0492eb22cc3b8ccdb0b36dd021173b365d4454"},
-    {file = "Sphinx-4.1.1.tar.gz", hash = "sha256:23c846a1841af998cb736218539bb86d16f5eb95f5760b1966abcd2d584e62b8"},
+    {file = "Sphinx-4.1.2-py3-none-any.whl", hash = "sha256:46d52c6cee13fec44744b8c01ed692c18a640f6910a725cbb938bc36e8d64544"},
+    {file = "Sphinx-4.1.2.tar.gz", hash = "sha256:3092d929cd807926d846018f2ace47ba2f3b671b309c7a89cd3306e80c826b13"},
 ]
 sphinx-copybutton = [
     {file = "sphinx-copybutton-0.4.0.tar.gz", hash = "sha256:8daed13a87afd5013c3a9af3575cc4d5bec052075ccd3db243f895c07a689386"},

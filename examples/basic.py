@@ -2,52 +2,36 @@
 This example demonstrates most basic operations with single model
 """
 from tortoise import Tortoise, fields, run_async
-from tortoise.manager import Manager
 from tortoise.models import Model
-from tortoise.queryset import QuerySet
 
 
-class StatusQuerySet(QuerySet):
-    def active(self):
-        return self.filter(status=1)
-
-
-class StatusManager(Manager):
-    def __init__(self, model=None, queryset_cls=None) -> None:
-        super().__init__(model=model)
-        self.queryset_cls = queryset_cls or QuerySet
-
-    def get_queryset(self):
-        return self.queryset_cls(self._model)
-
-
-class AbstractManagerModel(Model):
-    all_objects = Manager()
+class Event(Model):
+    id = fields.IntField(pk=True)
+    name = fields.TextField()
+    datetime = fields.DatetimeField(null=True)
 
     class Meta:
-        abstract = True
+        table = "event"
 
-
-class ManagerModel(AbstractManagerModel):
-    status = fields.IntField(default=0)
-
-    class Meta:
-        manager = StatusManager(queryset_cls=StatusQuerySet)
+    def __str__(self):
+        return self.name
 
 
 async def run():
     await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
     await Tortoise.generate_schemas()
 
-    m1 = await ManagerModel.create()
-    m2 = await ManagerModel.create(status=1)
+    event = await Event.create(name="Test")
+    await Event.filter(id=event.id).update(name="Updated name")
 
-    assert await ManagerModel.all().active().count() == 1
-    assert await ManagerModel.all_objects.count() == 2
+    print(await Event.filter(name="Updated name").first())
+    # >>> Updated name
 
-    assert await ManagerModel.all().active().get_or_none(pk=m1.pk) is None
-    assert await ManagerModel.all_objects.get_or_none(pk=m1.pk) is not None
-    assert await ManagerModel.get_or_none(pk=m2.pk) is not None
+    await Event(name="Test 2").save()
+    print(await Event.all().values_list("id", flat=True))
+    # >>> [1, 2]
+    print(await Event.all().values("id", "name"))
+    # >>> [{'id': 1, 'name': 'Updated name'}, {'id': 2, 'name': 'Test 2'}]
 
 
 if __name__ == "__main__":
