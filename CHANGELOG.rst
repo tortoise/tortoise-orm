@@ -12,6 +12,7 @@ Changelog
 0.17.7
 ------
 - Fix `select_related` behaviour for forward relation. (#825)
+- Fix bug in nested `QuerySet` and `Manager`. (#864)
 
 0.17.6
 ------
