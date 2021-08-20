@@ -511,6 +511,10 @@ class ModelMeta(type):
                 # For abstract classes
                 for key, value in meta.fields_map.items():
                     attrs[key] = value
+                # For abstract classes manager
+                for key, value in base.__dict__.items():
+                    if isinstance(value, Manager) and key not in attrs:
+                        attrs[key] = value.__class__()
             else:
                 # For mixin classes
                 for key, value in base.__dict__.items():
