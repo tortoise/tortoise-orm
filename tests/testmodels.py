@@ -14,6 +14,7 @@ from tortoise import fields
 from tortoise.exceptions import NoValuesFetched, ValidationError
 from tortoise.manager import Manager
 from tortoise.models import Model
+from tortoise.queryset import QuerySet
 from tortoise.validators import (
     CommaSeparatedIntegerListValidator,
     RegexValidator,
@@ -733,17 +734,35 @@ class NumberSourceField(Model):
     number = fields.IntField(source_field="counter", default=0)
 
 
+class StatusQuerySet(QuerySet):
+    def active(self):
+        return self.filter(status=1)
+
+
 class StatusManager(Manager):
+    def __init__(self, model=None, queryset_cls=None) -> None:
+        super().__init__(model=model)
+        self.queryset_cls = queryset_cls or QuerySet
+
     def get_queryset(self):
-        return super(StatusManager, self).get_queryset().filter(status=1)
+        return self.queryset_cls(self._model)
 
 
-class ManagerModel(Model):
-    status = fields.IntField(default=0)
+class AbstractManagerModel(Model):
     all_objects = Manager()
+    status = fields.IntField(default=0)
 
     class Meta:
-        manager = StatusManager()
+        abstract = True
+        manager = StatusManager(queryset_cls=StatusQuerySet)
+
+
+class ManagerModel(AbstractManagerModel):
+    pass
+
+
+class ManagerModelExtra(AbstractManagerModel):
+    extra = fields.CharField(max_length=200)
 
 
 class Extra(Model):
