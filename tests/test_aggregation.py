@@ -154,7 +154,9 @@ class TestAggregation(test.TestCase):
         await Book.create(name="Physics Book", author=author, rating=4, subject="physics ")
         await Book.create(name="Mathematics Book", author=author, rating=3, subject=" mathematics")
         await Book.create(name="No-subject Book", author=author, rating=3)
-        ret = await Book.all().annotate(
-            long_info=Max(Concat("name", "(", Coalesce(Trim("subject"), "others"), ")"))
-        ).values("long_info")
+        ret = (
+            await Book.all()
+            .annotate(long_info=Max(Concat("name", "(", Coalesce(Trim("subject"), "others"), ")")))
+            .values("long_info")
+        )
         self.assertEqual(ret, [{"long_info": "Physics Book(physics)"}])

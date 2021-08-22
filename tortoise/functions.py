@@ -106,7 +106,7 @@ class Function:
     def _resolve_default_values(self, model: "Type[Model]", table: Table) -> Iterator[Any]:
         for default_value in self.default_values:
             if isinstance(default_value, Function):
-                yield default_value.resolve(model, table)['field']
+                yield default_value.resolve(model, table)["field"]
             else:
                 yield default_value
 
@@ -237,9 +237,10 @@ class Concat(Function):
     Concate field or constant text.
 
      :samp:`Concat("{FIELD_NAME}", {ANOTHER_FIELD_NAMES or CONSTANT_TEXT}, *args)`
-     """
+    """
 
     database_func = functions.Concat
+
 
 ##############################################################################
 # Aggregate functions
