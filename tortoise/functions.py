@@ -235,6 +235,7 @@ class Upper(Function):
 class Concat(Function):
     """
     Concate field or constant text.
+    Be care, DB like sqlite3 has no support for `CONCAT`.
 
      :samp:`Concat("{FIELD_NAME}", {ANOTHER_FIELD_NAMES or CONSTANT_TEXT}, *args)`
     """
