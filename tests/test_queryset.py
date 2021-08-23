@@ -206,6 +206,7 @@ class TestQueryset(test.TestCase):
         with self.assertRaises(MultipleObjectsReturned):
             await IntFields.get(intnum_null=80)
 
+    @test.requireCapability(support_update_limit_order_by=True)
     async def test_delete(self):
         # Test delete
         await (await IntFields.get(intnum=40)).delete()

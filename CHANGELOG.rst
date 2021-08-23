@@ -14,6 +14,7 @@ Changelog
 - Fix `select_related` behaviour for forward relation. (#825)
 - Fix bug in nested `QuerySet` and `Manager`. (#864)
 - Add `Concat` function for MySQL/PostgreSQL. (#873)
+- Set SqliteClient capability `support_update_limit_order_by=False`
 
 0.17.6
 ------

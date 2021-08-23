@@ -41,7 +41,12 @@ class SqliteClient(BaseDBAsyncClient):
     query_class = SQLLiteQuery
     schema_generator = SqliteSchemaGenerator
     capabilities = Capabilities(
-        "sqlite", daemon=False, requires_limit=True, inline_comment=True, support_for_update=False
+        "sqlite",
+        daemon=False,
+        requires_limit=True,
+        inline_comment=True,
+        support_for_update=False,
+        support_update_limit_order_by=False,
     )
 
     def __init__(self, file_path: str, **kwargs: Any) -> None:
