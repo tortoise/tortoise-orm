@@ -149,6 +149,8 @@ class TestAggregation(test.TestCase):
         ret = await Book.all().annotate(max_name=Lower(Max("name"))).values("max_name")
         self.assertEqual(ret, [{"max_name": "third!"}])
 
+    @test.requireCapability(dialect="mysql")
+    @test.requireCapability(dialect="postgres")
     async def test_concat_functions(self):
         author = await Author.create(name="Some One")
         await Book.create(name="Physics Book", author=author, rating=4, subject="physics ")
