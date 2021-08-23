@@ -13,6 +13,7 @@ Changelog
 ------
 - Fix `select_related` behaviour for forward relation. (#825)
 - Fix bug in nested `QuerySet` and `Manager`. (#864)
+- Add `Concat` function for MySQL/PostgreSQL. (#873)
 
 0.17.6
 ------

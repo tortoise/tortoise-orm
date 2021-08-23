@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Optional, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Iterator, Optional, Type, Union, cast
 
 from pypika import Case, Table, functions
 from pypika.functions import DistinctOptionFunction
@@ -103,6 +103,13 @@ class Function:
 
         return {"joins": joins, "field": field}
 
+    def _resolve_default_values(self, model: "Type[Model]", table: Table) -> Iterator[Any]:
+        for default_value in self.default_values:
+            if isinstance(default_value, Function):
+                yield default_value.resolve(model, table)["field"]
+            else:
+                yield default_value
+
     def resolve(self, model: "Type[Model]", table: Table) -> dict:
         """
         Used to resolve the Function statement for SQL generation.
@@ -113,19 +120,21 @@ class Function:
         :return: Dict with keys ``"joins"`` and ``"fields"``
         """
 
+        default_values = self._resolve_default_values(model, table)
+
         if isinstance(self.field, str):
             function = self._resolve_field_for_model(model, table, self.field)
-            function["field"] = self._get_function_field(function["field"], *self.default_values)
+            function["field"] = self._get_function_field(function["field"], *default_values)
             return function
         elif isinstance(self.field, Function):
             function = self.field.resolve(model, table)
-            function["field"] = self._get_function_field(function["field"], *self.default_values)
+            function["field"] = self._get_function_field(function["field"], *default_values)
             return function
 
         field, field_object = F.resolver_arithmetic_expression(model, self.field)
         if self.populate_field_object:
             self.field_object = field_object
-        return {"joins": [], "field": self._get_function_field(field, *self.default_values)}
+        return {"joins": [], "field": self._get_function_field(field, *default_values)}
 
 
 class Aggregate(Function):
@@ -221,6 +230,17 @@ class Upper(Function):
     """
 
     database_func = functions.Upper
+
+
+class Concat(Function):
+    """
+    Concate field or constant text.
+    Be care, DB like sqlite3 has no support for `CONCAT`.
+
+     :samp:`Concat("{FIELD_NAME}", {ANOTHER_FIELD_NAMES or CONSTANT_TEXT}, *args)`
+    """
+
+    database_func = functions.Concat
 
 
 ##############################################################################

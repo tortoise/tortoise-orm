@@ -29,6 +29,8 @@ Functions apply a transform on each instance of a Field.
 
 .. autoclass:: tortoise.functions.Upper
 
+.. autoclass:: tortoise.functions.Concat
+
 
 Aggregates
 ==========

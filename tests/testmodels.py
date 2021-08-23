@@ -35,6 +35,7 @@ class Book(Model):
     name = fields.CharField(max_length=255)
     author = fields.ForeignKeyField("models.Author", related_name="books")
     rating = fields.FloatField()
+    subject = fields.CharField(max_length=255, null=True)
 
 
 class BookNoConstraint(Model):
