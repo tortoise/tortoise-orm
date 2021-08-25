@@ -191,14 +191,15 @@ class AwaitableQuery(Generic[MODEL]):
                 raise FieldError(
                     "Filtering by relation is not possible. Filter by nested field of related model"
                 )
-            if field_name.split("__")[0] in model._meta.fetch_fields:
-                related_field_name = field_name.split("__")[0]
+
+            related_field_name, __, forwarded = field_name.partition("__")
+            if related_field_name in model._meta.fetch_fields:
                 related_field = cast(RelationalField, model._meta.fields_map[related_field_name])
                 related_table = self._join_table_by_field(table, related_field_name, related_field)
                 self.resolve_ordering(
                     related_field.related_model,
                     related_table,
-                    [("__".join(field_name.split("__")[1:]), ordering[1])],
+                    [(forwarded, ordering[1])],
                     {},
                 )
             elif field_name in annotations:
@@ -739,8 +740,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             if isinstance(relation, Prefetch):
                 relation.resolve_for_queryset(queryset)
                 continue
-            relation_split = relation.split("__")
-            first_level_field = relation_split[0]
+
+            first_level_field, __, forwarded_prefetch = relation.partition("__")
             if first_level_field not in self.model._meta.fetch_fields:
                 if first_level_field in self.model._meta.fields:
                     raise FieldError(
@@ -751,7 +752,6 @@ class QuerySet(AwaitableQuery[MODEL]):
                 )
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()
-            forwarded_prefetch = "__".join(relation_split[1:])
             if forwarded_prefetch:
                 queryset._prefetch_map[first_level_field].add(forwarded_prefetch)
         return queryset
@@ -812,12 +812,12 @@ class QuerySet(AwaitableQuery[MODEL]):
                 table[related_field].as_(f"{table.get_table_name()}.{related_field}")
             )
         if forwarded_fields:
-            field, *forwarded_fields_ = forwarded_fields.split("__")
+            field, __, forwarded_fields_ = forwarded_fields.partition("__")
             self.query = self._join_table_with_select_related(
                 model=field_object.related_model,
                 table=table,
                 field=field,
-                forwarded_fields="__".join(forwarded_fields_),
+                forwarded_fields=forwarded_fields_,
                 path=(*path, field),
             )
             return self.query
@@ -871,12 +871,12 @@ class QuerySet(AwaitableQuery[MODEL]):
             )
         if self._select_related:
             for field in self._select_related:
-                field, *forwarded_fields = field.split("__")
+                field, __, forwarded_fields = field.partition("__")
                 self.query = self._join_table_with_select_related(
                     model=self.model,
                     table=self.model._meta.basetable,
                     field=field,
-                    forwarded_fields="__".join(forwarded_fields),
+                    forwarded_fields=forwarded_fields,
                     path=(None, field),
                 )
         if self._force_indexes:
@@ -1153,13 +1153,13 @@ class FieldSelectQuery(AwaitableQuery):
             raise FieldError(f'Unknown field "{field}" for model "{model.__name__}"')
 
         table = self._join_table_by_field(table, field, field_object)
-        forwarded_fields_split = forwarded_fields.split("__")
+        field, __, forwarded_fields_ = forwarded_fields.partition("__")
 
         return self._join_table_with_forwarded_fields(
             model=field_object.related_model,
             table=table,
-            field=forwarded_fields_split[0],
-            forwarded_fields="__".join(forwarded_fields_split[1:]),
+            field=field,
+            forwarded_fields=forwarded_fields_,
         )
 
     def add_field_to_select_query(self, field: str, return_as: str) -> None:
@@ -1179,13 +1179,13 @@ class FieldSelectQuery(AwaitableQuery):
             self._annotations[return_as] = self.annotations[field]
             return
 
-        field_split = field.split("__")
-        if field_split[0] in self.model._meta.fetch_fields:
+        field_, __, forwarded_fields = field.partition("__")
+        if field_ in self.model._meta.fetch_fields:
             related_table, related_db_field = self._join_table_with_forwarded_fields(
                 model=self.model,
                 table=table,
-                field=field_split[0],
-                forwarded_fields="__".join(field_split[1:]),
+                field=field_,
+                forwarded_fields=forwarded_fields,
             )
             self.query._select_field(related_table[related_db_field].as_(return_as))
             return
@@ -1210,10 +1210,10 @@ class FieldSelectQuery(AwaitableQuery):
         if field in model._meta.fields_map:
             return model._meta.fields_map[field].to_python_value
 
-        field_split = field.split("__")
-        if field_split[0] in model._meta.fetch_fields:
-            new_model = model._meta.fields_map[field_split[0]].related_model  # type: ignore
-            return self.resolve_to_python_value(new_model, "__".join(field_split[1:]))
+        field_, __, forwarded_fields = field.partition("__")
+        if field_ in model._meta.fetch_fields:
+            new_model = model._meta.fields_map[field_].related_model  # type: ignore
+            return self.resolve_to_python_value(new_model, forwarded_fields)
 
         raise FieldError(f'Unknown field "{field}" for model "{model}"')
 
@@ -1223,12 +1223,12 @@ class FieldSelectQuery(AwaitableQuery):
             if field_name in self._annotations:
                 group_bys.append(Term(field_name))
                 continue
-            field_split = field_name.split("__")
+            field, __, forwarded_fields = field_name.partition("__")
             related_table, related_db_field = self._join_table_with_forwarded_fields(
                 model=self.model,
                 table=self.model._meta.basetable,
-                field=field_split[0],
-                forwarded_fields="__".join(field_split[1:]) if len(field_split) > 1 else "",
+                field=field,
+                forwarded_fields=forwarded_fields,
             )
             field = related_table[related_db_field].as_(field_name)
             group_bys.append(field)
@@ -1323,10 +1323,15 @@ class ValuesListQuery(FieldSelectQuery):
         ]
         if self.flat:
             func = columns[0][1]
-            flatmap = lambda entry: func(entry["0"])  # noqa
+
+            def flatmap(entry):
+                return func(entry["0"])  # noqa
+
             return list(map(flatmap, result))
 
-        listmap = lambda entry: tuple(func(entry[column]) for column, func in columns)  # noqa
+        def listmap(entry):
+            return tuple(func(entry[column]) for column, func in columns)  # noqa
+
         return list(map(listmap, result))
 
 
