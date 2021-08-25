@@ -1,5 +1,4 @@
 import asyncio
-import logging
 from typing import Any, List, Optional, Sequence, Tuple, Type, Union
 
 from pypika import Query
@@ -7,6 +6,7 @@ from pypika import Query
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.exceptions import TransactionManagementError
+from tortoise.log import db_client_logger
 from tortoise.transactions import current_transaction_map
 
 
@@ -102,7 +102,7 @@ class BaseDBAsyncClient:
     capabilities: Capabilities = Capabilities("")
 
     def __init__(self, connection_name: str, fetch_inserted: bool = True, **kwargs: Any) -> None:
-        self.log = logging.getLogger("db_client")
+        self.log = db_client_logger
         self.connection_name = connection_name
         self.fetch_inserted = fetch_inserted
 

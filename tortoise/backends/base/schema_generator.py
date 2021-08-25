@@ -1,10 +1,10 @@
-import logging
 from hashlib import sha256
 from typing import TYPE_CHECKING, Any, List, Set, Type, cast
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields import JSONField, TextField, UUIDField
 from tortoise.indexes import Index
+from tortoise.log import logger
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
@@ -12,8 +12,6 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 # pylint: disable=R0201
-
-logger = logging.getLogger("tortoise")
 
 
 class BaseSchemaGenerator:
