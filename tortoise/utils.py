@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING
+
 from tortoise.log import logger
 
 if TYPE_CHECKING:  # pragma: nocoverage
