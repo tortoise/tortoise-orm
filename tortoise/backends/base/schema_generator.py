@@ -437,7 +437,12 @@ class BaseSchemaGenerator:
                     if t["references"].issubset(created_tables | {t["table"]})
                 )
             except StopIteration:
-                raise ConfigurationError("Can't create schema due to cyclic fk references")
+                t = tables_to_create[0]
+                table = t["table"]
+                refs = [i for i in t["references"] if i != table and i not in created_tables]
+                raise ConfigurationError(
+                    f"Can't create schema(`{table}`) due to cyclic fk references({refs})"
+                )
             tables_to_create.remove(next_table_for_create)
             created_tables.add(next_table_for_create["table"])
             ordered_tables_for_create.append(next_table_for_create["table_creation_string"])
