@@ -2,9 +2,9 @@
 Logging
 =======
 
-Current tortoise has two loggers, `db_client` and `tortoise`.
+Current tortoise has two loggers, `tortoise.db_client` and `tortoise`.
 
-`db_client` logging the information about execute query, and `tortoise` logging the information about runtime.
+`tortoise.db_client` logging the information about execute query, and `tortoise` logging the information about runtime.
 
 If you want control the behavior of tortoise logging, such as print debug sql, you can configure it yourself like following.
 
@@ -21,7 +21,7 @@ If you want control the behavior of tortoise logging, such as print debug sql, y
     sh.setFormatter(fmt)
 
     # will print debug sql
-    logger_db_client = logging.getLogger("db_client")
+    logger_db_client = logging.getLogger("tortoise.db_client")
     logger_db_client.setLevel(logging.DEBUG)
     logger_db_client.addHandler(sh)
 
