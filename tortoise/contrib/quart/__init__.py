@@ -105,6 +105,6 @@ def register_tortoise(
             await Tortoise.generate_schemas()
             await Tortoise.close_connections()
 
-        logger.basicConfig(level=logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
         loop = asyncio.get_event_loop()
         loop.run_until_complete(inner())
