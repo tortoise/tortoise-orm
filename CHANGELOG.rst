@@ -14,6 +14,8 @@ Changelog
 - Fix `select_related` behaviour for forward relation. (#825)
 - Fix bug in nested `QuerySet` and `Manager`. (#864)
 - Add `Concat` function for MySQL/PostgreSQL. (#873)
+- Fix all logging to use Tortoise's logger instead of root logger. (#879)
+- Rename `db_client` logger to `tortoise.db_client`.
 
 0.17.6
 ------
