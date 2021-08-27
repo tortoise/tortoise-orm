@@ -1164,6 +1164,11 @@ class FieldSelectQuery(AwaitableQuery):
 
     def add_field_to_select_query(self, field: str, return_as: str) -> None:
         table = self.model._meta.basetable
+
+        if field in self.annotations:
+            self._annotations[return_as] = self.annotations[field]
+            return
+
         if field in self.model._meta.fields_db_projection:
             db_field = self.model._meta.fields_db_projection[field]
             self.query._select_field(table[db_field].as_(return_as))
@@ -1174,10 +1179,6 @@ class FieldSelectQuery(AwaitableQuery):
                 'Selecting relation "{}" is not possible, select '
                 "concrete field on related model".format(field)
             )
-
-        if field in self.annotations:
-            self._annotations[return_as] = self.annotations[field]
-            return
 
         field_split = field.split("__")
         if field_split[0] in self.model._meta.fetch_fields:
@@ -1323,10 +1324,15 @@ class ValuesListQuery(FieldSelectQuery):
         ]
         if self.flat:
             func = columns[0][1]
-            flatmap = lambda entry: func(entry["0"])  # noqa
+
+            def flatmap(entry):
+                return func(entry["0"])  # noqa
+
             return list(map(flatmap, result))
 
-        listmap = lambda entry: tuple(func(entry[column]) for column, func in columns)  # noqa
+        def listmap(entry):
+            return tuple(func(entry[column]) for column, func in columns)  # noqa
+
         return list(map(listmap, result))
 
 
