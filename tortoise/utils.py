@@ -1,4 +1,5 @@
 import logging
+import warnings
 from typing import TYPE_CHECKING
 
 logger = logging.getLogger("tortoise")
@@ -29,4 +30,6 @@ async def generate_schema_for_client(client: "BaseDBAsyncClient", safe: bool) ->
     schema = get_schema_sql(client, safe)
     logger.debug("Creating schema: %s", schema)
     if schema:  # pragma: nobranch
-        await generator.generate_from_string(schema)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore" if safe else "default")
+            await generator.generate_from_string(schema)
