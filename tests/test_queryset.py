@@ -346,11 +346,23 @@ class TestQueryset(test.TestCase):
             "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
         )
 
+        sql_again = IntFields.filter(pk=1).only("id").force_index("index_name").sql()
+        self.assertEqual(
+            sql_again,
+            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+        )
+
     @test.requireCapability(support_index_hint=True)
     async def test_use_index(self):
         sql = IntFields.filter(pk=1).only("id").use_index("index_name").sql()
         self.assertEqual(
             sql,
+            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+        sql_again = IntFields.filter(pk=1).only("id").use_index("index_name").sql()
+        self.assertEqual(
+            sql_again,
             "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
         )
 
