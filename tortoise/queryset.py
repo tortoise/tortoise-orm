@@ -880,8 +880,10 @@ class QuerySet(AwaitableQuery[MODEL]):
                     path=(None, field),
                 )
         if self._force_indexes:
+            self.query._force_indexes = []
             self.query = self.query.force_index(*self._force_indexes)
         if self._use_indexes:
+            self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
