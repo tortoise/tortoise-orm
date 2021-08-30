@@ -353,6 +353,34 @@ class TestQueryset(test.TestCase):
         )
 
     @test.requireCapability(support_index_hint=True)
+    async def test_force_index_avaiable_in_more_query(self):
+        sql_ValuesQuery = IntFields.filter(pk=1).force_index("index_name").values("id").sql()
+        self.assertEqual(
+            sql_ValuesQuery,
+            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+        sql_ValuesListQuery = (
+            IntFields.filter(pk=1).force_index("index_name").values_list("id").sql()
+        )
+        self.assertEqual(
+            sql_ValuesListQuery,
+            "SELECT `id` `0` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+        sql_CountQuery = IntFields.filter(pk=1).force_index("index_name").count().sql()
+        self.assertEqual(
+            sql_CountQuery,
+            "SELECT COUNT(*) FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+        sql_ExistsQuery = IntFields.filter(pk=1).force_index("index_name").exists().sql()
+        self.assertEqual(
+            sql_ExistsQuery,
+            "SELECT 1 FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1 LIMIT 1",
+        )
+
+    @test.requireCapability(support_index_hint=True)
     async def test_use_index(self):
         sql = IntFields.filter(pk=1).only("id").use_index("index_name").sql()
         self.assertEqual(
@@ -364,6 +392,32 @@ class TestQueryset(test.TestCase):
         self.assertEqual(
             sql_again,
             "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+    @test.requireCapability(support_index_hint=True)
+    async def test_use_index_avaiable_in_more_query(self):
+        sql_ValuesQuery = IntFields.filter(pk=1).use_index("index_name").values("id").sql()
+        self.assertEqual(
+            sql_ValuesQuery,
+            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+        sql_ValuesListQuery = IntFields.filter(pk=1).use_index("index_name").values_list("id").sql()
+        self.assertEqual(
+            sql_ValuesListQuery,
+            "SELECT `id` `0` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+        sql_CountQuery = IntFields.filter(pk=1).use_index("index_name").count().sql()
+        self.assertEqual(
+            sql_CountQuery,
+            "SELECT COUNT(*) FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+        sql_ExistsQuery = IntFields.filter(pk=1).use_index("index_name").exists().sql()
+        self.assertEqual(
+            sql_ExistsQuery,
+            "SELECT 1 FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1 LIMIT 1",
         )
 
     @test.requireCapability(support_for_update=True)
