@@ -88,8 +88,7 @@ def _get_joins_for_related_field(
             or related_field.to_field_instance.model_field_name
         )
 
-        # type: ignore
-        from_field = related_field.model._meta.fields_map[related_field.source_field]
+        from_field = related_field.model._meta.fields_map[related_field.source_field]  # type: ignore
         from_field_source_field = from_field.source_field or from_field.model_field_name
 
         related_table = related_table.as_(f"{table.get_table_name()}__{related_field_name}")
