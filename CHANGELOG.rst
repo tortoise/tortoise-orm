@@ -14,6 +14,9 @@ Changelog
 - Fix `select_related` behaviour for forward relation. (#825)
 - Fix bug in nested `QuerySet` and `Manager`. (#864)
 - Add `Concat` function for MySQL/PostgreSQL. (#873)
+- Patch for use_index/force_index mutable problem when making query. (#888)
+- Lift annotation field's priority in make query. (#883)
+- Make use/force index available in select type Query. (#893)
 - Fix all logging to use Tortoise's logger instead of root logger. (#879)
 - Rename `db_client` logger to `tortoise.db_client`.
 

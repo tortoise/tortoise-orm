@@ -264,10 +264,10 @@ class Q:
     def _resolve_nested_filter(
         self, model: "Type[Model]", key: str, value: Any, table: Table
     ) -> QueryModifier:
-        related_field_name = key.split("__")[0]
+        related_field_name, __, forwarded_fields = key.partition("__")
         related_field = cast(RelationalField, model._meta.fields_map[related_field_name])
         required_joins = _get_joins_for_related_field(table, related_field, related_field_name)
-        modifier = Q(**{"__".join(key.split("__")[1:]): value}).resolve(
+        modifier = Q(**{forwarded_fields: value}).resolve(
             model=related_field.related_model,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
@@ -416,13 +416,13 @@ class Prefetch:
         :param queryset: Custom QuerySet to use for prefetching.
         :raises OperationalError: If field does not exist in model.
         """
-        relation_split = self.relation.split("__")
-        first_level_field = relation_split[0]
+
+        first_level_field, __, forwarded_prefetch = self.relation.partition("__")
         if first_level_field not in queryset.model._meta.fetch_fields:
             raise OperationalError(
                 f"relation {first_level_field} for {queryset.model._meta.db_table} not found"
             )
-        forwarded_prefetch = "__".join(relation_split[1:])
+
         if forwarded_prefetch:
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()

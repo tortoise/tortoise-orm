@@ -346,12 +346,78 @@ class TestQueryset(test.TestCase):
             "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
         )
 
+        sql_again = IntFields.filter(pk=1).only("id").force_index("index_name").sql()
+        self.assertEqual(
+            sql_again,
+            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+    @test.requireCapability(support_index_hint=True)
+    async def test_force_index_avaiable_in_more_query(self):
+        sql_ValuesQuery = IntFields.filter(pk=1).force_index("index_name").values("id").sql()
+        self.assertEqual(
+            sql_ValuesQuery,
+            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+        sql_ValuesListQuery = (
+            IntFields.filter(pk=1).force_index("index_name").values_list("id").sql()
+        )
+        self.assertEqual(
+            sql_ValuesListQuery,
+            "SELECT `id` `0` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+        sql_CountQuery = IntFields.filter(pk=1).force_index("index_name").count().sql()
+        self.assertEqual(
+            sql_CountQuery,
+            "SELECT COUNT(*) FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+        sql_ExistsQuery = IntFields.filter(pk=1).force_index("index_name").exists().sql()
+        self.assertEqual(
+            sql_ExistsQuery,
+            "SELECT 1 FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1 LIMIT 1",
+        )
+
     @test.requireCapability(support_index_hint=True)
     async def test_use_index(self):
         sql = IntFields.filter(pk=1).only("id").use_index("index_name").sql()
         self.assertEqual(
             sql,
             "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+        sql_again = IntFields.filter(pk=1).only("id").use_index("index_name").sql()
+        self.assertEqual(
+            sql_again,
+            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+    @test.requireCapability(support_index_hint=True)
+    async def test_use_index_avaiable_in_more_query(self):
+        sql_ValuesQuery = IntFields.filter(pk=1).use_index("index_name").values("id").sql()
+        self.assertEqual(
+            sql_ValuesQuery,
+            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+        sql_ValuesListQuery = IntFields.filter(pk=1).use_index("index_name").values_list("id").sql()
+        self.assertEqual(
+            sql_ValuesListQuery,
+            "SELECT `id` `0` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+        sql_CountQuery = IntFields.filter(pk=1).use_index("index_name").count().sql()
+        self.assertEqual(
+            sql_CountQuery,
+            "SELECT COUNT(*) FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+        )
+
+        sql_ExistsQuery = IntFields.filter(pk=1).use_index("index_name").exists().sql()
+        self.assertEqual(
+            sql_ExistsQuery,
+            "SELECT 1 FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1 LIMIT 1",
         )
 
     @test.requireCapability(support_for_update=True)
@@ -454,3 +520,10 @@ class TestQueryset(test.TestCase):
     async def test_raw_sql_filter(self):
         ret = await Tournament.filter(pk=RawSQL("id + 1"))
         self.assertEqual(ret, [])
+
+    async def test_annotation_field_priorior_to_model_field(self):
+        # Sometimes, field name in annotates also exist in model field sets
+        # and may need lift the former's priority in select query construction.
+        t1 = await Tournament.create(name="1")
+        ret = await Tournament.filter(pk=t1.pk).annotate(id=RawSQL("id + 1")).values("id")
+        self.assertEqual(ret, [{"id": t1.pk + 1}])
