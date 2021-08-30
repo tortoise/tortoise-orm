@@ -466,3 +466,10 @@ class TestQueryset(test.TestCase):
     async def test_raw_sql_filter(self):
         ret = await Tournament.filter(pk=RawSQL("id + 1"))
         self.assertEqual(ret, [])
+
+    async def test_annotation_field_priorior_to_model_field(self):
+        # Sometimes, field name in annotates also exist in model field sets
+        # and may need lift the former's priority in select query construction.
+        t1 = await Tournament.create(name="1")
+        ret = await Tournament.filter(pk=t1.pk).annotate(id=RawSQL("id + 1")).values("id")
+        self.assertEqual(ret, [{"id": t1.pk + 1}])

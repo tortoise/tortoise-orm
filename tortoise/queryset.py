@@ -1166,6 +1166,11 @@ class FieldSelectQuery(AwaitableQuery):
 
     def add_field_to_select_query(self, field: str, return_as: str) -> None:
         table = self.model._meta.basetable
+
+        if field in self.annotations:
+            self._annotations[return_as] = self.annotations[field]
+            return
+
         if field in self.model._meta.fields_db_projection:
             db_field = self.model._meta.fields_db_projection[field]
             self.query._select_field(table[db_field].as_(return_as))
@@ -1176,10 +1181,6 @@ class FieldSelectQuery(AwaitableQuery):
                 'Selecting relation "{}" is not possible, select '
                 "concrete field on related model".format(field)
             )
-
-        if field in self.annotations:
-            self._annotations[return_as] = self.annotations[field]
-            return
 
         field_, __, forwarded_fields = field.partition("__")
         if field_ in self.model._meta.fetch_fields:
