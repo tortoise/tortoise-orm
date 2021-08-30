@@ -579,8 +579,7 @@ class BaseExecutor:
     ) -> "Iterable[Model]":
         self.prefetch_map = {}
         for relation in args:
-            relation_split = relation.split("__")
-            first_level_field = relation_split[0]
+            first_level_field, __, forwarded_prefetch = relation.partition("__")
             if first_level_field not in self.model._meta.fetch_fields:
                 raise OperationalError(
                     f"relation {first_level_field} for {self.model._meta.db_table} not found"
@@ -589,7 +588,6 @@ class BaseExecutor:
             if first_level_field not in self.prefetch_map.keys():
                 self.prefetch_map[first_level_field] = set()
 
-            forwarded_prefetch = "__".join(relation_split[1:])
             if forwarded_prefetch:
                 self.prefetch_map[first_level_field].add(forwarded_prefetch)
 
