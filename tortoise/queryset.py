@@ -1325,7 +1325,7 @@ class ValuesListQuery(FieldSelectQuery):
         ]
         if self.flat:
             func = columns[0][1]
-	    flatmap = lambda entry: func(entry["0"])  # noqa
+            flatmap = lambda entry: func(entry["0"])  # noqa
             return list(map(flatmap, result))
 
         listmap = lambda entry: tuple(func(entry[column]) for column, func in columns)  # noqa
