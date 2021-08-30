@@ -15,7 +15,7 @@ Changelog
 - Fix bug in nested `QuerySet` and `Manager`. (#864)
 - Add `Concat` function for MySQL/PostgreSQL. (#873)
 - Patch for use_index/force_index mutable problem when making query. (#888)
-
+- Make use/force index available in select type Query. (#893)
 0.17.6
 ------
 - Add `RawSQL` expression.
