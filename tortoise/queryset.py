@@ -524,6 +524,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             annotations=self._annotations,
             custom_filters=self._custom_filters,
             group_bys=self._group_bys,
+            force_indexes=self._force_indexes,
+            use_indexes=self._use_indexes,
         )
 
     def values(self, *args: str, **kwargs: str) -> "ValuesQuery":
@@ -568,6 +570,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             annotations=self._annotations,
             custom_filters=self._custom_filters,
             group_bys=self._group_bys,
+            force_indexes=self._force_indexes,
+            use_indexes=self._use_indexes,
         )
 
     def delete(self) -> "DeleteQuery":
@@ -619,6 +623,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             custom_filters=self._custom_filters,
             limit=self._limit,
             offset=self._offset,
+            force_indexes=self._force_indexes,
+            use_indexes=self._use_indexes,
         )
 
     def exists(self) -> "ExistsQuery":
@@ -631,6 +637,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             q_objects=self._q_objects,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
+            force_indexes=self._force_indexes,
+            use_indexes=self._use_indexes,
         )
 
     def all(self) -> "QuerySet[MODEL]":
@@ -998,7 +1006,13 @@ class UpdateQuery(AwaitableQuery):
 
 
 class DeleteQuery(AwaitableQuery):
-    __slots__ = ("q_objects", "annotations", "custom_filters", "orderings", "limit")
+    __slots__ = (
+        "q_objects",
+        "annotations",
+        "custom_filters",
+        "orderings",
+        "limit",
+    )
 
     def __init__(
         self,
@@ -1044,7 +1058,13 @@ class DeleteQuery(AwaitableQuery):
 
 
 class ExistsQuery(AwaitableQuery):
-    __slots__ = ("q_objects", "annotations", "custom_filters")
+    __slots__ = (
+        "q_objects",
+        "annotations",
+        "custom_filters",
+        "force_indexes",
+        "use_indexes",
+    )
 
     def __init__(
         self,
@@ -1053,12 +1073,16 @@ class ExistsQuery(AwaitableQuery):
         q_objects: List[Q],
         annotations: Dict[str, Any],
         custom_filters: Dict[str, Dict[str, Any]],
+        force_indexes: Set[str],
+        use_indexes: Set[str],
     ) -> None:
         super().__init__(model)
         self.q_objects = q_objects
         self.annotations = annotations
         self.custom_filters = custom_filters
         self._db = db
+        self.force_indexes = force_indexes
+        self.use_indexes = use_indexes
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
@@ -1070,6 +1094,13 @@ class ExistsQuery(AwaitableQuery):
         )
         self.query._limit = 1
         self.query._select_other(ValueWrapper(1))
+
+        if self.force_indexes:
+            self.query._force_indexes = []
+            self.query = self.query.force_index(*self.force_indexes)
+        if self.use_indexes:
+            self.query._use_indexes = []
+            self.query = self.query.use_index(*self.use_indexes)
 
     def __await__(self) -> Generator[Any, None, bool]:
         if self._db is None:
@@ -1083,7 +1114,15 @@ class ExistsQuery(AwaitableQuery):
 
 
 class CountQuery(AwaitableQuery):
-    __slots__ = ("q_objects", "annotations", "custom_filters", "limit", "offset")
+    __slots__ = (
+        "q_objects",
+        "annotations",
+        "custom_filters",
+        "limit",
+        "offset",
+        "force_indexes",
+        "use_indexes",
+    )
 
     def __init__(
         self,
@@ -1094,6 +1133,8 @@ class CountQuery(AwaitableQuery):
         custom_filters: Dict[str, Dict[str, Any]],
         limit: Optional[int],
         offset: Optional[int],
+        force_indexes: Set[str],
+        use_indexes: Set[str],
     ) -> None:
         super().__init__(model)
         self.q_objects = q_objects
@@ -1102,6 +1143,8 @@ class CountQuery(AwaitableQuery):
         self.limit = limit
         self.offset = offset or 0
         self._db = db
+        self.force_indexes = force_indexes
+        self.use_indexes = use_indexes
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
@@ -1112,6 +1155,13 @@ class CountQuery(AwaitableQuery):
             custom_filters=self.custom_filters,
         )
         self.query._select_other(Count("*"))
+
+        if self.force_indexes:
+            self.query._force_indexes = []
+            self.query = self.query.force_index(*self.force_indexes)
+        if self.use_indexes:
+            self.query._use_indexes = []
+            self.query = self.query.use_index(*self.use_indexes)
 
     def __await__(self) -> Generator[Any, None, int]:
         if self._db is None:
@@ -1250,6 +1300,8 @@ class ValuesListQuery(FieldSelectQuery):
         "q_objects",
         "fields_for_select_list",
         "group_bys",
+        "force_indexes",
+        "use_indexes",
     )
 
     def __init__(
@@ -1266,6 +1318,8 @@ class ValuesListQuery(FieldSelectQuery):
         annotations: Dict[str, Any],
         custom_filters: Dict[str, Dict[str, Any]],
         group_bys: Tuple[str, ...],
+        force_indexes: Set[str],
+        use_indexes: Set[str],
     ) -> None:
         super().__init__(model, annotations)
         if flat and (len(fields_for_select_list) != 1):
@@ -1283,6 +1337,8 @@ class ValuesListQuery(FieldSelectQuery):
         self.flat = flat
         self._db = db
         self.group_bys = group_bys
+        self.force_indexes = force_indexes
+        self.use_indexes = use_indexes
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
@@ -1307,6 +1363,13 @@ class ValuesListQuery(FieldSelectQuery):
         if self.group_bys:
             self.query._groupbys = self._resolve_group_bys(*self.group_bys)
 
+        if self.force_indexes:
+            self.query._force_indexes = []
+            self.query = self.query.force_index(*self.force_indexes)
+        if self.use_indexes:
+            self.query._use_indexes = []
+            self.query = self.query.use_index(*self.use_indexes)
+
     def __await__(self) -> Generator[Any, None, List[Any]]:
         if self._db is None:
             self._db = self._choose_db()  # type: ignore
@@ -1325,10 +1388,15 @@ class ValuesListQuery(FieldSelectQuery):
         ]
         if self.flat:
             func = columns[0][1]
-            flatmap = lambda entry: func(entry["0"])  # noqa
+
+            def flatmap(entry):
+                return func(entry["0"])  # noqa
+
             return list(map(flatmap, result))
 
-        listmap = lambda entry: tuple(func(entry[column]) for column, func in columns)  # noqa
+        def listmap(entry):
+            return tuple(func(entry[column]) for column, func in columns)  # noqa
+
         return list(map(listmap, result))
 
 
@@ -1343,6 +1411,8 @@ class ValuesQuery(FieldSelectQuery):
         "custom_filters",
         "q_objects",
         "group_bys",
+        "force_indexes",
+        "use_indexes",
     )
 
     def __init__(
@@ -1358,6 +1428,8 @@ class ValuesQuery(FieldSelectQuery):
         annotations: Dict[str, Any],
         custom_filters: Dict[str, Dict[str, Any]],
         group_bys: Tuple[str, ...],
+        force_indexes: Set[str],
+        use_indexes: Set[str],
     ) -> None:
         super().__init__(model, annotations)
         self.fields_for_select = fields_for_select
@@ -1369,6 +1441,8 @@ class ValuesQuery(FieldSelectQuery):
         self.q_objects = q_objects
         self._db = db
         self.group_bys = group_bys
+        self.force_indexes = force_indexes
+        self.use_indexes = use_indexes
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
@@ -1392,6 +1466,13 @@ class ValuesQuery(FieldSelectQuery):
             self.query._distinct = True
         if self.group_bys:
             self.query._groupbys = self._resolve_group_bys(*self.group_bys)
+
+        if self.force_indexes:
+            self.query._force_indexes = []
+            self.query = self.query.force_index(*self.force_indexes)
+        if self.use_indexes:
+            self.query._use_indexes = []
+            self.query = self.query.use_index(*self.use_indexes)
 
     def __await__(self) -> Generator[Any, None, List[dict]]:
         if self._db is None:
