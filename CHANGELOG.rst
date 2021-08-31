@@ -19,6 +19,7 @@ Changelog
 - Make use/force index available in select type Query. (#893)
 - Fix all logging to use Tortoise's logger instead of root logger. (#879)
 - Rename `db_client` logger to `tortoise.db_client`.
+- Add `indexes` to `Model.describe`.
 
 0.17.6
 ------

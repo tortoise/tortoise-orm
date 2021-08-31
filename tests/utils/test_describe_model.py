@@ -147,6 +147,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": "Straight auto-mapped fields",
                 "docstring": None,
                 "unique_together": [["chars", "blip"]],
+                "indexes": [],
                 "pk_field": {
                     "name": "eyedee",
                     "field_type": "IntField",
@@ -366,6 +367,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": "Straight auto-mapped fields",
                 "docstring": None,
                 "unique_together": [["chars", "blip"]],
+                "indexes": [],
                 "pk_field": {
                     "name": "eyedee",
                     "field_type": fields.IntField,
@@ -585,6 +587,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": "Source mapped fields",
                 "docstring": "A Docstring.",
                 "unique_together": [["chars", "blip"]],
+                "indexes": [],
                 "pk_field": {
                     "name": "eyedee",
                     "field_type": "IntField",
@@ -804,6 +807,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": "Source mapped fields",
                 "docstring": "A Docstring.",
                 "unique_together": [["chars", "blip"]],
+                "indexes": [],
                 "pk_field": {
                     "name": "eyedee",
                     "field_type": fields.IntField,
@@ -1024,6 +1028,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": None,
                 "docstring": None,
                 "unique_together": [],
+                "indexes": [],
                 "pk_field": {
                     "name": "id",
                     "field_type": "UUIDField",
@@ -1097,6 +1102,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": None,
                 "docstring": None,
                 "unique_together": [],
+                "indexes": [],
                 "pk_field": {
                     "name": "id",
                     "field_type": fields.UUIDField,
@@ -1272,6 +1278,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 },
                 "table": "uuidfkrelatednullmodel",
                 "unique_together": [],
+                "indexes": [],
             },
         )
 
@@ -1288,6 +1295,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": "This model contains many JSON blobs",
                 "docstring": "This model contains many JSON blobs",
                 "unique_together": [],
+                "indexes": [],
                 "pk_field": {
                     "name": "id",
                     "field_type": "IntField",
@@ -1386,6 +1394,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": "This model contains many JSON blobs",
                 "docstring": "This model contains many JSON blobs",
                 "unique_together": [],
+                "indexes": [],
                 "pk_field": {
                     "name": "id",
                     "field_type": fields.IntField,
