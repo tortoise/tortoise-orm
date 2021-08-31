@@ -1,7 +1,6 @@
-import logging
 from typing import TYPE_CHECKING
 
-logger = logging.getLogger("tortoise")
+from tortoise.log import logger
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient

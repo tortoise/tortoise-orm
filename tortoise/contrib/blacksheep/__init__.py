@@ -1,4 +1,3 @@
-import logging
 from types import ModuleType
 from typing import Dict, Iterable, Optional, Union
 
@@ -7,6 +6,7 @@ from blacksheep.server import Application
 
 from tortoise import Tortoise
 from tortoise.exceptions import DoesNotExist, IntegrityError
+from tortoise.log import logger
 
 
 def register_tortoise(
@@ -86,15 +86,15 @@ def register_tortoise(
     @app.on_start
     async def init_orm(context) -> None:  # pylint: disable=W0612
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
-        logging.info("Tortoise-ORM started, %s, %s", Tortoise._connections, Tortoise.apps)
+        logger.info("Tortoise-ORM started, %s, %s", Tortoise._connections, Tortoise.apps)
         if generate_schemas:
-            logging.info("Tortoise-ORM generating schema")
+            logger.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()
 
     @app.on_stop
     async def close_orm(context) -> None:  # pylint: disable=W0612
         await Tortoise.close_connections()
-        logging.info("Tortoise-ORM shutdown")
+        logger.info("Tortoise-ORM shutdown")
 
     if add_exception_handlers:
 

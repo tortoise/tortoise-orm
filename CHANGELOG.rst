@@ -17,6 +17,8 @@ Changelog
 - Patch for use_index/force_index mutable problem when making query. (#888)
 - Lift annotation field's priority in make query. (#883)
 - Make use/force index available in select type Query. (#893)
+- Fix all logging to use Tortoise's logger instead of root logger. (#879)
+- Rename `db_client` logger to `tortoise.db_client`.
 
 0.17.6
 ------
