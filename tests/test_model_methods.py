@@ -289,7 +289,7 @@ class TestModelMethods(test.TestCase):
             await obj.save(force_update=True)
 
     async def test_raw(self):
-        await self.cls.create(name="TestRaw", id=self.mdl.id)
+        await self.cls.create(name="TestRaw")
         ret = await self.cls.raw("select * from tournament where name='TestRaw'")
         self.assertEqual(len(ret), 1)
         ret = await self.cls.raw("select * from tournament where name='111'")
