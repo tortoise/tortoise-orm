@@ -288,6 +288,13 @@ class TestModelMethods(test.TestCase):
         with self.assertRaises(IntegrityError):
             await obj.save(force_update=True)
 
+    async def test_raw(self):
+        await self.cls.create(name="TestRaw", id=self.mdl.id)
+        ret = await self.cls.raw("select * from tournament where name='TestRaw'")
+        self.assertEqual(len(ret), 1)
+        ret = await self.cls.raw("select * from tournament where name='111'")
+        self.assertEqual(len(ret), 0)
+
 
 class TestModelMethodsNoID(TestModelMethods):
     async def setUp(self):
