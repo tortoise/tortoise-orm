@@ -319,7 +319,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._use_indexes: Set[str] = set()
 
     def _clone(self) -> "QuerySet[MODEL]":
-        queryset = self.__class__.__new__(QuerySet)
+        queryset = self.__class__.__new__(self.__class__)
         queryset.fields = self.fields
         queryset.model = self.model
         queryset.query = self.query
