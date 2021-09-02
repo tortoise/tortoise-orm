@@ -9,6 +9,11 @@ Changelog
 
 0.17
 ====
+
+0.17.8
+------
+- Add `Model.raw` method to support the raw sql query.
+
 0.17.7
 ------
 - Fix `select_related` behaviour for forward relation. (#825)

@@ -23,7 +23,7 @@ from pypika import JoinType, Parameter, Query, Table
 from pypika.terms import ArithmeticExpression, Function
 
 from tortoise.exceptions import OperationalError
-from tortoise.expressions import F
+from tortoise.expressions import F, RawSQL
 from tortoise.fields.base import Field
 from tortoise.fields.relational import (
     BackwardFKRelation,
@@ -122,7 +122,9 @@ class BaseExecutor:
         sql = " ".join((self.EXPLAIN_PREFIX, query.get_sql()))
         return (await self.db.execute_query(sql))[1]
 
-    async def execute_select(self, query: Query, custom_fields: Optional[list] = None) -> list:
+    async def execute_select(
+        self, query: Union[Query, RawSQL], custom_fields: Optional[list] = None
+    ) -> list:
         _, raw_results = await self.db.execute_query(query.get_sql())
         instance_list = []
         for row in raw_results:

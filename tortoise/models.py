@@ -48,7 +48,7 @@ from tortoise.filters import get_filters_for_field
 from tortoise.functions import Function
 from tortoise.indexes import Index
 from tortoise.manager import Manager
-from tortoise.queryset import ExistsQuery, Q, QuerySet, QuerySetSingle
+from tortoise.queryset import ExistsQuery, Q, QuerySet, QuerySetSingle, RawSQLQuery
 from tortoise.router import router
 from tortoise.signals import Signals
 from tortoise.transactions import current_transaction_map, in_transaction
@@ -1202,6 +1202,19 @@ class Model(metaclass=ModelMeta):
         :raises DoesNotExist: If object can not be found.
         """
         return cls._meta.manager.get_queryset().get(*args, **kwargs)
+
+    @classmethod
+    def raw(cls, sql: str) -> "RawSQLQuery":
+        """
+        Executes a RAW SQL and returns the result
+
+        .. code-block:: python3
+
+            result = await User.raw("select * from users where name like '%test%'")
+
+        :param sql: The raw sql.
+        """
+        return cls._meta.manager.get_queryset().raw(sql)
 
     @classmethod
     def exists(cls: Type[MODEL], *args: Q, **kwargs: Any) -> ExistsQuery:

@@ -5,6 +5,7 @@ from tests.testmodels import (
     Dest_null,
     Event,
     IntFields,
+    Node,
     NoID,
     O2O_null,
     RequiredPKModel,
@@ -287,6 +288,13 @@ class TestModelMethods(test.TestCase):
         obj = self.cls(name="Test3", id=self.mdl.id + 100)
         with self.assertRaises(IntegrityError):
             await obj.save(force_update=True)
+
+    async def test_raw(self):
+        await Node.create(name="TestRaw")
+        ret = await Node.raw("select * from node where name='TestRaw'")
+        self.assertEqual(len(ret), 1)
+        ret = await Node.raw("select * from node where name='111'")
+        self.assertEqual(len(ret), 0)
 
 
 class TestModelMethodsNoID(TestModelMethods):

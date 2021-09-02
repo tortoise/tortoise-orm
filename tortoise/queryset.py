@@ -33,7 +33,7 @@ from tortoise.exceptions import (
     MultipleObjectsReturned,
     ParamsError,
 )
-from tortoise.expressions import F
+from tortoise.expressions import F, RawSQL
 from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
     OneToOneFieldInstance,
@@ -648,6 +648,12 @@ class QuerySet(AwaitableQuery[MODEL]):
         Essentially a no-op except as the only operation.
         """
         return self._clone()
+
+    def raw(self, sql: str) -> "RawSQLQuery":
+        """
+        Return the QuerySet from raw SQL
+        """
+        return RawSQLQuery(model=self.model, db=self._db, sql=sql)
 
     def first(self) -> QuerySetSingle[Optional[MODEL]]:
         """
@@ -1497,3 +1503,29 @@ class ValuesQuery(FieldSelectQuery):
                     row[col] = func(row[col])
 
         return result
+
+
+class RawSQLQuery(AwaitableQuery):
+
+    __slots__ = ("_sql", "_db")
+
+    def __init__(self, model: Type[MODEL], db: BaseDBAsyncClient, sql: str):
+        super().__init__(model)
+        self._sql = sql
+        self._db = db
+
+    def _make_query(self) -> None:
+        self.query = RawSQL(self._sql)
+
+    async def _execute(self) -> Any:
+        instance_list = await self._db.executor_class(
+            model=self.model,
+            db=self._db,
+        ).execute_select(self.query)
+        return instance_list
+
+    def __await__(self) -> Generator[Any, None, List[MODEL]]:
+        if self._db is None:
+            self._db = self._choose_db()  # type: ignore
+        self._make_query()
+        return self._execute().__await__()
