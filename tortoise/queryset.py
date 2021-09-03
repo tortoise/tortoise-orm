@@ -554,7 +554,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             _fields = [
                 field
                 for field in self.model._meta.fields_map.keys()
-                if field in self.model._meta.db_fields
+                if field in self.model._meta.fields_db_projection.keys()
             ] + list(self._annotations.keys())
 
             fields_for_select = {field: field for field in _fields}
