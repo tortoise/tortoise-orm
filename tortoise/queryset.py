@@ -918,7 +918,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         for val in await self:
             yield val
 
-    async def _execute(self) -> List[MODEL]:
+    async def _execute(self) -> Union[List[MODEL], MODEL]:
         instance_list = await self._db.executor_class(
             model=self.model,
             db=self._db,
@@ -1409,16 +1409,10 @@ class ValuesListQuery(FieldSelectQuery):
         ]
         if self.flat:
             func = columns[0][1]
-
-            def flatmap(entry):
-                return func(entry["0"])  # noqa
-
+            flatmap = lambda entry: func(entry["0"])  # noqa
             result = list(map(flatmap, result))
         else:
-
-            def listmap(entry):
-                return tuple(func(entry[column]) for column, func in columns)  # noqa
-
+            listmap = lambda entry: tuple(func(entry[column]) for column, func in columns)  # noqa
             result = list(map(listmap, result))
 
         if self.single:
