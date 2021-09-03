@@ -13,6 +13,7 @@ Changelog
 0.17.8
 ------
 - Add `Model.raw` method to support the raw sql query.
+- Fix bug in `.values` with `source_field`. (#844)
 
 0.17.7
 ------
