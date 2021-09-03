@@ -1409,10 +1409,16 @@ class ValuesListQuery(FieldSelectQuery):
         ]
         if self.flat:
             func = columns[0][1]
-            def flatmap(entry): return func(entry["0"])  # noqa
+
+            def flatmap(entry):
+                return func(entry["0"])  # noqa
+
             result = list(map(flatmap, result))
         else:
-            def listmap(entry): return tuple(func(entry[column]) for column, func in columns)  # noqa
+
+            def listmap(entry):
+                return tuple(func(entry[column]) for column, func in columns)  # noqa
+
             result = list(map(listmap, result))
 
         if self.single:
