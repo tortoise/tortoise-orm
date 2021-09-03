@@ -918,7 +918,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         for val in await self:
             yield val
 
-    async def _execute(self) -> Union[List[MODEL], MODEL]:
+    async def _execute(self) -> List[MODEL]:
         instance_list = await self._db.executor_class(
             model=self.model,
             db=self._db,
@@ -1391,7 +1391,7 @@ class ValuesListQuery(FieldSelectQuery):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self.use_indexes)
 
-    def __await__(self) -> Generator[Any, None, Optional[List[Tuple], Tuple, Any]]:
+    def __await__(self) -> Generator[Any, None, Union[List[Any], Tuple]]:
         if self._db is None:
             self._db = self._choose_db()  # type: ignore
         self._make_query()
@@ -1401,7 +1401,7 @@ class ValuesListQuery(FieldSelectQuery):
         for val in await self:
             yield val
 
-    async def _execute(self) -> Optional[List[Tuple], Tuple, Any]:
+    async def _execute(self) -> Union[List[Any], Tuple]:
         _, result = await self._db.execute_query(str(self.query))
         columns = [
             (key, self.resolve_to_python_value(self.model, name))
@@ -1410,20 +1410,20 @@ class ValuesListQuery(FieldSelectQuery):
         if self.flat:
             func = columns[0][1]
             flatmap = lambda entry: func(entry["0"])  # noqa
-            result = list(map(flatmap, result))
+            lst_values = list(map(flatmap, result))
         else:
             listmap = lambda entry: tuple(func(entry[column]) for column, func in columns)  # noqa
-            result = list(map(listmap, result))
+            lst_values = list(map(listmap, result))
 
         if self.single:
-            if len(result) == 1:
-                return result[0]
-            if not result:
+            if len(lst_values) == 1:
+                return lst_values[0]
+            if not lst_values:
                 if self.raise_does_not_exist:
                     raise DoesNotExist("Object does not exist")
-                return None
+                return None  # type: ignore
             raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
-        return result
+        return lst_values
 
 
 class ValuesQuery(FieldSelectQuery):
@@ -1506,7 +1506,7 @@ class ValuesQuery(FieldSelectQuery):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self.use_indexes)
 
-    def __await__(self) -> Generator[Any, None, Optional[List[dict], dict]]:
+    def __await__(self) -> Generator[Any, None, Union[List[dict], Dict]]:
         if self._db is None:
             self._db = self._choose_db()  # type: ignore
         self._make_query()
@@ -1516,7 +1516,7 @@ class ValuesQuery(FieldSelectQuery):
         for val in await self:
             yield val
 
-    async def _execute(self) -> Optional[List[dict], dict]:
+    async def _execute(self) -> Union[List[dict], Dict]:
         result = await self._db.execute_query_dict(str(self.query))
         columns = [
             val
@@ -1538,7 +1538,7 @@ class ValuesQuery(FieldSelectQuery):
             if not result:
                 if self.raise_does_not_exist:
                     raise DoesNotExist("Object does not exist")
-                return None
+                return None  # type: ignore
             raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
         return result
 

@@ -136,7 +136,7 @@ class BaseExecutor:
                 instance: "Model" = self.model._init_from_db(
                     **dict(zip(keys[:current_idx], values[:current_idx]))
                 )
-                instances: dict[Any, Any] = {path: instance}
+                instances: Dict[Any, Any] = {path: instance}
                 for (
                     model,
                     index,
