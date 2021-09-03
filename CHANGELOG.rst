@@ -15,6 +15,7 @@ Changelog
 - Add `Model.raw` method to support the raw sql query.
 - Fix `QuerySet` subclass being lost when `_clone` is run on the instance.
 - Fix bug in `.values` with `source_field`. (#844)
+- Make `.values()` and `.values_list()` awaited return more consistent. (#899)
 
 0.17.7
 ------
