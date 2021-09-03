@@ -501,7 +501,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         Make QuerySet returns list of tuples for given args instead of objects.
 
-        If ```flat=True`` and only one arg is passed can return flat list.
+        If call after `.get()`, `.get_or_none()` or `.first()` return tuples for given args instead of object.
+
+        If ```flat=True`` and only one arg is passed can return flat list or just scalar.
 
         If no arguments are passed it will default to a tuple containing all fields
         in order of declaration.
@@ -534,6 +536,8 @@ class QuerySet(AwaitableQuery[MODEL]):
     def values(self, *args: str, **kwargs: str) -> "ValuesQuery":
         """
         Make QuerySet return dicts instead of objects.
+
+        If call after `.get()`, `.get_or_none()` or `.first()` return dict instead of object.
 
         Can pass names of fields to fetch, or as a ``field_name='name_in_dict'`` kwarg.
 
