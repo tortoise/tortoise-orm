@@ -23,7 +23,7 @@ from pypika import JoinType, Parameter, Query, Table
 from pypika.terms import ArithmeticExpression, Function
 
 from tortoise.exceptions import OperationalError
-from tortoise.expressions import F
+from tortoise.expressions import F, RawSQL
 from tortoise.fields.base import Field
 from tortoise.fields.relational import (
     BackwardFKRelation,
@@ -122,7 +122,9 @@ class BaseExecutor:
         sql = " ".join((self.EXPLAIN_PREFIX, query.get_sql()))
         return (await self.db.execute_query(sql))[1]
 
-    async def execute_select(self, query: Query, custom_fields: Optional[list] = None) -> list:
+    async def execute_select(
+        self, query: Union[Query, RawSQL], custom_fields: Optional[list] = None
+    ) -> list:
         _, raw_results = await self.db.execute_query(query.get_sql())
         instance_list = []
         for row in raw_results:
@@ -579,8 +581,7 @@ class BaseExecutor:
     ) -> "Iterable[Model]":
         self.prefetch_map = {}
         for relation in args:
-            relation_split = relation.split("__")
-            first_level_field = relation_split[0]
+            first_level_field, __, forwarded_prefetch = relation.partition("__")
             if first_level_field not in self.model._meta.fetch_fields:
                 raise OperationalError(
                     f"relation {first_level_field} for {self.model._meta.db_table} not found"
@@ -589,7 +590,6 @@ class BaseExecutor:
             if first_level_field not in self.prefetch_map.keys():
                 self.prefetch_map[first_level_field] = set()
 
-            forwarded_prefetch = "__".join(relation_split[1:])
             if forwarded_prefetch:
                 self.prefetch_map[first_level_field].add(forwarded_prefetch)
 

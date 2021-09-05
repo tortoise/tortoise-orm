@@ -74,6 +74,7 @@ class TestBasic(test.TestCase):
                 "description": "The Event model docstring.",
                 "docstring": "The Event model docstring.\n\nThis is multiline docs.",
                 "unique_together": [],
+                "indexes": [],
                 "pk_field": {
                     "name": "id",
                     "field_type": "IntField",
@@ -218,6 +219,7 @@ class TestBasic(test.TestCase):
                 "description": "The Event model docstring.",
                 "docstring": "The Event model docstring.\n\nThis is multiline docs.",
                 "unique_together": [],
+                "indexes": [],
                 "pk_field": {
                     "name": "id",
                     "field_type": "IntField",

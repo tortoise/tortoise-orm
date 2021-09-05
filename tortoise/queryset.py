@@ -33,7 +33,7 @@ from tortoise.exceptions import (
     MultipleObjectsReturned,
     ParamsError,
 )
-from tortoise.expressions import F
+from tortoise.expressions import F, RawSQL
 from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
     OneToOneFieldInstance,
@@ -191,14 +191,15 @@ class AwaitableQuery(Generic[MODEL]):
                 raise FieldError(
                     "Filtering by relation is not possible. Filter by nested field of related model"
                 )
-            if field_name.split("__")[0] in model._meta.fetch_fields:
-                related_field_name = field_name.split("__")[0]
+
+            related_field_name, __, forwarded = field_name.partition("__")
+            if related_field_name in model._meta.fetch_fields:
                 related_field = cast(RelationalField, model._meta.fields_map[related_field_name])
                 related_table = self._join_table_by_field(table, related_field_name, related_field)
                 self.resolve_ordering(
                     related_field.related_model,
                     related_table,
-                    [("__".join(field_name.split("__")[1:]), ordering[1])],
+                    [(forwarded, ordering[1])],
                     {},
                 )
             elif field_name in annotations:
@@ -318,7 +319,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._use_indexes: Set[str] = set()
 
     def _clone(self) -> "QuerySet[MODEL]":
-        queryset = self.__class__.__new__(QuerySet)
+        queryset = self.__class__.__new__(self.__class__)
         queryset.fields = self.fields
         queryset.model = self.model
         queryset.query = self.query
@@ -524,6 +525,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             annotations=self._annotations,
             custom_filters=self._custom_filters,
             group_bys=self._group_bys,
+            force_indexes=self._force_indexes,
+            use_indexes=self._use_indexes,
         )
 
     def values(self, *args: str, **kwargs: str) -> "ValuesQuery":
@@ -551,7 +554,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             _fields = [
                 field
                 for field in self.model._meta.fields_map.keys()
-                if field in self.model._meta.db_fields
+                if field in self.model._meta.fields_db_projection.keys()
             ] + list(self._annotations.keys())
 
             fields_for_select = {field: field for field in _fields}
@@ -568,6 +571,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             annotations=self._annotations,
             custom_filters=self._custom_filters,
             group_bys=self._group_bys,
+            force_indexes=self._force_indexes,
+            use_indexes=self._use_indexes,
         )
 
     def delete(self) -> "DeleteQuery":
@@ -619,6 +624,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             custom_filters=self._custom_filters,
             limit=self._limit,
             offset=self._offset,
+            force_indexes=self._force_indexes,
+            use_indexes=self._use_indexes,
         )
 
     def exists(self) -> "ExistsQuery":
@@ -631,6 +638,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             q_objects=self._q_objects,
             annotations=self._annotations,
             custom_filters=self._custom_filters,
+            force_indexes=self._force_indexes,
+            use_indexes=self._use_indexes,
         )
 
     def all(self) -> "QuerySet[MODEL]":
@@ -639,6 +648,12 @@ class QuerySet(AwaitableQuery[MODEL]):
         Essentially a no-op except as the only operation.
         """
         return self._clone()
+
+    def raw(self, sql: str) -> "RawSQLQuery":
+        """
+        Return the QuerySet from raw SQL
+        """
+        return RawSQLQuery(model=self.model, db=self._db, sql=sql)
 
     def first(self) -> QuerySetSingle[Optional[MODEL]]:
         """
@@ -739,8 +754,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             if isinstance(relation, Prefetch):
                 relation.resolve_for_queryset(queryset)
                 continue
-            relation_split = relation.split("__")
-            first_level_field = relation_split[0]
+
+            first_level_field, __, forwarded_prefetch = relation.partition("__")
             if first_level_field not in self.model._meta.fetch_fields:
                 if first_level_field in self.model._meta.fields:
                     raise FieldError(
@@ -751,7 +766,6 @@ class QuerySet(AwaitableQuery[MODEL]):
                 )
             if first_level_field not in queryset._prefetch_map.keys():
                 queryset._prefetch_map[first_level_field] = set()
-            forwarded_prefetch = "__".join(relation_split[1:])
             if forwarded_prefetch:
                 queryset._prefetch_map[first_level_field].add(forwarded_prefetch)
         return queryset
@@ -812,12 +826,12 @@ class QuerySet(AwaitableQuery[MODEL]):
                 table[related_field].as_(f"{table.get_table_name()}.{related_field}")
             )
         if forwarded_fields:
-            field, *forwarded_fields_ = forwarded_fields.split("__")
+            field, __, forwarded_fields_ = forwarded_fields.partition("__")
             self.query = self._join_table_with_select_related(
                 model=field_object.related_model,
                 table=table,
                 field=field,
-                forwarded_fields="__".join(forwarded_fields_),
+                forwarded_fields=forwarded_fields_,
                 path=(*path, field),
             )
             return self.query
@@ -871,12 +885,12 @@ class QuerySet(AwaitableQuery[MODEL]):
             )
         if self._select_related:
             for field in self._select_related:
-                field, *forwarded_fields = field.split("__")
+                field, __, forwarded_fields = field.partition("__")
                 self.query = self._join_table_with_select_related(
                     model=self.model,
                     table=self.model._meta.basetable,
                     field=field,
-                    forwarded_fields="__".join(forwarded_fields),
+                    forwarded_fields=forwarded_fields,
                     path=(None, field),
                 )
         if self._force_indexes:
@@ -998,7 +1012,13 @@ class UpdateQuery(AwaitableQuery):
 
 
 class DeleteQuery(AwaitableQuery):
-    __slots__ = ("q_objects", "annotations", "custom_filters", "orderings", "limit")
+    __slots__ = (
+        "q_objects",
+        "annotations",
+        "custom_filters",
+        "orderings",
+        "limit",
+    )
 
     def __init__(
         self,
@@ -1044,7 +1064,13 @@ class DeleteQuery(AwaitableQuery):
 
 
 class ExistsQuery(AwaitableQuery):
-    __slots__ = ("q_objects", "annotations", "custom_filters")
+    __slots__ = (
+        "q_objects",
+        "annotations",
+        "custom_filters",
+        "force_indexes",
+        "use_indexes",
+    )
 
     def __init__(
         self,
@@ -1053,12 +1079,16 @@ class ExistsQuery(AwaitableQuery):
         q_objects: List[Q],
         annotations: Dict[str, Any],
         custom_filters: Dict[str, Dict[str, Any]],
+        force_indexes: Set[str],
+        use_indexes: Set[str],
     ) -> None:
         super().__init__(model)
         self.q_objects = q_objects
         self.annotations = annotations
         self.custom_filters = custom_filters
         self._db = db
+        self.force_indexes = force_indexes
+        self.use_indexes = use_indexes
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
@@ -1070,6 +1100,13 @@ class ExistsQuery(AwaitableQuery):
         )
         self.query._limit = 1
         self.query._select_other(ValueWrapper(1))
+
+        if self.force_indexes:
+            self.query._force_indexes = []
+            self.query = self.query.force_index(*self.force_indexes)
+        if self.use_indexes:
+            self.query._use_indexes = []
+            self.query = self.query.use_index(*self.use_indexes)
 
     def __await__(self) -> Generator[Any, None, bool]:
         if self._db is None:
@@ -1083,7 +1120,15 @@ class ExistsQuery(AwaitableQuery):
 
 
 class CountQuery(AwaitableQuery):
-    __slots__ = ("q_objects", "annotations", "custom_filters", "limit", "offset")
+    __slots__ = (
+        "q_objects",
+        "annotations",
+        "custom_filters",
+        "limit",
+        "offset",
+        "force_indexes",
+        "use_indexes",
+    )
 
     def __init__(
         self,
@@ -1094,6 +1139,8 @@ class CountQuery(AwaitableQuery):
         custom_filters: Dict[str, Dict[str, Any]],
         limit: Optional[int],
         offset: Optional[int],
+        force_indexes: Set[str],
+        use_indexes: Set[str],
     ) -> None:
         super().__init__(model)
         self.q_objects = q_objects
@@ -1102,6 +1149,8 @@ class CountQuery(AwaitableQuery):
         self.limit = limit
         self.offset = offset or 0
         self._db = db
+        self.force_indexes = force_indexes
+        self.use_indexes = use_indexes
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
@@ -1112,6 +1161,13 @@ class CountQuery(AwaitableQuery):
             custom_filters=self.custom_filters,
         )
         self.query._select_other(Count("*"))
+
+        if self.force_indexes:
+            self.query._force_indexes = []
+            self.query = self.query.force_index(*self.force_indexes)
+        if self.use_indexes:
+            self.query._use_indexes = []
+            self.query = self.query.use_index(*self.use_indexes)
 
     def __await__(self) -> Generator[Any, None, int]:
         if self._db is None:
@@ -1155,17 +1211,22 @@ class FieldSelectQuery(AwaitableQuery):
             raise FieldError(f'Unknown field "{field}" for model "{model.__name__}"')
 
         table = self._join_table_by_field(table, field, field_object)
-        forwarded_fields_split = forwarded_fields.split("__")
+        field, __, forwarded_fields_ = forwarded_fields.partition("__")
 
         return self._join_table_with_forwarded_fields(
             model=field_object.related_model,
             table=table,
-            field=forwarded_fields_split[0],
-            forwarded_fields="__".join(forwarded_fields_split[1:]),
+            field=field,
+            forwarded_fields=forwarded_fields_,
         )
 
     def add_field_to_select_query(self, field: str, return_as: str) -> None:
         table = self.model._meta.basetable
+
+        if field in self.annotations:
+            self._annotations[return_as] = self.annotations[field]
+            return
+
         if field in self.model._meta.fields_db_projection:
             db_field = self.model._meta.fields_db_projection[field]
             self.query._select_field(table[db_field].as_(return_as))
@@ -1177,17 +1238,13 @@ class FieldSelectQuery(AwaitableQuery):
                 "concrete field on related model".format(field)
             )
 
-        if field in self.annotations:
-            self._annotations[return_as] = self.annotations[field]
-            return
-
-        field_split = field.split("__")
-        if field_split[0] in self.model._meta.fetch_fields:
+        field_, __, forwarded_fields = field.partition("__")
+        if field_ in self.model._meta.fetch_fields:
             related_table, related_db_field = self._join_table_with_forwarded_fields(
                 model=self.model,
                 table=table,
-                field=field_split[0],
-                forwarded_fields="__".join(field_split[1:]),
+                field=field_,
+                forwarded_fields=forwarded_fields,
             )
             self.query._select_field(related_table[related_db_field].as_(return_as))
             return
@@ -1212,10 +1269,10 @@ class FieldSelectQuery(AwaitableQuery):
         if field in model._meta.fields_map:
             return model._meta.fields_map[field].to_python_value
 
-        field_split = field.split("__")
-        if field_split[0] in model._meta.fetch_fields:
-            new_model = model._meta.fields_map[field_split[0]].related_model  # type: ignore
-            return self.resolve_to_python_value(new_model, "__".join(field_split[1:]))
+        field_, __, forwarded_fields = field.partition("__")
+        if field_ in model._meta.fetch_fields:
+            new_model = model._meta.fields_map[field_].related_model  # type: ignore
+            return self.resolve_to_python_value(new_model, forwarded_fields)
 
         raise FieldError(f'Unknown field "{field}" for model "{model}"')
 
@@ -1225,12 +1282,12 @@ class FieldSelectQuery(AwaitableQuery):
             if field_name in self._annotations:
                 group_bys.append(Term(field_name))
                 continue
-            field_split = field_name.split("__")
+            field, __, forwarded_fields = field_name.partition("__")
             related_table, related_db_field = self._join_table_with_forwarded_fields(
                 model=self.model,
                 table=self.model._meta.basetable,
-                field=field_split[0],
-                forwarded_fields="__".join(field_split[1:]) if len(field_split) > 1 else "",
+                field=field,
+                forwarded_fields=forwarded_fields,
             )
             field = related_table[related_db_field].as_(field_name)
             group_bys.append(field)
@@ -1250,6 +1307,8 @@ class ValuesListQuery(FieldSelectQuery):
         "q_objects",
         "fields_for_select_list",
         "group_bys",
+        "force_indexes",
+        "use_indexes",
     )
 
     def __init__(
@@ -1266,6 +1325,8 @@ class ValuesListQuery(FieldSelectQuery):
         annotations: Dict[str, Any],
         custom_filters: Dict[str, Dict[str, Any]],
         group_bys: Tuple[str, ...],
+        force_indexes: Set[str],
+        use_indexes: Set[str],
     ) -> None:
         super().__init__(model, annotations)
         if flat and (len(fields_for_select_list) != 1):
@@ -1283,6 +1344,8 @@ class ValuesListQuery(FieldSelectQuery):
         self.flat = flat
         self._db = db
         self.group_bys = group_bys
+        self.force_indexes = force_indexes
+        self.use_indexes = use_indexes
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
@@ -1306,6 +1369,13 @@ class ValuesListQuery(FieldSelectQuery):
             self.query._distinct = True
         if self.group_bys:
             self.query._groupbys = self._resolve_group_bys(*self.group_bys)
+
+        if self.force_indexes:
+            self.query._force_indexes = []
+            self.query = self.query.force_index(*self.force_indexes)
+        if self.use_indexes:
+            self.query._use_indexes = []
+            self.query = self.query.use_index(*self.use_indexes)
 
     def __await__(self) -> Generator[Any, None, List[Any]]:
         if self._db is None:
@@ -1343,6 +1413,8 @@ class ValuesQuery(FieldSelectQuery):
         "custom_filters",
         "q_objects",
         "group_bys",
+        "force_indexes",
+        "use_indexes",
     )
 
     def __init__(
@@ -1358,6 +1430,8 @@ class ValuesQuery(FieldSelectQuery):
         annotations: Dict[str, Any],
         custom_filters: Dict[str, Dict[str, Any]],
         group_bys: Tuple[str, ...],
+        force_indexes: Set[str],
+        use_indexes: Set[str],
     ) -> None:
         super().__init__(model, annotations)
         self.fields_for_select = fields_for_select
@@ -1369,6 +1443,8 @@ class ValuesQuery(FieldSelectQuery):
         self.q_objects = q_objects
         self._db = db
         self.group_bys = group_bys
+        self.force_indexes = force_indexes
+        self.use_indexes = use_indexes
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
@@ -1392,6 +1468,13 @@ class ValuesQuery(FieldSelectQuery):
             self.query._distinct = True
         if self.group_bys:
             self.query._groupbys = self._resolve_group_bys(*self.group_bys)
+
+        if self.force_indexes:
+            self.query._force_indexes = []
+            self.query = self.query.force_index(*self.force_indexes)
+        if self.use_indexes:
+            self.query._use_indexes = []
+            self.query = self.query.use_index(*self.use_indexes)
 
     def __await__(self) -> Generator[Any, None, List[dict]]:
         if self._db is None:
@@ -1420,3 +1503,29 @@ class ValuesQuery(FieldSelectQuery):
                     row[col] = func(row[col])
 
         return result
+
+
+class RawSQLQuery(AwaitableQuery):
+
+    __slots__ = ("_sql", "_db")
+
+    def __init__(self, model: Type[MODEL], db: BaseDBAsyncClient, sql: str):
+        super().__init__(model)
+        self._sql = sql
+        self._db = db
+
+    def _make_query(self) -> None:
+        self.query = RawSQL(self._sql)
+
+    async def _execute(self) -> Any:
+        instance_list = await self._db.executor_class(
+            model=self.model,
+            db=self._db,
+        ).execute_select(self.query)
+        return instance_list
+
+    def __await__(self) -> Generator[Any, None, List[MODEL]]:
+        if self._db is None:
+            self._db = self._choose_db()  # type: ignore
+        self._make_query()
+        return self._execute().__await__()
