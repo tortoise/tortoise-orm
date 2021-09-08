@@ -257,10 +257,7 @@ class DecimalField(Field, Decimal):
         self.quant = Decimal("1" if decimal_places == 0 else f"1.{('0' * decimal_places)}")
 
     def to_python_value(self, value: Any) -> Optional[Decimal]:
-
-        if value is None:
-            value = None
-        else:
+        if value is not None:
             value = Decimal(value).quantize(self.quant).normalize()
         self.validate(value)
         return value
@@ -305,9 +302,7 @@ class DatetimeField(Field, datetime.datetime):
         self.auto_now_add = auto_now | auto_now_add
 
     def to_python_value(self, value: Any) -> Optional[datetime.datetime]:
-        if value is None:
-            value = None
-        else:
+        if value is not None:
             if isinstance(value, datetime.datetime):
                 value = value
             elif isinstance(value, int):
