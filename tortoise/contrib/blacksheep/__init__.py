@@ -99,11 +99,11 @@ def register_tortoise(
     if add_exception_handlers:
 
         @app.exception_handler(DoesNotExist)
-        async def doesnotexist_exception_handler(request: Request, exc: DoesNotExist):
+        async def doesnotexist_exception_handler(self, request: Request, exc: DoesNotExist):
             return Response(status=404, content=JSONContent({"detail": str(exc)}))
 
         @app.exception_handler(IntegrityError)
-        async def integrityerror_exception_handler(request: Request, exc: IntegrityError):
+        async def integrityerror_exception_handler(self, request: Request, exc: IntegrityError):
             return Response(
                 status=422,
                 content=JSONContent(
