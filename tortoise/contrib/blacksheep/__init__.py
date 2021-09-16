@@ -1,8 +1,9 @@
 from types import ModuleType
 from typing import Dict, Iterable, Optional, Union
 
-from blacksheep import JSONContent, Request, Response
+from blacksheep import Request
 from blacksheep.server import Application
+from blacksheep.server.responses import json
 
 from tortoise import Tortoise
 from tortoise.exceptions import DoesNotExist, IntegrityError
@@ -100,13 +101,8 @@ def register_tortoise(
 
         @app.exception_handler(DoesNotExist)
         async def doesnotexist_exception_handler(self, request: Request, exc: DoesNotExist):
-            return Response(status=404, content=JSONContent({"detail": str(exc)}))
+            return json({"detail": str(exc)}, 404)
 
         @app.exception_handler(IntegrityError)
         async def integrityerror_exception_handler(self, request: Request, exc: IntegrityError):
-            return Response(
-                status=422,
-                content=JSONContent(
-                    {"detail": [{"loc": [], "msg": str(exc), "type": "IntegrityError"}]}
-                ),
-            )
+            return json({"detail": [{"loc": [], "msg": str(exc), "type": "IntegrityError"}]}, 422)
