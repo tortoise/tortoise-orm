@@ -30,5 +30,9 @@ async def generate_schema_for_client(client: "BaseDBAsyncClient", safe: bool) ->
     logger.debug("Creating schema: %s", schema)
     if schema:  # pragma: nobranch
         with warnings.catch_warnings():
-            warnings.simplefilter("ignore" if safe else "default")
+            warnings.filterwarnings(
+                "ignore" if safe else "default",
+                message="Table '.*' already exists",
+                module="aiomysql.cursors",
+            )
             await generator.generate_from_string(schema)
