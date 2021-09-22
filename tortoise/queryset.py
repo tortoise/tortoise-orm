@@ -414,12 +414,15 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._orderings = new_ordering
         return queryset
 
-    def limit(self, limit: int) -> "QuerySet[MODEL]":
+    def limit(self, limit: Optional[int]) -> "QuerySet[MODEL]":
         """
         Limits QuerySet to given length.
 
         :raises ParamsError: Limit should be non-negative number.
         """
+        if limit is None:
+            return self
+
         if limit < 0:
             raise ParamsError("Limit should be non-negative number")
 
@@ -427,12 +430,15 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._limit = limit
         return queryset
 
-    def offset(self, offset: int) -> "QuerySet[MODEL]":
+    def offset(self, offset: Optional[int]) -> "QuerySet[MODEL]":
         """
         Query offset for QuerySet.
 
         :raises ParamsError: Offset should be non-negative number.
         """
+        if offset is None:
+            return self
+
         if offset < 0:
             raise ParamsError("Offset should be non-negative number")
 
