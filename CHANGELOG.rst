@@ -16,6 +16,7 @@ Changelog
 - Fix `QuerySet` subclass being lost when `_clone` is run on the instance.
 - Fix bug in `.values` with `source_field`. (#844)
 - Allow negative values with `IntEnumField`. (#889)
+- Fix `contrib.blacksheep` exception handlers, use builtin json response. (#914)
 
 0.17.7
 ------
