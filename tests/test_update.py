@@ -18,6 +18,15 @@ class TestUpdate(test.TestCase):
         tournament = await Tournament.first()
         self.assertEqual(tournament.name, "2")
 
+    async def test_bulk_update(self):
+        objs = [await Tournament.create(name="1"), await Tournament.create(name="2")]
+        objs[0].name = "0"
+        objs[1].name = "1"
+        rows_affected = await Tournament.bulk_update(objs, fields=["name"], batch_size=100)
+        self.assertEqual(rows_affected, 2)
+        self.assertEqual((await Tournament.get(pk=objs[0].pk)).name, "0")
+        self.assertEqual((await Tournament.get(pk=objs[1].pk)).name, "1")
+
     async def test_update_auto_now(self):
         obj = await DefaultUpdate.create()
 

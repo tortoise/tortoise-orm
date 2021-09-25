@@ -12,11 +12,20 @@ Changelog
 
 0.17.8
 ------
+
+Added
+^^^^^
 - Add `Model.raw` method to support the raw sql query.
+- Add `QuerySet.bulk_update` method. (#924)
+- Add `QuerySet.in_bulk` method.
+Fixed
+^^^^^
 - Fix `QuerySet` subclass being lost when `_clone` is run on the instance.
 - Fix bug in `.values` with `source_field`. (#844)
-- Allow negative values with `IntEnumField`. (#889)
 - Fix `contrib.blacksheep` exception handlers, use builtin json response. (#914)
+Changed
+^^^^^^^
+- Allow negative values with `IntEnumField`. (#889)
 
 0.17.7
 ------
