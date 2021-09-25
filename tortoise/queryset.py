@@ -22,7 +22,7 @@ from typing import (
 from pypika import JoinType, Order, Table
 from pypika.functions import Count
 from pypika.queries import QueryBuilder
-from pypika.terms import Term, ValueWrapper
+from pypika.terms import Case, Field, Term, ValueWrapper
 from typing_extensions import Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
@@ -42,6 +42,7 @@ from tortoise.fields.relational import (
 from tortoise.functions import Function
 from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
 from tortoise.router import router
+from tortoise.utils import chunk
 
 # Empty placeholder - Should never be edited.
 
@@ -673,6 +674,49 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._single = True
         queryset._raise_does_not_exist = True
         return queryset  # type: ignore
+
+    async def in_bulk(
+        self, id_list: Iterable[Union[str, int]], field_name: str
+    ) -> Dict[str, MODEL]:
+        """
+        Return a dictionary mapping each of the given IDs to the object with
+        that ID. If `id_list` isn't provided, evaluate the entire QuerySet.
+
+        :param id_list: A list of field values
+        :param field_name: Must be a unique field
+        """
+        objs = await self.filter(**{f"{field_name}__in": id_list})
+        return {getattr(obj, field_name): obj for obj in objs}
+
+    def bulk_update(
+        self,
+        objects: Iterable[MODEL],
+        fields: Iterable[str],
+        batch_size: Optional[int] = None,
+    ) -> "BulkUpdateQuery":
+        """
+        Update the given fields in each of the given objects in the database.
+
+        :param objects: List of objects to bulk create
+        :param fields: The fields to update
+        :param batch_size: How many objects are created in a single query
+
+        :raises ValueError: If objects have no primary key set
+        """
+        if any(obj.pk is None for obj in objects):
+            raise ValueError("All bulk_update() objects must have a primary key set.")
+        return BulkUpdateQuery(  # type:ignore
+            db=self._db,
+            model=self.model,
+            q_objects=self._q_objects,
+            annotations=self._annotations,
+            custom_filters=self._custom_filters,
+            limit=self._limit,
+            orderings=self._orderings,
+            objects=objects,
+            fields=fields,
+            batch_size=batch_size,
+        )
 
     def get_or_none(self, *args: Q, **kwargs: Any) -> QuerySetSingle[Optional[MODEL]]:
         """
@@ -1506,7 +1550,6 @@ class ValuesQuery(FieldSelectQuery):
 
 
 class RawSQLQuery(AwaitableQuery):
-
     __slots__ = ("_sql", "_db")
 
     def __init__(self, model: Type[MODEL], db: BaseDBAsyncClient, sql: str):
@@ -1529,3 +1572,63 @@ class RawSQLQuery(AwaitableQuery):
             self._db = self._choose_db()  # type: ignore
         self._make_query()
         return self._execute().__await__()
+
+
+class BulkUpdateQuery(UpdateQuery):
+    __slots__ = ("objects", "fields", "batch_size", "queries")
+
+    def __init__(
+        self,
+        model: Type[MODEL],
+        db: BaseDBAsyncClient,
+        q_objects: List[Q],
+        annotations: Dict[str, Any],
+        custom_filters: Dict[str, Dict[str, Any]],
+        limit: Optional[int],
+        orderings: List[Tuple[str, str]],
+        objects: Iterable[MODEL],
+        fields: Iterable[str],
+        batch_size: Optional[int] = None,
+    ):
+        super().__init__(model, {}, db, q_objects, annotations, custom_filters, limit, orderings)
+        self.objects = objects
+        self.fields = fields
+        self.batch_size = batch_size
+        self.queries: List[QUERY] = []
+
+    def _make_query(self) -> None:
+        table = self.model._meta.basetable
+        self.query = self._db.query_class.update(table)
+        if self.capabilities.support_update_limit_order_by and self.limit:
+            self.query._limit = self.limit
+            self.resolve_ordering(self.model, table, self.orderings, self.annotations)
+
+        self.resolve_filters(
+            model=self.model,
+            q_objects=self.q_objects,
+            annotations=self.annotations,
+            custom_filters=self.custom_filters,
+        )
+        pk = Field(self.model._meta.pk_attr)
+        for objects_item in chunk(self.objects, self.batch_size):
+            query = copy(self.query)
+            for field in self.fields:
+                case = Case()
+                pk_list = []
+                for obj in objects_item:
+                    attr = getattr(obj, field)
+                    case.when(pk == obj.pk, attr)
+                    pk_list.append(obj.pk)
+                query = query.set(field, case)
+                query = query.where(pk.isin(pk_list))
+            self.queries.append(query)
+
+    async def _execute(self) -> int:
+        count = 0
+        for query in self.queries:
+            count += (await self._db.execute_query(str(query)))[0]
+        return count
+
+    def sql(self, **kwargs) -> str:
+        self.as_query()
+        return ";".join([str(query) for query in self.queries])

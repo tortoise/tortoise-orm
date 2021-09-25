@@ -164,6 +164,10 @@ class TestQueryset(test.TestCase):
             [{"intnum": 40}, {"intnum": 43}, {"intnum": 46}, {"intnum": 49}, {"intnum": 52}],
         )
 
+    async def test_in_bulk(self):
+        ret = await IntFields.in_bulk(id_list=[1, 2])
+        self.assertEqual(list(ret.keys()), [1, 2])
+
     async def test_first(self):
         # Test first
         self.assertEqual(

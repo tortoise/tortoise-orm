@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Iterable, Optional
 
 from tortoise.log import logger
 
@@ -29,3 +29,16 @@ async def generate_schema_for_client(client: "BaseDBAsyncClient", safe: bool) ->
     logger.debug("Creating schema: %s", schema)
     if schema:  # pragma: nobranch
         await generator.generate_from_string(schema)
+
+
+def chunk(instances: Iterable[Any], batch_size: Optional[int] = None) -> Iterable[Iterable[Any]]:
+    """
+    Generate iterable chunk by batch_size
+    # noqa: DAR301
+    """
+    if not batch_size:
+        yield instances
+    else:
+        instances = list(instances)
+        for i in range(0, len(instances), batch_size):
+            yield instances[i : i + batch_size]  # noqa:E203
