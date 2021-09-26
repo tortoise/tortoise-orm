@@ -60,6 +60,40 @@ class MinLengthValidator(Validator):
             raise ValidationError(f"Length of '{value}' {len(value)} < {self.min_length}")
 
 
+class MinValueValidator(Validator):
+    """
+    Min value validator for FloatField, IntField, SmallIntField, BigIntField
+    """
+    def __init__(self, min_value: Union[int, float]):
+        if min_value is None or type(min_value) not in [int, float]:
+            raise ValidationError("Value must be a numeric value and is required")
+        self.min_value = min_value
+
+    def __call__(self, value: Union[int, float]):
+        if value is None or type(value) not in [int, float]:
+            raise ValidationError("Value must be a numeric value and is required")
+
+        if value < self.min_value:
+            raise ValidationError(f"Value should be greater or equal to {self.min_value}")
+
+
+class MaxValueValidator(Validator):
+    """
+    Max value validator for FloatField, IntField, SmallIntField, BigIntField
+    """
+    def __init__(self, max_value: Union[int, float]):
+        if max_value is None or type(max_value) not in [int, float]:
+            raise ValidationError("Value must be a numeric value and is required")
+        self.max_value = max_value
+
+    def __call__(self, value: Union[int, float]):
+        if value is None or type(value) not in [int, float]:
+            raise ValidationError("Value must be a numeric value and is required")
+
+        if value > self.max_value:
+            raise ValidationError(f"Value should be less or equal to {self.max_value}")
+
+
 class CommaSeparatedIntegerListValidator(Validator):
     """
     A validator to validate whether the given value is valid comma separated integer list or not.
