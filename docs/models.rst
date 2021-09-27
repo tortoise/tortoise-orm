@@ -239,6 +239,19 @@ The ``Meta`` class
 
             manager = CustomManager()
 
+    .. attribute:: transformers
+        :annotation: = dict[str, collections.abc.Callable[[Any], Any]]
+
+        Specify ``transformers`` to force all queries to be converted with the related Callable.
+        It should be a dictionary, as key a field, as value the Callable to receive and return the converted field's value.
+
+        .. code-block:: python3
+
+            transformers = {
+                'lastname': str.upper,
+                'x', lambda x: x + 10,  # position_with_offset
+            }
+
 ``ForeignKeyField``
 -------------------
 
