@@ -64,6 +64,7 @@ class MinValueValidator(Validator):
     """
     Min value validator for FloatField, IntField, SmallIntField, BigIntField
     """
+
     def __init__(self, min_value: Union[int, float]):
         if min_value is None or type(min_value) not in [int, float]:
             raise ValidationError("Value must be a numeric value and is required")
@@ -81,6 +82,7 @@ class MaxValueValidator(Validator):
     """
     Max value validator for FloatField, IntField, SmallIntField, BigIntField
     """
+
     def __init__(self, max_value: Union[int, float]):
         if max_value is None or type(max_value) not in [int, float]:
             raise ValidationError("Value must be a numeric value and is required")
