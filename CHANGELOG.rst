@@ -18,6 +18,7 @@ Added
 - Add `Model.raw` method to support the raw sql query.
 - Add `QuerySet.bulk_update` method. (#924)
 - Add `QuerySet.in_bulk` method.
+- Add `MaxValueValidator` and `MinValueValidator` (#927)
 Fixed
 ^^^^^
 - Fix `QuerySet` subclass being lost when `_clone` is run on the instance.
