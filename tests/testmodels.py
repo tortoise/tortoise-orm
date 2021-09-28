@@ -728,8 +728,8 @@ class ValidatorModel(Model):
     max_length = fields.CharField(max_length=5, null=True)
     ipv4 = fields.CharField(max_length=100, null=True, validators=[validate_ipv4_address])
     ipv6 = fields.CharField(max_length=100, null=True, validators=[validate_ipv6_address])
-    max_value = fields.IntField(null=True, validators=[MaxValueValidator(20)])
-    min_value = fields.IntField(null=True, validators=[MinValueValidator(10)])
+    max_value = fields.IntField(null=True, validators=[MaxValueValidator(20.0)])
+    min_value = fields.IntField(null=True, validators=[MinValueValidator(10.0)])
     comma_separated_integer_list = fields.CharField(
         max_length=100, null=True, validators=[CommaSeparatedIntegerListValidator()]
     )

@@ -66,12 +66,12 @@ class MinValueValidator(Validator):
     """
 
     def __init__(self, min_value: Union[int, float]):
-        if type(min_value) not in [int, float]:
+        if not isinstance(min_value, (int, float)):
             raise ValidationError("Value must be a numeric value and is required")
         self.min_value = min_value
 
     def __call__(self, value: Union[int, float]):
-        if type(value) not in [int, float]:
+        if not isinstance(value, (int, float)):
             raise ValidationError("Value must be a numeric value and is required")
 
         if value < self.min_value:
@@ -84,12 +84,12 @@ class MaxValueValidator(Validator):
     """
 
     def __init__(self, max_value: Union[int, float]):
-        if type(max_value) not in [int, float]:
+        if not isinstance(max_value, (int, float)):
             raise ValidationError("Value must be a numeric value and is required")
         self.max_value = max_value
 
     def __call__(self, value: Union[int, float]):
-        if type(value) not in [int, float]:
+        if not isinstance(value, (int, float)):
             raise ValidationError("Value must be a numeric value and is required")
 
         if value > self.max_value:
