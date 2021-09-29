@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 class Index:
     INDEX_TYPE = ""
     INDEX_CREATE_TEMPLATE = (
-        "CREATE{index_type}INDEX {index_name} ON {table_name} ({fields}){extra};"
+        "CREATE{index_type}INDEX {exists}{index_name} ON {table_name} ({fields}){extra};"
     )
 
     def __init__(
