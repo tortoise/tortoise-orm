@@ -48,14 +48,7 @@ from tortoise.filters import get_filters_for_field
 from tortoise.functions import Function
 from tortoise.indexes import Index
 from tortoise.manager import Manager
-from tortoise.queryset import (
-    BulkUpdateQuery,
-    ExistsQuery,
-    Q,
-    QuerySet,
-    QuerySetSingle,
-    RawSQLQuery,
-)
+from tortoise.queryset import BulkUpdateQuery, ExistsQuery, Q, QuerySet, QuerySetSingle, RawSQLQuery
 from tortoise.router import router
 from tortoise.signals import Signals
 from tortoise.transactions import current_transaction_map, in_transaction
@@ -70,11 +63,7 @@ EMPTY = object()
 def get_together(meta: "Model.Meta", together: str) -> Tuple[Tuple[str, ...], ...]:
     _together = getattr(meta, together, ())
 
-    if (
-        _together
-        and isinstance(_together, (list, tuple))
-        and isinstance(_together[0], str)
-    ):
+    if _together and isinstance(_together, (list, tuple)) and isinstance(_together[0], str):
         _together = (_together,)
 
     # return without validation, validation will be done further in the code
@@ -165,9 +154,7 @@ def _get_comments(cls: "Type[Model]") -> Dict[str, str]:
     for cls_ in reversed(cls.__mro__):
         if cls_ is object:
             continue
-        matches = re.findall(
-            r"((?:(?!\n|^)[^\w\n]*#:.*?\n)+?)[^\w\n]*(\w+)\s*[:=]", source
-        )
+        matches = re.findall(r"((?:(?!\n|^)[^\w\n]*#:.*?\n)+?)[^\w\n]*(\w+)\s*[:=]", source)
         for match in matches:
             field_name = match[1]
             # Extract text
@@ -224,13 +211,9 @@ class MetaInfo:
         self.manager: Manager = getattr(meta, "manager", Manager())
         self.db_table: str = getattr(meta, "table", "")
         self.app: Optional[str] = getattr(meta, "app", None)
-        self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(
-            meta, "unique_together"
-        )
+        self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
         self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
-        self._default_ordering: Tuple[
-            Tuple[str, Order], ...
-        ] = prepare_default_ordering(meta)
+        self._default_ordering: Tuple[Tuple[str, Order], ...] = prepare_default_ordering(meta)
         self._ordering_validated: bool = False
         self.fields: Set[str] = set()
         self.db_fields: Set[str] = set()
@@ -454,9 +437,7 @@ class MetaInfo:
             setattr(
                 self._model,
                 key,
-                property(
-                    partial(_m2m_getter, _key=_key, field_object=self.fields_map[key])
-                ),
+                property(partial(_m2m_getter, _key=_key, field_object=self.fields_map[key])),
             )
 
     def _generate_db_fields(self) -> None:
@@ -695,8 +676,7 @@ class Model(metaclass=ModelMeta):
             if key in meta.fk_fields or key in meta.o2o_fields:
                 if value and not value._saved_in_db:
                     raise OperationalError(
-                        f"You should first call .save() on {value} before referring"
-                        " to it"
+                        f"You should first call .save() on {value} before referring" " to it"
                     )
                 setattr(self, key, value)
                 passed_fields.add(meta.fields_map[key].source_field)
@@ -705,14 +685,11 @@ class Model(metaclass=ModelMeta):
                 if field_object.pk and field_object.generated:
                     self._custom_generated_pk = True
                 if value is None and not field_object.null:
-                    raise ValueError(
-                        f"{key} is non nullable field, but null was passed"
-                    )
+                    raise ValueError(f"{key} is non nullable field, but null was passed")
                 setattr(self, key, field_object.to_python_value(value))
             elif key in meta.backward_fk_fields:
                 raise ConfigurationError(
-                    "You can't set backward relations through init, change related"
-                    " model instead"
+                    "You can't set backward relations through init, change related" " model instead"
                 )
             elif key in meta.backward_o2o_fields:
                 raise ConfigurationError(
@@ -863,9 +840,7 @@ class Model(metaclass=ModelMeta):
         using_db: Optional[BaseDBAsyncClient] = None,
     ) -> None:
         listeners = []
-        cls_listeners = self._listeners.get(Signals.pre_delete, {}).get(
-            self.__class__, []
-        )
+        cls_listeners = self._listeners.get(Signals.pre_delete, {}).get(self.__class__, [])
         for listener in cls_listeners:
             listeners.append(
                 listener(
@@ -881,9 +856,7 @@ class Model(metaclass=ModelMeta):
         using_db: Optional[BaseDBAsyncClient] = None,
     ) -> None:
         listeners = []
-        cls_listeners = self._listeners.get(Signals.post_delete, {}).get(
-            self.__class__, []
-        )
+        cls_listeners = self._listeners.get(Signals.post_delete, {}).get(self.__class__, [])
         for listener in cls_listeners:
             listeners.append(
                 listener(
@@ -900,9 +873,7 @@ class Model(metaclass=ModelMeta):
         update_fields: Optional[Iterable[str]] = None,
     ) -> None:
         listeners = []
-        cls_listeners = self._listeners.get(Signals.pre_save, {}).get(
-            self.__class__, []
-        )
+        cls_listeners = self._listeners.get(Signals.pre_save, {}).get(self.__class__, [])
         for listener in cls_listeners:
             listeners.append(listener(self.__class__, self, using_db, update_fields))
         await asyncio.gather(*listeners)
@@ -914,13 +885,9 @@ class Model(metaclass=ModelMeta):
         update_fields: Optional[Iterable[str]] = None,
     ) -> None:
         listeners = []
-        cls_listeners = self._listeners.get(Signals.post_save, {}).get(
-            self.__class__, []
-        )
+        cls_listeners = self._listeners.get(Signals.post_save, {}).get(self.__class__, [])
         for listener in cls_listeners:
-            listeners.append(
-                listener(self.__class__, self, created, using_db, update_fields)
-            )
+            listeners.append(listener(self.__class__, self, created, using_db, update_fields))
         await asyncio.gather(*listeners)
 
     async def save(
@@ -972,9 +939,7 @@ class Model(metaclass=ModelMeta):
         elif force_update:
             rows = await executor.execute_update(self, update_fields)
             if rows == 0:
-                raise IntegrityError(
-                    f"Can't update object that doesn't exist. PK: {self.pk}"
-                )
+                raise IntegrityError(f"Can't update object that doesn't exist. PK: {self.pk}")
             created = False
         else:
             if self._saved_in_db or update_fields:
@@ -1007,9 +972,7 @@ class Model(metaclass=ModelMeta):
         await db.executor_class(model=self.__class__, db=db).execute_delete(self)
         await self._post_delete(db)
 
-    async def fetch_related(
-        self, *args: Any, using_db: Optional[BaseDBAsyncClient] = None
-    ) -> None:
+    async def fetch_related(self, *args: Any, using_db: Optional[BaseDBAsyncClient] = None) -> None:
         """
         Fetch related fields.
 
@@ -1021,9 +984,7 @@ class Model(metaclass=ModelMeta):
         :param using_db: Specific DB connection to use instead of default bound
         """
         db = using_db or self._choose_db()
-        await db.executor_class(model=self.__class__, db=db).fetch_for_list(
-            [self], *args
-        )
+        await db.executor_class(model=self.__class__, db=db).fetch_for_list([self], *args)
 
     async def refresh_from_db(
         self,
@@ -1108,9 +1069,7 @@ class Model(metaclass=ModelMeta):
         Returns a queryset that will lock rows until the end of the transaction,
         generating a SELECT ... FOR UPDATE SQL statement on supported databases.
         """
-        return cls._meta.manager.get_queryset().select_for_update(
-            nowait, skip_locked, of
-        )
+        return cls._meta.manager.get_queryset().select_for_update(nowait, skip_locked, of)
 
     @classmethod
     async def update_or_create(
@@ -1130,13 +1089,9 @@ class Model(metaclass=ModelMeta):
             defaults = {}
         db = using_db or cls._choose_db(True)
         async with in_transaction(connection_name=db.connection_name) as connection:
-            instance = (
-                await cls.select_for_update().using_db(connection).get_or_none(**kwargs)
-            )
+            instance = await cls.select_for_update().using_db(connection).get_or_none(**kwargs)
             if instance:
-                await instance.update_from_dict(defaults).save(
-                    using_db=connection
-                )  # type:ignore
+                await instance.update_from_dict(defaults).save(using_db=connection)  # type:ignore
                 return instance, False
         return await cls.get_or_create(defaults, db, **kwargs)
 
@@ -1237,9 +1192,7 @@ class Model(metaclass=ModelMeta):
         :param using_db: Specific DB connection to use instead of default bound
         """
         db = using_db or cls._choose_db(True)
-        await db.executor_class(model=cls, db=db).execute_bulk_insert(
-            objects, batch_size
-        )
+        await db.executor_class(model=cls, db=db).execute_bulk_insert(objects, batch_size)
 
     @classmethod
     def first(cls: Type[MODEL]) -> QuerySetSingle[Optional[MODEL]]:
@@ -1329,9 +1282,7 @@ class Model(metaclass=ModelMeta):
         return cls._meta.manager.get_queryset().filter(*args, **kwargs).exists()
 
     @classmethod
-    def get_or_none(
-        cls: Type[MODEL], *args: Q, **kwargs: Any
-    ) -> QuerySetSingle[Optional[MODEL]]:
+    def get_or_none(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySetSingle[Optional[MODEL]]:
         """
         Fetches a single record for a Model type using the provided filter parameters or None.
 
@@ -1380,14 +1331,9 @@ class Model(metaclass=ModelMeta):
         """
         _together = getattr(cls._meta, together)
         if not isinstance(_together, (tuple, list)):
-            raise ConfigurationError(
-                f"'{cls.__name__}.{together}' must be a list or tuple."
-            )
+            raise ConfigurationError(f"'{cls.__name__}.{together}' must be a list or tuple.")
 
-        if any(
-            not isinstance(unique_fields, (tuple, list, Index))
-            for unique_fields in _together
-        ):
+        if any(not isinstance(unique_fields, (tuple, list, Index)) for unique_fields in _together):
             raise ConfigurationError(
                 f"All '{cls.__name__}.{together}' elements must be lists or tuples."
             )
@@ -1459,8 +1405,7 @@ class Model(metaclass=ModelMeta):
             "data_fields": [
                 field.describe(serializable)
                 for name, field in cls._meta.fields_map.items()
-                if name != cls._meta.pk_attr
-                and name in (cls._meta.fields - cls._meta.fetch_fields)
+                if name != cls._meta.pk_attr and name in (cls._meta.fields - cls._meta.fetch_fields)
             ],
             "fk_fields": [
                 field.describe(serializable)
