@@ -16,6 +16,7 @@ def _process_filter_kwarg(
     model: "Type[Model]", key: str, value: Any, table: Table
 ) -> Tuple[Criterion, Optional[Tuple[Table, Criterion]]]:
     join = None
+
     if transformer := model._meta.transformers.get(key):
         value = transformer(value)
 
@@ -181,9 +182,7 @@ class QueryModifier:
             )
         return QueryModifier(where_criterion=self.where_criterion.negate(), joins=self.joins)
 
-    def get_query_modifiers(
-        self,
-    ) -> Tuple[Criterion, List[Tuple[Table, Criterion]], Criterion]:
+    def get_query_modifiers(self) -> Tuple[Criterion, List[Tuple[Table, Criterion]], Criterion]:
         """
         Returns a tuple of the query criterion.
         """
@@ -424,7 +423,7 @@ class Prefetch:
         first_level_field, __, forwarded_prefetch = self.relation.partition("__")
         if first_level_field not in queryset.model._meta.fetch_fields:
             raise OperationalError(
-                f"relation {first_level_field} for {queryset.model._meta.db_table} not" " found"
+                f"relation {first_level_field} for {queryset.model._meta.db_table} not found"
             )
 
         if forwarded_prefetch:
