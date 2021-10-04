@@ -48,7 +48,7 @@ from tortoise.filters import get_filters_for_field
 from tortoise.functions import Function
 from tortoise.indexes import Index
 from tortoise.manager import Manager
-from tortoise.queryset import ExistsQuery, Q, QuerySet, QuerySetSingle, RawSQLQuery
+from tortoise.queryset import BulkUpdateQuery, ExistsQuery, Q, QuerySet, QuerySetSingle, RawSQLQuery
 from tortoise.router import router
 from tortoise.signals import Signals
 from tortoise.transactions import current_transaction_map, in_transaction
@@ -1108,6 +1108,47 @@ class Model(metaclass=ModelMeta):
         db = kwargs.get("using_db") or cls._choose_db(True)
         await instance.save(using_db=db, force_create=True)
         return instance
+
+    @classmethod
+    def bulk_update(
+        cls: Type[MODEL],
+        objects: Iterable[MODEL],
+        fields: Iterable[str],
+        batch_size: Optional[int] = None,
+    ) -> "BulkUpdateQuery":
+        """
+        Update the given fields in each of the given objects in the database.
+        This method efficiently updates the given fields on the provided model instances, generally with one query.
+
+        .. code-block:: python3
+
+            users = [
+                await User.create(name="...", email="..."),
+                await User.create(name="...", email="...")
+            ]
+            users[0].name = 'name1'
+            users[1].name = 'name2'
+
+            await User.bulk_update(users, fields=['name'])
+
+        :param objects: List of objects to bulk create
+        :param fields: The fields to update
+        :param batch_size: How many objects are created in a single query
+        """
+        return cls._meta.manager.get_queryset().bulk_update(objects, fields, batch_size)
+
+    @classmethod
+    async def in_bulk(
+        cls: Type[MODEL], id_list: Iterable[Union[str, int]], field_name: str = "pk"
+    ) -> Dict[str, MODEL]:
+        """
+        Return a dictionary mapping each of the given IDs to the object with
+        that ID. If `id_list` isn't provided, evaluate the entire QuerySet.
+
+        :param id_list: A list of field values
+        :param field_name: Must be a unique field
+        """
+        return await cls._meta.manager.get_queryset().in_bulk(id_list, field_name)
 
     @classmethod
     async def bulk_create(

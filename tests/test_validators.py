@@ -14,6 +14,18 @@ class TestValues(test.TestCase):
             await ValidatorModel.create(max_length="aaaaaa")
         await ValidatorModel.create(max_length="aaaaa")
 
+    async def test_validator_min_value(self):
+        # min value is 10
+        with self.assertRaises(ValidationError):
+            await ValidatorModel.create(min_value=9)
+        await ValidatorModel.create(min_value=10)
+
+    async def test_validator_max_value(self):
+        # max value is 20
+        with self.assertRaises(ValidationError):
+            await ValidatorModel.create(max_value=21)
+        await ValidatorModel.create(min_value=20)
+
     async def test_validator_ipv4(self):
         with self.assertRaises(ValidationError):
             await ValidatorModel.create(ipv4="aaaaaa")

@@ -531,16 +531,23 @@ class BinaryField(Field, bytes):  # type: ignore
 
 class IntEnumFieldInstance(SmallIntField):
     def __init__(
-        self, enum_type: Type[IntEnum], description: Optional[str] = None, **kwargs: Any
+        self,
+        enum_type: Type[IntEnum],
+        description: Optional[str] = None,
+        generated: bool = False,
+        **kwargs: Any,
     ) -> None:
         # Validate values
+        minimum = 1 if generated else -32768
         for item in enum_type:
             try:
                 value = int(item.value)
             except ValueError:
                 raise ConfigurationError("IntEnumField only supports integer enums!")
-            if not 0 <= value < 32768:
-                raise ConfigurationError("The valid range of IntEnumField's values is 0..32767!")
+            if not minimum <= value < 32768:
+                raise ConfigurationError(
+                    "The valid range of IntEnumField's values is {}..32767!".format(minimum)
+                )
 
         # Automatic description for the field if not specified by the user
         if description is None:

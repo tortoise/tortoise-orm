@@ -4,7 +4,9 @@ from tortoise.indexes import Index
 
 
 class PostgreSQLIndex(Index, metaclass=ABCMeta):
-    INDEX_CREATE_TEMPLATE = "CREATE INDEX {index_name} ON {table_name} USING{index_type}({fields});"
+    INDEX_CREATE_TEMPLATE = (
+        "CREATE INDEX {exists}{index_name} ON {table_name} USING{index_type}({fields});"
+    )
 
 
 class BloomIndex(PostgreSQLIndex):
