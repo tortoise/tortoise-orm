@@ -65,20 +65,20 @@ class TestIntEnumFields(test.TestCase):
     async def test_values(self):
         obj0 = await testmodels.EnumFields.create(service=testmodels.Service.system_administration)
         values = await testmodels.EnumFields.get(id=obj0.id).values("service")
-        self.assertEqual(values[0]["service"], testmodels.Service.system_administration)
+        self.assertEqual(values["service"], testmodels.Service.system_administration)
 
         obj1 = await testmodels.EnumFields.create(service=3)
         values = await testmodels.EnumFields.get(id=obj1.id).values("service")
-        self.assertEqual(values[0]["service"], testmodels.Service.system_administration)
+        self.assertEqual(values["service"], testmodels.Service.system_administration)
 
     async def test_values_list(self):
         obj0 = await testmodels.EnumFields.create(service=testmodels.Service.system_administration)
         values = await testmodels.EnumFields.get(id=obj0.id).values_list("service", flat=True)
-        self.assertEqual(values[0], testmodels.Service.system_administration)
+        self.assertEqual(values, testmodels.Service.system_administration)
 
         obj1 = await testmodels.EnumFields.create(service=3)
         values = await testmodels.EnumFields.get(id=obj1.id).values_list("service", flat=True)
-        self.assertEqual(values[0], testmodels.Service.system_administration)
+        self.assertEqual(values, testmodels.Service.system_administration)
 
     def test_char_fails(self):
         with self.assertRaisesRegex(
@@ -162,22 +162,22 @@ class TestCharEnumFields(test.TestCase):
             service=testmodels.Service.system_administration, currency=testmodels.Currency.EUR
         )
         values = await testmodels.EnumFields.get(id=obj0.id).values("currency")
-        self.assertEqual(values[0]["currency"], testmodels.Currency.EUR)
+        self.assertEqual(values["currency"], testmodels.Currency.EUR)
 
         obj1 = await testmodels.EnumFields.create(service=3, currency="EUR")
         values = await testmodels.EnumFields.get(id=obj1.id).values("currency")
-        self.assertEqual(values[0]["currency"], testmodels.Currency.EUR)
+        self.assertEqual(values["currency"], testmodels.Currency.EUR)
 
     async def test_values_list(self):
         obj0 = await testmodels.EnumFields.create(
             service=testmodels.Service.system_administration, currency=testmodels.Currency.EUR
         )
         values = await testmodels.EnumFields.get(id=obj0.id).values_list("currency", flat=True)
-        self.assertEqual(values[0], testmodels.Currency.EUR)
+        self.assertEqual(values, testmodels.Currency.EUR)
 
         obj1 = await testmodels.EnumFields.create(service=3, currency="EUR")
         values = await testmodels.EnumFields.get(id=obj1.id).values_list("currency", flat=True)
-        self.assertEqual(values[0], testmodels.Currency.EUR)
+        self.assertEqual(values, testmodels.Currency.EUR)
 
     def test_auto_maxlen(self):
         fld = CharEnumField(testmodels.Currency)

@@ -43,9 +43,9 @@ class TestCharFields(test.TestCase):
     async def test_values(self):
         obj0 = await testmodels.CharFields.create(char="moo")
         values = await testmodels.CharFields.get(id=obj0.id).values("char")
-        self.assertEqual(values[0]["char"], "moo")
+        self.assertEqual(values["char"], "moo")
 
     async def test_values_list(self):
         obj0 = await testmodels.CharFields.create(char="moo")
         values = await testmodels.CharFields.get(id=obj0.id).values_list("char", flat=True)
-        self.assertEqual(values[0], "moo")
+        self.assertEqual(values, "moo")

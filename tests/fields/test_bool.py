@@ -27,9 +27,9 @@ class TestBooleanFields(test.TestCase):
     async def test_values(self):
         obj0 = await testmodels.BooleanFields.create(boolean=True)
         values = await testmodels.BooleanFields.get(id=obj0.id).values("boolean")
-        self.assertIs(values[0]["boolean"], True)
+        self.assertIs(values["boolean"], True)
 
     async def test_values_list(self):
         obj0 = await testmodels.BooleanFields.create(boolean=True)
         values = await testmodels.BooleanFields.get(id=obj0.id).values_list("boolean", flat=True)
-        self.assertIs(values[0], True)
+        self.assertIs(values, True)

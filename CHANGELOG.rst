@@ -28,6 +28,7 @@ Fixed
 Changed
 ^^^^^^^
 - Allow negative values with `IntEnumField`. (#889)
+- Make `.values()` and `.values_list()` awaited return more consistent. (#899)
 
 0.17.7
 ------

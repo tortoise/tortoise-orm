@@ -502,7 +502,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         Make QuerySet returns list of tuples for given args instead of objects.
 
-        If ```flat=True`` and only one arg is passed can return flat list.
+        If call after `.get()`, `.get_or_none()` or `.first()` return tuples for given args instead of object.
+
+        If ```flat=True`` and only one arg is passed can return flat list or just scalar.
 
         If no arguments are passed it will default to a tuple containing all fields
         in order of declaration.
@@ -511,6 +513,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             db=self._db,
             model=self.model,
             q_objects=self._q_objects,
+            single=self._single,
+            raise_does_not_exist=self._raise_does_not_exist,
             flat=flat,
             fields_for_select_list=fields_  # type: ignore
             or [
@@ -533,6 +537,8 @@ class QuerySet(AwaitableQuery[MODEL]):
     def values(self, *args: str, **kwargs: str) -> "ValuesQuery":
         """
         Make QuerySet return dicts instead of objects.
+
+        If call after `.get()`, `.get_or_none()` or `.first()` return dict instead of object.
 
         Can pass names of fields to fetch, or as a ``field_name='name_in_dict'`` kwarg.
 
@@ -564,6 +570,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             db=self._db,
             model=self.model,
             q_objects=self._q_objects,
+            single=self._single,
+            raise_does_not_exist=self._raise_does_not_exist,
             fields_for_select=fields_for_select,
             distinct=self._distinct,
             limit=self._limit,
@@ -1349,6 +1357,8 @@ class ValuesListQuery(FieldSelectQuery):
         "annotations",
         "custom_filters",
         "q_objects",
+        "single",
+        "raise_does_not_exist",
         "fields_for_select_list",
         "group_bys",
         "force_indexes",
@@ -1360,6 +1370,8 @@ class ValuesListQuery(FieldSelectQuery):
         model: Type[MODEL],
         db: BaseDBAsyncClient,
         q_objects: List[Q],
+        single: bool,
+        raise_does_not_exist: bool,
         fields_for_select_list: List[str],
         limit: Optional[int],
         offset: Optional[int],
@@ -1384,6 +1396,8 @@ class ValuesListQuery(FieldSelectQuery):
         self.orderings = orderings
         self.custom_filters = custom_filters
         self.q_objects = q_objects
+        self.single = single
+        self.raise_does_not_exist = raise_does_not_exist
         self.fields_for_select_list = fields_for_select_list
         self.flat = flat
         self._db = db
@@ -1421,7 +1435,7 @@ class ValuesListQuery(FieldSelectQuery):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self.use_indexes)
 
-    def __await__(self) -> Generator[Any, None, List[Any]]:
+    def __await__(self) -> Generator[Any, None, Union[List[Any], Tuple]]:
         if self._db is None:
             self._db = self._choose_db()  # type: ignore
         self._make_query()
@@ -1431,7 +1445,7 @@ class ValuesListQuery(FieldSelectQuery):
         for val in await self:
             yield val
 
-    async def _execute(self) -> List[Any]:
+    async def _execute(self) -> Union[List[Any], Tuple]:
         _, result = await self._db.execute_query(str(self.query))
         columns = [
             (key, self.resolve_to_python_value(self.model, name))
@@ -1440,10 +1454,20 @@ class ValuesListQuery(FieldSelectQuery):
         if self.flat:
             func = columns[0][1]
             flatmap = lambda entry: func(entry["0"])  # noqa
-            return list(map(flatmap, result))
+            lst_values = list(map(flatmap, result))
+        else:
+            listmap = lambda entry: tuple(func(entry[column]) for column, func in columns)  # noqa
+            lst_values = list(map(listmap, result))
 
-        listmap = lambda entry: tuple(func(entry[column]) for column, func in columns)  # noqa
-        return list(map(listmap, result))
+        if self.single:
+            if len(lst_values) == 1:
+                return lst_values[0]
+            if not lst_values:
+                if self.raise_does_not_exist:
+                    raise DoesNotExist("Object does not exist")
+                return None  # type: ignore
+            raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
+        return lst_values
 
 
 class ValuesQuery(FieldSelectQuery):
@@ -1456,6 +1480,8 @@ class ValuesQuery(FieldSelectQuery):
         "annotations",
         "custom_filters",
         "q_objects",
+        "single",
+        "raise_does_not_exist",
         "group_bys",
         "force_indexes",
         "use_indexes",
@@ -1466,6 +1492,8 @@ class ValuesQuery(FieldSelectQuery):
         model: Type[MODEL],
         db: BaseDBAsyncClient,
         q_objects: List[Q],
+        single: bool,
+        raise_does_not_exist: bool,
         fields_for_select: Dict[str, str],
         limit: Optional[int],
         offset: Optional[int],
@@ -1485,6 +1513,8 @@ class ValuesQuery(FieldSelectQuery):
         self.orderings = orderings
         self.custom_filters = custom_filters
         self.q_objects = q_objects
+        self.single = single
+        self.raise_does_not_exist = raise_does_not_exist
         self._db = db
         self.group_bys = group_bys
         self.force_indexes = force_indexes
@@ -1520,7 +1550,7 @@ class ValuesQuery(FieldSelectQuery):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self.use_indexes)
 
-    def __await__(self) -> Generator[Any, None, List[dict]]:
+    def __await__(self) -> Generator[Any, None, Union[List[dict], Dict]]:
         if self._db is None:
             self._db = self._choose_db()  # type: ignore
         self._make_query()
@@ -1530,7 +1560,7 @@ class ValuesQuery(FieldSelectQuery):
         for val in await self:
             yield val
 
-    async def _execute(self) -> List[dict]:
+    async def _execute(self) -> Union[List[dict], Dict]:
         result = await self._db.execute_query_dict(str(self.query))
         columns = [
             val
@@ -1546,6 +1576,14 @@ class ValuesQuery(FieldSelectQuery):
                 for col, func in columns:
                     row[col] = func(row[col])
 
+        if self.single:
+            if len(result) == 1:
+                return result[0]
+            if not result:
+                if self.raise_does_not_exist:
+                    raise DoesNotExist("Object does not exist")
+                return None  # type: ignore
+            raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
         return result
 
 
