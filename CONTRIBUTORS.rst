@@ -49,6 +49,7 @@ Contributors
 * Isaque Alves ``@isaquealves``
 * Vinay Karanam ``@vinayinvicible``
 * Aleksandr Rozum ``@rozumalex``
+* Max Smirnov ``@Masynchin``
 
 Special Thanks
 ==============
