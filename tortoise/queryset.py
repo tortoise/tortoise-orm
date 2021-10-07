@@ -1631,7 +1631,17 @@ class BulkUpdateQuery(UpdateQuery):
         fields: Iterable[str],
         batch_size: Optional[int] = None,
     ):
-        super().__init__(model, {}, db, q_objects, annotations, custom_filters, limit, orderings)
+        super().__init__(
+            model=model,
+            update_kwargs={},
+            db=db,
+            q_objects=q_objects,
+            annotations=annotations,
+            custom_filters=custom_filters,
+            limit=limit,
+            orderings=orderings,
+        )
+
         self.objects = objects
         self.fields = fields
         self.batch_size = batch_size
