@@ -1311,7 +1311,7 @@ class FieldSelectQuery(AwaitableQuery):
             # return as is to get whole model objects
             return lambda x: x
 
-        if field in (x[1] for x in model._meta.db_native_fields):
+        if field in (model_field for _, model_field, _ in model._meta.db_native_fields):
             return lambda x: x
 
         if field in self.annotations:
