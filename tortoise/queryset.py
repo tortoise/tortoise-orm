@@ -130,10 +130,12 @@ class AwaitableQuery(Generic[MODEL]):
             modifier &= node.resolve(model, annotations, custom_filters, model._meta.basetable)
 
         where_criterion, joins, having_criterion = modifier.get_query_modifiers()
-        for join in joins:
-            if join[0] not in self._joined_tables:
-                self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
-                self._joined_tables.append(join[0])
+        for joined_table, join_criterion in joins:
+            if joined_table not in self._joined_tables:
+                self.query = self.query.join(joined_table, how=JoinType.left_outer).on(
+                    join_criterion
+                )
+                self._joined_tables.append(joined_table)
 
         self.query._wheres = where_criterion
         self.query._havings = having_criterion
@@ -147,10 +149,12 @@ class AwaitableQuery(Generic[MODEL]):
         self, table: Table, related_field_name: str, related_field: RelationalField
     ) -> Table:
         joins = _get_joins_for_related_field(table, related_field, related_field_name)
-        for join in joins:
-            if join[0] not in self._joined_tables:
-                self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
-                self._joined_tables.append(join[0])
+        for joined_table, join_criterion in joins:
+            if joined_table not in self._joined_tables:
+                self.query = self.query.join(joined_table, how=JoinType.left_outer).on(
+                    join_criterion
+                )
+                self._joined_tables.append(joined_table)
         return joins[-1][0]
 
     @staticmethod
@@ -186,8 +190,7 @@ class AwaitableQuery(Generic[MODEL]):
         if not orderings and self.model._meta.ordering and not annotations:
             orderings = self.model._meta.ordering
 
-        for ordering in orderings:
-            field_name = ordering[0]
+        for field_name, order_type in orderings:
             if field_name in model._meta.fetch_fields:
                 raise FieldError(
                     "Filtering by relation is not possible. Filter by nested field of related model"
@@ -200,21 +203,21 @@ class AwaitableQuery(Generic[MODEL]):
                 self.resolve_ordering(
                     related_field.related_model,
                     related_table,
-                    [(forwarded, ordering[1])],
+                    [(forwarded, order_type)],
                     {},
                 )
             elif field_name in annotations:
                 annotation = annotations[field_name]
                 if isinstance(annotation, Term):
-                    self.query = self.query.orderby(annotation, order=ordering[1])
+                    self.query = self.query.orderby(annotation, order=order_type)
                 else:
                     annotation_info = annotation.resolve(self.model, table)
-                    self.query = self.query.orderby(annotation_info["field"], order=ordering[1])
+                    self.query = self.query.orderby(annotation_info["field"], order=order_type)
             else:
                 field_object = model._meta.fields_map.get(field_name)
-
                 if not field_object:
                     raise FieldError(f"Unknown field {field_name} for model {model.__name__}")
+
                 field_name = field_object.source_field or field_name
                 field = table[field_name]
 
@@ -224,7 +227,7 @@ class AwaitableQuery(Generic[MODEL]):
                 if func:
                     field = func(field_object, field)
 
-                self.query = self.query.orderby(field, order=ordering[1])
+                self.query = self.query.orderby(field, order=order_type)
 
     def _resolve_annotate(self) -> bool:
         if not self._annotations:
