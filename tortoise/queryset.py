@@ -1567,10 +1567,10 @@ class ValuesQuery(FieldSelectQuery):
         result = await self._db.execute_query_dict(str(self.query))
         columns = [
             val
-            for val in [
+            for val in (
                 (alias, self.resolve_to_python_value(self.model, field_name))
                 for alias, field_name in self.fields_for_select.items()
-            ]
+            )
             if not isinstance(val[1], types.LambdaType)
         ]
 
