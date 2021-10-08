@@ -12,9 +12,23 @@ Changelog
 
 0.17.8
 ------
+
+Added
+^^^^^
 - Add `Model.raw` method to support the raw sql query.
+- Add `QuerySet.bulk_update` method. (#924)
+- Add `QuerySet.in_bulk` method.
+- Add `MaxValueValidator` and `MinValueValidator` (#927)
+Fixed
+^^^^^
 - Fix `QuerySet` subclass being lost when `_clone` is run on the instance.
 - Fix bug in `.values` with `source_field`. (#844)
+- Fix `contrib.blacksheep` exception handlers, use builtin json response. (#914)
+- Fix Indexes defined in Meta class do not make use of `exists` parameter in their template (#928)
+Changed
+^^^^^^^
+- Allow negative values with `IntEnumField`. (#889)
+- Make `.values()` and `.values_list()` awaited return more consistent. (#899)
 
 0.17.7
 ------

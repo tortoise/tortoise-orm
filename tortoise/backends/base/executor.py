@@ -32,6 +32,7 @@ from tortoise.fields.relational import (
     RelationalField,
 )
 from tortoise.query_utils import QueryModifier
+from tortoise.utils import chunk
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
@@ -136,7 +137,7 @@ class BaseExecutor:
                 instance: "Model" = self.model._init_from_db(
                     **dict(zip(keys[:current_idx], values[:current_idx]))
                 )
-                instances: dict[Any, Any] = {path: instance}
+                instances: Dict[Any, Any] = {path: instance}
                 for (
                     model,
                     index,
@@ -226,21 +227,12 @@ class BaseExecutor:
             ]
             await self.db.execute_insert(self.insert_query_all, values)
 
-    @staticmethod
-    def _chunk(instances: "Iterable[Model]", batch_size: Optional[int] = None):
-        if not batch_size:
-            yield instances
-        else:
-            instances = list(instances)
-            for i in range(0, len(instances), batch_size):
-                yield instances[i : i + batch_size]  # noqa:E203
-
     async def execute_bulk_insert(
         self,
         instances: "Iterable[Model]",
         batch_size: Optional[int] = None,
     ) -> None:
-        for instance_chunk in self._chunk(instances, batch_size):
+        for instance_chunk in chunk(instances, batch_size):
             values_lists_all = []
             values_lists = []
             for instance in instance_chunk:

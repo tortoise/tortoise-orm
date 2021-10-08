@@ -1,5 +1,4 @@
 checkfiles = tortoise/ examples/ tests/ conftest.py
-black_opts = -l 100 -t py37
 py_warn = PYTHONDEVMODE=1
 
 help:
@@ -22,7 +21,7 @@ deps:
 
 check: deps build
 ifneq ($(shell which black),)
-	black --check $(black_opts) $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
+	black --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
 	flake8 $(checkfiles)
 	mypy $(checkfiles)
@@ -32,7 +31,7 @@ endif
 
 lint: deps build
 ifneq ($(shell which black),)
-	black --check $(black_opts) $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
+	black --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
 	flake8 $(checkfiles)
 	mypy $(checkfiles)
@@ -68,7 +67,7 @@ docs: deps
 
 style: deps
 	isort -src $(checkfiles)
-	black $(black_opts) $(checkfiles)
+	black $(checkfiles)
 
 build: deps
 	rm -fR dist/

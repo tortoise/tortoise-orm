@@ -13,6 +13,12 @@ class BadIntEnum1(IntEnum):
 
 
 class BadIntEnum2(IntEnum):
+    python_programming = -32769
+    database_design = 2
+    system_administration = 3
+
+
+class BadIntEnumIfGenerated(IntEnum):
     python_programming = -1
     database_design = 2
     system_administration = 3
@@ -59,20 +65,20 @@ class TestIntEnumFields(test.TestCase):
     async def test_values(self):
         obj0 = await testmodels.EnumFields.create(service=testmodels.Service.system_administration)
         values = await testmodels.EnumFields.get(id=obj0.id).values("service")
-        self.assertEqual(values[0]["service"], testmodels.Service.system_administration)
+        self.assertEqual(values["service"], testmodels.Service.system_administration)
 
         obj1 = await testmodels.EnumFields.create(service=3)
         values = await testmodels.EnumFields.get(id=obj1.id).values("service")
-        self.assertEqual(values[0]["service"], testmodels.Service.system_administration)
+        self.assertEqual(values["service"], testmodels.Service.system_administration)
 
     async def test_values_list(self):
         obj0 = await testmodels.EnumFields.create(service=testmodels.Service.system_administration)
         values = await testmodels.EnumFields.get(id=obj0.id).values_list("service", flat=True)
-        self.assertEqual(values[0], testmodels.Service.system_administration)
+        self.assertEqual(values, testmodels.Service.system_administration)
 
         obj1 = await testmodels.EnumFields.create(service=3)
         values = await testmodels.EnumFields.get(id=obj1.id).values_list("service", flat=True)
-        self.assertEqual(values[0], testmodels.Service.system_administration)
+        self.assertEqual(values, testmodels.Service.system_administration)
 
     def test_char_fails(self):
         with self.assertRaisesRegex(
@@ -82,15 +88,25 @@ class TestIntEnumFields(test.TestCase):
 
     def test_range1_fails(self):
         with self.assertRaisesRegex(
-            ConfigurationError, "The valid range of IntEnumField's values is 0..32767!"
+            ConfigurationError, "The valid range of IntEnumField's values is -32768..32767!"
         ):
             IntEnumField(BadIntEnum1)
 
     def test_range2_fails(self):
         with self.assertRaisesRegex(
-            ConfigurationError, "The valid range of IntEnumField's values is 0..32767!"
+            ConfigurationError, "The valid range of IntEnumField's values is -32768..32767!"
         ):
             IntEnumField(BadIntEnum2)
+
+    def test_range3_generated_fails(self):
+        with self.assertRaisesRegex(
+            ConfigurationError, "The valid range of IntEnumField's values is 1..32767!"
+        ):
+            IntEnumField(BadIntEnumIfGenerated, generated=True)
+
+    def test_range3_manual(self):
+        fld = IntEnumField(BadIntEnumIfGenerated)
+        self.assertIs(fld.enum_type, BadIntEnumIfGenerated)
 
     def test_auto_description(self):
         fld = IntEnumField(testmodels.Service)
@@ -146,22 +162,22 @@ class TestCharEnumFields(test.TestCase):
             service=testmodels.Service.system_administration, currency=testmodels.Currency.EUR
         )
         values = await testmodels.EnumFields.get(id=obj0.id).values("currency")
-        self.assertEqual(values[0]["currency"], testmodels.Currency.EUR)
+        self.assertEqual(values["currency"], testmodels.Currency.EUR)
 
         obj1 = await testmodels.EnumFields.create(service=3, currency="EUR")
         values = await testmodels.EnumFields.get(id=obj1.id).values("currency")
-        self.assertEqual(values[0]["currency"], testmodels.Currency.EUR)
+        self.assertEqual(values["currency"], testmodels.Currency.EUR)
 
     async def test_values_list(self):
         obj0 = await testmodels.EnumFields.create(
             service=testmodels.Service.system_administration, currency=testmodels.Currency.EUR
         )
         values = await testmodels.EnumFields.get(id=obj0.id).values_list("currency", flat=True)
-        self.assertEqual(values[0], testmodels.Currency.EUR)
+        self.assertEqual(values, testmodels.Currency.EUR)
 
         obj1 = await testmodels.EnumFields.create(service=3, currency="EUR")
         values = await testmodels.EnumFields.get(id=obj1.id).values_list("currency", flat=True)
-        self.assertEqual(values[0], testmodels.Currency.EUR)
+        self.assertEqual(values, testmodels.Currency.EUR)
 
     def test_auto_maxlen(self):
         fld = CharEnumField(testmodels.Currency)
