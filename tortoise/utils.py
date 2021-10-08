@@ -48,4 +48,4 @@ def chunk(instances: Iterable[Any], batch_size: Optional[int] = None) -> Iterabl
     else:
         instances = list(instances)
         for i in range(0, len(instances), batch_size):
-            yield instances[i: i + batch_size]  # noqa:E203
+            yield instances[i : i + batch_size]  # noqa:E203
