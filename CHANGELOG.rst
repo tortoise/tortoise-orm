@@ -10,6 +10,14 @@ Changelog
 0.17
 ====
 
+0.17.9
+------
+
+Added
+^^^^^
+- Add Case-When support. (#943)
+
+
 0.17.8
 ------
 
