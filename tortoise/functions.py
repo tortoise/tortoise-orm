@@ -1,9 +1,11 @@
-from typing import TYPE_CHECKING, Any, Iterator, Optional, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Iterator, List, Optional, Type, Union, cast
 
-from pypika import Case, Table, functions
+from pypika import Case as BaseCase
+from pypika import Table, functions
 from pypika.functions import DistinctOptionFunction
 from pypika.terms import ArithmeticExpression
 from pypika.terms import Function as BaseFunction
+from pypika.terms import Term
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.expressions import F
@@ -172,7 +174,7 @@ class Aggregate(Function):
             modifier = QueryModifier()
             modifier &= self.filter.resolve(model, {}, {}, model._meta.basetable)
             where_criterion, joins, having_criterion = modifier.get_query_modifiers()
-            ret["field"] = Case().when(where_criterion, ret["field"]).else_(None)
+            ret["field"] = BaseCase().when(where_criterion, ret["field"]).else_(None)
 
         return ret
 
@@ -300,3 +302,96 @@ class Avg(Aggregate):
 
     database_func = functions.Avg
     populate_field_object = True
+
+
+##############################################################################
+# Case-When
+##############################################################################
+
+
+class When:
+    """
+    When expression.
+
+    :param args: Q objects
+    :param kwargs: keyword criterion like filter
+    :param then: value for criterion
+    :param negate: false (default)
+    """
+
+    def __init__(
+        self,
+        *args: Q,
+        then: Union[str, F, ArithmeticExpression, Function],
+        negate: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        self.args = args
+        self.then = then
+        self.negate = negate
+        self.kwargs = kwargs
+
+    def _resolve_q_objects(self) -> List[Q]:
+        q_objects = []
+        for arg in self.args:
+            if not isinstance(arg, Q):
+                raise TypeError("expected Q objects as args")
+            if self.negate:
+                q_objects.append(~arg)
+            else:
+                q_objects.append(arg)
+
+        for key, value in self.kwargs.items():
+            if self.negate:
+                q_objects.append(~Q(**{key: value}))
+            else:
+                q_objects.append(Q(**{key: value}))
+        return q_objects
+
+    def resolve(self, model: "Type[Model]", table: Table) -> tuple:
+        q_objects = self._resolve_q_objects()
+
+        modifier = QueryModifier()
+        for node in q_objects:
+            modifier &= node.resolve(model, {}, {}, model._meta.basetable)
+
+        if isinstance(self.then, Function):
+            then = self.then.resolve(model, table)["field"]
+        elif isinstance(self.then, Term):
+            then = F.resolver_arithmetic_expression(model, self.then)[0]
+        else:
+            then = Term.wrap_constant(self.then)
+
+        return modifier.where_criterion, then
+
+
+class Case:
+    """
+    Case expression.
+
+    :param args: When objects
+    :param default: value for 'CASE WHEN ... THEN ... ELSE <default> END'
+    """
+
+    def __init__(
+        self, *args, default: Union[str, F, ArithmeticExpression, Function] = None
+    ) -> None:
+        self.args = args
+        self.default = default
+
+    def resolve(self, model: "Type[Model]", table: Table) -> dict:
+        case = BaseCase()
+        for arg in self.args:
+            if not isinstance(arg, When):
+                raise TypeError("expected When objects as args")
+            criterion, term = arg.resolve(model, table)
+            case = case.when(criterion, term)
+
+        if isinstance(self.default, Function):
+            case = case.else_(self.default.resolve(model, table)["field"])
+        elif isinstance(self.default, Term):
+            case = case.else_(F.resolver_arithmetic_expression(model, self.default)[0])
+        else:
+            case = case.else_(Term.wrap_constant(self.default))
+
+        return {"joins": [], "field": case}
