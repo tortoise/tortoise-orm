@@ -37,6 +37,7 @@ async def generate_schema_for_client(client: "BaseDBAsyncClient", safe: bool) ->
             )
             await generator.generate_from_string(schema)
  
+
 def chunk(instances: Iterable[Any], batch_size: Optional[int] = None) -> Iterable[Iterable[Any]]:
     """
     Generate iterable chunk by batch_size
