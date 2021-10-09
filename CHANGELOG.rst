@@ -19,7 +19,7 @@ Added
 - Add `Rand`/`Random` function in contrib. (#944)
 Changed
 ^^^^^^^
-- Remove `Function`,`Aggregate` from 'functions.py' to 'expressions.py'. (#944)
+- Remove `Function`,`Aggregate` from 'functions.py' to 'expressions.py'. (#943)
 
 0.17.8
 ------
