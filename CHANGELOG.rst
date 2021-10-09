@@ -16,7 +16,8 @@ Added
 - Add `Rand`/`Random` function in contrib. (#944)
 Changed
 ^^^^^^^
-- Move `Function`, `Aggregate`, `Q` from `functions.py` to `expressions.py`. (#943)
+- Move `Function`, `Aggregate` from `functions.py` to `expressions.py`. (#943)
+- Move `Q` from `query_utils.py` to `expressions.py`.
 
 0.17
 ====
