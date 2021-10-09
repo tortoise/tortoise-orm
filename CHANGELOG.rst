@@ -4,26 +4,24 @@
 Changelog
 =========
 
-
 .. rst-class:: emphasize-children
 
-0.17
+0.18
 ====
-
-0.17.9
+0.18.0
 ------
-
 Added
 ^^^^^
 - Add Case-When support. (#943)
 - Add `Rand`/`Random` function in contrib. (#944)
 Changed
 ^^^^^^^
-- Remove `Function`,`Aggregate` from 'functions.py' to 'expressions.py'. (#943)
+- Move `Function`, `Aggregate`, `Q` from `functions.py` to `expressions.py`. (#943)
 
+0.17
+====
 0.17.8
 ------
-
 Added
 ^^^^^
 - Add `Model.raw` method to support the raw sql query.

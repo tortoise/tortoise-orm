@@ -1,8 +1,8 @@
 from tests.testmodels import Author, Book, Event, MinRelation, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
+from tortoise.expressions import Q
 from tortoise.functions import Avg, Coalesce, Concat, Count, Lower, Max, Min, Sum, Trim
-from tortoise.query_utils import Q
 
 
 class TestAggregation(test.TestCase):

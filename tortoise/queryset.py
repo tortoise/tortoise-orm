@@ -33,14 +33,14 @@ from tortoise.exceptions import (
     MultipleObjectsReturned,
     ParamsError,
 )
-from tortoise.expressions import F, RawSQL
+from tortoise.expressions import F, Q, RawSQL
 from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
     OneToOneFieldInstance,
     RelationalField,
 )
 from tortoise.functions import Function
-from tortoise.query_utils import Prefetch, Q, QueryModifier, _get_joins_for_related_field
+from tortoise.query_utils import Prefetch, QueryModifier, _get_joins_for_related_field
 from tortoise.router import router
 from tortoise.utils import chunk
 
@@ -127,7 +127,9 @@ class AwaitableQuery(Generic[MODEL]):
 
         modifier = QueryModifier()
         for node in q_objects:
-            modifier &= node.resolve(model, annotations, custom_filters, model._meta.basetable)
+            node._annotations = annotations
+            node._custom_filters = custom_filters
+            modifier &= node.resolve(model, model._meta.basetable)
 
         where_criterion, joins, having_criterion = modifier.get_query_modifiers()
         for join in joins:

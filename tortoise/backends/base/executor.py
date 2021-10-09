@@ -448,10 +448,10 @@ class BaseExecutor:
             joined_tables: List[Table] = []
             modifier = QueryModifier()
             for node in related_query._q_objects:
+                node._annotations = related_query._annotations
+                node._custom_filters = related_query._custom_filters
                 modifier &= node.resolve(
                     model=related_query.model,
-                    annotations=related_query._annotations,
-                    custom_filters=related_query._custom_filters,
                     table=related_query_table,
                 )
 

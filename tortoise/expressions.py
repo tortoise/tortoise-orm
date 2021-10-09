@@ -1,17 +1,17 @@
-from typing import TYPE_CHECKING, Any, Iterator, List, Optional, Tuple, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Tuple, Type, Union, cast
 
 from pypika import Case as PypikaCase
 from pypika import Field as PypikaField
 from pypika import Table
 from pypika.functions import DistinctOptionFunction
-from pypika.terms import ArithmeticExpression
+from pypika.terms import ArithmeticExpression, Criterion
 from pypika.terms import Function as PypikaFunction
 from pypika.terms import Term
 from pypika.utils import format_alias_sql
 
-from tortoise.exceptions import ConfigurationError, FieldError
+from tortoise.exceptions import ConfigurationError, FieldError, OperationalError
 from tortoise.fields.relational import BackwardFKRelation, ForeignKeyFieldInstance, RelationalField
-from tortoise.query_utils import Q, QueryModifier
+from tortoise.query_utils import QueryModifier, _get_joins_for_related_field
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from pypika.queries import Selectable
@@ -97,7 +97,250 @@ class RawSQL(Term):  # type: ignore
         return self.sql
 
 
-class Function:
+class Expression:
+    """
+    Parent class for expressions
+    """
+
+    def resolve(self, model: "Type[Model]", table: Table) -> Any:
+        raise NotImplementedError()
+
+
+class Q(Expression):
+    """
+    Q Expression container.
+    Q Expressions are a useful tool to compose a query from many small parts.
+
+    :param join_type: Is the join an AND or OR join type?
+    :param args: Inner ``Q`` expressions that you want to wrap.
+    :param kwargs: Filter statements that this Q object should encapsulate.
+    """
+
+    __slots__ = (
+        "children",
+        "filters",
+        "join_type",
+        "_is_negated",
+        "_annotations",
+        "_custom_filters",
+    )
+
+    AND = "AND"
+    OR = "OR"
+
+    def __init__(self, *args: "Q", join_type: str = AND, **kwargs: Any) -> None:
+        if args and kwargs:
+            newarg = Q(join_type=join_type, **kwargs)
+            args = (newarg,) + args
+            kwargs = {}
+        if not all(isinstance(node, Q) for node in args):
+            raise OperationalError("All ordered arguments must be Q nodes")
+        #: Contains the sub-Q's that this Q is made up of
+        self.children: Tuple[Q, ...] = args
+        #: Contains the filters applied to this Q
+        self.filters: Dict[str, Any] = kwargs
+        if join_type not in {self.AND, self.OR}:
+            raise OperationalError("join_type must be AND or OR")
+        #: Specifies if this Q does an AND or OR on its children
+        self.join_type = join_type
+        self._is_negated = False
+        self._annotations: Dict[str, Any] = {}
+        self._custom_filters: Dict[str, Dict[str, Any]] = {}
+
+    def __and__(self, other: "Q") -> "Q":
+        """
+        Returns a binary AND of Q objects, use ``AND`` operator.
+
+        :raises OperationalError: AND operation requires a Q node
+        """
+        if not isinstance(other, Q):
+            raise OperationalError("AND operation requires a Q node")
+        return Q(self, other, join_type=self.AND)
+
+    def __or__(self, other: "Q") -> "Q":
+        """
+        Returns a binary OR of Q objects, use ``OR`` operator.
+
+        :raises OperationalError: OR operation requires a Q node
+        """
+        if not isinstance(other, Q):
+            raise OperationalError("OR operation requires a Q node")
+        return Q(self, other, join_type=self.OR)
+
+    def __invert__(self) -> "Q":
+        """
+        Returns a negated instance of the Q object, use ``~`` operator.
+        """
+        q = Q(*self.children, join_type=self.join_type, **self.filters)
+        q.negate()
+        return q
+
+    def negate(self) -> None:
+        """
+        Negates the current Q object. (mutation)
+        """
+        self._is_negated = not self._is_negated
+
+    def _resolve_nested_filter(
+        self, model: "Type[Model]", key: str, value: Any, table: Table
+    ) -> QueryModifier:
+        related_field_name, __, forwarded_fields = key.partition("__")
+        related_field = cast(RelationalField, model._meta.fields_map[related_field_name])
+        required_joins = _get_joins_for_related_field(table, related_field, related_field_name)
+        q = Q(**{forwarded_fields: value})
+        q._annotations = self._annotations
+        q._custom_filters = self._custom_filters
+        modifier = q.resolve(
+            model=related_field.related_model,
+            table=required_joins[-1][0],
+        )
+        return QueryModifier(joins=required_joins) & modifier
+
+    def _resolve_custom_kwarg(
+        self, model: "Type[Model]", key: str, value: Any, table: Table
+    ) -> QueryModifier:
+        having_info = self._custom_filters[key]
+        annotation = self._annotations[having_info["field"]]
+        if isinstance(annotation, Term):
+            annotation_info = {"field": annotation}
+        else:
+            annotation_info = annotation.resolve(model, table)
+
+        operator = having_info["operator"]
+        overridden_operator = model._meta.db.executor_class.get_overridden_filter_func(
+            filter_func=operator
+        )
+        if overridden_operator:
+            operator = overridden_operator
+        if annotation_info["field"].is_aggregate:
+            modifier = QueryModifier(having_criterion=operator(annotation_info["field"], value))
+        else:
+            modifier = QueryModifier(where_criterion=operator(annotation_info["field"], value))
+        return modifier
+
+    def _process_filter_kwarg(
+        self, model: "Type[Model]", key: str, value: Any, table: Table
+    ) -> Tuple[Criterion, Optional[Tuple[Table, Criterion]]]:
+        join = None
+
+        if value is None and f"{key}__isnull" in model._meta.filters:
+            param = model._meta.get_filter(f"{key}__isnull")
+            value = True
+        else:
+            param = model._meta.get_filter(key)
+
+        pk_db_field = model._meta.db_pk_column
+        if param.get("table"):
+            join = (
+                param["table"],
+                table[pk_db_field] == param["table"][param["backward_key"]],
+            )
+            if param.get("value_encoder"):
+                value = param["value_encoder"](value, model)
+            criterion = param["operator"](param["table"][param["field"]], value)
+        else:
+            if isinstance(value, Term):
+                encoded_value = value
+            else:
+                field_object = model._meta.fields_map[param["field"]]
+                encoded_value = (
+                    param["value_encoder"](value, model, field_object)
+                    if param.get("value_encoder")
+                    else model._meta.db.executor_class._field_to_db(field_object, value, model)
+                )
+            criterion = param["operator"](table[param["source_field"]], encoded_value)
+        return criterion, join
+
+    def _resolve_regular_kwarg(
+        self, model: "Type[Model]", key: str, value: Any, table: Table
+    ) -> QueryModifier:
+        if key not in model._meta.filters and key.split("__")[0] in model._meta.fetch_fields:
+            modifier = self._resolve_nested_filter(model, key, value, table)
+        else:
+            criterion, join = self._process_filter_kwarg(model, key, value, table)
+            joins = [join] if join else []
+            modifier = QueryModifier(where_criterion=criterion, joins=joins)
+        return modifier
+
+    def _get_actual_filter_params(
+        self, model: "Type[Model]", key: str, value: Table
+    ) -> Tuple[str, Any]:
+        filter_key = key
+        if key in model._meta.fk_fields or key in model._meta.o2o_fields:
+            field_object = model._meta.fields_map[key]
+            if hasattr(value, "pk"):
+                filter_value = value.pk
+            else:
+                filter_value = value
+            filter_key = cast(str, field_object.source_field)
+        elif key in model._meta.m2m_fields:
+            if hasattr(value, "pk"):
+                filter_value = value.pk
+            else:
+                filter_value = value
+        elif (
+            key.split("__")[0] in model._meta.fetch_fields
+            or key in self._custom_filters
+            or key in model._meta.filters
+        ):
+            filter_value = value
+        else:
+            allowed = sorted(
+                model._meta.fields | model._meta.fetch_fields | set(self._custom_filters)
+            )
+            raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
+        return filter_key, filter_value
+
+    def _resolve_kwargs(self, model: "Type[Model]", table: Table) -> QueryModifier:
+        modifier = QueryModifier()
+        for raw_key, raw_value in self.filters.items():
+            key, value = self._get_actual_filter_params(model, raw_key, raw_value)
+            if key in self._custom_filters:
+                filter_modifier = self._resolve_custom_kwarg(model, key, value, table)
+            else:
+                filter_modifier = self._resolve_regular_kwarg(model, key, value, table)
+
+            if self.join_type == self.AND:
+                modifier &= filter_modifier
+            else:
+                modifier |= filter_modifier
+        if self._is_negated:
+            modifier = ~modifier
+        return modifier
+
+    def _resolve_children(self, model: "Type[Model]", table: Table) -> QueryModifier:
+        modifier = QueryModifier()
+        for node in self.children:
+            node._annotations = self._annotations
+            node._custom_filters = self._custom_filters
+            node_modifier = node.resolve(model, table)
+            if self.join_type == self.AND:
+                modifier &= node_modifier
+            else:
+                modifier |= node_modifier
+
+        if self._is_negated:
+            modifier = ~modifier
+        return modifier
+
+    def resolve(
+        self,
+        model: "Type[Model]",
+        table: Table,
+    ) -> QueryModifier:
+        """
+        Resolves the logical Q chain into the parts of a SQL statement.
+
+        :param model: The Model this Q Expression should be resolved on.
+        :param table: ``pypika.Table`` to keep track of the virtual SQL table
+            (to allow self referential joins)
+        """
+        if self.filters:
+            return self._resolve_kwargs(model, table)
+        return self._resolve_children(model, table)
+
+
+class Function(Expression):
     """
     Function/Aggregate base.
 
@@ -247,14 +490,14 @@ class Aggregate(Function):
         ret = super()._resolve_field_for_model(model, table, field)
         if self.filter:
             modifier = QueryModifier()
-            modifier &= self.filter.resolve(model, {}, {}, model._meta.basetable)
+            modifier &= self.filter.resolve(model, model._meta.basetable)
             where_criterion, joins, having_criterion = modifier.get_query_modifiers()
             ret["field"] = PypikaCase().when(where_criterion, ret["field"]).else_(None)
 
         return ret
 
 
-class When:
+class When(Expression):
     """
     When expression.
 
@@ -298,7 +541,7 @@ class When:
 
         modifier = QueryModifier()
         for node in q_objects:
-            modifier &= node.resolve(model, {}, {}, model._meta.basetable)
+            modifier &= node.resolve(model, model._meta.basetable)
 
         if isinstance(self.then, Function):
             then = self.then.resolve(model, table)["field"]
@@ -310,7 +553,7 @@ class When:
         return modifier.where_criterion, then
 
 
-class Case:
+class Case(Expression):
     """
     Case expression.
 
@@ -319,7 +562,7 @@ class Case:
     """
 
     def __init__(
-        self, *args, default: Union[str, F, ArithmeticExpression, Function] = None
+        self, *args: When, default: Union[str, F, ArithmeticExpression, Function] = None
     ) -> None:
         self.args = args
         self.default = default

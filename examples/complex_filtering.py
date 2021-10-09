@@ -4,8 +4,8 @@ This example shows some more complex querying
 Key points are filtering by related names and using Q objects
 """
 from tortoise import Tortoise, fields, run_async
+from tortoise.expressions import Q
 from tortoise.models import Model
-from tortoise.query_utils import Q
 
 
 class Tournament(Model):

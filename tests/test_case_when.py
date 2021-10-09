@@ -1,9 +1,8 @@
 from tests.testmodels import IntFields
 from tortoise import Tortoise
 from tortoise.contrib import test
-from tortoise.expressions import Case, F, When
+from tortoise.expressions import Case, F, Q, When
 from tortoise.functions import Coalesce
-from tortoise.query_utils import Q
 
 
 class TestCaseWhen(test.TestCase):
