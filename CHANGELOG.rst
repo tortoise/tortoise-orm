@@ -17,7 +17,6 @@ Added
 ^^^^^
 - Add Case-When support. (#943)
 
-
 0.17.8
 ------
 

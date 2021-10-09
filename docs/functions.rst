@@ -1,8 +1,8 @@
 .. _functions:
 
-======================
+=============================================
 Functions & Aggregates & Case-When Expression
-======================
+=============================================
 
 To apply functions to values and get aggregates computed on the DB side, one needs to annotate the QuerySet.
 
