@@ -70,8 +70,7 @@ You can custom functions which not builtin, such as ``TruncMonth`` and ``JsonExt
 .. code-block:: python3
 
     from pypika import CustomFunction
-    from tortoise.expressions import F
-    from tortoise.functions import Function
+    from tortoise.expressions import F, Function
 
     class TruncMonth(Function):
         database_func = CustomFunction("DATE_FORMAT", ["name", "dt_format"])

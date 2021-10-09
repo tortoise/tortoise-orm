@@ -63,3 +63,17 @@ You can use `RawSQL` in `filter()` and `annotate()`.
     await Tournament.filter(pk=1).annotate(count=RawSQL('count(*)')).values("count")
     await Tournament.filter(pk=1).annotate(idp=RawSQL('id + 1')).filter(idp=2).values("idp")
     await Tournament.filter(pk=RawSQL("id + 1"))
+
+
+Case-When Expression
+====================
+
+Build classic `CASE WHEN ... THEN ... ELSE ... END` sql snippet.
+
+.. autoclass:: tortoise.expressions.When
+
+.. autoclass:: tortoise.expressions.Case
+
+.. code-block:: py3
+
+    results = await IntModel.all().annotate(category=Case(When(intnum__gte=8, then='big'), When(intnum__lte=2, then='small'), default='middle'))
