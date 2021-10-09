@@ -10,6 +10,13 @@ Changelog
 0.17
 ====
 
+0.17.9
+------
+
+Added
+^^^^^
+- Add `Rand`/`Random` function in contrib. (#944)
+
 0.17.8
 ------
 
