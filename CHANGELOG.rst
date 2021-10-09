@@ -17,6 +17,9 @@ Added
 ^^^^^
 - Add Case-When support. (#943)
 - Add `Rand`/`Random` function in contrib. (#944)
+Changed
+^^^^^^^
+- Remove `Function`,`Case`,`When` from 'functions.py' to 'expressions.py'. (#944)
 
 0.17.8
 ------
