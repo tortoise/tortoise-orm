@@ -1,8 +1,8 @@
 .. _functions:
 
-=============================================
-Functions & Aggregates & Case-When Expression
-=============================================
+======================
+Functions & Aggregates
+======================
 
 To apply functions to values and get aggregates computed on the DB side, one needs to annotate the QuerySet.
 
@@ -65,8 +65,7 @@ You can custom functions which not builtin, such as ``TruncMonth`` and ``JsonExt
 .. code-block:: python3
 
     from pypika import CustomFunction
-    from tortoise.expressions import F
-    from tortoise.functions import Function
+    from tortoise.expressions import F, Function
 
     class TruncMonth(Function):
         database_func = CustomFunction("DATE_FORMAT", ["name", "dt_format"])
@@ -94,16 +93,3 @@ And you can also use functions in update, the example is only suitable for MySQL
     sql = JSONFields.filter(pk=json.pk).update(data_default=JsonSet(F("data_default"), "$.a", 3)).sql()
     print(sql)
     # UPDATE jsonfields SET data_default=JSON_SET(`data_default`,'$.a',3) where id=1
-
-Case-When Expression
-====================
-
-Case-When apply a transform on each instance of a Field or multiple Fields.
-
-.. autoclass:: tortoise.functions.When
-
-.. autoclass:: tortoise.functions.Case
-
-.. code-block:: py3
-
-    results = await IntModel.all().annotate(category=Case(When(intnum__gte=8, then='big'), When(intnum__lte=2, then='small'), default='middle'))
