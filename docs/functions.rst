@@ -31,6 +31,11 @@ Functions apply a transform on each instance of a Field.
 
 .. autoclass:: tortoise.functions.Concat
 
+.. autoclass:: tortoise.contrib.mysql.functions.Rand
+
+.. autoclass:: tortoise.contrib.postgres.functions.Random
+
+.. autoclass:: tortoise.contrib.sqlite.functions.Random
 
 Aggregates
 ==========
