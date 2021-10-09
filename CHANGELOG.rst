@@ -16,6 +16,7 @@ Changelog
 Added
 ^^^^^
 - Add Case-When support. (#943)
+- Add `Rand`/`Random` function in contrib. (#944)
 
 0.17.8
 ------
