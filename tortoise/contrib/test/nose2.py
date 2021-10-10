@@ -31,9 +31,9 @@ class TortoisePlugin(Plugin):  # type: ignore
         group.add_argument(
             "--app-label",
             action="store",
-            default="",
-            metavar="URI",
-            dest="db_url",
+            default="models",
+            metavar="APP_LABEL",
+            dest="app_label",
             help="The name of the APP to initialise the modules in",
         )
         group.add_argument(
@@ -49,6 +49,7 @@ class TortoisePlugin(Plugin):  # type: ignore
         """Get our options in order command line, config file, hard coded."""
         self.db_url = event.args.db_url or self.db_url
         self.db_modules = event.args.db_modules or self.db_modules
+        self.app_label = event.args.app_label or self.app_label
 
     def startTestRun(self, event: Event) -> None:
         initializer(self.db_modules, db_url=self.db_url, app_label=self.app_label)
