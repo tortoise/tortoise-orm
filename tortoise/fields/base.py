@@ -134,6 +134,7 @@ class Field(metaclass=_FieldMeta):
         generated: bool = False,
         pk: bool = False,
         null: bool = False,
+        blank: bool = False,
         default: Any = None,
         unique: bool = False,
         index: bool = False,
@@ -158,6 +159,7 @@ class Field(metaclass=_FieldMeta):
         self.pk = pk
         self.default = default
         self.null = null
+        self.blank = blank
         self.unique = unique
         self.index = index
         self.model_field_name = ""
@@ -207,6 +209,8 @@ class Field(metaclass=_FieldMeta):
         for v in self.validators:
             if self.null and value is None:
                 continue
+            if not self.blank:
+                raise ValidationError(f"{self.model_field_name}: This field is required.")
             try:
                 if isinstance(value, Enum):
                     v(value.value)
