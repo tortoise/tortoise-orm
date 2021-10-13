@@ -6,9 +6,8 @@ This is to test that behaviour doesn't change when one defined source_field para
 """
 from tests.testmodels import NumberSourceField, SourceFields, StraightFields
 from tortoise.contrib import test
-from tortoise.expressions import F
+from tortoise.expressions import F, Q
 from tortoise.functions import Coalesce, Count, Length, Lower, Trim, Upper
-from tortoise.query_utils import Q
 
 
 class StraightFieldTests(test.TestCase):

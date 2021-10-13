@@ -174,42 +174,112 @@ class TestQueryset(test.TestCase):
         self.assertEqual(
             (await IntFields.all().order_by("intnum").filter(intnum__gte=40).first()).intnum, 40
         )
+        self.assertEqual(
+            (await IntFields.all().order_by("intnum").filter(intnum__gte=40).first().values())[
+                "intnum"
+            ],
+            40,
+        )
+        self.assertEqual(
+            (await IntFields.all().order_by("intnum").filter(intnum__gte=40).first().values_list())[
+                1
+            ],
+            40,
+        )
 
         self.assertEqual(
             await IntFields.all().order_by("intnum").filter(intnum__gte=400).first(), None
         )
+        self.assertEqual(
+            await IntFields.all().order_by("intnum").filter(intnum__gte=400).first().values(), None
+        )
+        self.assertEqual(
+            await IntFields.all().order_by("intnum").filter(intnum__gte=400).first().values_list(),
+            None,
+        )
 
     async def test_get_or_none(self):
         self.assertEqual((await IntFields.all().get_or_none(intnum=40)).intnum, 40)
+        self.assertEqual((await IntFields.all().get_or_none(intnum=40).values())["intnum"], 40)
+        self.assertEqual((await IntFields.all().get_or_none(intnum=40).values_list())[1], 40)
 
         self.assertEqual(
             await IntFields.all().order_by("intnum").get_or_none(intnum__gte=400), None
         )
 
+        self.assertEqual(
+            await IntFields.all().order_by("intnum").get_or_none(intnum__gte=400).values(), None
+        )
+
+        self.assertEqual(
+            await IntFields.all().order_by("intnum").get_or_none(intnum__gte=400).values_list(),
+            None,
+        )
+
         with self.assertRaises(MultipleObjectsReturned):
             await IntFields.all().order_by("intnum").get_or_none(intnum__gte=40)
+
+        with self.assertRaises(MultipleObjectsReturned):
+            await IntFields.all().order_by("intnum").get_or_none(intnum__gte=40).values()
+
+        with self.assertRaises(MultipleObjectsReturned):
+            await IntFields.all().order_by("intnum").get_or_none(intnum__gte=40).values_list()
 
     async def test_get(self):
         await IntFields.filter(intnum__gte=70).update(intnum_null=80)
 
         # Test get
         self.assertEqual((await IntFields.all().get(intnum=40)).intnum, 40)
+        self.assertEqual((await IntFields.all().get(intnum=40).values())["intnum"], 40)
+        self.assertEqual((await IntFields.all().get(intnum=40).values_list())[1], 40)
 
         self.assertEqual((await IntFields.all().all().all().all().all().get(intnum=40)).intnum, 40)
+        self.assertEqual(
+            (await IntFields.all().all().all().all().all().get(intnum=40).values())["intnum"], 40
+        )
+        self.assertEqual(
+            (await IntFields.all().all().all().all().all().get(intnum=40).values_list())[1], 40
+        )
 
         self.assertEqual((await IntFields.get(intnum=40)).intnum, 40)
+        self.assertEqual((await IntFields.get(intnum=40).values())["intnum"], 40)
+        self.assertEqual((await IntFields.get(intnum=40).values_list())[1], 40)
 
         with self.assertRaises(DoesNotExist):
             await IntFields.all().get(intnum=41)
 
         with self.assertRaises(DoesNotExist):
+            await IntFields.all().get(intnum=41).values()
+
+        with self.assertRaises(DoesNotExist):
+            await IntFields.all().get(intnum=41).values_list()
+
+        with self.assertRaises(DoesNotExist):
             await IntFields.get(intnum=41)
+
+        with self.assertRaises(DoesNotExist):
+            await IntFields.get(intnum=41).values()
+
+        with self.assertRaises(DoesNotExist):
+            await IntFields.get(intnum=41).values_list()
 
         with self.assertRaises(MultipleObjectsReturned):
             await IntFields.all().get(intnum_null=80)
 
         with self.assertRaises(MultipleObjectsReturned):
+            await IntFields.all().get(intnum_null=80).values()
+
+        with self.assertRaises(MultipleObjectsReturned):
+            await IntFields.all().get(intnum_null=80).values_list()
+
+        with self.assertRaises(MultipleObjectsReturned):
             await IntFields.get(intnum_null=80)
+
+        with self.assertRaises(MultipleObjectsReturned):
+            await IntFields.get(intnum_null=80).values()
+
+        with self.assertRaises(MultipleObjectsReturned):
+            await IntFields.get(intnum_null=80).values_list()
 
     async def test_delete(self):
         # Test delete
@@ -332,7 +402,7 @@ class TestQueryset(test.TestCase):
             .order_by("-idp")
             .first()
             .values_list("id", "idp")
-        )[0]
+        )
         self.assertEqual(data[0] + 1, data[1])
 
     async def test_annotate_expression_filter(self):

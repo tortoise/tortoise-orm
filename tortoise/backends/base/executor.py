@@ -137,7 +137,7 @@ class BaseExecutor:
                 instance: "Model" = self.model._init_from_db(
                     **dict(zip(keys[:current_idx], values[:current_idx]))
                 )
-                instances: dict[Any, Any] = {path: instance}
+                instances: Dict[Any, Any] = {path: instance}
                 for (
                     model,
                     index,
@@ -448,10 +448,10 @@ class BaseExecutor:
             joined_tables: List[Table] = []
             modifier = QueryModifier()
             for node in related_query._q_objects:
+                node._annotations = related_query._annotations
+                node._custom_filters = related_query._custom_filters
                 modifier &= node.resolve(
                     model=related_query.model,
-                    annotations=related_query._annotations,
-                    custom_filters=related_query._custom_filters,
                     table=related_query_table,
                 )
 

@@ -189,54 +189,6 @@ You can use them like this:
     await event.participants.add(participant_1, participant_2)
 
 
-Q objects
-=========
-
-Sometimes you need to do more complicated queries than the simple AND ``<model>.filter()`` provides. Luckily we have Q objects to spice things up and help you find what you need. These Q-objects can then be used as argument to ``<model>.filter()`` instead.
-
-Q objects are extremely versatile, some example use cases:
- - creating an OR filter
- - nested filters
- - inverted filters
- - combining any of the above to simply write complicated multilayer filters
-
-Q objects can take any (special) kwargs for filtering that ``<model>.filter()`` accepts, see those docs for a full list of filter options in that regard.
-
-They can also be combined by using bitwise operators (``|`` is OR and ``&`` is AND for those unfamiliar with bitwise operators)
-
-For example to find the events with as name ``Event 1`` or ``Event 2``:
-
-.. code-block:: python3
-
-    found_events = await Event.filter(
-        Q(name='Event 1') | Q(name='Event 2')
-    )
-
-Q objects can be nested as well, the above for example is equivalent to:
-
-.. code-block:: python3
-
-    found_events = await Event.filter(
-        Q(Q(name='Event 1'), Q(name='Event 2'), join_type="OR")
-    )
-
-If join type is omitted it defaults to ``AND``.
-
-.. note::
-    Q objects without filter arguments are considered NOP and will be ignored for the final query (regardless on if they are used as ``AND`` or ``OR`` param)
-
-
-Also, Q objects support negated to generate ``NOT`` (``~`` operator) clause in your query
-
-.. code-block:: python3
-
-    not_third_events = await Event.filter(~Q(name='3'))
-
-.. automodule:: tortoise.query_utils
-    :members: Q, QueryModifier
-    :undoc-members:
-
-
 .. _filtering-queries:
 
 Filtering

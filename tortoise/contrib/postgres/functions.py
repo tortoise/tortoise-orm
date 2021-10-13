@@ -17,3 +17,14 @@ class ToTsQuery(Function):  # type: ignore
 
     def __init__(self, field: Term):
         super(ToTsQuery, self).__init__("TO_TSQUERY", field)
+
+
+class Random(Function):  # type: ignore
+    """
+    Genrate random number.
+
+    :samp:`Random()`
+    """
+
+    def __init__(self, alias=None) -> None:
+        super().__init__("RANDOM", alias=alias)

@@ -1,7 +1,7 @@
 from tortoise import Tortoise, fields, run_async
+from tortoise.expressions import Q
 from tortoise.functions import Coalesce, Count, Length, Lower, Min, Sum, Trim, Upper
 from tortoise.models import Model
-from tortoise.query_utils import Q
 
 
 class Tournament(Model):

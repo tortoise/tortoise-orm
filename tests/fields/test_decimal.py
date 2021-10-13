@@ -61,15 +61,15 @@ class TestDecimalFields(test.TestCase):
     async def test_values(self):
         obj0 = await testmodels.DecimalFields.create(decimal=Decimal("1.23456"), decimal_nodec=18.7)
         values = await testmodels.DecimalFields.get(id=obj0.id).values("decimal", "decimal_nodec")
-        self.assertEqual(values[0]["decimal"], Decimal("1.2346"))
-        self.assertEqual(values[0]["decimal_nodec"], 19)
+        self.assertEqual(values["decimal"], Decimal("1.2346"))
+        self.assertEqual(values["decimal_nodec"], 19)
 
     async def test_values_list(self):
         obj0 = await testmodels.DecimalFields.create(decimal=Decimal("1.23456"), decimal_nodec=18.7)
         values = await testmodels.DecimalFields.get(id=obj0.id).values_list(
             "decimal", "decimal_nodec"
         )
-        self.assertEqual(list(values[0]), [Decimal("1.2346"), 19])
+        self.assertEqual(list(values), [Decimal("1.2346"), 19])
 
     async def test_order_by(self):
         await testmodels.DecimalFields.create(decimal=Decimal("0"), decimal_nodec=1)
