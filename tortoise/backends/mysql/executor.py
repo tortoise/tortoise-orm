@@ -1,3 +1,5 @@
+import re
+
 from pypika import Parameter, functions
 from pypika.enums import SqlTypes
 from pypika.terms import Criterion
@@ -18,6 +20,7 @@ from tortoise.filters import (
     contains,
     ends_with,
     format_quotes,
+    ilike,
     insensitive_contains,
     insensitive_ends_with,
     insensitive_exact,
@@ -25,6 +28,7 @@ from tortoise.filters import (
     json_contained_by,
     json_contains,
     json_filter,
+    like,
     search,
     starts_with,
 )
@@ -45,9 +49,30 @@ def escape_like(val: str) -> str:
     return val.replace("\\", "\\\\\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
+def escape_like_except_wildcards(val: str) -> str:
+    # Replace \ with \\\\ if the backslash is not followed by % or _
+    return re.sub(r"(\\(?![%_]))", r"\\\\\\\g<1>", val)
+
+
 def mysql_contains(field: Term, value: str) -> Criterion:
     return Like(
         functions.Cast(field, SqlTypes.CHAR), StrWrapper(f"%{escape_like(value)}%"), escape=""
+    )
+
+
+def mysql_like(field: Term, value: str) -> Criterion:
+    return Like(
+        functions.Cast(field, SqlTypes.CHAR),
+        StrWrapper(escape_like_except_wildcards(value)),
+        escape="",
+    )
+
+
+def mysql_ilike(field: Term, value: str) -> Criterion:
+    return Like(
+        functions.Upper(functions.Cast(field, SqlTypes.CHAR)),
+        functions.Upper(StrWrapper(escape_like_except_wildcards(value))),
+        escape="",
     )
 
 
@@ -98,6 +123,8 @@ def mysql_search(field: Term, value: str):
 class MySQLExecutor(BaseExecutor):
     FILTER_FUNC_OVERRIDE = {
         contains: mysql_contains,
+        like: mysql_like,
+        ilike: mysql_ilike,
         starts_with: mysql_starts_with,
         ends_with: mysql_ends_with,
         insensitive_exact: mysql_insensitive_exact,

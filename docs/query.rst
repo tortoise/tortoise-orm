@@ -260,6 +260,8 @@ When using ``.filter()`` method you can use number of modifiers to field names t
 - ``not_isnull`` - field is not null
 - ``contains`` - field contains specified substring
 - ``icontains`` - case insensitive ``contains``
+- ``like`` - field matches the specified pattern (may contain the SQL wildcards ``%`` and ``_``)
+- ``ilike`` - case insensitive ``LIKE``
 - ``startswith`` - if field starts with value
 - ``istartswith`` - case insensitive ``startswith``
 - ``endswith`` - if field ends with value

@@ -10,6 +10,17 @@ Changelog
 0.17
 ====
 
+0.17.9
+------
+
+Added
+^^^^^
+- Add `__like` and `__ilike` filters. (#421)
+Fixed
+^^^^^
+Changed
+^^^^^^^
+
 0.17.8
 ------
 

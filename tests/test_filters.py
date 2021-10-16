@@ -162,6 +162,64 @@ class TestCharFieldFilters(test.TestCase):
             {"moo"},
         )
 
+    async def test_like(self):
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="moo").values_list("char", flat=True)),
+            {"moo"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="%moo%").values_list("char", flat=True)),
+            {"moo"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="mo_").values_list("char", flat=True)),
+            {"moo"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="moo%_").values_list("char", flat=True)),
+            set(),
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="%o%").values_list("char", flat=True)),
+            {"moo", "oink"},
+        )
+
+    async def test_like_escapes_backslash_that_does_not_escape_sql_wildcard(self):
+        await CharFields.create(char="o\\ink")
+        await CharFields.create(char="o\\\\ink")
+        await CharFields.create(char="oink\\")
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like=r"o\i%").values_list("char", flat=True)),
+            {"o\\ink"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like=r"o\\i%").values_list("char", flat=True)),
+            {"o\\\\ink"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="%\\").values_list("char", flat=True)),
+            {"oink\\"},
+        )
+
+    async def test_like_does_not_escape_backslash_that_escapes_sql_wildcard(self):
+        await CharFields.create(char=r"o%nk")
+        await CharFields.create(char=r"o_nk")
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like=r"o\_nk").values_list("char", flat=True)),
+            {r"o_nk"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like=r"o\%nk").values_list("char", flat=True)),
+            {r"o%nk"},
+        )
+
+    async def test_ilike_is_case_insensitive(self):
+        await CharFields.create(char=r"OinK")
+        self.assertSetEqual(
+            set(await CharFields.filter(char__ilike=r"o%k").values_list("char", flat=True)),
+            {r"OinK", r"oink"},
+        )
+
     async def test_sorting(self):
         self.assertEqual(
             await CharFields.all().order_by("char").values_list("char", flat=True),

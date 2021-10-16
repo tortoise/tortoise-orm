@@ -1,4 +1,5 @@
 import operator
+import re
 from functools import partial
 from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple
 
@@ -83,6 +84,11 @@ def escape_like(val: str) -> str:
     return val.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
+def escape_like_except_wildcards(val: str) -> str:
+    # Replace \ with \\ if the backslash is not followed by % or _
+    return re.sub(r"(\\(?![%_]))", r"\\\g<1>", val)
+
+
 ##############################################################################
 # Encoders
 # Should be type: (Any, instance: "Model", field: Field) -> type:
@@ -155,6 +161,19 @@ def not_null(field: Term, value: Any) -> Criterion:
 
 def contains(field: Term, value: str) -> Criterion:
     return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"%{escape_like(value)}%"))
+
+
+def like(field: Term, value: str) -> Criterion:
+    return Like(
+        Cast(field, SqlTypes.VARCHAR), field.wrap_constant(escape_like_except_wildcards(value))
+    )
+
+
+def ilike(field: Term, value: str) -> Criterion:
+    return Like(
+        Upper(Cast(field, SqlTypes.VARCHAR)),
+        field.wrap_constant(Upper(escape_like_except_wildcards(value))),
+    )
 
 
 def search(field: Term, value: str):
@@ -445,6 +464,18 @@ def get_filters_for_field(
             "source_field": source_field,
             "operator": between_and,
             "value_encoder": list_encoder,
+        },
+        f"{field_name}__like": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": like,
+            "value_encoder": string_encoder,
+        },
+        f"{field_name}__ilike": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": ilike,
+            "value_encoder": string_encoder,
         },
         f"{field_name}__contains": {
             "field": actual_field_name,
