@@ -51,7 +51,7 @@ def escape_like(val: str) -> str:
 
 def escape_like_except_wildcards(val: str) -> str:
     # Replace \ with \\\\ if the backslash is not followed by % or _
-    return re.sub(r"(\\(?![%_]))", r"\\\\\\\g<1>", val)
+    return re.sub(r"\\(?![%_])", r"\\\\\\\\", val)
 
 
 def mysql_contains(field: Term, value: str) -> Criterion:
