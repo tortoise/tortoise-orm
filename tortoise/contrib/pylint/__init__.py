@@ -38,9 +38,8 @@ def transform_model(cls: ClassDef) -> None:
         for mcls in cls.get_children():
             if isinstance(mcls, ClassDef):
                 for attr in mcls.get_children():
-                    if isinstance(attr, Assign):
-                        if attr.targets[0].name == "app":
-                            appname = attr.value.value
+                    if isinstance(attr, Assign) and attr.targets[0].name == "app":
+                        appname = attr.value.value
 
         mname = f"{appname}.{cls.name}"
         MODELS[mname] = cls

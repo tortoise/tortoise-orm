@@ -71,7 +71,7 @@ class SqliteClient(BaseDBAsyncClient):
                 "Created connection %s with params: filename=%s %s",
                 self._connection,
                 self.filename,
-                " ".join([f"{k}={v}" for k, v in self.pragmas.items()]),
+                " ".join(f"{k}={v}" for k, v in self.pragmas.items()),
             )
 
     async def close(self) -> None:
@@ -81,8 +81,9 @@ class SqliteClient(BaseDBAsyncClient):
                 "Closed connection %s with params: filename=%s %s",
                 self._connection,
                 self.filename,
-                " ".join([f"{k}={v}" for k, v in self.pragmas.items()]),
+                " ".join(f"{k}={v}" for k, v in self.pragmas.items()),
             )
+
             self._connection = None
 
     async def db_create(self) -> None:

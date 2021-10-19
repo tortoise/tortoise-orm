@@ -47,18 +47,18 @@ class Index:
                 ),
                 index_type=f" {self.INDEX_TYPE} ",
                 table_name=schema_generator.quote(model._meta.db_table),
-                fields=", ".join([schema_generator.quote(f) for f in self.fields]),
+                fields=", ".join(schema_generator.quote(f) for f in self.fields),
                 extra=self.extra,
             )
-        else:
-            expressions = [f"({expression.get_sql()})" for expression in self.expressions]
-            return self.INDEX_CREATE_TEMPLATE.format(
-                exists="IF NOT EXISTS " if safe else "",
-                index_name=schema_generator.quote(
-                    self.name or schema_generator._generate_index_name("idx", model, expressions)
-                ),
-                index_type=f" {self.INDEX_TYPE} ",
-                table_name=schema_generator.quote(model._meta.db_table),
-                fields=", ".join(expressions),
-                extra=self.extra,
-            )
+
+        expressions = [f"({expression.get_sql()})" for expression in self.expressions]
+        return self.INDEX_CREATE_TEMPLATE.format(
+            exists="IF NOT EXISTS " if safe else "",
+            index_name=schema_generator.quote(
+                self.name or schema_generator._generate_index_name("idx", model, expressions)
+            ),
+            index_type=f" {self.INDEX_TYPE} ",
+            table_name=schema_generator.quote(model._meta.db_table),
+            fields=", ".join(expressions),
+            extra=self.extra,
+        )
