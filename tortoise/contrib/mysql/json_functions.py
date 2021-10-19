@@ -51,7 +51,7 @@ def mysql_json_contained_by(field: Term, value_str: str) -> Criterion:
 
 
 def _mysql_json_is_null(left: Term, is_null: bool):
-    if is_null is True:
+    if is_null:
         return operator.eq(left, Cast("null", "JSON"))
     else:
         return not_equal(left, Cast("null", "JSON"))
