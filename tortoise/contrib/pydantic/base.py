@@ -84,9 +84,7 @@ class PydanticModel(BaseModel):
         fetch_fields = _get_fetch_fields(cls, getattr(cls.__config__, "orig_model"))
         # Fetch fields
         await obj.fetch_related(*fetch_fields)
-        # Convert to pydantic object
-        values = super().from_orm(obj)
-        return values
+        return super().from_orm(obj)
 
     @classmethod
     async def from_queryset_single(cls, queryset: "QuerySetSingle") -> "PydanticModel":
@@ -135,7 +133,6 @@ class PydanticListModel(BaseModel):
         """
         submodel = getattr(cls.__config__, "submodel")
         fetch_fields = _get_fetch_fields(submodel, getattr(submodel.__config__, "orig_model"))
-        values = cls(
+        return cls(
             __root__=[submodel.from_orm(e) for e in await queryset.prefetch_related(*fetch_fields)]
         )
-        return values

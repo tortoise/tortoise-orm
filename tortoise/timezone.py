@@ -52,10 +52,7 @@ def localtime(value: Optional[datetime] = None, timezone: Optional[str] = None) 
     """
     if value is None:
         value = now()
-    if timezone is None:
-        tz = get_default_timezone()
-    else:
-        tz = pytz.timezone(timezone)
+    tz = get_default_timezone() if timezone is None else pytz.timezone(timezone)
     if is_naive(value):
         raise ValueError("localtime() cannot be applied to a naive datetime")
     return value.astimezone(tz)
@@ -95,17 +92,13 @@ def make_aware(
 
     :raises ValueError: when value is not naive datetime
     """
-    if timezone is None:
-        tz = get_default_timezone()
-    else:
-        tz = pytz.timezone(timezone)
+    tz = get_default_timezone() if timezone is None else pytz.timezone(timezone)
     if hasattr(tz, "localize"):
         return tz.localize(value, is_dst=is_dst)  # type: ignore
-    else:
-        if is_aware(value):
-            raise ValueError("make_aware expects a naive datetime, got %s" % value)
-        # This may be wrong around DST changes!
-        return value.replace(tzinfo=tz)
+    if is_aware(value):
+        raise ValueError("make_aware expects a naive datetime, got %s" % value)
+    # This may be wrong around DST changes!
+    return value.replace(tzinfo=tz)
 
 
 def make_naive(value: datetime, timezone: Optional[str] = None) -> datetime:
@@ -114,10 +107,7 @@ def make_naive(value: datetime, timezone: Optional[str] = None) -> datetime:
 
     :raises ValueError: when value is naive datetime
     """
-    if timezone is None:
-        tz = get_default_timezone()
-    else:
-        tz = pytz.timezone(timezone)
+    tz = get_default_timezone() if timezone is None else pytz.timezone(timezone)
     if is_naive(value):
         raise ValueError("make_naive() cannot be applied to a naive datetime")
     return value.astimezone(tz).replace(tzinfo=None)
