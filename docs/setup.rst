@@ -21,7 +21,7 @@ You can do it like this:
         #  which contain models from "app.models"
         await Tortoise.init(
             db_url='sqlite://db.sqlite3',
-            modules={'models': ['app.models']}
+            modules={'modules': ['app.models']}
         )
         # Generate the schema
         await Tortoise.generate_schemas()
