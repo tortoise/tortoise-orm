@@ -21,6 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Programming Language :: PL/SQL",
@@ -39,7 +40,7 @@ iso8601 = "^0.1.13"
 aiosqlite = ">=0.16.0, <0.18.0"
 pytz = "*"
 ciso8601 = { version = "^2.1.2", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
-uvloop = { version = "^0.14.0", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
+uvloop = { version = "^0.16.0", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
 python-rapidjson = { version = "*", optional = true }
 asyncpg = { version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
@@ -49,6 +50,7 @@ asyncmy = { version = "*", optional = true }
 # Linter tools
 mypy = "*"
 importlib_metadata = "*" # required by flake8
+flake8 = "*"
 flake8-isort = "*"
 flake8-comprehensions = "*"
 darglint = "*"
