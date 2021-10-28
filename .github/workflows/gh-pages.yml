@@ -12,9 +12,9 @@ jobs:
         with:
           python-version: "3.x"
       - name: Install and configure Poetry
-        uses: snok/install-poetry@v1.1.1
-        with:
-          virtualenvs-create: false
+        run: |
+          pip install -U pip poetry
+          poetry config virtualenvs.create false
       - name: Build docs
         run: make docs
       - name: Deploy docs
