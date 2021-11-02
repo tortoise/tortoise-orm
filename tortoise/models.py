@@ -661,7 +661,7 @@ class Model(metaclass=ModelMeta):
             if callable(field_object.default):
                 setattr(self, key, field_object.default())
             else:
-                setattr(self, key, field_object.default)
+                setattr(self, key, deepcopy(field_object.default))
 
     def _set_kwargs(self, kwargs: dict) -> Set[str]:
         meta = self._meta
