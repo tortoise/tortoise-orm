@@ -8,10 +8,6 @@ from typing import Any, Callable, Iterable, List, Optional, Union
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 from unittest.result import TestResult
 
-from asynctest import TestCase as _TestCase
-from asynctest import _fail_on
-from asynctest.case import _Policy
-
 from tortoise import Model, Tortoise
 from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise.exceptions import DBConnectionError
@@ -155,7 +151,7 @@ def env_initializer() -> None:  # pragma: nocoverage
     initializer(modules, db_url=db_url, app_label=app_label)
 
 
-class SimpleTestCase(_TestCase):  # type: ignore
+class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
     """
     The Tortoise base test class.
 
@@ -175,15 +171,8 @@ class SimpleTestCase(_TestCase):  # type: ignore
     def _init_loop(self) -> None:
         if self.use_default_loop:
             self.loop = _LOOP
-            loop = None
         else:  # pragma: nocoverage
-            loop = self.loop = asyncio.new_event_loop()
-
-        policy = _Policy(asyncio.get_event_loop_policy(), loop, self.forbid_get_event_loop)
-
-        asyncio.set_event_loop_policy(policy)
-
-        self.loop = self._patch_loop(self.loop)
+            self.loop = asyncio.new_event_loop()
 
     async def _setUpDB(self) -> None:
         pass
@@ -193,15 +182,9 @@ class SimpleTestCase(_TestCase):  # type: ignore
 
     async def _setUp(self) -> None:
 
-        # initialize post-test checks
-        test = getattr(self, self._testMethodName)
-        checker = getattr(test, _fail_on._FAIL_ON_ATTR, None)
-        self._checker = checker or _fail_on._fail_on()
-        self._checker.before_test(self)
-
         await self._setUpDB()
         if asyncio.iscoroutinefunction(self.setUp):
-            await self.setUp()
+            await self.asyncSetUp()
         else:
             self.setUp()
 
@@ -210,16 +193,13 @@ class SimpleTestCase(_TestCase):  # type: ignore
 
     async def _tearDown(self) -> None:
         if asyncio.iscoroutinefunction(self.tearDown):
-            await self.tearDown()
+            await self.asyncTearDown()
         else:
             self.tearDown()
         await self._tearDownDB()
         Tortoise.apps = {}
         Tortoise._connections = {}
         Tortoise._inited = False
-
-        # post-test checks
-        self._checker.check_test(self)
 
     # Override unittest.TestCase methods which call setUp() and tearDown()
     def run(self, result: Optional[TestResult] = None) -> Optional[TestResult]:
@@ -254,19 +234,10 @@ class SimpleTestCase(_TestCase):  # type: ignore
 
             self.loop.run_until_complete(self._run_outcome(outcome, expecting_failure, testMethod))
 
-            self.loop.run_until_complete(self.doCleanups())
-            self._unset_loop()
             for test, reason in outcome.skipped:
                 self._addSkip(result, test, reason)
-            self._feedErrorsToResult(result, outcome.errors)
             if outcome.success:
-                if expecting_failure:
-                    if outcome.expectedFailure:
-                        self._addExpectedFailure(result, outcome.expectedFailure)
-                    else:  # pragma: nocoverage
-                        self._addUnexpectedSuccess(result)
-                else:
-                    result.addSuccess(self)
+                result.addSuccess(self)
             return result
         finally:
             result.stopTest(self)

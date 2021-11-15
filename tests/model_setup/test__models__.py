@@ -3,8 +3,7 @@ Tests for __models__
 """
 
 import re
-
-from asynctest.mock import CoroutineMock, patch
+from unittest.mock import AsyncMock, patch
 
 from tortoise import Tortoise
 from tortoise.contrib import test
@@ -35,7 +34,7 @@ class TestGenerateSchema(test.SimpleTestCase):
         if self.engine != "tortoise.backends.sqlite":
             raise test.SkipTest("sqlite only")
         with patch(
-            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=CoroutineMock()
+            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=AsyncMock()
         ):
             await Tortoise.init(
                 {

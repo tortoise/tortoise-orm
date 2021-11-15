@@ -8,7 +8,7 @@ on:
       - master
 jobs:
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:latest
@@ -23,9 +23,8 @@ jobs:
       TORTOISE_MYSQL_PASS: root
       TORTOISE_POSTGRES_PASS: 123456
     strategy:
-      fail-fast: false
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10"]
+        python-version: [ "3.8", "3.9", "3.10" ]
     steps:
       - name: Start MySQL
         run: sudo systemctl start mysql.service
@@ -47,15 +46,6 @@ jobs:
         run: make deps
       - name: Run ci
         run: make ci
-      - name: Run green
-        env:
-          TEST_RUNNER: green
-        run: green
-      - name: Run nose2
-        env:
-          TEST_RUNNER: nose2
-        run: |
-          nose2 --plugin tortoise.contrib.test.nose2 --db-module tests.testmodels --db-url sqlite://:memory:
       - name: Upload Coverage
         run: coveralls --service=github
         env:

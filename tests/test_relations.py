@@ -371,7 +371,7 @@ class TestDoubleFK(test.TestCase):
         r'[`"]doublefk__right[`"].[`"]id[`"]=[`"]doublefk[`"].[`"]right_id[`"]'
     )
 
-    async def setUp(self) -> None:
+    async def asyncSetUp(self) -> None:
         one = await DoubleFK.create(name="one")
         two = await DoubleFK.create(name="two")
         self.middle = await DoubleFK.create(name="middle", left=one, right=two)

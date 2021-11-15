@@ -17,7 +17,7 @@ class TestPostgreSQL(test.SimpleTestCase):
         if self.db_config["connections"]["models"]["engine"] != "tortoise.backends.asyncpg":
             raise test.SkipTest("PostgreSQL only")
 
-    async def tearDown(self) -> None:
+    async def asyncTearDown(self) -> None:
         if Tortoise._inited:
             await Tortoise._drop_databases()
 
