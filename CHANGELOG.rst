@@ -18,6 +18,7 @@ Changed
 ^^^^^^^
 - Move `Function`, `Aggregate` from `functions.py` to `expressions.py`. (#943)
 - Move `Q` from `query_utils.py` to `expressions.py`.
+- Remove `asynctest` and use `unittest.IsolatedAsyncioTestCase`. (#416)
 
 0.17
 ====

@@ -4,7 +4,7 @@ from tortoise.functions import Avg, Count, Sum, Upper
 
 
 class TestGroupBy(test.TestCase):
-    async def setUp(self) -> None:
+    async def asyncSetUp(self) -> None:
         self.a1 = await Author.create(name="author1")
         self.a2 = await Author.create(name="author2")
         for i in range(10):

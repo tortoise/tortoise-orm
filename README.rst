@@ -14,6 +14,7 @@ Tortoise ORM
    :target: https://coveralls.io/github/tortoise/tortoise-orm
 .. image:: https://api.codacy.com/project/badge/Grade/b5b77021ba284e4a9e0c033a4611b046
    :target: https://app.codacy.com/app/Tortoise/tortoise-orm
+.. image:: https://img.shields.io/pypi/pyversions/tortoise-orm   :alt: PyPI - Python Version
 
 Introduction
 ============
