@@ -59,11 +59,8 @@ pygments = "*"
 bandit = "*"
 black = "*"
 # Test tools
-tox = "*"
-green = "*"
 coveralls = "*"
 pytest = "*"
-nose2 = "*"
 pytest-xdist = "*"
 pytest-cov = "*"
 # Pypi

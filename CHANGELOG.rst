@@ -22,6 +22,7 @@ Removed
 ^^^^^^^
 - Remove `asynctest` and use `unittest.IsolatedAsyncioTestCase`. (#416)
 - Remove `py37` support in tests.
+- Remove `green` and `nose2` test runner.
 0.17
 ====
 0.17.8
