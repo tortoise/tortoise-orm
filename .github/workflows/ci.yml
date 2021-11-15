@@ -23,7 +23,6 @@ jobs:
       TORTOISE_MYSQL_PASS: root
       TORTOISE_POSTGRES_PASS: 123456
     strategy:
-      fail-fast: false
       matrix:
         python-version: [ "3.8", "3.9", "3.10" ]
     steps:
