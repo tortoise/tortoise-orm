@@ -41,7 +41,7 @@ aiosqlite = ">=0.16.0, <0.18.0"
 pytz = "*"
 ciso8601 = { version = "^2.1.2", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
 uvloop = { version = "^0.16.0", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
-python-rapidjson = { version = "*", optional = true }
+orjson = { version = "*", optional = true }
 asyncpg = { version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
 asyncmy = { version = "*", optional = true }
@@ -91,7 +91,7 @@ docutils = "*"
 sphinx-copybutton = "*"
 
 [tool.poetry.extras]
-accel = ["ciso8601", "uvloop", "python-rapidjson"]
+accel = ["ciso8601", "uvloop", "orjson"]
 asyncpg = ["asyncpg"]
 aiomysql = ["aiomysql"]
 asyncmy = ["asyncmy"]

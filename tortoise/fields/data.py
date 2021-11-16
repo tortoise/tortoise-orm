@@ -53,11 +53,11 @@ JSON_DUMPS: JsonDumpsFunc = functools.partial(json.dumps, separators=(",", ":"))
 JSON_LOADS: JsonLoadsFunc = json.loads
 
 try:
-    # Use python-rapidjson as an optional accelerator
-    import rapidjson
+    # Use orjson as an optional accelerator
+    import orjson
 
-    JSON_DUMPS = rapidjson.dumps
-    JSON_LOADS = rapidjson.loads
+    JSON_DUMPS = orjson.dumps  # type:ignore
+    JSON_LOADS = orjson.loads
 except ImportError:  # pragma: nocoverage
     pass
 
@@ -379,11 +379,9 @@ class DateField(Field, datetime.date):
     ) -> Optional[datetime.date]:
 
         if value is not None and not isinstance(value, datetime.date):
-            return_value = parse_datetime(value).date()
-        else:
-            return_value = value
-        self.validate(return_value)
-        return return_value
+            value = parse_datetime(value).date()
+        self.validate(value)
+        return value
 
 
 class TimeDeltaField(Field, datetime.timedelta):
