@@ -30,7 +30,7 @@ If you want control the behavior of tortoise logging, such as print debug sql, y
     logger_tortoise.addHandler(sh)
 
 
-You can also use your own formatter to add syntax coloration to sql :
+You can also use your own formatter to add syntax coloration to sql, by using `pygments <https://pygments.org/>` :
 
 .. code-block:: python3
 
