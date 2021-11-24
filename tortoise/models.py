@@ -17,8 +17,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    _GenericAlias,
-    overload,
+    Generic,
 )
 
 from pypika import Order, Query, Table
@@ -662,20 +661,11 @@ class Model(metaclass=ModelMeta):
             else:
                 setattr(self, key, field_object.default)
 
-    @overload
-    def __class_getitem__(cls: Type[MODEL], key: type) -> _GenericAlias:
-        pass
-
-    @overload
-    def __class_getitem__(cls: Type[MODEL], key: Any) -> QuerySetSingle[MODEL]:
-        pass
-
-    def __class_getitem__(
-        cls: Type[MODEL], key: Any
-    ) -> Union[QuerySetSingle[MODEL], _GenericAlias]:
-        if (isinstance(key, tuple) and inspect.isclass(key[0])) or inspect.isclass(key):
-            return _GenericAlias(cls, key)
+    def __class_getitem__(cls: Type[MODEL], key: Any) -> QuerySetSingle[MODEL]:  # type: ignore
+        if ((isinstance(key, tuple) and inspect.isclass(key[0])) or inspect.isclass(key)) and issubclass(cls, Generic):
+            return Generic.__class_getitem__.__func__(cls, key)
         return cls._getbypk(key)
+
 
     def _set_kwargs(self, kwargs: dict) -> Set[str]:
         meta = self._meta
