@@ -14,6 +14,9 @@ Added
 ^^^^^
 - Add Case-When support. (#943)
 - Add `Rand`/`Random` function in contrib. (#944)
+Fixed
+^^^^^
+- Fix `bulk_update` error when pk is uuid. (#986)
 Changed
 ^^^^^^^
 - Move `Function`, `Aggregate` from `functions.py` to `expressions.py`. (#943)

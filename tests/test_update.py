@@ -1,9 +1,10 @@
+import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
 from pypika.terms import Function
 
-from tests.testmodels import DefaultUpdate, Event, IntFields, JSONFields, Tournament
+from tests.testmodels import DefaultUpdate, Event, IntFields, JSONFields, Tournament, UUIDFields
 from tortoise.contrib import test
 from tortoise.expressions import F
 
@@ -26,6 +27,18 @@ class TestUpdate(test.TestCase):
         self.assertEqual(rows_affected, 2)
         self.assertEqual((await Tournament.get(pk=objs[0].pk)).name, "0")
         self.assertEqual((await Tournament.get(pk=objs[1].pk)).name, "1")
+
+    async def test_bulk_update_pk_uuid(self):
+        objs = [
+            await UUIDFields.create(data=uuid.uuid4()),
+            await UUIDFields.create(data=uuid.uuid4()),
+        ]
+        objs[0].data = str(uuid.uuid4())
+        objs[1].data = str(uuid.uuid4())
+        rows_affected = await UUIDFields.bulk_update(objs, fields=["data"])
+        self.assertEqual(rows_affected, 2)
+        self.assertEqual((await UUIDFields.get(pk=objs[0].pk)).data, objs[0].data)
+        self.assertEqual((await UUIDFields.get(pk=objs[1].pk)).data, objs[1].data)
 
     async def test_update_auto_now(self):
         obj = await DefaultUpdate.create()
