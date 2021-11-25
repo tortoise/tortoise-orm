@@ -9,6 +9,7 @@ from typing import (
     Callable,
     Dict,
     Generator,
+    Generic,
     Iterable,
     List,
     Optional,
@@ -17,7 +18,6 @@ from typing import (
     Type,
     TypeVar,
     Union,
-    Generic,
 )
 
 from pypika import Order, Query, Table
@@ -662,10 +662,11 @@ class Model(metaclass=ModelMeta):
                 setattr(self, key, field_object.default)
 
     def __class_getitem__(cls: Type[MODEL], key: Any) -> QuerySetSingle[MODEL]:  # type: ignore
-        if ((isinstance(key, tuple) and inspect.isclass(key[0])) or inspect.isclass(key)) and issubclass(cls, Generic):
+        if (
+            (isinstance(key, tuple) and inspect.isclass(key[0])) or inspect.isclass(key)
+        ) and issubclass(cls, Generic):
             return Generic.__class_getitem__.__func__(cls, key)
         return cls._getbypk(key)
-
 
     def _set_kwargs(self, kwargs: dict) -> Set[str]:
         meta = self._meta
