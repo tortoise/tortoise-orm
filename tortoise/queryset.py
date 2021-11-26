@@ -33,7 +33,7 @@ from tortoise.exceptions import (
     MultipleObjectsReturned,
     ParamsError,
 )
-from tortoise.expressions import F, Q, RawSQL
+from tortoise.expressions import Expression, F, Q, RawSQL
 from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
     OneToOneFieldInstance,
@@ -92,7 +92,7 @@ class AwaitableQuery(Generic[MODEL]):
         self.query: QueryBuilder = QUERY
         self._db: BaseDBAsyncClient = None  # type: ignore
         self.capabilities: Capabilities = model._meta.db.capabilities
-        self._annotations: Dict[str, Function] = {}
+        self._annotations: Dict[str, Expression] = {}
 
     def _choose_db(self, for_write: bool = False) -> BaseDBAsyncClient:
         """
@@ -474,7 +474,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             return queryset
         return self
 
-    def annotate(self, **kwargs: Union[Function, Term]) -> "QuerySet[MODEL]":
+    def annotate(self, **kwargs: Union[Expression, Term]) -> "QuerySet[MODEL]":
         """
         Annotate result with aggregation or function result.
 
@@ -1649,16 +1649,19 @@ class BulkUpdateQuery(UpdateQuery):
             annotations=self.annotations,
             custom_filters=self.custom_filters,
         )
-        pk = Field(self.model._meta.pk_attr)
+        executor = self._db.executor_class(model=self.model, db=self._db)
+        pk_attr = self.model._meta.pk_attr
+        pk = Field(pk_attr)
         for objects_item in chunk(self.objects, self.batch_size):
             query = copy(self.query)
             for field in self.fields:
                 case = Case()
                 pk_list = []
                 for obj in objects_item:
+                    value = executor.column_map[pk_attr](obj.pk, None)
                     attr = getattr(obj, field)
-                    case.when(pk == obj.pk, attr)
-                    pk_list.append(obj.pk)
+                    case.when(pk == value, attr)
+                    pk_list.append(value)
                 query = query.set(field, case)
                 query = query.where(pk.isin(pk_list))
             self.queries.append(query)
