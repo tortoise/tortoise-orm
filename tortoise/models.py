@@ -661,12 +661,11 @@ class Model(metaclass=ModelMeta):
             else:
                 setattr(self, key, field_object.default)
 
-    def __class_getitem__(cls: Type[MODEL], key: Any) -> QuerySetSingle[MODEL]:  # type: ignore
-        if (
-            (isinstance(key, tuple) and inspect.isclass(key[0])) or inspect.isclass(key)
-        ) and issubclass(cls, Generic):
-            return Generic.__class_getitem__.__func__(cls, key)
-        return cls._getbypk(key)
+    def __class_getitem__(cls: Type[MODEL], key: Any) -> QuerySetSingle[MODEL]:
+        if (isinstance(key, tuple) and inspect.isclass(key[0])) or inspect.isclass(key):
+            if issubclass(cls, Generic):  # type: ignore
+                return Generic.__class_getitem__.__func__(cls, key)  # type: ignore
+        return cls._getbypk(key)  # type: ignore
 
     def _set_kwargs(self, kwargs: dict) -> Set[str]:
         meta = self._meta
