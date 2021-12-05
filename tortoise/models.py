@@ -52,7 +52,7 @@ from tortoise.manager import Manager
 from tortoise.queryset import BulkUpdateQuery, ExistsQuery, Q, QuerySet, QuerySetSingle, RawSQLQuery
 from tortoise.router import router
 from tortoise.signals import Signals
-from tortoise.transactions import current_transaction_map, in_transaction
+from tortoise.transactions import in_transaction
 
 MODEL = TypeVar("MODEL", bound="Model")
 EMPTY = object()
@@ -271,6 +271,10 @@ class MetaInfo:
 
     @property
     def db(self) -> BaseDBAsyncClient:
+        if self.default_connection is None:
+            raise ConfigurationError(
+                f"default_connection for the model {self._model} cannot be None"
+            )
         return connections.get(self.default_connection)
 
     @property

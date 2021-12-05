@@ -3,9 +3,9 @@ from typing import Any, List, Optional, Sequence, Tuple, Type, Union
 
 from pypika import Query
 
-from tortoise.connection import connections
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
+from tortoise.connection import connections
 from tortoise.exceptions import TransactionManagementError
 from tortoise.log import db_client_logger
 
@@ -210,7 +210,7 @@ class ConnectionWrapper:
         self.client = client
         self.connection: Any = client._connection
 
-    async def ensure_connection(self):
+    async def ensure_connection(self) -> None:
         if not self.connection:
             await self.client.create_connection(with_db=True)
             self.connection = self.client._connection
@@ -232,7 +232,7 @@ class TransactionContext:
         self.connection_name = connection.connection_name
         self.lock = getattr(connection, "_trxlock", None)
 
-    async def ensure_connection(self):
+    async def ensure_connection(self) -> None:
         if not self.connection._connection:
             await self.connection._parent.create_connection(with_db=True)
             self.connection._connection = self.connection._parent._connection
@@ -259,7 +259,7 @@ class TransactionContext:
 class TransactionContextPooled(TransactionContext):
     __slots__ = ("conn_wrapper", "connection", "connection_name", "token")
 
-    async def ensure_connection(self):
+    async def ensure_connection(self) -> None:
         if not self.connection._parent._pool:
             await self.connection._parent.create_connection(with_db=True)
 
@@ -314,7 +314,7 @@ class PoolConnectionWrapper:
         self.client = client
         self.connection = None
 
-    async def ensure_connection(self):
+    async def ensure_connection(self) -> None:
         if not self.pool:
             await self.client.create_connection(with_db=True)
             self.pool = self.client._pool

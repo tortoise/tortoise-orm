@@ -1,7 +1,7 @@
 import os
 from unittest import TestCase, skipIf
 
-from tortoise import Tortoise, run_async, connections
+from tortoise import Tortoise, connections, run_async
 
 
 @skipIf(os.name == "nt", "stuck with Windows")

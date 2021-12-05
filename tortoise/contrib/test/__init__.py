@@ -174,6 +174,17 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
         else:  # pragma: nocoverage
             self.loop = asyncio.new_event_loop()
 
+    async def _setUp(self) -> None:
+        self.token: Optional[contextvars.Token] = None
+        await self._setUpDB()
+        if asyncio.iscoroutinefunction(self.setUp):
+            await self.asyncSetUp()
+        else:
+            self.setUp()
+
+        # don't take into account if the loop ran during setUp
+        self.loop._asynctest_ran = False  # type: ignore
+
     async def _setUpDB(self) -> None:
         # setting storage to an empty dict explicitly to create a
         # ContextVar specific scope for each test case. The storage will
@@ -184,23 +195,11 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
     async def _tearDownDB(self) -> None:
         pass
 
-    async def _setUp(self) -> None:
-        self.token: Optional[contextvars.Token] = None
-
-        await self._setUpDB()
-        if asyncio.iscoroutinefunction(self.setUp):
-            await self.asyncSetUp()
-        else:
-            self.setUp()
-
-        # don't take into account if the loop ran during setUp
-        self.loop._asynctest_ran = False  # type: ignore
-
-    def _reset_conn_state(self):
+    def _reset_conn_state(self) -> None:
         # clearing the storage and restoring to previous storage state
         # of the contextvar
         connections._clear_storage()
-        connections._db_config.clear()
+        connections.db_config.clear()
         if self.token:
             connections.reset(self.token)
 
@@ -357,10 +356,10 @@ class TransactionTestContext:
         self.connection_name = connection.connection_name
         self.uses_pool = hasattr(self.connection._parent, "_pool")
 
-    async def ensure_connection(self):
-        is_conn_established = self.connection._connection != None
+    async def ensure_connection(self) -> None:
+        is_conn_established = self.connection._connection is not None
         if self.uses_pool:
-            is_conn_established = self.connection._parent._pool != None
+            is_conn_established = self.connection._parent._pool is not None
 
         # If the underlying pool/connection hasn't been established then
         # first create the pool/connection

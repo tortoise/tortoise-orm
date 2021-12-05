@@ -3,23 +3,23 @@ import contextvars
 import copy
 import importlib
 from contextvars import ContextVar
-from typing import Dict, Optional, Any, Type, Union, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, Union
 
 from tortoise.backends.base.config_generator import expand_db_url
 from tortoise.exceptions import ConfigurationError
 
-
 if TYPE_CHECKING:
     from tortoise.backends.base.client import BaseDBAsyncClient
+    DBConfigType = Dict[str, Any]
 
 
 class ConnectionHandler:
-    _conn_storage: ContextVar[Dict[str, 'BaseDBAsyncClient']] = contextvars.ContextVar(
+    _conn_storage: ContextVar[Dict[str, "BaseDBAsyncClient"]] = contextvars.ContextVar(
         "_conn_storage", default={}
     )
 
-    def __init__(self):
-        self._db_config: Optional[Dict[str, Any]] = None
+    def __init__(self) -> None:
+        self._db_config: Optional["DBConfigType"] = None
         self._create_db: bool = False
 
     async def _init(self, db_config: Dict[str, Any], create_db: bool):
@@ -28,19 +28,25 @@ class ConnectionHandler:
         await self._init_connections()
 
     @property
-    def db_config(self) -> Dict[str, Any]:
+    def db_config(self) -> "DBConfigType":
+        if self._db_config is None:
+            raise ConfigurationError(
+                "DB configuration not initialised. Make sure to call "
+                "Tortoise.init with a valid configuration before attempting "
+                "to create connections."
+            )
         return self._db_config
 
-    def _get_storage(self) -> Dict[str, 'BaseDBAsyncClient']:
+    def _get_storage(self) -> Dict[str, "BaseDBAsyncClient"]:
         return self._conn_storage.get()
 
-    def _copy_storage(self):
+    def _copy_storage(self) -> Dict[str, "BaseDBAsyncClient"]:
         return copy.copy(self._get_storage())
 
     def _clear_storage(self) -> None:
         self._get_storage().clear()
 
-    def _discover_client_class(self, engine: str) -> Type['BaseDBAsyncClient']:
+    def _discover_client_class(self, engine: str) -> Type["BaseDBAsyncClient"]:
         # Let exception bubble up for transparency
         engine_module = importlib.import_module(engine)
 
@@ -52,34 +58,31 @@ class ConnectionHandler:
 
     def _get_db_info(self, conn_alias: str) -> Union[str, Dict]:
         try:
-            return self._db_config[conn_alias]
+            return self.db_config[conn_alias]
         except KeyError:
             raise ConfigurationError(
-                f'Unable to get db settings for alias {conn_alias}. Please '
-                f'check if the config dict contains this alias and try again'
+                f"Unable to get db settings for alias {conn_alias}. Please "
+                f"check if the config dict contains this alias and try again"
             )
 
     async def _init_connections(self) -> None:
-        # print("storage within init is ", self._get_storage())
         for alias in self.db_config:
-            connection: 'BaseDBAsyncClient' = self.get(alias)
+            connection: "BaseDBAsyncClient" = self.get(alias)
             if self._create_db:
                 await connection.db_create()
 
-    def _create_connection(self, conn_alias: str) -> 'BaseDBAsyncClient':
-        db_info: Union[str, Dict] = self._get_db_info(conn_alias)
+    def _create_connection(self, conn_alias: str) -> "BaseDBAsyncClient":
+        db_info = self._get_db_info(conn_alias)
         if isinstance(db_info, str):
             db_info = expand_db_url(db_info)
-        client_class: Type['BaseDBAsyncClient'] = self._discover_client_class(
-            db_info.get("engine")
-        )
+        client_class = self._discover_client_class(db_info.get("engine", ""))
         db_params = db_info["credentials"].copy()
         db_params.update({"connection_name": conn_alias})
-        connection: 'BaseDBAsyncClient' = client_class(**db_params)
+        connection: "BaseDBAsyncClient" = client_class(**db_params)
         return connection
 
-    def get(self, conn_alias: str) -> 'BaseDBAsyncClient':
-        storage: Dict[str, 'BaseDBAsyncClient'] = self._get_storage()
+    def get(self, conn_alias: str) -> "BaseDBAsyncClient":
+        storage: Dict[str, "BaseDBAsyncClient"] = self._get_storage()
         try:
             return storage[conn_alias]
         except KeyError:
@@ -87,7 +90,7 @@ class ConnectionHandler:
             storage[conn_alias] = connection
             return connection
 
-    def _set_storage(self, new_storage: Dict[str, 'BaseDBAsyncClient']) -> contextvars.Token:
+    def _set_storage(self, new_storage: Dict[str, "BaseDBAsyncClient"]) -> contextvars.Token:
         # Should be used only for testing purposes.
         return self._conn_storage.set(new_storage)
 
@@ -96,7 +99,7 @@ class ConnectionHandler:
         storage_copy[conn_alias] = conn
         return self._conn_storage.set(storage_copy)
 
-    def discard(self, conn_alias: str) -> Optional['BaseDBAsyncClient']:
+    def discard(self, conn_alias: str) -> Optional["BaseDBAsyncClient"]:
         return self._get_storage().pop(conn_alias, None)
 
     def reset(self, token: contextvars.Token):
@@ -107,7 +110,7 @@ class ConnectionHandler:
             if alias not in prev_storage:
                 prev_storage[alias] = conn
 
-    def all(self) -> List['BaseDBAsyncClient']:
+    def all(self) -> List["BaseDBAsyncClient"]:
         # Returning a list here so as to avoid accidental
         # mutation of the underlying storage dict
         return list(self._get_storage().values())

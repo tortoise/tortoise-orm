@@ -7,9 +7,7 @@ from contextvars import ContextVar
 from copy import deepcopy
 from inspect import isclass
 from types import ModuleType
-from typing import (
-    Coroutine, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
-)
+from typing import Coroutine, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
 
 from pypika import Table
 

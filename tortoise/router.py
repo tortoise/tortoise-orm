@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, List, Optional, Type
 
-from tortoise.exceptions import ConfigurationError
 from tortoise.connection import connections
+from tortoise.exceptions import ConfigurationError
 
 if TYPE_CHECKING:
     from tortoise import BaseDBAsyncClient, Model
