@@ -1,5 +1,5 @@
 from tests.testmodels import Event, EventTwo, TeamTwo, Tournament
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
 from tortoise.contrib import test
 from tortoise.exceptions import OperationalError, ParamsError
 from tortoise.transactions import in_transaction
@@ -17,8 +17,8 @@ class TestTwoDatabases(test.SimpleTestCase):
         }
         await Tortoise.init(merged_config, _create_db=True)
         await Tortoise.generate_schemas()
-        self.db = Tortoise.get_connection("models")
-        self.second_db = Tortoise.get_connection("events")
+        self.db = connections.get("models")
+        self.second_db = connections.get("events")
 
     async def tearDown(self):
         await Tortoise._drop_databases()

@@ -1,6 +1,7 @@
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, cast
 
+from tortoise import connections
 from tortoise.exceptions import ParamsError
 
 current_transaction_map: dict = {}
@@ -12,18 +13,17 @@ FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
 
 
-def get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
-    from tortoise import Tortoise
+def _get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
 
     if connection_name:
-        connection = current_transaction_map[connection_name].get()
-    elif len(Tortoise._connections) == 1:
-        connection_name = list(Tortoise._connections.keys())[0]
-        connection = current_transaction_map[connection_name].get()
+        connection = connections.get(connection_name)
+    elif len(connections.db_config) == 1:
+        connection_name = next(iter(connections.db_config.keys()))
+        connection = connections.get(connection_name)
     else:
         raise ParamsError(
             "You are running with multiple databases, so you should specify"
-            f" connection_name: {list(Tortoise._connections.keys())}"
+            f" connection_name: {list(connections.db_config)}"
         )
     return connection
 
@@ -38,7 +38,7 @@ def in_transaction(connection_name: Optional[str] = None) -> "TransactionContext
     :param connection_name: name of connection to run with, optional if you have only
                             one db connection
     """
-    connection = get_connection(connection_name)
+    connection = _get_connection(connection_name)
     return connection._in_transaction()
 
 

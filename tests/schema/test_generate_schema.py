@@ -2,7 +2,7 @@
 import re
 from unittest.mock import AsyncMock, patch
 
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 from tortoise.utils import get_schema_sql
@@ -12,7 +12,6 @@ class TestGenerateSchema(test.SimpleTestCase):
     async def setUp(self):
         try:
             Tortoise.apps = {}
-            Tortoise._connections = {}
             Tortoise._inited = False
         except ConfigurationError:
             pass
@@ -24,7 +23,6 @@ class TestGenerateSchema(test.SimpleTestCase):
         ]
 
     async def tearDown(self):
-        Tortoise._connections = {}
         await Tortoise._reset_apps()
 
     async def init_for(self, module: str, safe=False) -> None:
@@ -42,7 +40,7 @@ class TestGenerateSchema(test.SimpleTestCase):
                     "apps": {"models": {"models": [module], "default_connection": "default"}},
                 }
             )
-            self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split(";\n")
+            self.sqls = get_schema_sql(connections.get("default"), safe).split(";\n")
 
     def get_sql(self, text: str) -> str:
         return re.sub(r"[ \t\n\r]+", " ", " ".join([sql for sql in self.sqls if text in sql]))
@@ -415,7 +413,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
                         "apps": {"models": {"models": [module], "default_connection": "default"}},
                     }
                 )
-                self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+                self.sqls = get_schema_sql(connections.get("default"), safe).split("; ")
         except ImportError:
             raise test.SkipTest("aiomysql not installed")
 
@@ -498,7 +496,7 @@ CREATE TABLE `teamevents` (
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -793,7 +791,7 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
                         "apps": {"models": {"models": [module], "default_connection": "default"}},
                     }
                 )
-                self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+                self.sqls = get_schema_sql(connections.get("default"), safe).split("; ")
         except ImportError:
             raise test.SkipTest("asyncpg not installed")
 

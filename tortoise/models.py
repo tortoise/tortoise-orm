@@ -22,6 +22,7 @@ from typing import (
 from pypika import Order, Query, Table
 from pypika.terms import Term
 
+from tortoise import connections
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import (
     ConfigurationError,
@@ -270,10 +271,7 @@ class MetaInfo:
 
     @property
     def db(self) -> BaseDBAsyncClient:
-        try:
-            return current_transaction_map[self.default_connection].get()
-        except KeyError:
-            raise ConfigurationError("No DB associated to model")
+        return connections.get(self.default_connection)
 
     @property
     def ordering(self) -> Tuple[Tuple[str, Order], ...]:

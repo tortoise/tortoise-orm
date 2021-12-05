@@ -3,11 +3,11 @@ from typing import Any, List, Optional, Sequence, Tuple, Type, Union
 
 from pypika import Query
 
+from tortoise.connection import connections
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.exceptions import TransactionManagementError
 from tortoise.log import db_client_logger
-from tortoise.transactions import current_transaction_map
 
 
 class Capabilities:
@@ -203,13 +203,20 @@ class BaseDBAsyncClient:
 
 
 class ConnectionWrapper:
-    __slots__ = ("connection", "lock")
+    __slots__ = ("connection", "lock", "client")
 
-    def __init__(self, connection: Any, lock: asyncio.Lock) -> None:
-        self.connection = connection
+    def __init__(self, lock: asyncio.Lock, client: Any) -> None:
         self.lock: asyncio.Lock = lock
+        self.client = client
+        self.connection: Any = client._connection
+
+    async def ensure_connection(self):
+        if not self.connection:
+            await self.client.create_connection(with_db=True)
+            self.connection = self.client._connection
 
     async def __aenter__(self):
+        await self.ensure_connection()
         await self.lock.acquire()
         return self.connection
 
@@ -225,10 +232,15 @@ class TransactionContext:
         self.connection_name = connection.connection_name
         self.lock = getattr(connection, "_trxlock", None)
 
+    async def ensure_connection(self):
+        if not self.connection._connection:
+            await self.connection._parent.create_connection(with_db=True)
+            self.connection._connection = self.connection._parent._connection
+
     async def __aenter__(self):
+        await self.ensure_connection()
         await self.lock.acquire()
-        current_transaction = current_transaction_map[self.connection_name]
-        self.token = current_transaction.set(self.connection)
+        self.token = connections.set(self.connection_name, self.connection)
         await self.connection.start()
         return self.connection
 
@@ -240,16 +252,20 @@ class TransactionContext:
                     await self.connection.rollback()
             else:
                 await self.connection.commit()
-        current_transaction_map[self.connection_name].reset(self.token)
+        connections.reset(self.token)
         self.lock.release()
 
 
 class TransactionContextPooled(TransactionContext):
-    __slots__ = ("connection", "connection_name", "token")
+    __slots__ = ("conn_wrapper", "connection", "connection_name", "token")
+
+    async def ensure_connection(self):
+        if not self.connection._parent._pool:
+            await self.connection._parent.create_connection(with_db=True)
 
     async def __aenter__(self):
-        current_transaction = current_transaction_map[self.connection_name]
-        self.token = current_transaction.set(self.connection)
+        await self.ensure_connection()
+        self.token = connections.set(self.connection_name, self.connection)
         self.connection._connection = await self.connection._parent._pool.acquire()
         await self.connection.start()
         return self.connection
@@ -262,7 +278,6 @@ class TransactionContextPooled(TransactionContext):
                     await self.connection.rollback()
             else:
                 await self.connection.commit()
-        current_transaction_map[self.connection_name].reset(self.token)
         if self.connection._parent._pool:
             await self.connection._parent._pool.release(self.connection._connection)
 
@@ -294,11 +309,18 @@ class NestedTransactionPooledContext(TransactionContext):
 
 
 class PoolConnectionWrapper:
-    def __init__(self, pool: Any) -> None:
-        self.pool = pool
+    def __init__(self, client: Any) -> None:
+        self.pool = client._pool
+        self.client = client
         self.connection = None
 
+    async def ensure_connection(self):
+        if not self.pool:
+            await self.client.create_connection(with_db=True)
+            self.pool = self.client._pool
+
     async def __aenter__(self):
+        await self.ensure_connection()
         # get first available connection
         self.connection = await self.pool.acquire()
         return self.connection

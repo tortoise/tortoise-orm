@@ -1,4 +1,5 @@
 import asyncio
+import contextvars
 import os as _os
 import unittest
 from asyncio.events import AbstractEventLoop
@@ -8,10 +9,9 @@ from typing import Any, Callable, Iterable, List, Optional, Union
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 from unittest.result import TestResult
 
-from tortoise import Model, Tortoise
+from tortoise import Model, Tortoise, connections
 from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise.exceptions import DBConnectionError
-from tortoise.transactions import current_transaction_map
 
 __all__ = (
     "SimpleTestCase",
@@ -43,7 +43,7 @@ _CONNECTIONS: dict = {}
 _SELECTOR = None
 _LOOP: AbstractEventLoop = None  # type: ignore
 _MODULES: Iterable[Union[str, ModuleType]] = []
-_CONN_MAP: dict = {}
+_CONN_CONFIG: dict = {}
 
 
 def getDBConfig(app_label: str, modules: Iterable[Union[str, ModuleType]]) -> dict:
@@ -74,8 +74,8 @@ async def _init_db(config: dict) -> None:
 
 def _restore_default() -> None:
     Tortoise.apps = {}
-    Tortoise._connections = _CONNECTIONS.copy()
-    current_transaction_map.update(_CONN_MAP)
+    connections._get_storage().update(_CONNECTIONS.copy())
+    connections._db_config = _CONN_CONFIG.copy()
     Tortoise._init_apps(_CONFIG["apps"])
     Tortoise._inited = True
 
@@ -101,20 +101,20 @@ def initializer(
     global _LOOP
     global _TORTOISE_TEST_DB
     global _MODULES
-    global _CONN_MAP
+    global _CONN_CONFIG
     _MODULES = modules
     if db_url is not None:  # pragma: nobranch
         _TORTOISE_TEST_DB = db_url
     _CONFIG = getDBConfig(app_label=app_label, modules=_MODULES)
-
     loop = loop or asyncio.get_event_loop()
     _LOOP = loop
     _SELECTOR = loop._selector  # type: ignore
     loop.run_until_complete(_init_db(_CONFIG))
-    _CONNECTIONS = Tortoise._connections.copy()
-    _CONN_MAP = current_transaction_map.copy()
+    _CONNECTIONS = connections._copy_storage()
+    _CONN_CONFIG = connections.db_config.copy()
+    connections._clear_storage()
+    connections.db_config.clear()
     Tortoise.apps = {}
-    Tortoise._connections = {}
     Tortoise._inited = False
 
 
@@ -175,12 +175,17 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
             self.loop = asyncio.new_event_loop()
 
     async def _setUpDB(self) -> None:
-        pass
+        # setting storage to an empty dict explicitly to create a
+        # ContextVar specific scope for each test case. The storage will
+        # either be restored from _restore_default or re-initialised depending on
+        # how the test case should behave
+        self.token = connections._set_storage({})
 
     async def _tearDownDB(self) -> None:
         pass
 
     async def _setUp(self) -> None:
+        self.token: Optional[contextvars.Token] = None
 
         await self._setUpDB()
         if asyncio.iscoroutinefunction(self.setUp):
@@ -191,14 +196,24 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
         # don't take into account if the loop ran during setUp
         self.loop._asynctest_ran = False  # type: ignore
 
+    def _reset_conn_state(self):
+        # clearing the storage and restoring to previous storage state
+        # of the contextvar
+        connections._clear_storage()
+        connections._db_config.clear()
+        if self.token:
+            connections.reset(self.token)
+
     async def _tearDown(self) -> None:
         if asyncio.iscoroutinefunction(self.tearDown):
             await self.asyncTearDown()
         else:
             self.tearDown()
         await self._tearDownDB()
+
+        self._reset_conn_state()
+
         Tortoise.apps = {}
-        Tortoise._connections = {}
         Tortoise._inited = False
 
     # Override unittest.TestCase methods which call setUp() and tearDown()
@@ -301,13 +316,12 @@ class IsolatedTestCase(SimpleTestCase):
     tortoise_test_modules: Iterable[Union[str, ModuleType]] = []
 
     async def _setUpDB(self) -> None:
+        await super()._setUpDB()
         config = getDBConfig(app_label="models", modules=self.tortoise_test_modules or _MODULES)
         await Tortoise.init(config, _create_db=True)
         await Tortoise.generate_schemas(safe=False)
-        self._connections = Tortoise._connections.copy()
 
     async def _tearDownDB(self) -> None:
-        Tortoise._connections = self._connections.copy()
         await Tortoise._drop_databases()
 
 
@@ -336,25 +350,39 @@ class TruncationTestCase(SimpleTestCase):
 
 
 class TransactionTestContext:
-    __slots__ = ("connection", "connection_name", "token")
+    __slots__ = ("connection", "connection_name", "token", "uses_pool")
 
     def __init__(self, connection) -> None:
         self.connection = connection
         self.connection_name = connection.connection_name
+        self.uses_pool = hasattr(self.connection._parent, "_pool")
+
+    async def ensure_connection(self):
+        is_conn_established = self.connection._connection != None
+        if self.uses_pool:
+            is_conn_established = self.connection._parent._pool != None
+
+        # If the underlying pool/connection hasn't been established then
+        # first create the pool/connection
+        if not is_conn_established:
+            await self.connection._parent.create_connection(with_db=True)
+
+        if self.uses_pool:
+            self.connection._connection = await self.connection._parent._pool.acquire()
+        else:
+            self.connection._connection = self.connection._parent._connection
 
     async def __aenter__(self):
-        current_transaction = current_transaction_map[self.connection_name]
-        self.token = current_transaction.set(self.connection)
-        if hasattr(self.connection, "_parent"):
-            self.connection._connection = await self.connection._parent._pool.acquire()
+        await self.ensure_connection()
+        self.token = connections.set(self.connection_name, self.connection)
         await self.connection.start()
         return self.connection
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.connection.rollback()
-        if hasattr(self.connection, "_parent"):
+        if self.uses_pool:
             await self.connection._parent._pool.release(self.connection._connection)
-        current_transaction_map[self.connection_name].reset(self.token)
+        connections.reset(self.token)
 
 
 class TestCase(TruncationTestCase):
@@ -374,6 +402,13 @@ class TestCase(TruncationTestCase):
                 await super()._run_outcome(outcome, expecting_failure, testMethod)
         else:
             await super()._run_outcome(outcome, expecting_failure, testMethod)
+
+        # Clearing out the storage so as to provide a clean storage state
+        # for all tests. Have to explicitly clear it here since teardown
+        # gets called as part of _run_outcome which would only clear the nested
+        # storage in the contextvar. This is not needed for other testcase classes
+        # as they don't run inside a transaction
+        self._reset_conn_state()
 
     async def _setUpDB(self) -> None:
         pass

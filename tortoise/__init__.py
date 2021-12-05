@@ -7,12 +7,15 @@ from contextvars import ContextVar
 from copy import deepcopy
 from inspect import isclass
 from types import ModuleType
-from typing import Coroutine, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
+from typing import (
+    Coroutine, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
+)
 
 from pypika import Table
 
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
+from tortoise.connection import connections
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields.relational import (
     BackwardFKRelation,
@@ -40,7 +43,7 @@ class Tortoise:
 
         :raises KeyError: If connection name does not exist.
         """
-        return cls._connections[connection_name]
+        return connections.get(connection_name)
 
     @classmethod
     def describe_model(
@@ -542,7 +545,7 @@ class Tortoise:
         :raises ConfigurationError: For any configuration error
         """
         if cls._inited:
-            await cls.close_connections()
+            await connections.close_all(discard=True)
             await cls._reset_apps()
         if int(bool(config) + bool(config_file) + bool(db_url)) != 1:
             raise ConfigurationError(
@@ -595,7 +598,7 @@ class Tortoise:
         )
 
         cls._init_timezone(use_tz, timezone)
-        await cls._init_connections(connections_config, _create_db)
+        await connections._init(connections_config, _create_db)
         cls._init_apps(apps_config)
         cls._init_routers(routers)
 
@@ -643,7 +646,6 @@ class Tortoise:
                 if isinstance(model, ModelMeta):
                     model._meta.default_connection = None
         cls.apps.clear()
-        current_transaction_map.clear()
 
     @classmethod
     async def generate_schemas(cls, safe: bool = True) -> None:
@@ -658,7 +660,7 @@ class Tortoise:
         """
         if not cls._inited:
             raise ConfigurationError("You have to call .init() first before generating schemas")
-        for connection in cls._connections.values():
+        for connection in connections.all():
             await generate_schema_for_client(connection, safe)
 
     @classmethod
@@ -671,10 +673,13 @@ class Tortoise:
         """
         if not cls._inited:
             raise ConfigurationError("You have to call .init() first before deleting schemas")
-        for connection in cls._connections.values():
-            await connection.close()
-            await connection.db_delete()
-        cls._connections = {}
+        # this closes any existing connections/pool if any and clears
+        # the storage
+        await connections.close_all()
+        for conn in connections.all():
+            await conn.db_delete()
+            connections.discard(conn.connection_name)
+
         await cls._reset_apps()
 
     @classmethod
@@ -706,7 +711,7 @@ def run_async(coro: Coroutine) -> None:
     try:
         loop.run_until_complete(coro)
     finally:
-        loop.run_until_complete(Tortoise.close_connections())
+        loop.run_until_complete(connections.close_all(discard=True))
 
 
 __version__ = "0.18.0"
