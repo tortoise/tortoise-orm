@@ -403,10 +403,10 @@ class TestCase(TruncationTestCase):
             await super()._run_outcome(outcome, expecting_failure, testMethod)
 
         # Clearing out the storage so as to provide a clean storage state
-        # for all tests. Have to explicitly clear it here since teardown
-        # gets called as part of _run_outcome which would only clear the nested
-        # storage in the contextvar. This is not needed for other testcase classes
-        # as they don't run inside a transaction
+        # for all tests. Have to explicitly clear it here since the teardown which
+        # gets called in _run_outcome would only clear the nested
+        # storage created in the contextvar due to TransactionTestContext.
+        # This is not needed for other testcase classes as they don't run inside a transaction
         self._reset_conn_state()
 
     async def _setUpDB(self) -> None:
