@@ -10,6 +10,7 @@ from tortoise.exceptions import ConfigurationError
 
 if TYPE_CHECKING:
     from tortoise.backends.base.client import BaseDBAsyncClient
+
     DBConfigType = Dict[str, Any]
 
 
@@ -22,7 +23,7 @@ class ConnectionHandler:
         self._db_config: Optional["DBConfigType"] = None
         self._create_db: bool = False
 
-    async def _init(self, db_config: Dict[str, Any], create_db: bool):
+    async def _init(self, db_config: "DBConfigType", create_db: bool):
         self._db_config = db_config
         self._create_db = create_db
         await self._init_connections()
