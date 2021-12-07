@@ -17,6 +17,7 @@ Added
 Fixed
 ^^^^^
 - Fix `bulk_update` error when pk is uuid. (#986)
+- Fix mutable default value. (#969)
 Changed
 ^^^^^^^
 - Move `Function`, `Aggregate` from `functions.py` to `expressions.py`. (#943)
