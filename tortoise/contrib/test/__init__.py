@@ -11,7 +11,7 @@ from unittest.result import TestResult
 
 from tortoise import Model, Tortoise, connections
 from tortoise.backends.base.config_generator import generate_config as _generate_config
-from tortoise.exceptions import DBConnectionError
+from tortoise.exceptions import DBConnectionError, OperationalError
 
 __all__ = (
     "SimpleTestCase",
@@ -62,10 +62,12 @@ def getDBConfig(app_label: str, modules: Iterable[Union[str, ModuleType]]) -> di
 
 
 async def _init_db(config: dict) -> None:
+    # Placing init outside the try block since it doesn't
+    # establish connections to the DB eagerly.
+    await Tortoise.init(config)
     try:
-        await Tortoise.init(config)
         await Tortoise._drop_databases()
-    except DBConnectionError:  # pragma: nocoverage
+    except (DBConnectionError, OperationalError):  # pragma: nocoverage
         pass
 
     await Tortoise.init(config, _create_db=True)
