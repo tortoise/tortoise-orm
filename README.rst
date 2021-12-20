@@ -218,3 +218,8 @@ License
 =======
 
 This project is licensed under the Apache License - see the `LICENSE.txt <LICENSE.txt>`_ file for details.
+
+
+.. image:: https://api.codacy.com/project/badge/Grade/c51e8bd85ac94fe48beb7a130b4d3a29
+   :alt: Codacy Badge
+   :target: https://app.codacy.com/gh/tortoise/tortoise-orm?utm_source=github.com&utm_medium=referral&utm_content=tortoise/tortoise-orm&utm_campaign=Badge_Grade_Settings
