@@ -239,7 +239,7 @@ class TransactionContext:
 
     async def __aenter__(self):
         await self.ensure_connection()
-        await self.lock.acquire()
+        await self.lock.acquire()  # type:ignore
         self.token = connections.set(self.connection_name, self.connection)
         await self.connection.start()
         return self.connection
@@ -253,7 +253,7 @@ class TransactionContext:
             else:
                 await self.connection.commit()
         connections.reset(self.token)
-        self.lock.release()
+        self.lock.release()  # type:ignore
 
 
 class TransactionContextPooled(TransactionContext):
@@ -296,11 +296,11 @@ class NestedTransactionContext(TransactionContext):
 
 class NestedTransactionPooledContext(TransactionContext):
     async def __aenter__(self):
-        await self.lock.acquire()
+        await self.lock.acquire()  # type:ignore
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self.lock.release()
+        self.lock.release()  # type:ignore
         if not self.connection._finalized:
             if exc_type:
                 # Can't rollback a transaction that already failed.
