@@ -35,7 +35,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-pypika-tortoise = "^0.1.1"
+pypika-tortoise = "^0.1.2"
 iso8601 = "^0.1.13"
 aiosqlite = ">=0.16.0, <0.18.0"
 pytz = "*"

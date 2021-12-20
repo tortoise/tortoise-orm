@@ -361,7 +361,7 @@ class Tortoise:
         discovered_models = []
         possible_models = getattr(module, "__models__", None)
         try:
-            possible_models = [*possible_models]
+            possible_models = [*possible_models]  # type:ignore
         except TypeError:
             possible_models = None
         if not possible_models:

@@ -33,7 +33,9 @@ class AsyncpgExecutor(BaseExecutor):
     def parameter(self, pos: int) -> Parameter:
         return Parameter("$%d" % (pos + 1,))
 
-    def _prepare_insert_statement(self, columns: Sequence[str], has_generated: bool = True) -> str:
+    def _prepare_insert_statement(
+        self, columns: Sequence[str], has_generated: bool = True, ignore_conflicts: bool = False
+    ) -> str:
         query = (
             self.db.query_class.into(self.model._meta.basetable)
             .columns(*columns)
@@ -43,6 +45,8 @@ class AsyncpgExecutor(BaseExecutor):
             generated_fields = self.model._meta.generated_db_fields
             if generated_fields:
                 query = query.returning(*generated_fields)
+        if ignore_conflicts:
+            query = query.do_nothing()
         return str(query)
 
     async def _process_insert_result(

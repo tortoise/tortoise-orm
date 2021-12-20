@@ -48,7 +48,15 @@ from tortoise.filters import get_filters_for_field
 from tortoise.functions import Function
 from tortoise.indexes import Index
 from tortoise.manager import Manager
-from tortoise.queryset import BulkUpdateQuery, ExistsQuery, Q, QuerySet, QuerySetSingle, RawSQLQuery
+from tortoise.queryset import (
+    BulkCreateQuery,
+    BulkUpdateQuery,
+    ExistsQuery,
+    Q,
+    QuerySet,
+    QuerySetSingle,
+    RawSQLQuery,
+)
 from tortoise.router import router
 from tortoise.signals import Signals
 from tortoise.transactions import current_transaction_map, in_transaction
@@ -1155,8 +1163,8 @@ class Model(metaclass=ModelMeta):
         cls: Type[MODEL],
         objects: Iterable[MODEL],
         batch_size: Optional[int] = None,
-        using_db: Optional[BaseDBAsyncClient] = None,
-    ) -> None:
+        ignore_conflicts: bool = False,
+    ) -> "BulkCreateQuery":
         """
         Bulk insert operation:
 
@@ -1167,7 +1175,7 @@ class Model(metaclass=ModelMeta):
 
             e.g. ``IntField`` primary keys will not be populated.
 
-        This is recommend only for throw away inserts where you want to ensure optimal
+        This is recommended only for throw away inserts where you want to ensure optimal
         insert performance.
 
         .. code-block:: python3
@@ -1177,12 +1185,11 @@ class Model(metaclass=ModelMeta):
                 User(name="...", email="...")
             ])
 
+        :param ignore_conflicts: Ignore conflicts when inserting
         :param objects: List of objects to bulk create
         :param batch_size: How many objects are created in a single query
-        :param using_db: Specific DB connection to use instead of default bound
         """
-        db = using_db or cls._choose_db(True)
-        await db.executor_class(model=cls, db=db).execute_bulk_insert(objects, batch_size)
+        return cls._meta.manager.get_queryset().bulk_create(objects, batch_size, ignore_conflicts)
 
     @classmethod
     def first(cls: Type[MODEL]) -> QuerySetSingle[Optional[MODEL]]:

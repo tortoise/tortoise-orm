@@ -14,6 +14,7 @@ Added
 ^^^^^
 - Add Case-When support. (#943)
 - Add `Rand`/`Random` function in contrib. (#944)
+- Add `ON CONFLICT` support in `INSERT` statements. (#428)
 Fixed
 ^^^^^
 - Fix `bulk_update` error when pk is uuid. (#986)
