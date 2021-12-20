@@ -12,8 +12,8 @@ Tortoise ORM
    :target: https://github.com/tortoise/tortoise-orm/actions?query=workflow:ci
 .. image:: https://coveralls.io/repos/github/tortoise/tortoise-orm/badge.svg
    :target: https://coveralls.io/github/tortoise/tortoise-orm
-.. image:: https://api.codacy.com/project/badge/Grade/b5b77021ba284e4a9e0c033a4611b046
-   :target: https://app.codacy.com/app/Tortoise/tortoise-orm
+.. image:: https://app.codacy.com/project/badge/Grade/844030d0cb8240d6af92c71bfac764ff
+   :target: https://www.codacy.com/gh/tortoise/tortoise-orm/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=tortoise/tortoise-orm&amp;utm_campaign=Badge_Grade
 
 Introduction
 ============
