@@ -90,3 +90,10 @@ class TestBulk(test.TruncationTestCase):
         with self.assertRaises(IntegrityError):
             async with in_transaction():
                 await UUIDPkModel.bulk_create([UUIDPkModel(id=val) for _ in range(10)])
+
+    async def test_bulk_create_ignore_conflicts(self):
+        name1 = UniqueName(name="name1")
+        name2 = UniqueName(name="name2")
+        await UniqueName.bulk_create([name1, name2], ignore_conflicts=True)
+        with self.assertRaises(IntegrityError):
+            await UniqueName.bulk_create([name1, name2])

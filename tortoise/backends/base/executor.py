@@ -195,15 +195,20 @@ class BaseExecutor:
             return cls.TO_DB_OVERRIDE[field_object.__class__](field_object, attr, instance)
         return field_object.to_db_value(attr, instance)
 
-    def _prepare_insert_statement(self, columns: Sequence[str], has_generated: bool = True) -> str:
+    def _prepare_insert_statement(
+        self, columns: Sequence[str], has_generated: bool = True, ignore_conflicts: bool = False
+    ) -> str:
         # Insert should implement returning new id to saved object
         # Each db has it's own methods for it, so each implementation should
         # go to descendant executors
-        return str(
+        query = (
             self.db.query_class.into(self.model._meta.basetable)
             .columns(*columns)
             .insert(*[self.parameter(i) for i in range(len(columns))])
         )
+        if ignore_conflicts:
+            query = query.ignore()
+        return str(query)
 
     async def _process_insert_result(self, instance: "Model", results: Any) -> None:
         raise NotImplementedError()  # pragma: nocoverage
