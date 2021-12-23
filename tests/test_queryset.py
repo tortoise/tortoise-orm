@@ -15,7 +15,8 @@ from tortoise.expressions import F, RawSQL, Subquery
 
 
 class TestQueryset(test.TestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         # Build large dataset
         self.intfields = [await IntFields.create(intnum=val) for val in range(10, 100, 3)]
         self.db = Tortoise.get_connection("models")

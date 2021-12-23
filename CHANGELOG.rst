@@ -8,6 +8,13 @@ Changelog
 
 0.18
 ====
+0.18.1
+------
+Fixed
+^^^^^
+- Fix `bulk_create` error. (#1012)
+- Fix unittest invalid.
+
 0.18.0
 ------
 Added

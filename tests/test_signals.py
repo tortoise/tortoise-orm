@@ -41,7 +41,8 @@ async def signal_post_delete(
 
 
 class TestSignals(test.TestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         self.signal_save = await Signals.create(name="signal_save")
         self.signal_delete = await Signals.create(name="signal_delete")
 

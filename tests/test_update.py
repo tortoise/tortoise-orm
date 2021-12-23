@@ -33,8 +33,8 @@ class TestUpdate(test.TestCase):
             await UUIDFields.create(data=uuid.uuid4()),
             await UUIDFields.create(data=uuid.uuid4()),
         ]
-        objs[0].data = str(uuid.uuid4())
-        objs[1].data = str(uuid.uuid4())
+        objs[0].data = uuid.uuid4()
+        objs[1].data = uuid.uuid4()
         rows_affected = await UUIDFields.bulk_update(objs, fields=["data"])
         self.assertEqual(rows_affected, 2)
         self.assertEqual((await UUIDFields.get(pk=objs[0].pk)).data, objs[0].data)

@@ -1,11 +1,11 @@
 import uuid
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Type, Union
 
 import asyncpg
 from pypika import Parameter
 from pypika.terms import Term
 
-from tortoise import Model
+from tortoise import Model, fields
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.contrib.postgres.json_functions import (
     postgres_json_contained_by,
@@ -20,7 +20,22 @@ def postgres_search(field: Term, value: Term):
     return SearchCriterion(field, expr=value)
 
 
+def to_db_uuid(
+    self: fields.UUIDField,
+    value: Optional[Union[str, uuid.UUID]],
+    instance: Union[Type[Model], Model],
+):
+    if value is None:
+        return None
+    if isinstance(value, str):
+        return uuid.UUID(value)
+    return value
+
+
 class AsyncpgExecutor(BaseExecutor):
+    TO_DB_OVERRIDE = {
+        fields.UUIDField: to_db_uuid,
+    }
     EXPLAIN_PREFIX = "EXPLAIN (FORMAT JSON, VERBOSE)"
     DB_NATIVE = BaseExecutor.DB_NATIVE | {bool, uuid.UUID}
     FILTER_FUNC_OVERRIDE = {

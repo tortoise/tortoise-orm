@@ -1159,7 +1159,7 @@ class Model(metaclass=ModelMeta):
         return await cls._meta.manager.get_queryset().in_bulk(id_list, field_name)
 
     @classmethod
-    async def bulk_create(
+    def bulk_create(
         cls: Type[MODEL],
         objects: Iterable[MODEL],
         batch_size: Optional[int] = None,

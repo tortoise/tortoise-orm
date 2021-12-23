@@ -372,6 +372,7 @@ class TestDoubleFK(test.TestCase):
     )
 
     async def asyncSetUp(self) -> None:
+        await super().asyncSetUp()
         one = await DoubleFK.create(name="one")
         two = await DoubleFK.create(name="two")
         self.middle = await DoubleFK.create(name="middle", left=one, right=two)

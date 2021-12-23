@@ -1,9 +1,10 @@
 import operator
 from functools import partial
 from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple
+from uuid import UUID
 
 from pypika import Table
-from pypika.enums import DatePart, SqlTypes
+from pypika.enums import DatePart, Dialects, SqlTypes
 from pypika.functions import Cast, Extract, Upper
 from pypika.terms import (
     BasicCriterion,
@@ -43,9 +44,12 @@ def get_value_sql(self, **kwargs):  # pragma: nocoverage
         return format_quotes(value, quote_char)
     if isinstance(self.value, str):
         value = self.value.replace(quote_char, quote_char * 2)
-        if dialect == "mysql":
+        if dialect == Dialects.MYSQL.value:
             value = value.replace("\\", "\\\\")
         return format_quotes(value, quote_char)
+    if isinstance(self.value, UUID):
+        if dialect == Dialects.POSTGRESQL.value:
+            return format_quotes(str(self.value), quote_char) + "::uuid"
     if isinstance(self.value, bool):
         return str.lower(str(self.value))
     if self.value is None:

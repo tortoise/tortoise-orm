@@ -1,12 +1,12 @@
 import asyncio
+import os
 import os as _os
 import unittest
 from asyncio.events import AbstractEventLoop
 from functools import wraps
 from types import ModuleType
-from typing import Any, Callable, Iterable, List, Optional, Union
+from typing import Any, Iterable, List, Optional, Union
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
-from unittest.result import TestResult
 
 from tortoise import Model, Tortoise
 from tortoise.backends.base.config_generator import generate_config as _generate_config
@@ -166,94 +166,34 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
     Based on `asynctest <http://asynctest.readthedocs.io/>`_
     """
 
-    use_default_loop = True
-
-    def _init_loop(self) -> None:
-        if self.use_default_loop:
-            self.loop = _LOOP
-        else:  # pragma: nocoverage
-            self.loop = asyncio.new_event_loop()
-
     async def _setUpDB(self) -> None:
         pass
 
     async def _tearDownDB(self) -> None:
         pass
 
-    async def _setUp(self) -> None:
+    def _setupAsyncioLoop(self):
+        loop = asyncio.get_event_loop()
+        loop.set_debug(True)
+        self._asyncioTestLoop = loop
+        fut = loop.create_future()
+        self._asyncioCallsTask = loop.create_task(self._asyncioLoopRunner(fut))  # type: ignore
+        loop.run_until_complete(fut)
 
+    def _tearDownAsyncioLoop(self):
+        loop = self._asyncioTestLoop
+        self._asyncioTestLoop = None  # type: ignore
+        self._asyncioCallsQueue.put_nowait(None)  # type: ignore
+        loop.run_until_complete(self._asyncioCallsQueue.join())  # type: ignore
+
+    async def asyncSetUp(self) -> None:
         await self._setUpDB()
-        if asyncio.iscoroutinefunction(self.setUp):
-            await self.asyncSetUp()
-        else:
-            self.setUp()
 
-        # don't take into account if the loop ran during setUp
-        self.loop._asynctest_ran = False  # type: ignore
-
-    async def _tearDown(self) -> None:
-        if asyncio.iscoroutinefunction(self.tearDown):
-            await self.asyncTearDown()
-        else:
-            self.tearDown()
+    async def asyncTearDown(self) -> None:
         await self._tearDownDB()
         Tortoise.apps = {}
         Tortoise._connections = {}
         Tortoise._inited = False
-
-    # Override unittest.TestCase methods which call setUp() and tearDown()
-    def run(self, result: Optional[TestResult] = None) -> Optional[TestResult]:
-        orig_result = result
-        if result is None:  # pragma: nocoverage
-            result = self.defaultTestResult()
-            startTestRun = getattr(result, "startTestRun", None)
-            if startTestRun is not None:
-                startTestRun()
-
-        result.startTest(self)
-
-        testMethod = getattr(self, self._testMethodName)
-        if getattr(self.__class__, "__unittest_skip__", False) or getattr(
-            testMethod, "__unittest_skip__", False
-        ):
-            # If the class or method was skipped.
-            try:
-                skip_why = getattr(self.__class__, "__unittest_skip_why__", "") or getattr(
-                    testMethod, "__unittest_skip_why__", ""
-                )
-                self._addSkip(result, self, skip_why)
-            finally:
-                result.stopTest(self)
-            return None
-        expecting_failure = getattr(testMethod, "__unittest_expecting_failure__", False)
-        outcome = unittest.case._Outcome(result)  # type: ignore
-        try:
-            self._outcome = outcome
-
-            self._init_loop()
-
-            self.loop.run_until_complete(self._run_outcome(outcome, expecting_failure, testMethod))
-
-            for test, reason in outcome.skipped:
-                self._addSkip(result, test, reason)
-            if outcome.success:
-                result.addSuccess(self)
-            return result
-        finally:
-            result.stopTest(self)
-            if orig_result is None:  # pragma: nocoverage
-                stopTestRun = getattr(result, "stopTestRun", None)
-                if stopTestRun is not None:
-                    stopTestRun()  # pylint: disable=E1102
-
-            # explicitly break reference cycles:
-            # outcome.errors -> frame -> outcome -> outcome.errors
-            # outcome.expectedFailure -> frame -> outcome -> outcome.expectedFailure
-            outcome.errors.clear()
-            outcome.expectedFailure = None
-
-            # clear the outcome, no more needed
-            self._outcome = None
 
     def assertListSortEqual(self, list1: List[Any], list2: List[Any], msg: Any = ...) -> None:
         if isinstance(list1[0], Model):
@@ -262,24 +202,6 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
             )
         elif isinstance(list1[0], tuple):
             super().assertListEqual(sorted(list1), sorted(list2))
-
-    async def _run_outcome(self, outcome, expecting_failure: bool, testMethod: Callable) -> None:
-        with outcome.testPartExecutor(self):
-            await self._setUp()
-        if outcome.success:
-            outcome.expecting_failure = expecting_failure
-            with outcome.testPartExecutor(self, isTest=True):
-                await self._run_test_method(testMethod)
-            outcome.expecting_failure = False
-            with outcome.testPartExecutor(self):
-                await self._tearDown()
-
-    async def _run_test_method(self, method: Callable) -> None:
-        # If the method is a coroutine or returns a coroutine, run it on the
-        # loop
-        result = method()
-        if asyncio.iscoroutine(result):
-            await result
 
 
 class IsolatedTestCase(SimpleTestCase):
@@ -322,6 +244,7 @@ class TruncationTestCase(SimpleTestCase):
     """
 
     async def _setUpDB(self) -> None:
+        await super(TruncationTestCase, self)._setUpDB()
         _restore_default()
 
     async def _tearDownDB(self) -> None:
@@ -333,6 +256,7 @@ class TruncationTestCase(SimpleTestCase):
                 await model._meta.db.execute_script(  # nosec
                     f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"
                 )
+        await super(TruncationTestCase, self)._tearDownDB()
 
 
 class TransactionTestContext:
@@ -365,18 +289,19 @@ class TestCase(TruncationTestCase):
     This is a fast test runner. Don't use it if your test uses transactions.
     """
 
-    async def _run_outcome(self, outcome, expecting_failure, testMethod) -> None:
+    async def asyncSetUp(self) -> None:
+        await super(TestCase, self).asyncSetUp()
         _restore_default()
         self.__db__ = Tortoise.get_connection("models")
-        if self.__db__.capabilities.supports_transactions:
-            connection = self.__db__._in_transaction().connection
-            async with TransactionTestContext(connection):
-                await super()._run_outcome(outcome, expecting_failure, testMethod)
-        else:
-            await super()._run_outcome(outcome, expecting_failure, testMethod)
+        self.__transaction__ = TransactionTestContext(self.__db__._in_transaction().connection)
+        await self.__transaction__.__aenter__()  # type: ignore
+
+    async def asyncTearDown(self) -> None:
+        await self.__transaction__.__aexit__(None, None, None)
+        await super(TestCase, self).asyncTearDown()
 
     async def _setUpDB(self) -> None:
-        pass
+        await super(TestCase, self)._setUpDB()
 
     async def _tearDownDB(self) -> None:
         if self.__db__.capabilities.supports_transactions:
