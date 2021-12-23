@@ -186,30 +186,6 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
         self._asyncioCallsQueue.put_nowait(None)  # type: ignore
         loop.run_until_complete(self._asyncioCallsQueue.join())  # type: ignore
 
-        # cancel all tasks
-        to_cancel = asyncio.all_tasks(loop)
-        if not to_cancel:
-            return
-
-        for task in to_cancel:
-            task.cancel()
-
-        loop.run_until_complete(asyncio.gather(*to_cancel, loop=loop, return_exceptions=True))
-
-        for task in to_cancel:
-            if task.cancelled():
-                continue
-            if task.exception() is not None:
-                loop.call_exception_handler(
-                    {
-                        "message": "unhandled exception during test shutdown",
-                        "exception": task.exception(),
-                        "task": task,
-                    }
-                )
-        # shutdown asyncgens
-        loop.run_until_complete(loop.shutdown_asyncgens())
-
     async def asyncSetUp(self) -> None:
         await self._setUpDB()
 

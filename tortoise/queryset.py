@@ -1682,8 +1682,8 @@ class BulkUpdateQuery(UpdateQuery):
                 pk_list = []
                 for obj in objects_item:
                     value = executor.column_map[pk_attr](obj.pk, None)
-                    attr = getattr(obj, field)
-                    case.when(pk == value, executor.column_map[field](attr, None))
+                    field_value = getattr(obj, field)
+                    case.when(pk == value, executor.column_map[field](field_value, None))
                     pk_list.append(value)
                 query = query.set(field, case)
                 query = query.where(pk.isin(pk_list))

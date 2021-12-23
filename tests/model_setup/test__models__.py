@@ -27,7 +27,7 @@ class TestGenerateSchema(test.SimpleTestCase):
             "engine"
         ]
 
-    async def tearDown(self):
+    async def asyncTearDown(self) -> None:
         Tortoise._connections = {}
         await Tortoise._reset_apps()
 
