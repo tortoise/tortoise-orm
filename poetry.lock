@@ -1681,7 +1681,7 @@ asyncpg = ["asyncpg"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "a9c0941f46b8437e3cdd2041321599c4614de609c07992009561c510f88153cf"
+content-hash = "be91eaeaf3ed7983b5b2f8cc65341595606898b9bc7d9abbe66e90afe0fe2563"
 
 [metadata.files]
 aiofiles = [

@@ -39,8 +39,8 @@ pypika-tortoise = "^0.1.2"
 iso8601 = "^0.1.13"
 aiosqlite = ">=0.16.0, <0.18.0"
 pytz = "*"
-ciso8601 = { version = "^2.1.2", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
-uvloop = { version = "^0.16.0", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
+ciso8601 = { version = "*", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
+uvloop = { version = "*", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
 orjson = { version = "*", optional = true }
 asyncpg = { version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
