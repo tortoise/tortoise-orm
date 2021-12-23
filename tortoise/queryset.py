@@ -1707,7 +1707,8 @@ class BulkCreateQuery(AwaitableQuery):
         "batch_size",
         "_db",
         "executor",
-        "_custom_generated_pk",
+        "insert_query",
+        "insert_query_all",
     )
 
     def __init__(
@@ -1723,31 +1724,32 @@ class BulkCreateQuery(AwaitableQuery):
         self.ignore_conflicts = ignore_conflicts
         self.batch_size = batch_size
         self._db = db
-        self._custom_generated_pk = self.objects[0]._custom_generated_pk
 
     def _make_query(self) -> None:
         self.executor = self._db.executor_class(model=self.model, db=self._db)
         if not self.ignore_conflicts:
-            if self._custom_generated_pk:
-                self.query = self.executor.insert_query_all
-            else:
-                self.query = self.executor.insert_query
+            self.insert_query_all = self.executor.insert_query_all
+            self.insert_query = self.executor.insert_query
         else:
-            _, columns = self.executor._prepare_insert_columns()
-            if self._custom_generated_pk and self.model._meta.generated_db_fields:
-                _, columns_all = self.executor._prepare_insert_columns(include_generated=True)
-                self.query = self.executor._prepare_insert_statement(
+            regular_columns, columns = self.executor._prepare_insert_columns()
+            self.insert_query = self.executor._prepare_insert_statement(
+                columns, ignore_conflicts=True
+            )
+            self.insert_query_all = self.insert_query
+            if self.model._meta.generated_db_fields:
+                regular_columns_all, columns_all = self.executor._prepare_insert_columns(
+                    include_generated=True
+                )
+                self.insert_query_all = self.executor._prepare_insert_statement(
                     columns_all, has_generated=False, ignore_conflicts=True
                 )
-            else:
-                self.query = self.executor._prepare_insert_statement(columns, ignore_conflicts=True)
 
     async def _execute(self) -> List[MODEL]:
         for instance_chunk in chunk(self.objects, self.batch_size):
             values_lists_all = []
             values_lists = []
             for instance in instance_chunk:
-                if self._custom_generated_pk:
+                if instance._custom_generated_pk:
                     values_lists_all.append(
                         [
                             self.executor.column_map[field_name](
@@ -1766,9 +1768,9 @@ class BulkCreateQuery(AwaitableQuery):
                         ]
                     )
             if values_lists_all:
-                await self._db.execute_many(self.query, values_lists_all)
+                await self._db.execute_many(self.insert_query_all, values_lists_all)
             if values_lists:
-                await self._db.execute_many(self.query, values_lists)
+                await self._db.execute_many(self.insert_query, values_lists)
         return self.objects
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
@@ -1776,3 +1778,9 @@ class BulkCreateQuery(AwaitableQuery):
             self._db = self._choose_db(True)  # type: ignore
         self._make_query()
         return self._execute().__await__()  # type: ignore
+
+    def sql(self, **kwargs) -> str:
+        self.as_query()
+        if self.insert_query and self.insert_query_all:
+            return ";".join([str(self.insert_query), str(self.insert_query_all)])
+        return str(self.insert_query or self.insert_query_all)
