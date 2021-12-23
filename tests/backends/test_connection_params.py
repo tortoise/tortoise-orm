@@ -7,6 +7,12 @@ from tortoise.contrib import test
 
 
 class TestConnectionParams(test.TestCase):
+    async def asyncSetUp(self) -> None:
+        pass
+
+    async def asyncTearDown(self) -> None:
+        pass
+
     async def test_mysql_connection_params(self):
         with patch("asyncmy.create_pool", new=AsyncMock()) as mysql_connect:
             await Tortoise._init_connections(

@@ -6,7 +6,8 @@ from tortoise.functions import Coalesce
 
 
 class TestCaseWhen(test.TestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         self.intfields = [await IntFields.create(intnum=val) for val in range(10)]
         self.db = Tortoise.get_connection("models")
 

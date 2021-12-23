@@ -12,6 +12,7 @@ from tortoise.contrib import test
 
 class TestDefault(test.TestCase):
     async def asyncSetUp(self) -> None:
+        await super(TestDefault, self).asyncSetUp()
         connection = self.__db__
         if isinstance(connection, MySQLClient):
             await connection.execute_query(

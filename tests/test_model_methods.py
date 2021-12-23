@@ -84,7 +84,8 @@ class TestModelCreate(test.TestCase):
 
 
 class TestModelMethods(test.TestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         self.mdl = await Tournament.create(name="Test")
         self.mdl2 = Tournament(name="Test")
         self.cls = Tournament
@@ -298,7 +299,8 @@ class TestModelMethods(test.TestCase):
 
 
 class TestModelMethodsNoID(TestModelMethods):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         self.mdl = await NoID.create(name="Test")
         self.mdl2 = NoID(name="Test")
         self.cls = NoID

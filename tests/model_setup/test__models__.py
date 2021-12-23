@@ -12,7 +12,8 @@ from tortoise.utils import get_schema_sql
 
 
 class TestGenerateSchema(test.SimpleTestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         try:
             Tortoise.apps = {}
             Tortoise._connections = {}

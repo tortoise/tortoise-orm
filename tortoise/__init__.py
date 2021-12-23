@@ -342,7 +342,7 @@ class Tortoise:
         engine_module = importlib.import_module(engine)
 
         try:
-            client_class = engine_module.client_class  # type: ignore
+            client_class = engine_module.client_class
         except AttributeError:
             raise ConfigurationError(f'Backend for engine "{engine}" does not implement db client')
         return client_class
@@ -709,4 +709,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.18.0"
+__version__ = "0.18.1"

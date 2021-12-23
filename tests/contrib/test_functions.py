@@ -7,7 +7,8 @@ from tortoise.contrib.sqlite.functions import Random as SqliteRandom
 
 
 class TestFunction(test.TestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         self.intfields = [await IntFields.create(intnum=val) for val in range(10)]
         self.db = Tortoise.get_connection("models")
 
