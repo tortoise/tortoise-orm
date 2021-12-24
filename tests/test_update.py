@@ -2,9 +2,18 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
+import pytz
 from pypika.terms import Function
 
-from tests.testmodels import DefaultUpdate, Event, IntFields, JSONFields, Tournament, UUIDFields
+from tests.testmodels import (
+    DatetimeFields,
+    DefaultUpdate,
+    Event,
+    IntFields,
+    JSONFields,
+    Tournament,
+    UUIDFields,
+)
 from tortoise.contrib import test
 from tortoise.expressions import F
 
@@ -27,6 +36,20 @@ class TestUpdate(test.TestCase):
         self.assertEqual(rows_affected, 2)
         self.assertEqual((await Tournament.get(pk=objs[0].pk)).name, "0")
         self.assertEqual((await Tournament.get(pk=objs[1].pk)).name, "1")
+
+    async def test_bulk_update_datetime(self):
+        objs = [
+            await DatetimeFields.create(datetime=datetime(2021, 1, 1, tzinfo=pytz.utc)),
+            await DatetimeFields.create(datetime=datetime(2021, 1, 1, tzinfo=pytz.utc)),
+        ]
+        t0 = datetime(2021, 1, 2, tzinfo=pytz.utc)
+        t1 = datetime(2021, 1, 3, tzinfo=pytz.utc)
+        objs[0].datetime = t0
+        objs[1].datetime = t1
+        rows_affected = await DatetimeFields.bulk_update(objs, fields=["datetime"])
+        self.assertEqual(rows_affected, 2)
+        self.assertEqual((await DatetimeFields.get(pk=objs[0].pk)).datetime, t0)
+        self.assertEqual((await DatetimeFields.get(pk=objs[1].pk)).datetime, t1)
 
     async def test_bulk_update_pk_uuid(self):
         objs = [

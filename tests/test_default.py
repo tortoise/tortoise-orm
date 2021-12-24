@@ -34,7 +34,7 @@ class TestDefault(test.TestCase):
         self.assertEqual(default_model.decimal_default, Decimal(1))
         self.assertTrue(default_model.bool_default)
         self.assertEqual(default_model.char_default, "tortoise")
-        self.assertEqual(default_model.date_default, datetime.date.fromisoformat("2020-05-20"))
+        self.assertEqual(default_model.date_default, datetime.date(year=2020, month=5, day=20))
         self.assertEqual(
             default_model.datetime_default,
             datetime.datetime(year=2020, month=5, day=20, tzinfo=pytz.utc),

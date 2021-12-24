@@ -1,4 +1,5 @@
 import operator
+from datetime import datetime
 from functools import partial
 from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple
 from uuid import UUID
@@ -41,15 +42,20 @@ def get_value_sql(self, **kwargs):  # pragma: nocoverage
         return self.value.value
     if isinstance(self.value, date):
         value = self.value.isoformat()
-        return format_quotes(value, quote_char)
+        value = format_quotes(value, quote_char)
+        if isinstance(self.value, datetime) and dialect == Dialects.POSTGRESQL.value:
+            value = f"{value}::timestamptz"
+        return value
     if isinstance(self.value, str):
         value = self.value.replace(quote_char, quote_char * 2)
         if dialect == Dialects.MYSQL.value:
             value = value.replace("\\", "\\\\")
         return format_quotes(value, quote_char)
     if isinstance(self.value, UUID):
+        value = format_quotes(str(self.value), quote_char)
         if dialect == Dialects.POSTGRESQL.value:
-            return format_quotes(str(self.value), quote_char) + "::uuid"
+            return f"{value}::uuid"
+        return value
     if isinstance(self.value, bool):
         return str.lower(str(self.value))
     if self.value is None:
