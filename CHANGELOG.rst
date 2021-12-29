@@ -12,7 +12,7 @@ Changelog
 ------
 Fixed
 ^^^^^
-- Fix `bulk_create` error. (#1012)
+- Fix `bulk_create` error. (#1012) (#1022)
 - Fix unittest invalid.
 - Fix `bulk_update` in `postgres` with some type like `datetime`. (#968)
 

@@ -1,3 +1,4 @@
+import json
 import operator
 from datetime import datetime
 from functools import partial
@@ -55,6 +56,11 @@ def get_value_sql(self, **kwargs):  # pragma: nocoverage
         value = format_quotes(str(self.value), quote_char)
         if dialect == Dialects.POSTGRESQL.value:
             return f"{value}::uuid"
+        return value
+    if isinstance(self.value, (dict, list)):
+        value = format_quotes(json.dumps(self.value), quote_char)
+        if dialect == Dialects.POSTGRESQL.value:
+            return f"{value}::jsonb"
         return value
     if isinstance(self.value, bool):
         return str.lower(str(self.value))
