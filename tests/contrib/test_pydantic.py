@@ -1015,7 +1015,7 @@ class TestPydantic(test.TestCase):
         self.assertEqual(
             ret0,
             {
-                "id": 1,
+                "id": json_field_0.pk,
                 "data": {"a": 1},
                 "data_null": None,
                 "data_default": {"a": 1},
@@ -1026,7 +1026,7 @@ class TestPydantic(test.TestCase):
         self.assertEqual(
             ret1,
             {
-                "id": 2,
+                "id": json_field_1.pk,
                 "data": [{"a": 1, "b": 2}],
                 "data_null": None,
                 "data_default": {"a": 1},

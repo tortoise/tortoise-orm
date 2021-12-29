@@ -14,7 +14,7 @@ Fixed
 ^^^^^
 - Fix `bulk_create` error. (#1012)
 - Fix unittest invalid.
-- Fix `bulk_update` in `postgres` with some type like `datetime`. (#968)
+- Fix `bulk_update` in `postgres` with some type. (#968) (#1022)
 
 0.18.0
 ------

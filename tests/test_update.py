@@ -63,6 +63,18 @@ class TestUpdate(test.TestCase):
         self.assertEqual((await UUIDFields.get(pk=objs[0].pk)).data, objs[0].data)
         self.assertEqual((await UUIDFields.get(pk=objs[1].pk)).data, objs[1].data)
 
+    async def test_bulk_update_json_value(self):
+        objs = [
+            await JSONFields.create(data={}),
+            await JSONFields.create(data={}),
+        ]
+        objs[0].data = [0]
+        objs[1].data = {"a": 1}
+        rows_affected = await JSONFields.bulk_update(objs, fields=["data"])
+        self.assertEqual(rows_affected, 2)
+        self.assertEqual((await JSONFields.get(pk=objs[0].pk)).data, objs[0].data)
+        self.assertEqual((await JSONFields.get(pk=objs[1].pk)).data, objs[1].data)
+
     async def test_update_auto_now(self):
         obj = await DefaultUpdate.create()
 
