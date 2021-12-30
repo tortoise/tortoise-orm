@@ -1,75 +1,17 @@
-import json
 import operator
-from datetime import datetime
 from functools import partial
 from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple
-from uuid import UUID
 
 from pypika import Table
-from pypika.enums import DatePart, Dialects, SqlTypes
+from pypika.enums import DatePart, SqlTypes
 from pypika.functions import Cast, Extract, Upper
-from pypika.terms import (
-    BasicCriterion,
-    Criterion,
-    Enum,
-    Equality,
-    Term,
-    ValueWrapper,
-    date,
-    format_quotes,
-)
+from pypika.terms import BasicCriterion, Criterion, Equality, Term, ValueWrapper
 
 from tortoise.fields import Field, JSONField
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
-
-
-##############################################################################
-# Here we monkey-patch PyPika Valuewrapper to behave differently for MySQL
-##############################################################################
-
-
-def get_value_sql(self, **kwargs):  # pragma: nocoverage
-    quote_char = kwargs.get("secondary_quote_char") or ""
-    dialect = kwargs.get("dialect")
-    if dialect:
-        dialect = dialect.value
-
-    if isinstance(self.value, Term):
-        return self.value.get_sql(**kwargs)
-    if isinstance(self.value, Enum):
-        return self.value.value
-    if isinstance(self.value, date):
-        value = self.value.isoformat()
-        value = format_quotes(value, quote_char)
-        if isinstance(self.value, datetime) and dialect == Dialects.POSTGRESQL.value:
-            value = f"{value}::timestamptz"
-        return value
-    if isinstance(self.value, str):
-        value = self.value.replace(quote_char, quote_char * 2)
-        if dialect == Dialects.MYSQL.value:
-            value = value.replace("\\", "\\\\")
-        return format_quotes(value, quote_char)
-    if isinstance(self.value, UUID):
-        value = format_quotes(str(self.value), quote_char)
-        if dialect == Dialects.POSTGRESQL.value:
-            return f"{value}::uuid"
-        return value
-    if isinstance(self.value, (dict, list)):
-        value = format_quotes(json.dumps(self.value), quote_char)
-        if dialect == Dialects.POSTGRESQL.value:
-            return f"{value}::jsonb"
-        return value
-    if isinstance(self.value, bool):
-        return str.lower(str(self.value))
-    if self.value is None:
-        return "null"
-    return str(self.value)
-
-
-ValueWrapper.get_value_sql = get_value_sql
 
 
 ##############################################################################

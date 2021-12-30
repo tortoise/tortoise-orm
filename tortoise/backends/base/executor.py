@@ -207,7 +207,7 @@ class BaseExecutor:
             .insert(*[self.parameter(i) for i in range(len(columns))])
         )
         if ignore_conflicts:
-            query = query.ignore()
+            query = query.do_nothing()
         return str(query)
 
     async def _process_insert_result(self, instance: "Model", results: Any) -> None:

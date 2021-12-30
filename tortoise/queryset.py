@@ -1683,7 +1683,7 @@ class BulkUpdateQuery(UpdateQuery):
                 for obj in objects_item:
                     value = executor.column_map[pk_attr](obj.pk, None)
                     field_value = getattr(obj, field)
-                    case.when(pk == value, ValueWrapper(field_value))
+                    case.when(pk == value, self.query._wrapper_cls(field_value))
                     pk_list.append(value)
                 query = query.set(field, case)
                 query = query.where(pk.isin(pk_list))

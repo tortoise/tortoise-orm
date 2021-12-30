@@ -157,17 +157,17 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
 name = "attrs"
-version = "21.2.0"
+version = "21.4.0"
 description = "Classes Without Boilerplate"
 category = "dev"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [package.extras]
-dev = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "mypy", "pytest-mypy-plugins", "zope.interface", "furo", "sphinx", "sphinx-notfound-page", "pre-commit"]
+dev = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "mypy", "pytest-mypy-plugins", "zope.interface", "furo", "sphinx", "sphinx-notfound-page", "pre-commit", "cloudpickle"]
 docs = ["furo", "sphinx", "zope.interface", "sphinx-notfound-page"]
-tests = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "mypy", "pytest-mypy-plugins", "zope.interface"]
-tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "mypy", "pytest-mypy-plugins"]
+tests = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "mypy", "pytest-mypy-plugins", "zope.interface", "cloudpickle"]
+tests_no_zope = ["coverage[toml] (>=5.0.2)", "hypothesis", "pympler", "pytest (>=4.3.0)", "six", "mypy", "pytest-mypy-plugins", "cloudpickle"]
 
 [[package]]
 name = "babel"
@@ -602,7 +602,7 @@ test = ["Cython (>=0.29.24,<0.30.0)"]
 
 [[package]]
 name = "hypercorn"
-version = "0.13.1"
+version = "0.13.2"
 description = "A ASGI Server based on Hyper libraries and inspired by Gunicorn"
 category = "dev"
 optional = false
@@ -863,11 +863,11 @@ testing = ["coverage", "nose"]
 
 [[package]]
 name = "platformdirs"
-version = "2.4.0"
+version = "2.4.1"
 description = "A small Python module for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 category = "dev"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.7"
 
 [package.extras]
 docs = ["Sphinx (>=4)", "furo (>=2021.7.5b38)", "proselint (>=0.10.2)", "sphinx-autodoc-typehints (>=1.12)"]
@@ -992,11 +992,18 @@ diagrams = ["jinja2", "railroad-diagrams"]
 
 [[package]]
 name = "pypika-tortoise"
-version = "0.1.2"
+version = "0.1.3"
 description = "Forked from pypika and streamline just for tortoise-orm"
 category = "main"
 optional = false
-python-versions = ">=3.7,<4.0"
+python-versions = "^3.7"
+develop = false
+
+[package.source]
+type = "git"
+url = "https://github.com/tortoise/pypika-tortoise.git"
+reference = "main"
+resolved_reference = "21617b499c8543132e85d73bc3b722143f5f68b2"
 
 [[package]]
 name = "pytest"
@@ -1204,7 +1211,7 @@ python-versions = "*"
 
 [[package]]
 name = "sanic"
-version = "21.9.3"
+version = "21.12.0"
 description = "A web server and web framework that's written to go fast. Build fast. Run fast."
 category = "dev"
 optional = false
@@ -1220,10 +1227,11 @@ uvloop = {version = ">=0.5.3", markers = "sys_platform != \"win32\" and implemen
 websockets = ">=10.0"
 
 [package.extras]
-all = ["isort (>=5.0.0)", "beautifulsoup4", "chardet (>=3.0.0,<4.0.0)", "pytest-benchmark", "pytest-cov", "pytest-sugar", "m2r2", "pygments", "mypy (>=0.901)", "towncrier", "pytest (==5.2.1)", "uvicorn (<0.15.0)", "coverage (==5.3)", "pytest-sanic", "flake8", "sphinx (>=2.1.2)", "sanic-testing (>=0.7.0)", "bandit", "black", "gunicorn (==20.0.4)", "tox", "sphinx-rtd-theme (>=0.4.3)", "docutils", "types-ujson"]
-dev = ["sanic-testing (>=0.7.0)", "pytest (==5.2.1)", "coverage (==5.3)", "gunicorn (==20.0.4)", "pytest-cov", "beautifulsoup4", "pytest-sanic", "pytest-sugar", "pytest-benchmark", "chardet (>=3.0.0,<4.0.0)", "flake8", "black", "isort (>=5.0.0)", "bandit", "mypy (>=0.901)", "docutils", "pygments", "uvicorn (<0.15.0)", "tox", "towncrier", "types-ujson"]
-docs = ["sphinx (>=2.1.2)", "sphinx-rtd-theme (>=0.4.3)", "docutils", "pygments", "m2r2"]
-test = ["sanic-testing (>=0.7.0)", "pytest (==5.2.1)", "coverage (==5.3)", "gunicorn (==20.0.4)", "pytest-cov", "beautifulsoup4", "pytest-sanic", "pytest-sugar", "pytest-benchmark", "chardet (>=3.0.0,<4.0.0)", "flake8", "black", "isort (>=5.0.0)", "bandit", "mypy (>=0.901)", "docutils", "pygments", "uvicorn (<0.15.0)", "types-ujson"]
+all = ["gunicorn (==20.0.4)", "docutils", "pytest-sugar", "flake8", "pytest (==6.2.5)", "m2r2", "sanic-testing (>=0.7.0)", "uvicorn (<0.15.0)", "pytest-benchmark", "pytest-sanic", "bandit", "chardet (>=3.0.0,<4.0.0)", "black", "coverage (==5.3)", "mistune (<2.0.0)", "cryptography", "sphinx (>=2.1.2)", "pytest-cov", "isort (>=5.0.0)", "mypy (>=0.901,<0.910)", "sphinx-rtd-theme (>=0.4.3)", "beautifulsoup4", "towncrier", "tox", "pygments", "types-ujson"]
+dev = ["sanic-testing (>=0.7.0)", "pytest (==6.2.5)", "coverage (==5.3)", "gunicorn (==20.0.4)", "pytest-cov", "beautifulsoup4", "pytest-sanic", "pytest-sugar", "pytest-benchmark", "chardet (>=3.0.0,<4.0.0)", "flake8", "black", "isort (>=5.0.0)", "bandit", "mypy (>=0.901,<0.910)", "docutils", "pygments", "uvicorn (<0.15.0)", "cryptography", "tox", "towncrier", "types-ujson"]
+docs = ["sphinx (>=2.1.2)", "sphinx-rtd-theme (>=0.4.3)", "docutils", "pygments", "m2r2", "mistune (<2.0.0)"]
+ext = ["sanic-ext"]
+test = ["sanic-testing (>=0.7.0)", "pytest (==6.2.5)", "coverage (==5.3)", "gunicorn (==20.0.4)", "pytest-cov", "beautifulsoup4", "pytest-sanic", "pytest-sugar", "pytest-benchmark", "chardet (>=3.0.0,<4.0.0)", "flake8", "black", "isort (>=5.0.0)", "bandit", "mypy (>=0.901,<0.910)", "docutils", "pygments", "uvicorn (<0.15.0)", "types-ujson"]
 
 [[package]]
 name = "sanic-routing"
@@ -1529,7 +1537,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "types-pymysql"
-version = "1.0.7"
+version = "1.0.8"
 description = "Typing stubs for PyMySQL"
 category = "dev"
 optional = false
@@ -1681,7 +1689,7 @@ asyncpg = ["asyncpg"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "be91eaeaf3ed7983b5b2f8cc65341595606898b9bc7d9abbe66e90afe0fe2563"
+content-hash = "86a4e973031a68c75c90cda99a4dae6ea3d88179dee95074c108b8586d0ea6a6"
 
 [metadata.files]
 aiofiles = [
@@ -1842,8 +1850,8 @@ atomicwrites = [
     {file = "atomicwrites-1.4.0.tar.gz", hash = "sha256:ae70396ad1a434f9c7046fd2dd196fc04b12f9e91ffb859164193be8b6168a7a"},
 ]
 attrs = [
-    {file = "attrs-21.2.0-py2.py3-none-any.whl", hash = "sha256:149e90d6d8ac20db7a955ad60cf0e6881a3f20d37096140088356da6c716b0b1"},
-    {file = "attrs-21.2.0.tar.gz", hash = "sha256:ef6aaac3ca6cd92904cdd0d83f629a15f18053ec84e6432106f7a4d04ae4f5fb"},
+    {file = "attrs-21.4.0-py2.py3-none-any.whl", hash = "sha256:2d27e3784d7a565d36ab851fe94887c5eccd6a463168875832a1be79c82828b4"},
+    {file = "attrs-21.4.0.tar.gz", hash = "sha256:626ba8234211db98e869df76230a137c4c40a12d72445c45d5f5b716f076e2fd"},
 ]
 babel = [
     {file = "Babel-2.9.1-py2.py3-none-any.whl", hash = "sha256:ab49e12b91d937cd11f0b67cb259a57ab4ad2b59ac7a3b41d6c06c0ac5b0def9"},
@@ -2229,8 +2237,8 @@ httptools = [
     {file = "httptools-0.3.0.tar.gz", hash = "sha256:3f9b4856d46ba1f0c850f4e84b264a9a8b4460acb20e865ec00978ad9fbaa4cf"},
 ]
 hypercorn = [
-    {file = "Hypercorn-0.13.1-py3-none-any.whl", hash = "sha256:fcbfd5b691176cfcbf558cfa536909b2ef249af5528c99fcf941405c1c9aba74"},
-    {file = "Hypercorn-0.13.1.tar.gz", hash = "sha256:3f55c7d0a51a93601d24fb773b88b1cd05c8ccb33e19294d1215bc0e19a6939c"},
+    {file = "Hypercorn-0.13.2-py3-none-any.whl", hash = "sha256:ca18f91ab3fa823cbe9e949738f9f2cc07027cd647c80d8f93e4b1a2a175f112"},
+    {file = "Hypercorn-0.13.2.tar.gz", hash = "sha256:6307be5cbdf6ba411967d4661202dc4f79bd511b5d318bc4eed88b09418427f8"},
 ]
 hyperframe = [
     {file = "hyperframe-6.0.1-py3-none-any.whl", hash = "sha256:0ec6bafd80d8ad2195c4f03aacba3a8265e57bc4cff261e802bf39970ed02a15"},
@@ -2560,8 +2568,8 @@ pkginfo = [
     {file = "pkginfo-1.8.2.tar.gz", hash = "sha256:542e0d0b6750e2e21c20179803e40ab50598d8066d51097a0e382cba9eb02bff"},
 ]
 platformdirs = [
-    {file = "platformdirs-2.4.0-py3-none-any.whl", hash = "sha256:8868bbe3c3c80d42f20156f22e7131d2fb321f5bc86a2a345375c6481a67021d"},
-    {file = "platformdirs-2.4.0.tar.gz", hash = "sha256:367a5e80b3d04d2428ffa76d33f124cf11e8fff2acdaa9b43d545f5c7d661ef2"},
+    {file = "platformdirs-2.4.1-py3-none-any.whl", hash = "sha256:1d7385c7db91728b83efd0ca99a5afb296cab9d0ed8313a45ed8ba17967ecfca"},
+    {file = "platformdirs-2.4.1.tar.gz", hash = "sha256:440633ddfebcc36264232365d7840a970e75e1018d15b4327d11f91909045fda"},
 ]
 pluggy = [
     {file = "pluggy-1.0.0-py2.py3-none-any.whl", hash = "sha256:74134bbf457f031a36d68416e1509f34bd5ccc019f0bcc952c7b909d06b37bd3"},
@@ -2627,10 +2635,7 @@ pyparsing = [
     {file = "pyparsing-3.0.6-py3-none-any.whl", hash = "sha256:04ff808a5b90911829c55c4e26f75fa5ca8a2f5f36aa3a51f68e27033341d3e4"},
     {file = "pyparsing-3.0.6.tar.gz", hash = "sha256:d9bdec0013ef1eb5a84ab39a3b3868911598afa494f5faa038647101504e2b81"},
 ]
-pypika-tortoise = [
-    {file = "pypika-tortoise-0.1.2.tar.gz", hash = "sha256:76d1bb45d9cd92ec18037be312d3ee8a26945f787ce981367cfed1ac6e1a11c9"},
-    {file = "pypika_tortoise-0.1.2-py3-none-any.whl", hash = "sha256:90a61d3d8b9c19cecd1bdd3ca3515114cb7c3a657a6cad9e9e48cfe6db8cc1e0"},
-]
+pypika-tortoise = []
 pytest = [
     {file = "pytest-6.2.5-py3-none-any.whl", hash = "sha256:7310f8d27bc79ced999e760ca304d69f6ba6c6649c0b60fb0e04a4a77cacc134"},
     {file = "pytest-6.2.5.tar.gz", hash = "sha256:131b36680866a76e6781d13f101efb86cf674ebb9762eb70d3082b6f29889e89"},
@@ -2719,8 +2724,8 @@ rodi = [
     {file = "rodi-1.1.1.tar.gz", hash = "sha256:8d73539614c0335120ed42b9a92aae522dca937071e75c8ba207fa2b85ebb5c3"},
 ]
 sanic = [
-    {file = "sanic-21.9.3-py3-none-any.whl", hash = "sha256:354fbc9e5382df23989752067a57d042aef99bf5a8e85593a3e0112276bff9e8"},
-    {file = "sanic-21.9.3.tar.gz", hash = "sha256:5edb41d0d30cf47a25cf991b7465f53ea161b43e3cd20d8985e68ecf7fb7ad24"},
+    {file = "sanic-21.12.0-py3-none-any.whl", hash = "sha256:92882740bf213c883a272469049751bcfb06ab0e5810f4844615df4854d0232c"},
+    {file = "sanic-21.12.0.tar.gz", hash = "sha256:d01c509c03f526cdde432f54dd791ce247d84bff73f7c1200fd8c2054ad84f35"},
 ]
 sanic-routing = [
     {file = "sanic-routing-0.7.2.tar.gz", hash = "sha256:139ce88b3f054e7aa336e2ecc8459837092b103b275d3a97609a34092c55374d"},
@@ -2840,8 +2845,8 @@ typed-ast = [
     {file = "typed_ast-1.5.1.tar.gz", hash = "sha256:484137cab8ecf47e137260daa20bafbba5f4e3ec7fda1c1e69ab299b75fa81c5"},
 ]
 types-pymysql = [
-    {file = "types-PyMySQL-1.0.7.tar.gz", hash = "sha256:01b0e8d7e18963d664282e10fdc495f306b65b0f097cc0c5be70f3ca7e3efa1f"},
-    {file = "types_PyMySQL-1.0.7-py3-none-any.whl", hash = "sha256:8b553effda99b43406b938384fe6b0f38d5844e6efb49d2da97fdddd000ef20a"},
+    {file = "types-PyMySQL-1.0.8.tar.gz", hash = "sha256:9edf59b23f4e3201a28274f86bb6e3588e1777d56617a07da4196df2d2dd2162"},
+    {file = "types_PyMySQL-1.0.8-py3-none-any.whl", hash = "sha256:d26748b5a71ddd5576d2cdab4eac069614b9211f63b74c488ad7b0a7f936e737"},
 ]
 types-pytz = [
     {file = "types-pytz-2021.3.3.tar.gz", hash = "sha256:f6d21d6687935a1615db464b1e1df800d19502c36bc0486f43be7dfd2c404947"},
