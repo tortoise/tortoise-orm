@@ -10,6 +10,9 @@ Changelog
 ====
 0.18.1
 ------
+Added
+^^^^^
+- Add on conflict do update for bulk_create. (#1024)
 Fixed
 ^^^^^
 - Fix `bulk_create` error. (#1012)
