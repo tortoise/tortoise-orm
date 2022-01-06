@@ -1767,12 +1767,12 @@ class BulkCreateQuery(AwaitableQuery):
             if self.update_fields:
                 alias = f"new_{self.model.__name__}"
                 self.insert_query_all = (
-                    self.insert_query_all.as_(alias)
+                    self.insert_query_all.as_(alias)  # type:ignore
                     .on_conflict(*self.on_conflict)
                     .do_update(*self.update_fields)
                 )
                 self.insert_query = (
-                    self.insert_query.as_(alias)
+                    self.insert_query.as_(alias)  # type:ignore
                     .on_conflict(*self.on_conflict)
                     .do_update(*self.update_fields)
                 )
