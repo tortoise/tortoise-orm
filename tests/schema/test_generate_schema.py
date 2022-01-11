@@ -9,7 +9,8 @@ from tortoise.utils import get_schema_sql
 
 
 class TestGenerateSchema(test.SimpleTestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         try:
             Tortoise.apps = {}
             Tortoise._inited = False
@@ -22,7 +23,7 @@ class TestGenerateSchema(test.SimpleTestCase):
             "engine"
         ]
 
-    async def tearDown(self):
+    async def asyncTearDown(self) -> None:
         await Tortoise._reset_apps()
 
     async def init_for(self, module: str, safe=False) -> None:

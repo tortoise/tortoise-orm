@@ -1,11 +1,18 @@
 import os
-from unittest import TestCase, skipIf
+from unittest import skipIf
 
 from tortoise import Tortoise, connections, run_async
+from tortoise.contrib.test import TestCase
 
 
 @skipIf(os.name == "nt", "stuck with Windows")
 class TestRunAsync(TestCase):
+    async def asyncSetUp(self) -> None:
+        pass
+
+    async def asyncTearDown(self) -> None:
+        pass
+
     def setUp(self):
         self.somevalue = 1
 

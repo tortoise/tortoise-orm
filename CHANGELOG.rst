@@ -8,6 +8,17 @@ Changelog
 
 0.18
 ====
+0.18.1
+------
+Added
+^^^^^
+- Add on conflict do update for bulk_create. (#1024)
+Fixed
+^^^^^
+- Fix `bulk_create` error. (#1012)
+- Fix unittest invalid.
+- Fix `bulk_update` in `postgres` with some type. (#968) (#1022)
+
 0.18.0
 ------
 Added

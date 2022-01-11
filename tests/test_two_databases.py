@@ -6,7 +6,8 @@ from tortoise.transactions import in_transaction
 
 
 class TestTwoDatabases(test.SimpleTestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         if Tortoise._inited:
             await self._tearDownDB()
         first_db_config = test.getDBConfig(app_label="models", modules=["tests.testmodels"])
@@ -20,8 +21,9 @@ class TestTwoDatabases(test.SimpleTestCase):
         self.db = connections.get("models")
         self.second_db = connections.get("events")
 
-    async def tearDown(self):
+    async def asyncTearDown(self) -> None:
         await Tortoise._drop_databases()
+        await super(TestTwoDatabases, self).asyncTearDown()
 
     async def test_two_databases(self):
         tournament = await Tournament.create(name="Tournament")

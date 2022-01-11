@@ -3,6 +3,7 @@ from typing import Optional, Sequence
 
 import asyncpg
 from pypika import Parameter
+from pypika.dialects import PostgreSQLQueryBuilder
 from pypika.terms import Term
 
 from tortoise import Model
@@ -35,7 +36,7 @@ class AsyncpgExecutor(BaseExecutor):
 
     def _prepare_insert_statement(
         self, columns: Sequence[str], has_generated: bool = True, ignore_conflicts: bool = False
-    ) -> str:
+    ) -> PostgreSQLQueryBuilder:
         query = (
             self.db.query_class.into(self.model._meta.basetable)
             .columns(*columns)
@@ -47,7 +48,7 @@ class AsyncpgExecutor(BaseExecutor):
                 query = query.returning(*generated_fields)
         if ignore_conflicts:
             query = query.do_nothing()
-        return str(query)
+        return query
 
     async def _process_insert_result(
         self, instance: Model, results: Optional[asyncpg.Record]

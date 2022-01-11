@@ -20,6 +20,7 @@ from typing import (
 )
 
 from pypika import JoinType, Parameter, Query, Table
+from pypika.queries import QueryBuilder
 from pypika.terms import ArithmeticExpression, Function
 
 from tortoise.exceptions import OperationalError
@@ -69,15 +70,15 @@ class BaseExecutor:
         key = f"{self.db.connection_name}:{self.model._meta.db_table}"
         if key not in EXECUTOR_CACHE:
             self.regular_columns, columns = self._prepare_insert_columns()
-            self.insert_query = self._prepare_insert_statement(columns)
+            self.insert_query = str(self._prepare_insert_statement(columns))
             self.regular_columns_all = self.regular_columns
             self.insert_query_all = self.insert_query
             if self.model._meta.generated_db_fields:
                 self.regular_columns_all, columns_all = self._prepare_insert_columns(
                     include_generated=True
                 )
-                self.insert_query_all = self._prepare_insert_statement(
-                    columns_all, has_generated=False
+                self.insert_query_all = str(
+                    self._prepare_insert_statement(columns_all, has_generated=False)
                 )
 
             self.column_map: Dict[str, Callable[[Any, Any], Any]] = {}
@@ -197,7 +198,7 @@ class BaseExecutor:
 
     def _prepare_insert_statement(
         self, columns: Sequence[str], has_generated: bool = True, ignore_conflicts: bool = False
-    ) -> str:
+    ) -> QueryBuilder:
         # Insert should implement returning new id to saved object
         # Each db has it's own methods for it, so each implementation should
         # go to descendant executors
@@ -207,8 +208,8 @@ class BaseExecutor:
             .insert(*[self.parameter(i) for i in range(len(columns))])
         )
         if ignore_conflicts:
-            query = query.ignore()
-        return str(query)
+            query = query.do_nothing()
+        return query
 
     async def _process_insert_result(self, instance: "Model", results: Any) -> None:
         raise NotImplementedError()  # pragma: nocoverage

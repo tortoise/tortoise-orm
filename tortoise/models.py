@@ -1161,11 +1161,13 @@ class Model(metaclass=ModelMeta):
         return await cls._meta.manager.get_queryset().in_bulk(id_list, field_name)
 
     @classmethod
-    async def bulk_create(
+    def bulk_create(
         cls: Type[MODEL],
         objects: Iterable[MODEL],
         batch_size: Optional[int] = None,
         ignore_conflicts: bool = False,
+        update_fields: Optional[Iterable[str]] = None,
+        on_conflict: Optional[Iterable[str]] = None,
     ) -> "BulkCreateQuery":
         """
         Bulk insert operation:
@@ -1187,11 +1189,15 @@ class Model(metaclass=ModelMeta):
                 User(name="...", email="...")
             ])
 
+        :param on_conflict: On conflict index name
+        :param update_fields: Update fields when conflicts
         :param ignore_conflicts: Ignore conflicts when inserting
         :param objects: List of objects to bulk create
         :param batch_size: How many objects are created in a single query
         """
-        return cls._meta.manager.get_queryset().bulk_create(objects, batch_size, ignore_conflicts)
+        return cls._meta.manager.get_queryset().bulk_create(
+            objects, batch_size, ignore_conflicts, update_fields, on_conflict
+        )
 
     @classmethod
     def first(cls: Type[MODEL]) -> QuerySetSingle[Optional[MODEL]]:

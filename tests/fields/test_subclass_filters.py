@@ -5,7 +5,8 @@ from tortoise.contrib import test
 class TestCustomFieldFilters(test.IsolatedTestCase):
     tortoise_test_modules = ["tests.fields.subclass_models"]
 
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         await RaceParticipant.create(
             first_name="George", place=RacePlacingEnum.FIRST, predicted_place=RacePlacingEnum.SECOND
         )

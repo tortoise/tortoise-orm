@@ -48,7 +48,7 @@ __all__ = (
 
 # Doing this we can replace json dumps/loads with different implementations
 JsonDumpsFunc = Callable[[Any], str]
-JsonLoadsFunc = Callable[[str], Any]
+JsonLoadsFunc = Callable[[Union[str, bytes]], Any]
 JSON_DUMPS: JsonDumpsFunc = functools.partial(json.dumps, separators=(",", ":"))
 JSON_LOADS: JsonLoadsFunc = json.loads
 
@@ -56,7 +56,7 @@ try:
     # Use orjson as an optional accelerator
     import orjson
 
-    JSON_DUMPS = orjson.dumps  # type:ignore
+    JSON_DUMPS = lambda x: orjson.dumps(x).decode()  # noqa: E731
     JSON_LOADS = orjson.loads
 except ImportError:  # pragma: nocoverage
     pass
@@ -460,7 +460,7 @@ class JSONField(Field, dict, list):  # type: ignore
     ) -> Optional[str]:
         self.validate(value)
 
-        if isinstance(value, str):
+        if isinstance(value, (str, bytes)):
             try:
                 self.decoder(value)
             except Exception:
@@ -469,13 +469,15 @@ class JSONField(Field, dict, list):  # type: ignore
         return None if value is None else self.encoder(value)
 
     def to_python_value(
-        self, value: Optional[Union[str, dict, list]]
+        self, value: Optional[Union[str, bytes, dict, list]]
     ) -> Optional[Union[dict, list]]:
-        if isinstance(value, str):
+        if isinstance(value, (str, bytes)):
             try:
                 return self.decoder(value)
             except Exception:
-                raise FieldError(f"Value {value} is invalid json value.")
+                raise FieldError(
+                    f"Value {value if isinstance(value,str) else value.decode()} is invalid json value."
+                )
 
         self.validate(value)
         return value
