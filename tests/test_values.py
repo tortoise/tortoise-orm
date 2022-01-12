@@ -153,6 +153,7 @@ class TestValues(test.TestCase):
                 {"name": "Championship", "name_slength": 12},
                 {"name": "Super Bowl", "name_slength": 10},
             ],
+            sorted_key="name",
         )
 
     async def test_values_list_annotations_trim(self):
@@ -170,5 +171,7 @@ class TestValues(test.TestCase):
 
         tournaments = await Tournament.annotate(name_trim=Trim("name")).values("name", "name_trim")
         self.assertListSortEqual(
-            tournaments, [{"name": "  x", "name_trim": "x"}, {"name": " y ", "name_trim": "y"}]
+            tournaments,
+            [{"name": "  x", "name_trim": "x"}, {"name": " y ", "name_trim": "y"}],
+            sorted_key="name",
         )

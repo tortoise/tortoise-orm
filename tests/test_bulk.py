@@ -11,7 +11,9 @@ class TestBulk(test.TruncationTestCase):
         await UniqueName.bulk_create([UniqueName() for _ in range(1000)])
         all_ = await UniqueName.all().values("id", "name")
         inc = all_[0]["id"]
-        self.assertListSortEqual(all_, [{"id": val + inc, "name": None} for val in range(1000)])
+        self.assertListSortEqual(
+            all_, [{"id": val + inc, "name": None} for val in range(1000)], sorted_key="id"
+        )
 
     async def test_bulk_create_update_fields(self):
         await UniqueName.bulk_create([UniqueName(name="name")])
@@ -39,12 +41,16 @@ class TestBulk(test.TruncationTestCase):
         await UniqueName.bulk_create([UniqueName() for _ in range(1000)], batch_size=100)
         all_ = await UniqueName.all().values("id", "name")
         inc = all_[0]["id"]
-        self.assertListSortEqual(all_, [{"id": val + inc, "name": None} for val in range(1000)])
+        self.assertListSortEqual(
+            all_, [{"id": val + inc, "name": None} for val in range(1000)], sorted_key="id"
+        )
 
     async def test_bulk_create_with_specified(self):
         await UniqueName.bulk_create([UniqueName(id=id_) for id_ in range(1000, 2000)])
         all_ = await UniqueName.all().values("id", "name")
-        self.assertListSortEqual(all_, [{"id": id_, "name": None} for id_ in range(1000, 2000)])
+        self.assertListSortEqual(
+            all_, [{"id": id_, "name": None} for id_ in range(1000, 2000)], sorted_key="id"
+        )
 
     async def test_bulk_create_mix_specified(self):
         await UniqueName.bulk_create(
@@ -56,11 +62,11 @@ class TestBulk(test.TruncationTestCase):
         self.assertEqual(len(all_), 2000)
 
         self.assertListSortEqual(
-            all_[:1000], [{"id": id_, "name": None} for id_ in range(10000, 11000)]
+            all_[:1000], [{"id": id_, "name": None} for id_ in range(10000, 11000)], sorted_key="id"
         )
         inc = all_[1000]["id"]
         self.assertListSortEqual(
-            all_[1000:], [{"id": val + inc, "name": None} for val in range(1000)]
+            all_[1000:], [{"id": val + inc, "name": None} for val in range(1000)], sorted_key="id"
         )
 
     async def test_bulk_create_uuidpk(self):

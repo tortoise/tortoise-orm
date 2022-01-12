@@ -195,15 +195,21 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
         Tortoise._connections = {}
         Tortoise._inited = False
 
-    def assertListSortEqual(self, list1: List[Any], list2: List[Any], msg: Any = ...) -> None:
+    def assertListSortEqual(
+        self, list1: List[Any], list2: List[Any], msg: Any = ..., sorted_key: Optional[str] = None
+    ) -> None:
         if isinstance(list1[0], Model):
             super().assertListEqual(
-                sorted(list1, key=lambda x: x.pk), sorted(list2, key=lambda x: x.pk)
+                sorted(list1, key=lambda x: x.pk), sorted(list2, key=lambda x: x.pk), msg=msg
             )
-        elif isinstance(list1[0], tuple):
-            super().assertListEqual(sorted(list1), sorted(list2))
+        elif isinstance(list1[0], dict) and sorted_key:
+            super().assertListEqual(
+                sorted(list1, key=lambda x: x[sorted_key]),
+                sorted(list2, key=lambda x: x[sorted_key]),
+                msg=msg,
+            )
         else:
-            super().assertListEqual(list1, list2)
+            super().assertListEqual(sorted(list1), sorted(list2), msg=msg)
 
 
 class IsolatedTestCase(SimpleTestCase):
