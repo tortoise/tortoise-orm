@@ -1765,17 +1765,18 @@ class BulkCreateQuery(AwaitableQuery):
                     columns_all, has_generated=False, ignore_conflicts=self.ignore_conflicts
                 )
             if self.update_fields:
-                alias = f"new_{self.model.__name__}"
-                self.insert_query_all = (
-                    self.insert_query_all.as_(alias)  # type:ignore
-                    .on_conflict(*self.on_conflict)
-                    .do_update(*self.update_fields)
+                alias = f"new_{self.model._meta.db_table}"
+                self.insert_query_all = self.insert_query_all.as_(alias).on_conflict(  # type:ignore
+                    *self.on_conflict
                 )
-                self.insert_query = (
-                    self.insert_query.as_(alias)  # type:ignore
-                    .on_conflict(*self.on_conflict)
-                    .do_update(*self.update_fields)
+                self.insert_query = self.insert_query.as_(alias).on_conflict(  # type:ignore
+                    *self.on_conflict
                 )
+                for update_field in self.update_fields:
+                    self.insert_query_all = self.insert_query_all.do_update(  # type:ignore
+                        update_field
+                    )
+                    self.insert_query = self.insert_query.do_update(update_field)  # type:ignore
 
     async def _execute(self) -> List[MODEL]:
         for instance_chunk in chunk(self.objects, self.batch_size):

@@ -8,6 +8,12 @@ Changelog
 
 0.18
 ====
+0.18.2
+------
+Fixed
+^^^^^
+- Fix `bulk_create` doesn't work correctly with more than 1 update_fields. (#1046)
+
 0.18.1
 ------
 Added

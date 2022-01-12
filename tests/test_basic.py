@@ -18,4 +18,5 @@ class TestBasic(test.TestCase):
                 {"id": tournament.id, "name": "Updated name"},
                 {"id": tournament.id + 1, "name": "Test 2"},
             ],
+            sorted_key="id",
         )
