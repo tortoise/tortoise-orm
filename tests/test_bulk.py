@@ -23,6 +23,18 @@ class TestBulk(test.TruncationTestCase):
         all_ = await UniqueName.all().values("name", "optional")
         self.assertListSortEqual(all_, [{"name": "name", "optional": "optional"}])
 
+    async def test_bulk_create_more_that_one_update_fields(self):
+        await UniqueName.bulk_create([UniqueName(name="name")])
+        await UniqueName.bulk_create(
+            [UniqueName(name="name", optional="optional", other_optional="other_optional")],
+            update_fields=["optional", "other_optional"],
+            on_conflict=["name"],
+        )
+        all_ = await UniqueName.all().values("name", "optional", "other_optional")
+        self.assertListSortEqual(
+            all_, [{"name": "name", "optional": "optional", "other_optional": "other_optional"}]
+        )
+
     async def test_bulk_create_with_batch_size(self):
         await UniqueName.bulk_create([UniqueName() for _ in range(1000)], batch_size=100)
         all_ = await UniqueName.all().values("id", "name")

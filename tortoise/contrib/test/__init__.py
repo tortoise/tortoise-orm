@@ -202,6 +202,8 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
             )
         elif isinstance(list1[0], tuple):
             super().assertListEqual(sorted(list1), sorted(list2))
+        else:
+            super().assertListEqual(list1, list2)
 
 
 class IsolatedTestCase(SimpleTestCase):
