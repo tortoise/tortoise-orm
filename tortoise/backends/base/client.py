@@ -206,6 +206,7 @@ class ConnectionWrapper:
     __slots__ = ("connection", "lock", "client")
 
     def __init__(self, lock: asyncio.Lock, client: Any) -> None:
+        """Wraps the connections with a lock to facilitate safe concurrent access."""
         self.lock: asyncio.Lock = lock
         self.client = client
         self.connection: Any = client._connection
@@ -311,6 +312,7 @@ class NestedTransactionPooledContext(TransactionContext):
 
 class PoolConnectionWrapper:
     def __init__(self, client: Any) -> None:
+        """Class to manage acquiring from and releasing connections to a pool."""
         self.pool = client._pool
         self.client = client
         self.connection = None

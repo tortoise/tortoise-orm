@@ -20,6 +20,7 @@ class ConnectionHandler:
     )
 
     def __init__(self) -> None:
+        """Unified connection management interface."""
         self._db_config: Optional["DBConfigType"] = None
         self._create_db: bool = False
 
