@@ -1,8 +1,21 @@
 import copy
 
-from tests.testmodels import Address, Employee, Event, JSONFields, Reporter, Team, Tournament
+from tests.testmodels import (
+    Address,
+    CamelCaseAliasPerson,
+    Employee,
+    Event,
+    JSONFields,
+    Reporter,
+    Team,
+    Tournament,
+)
 from tortoise.contrib import test
-from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
+from tortoise.contrib.pydantic import (
+    PydanticModel,
+    pydantic_model_creator,
+    pydantic_queryset_creator,
+)
 
 
 class TestPydantic(test.TestCase):
@@ -1033,6 +1046,74 @@ class TestPydantic(test.TestCase):
                 "data_validate": None,
             },
         )
+
+    def test_generated_pydantic_inherit_model_meta_config_class(self):
+        """Generated class should inherit PydanticMeta's config_class"""
+        ModelPydantic = pydantic_model_creator(CamelCaseAliasPerson, name="AutoAliasPerson")
+        ExpectedParentConfig = CamelCaseAliasPerson.PydanticMeta.config_class
+
+        self.assertTrue(issubclass(ModelPydantic.Config, ExpectedParentConfig))
+
+    def test_override_default_model_config_by_config_class(self):
+        """PydanticMeta's config_class should be able to override default config."""
+        CamelCaseAliasPersonCopy = copy.deepcopy(CamelCaseAliasPerson)
+        # Set class pydantic config's orm_mode to False
+        CamelCaseAliasPersonCopy.PydanticMeta.config_class.orm_mode = False
+
+        ModelPydantic = pydantic_model_creator(
+            CamelCaseAliasPerson, name="AutoAliasPersonOverriddenORMMode"
+        )
+
+        self.assertEqual(ModelPydantic.Config.orm_mode, False)
+
+    def test_override_meta_pydantic_config_by_model_creator(self):
+        """pydantic_model_creator's config_class parameter should be able to override
+        model PydanticMeta's config_class.
+        """
+
+        class AnotherConfigClass:
+            title = "Another title!"
+
+        ModelPydantic = pydantic_model_creator(
+            CamelCaseAliasPerson,
+            config_class=AnotherConfigClass,
+            name="AutoAliasPersonModelCreatorConfig",
+        )
+
+        self.assertEqual(AnotherConfigClass.title, ModelPydantic.Config.title)
+
+    def test_config_class_ignore_fields_config(self):
+        """Generated config class should ignore config_class's fields parameter."""
+
+        class FieldsConfig:
+            fields = ["id"]
+
+        ModelPydantic = pydantic_model_creator(
+            CamelCaseAliasPerson, name="AutoAliasPersonCustomFields", config_class=FieldsConfig
+        )
+
+        self.assertNotEqual(ModelPydantic.Config.fields, FieldsConfig.fields)
+
+    def test_config_classes_merge_all_configs(self):
+        """Model creator should merge all 3 configs (Default, Meta's config_class
+        and creator's config_class) together.
+        """
+
+        class MinLengthConfig:
+            min_anystr_length = 3
+
+        ModelPydantic = pydantic_model_creator(
+            CamelCaseAliasPerson, name="AutoAliasPersonMinLength", config_class=MinLengthConfig
+        )
+
+        # Should set min_anystr_length from pydantic_model_creator's config_class
+        self.assertEqual(ModelPydantic.Config.min_anystr_length, MinLengthConfig.min_anystr_length)
+        # Should set title from model PydanticMeta's config_class
+        self.assertEqual(
+            ModelPydantic.Config.title, CamelCaseAliasPerson.PydanticMeta.config_class.title
+        )
+        # Should set orm_mode from base pydantic model configuration
+        self.assertEqual(ModelPydantic.Config.orm_mode, PydanticModel.Config.orm_mode)
 
 
 class TestPydanticCycle(test.TestCase):

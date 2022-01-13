@@ -4,6 +4,7 @@ from hashlib import sha3_224
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, cast
 
 import pydantic
+from pydantic.main import BaseConfig as PydanticBaseConfig
 
 from tortoise import fields
 from tortoise.contrib.pydantic.base import PydanticListModel, PydanticModel
@@ -58,6 +59,9 @@ class PydanticMeta:
     #: Sort fields alphabetically.
     #: If not set (or ``False``) then leave fields in declaration order
     sort_alphabetically: bool = False
+
+    #: Allows user to specify custom config class for generated model
+    config_class: Optional[Type[PydanticBaseConfig]] = None
 
 
 def _br_it(val: str) -> str:
@@ -126,6 +130,7 @@ def pydantic_model_creator(
     _stack: tuple = (),
     exclude_readonly: bool = False,
     meta_override: Optional[Type] = None,
+    config_class: Optional[Type[PydanticBaseConfig]] = None,
 ) -> Type[PydanticModel]:
     """
     Function to build `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ off Tortoise Model.
@@ -148,6 +153,12 @@ def pydantic_model_creator(
             * order of computed functions (as provided).
     :param exclude_readonly: Build a subset model that excludes any readonly fields
     :param meta_override: A PydanticMeta class to override model's values.
+    :param config_class: A custom config class to use as pydantic config.
+
+        Note: Created pydantic model uses config_class parameter and PydanticMeta's
+            config_class as its Config class's bases(Only if provided!), but it
+            ignores ``fields`` config. pydantic_model_creator will generate fields by
+            include/exclude/computed parameters automatically.
     """
 
     # Fully qualified class name
@@ -192,6 +203,7 @@ def pydantic_model_creator(
     default_include: Tuple[str, ...] = tuple(get_param("include"))
     default_exclude: Tuple[str, ...] = tuple(get_param("exclude"))
     default_computed: Tuple[str, ...] = tuple(get_param("computed"))
+    default_config_class: Optional[Type[PydanticBaseConfig]] = get_param("config_class")
 
     backward_relations: bool = bool(get_param("backward_relations"))
 
@@ -212,11 +224,33 @@ def pydantic_model_creator(
     # Get all annotations
     annotations = get_annotations(cls)
 
+    # Not: First ones override next ones' attributes
+    pconfig_bases: list[Type] = [PydanticModel.Config]
+    # If default config class is specified, we add it as first item of bases
+    if default_config_class:
+        pconfig_bases.insert(0, default_config_class)
+    # If config class is specified, we add it as first item of bases
+    if config_class:
+        pconfig_bases.insert(0, config_class)
+
+    # fields will be filled BY using include/exclude/computed
+    pconfig_attrs: Dict[Any, Any] = {"fields": {}}
+
+    # If at least one of default_config_class or config_class have title,
+    #   we don't add title automatically.
+    if not hasattr(default_config_class, "title") and not hasattr(config_class, "title"):
+        pconfig_attrs["title"] = name or cls.__name__
+
+    # If at least one of default_config_class or config_class have extra,
+    #   we don't add extra automatically.
+    if not hasattr(default_config_class, "extra") and not hasattr(config_class, "extra"):
+        pconfig_attrs["extra"] = pydantic.main.Extra.forbid
+
     # Properties and their annotations` store
     pconfig: Type[pydantic.main.BaseConfig] = type(
         "Config",
-        (PydanticModel.Config,),
-        {"title": name or cls.__name__, "extra": pydantic.main.Extra.forbid, "fields": {}},
+        tuple(pconfig_bases),
+        pconfig_attrs,
     )
     pannotations: Dict[str, Optional[Type]] = {}
     properties: Dict[str, Any] = {"__annotations__": pannotations, "Config": pconfig}
