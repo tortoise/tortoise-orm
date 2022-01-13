@@ -1055,7 +1055,7 @@ class TestPydantic(test.TestCase):
         self.assertTrue(issubclass(ModelPydantic.Config, ExpectedParentConfig))
 
     def test_override_default_model_config_by_config_class(self):
-        """PydanticMeta's config_class should be able to override default config."""
+        """Pydantic meta's config_class should be able to override default config."""
         CamelCaseAliasPersonCopy = copy.deepcopy(CamelCaseAliasPerson)
         # Set class pydantic config's orm_mode to False
         CamelCaseAliasPersonCopy.PydanticMeta.config_class.orm_mode = False
@@ -1067,8 +1067,10 @@ class TestPydantic(test.TestCase):
         self.assertEqual(ModelPydantic.Config.orm_mode, False)
 
     def test_override_meta_pydantic_config_by_model_creator(self):
-        """pydantic_model_creator's config_class parameter should be able to override
-        model PydanticMeta's config_class.
+        """Tests config_class parameters' importance order.
+
+        - pydantic_model_creator's config_class parameter should be able to override
+            model PydanticMeta's config_class.
         """
 
         class AnotherConfigClass:
@@ -1095,8 +1097,9 @@ class TestPydantic(test.TestCase):
         self.assertNotEqual(ModelPydantic.Config.fields, FieldsConfig.fields)
 
     def test_config_classes_merge_all_configs(self):
-        """Model creator should merge all 3 configs (Default, Meta's config_class
-        and creator's config_class) together.
+        """Model creator should merge all 3 configs.
+
+        - It merges (Default, Meta's config_class and creator's config_class) together.
         """
 
         class MinLengthConfig:

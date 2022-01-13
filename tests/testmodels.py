@@ -806,8 +806,10 @@ class Pair(Model):
 
 
 class CamelCaseAliasPerson(Model):
-    """A model that generates camelized aliases automatically by
-    configuring config_class.
+    """CamelCaseAliasPerson model.
+
+    - A model that generates camelized aliases automatically by
+        configuring config_class.
     """
 
     id = fields.IntField(pk=True)
@@ -816,7 +818,11 @@ class CamelCaseAliasPerson(Model):
     full_address = fields.TextField(null=True)
 
     class PydanticMeta:
+        """Defines the default config for pydantic model generator."""
+
         class PydanticConfig:
+            """Defines the default pydantic config for the model."""
+
             @staticmethod
             def camelize_var(var_name: str):
                 var_parts: list[str] = var_name.split("_")
