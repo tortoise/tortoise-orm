@@ -5,16 +5,15 @@ from tortoise.exceptions import ConfigurationError
 
 class TestBadReleationReferenceErrors(test.SimpleTestCase):
     async def asyncSetUp(self):
+        await super().asyncSetUp()
         try:
             Tortoise.apps = {}
-            Tortoise._connections = {}
             Tortoise._inited = False
         except ConfigurationError:
             pass
         Tortoise._inited = False
 
     async def asyncTearDown(self) -> None:
-        await Tortoise.close_connections()
         await Tortoise._reset_apps()
         await super(TestBadReleationReferenceErrors, self).asyncTearDown()
 

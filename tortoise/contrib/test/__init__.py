@@ -168,11 +168,7 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
     """
 
     async def _setUpDB(self) -> None:
-        # setting storage to an empty dict explicitly to create a
-        # ContextVar specific scope for each test case. The storage will
-        # either be restored from _restore_default or re-initialised depending on
-        # how the test case should behave
-        self.token = connections._set_storage({})
+        pass
 
     async def _tearDownDB(self) -> None:
         pass
@@ -195,12 +191,9 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
         await self._setUpDB()
 
     def _reset_conn_state(self) -> None:
-        # clearing the storage and restoring to previous storage state
-        # of the contextvar
+        # clearing the storage and db config
         connections._clear_storage()
         connections.db_config.clear()
-        if self.token:
-            connections.reset(self.token)
 
     async def asyncTearDown(self) -> None:
         await self._tearDownDB()
@@ -317,7 +310,6 @@ class TestCase(TruncationTestCase):
 
     async def asyncSetUp(self) -> None:
         await super(TestCase, self).asyncSetUp()
-        _restore_default()
         self.__db__ = connections.get("models")
         self.__transaction__ = TransactionTestContext(self.__db__._in_transaction().connection)
         await self.__transaction__.__aenter__()  # type: ignore
@@ -325,13 +317,6 @@ class TestCase(TruncationTestCase):
     async def asyncTearDown(self) -> None:
         await self.__transaction__.__aexit__(None, None, None)
         await super(TestCase, self).asyncTearDown()
-
-        # Clearing out the storage so as to provide a clean storage state
-        # for all tests. Have to explicitly clear it here since the teardown which
-        # gets called in _run_outcome would only clear the nested
-        # storage created in the contextvar due to TransactionTestContext.
-        # This is not needed for other testcase classes as they don't run inside a transaction
-        self._reset_conn_state()
 
     async def _setUpDB(self) -> None:
         await super(TestCase, self)._setUpDB()
@@ -375,7 +360,7 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
 
             @wraps(test_item)
             def skip_wrapper(*args, **kwargs):
-                db = Tortoise.get_connection(connection_name)
+                db = connections.get(connection_name)
                 for key, val in conditions.items():
                     if getattr(db.capabilities, key) != val:
                         raise SkipTest(f"Capability {key} != {val}")

@@ -21,6 +21,7 @@ class TestPostgreSQL(test.SimpleTestCase):
     async def asyncTearDown(self) -> None:
         if Tortoise._inited:
             await Tortoise._drop_databases()
+        await super().asyncTearDown()
 
     async def test_schema(self):
         from asyncpg.exceptions import InvalidSchemaNameError
@@ -56,7 +57,7 @@ class TestPostgreSQL(test.SimpleTestCase):
     async def test_ssl_true(self):
         self.db_config["connections"]["models"]["credentials"]["ssl"] = True
         try:
-            await Tortoise.init(self.db_config)
+            await Tortoise.init(self.db_config, _create_db=True)
         except (ConnectionError, ssl.SSLError):
             pass
         else:

@@ -62,7 +62,7 @@ class ConnectionHandler:
             return self.db_config[conn_alias]
         except KeyError:
             raise ConfigurationError(
-                f"Unable to get db settings for alias {conn_alias}. Please "
+                f"Unable to get db settings for alias '{conn_alias}'. Please "
                 f"check if the config dict contains this alias and try again"
             )
 

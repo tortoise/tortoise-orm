@@ -630,11 +630,7 @@ class Tortoise:
         else your event loop may never complete
         as it is waiting for the connections to die.
         """
-        tasks = []
-        for connection in cls._connections.values():
-            tasks.append(connection.close())
-        await asyncio.gather(*tasks)
-        cls._connections = {}
+        await connections.close_all(discard=True)
         logger.info("Tortoise-ORM shutdown")
 
     @classmethod

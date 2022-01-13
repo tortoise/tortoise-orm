@@ -25,6 +25,7 @@ class TestGenerateSchema(test.SimpleTestCase):
 
     async def asyncTearDown(self) -> None:
         await Tortoise._reset_apps()
+        await super().asyncTearDown()
 
     async def init_for(self, module: str, safe=False) -> None:
         with patch(

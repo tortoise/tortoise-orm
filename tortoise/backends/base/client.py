@@ -280,6 +280,7 @@ class TransactionContextPooled(TransactionContext):
                 await self.connection.commit()
         if self.connection._parent._pool:
             await self.connection._parent._pool.release(self.connection._connection)
+        connections.reset(self.token)
 
 
 class NestedTransactionContext(TransactionContext):
