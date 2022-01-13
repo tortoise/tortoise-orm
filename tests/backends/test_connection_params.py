@@ -30,7 +30,7 @@ class TestConnectionParams(test.SimpleTestCase):
                         },
                     }
                 },
-                False
+                False,
             )
             await connections.get("models").create_connection(with_db=True)
 
@@ -66,7 +66,7 @@ class TestConnectionParams(test.SimpleTestCase):
                             },
                         }
                     },
-                    False
+                    False,
                 )
                 await connections.get("models").create_connection(with_db=True)
 

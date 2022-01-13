@@ -1,7 +1,7 @@
 """
 This example demonstrates SQL Schema generation for each DB type supported.
 """
-from tortoise import Tortoise, fields, run_async, connections
+from tortoise import Tortoise, connections, fields, run_async
 from tortoise.models import Model
 from tortoise.utils import get_schema_sql
 

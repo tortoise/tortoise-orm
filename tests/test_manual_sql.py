@@ -1,4 +1,4 @@
-from tortoise import Tortoise, connections
+from tortoise import connections
 from tortoise.contrib import test
 from tortoise.transactions import in_transaction
 

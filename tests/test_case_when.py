@@ -1,5 +1,5 @@
 from tests.testmodels import IntFields
-from tortoise import Tortoise, connections
+from tortoise import connections
 from tortoise.contrib import test
 from tortoise.expressions import Case, F, Q, When
 from tortoise.functions import Coalesce
