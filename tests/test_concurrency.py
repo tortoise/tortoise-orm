@@ -2,7 +2,6 @@ import asyncio
 import sys
 
 from tests.testmodels import Tournament, UniqueName
-from tortoise import connections
 from tortoise.contrib import test
 from tortoise.transactions import in_transaction
 

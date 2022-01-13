@@ -1,5 +1,4 @@
 import asyncio
-import contextvars
 import os as _os
 import unittest
 from asyncio.events import AbstractEventLoop

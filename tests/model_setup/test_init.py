@@ -183,9 +183,9 @@ class TestInitErrors(test.SimpleTestCase):
 
     async def test_unknown_connection(self):
         with self.assertRaisesRegex(
-                ConfigurationError,
-                "Unable to get db settings for alias 'fioop'. Please "
-                "check if the config dict contains this alias and try again"
+            ConfigurationError,
+            "Unable to get db settings for alias 'fioop'. Please "
+            "check if the config dict contains this alias and try again",
         ):
             await Tortoise.init(
                 {

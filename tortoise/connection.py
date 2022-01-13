@@ -50,9 +50,8 @@ class ConnectionHandler:
     def _discover_client_class(self, engine: str) -> Type["BaseDBAsyncClient"]:
         # Let exception bubble up for transparency
         engine_module = importlib.import_module(engine)
-
         try:
-            client_class = engine_module.client_class  # type: ignore
+            client_class = engine_module.client_class
         except AttributeError:
             raise ConfigurationError(f'Backend for engine "{engine}" does not implement db client')
         return client_class
