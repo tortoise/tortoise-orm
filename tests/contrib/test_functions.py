@@ -1,5 +1,5 @@
 from tests.testmodels import IntFields
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
 from tortoise.contrib import test
 from tortoise.contrib.mysql.functions import Rand
 from tortoise.contrib.postgres.functions import Random as PostgresRandom
@@ -10,7 +10,7 @@ class TestFunction(test.TestCase):
     async def asyncSetUp(self):
         await super().asyncSetUp()
         self.intfields = [await IntFields.create(intnum=val) for val in range(10)]
-        self.db = Tortoise.get_connection("models")
+        self.db = connections.get("models")
 
     @test.requireCapability(dialect="mysql")
     async def test_mysql_func_rand(self):

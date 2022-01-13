@@ -1,5 +1,5 @@
 from tests.testmodels import IntFields
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
 from tortoise.contrib import test
 from tortoise.expressions import Case, F, Q, When
 from tortoise.functions import Coalesce
@@ -9,7 +9,7 @@ class TestCaseWhen(test.TestCase):
     async def asyncSetUp(self):
         await super().asyncSetUp()
         self.intfields = [await IntFields.create(intnum=val) for val in range(10)]
-        self.db = Tortoise.get_connection("models")
+        self.db = connections.get("models")
 
     async def test_single_when(self):
         category = Case(When(intnum__gte=8, then="big"), default="default")

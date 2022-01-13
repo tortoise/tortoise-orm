@@ -8,7 +8,7 @@ use relations between two databases
 Key notes of this example is using db_route for Tortoise init
 and explicitly declaring model apps in class Meta
 """
-from tortoise import Tortoise, fields, run_async
+from tortoise import Tortoise, fields, run_async, connections
 from tortoise.exceptions import OperationalError
 from tortoise.models import Model
 
@@ -73,8 +73,8 @@ async def run():
         }
     )
     await Tortoise.generate_schemas()
-    client = Tortoise.get_connection("first")
-    second_client = Tortoise.get_connection("second")
+    client = connections.get("first")
+    second_client = connections.get("second")
 
     tournament = await Tournament.create(name="Tournament")
     await Event(name="Event", tournament_id=tournament.id).save()

@@ -1,5 +1,5 @@
 from tests.testmodels import Tournament
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
 from tortoise.contrib import test
 from tortoise.transactions import in_transaction
 
@@ -9,11 +9,11 @@ class TestReconnect(test.IsolatedTestCase):
     async def test_reconnect(self):
         await Tournament.create(name="1")
 
-        await Tortoise._connections["models"]._expire_connections()
+        await connections.get("models")._expire_connections()
 
         await Tournament.create(name="2")
 
-        await Tortoise._connections["models"]._expire_connections()
+        await connections.get("models")._expire_connections()
 
         await Tournament.create(name="3")
 
@@ -26,12 +26,12 @@ class TestReconnect(test.IsolatedTestCase):
         async with in_transaction():
             await Tournament.create(name="1")
 
-        await Tortoise._connections["models"]._expire_connections()
+        await connections.get("models")._expire_connections()
 
         async with in_transaction():
             await Tournament.create(name="2")
 
-        await Tortoise._connections["models"]._expire_connections()
+        await connections.get("models")._expire_connections()
 
         async with in_transaction():
             self.assertEqual([f"{a.id}:{a.name}" for a in await Tournament.all()], ["1:1", "2:2"])

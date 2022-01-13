@@ -4,7 +4,7 @@ Test some PostgreSQL-specific features
 import ssl
 
 from tests.testmodels import Tournament
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
 from tortoise.contrib import test
 from tortoise.exceptions import OperationalError
 
@@ -32,7 +32,7 @@ class TestPostgreSQL(test.SimpleTestCase):
         with self.assertRaises(InvalidSchemaNameError):
             await Tortoise.generate_schemas()
 
-        conn = Tortoise.get_connection("models")
+        conn = connections.get("models")
         await conn.execute_script("CREATE SCHEMA mytestschema;")
         await Tortoise.generate_schemas()
 
@@ -45,7 +45,7 @@ class TestPostgreSQL(test.SimpleTestCase):
         with self.assertRaises(OperationalError):
             await Tournament.filter(name="Test").first()
 
-        conn = Tortoise.get_connection("models")
+        conn = connections.get("models")
         _, res = await conn.execute_query(
             "SELECT id, name FROM mytestschema.tournament WHERE name='Test' LIMIT 1"
         )
@@ -81,7 +81,7 @@ class TestPostgreSQL(test.SimpleTestCase):
         ] = "mytest_application"
         await Tortoise.init(self.db_config, _create_db=True)
 
-        conn = Tortoise.get_connection("models")
+        conn = connections.get("models")
         _, res = await conn.execute_query(
             "SELECT application_name FROM pg_stat_activity WHERE pid = pg_backend_pid()"
         )

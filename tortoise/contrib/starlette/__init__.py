@@ -3,7 +3,7 @@ from typing import Dict, Iterable, Optional, Union
 
 from starlette.applications import Starlette  # pylint: disable=E0401
 
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
 from tortoise.log import logger
 
 
@@ -80,7 +80,7 @@ def register_tortoise(
     @app.on_event("startup")
     async def init_orm() -> None:  # pylint: disable=W0612
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
-        logger.info("Tortoise-ORM started, %s, %s", Tortoise._connections, Tortoise.apps)
+        logger.info("Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps)
         if generate_schemas:
             logger.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()

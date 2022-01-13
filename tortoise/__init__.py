@@ -3,7 +3,6 @@ import importlib
 import json
 import os
 import warnings
-from contextvars import ContextVar
 from copy import deepcopy
 from inspect import isclass
 from types import ModuleType
@@ -31,7 +30,6 @@ from tortoise.utils import generate_schema_for_client
 
 class Tortoise:
     apps: Dict[str, Dict[str, Type["Model"]]] = {}
-    _connections: Dict[str, BaseDBAsyncClient] = {}
     _inited: bool = False
 
     @classmethod
@@ -40,6 +38,10 @@ class Tortoise:
         Returns the connection by name.
 
         :raises KeyError: If connection name does not exist.
+
+        .. warning::
+           This is deprecated and will be removed in a future release. Please use
+           :meth:`tortoise.connection.connections.get` instead.
         """
         return connections.get(connection_name)
 
@@ -378,21 +380,6 @@ class Tortoise:
         return discovered_models
 
     @classmethod
-    async def _init_connections(cls, connections_config: dict, create_db: bool) -> None:
-        for name, info in connections_config.items():
-            if isinstance(info, str):
-                info = expand_db_url(info)
-            client_class = cls._discover_client_class(info.get("engine"))
-            db_params = info["credentials"].copy()
-            db_params.update({"connection_name": name})
-            connection = client_class(**db_params)
-            if create_db:
-                await connection.db_create()
-            await connection.create_connection(with_db=True)
-            cls._connections[name] = connection
-            current_transaction_map[name] = ContextVar(name, default=connection)
-
-    @classmethod
     def init_models(
         cls,
         models_paths: Iterable[Union[ModuleType, str]],
@@ -424,7 +411,7 @@ class Tortoise:
     def _init_apps(cls, apps_config: dict) -> None:
         for name, info in apps_config.items():
             try:
-                cls.get_connection(info.get("default_connection", "default"))
+                connections.get(info.get("default_connection", "default"))
             except KeyError:
                 raise ConfigurationError(
                     'Unknown connection "{}" for app "{}"'.format(

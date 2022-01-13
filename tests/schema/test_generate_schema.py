@@ -137,7 +137,7 @@ class TestGenerateSchema(test.SimpleTestCase):
     async def test_schema_no_db_constraint(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_no_db_constraint")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             r"""CREATE TABLE "team" (
@@ -177,7 +177,7 @@ CREATE TABLE "teamevents" (
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -264,7 +264,7 @@ CREATE TABLE "teamevents" (
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = get_schema_sql(connections.get("default"), safe=True)
         self.assertEqual(
             sql.strip(),
             """
@@ -351,7 +351,7 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
     async def test_m2m_no_auto_create(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_no_auto_create_m2m")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             r"""CREATE TABLE "team" (
@@ -458,7 +458,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def test_schema_no_db_constraint(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_no_db_constraint")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             r"""CREATE TABLE `team` (
@@ -597,7 +597,7 @@ CREATE TABLE `teamevents` (
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = get_schema_sql(connections.get("default"), safe=True)
 
         self.assertEqual(
             sql.strip(),
@@ -696,7 +696,7 @@ CREATE TABLE IF NOT EXISTS `teamevents` (
 
     async def test_index_safe(self):
         await self.init_for("tests.schema.models_mysql_index")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = get_schema_sql(connections.get("default"), safe=True)
         self.assertEqual(
             sql,
             """CREATE TABLE IF NOT EXISTS `index` (
@@ -710,7 +710,7 @@ CREATE SPATIAL INDEX IF NOT EXISTS `idx_index_geometr_0b4dfb` ON `index` (`geome
 
     async def test_index_unsafe(self):
         await self.init_for("tests.schema.models_mysql_index")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql,
             """CREATE TABLE `index` (
@@ -725,7 +725,7 @@ CREATE SPATIAL INDEX `idx_index_geometr_0b4dfb` ON `index` (`geometry`);""",
     async def test_m2m_no_auto_create(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_no_auto_create_m2m")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             r"""CREATE TABLE `team` (
@@ -819,7 +819,7 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     async def test_schema_no_db_constraint(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_no_db_constraint")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             r"""CREATE TABLE "team" (
@@ -869,7 +869,7 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';""",
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -971,7 +971,7 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = get_schema_sql(connections.get("default"), safe=True)
         self.assertEqual(
             sql.strip(),
             """
@@ -1072,7 +1072,7 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';
 
     async def test_index_unsafe(self):
         await self.init_for("tests.schema.models_postgres_index")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql,
             """CREATE TABLE "index" (
@@ -1094,7 +1094,7 @@ CREATE INDEX "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");""",
 
     async def test_index_safe(self):
         await self.init_for("tests.schema.models_postgres_index")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = get_schema_sql(connections.get("default"), safe=True)
         self.assertEqual(
             sql,
             """CREATE TABLE IF NOT EXISTS "index" (
@@ -1117,7 +1117,7 @@ CREATE INDEX IF NOT EXISTS "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash"
     async def test_m2m_no_auto_create(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_no_auto_create_m2m")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             r"""CREATE TABLE "team" (

@@ -1,4 +1,4 @@
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
 from tortoise.contrib import test
 
 
@@ -7,7 +7,7 @@ class TestCapabilities(test.TestCase):
 
     async def asyncSetUp(self) -> None:
         await super(TestCapabilities, self).asyncSetUp()
-        self.db = Tortoise.get_connection("models")
+        self.db = connections.get("models")
         self.caps = self.db.capabilities
 
     def test_str(self):

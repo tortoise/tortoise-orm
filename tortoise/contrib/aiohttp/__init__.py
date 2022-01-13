@@ -3,7 +3,7 @@ from typing import Dict, Iterable, Optional, Union
 
 from aiohttp import web  # pylint: disable=E0401
 
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
 from tortoise.log import logger
 
 
@@ -79,7 +79,7 @@ def register_tortoise(
 
     async def init_orm(app):  # pylint: disable=W0612
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
-        logger.info(f"Tortoise-ORM started, {Tortoise._connections}, {Tortoise.apps}")
+        logger.info(f"Tortoise-ORM started, {connections._get_storage()}, {Tortoise.apps}")
         if generate_schemas:
             logger.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()
