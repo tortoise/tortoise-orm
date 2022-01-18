@@ -32,8 +32,8 @@ class ConnectionHandler:
     @property
     def db_config(self) -> "DBConfigType":
         """
-        Returns the DB config with which the
-        :meth:`Tortoise.init<tortoise.Tortoise.init>` method was called.
+        Returns the DB config with which the :meth:`Tortoise.init<tortoise.Tortoise.init>`
+        method was called.
 
         :raises ConfigurationError:
             If this property is accessed before calling the
