@@ -31,7 +31,8 @@ class ConnectionHandler:
 
     @property
     def db_config(self) -> "DBConfigType":
-        """Return the DB config.
+        """
+        Return the DB config.
 
         This is the same config passed to the
         :meth:`Tortoise.init<tortoise.Tortoise.init>` method while initialization.
@@ -96,7 +97,8 @@ class ConnectionHandler:
         return connection
 
     def get(self, conn_alias: str) -> "BaseDBAsyncClient":
-        """Return the connection object for the given alias, creating it if needed.
+        """
+        Return the connection object for the given alias, creating it if needed.
 
         Used for accessing the low-level connection object
         (:class:`BaseDBAsyncClient<tortoise.backends.base.client.BaseDBAsyncClient>`) for the
@@ -115,7 +117,8 @@ class ConnectionHandler:
             return connection
 
     def set(self, conn_alias: str, conn_obj: "BaseDBAsyncClient") -> contextvars.Token:
-        """Sets the given alias to the provided connection object.
+        """
+        Sets the given alias to the provided connection object.
 
         :param conn_alias: The alias to set the connection for.
         :param conn_obj: The connection object that needs to be set for this alias.
@@ -131,7 +134,8 @@ class ConnectionHandler:
         return self._conn_storage.set(storage_copy)
 
     def discard(self, conn_alias: str) -> Optional["BaseDBAsyncClient"]:
-        """Discards the given alias from the storage in the `current context`.
+        """
+        Discards the given alias from the storage in the `current context`.
 
         :param conn_alias: The alias for which the connection object should be discarded.
 
@@ -142,7 +146,8 @@ class ConnectionHandler:
         return self._get_storage().pop(conn_alias, None)
 
     def reset(self, token: contextvars.Token) -> None:
-        """Reset the underlying storage to the previous context state.
+        """
+        Reset the underlying storage to the previous context state.
 
         Resets the storage state to the `context` associated with the provided token. After
         resetting storage state, any additional `connections` created in the `old context` are
@@ -167,7 +172,8 @@ class ConnectionHandler:
         return list(self._get_storage().values())
 
     async def close_all(self, discard: bool = False) -> None:
-        """Closes all connections in the storage in the `current context`.
+        """
+        Closes all connections in the storage in the `current context`.
 
         :param discard:
             If ``True``, the connection object is discarded from the storage
