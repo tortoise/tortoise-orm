@@ -31,8 +31,11 @@ class ConnectionHandler:
 
     @property
     def db_config(self) -> "DBConfigType":
-        """Returns the DB config with which the :meth:`Tortoise.init<tortoise.Tortoise.init>`
-        method was called.
+        """
+        Return the DB config.
+
+        This is the same config passed to the
+        :meth:`Tortoise.init<tortoise.Tortoise.init>` method while initialization.
 
         :raises ConfigurationError:
             If this property is accessed before calling the
@@ -95,6 +98,8 @@ class ConnectionHandler:
 
     def get(self, conn_alias: str) -> "BaseDBAsyncClient":
         """
+        Return the connection object for the given alias, creating it if needed.
+
         Used for accessing the low-level connection object
         (:class:`BaseDBAsyncClient<tortoise.backends.base.client.BaseDBAsyncClient>`) for the
         given alias.
@@ -142,6 +147,8 @@ class ConnectionHandler:
 
     def reset(self, token: contextvars.Token) -> None:
         """
+        Reset the underlying storage to the previous context state.
+
         Resets the storage state to the `context` associated with the provided token. After
         resetting storage state, any additional `connections` created in the `old context` are
         copied into the `current context`.
