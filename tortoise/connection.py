@@ -1,8 +1,8 @@
 import asyncio
 import contextvars
-import copy
 import importlib
 from contextvars import ContextVar
+from copy import copy
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, Union
 
 from tortoise.backends.base.config_generator import expand_db_url
@@ -42,8 +42,12 @@ class ConnectionHandler:
     def _get_storage(self) -> Dict[str, "BaseDBAsyncClient"]:
         return self._conn_storage.get()
 
+    def _set_storage(self, new_storage: Dict[str, "BaseDBAsyncClient"]) -> contextvars.Token:
+        # Should be used only for testing purposes.
+        return self._conn_storage.set(new_storage)
+
     def _copy_storage(self) -> Dict[str, "BaseDBAsyncClient"]:
-        return copy.copy(self._get_storage())
+        return copy(self._get_storage())
 
     def _clear_storage(self) -> None:
         self._get_storage().clear()
@@ -90,10 +94,6 @@ class ConnectionHandler:
             connection: BaseDBAsyncClient = self._create_connection(conn_alias)
             storage[conn_alias] = connection
             return connection
-
-    def _set_storage(self, new_storage: Dict[str, "BaseDBAsyncClient"]) -> contextvars.Token:
-        # Should be used only for testing purposes.
-        return self._conn_storage.set(new_storage)
 
     def set(self, conn_alias: str, conn) -> contextvars.Token:
         storage_copy = self._copy_storage()
