@@ -213,7 +213,7 @@ class TestConnections(SimpleTestCase):
         mocked_copy_storage.return_value = {}
         expected_storage = {"default": "some_conn"}
         mocked_conn_storage.set.return_value = "some_token"
-        ret_val = self.conn_handler.set("default", "some_conn")
+        ret_val = self.conn_handler.set("default", "some_conn")  # type: ignore
         mocked_copy_storage.assert_called_once()
         self.assertEqual(ret_val, mocked_conn_storage.set.return_value)
         self.assertDictEqual(expected_storage, mocked_copy_storage.return_value)

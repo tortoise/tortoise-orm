@@ -31,6 +31,14 @@ class ConnectionHandler:
 
     @property
     def db_config(self) -> "DBConfigType":
+        """
+        Returns the DB config with which the
+        :meth:`Tortoise.init<tortoise.Tortoise.init>` method was called.
+
+        :raises ConfigurationError:
+            If this property is accessed before calling the
+            :meth:`Tortoise.init<tortoise.Tortoise.init>` method.
+        """
         if self._db_config is None:
             raise ConfigurationError(
                 "DB configuration not initialised. Make sure to call "
@@ -87,6 +95,15 @@ class ConnectionHandler:
         return connection
 
     def get(self, conn_alias: str) -> "BaseDBAsyncClient":
+        """
+        Used for accessing the low-level connection object
+        (:class:`BaseDBAsyncClient<tortoise.backends.base.client.BaseDBAsyncClient>`) for the
+        given alias.
+
+        :param conn_alias: The alias for which the connection has to be fetched
+
+        :raises ConfigurationError: If the connection alias does not exist.
+        """
         storage: Dict[str, "BaseDBAsyncClient"] = self._get_storage()
         try:
             return storage[conn_alias]
@@ -95,15 +112,46 @@ class ConnectionHandler:
             storage[conn_alias] = connection
             return connection
 
-    def set(self, conn_alias: str, conn) -> contextvars.Token:
+    def set(self, conn_alias: str, conn_obj: "BaseDBAsyncClient") -> contextvars.Token:
+        """
+        Sets the given alias to the provided connection object.
+
+        :param conn_alias: The alias to set the connection for.
+        :param conn_obj: The connection object that needs to be set for this alias.
+
+        .. note::
+            This method copies the storage from the `current context`, updates the
+            ``conn_alias`` with the provided ``conn_obj`` and sets the updated storage
+            in a `new context` and therefore returns a ``contextvars.Token`` in order to restore
+            the original context storage.
+        """
         storage_copy = self._copy_storage()
-        storage_copy[conn_alias] = conn
+        storage_copy[conn_alias] = conn_obj
         return self._conn_storage.set(storage_copy)
 
     def discard(self, conn_alias: str) -> Optional["BaseDBAsyncClient"]:
+        """
+        Discards the given alias from the storage in the `current context`.
+
+        :param conn_alias: The alias for which the connection object should be discarded.
+
+        .. important::
+            Make sure to have called ``conn.close()`` for the provided alias before calling
+            this method else there would be a connection leak (dangling connection).
+        """
         return self._get_storage().pop(conn_alias, None)
 
-    def reset(self, token: contextvars.Token):
+    def reset(self, token: contextvars.Token) -> None:
+        """
+        Resets the storage state to the `context` associated with the provided token. After
+        resetting storage state, any additional `connections` created in the `old context` are
+        copied into the `current context`.
+
+        :param token:
+            The token corresponding to the `context` to which the storage state has to
+            be reset. Typically, this token is obtained by calling the
+            :meth:`set<tortoise.connection.ConnectionHandler.set>` method of this class.
+        """
         current_storage = self._get_storage()
         self._conn_storage.reset(token)
         prev_storage = self._get_storage()
@@ -112,11 +160,19 @@ class ConnectionHandler:
                 prev_storage[alias] = conn
 
     def all(self) -> List["BaseDBAsyncClient"]:
+        """Returns a list of connection objects from the storage in the `current context`."""
         # Returning a list here so as to avoid accidental
         # mutation of the underlying storage dict
         return list(self._get_storage().values())
 
     async def close_all(self, discard: bool = False) -> None:
+        """
+        Closes all connections in the storage in the `current context`.
+
+        :param discard:
+            If ``True``, the connection object is discarded from the storage
+            after being closed.
+        """
         tasks = [conn.close() for conn in self._get_storage().values()]
         await asyncio.gather(*tasks)
         if discard:

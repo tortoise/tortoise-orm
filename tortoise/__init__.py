@@ -37,11 +37,11 @@ class Tortoise:
         """
         Returns the connection by name.
 
-        :raises KeyError: If connection name does not exist.
+        :raises ConfigurationError: If connection name does not exist.
 
         .. warning::
            This is deprecated and will be removed in a future release. Please use
-           :meth:`tortoise.connection.connections.get` instead.
+           :meth:`connections.get<tortoise.connection.ConnectionHandler.get>` instead.
         """
         return connections.get(connection_name)
 
@@ -338,17 +338,6 @@ class Tortoise:
                     m2m_relation._generated = True
                     model._meta.filters.update(get_m2m_filters(field, m2m_object))
                     related_model._meta.add_field(backward_relation_name, m2m_relation)
-
-    @classmethod
-    def _discover_client_class(cls, engine: str) -> Type[BaseDBAsyncClient]:
-        # Let exception bubble up for transparency
-        engine_module = importlib.import_module(engine)
-
-        try:
-            client_class = engine_module.client_class
-        except AttributeError:
-            raise ConfigurationError(f'Backend for engine "{engine}" does not implement db client')
-        return client_class
 
     @classmethod
     def _discover_models(
