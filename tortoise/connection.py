@@ -180,7 +180,7 @@ class ConnectionHandler:
         All closed connections will be removed from the storage by default.
 
         :param discard:
-            If ``False``, the connection object is closed but `retained` in the storage.
+            If ``False``, all connection objects are closed but `retained` in the storage.
         """
         tasks = [conn.close() for conn in self.all()]
         await asyncio.gather(*tasks)

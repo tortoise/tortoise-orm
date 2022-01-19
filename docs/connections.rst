@@ -44,8 +44,8 @@ Below is a simple code snippet which shows how the interface can be accessed:
     Any attempt to modify or override its behaviour at runtime is risky and not recommended.
 
 
-Please refer to :ref:`this example<example_two_databases>` for a detailed demonstration of how developers can use
-this in practice.
+Please refer to :ref:`this example<example_two_databases>` for a detailed demonstration of how this API can be used
+in practice.
 
 
 API Reference
