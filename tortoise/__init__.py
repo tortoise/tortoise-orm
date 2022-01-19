@@ -605,8 +605,12 @@ class Tortoise:
         It is required for this to be called on exit,
         else your event loop may never complete
         as it is waiting for the connections to die.
+
+        .. warning::
+           This is deprecated and will be removed in a future release. Please use
+           :meth:`connections.close_all<tortoise.connection.ConnectionHandler.close_all>` instead.
         """
-        await connections.close_all(discard=True)
+        await connections.close_all()
         logger.info("Tortoise-ORM shutdown")
 
     @classmethod
@@ -645,7 +649,7 @@ class Tortoise:
             raise ConfigurationError("You have to call .init() first before deleting schemas")
         # this closes any existing connections/pool if any and clears
         # the storage
-        await connections.close_all()
+        await connections.close_all(discard=False)
         for conn in connections.all():
             await conn.db_delete()
             connections.discard(conn.connection_name)

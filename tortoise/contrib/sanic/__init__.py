@@ -87,5 +87,5 @@ def register_tortoise(
 
     @app.listener("after_server_stop")  # type:ignore
     async def close_orm(app, loop):  # pylint: disable=W0612
-        await Tortoise.close_connections()
+        await connections.close_all()
         logger.info("Tortoise-ORM shutdown")

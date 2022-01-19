@@ -237,35 +237,44 @@ class TestConnections(SimpleTestCase):
         mocked_conn_storage.reset.assert_called_once_with("some_token")
         self.assertDictEqual(final_storage, second_config)
 
-    @patch("tortoise.connection.ConnectionHandler._get_storage")
-    def test_all(self, mocked_get_storage: Mock):
-        mocked_get_storage.return_value = {"default": "some_conn", "other": "some_other_conn"}
+    @patch("tortoise.connection.ConnectionHandler.db_config", new_callable=PropertyMock)
+    @patch("tortoise.connection.ConnectionHandler.get")
+    def test_all(self, mocked_get: Mock, mocked_db_config: Mock):
+        db_config = {"default": "some_conn", "other": "some_other_conn"}
+
+        def side_effect_callable(alias):
+            return db_config[alias]
+
+        mocked_get.side_effect = side_effect_callable
+        mocked_db_config.return_value = db_config
         expected_result = ["some_conn", "some_other_conn"]
         ret_val = self.conn_handler.all()
+        mocked_db_config.assert_called_once()
+        mocked_get.assert_has_calls([call("default"), call("other")], any_order=True)
         self.assertEqual(ret_val, expected_result)
 
-    @patch("tortoise.connection.ConnectionHandler._get_storage")
+    @patch("tortoise.connection.ConnectionHandler.all")
     @patch("tortoise.connection.ConnectionHandler.discard")
-    async def test_close_all_with_discard(self, mocked_discard: Mock, mocked_get_storage: Mock):
-        storage = {
-            "default": AsyncMock(spec=BaseDBAsyncClient),
-            "other": AsyncMock(spec=BaseDBAsyncClient),
-        }
-        mocked_get_storage.return_value = storage
-        await self.conn_handler.close_all(discard=True)
-        for mock_obj in storage.values():
+    @patch("tortoise.connection.ConnectionHandler.db_config", new_callable=PropertyMock)
+    async def test_close_all_with_discard(
+        self, mocked_db_config: Mock, mocked_discard: Mock, mocked_all: Mock
+    ):
+        all_conn = [AsyncMock(spec=BaseDBAsyncClient), AsyncMock(spec=BaseDBAsyncClient)]
+        db_config = {"default": "some_config", "other": "some_other_config"}
+        mocked_all.return_value = all_conn
+        mocked_db_config.return_value = db_config
+        await self.conn_handler.close_all()
+        mocked_all.assert_called_once()
+        mocked_db_config.assert_called_once()
+        for mock_obj in all_conn:
             mock_obj.close.assert_awaited_once()
         mocked_discard.assert_has_calls([call("default"), call("other")], any_order=True)
 
-    @patch("tortoise.connection.ConnectionHandler._get_storage")
-    @patch("tortoise.connection.ConnectionHandler.discard")
-    async def test_close_all_without_discard(self, mocked_discard: Mock, mocked_get_storage: Mock):
-        storage = {
-            "default": AsyncMock(spec=BaseDBAsyncClient),
-            "other": AsyncMock(spec=BaseDBAsyncClient),
-        }
-        mocked_get_storage.return_value = storage
-        await self.conn_handler.close_all()
-        for mock_obj in storage.values():
+    @patch("tortoise.connection.ConnectionHandler.all")
+    async def test_close_all_without_discard(self, mocked_all: Mock):
+        all_conn = [AsyncMock(spec=BaseDBAsyncClient), AsyncMock(spec=BaseDBAsyncClient)]
+        mocked_all.return_value = all_conn
+        await self.conn_handler.close_all(discard=False)
+        mocked_all.assert_called_once()
+        for mock_obj in all_conn:
             mock_obj.close.assert_awaited_once()
-        mocked_discard.assert_not_called()

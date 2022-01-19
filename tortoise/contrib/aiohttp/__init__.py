@@ -85,7 +85,7 @@ def register_tortoise(
             await Tortoise.generate_schemas()
 
     async def close_orm(app):  # pylint: disable=W0612
-        await Tortoise.close_connections()
+        await connections.close_all()
         logger.info("Tortoise-ORM shutdown")
 
     app.on_startup.append(init_orm)

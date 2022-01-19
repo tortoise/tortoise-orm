@@ -37,7 +37,7 @@ class TestPostgreSQL(test.SimpleTestCase):
         await Tortoise.generate_schemas()
 
         tournament = await Tournament.create(name="Test")
-        await Tortoise.close_connections()
+        await connections.close_all()
 
         del self.db_config["connections"]["models"]["credentials"]["schema"]
         await Tortoise.init(self.db_config)

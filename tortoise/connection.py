@@ -167,22 +167,25 @@ class ConnectionHandler:
 
     def all(self) -> List["BaseDBAsyncClient"]:
         """Returns a list of connection objects from the storage in the `current context`."""
-        # Returning a list here so as to avoid accidental
-        # mutation of the underlying storage dict
-        return list(self._get_storage().values())
+        # The reason this method iterates over db_config and not over `storage` directly is
+        # because: assume that someone calls `discard` with a certain alias, and calls this
+        # method subsequently. The alias which just got discarded from the storage would not
+        # appear in the returned list though it exists as part of the `db_config`.
+        return [self.get(alias) for alias in self.db_config]
 
-    async def close_all(self, discard: bool = False) -> None:
+    async def close_all(self, discard: bool = True) -> None:
         """
         Closes all connections in the storage in the `current context`.
 
+        All closed connections will be removed from the storage by default.
+
         :param discard:
-            If ``True``, the connection object is discarded from the storage
-            after being closed.
+            If ``False``, the connection object is closed but `retained` in the storage.
         """
-        tasks = [conn.close() for conn in self._get_storage().values()]
+        tasks = [conn.close() for conn in self.all()]
         await asyncio.gather(*tasks)
         if discard:
-            for alias in tuple(self._get_storage()):
+            for alias in self.db_config:
                 self.discard(alias)
 
 
