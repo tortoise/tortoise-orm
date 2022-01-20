@@ -384,6 +384,7 @@ class Tortoise:
             client_class = cls._discover_client_class(info.get("engine"))
             db_params = info["credentials"].copy()
             db_params.update({"connection_name": name})
+            db_params.update(info.get("connection_params", {}))
             connection = client_class(**db_params)
             if create_db:
                 await connection.db_create()
