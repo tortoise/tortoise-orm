@@ -8,6 +8,12 @@ Changelog
 
 0.18
 ====
+0.18.3
+------
+Fixed
+^^^^^
+- Fix for prefetch_related with foreign key id == 0.
+
 0.18.2
 ------
 Fixed
