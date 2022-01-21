@@ -1340,11 +1340,9 @@ class TestPydanticUpdate(test.TestCase):
         )
 
     def test_update_schema(self):
-        """
-        Update schema should be same as create schema,
-        but without required fields.
-        This acts an example of a PATH endpoint in an API, where users may want
-        to update a single field of a model without anything else.
+        """All fields of this schema should be optional.
+        This demonstrates an example PATCH endpoint in an API, where a client may want
+        to update a single field of a model without modifying the rest.
         """
 
         self.assertEqual(
