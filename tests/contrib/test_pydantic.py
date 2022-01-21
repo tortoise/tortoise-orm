@@ -1295,7 +1295,7 @@ class TestPydanticCycle(test.TestCase):
 
 
 class TestPydanticUpdate(test.TestCase):
-    async def setUp(self) -> None:
+    def setUp(self) -> None:
         self.UserCreate_Pydantic = pydantic_model_creator(
             User,
             name="UserCreate",
