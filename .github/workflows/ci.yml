@@ -1,8 +1,14 @@
 name: ci
-on: [ push, pull_request ]
+on:
+  push:
+    branches-ignore:
+      - master
+  pull_request:
+    branches-ignore:
+      - master
 jobs:
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:latest
@@ -18,7 +24,7 @@ jobs:
       TORTOISE_POSTGRES_PASS: 123456
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8 ]
+        python-version: [ "3.8", "3.9", "3.10" ]
     steps:
       - name: Start MySQL
         run: sudo systemctl start mysql.service
@@ -29,26 +35,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install and configure Poetry
-        uses: snok/install-poetry@v1.1.1
-        with:
-          virtualenvs-create: false
+        run: |
+          pip install -U pip poetry
+          poetry config virtualenvs.create false
       - name: Install requirements
         run: make deps
       - name: Run ci
         run: make ci
-      - name: Run green
-        env:
-          TEST_RUNNER: green
-        run: green
-      - name: Run nose2
-        env:
-          TEST_RUNNER: nose2
-        run: |
-          nose2 --plugin tortoise.contrib.test.nose2 --db-module tests.testmodels --db-url sqlite://:memory:
       - name: Upload Coverage
         run: coveralls --service=github
         env:

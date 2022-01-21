@@ -4,7 +4,8 @@ from tortoise.functions import Avg, Count, Sum, Upper
 
 
 class TestGroupBy(test.TestCase):
-    async def setUp(self) -> None:
+    async def asyncSetUp(self) -> None:
+        await super(TestGroupBy, self).asyncSetUp()
         self.a1 = await Author.create(name="author1")
         self.a2 = await Author.create(name="author2")
         for i in range(10):
@@ -34,7 +35,9 @@ class TestGroupBy(test.TestCase):
             .values("author__name", "count")
         )
         self.assertListSortEqual(
-            ret, [{"author__name": "author1", "count": 10}, {"author__name": "author2", "count": 5}]
+            ret,
+            [{"author__name": "author1", "count": 10}, {"author__name": "author2", "count": 5}],
+            sorted_key="author__name",
         )
 
     async def test_count_filter_group_by(self):
@@ -68,6 +71,7 @@ class TestGroupBy(test.TestCase):
         self.assertListSortEqual(
             ret,
             [{"author__name": "author1", "sum": 45.0}, {"author__name": "author2", "sum": 10.0}],
+            sorted_key="author__name",
         )
 
     async def test_sum_filter_group_by(self):
@@ -100,7 +104,9 @@ class TestGroupBy(test.TestCase):
             .values("author__name", "avg")
         )
         self.assertListSortEqual(
-            ret, [{"author__name": "author1", "avg": 4.5}, {"author__name": "author2", "avg": 2}]
+            ret,
+            [{"author__name": "author1", "avg": 4.5}, {"author__name": "author2", "avg": 2}],
+            sorted_key="author__name",
         )
 
     async def test_avg_filter_group_by(self):
@@ -222,5 +228,7 @@ class TestGroupBy(test.TestCase):
             .values("upper_name", "count")
         )
         self.assertListSortEqual(
-            ret, [{"upper_name": "AUTHOR1", "count": 10}, {"upper_name": "AUTHOR2", "count": 5}]
+            ret,
+            [{"upper_name": "AUTHOR1", "count": 10}, {"upper_name": "AUTHOR2", "count": 5}],
+            sorted_key="upper_name",
         )

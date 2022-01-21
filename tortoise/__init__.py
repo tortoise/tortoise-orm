@@ -1,7 +1,6 @@
 import asyncio
 import importlib
 import json
-import logging
 import os
 import warnings
 from contextvars import ContextVar
@@ -23,11 +22,10 @@ from tortoise.fields.relational import (
     OneToOneFieldInstance,
 )
 from tortoise.filters import get_m2m_filters
-from tortoise.models import Model
+from tortoise.log import logger
+from tortoise.models import Model, ModelMeta
 from tortoise.transactions import current_transaction_map
 from tortoise.utils import generate_schema_for_client
-
-logger = logging.getLogger("tortoise")
 
 
 class Tortoise:
@@ -180,7 +178,7 @@ class Tortoise:
                         key_fk_object = deepcopy(related_model._meta.pk)
                         fk_object.to_field_instance = related_model._meta.pk
                         fk_object.to_field = related_model._meta.pk_attr
-
+                    fk_object.field_type = fk_object.to_field_instance.field_type
                     key_field = f"{field}_id"
                     key_fk_object.pk = False
                     key_fk_object.unique = False
@@ -245,6 +243,8 @@ class Tortoise:
                         key_o2o_object = deepcopy(related_model._meta.pk)
                         o2o_object.to_field_instance = related_model._meta.pk
                         o2o_object.to_field = related_model._meta.pk_attr
+
+                    o2o_object.field_type = o2o_object.to_field_instance.field_type
 
                     key_field = f"{field}_id"
                     key_o2o_object.pk = o2o_object.pk
@@ -342,7 +342,7 @@ class Tortoise:
         engine_module = importlib.import_module(engine)
 
         try:
-            client_class = engine_module.client_class  # type: ignore
+            client_class = engine_module.client_class
         except AttributeError:
             raise ConfigurationError(f'Backend for engine "{engine}" does not implement db client')
         return client_class
@@ -361,7 +361,7 @@ class Tortoise:
         discovered_models = []
         possible_models = getattr(module, "__models__", None)
         try:
-            possible_models = [*possible_models]
+            possible_models = [*possible_models]  # type:ignore
         except TypeError:
             possible_models = None
         if not possible_models:
@@ -610,7 +610,7 @@ class Tortoise:
         for r in routers:
             if isinstance(r, str):
                 try:
-                    module_name, class_name = r.rsplit(".", 2)
+                    module_name, class_name = r.rsplit(".", 1)
                     router_cls.append(getattr(importlib.import_module(module_name), class_name))
                 except Exception:
                     raise ConfigurationError(f"Can't import router from `{r}`")
@@ -640,7 +640,8 @@ class Tortoise:
     async def _reset_apps(cls) -> None:
         for app in cls.apps.values():
             for model in app.values():
-                model._meta.default_connection = None
+                if isinstance(model, ModelMeta):
+                    model._meta.default_connection = None
         cls.apps.clear()
         current_transaction_map.clear()
 
@@ -708,4 +709,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(Tortoise.close_connections())
 
 
-__version__ = "0.17.3"
+__version__ = "0.18.2"

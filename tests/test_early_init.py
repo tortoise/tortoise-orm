@@ -74,6 +74,7 @@ class TestBasic(test.TestCase):
                 "description": "The Event model docstring.",
                 "docstring": "The Event model docstring.\n\nThis is multiline docs.",
                 "unique_together": [],
+                "indexes": [],
                 "pk_field": {
                     "name": "id",
                     "field_type": "IntField",
@@ -142,6 +143,7 @@ class TestBasic(test.TestCase):
                         "constraints": {},
                         "raw_field": None,
                         "on_delete": "CASCADE",
+                        "db_constraint": True,
                     }
                 ],
                 "backward_fk_fields": [],
@@ -217,6 +219,7 @@ class TestBasic(test.TestCase):
                 "description": "The Event model docstring.",
                 "docstring": "The Event model docstring.\n\nThis is multiline docs.",
                 "unique_together": [],
+                "indexes": [],
                 "pk_field": {
                     "name": "id",
                     "field_type": "IntField",
@@ -300,6 +303,7 @@ class TestBasic(test.TestCase):
                         "description": None,
                         "docstring": None,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "backward_fk_fields": [],

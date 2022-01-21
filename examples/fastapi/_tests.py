@@ -21,7 +21,7 @@ def client() -> Generator:
 
 @pytest.fixture(scope="module")
 def event_loop(client: TestClient) -> Generator:
-    yield client.task.get_loop()
+    yield client.task.get_loop()  # type: ignore
 
 
 def test_create_user(client: TestClient, event_loop: asyncio.AbstractEventLoop):  # nosec

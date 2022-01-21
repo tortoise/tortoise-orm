@@ -47,6 +47,9 @@ Contributors
 * Mykyta Holubakha ``@Hummer12007``
 * Tiago Barrionuevo ``@tiabogar``
 * Isaque Alves ``@isaquealves``
+* Vinay Karanam ``@vinayinvicible``
+* Aleksandr Rozum ``@rozumalex``
+* Mojix Coder ``@MojixCoder``
 
 Special Thanks
 ==============

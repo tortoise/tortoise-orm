@@ -10,14 +10,15 @@ from tortoise.exceptions import OperationalError
 
 
 class TestPostgreSQL(test.SimpleTestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         if Tortoise._inited:
             await self._tearDownDB()
         self.db_config = test.getDBConfig(app_label="models", modules=["tests.testmodels"])
         if self.db_config["connections"]["models"]["engine"] != "tortoise.backends.asyncpg":
             raise test.SkipTest("PostgreSQL only")
 
-    async def tearDown(self) -> None:
+    async def asyncTearDown(self) -> None:
         if Tortoise._inited:
             await Tortoise._drop_databases()
 
@@ -72,3 +73,17 @@ class TestPostgreSQL(test.SimpleTestCase):
             await Tortoise.init(self.db_config, _create_db=True)
         except ConnectionError:
             pass
+
+    async def test_application_name(self):
+        self.db_config["connections"]["models"]["credentials"][
+            "application_name"
+        ] = "mytest_application"
+        await Tortoise.init(self.db_config, _create_db=True)
+
+        conn = Tortoise.get_connection("models")
+        _, res = await conn.execute_query(
+            "SELECT application_name FROM pg_stat_activity WHERE pid = pg_backend_pid()"
+        )
+
+        self.assertEqual(len(res), 1)
+        self.assertEqual("mytest_application", res[0][0])

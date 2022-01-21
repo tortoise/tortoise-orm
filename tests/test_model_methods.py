@@ -5,6 +5,7 @@ from tests.testmodels import (
     Dest_null,
     Event,
     IntFields,
+    Node,
     NoID,
     O2O_null,
     RequiredPKModel,
@@ -83,7 +84,8 @@ class TestModelCreate(test.TestCase):
 
 
 class TestModelMethods(test.TestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         self.mdl = await Tournament.create(name="Test")
         self.mdl2 = Tournament(name="Test")
         self.cls = Tournament
@@ -288,9 +290,17 @@ class TestModelMethods(test.TestCase):
         with self.assertRaises(IntegrityError):
             await obj.save(force_update=True)
 
+    async def test_raw(self):
+        await Node.create(name="TestRaw")
+        ret = await Node.raw("select * from node where name='TestRaw'")
+        self.assertEqual(len(ret), 1)
+        ret = await Node.raw("select * from node where name='111'")
+        self.assertEqual(len(ret), 0)
+
 
 class TestModelMethodsNoID(TestModelMethods):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         self.mdl = await NoID.create(name="Test")
         self.mdl2 = NoID(name="Test")
         self.cls = NoID

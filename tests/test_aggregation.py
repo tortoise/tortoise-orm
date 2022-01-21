@@ -1,8 +1,8 @@
 from tests.testmodels import Author, Book, Event, MinRelation, Team, Tournament
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
-from tortoise.functions import Avg, Count, Min, Sum
-from tortoise.query_utils import Q
+from tortoise.expressions import Q
+from tortoise.functions import Avg, Coalesce, Concat, Count, Lower, Max, Min, Sum, Trim
 
 
 class TestAggregation(test.TestCase):
@@ -140,3 +140,25 @@ class TestAggregation(test.TestCase):
             .values_list("id", "name", "average_rating")
         )
         self.assertAlmostEqual(authors[0][2], 3.3333333333)
+
+    async def test_nested_functions(self):
+        author = await Author.create(name="Some One")
+        await Book.create(name="First!", author=author, rating=4)
+        await Book.create(name="Second!", author=author, rating=3)
+        await Book.create(name="Third!", author=author, rating=3)
+        ret = await Book.all().annotate(max_name=Lower(Max("name"))).values("max_name")
+        self.assertEqual(ret, [{"max_name": "third!"}])
+
+    @test.requireCapability(dialect="mysql")
+    @test.requireCapability(dialect="postgres")
+    async def test_concat_functions(self):
+        author = await Author.create(name="Some One")
+        await Book.create(name="Physics Book", author=author, rating=4, subject="physics ")
+        await Book.create(name="Mathematics Book", author=author, rating=3, subject=" mathematics")
+        await Book.create(name="No-subject Book", author=author, rating=3)
+        ret = (
+            await Book.all()
+            .annotate(long_info=Max(Concat("name", "(", Coalesce(Trim("subject"), "others"), ")")))
+            .values("long_info")
+        )
+        self.assertEqual(ret, [{"long_info": "Physics Book(physics)"}])

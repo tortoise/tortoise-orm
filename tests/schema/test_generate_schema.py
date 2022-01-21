@@ -1,7 +1,6 @@
 # pylint: disable=C0301
 import re
-
-from asynctest.mock import CoroutineMock, patch
+from unittest.mock import AsyncMock, patch
 
 from tortoise import Tortoise
 from tortoise.contrib import test
@@ -10,7 +9,8 @@ from tortoise.utils import get_schema_sql
 
 
 class TestGenerateSchema(test.SimpleTestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         try:
             Tortoise.apps = {}
             Tortoise._connections = {}
@@ -24,13 +24,13 @@ class TestGenerateSchema(test.SimpleTestCase):
             "engine"
         ]
 
-    async def tearDown(self):
+    async def asyncTearDown(self) -> None:
         Tortoise._connections = {}
         await Tortoise._reset_apps()
 
     async def init_for(self, module: str, safe=False) -> None:
         with patch(
-            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=CoroutineMock()
+            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=AsyncMock()
         ):
             await Tortoise.init(
                 {
@@ -396,7 +396,7 @@ CREATE TABLE "team_team" (
 class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
         try:
-            with patch("asyncmy.create_pool", new=CoroutineMock()):
+            with patch("asyncmy.create_pool", new=AsyncMock()):
                 await Tortoise.init(
                     {
                         "connections": {
@@ -695,12 +695,26 @@ CREATE TABLE IF NOT EXISTS `teamevents` (
 """.strip(),
         )
 
-    async def test_index(self):
+    async def test_index_safe(self):
         await self.init_for("tests.schema.models_mysql_index")
         sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
         self.assertEqual(
             sql,
             """CREATE TABLE IF NOT EXISTS `index` (
+    `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
+    `full_text` LONGTEXT NOT NULL,
+    `geometry` GEOMETRY NOT NULL
+) CHARACTER SET utf8mb4;
+CREATE FULLTEXT INDEX IF NOT EXISTS `idx_index_full_te_3caba4` ON `index` (`full_text`) WITH PARSER ngram;
+CREATE SPATIAL INDEX IF NOT EXISTS `idx_index_geometr_0b4dfb` ON `index` (`geometry`);""",
+        )
+
+    async def test_index_unsafe(self):
+        await self.init_for("tests.schema.models_mysql_index")
+        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        self.assertEqual(
+            sql,
+            """CREATE TABLE `index` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `full_text` LONGTEXT NOT NULL,
     `geometry` GEOMETRY NOT NULL
@@ -762,7 +776,7 @@ CREATE TABLE `team_team` (
 class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
         try:
-            with patch("asyncpg.create_pool", new=CoroutineMock()):
+            with patch("asyncpg.create_pool", new=AsyncMock()):
                 await Tortoise.init(
                     {
                         "connections": {
@@ -1057,12 +1071,12 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';
 """.strip(),
         )
 
-    async def test_index(self):
+    async def test_index_unsafe(self):
         await self.init_for("tests.schema.models_postgres_index")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
         self.assertEqual(
             sql,
-            """CREATE TABLE IF NOT EXISTS "index" (
+            """CREATE TABLE "index" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "bloom" VARCHAR(200) NOT NULL,
     "brin" VARCHAR(200) NOT NULL,
@@ -1077,6 +1091,28 @@ CREATE INDEX "idx_index_gin_a403ee" ON "index" USING GIN ("gin");
 CREATE INDEX "idx_index_gist_c807bf" ON "index" USING GIST ("gist");
 CREATE INDEX "idx_index_sp_gist_2c0bad" ON "index" USING SPGIST ("sp_gist");
 CREATE INDEX "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");""",
+        )
+
+    async def test_index_safe(self):
+        await self.init_for("tests.schema.models_postgres_index")
+        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        self.assertEqual(
+            sql,
+            """CREATE TABLE IF NOT EXISTS "index" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "bloom" VARCHAR(200) NOT NULL,
+    "brin" VARCHAR(200) NOT NULL,
+    "gin" TSVECTOR NOT NULL,
+    "gist" TSVECTOR NOT NULL,
+    "sp_gist" VARCHAR(200) NOT NULL,
+    "hash" VARCHAR(200) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS "idx_index_bloom_280137" ON "index" USING BLOOM ("bloom");
+CREATE INDEX IF NOT EXISTS "idx_index_brin_a54a00" ON "index" USING BRIN ("brin");
+CREATE INDEX IF NOT EXISTS "idx_index_gin_a403ee" ON "index" USING GIN ("gin");
+CREATE INDEX IF NOT EXISTS "idx_index_gist_c807bf" ON "index" USING GIST ("gist");
+CREATE INDEX IF NOT EXISTS "idx_index_sp_gist_2c0bad" ON "index" USING SPGIST ("sp_gist");
+CREATE INDEX IF NOT EXISTS "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");""",
         )
 
     async def test_m2m_no_auto_create(self):

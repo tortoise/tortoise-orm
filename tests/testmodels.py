@@ -10,12 +10,17 @@ from decimal import Decimal
 from enum import Enum, IntEnum
 from typing import Union
 
+import pytz
+
 from tortoise import fields
 from tortoise.exceptions import NoValuesFetched, ValidationError
 from tortoise.manager import Manager
 from tortoise.models import Model
+from tortoise.queryset import QuerySet
 from tortoise.validators import (
     CommaSeparatedIntegerListValidator,
+    MaxValueValidator,
+    MinValueValidator,
     RegexValidator,
     validate_ipv4_address,
     validate_ipv6_address,
@@ -34,6 +39,7 @@ class Book(Model):
     name = fields.CharField(max_length=255)
     author = fields.ForeignKeyField("models.Author", related_name="books")
     rating = fields.FloatField()
+    subject = fields.CharField(max_length=255, null=True)
 
 
 class BookNoConstraint(Model):
@@ -60,7 +66,7 @@ class Tournament(Model):
 
 
 class Reporter(Model):
-    """ Whom is assigned as the reporter """
+    """Whom is assigned as the reporter"""
 
     id = fields.IntField(pk=True)
     name = fields.TextField()
@@ -75,7 +81,7 @@ class Reporter(Model):
 
 
 class Event(Model):
-    """ Events on the calendar """
+    """Events on the calendar"""
 
     event_id = fields.BigIntField(pk=True)
     #: The name
@@ -305,7 +311,10 @@ class NoID(Model):
 
 
 class UniqueName(Model):
+    id = fields.IntField(pk=True)
     name = fields.CharField(max_length=20, null=True, unique=True)
+    optional = fields.CharField(max_length=20, null=True)
+    other_optional = fields.CharField(max_length=20, null=True)
 
 
 class UniqueTogetherFields(Model):
@@ -709,8 +718,10 @@ class DefaultModel(Model):
     decimal_default = fields.DecimalField(max_digits=8, decimal_places=2, default=Decimal(1))
     bool_default = fields.BooleanField(default=True)
     char_default = fields.CharField(max_length=20, default="tortoise")
-    date_default = fields.DateField(default=datetime.date.fromisoformat("2020-05-20"))
-    datetime_default = fields.DatetimeField(default=datetime.datetime(year=2020, month=5, day=20))
+    date_default = fields.DateField(default=datetime.date(year=2020, month=5, day=20))
+    datetime_default = fields.DatetimeField(
+        default=datetime.datetime(year=2020, month=5, day=20, tzinfo=pytz.utc)
+    )
 
 
 class RequiredPKModel(Model):
@@ -723,6 +734,8 @@ class ValidatorModel(Model):
     max_length = fields.CharField(max_length=5, null=True)
     ipv4 = fields.CharField(max_length=100, null=True, validators=[validate_ipv4_address])
     ipv6 = fields.CharField(max_length=100, null=True, validators=[validate_ipv6_address])
+    max_value = fields.IntField(null=True, validators=[MaxValueValidator(20.0)])
+    min_value = fields.IntField(null=True, validators=[MinValueValidator(10.0)])
     comma_separated_integer_list = fields.CharField(
         max_length=100, null=True, validators=[CommaSeparatedIntegerListValidator()]
     )
@@ -732,17 +745,27 @@ class NumberSourceField(Model):
     number = fields.IntField(source_field="counter", default=0)
 
 
+class StatusQuerySet(QuerySet):
+    def active(self):
+        return self.filter(status=1)
+
+
 class StatusManager(Manager):
+    def __init__(self, model=None, queryset_cls=None) -> None:
+        super().__init__(model=model)
+        self.queryset_cls = queryset_cls or QuerySet
+
     def get_queryset(self):
-        return super(StatusManager, self).get_queryset().filter(status=1)
+        return self.queryset_cls(self._model)
 
 
-class ManagerModel(Model):
-    status = fields.IntField(default=0)
+class AbstractManagerModel(Model):
     all_objects = Manager()
+    status = fields.IntField(default=0)
 
     class Meta:
         manager = StatusManager()
+        abstract = True
 
 
 class User(Model):
@@ -750,3 +773,41 @@ class User(Model):
     username = fields.CharField(max_length=32)
     mail = fields.CharField(max_length=64)
     bio = fields.TextField()
+
+
+class ManagerModel(AbstractManagerModel):
+    class Meta:
+        manager = StatusManager(queryset_cls=StatusQuerySet)
+
+
+class ManagerModelExtra(AbstractManagerModel):
+    extra = fields.CharField(max_length=200)
+
+
+class Extra(Model):
+    """Dumb model, has no fk.
+    src: https://github.com/tortoise/tortoise-orm/pull/826#issuecomment-883341557
+    """
+
+    id = fields.IntField(pk=True)
+    # currently, tortoise don't save models with single pk field for some reason \_0_/
+    some_name = fields.CharField(default=lambda: str(uuid.uuid4()), max_length=64)
+
+
+class Single(Model):
+    """Dumb model, having single fk
+    src: https://github.com/tortoise/tortoise-orm/pull/826#issuecomment-883341557
+    """
+
+    id = fields.IntField(pk=True)
+    extra = fields.ForeignKeyField("models.Extra", related_name="singles", null=True)
+
+
+class Pair(Model):
+    """Dumb model, having double fk
+    src: https://github.com/tortoise/tortoise-orm/pull/826#issuecomment-883341557
+    """
+
+    id = fields.IntField(pk=True)
+    left = fields.ForeignKeyField("models.Single", related_name="lefts", null=True)
+    right = fields.ForeignKeyField("models.Single", related_name="rights", null=True)

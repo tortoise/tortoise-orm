@@ -27,7 +27,7 @@ class RegexValidator(Validator):
 
     def __call__(self, value: Any):
         if not self.regex.match(value):
-            raise ValidationError(f"Value '{value}' not match regex '{self.regex.pattern}'")
+            raise ValidationError(f"Value '{value}' does not match regex '{self.regex.pattern}'")
 
 
 class MaxLengthValidator(Validator):
@@ -58,6 +58,42 @@ class MinLengthValidator(Validator):
             raise ValidationError("Value must not be None")
         if len(value) < self.min_length:
             raise ValidationError(f"Length of '{value}' {len(value)} < {self.min_length}")
+
+
+class MinValueValidator(Validator):
+    """
+    Min value validator for FloatField, IntField, SmallIntField, BigIntField
+    """
+
+    def __init__(self, min_value: Union[int, float]):
+        if not isinstance(min_value, (int, float)):
+            raise ValidationError("Value must be a numeric value and is required")
+        self.min_value = min_value
+
+    def __call__(self, value: Union[int, float]):
+        if not isinstance(value, (int, float)):
+            raise ValidationError("Value must be a numeric value and is required")
+
+        if value < self.min_value:
+            raise ValidationError(f"Value should be greater or equal to {self.min_value}")
+
+
+class MaxValueValidator(Validator):
+    """
+    Max value validator for FloatField, IntField, SmallIntField, BigIntField
+    """
+
+    def __init__(self, max_value: Union[int, float]):
+        if not isinstance(max_value, (int, float)):
+            raise ValidationError("Value must be a numeric value and is required")
+        self.max_value = max_value
+
+    def __call__(self, value: Union[int, float]):
+        if not isinstance(value, (int, float)):
+            raise ValidationError("Value must be a numeric value and is required")
+
+        if value > self.max_value:
+            raise ValidationError(f"Value should be less or equal to {self.max_value}")
 
 
 class CommaSeparatedIntegerListValidator(Validator):

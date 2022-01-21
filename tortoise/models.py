@@ -48,7 +48,15 @@ from tortoise.filters import get_filters_for_field
 from tortoise.functions import Function
 from tortoise.indexes import Index
 from tortoise.manager import Manager
-from tortoise.queryset import ExistsQuery, Q, QuerySet, QuerySetSingle
+from tortoise.queryset import (
+    BulkCreateQuery,
+    BulkUpdateQuery,
+    ExistsQuery,
+    Q,
+    QuerySet,
+    QuerySetSingle,
+    RawSQLQuery,
+)
 from tortoise.router import router
 from tortoise.signals import Signals
 from tortoise.transactions import current_transaction_map, in_transaction
@@ -511,6 +519,10 @@ class ModelMeta(type):
                 # For abstract classes
                 for key, value in meta.fields_map.items():
                     attrs[key] = value
+                # For abstract classes manager
+                for key, value in base.__dict__.items():
+                    if isinstance(value, Manager) and key not in attrs:
+                        attrs[key] = value.__class__()
             else:
                 # For mixin classes
                 for key, value in base.__dict__.items():
@@ -606,11 +618,11 @@ class ModelMeta(type):
         if not fields_map:
             meta.abstract = True
 
-        new_class: Type["Model"] = super().__new__(mcs, name, bases, attrs)
+        new_class = super().__new__(mcs, name, bases, attrs)
         for field in meta.fields_map.values():
-            field.model = new_class
+            field.model = new_class  # type: ignore
 
-        for fname, comment in _get_comments(new_class).items():
+        for fname, comment in _get_comments(new_class).items():  # type: ignore
             if fname in fields_map:
                 fields_map[fname].docstring = comment
                 if fields_map[fname].description is None:
@@ -621,7 +633,7 @@ class ModelMeta(type):
         for key, value in attrs.items():
             if isinstance(value, Manager):
                 value._model = new_class
-        meta._model = new_class
+        meta._model = new_class  # type: ignore
         meta.manager._model = new_class
         meta.finalise_fields()
         return new_class
@@ -657,7 +669,7 @@ class Model(metaclass=ModelMeta):
             if callable(field_object.default):
                 setattr(self, key, field_object.default())
             else:
-                setattr(self, key, field_object.default)
+                setattr(self, key, deepcopy(field_object.default))
 
     def _set_kwargs(self, kwargs: dict) -> Set[str]:
         meta = self._meta
@@ -1041,7 +1053,7 @@ class Model(metaclass=ModelMeta):
                 return await cls.filter(**kwargs).using_db(connection).get(), False
             except DoesNotExist:
                 try:
-                    return await cls.create(using_db=using_db, **defaults, **kwargs), True
+                    return await cls.create(using_db=connection, **defaults, **kwargs), True
                 except (IntegrityError, TransactionManagementError):
                     return await cls.filter(**kwargs).using_db(connection).get(), False
 
@@ -1079,7 +1091,7 @@ class Model(metaclass=ModelMeta):
             if instance:
                 await instance.update_from_dict(defaults).save(using_db=connection)  # type:ignore
                 return instance, False
-        return await cls.get_or_create(defaults, connection, **kwargs)
+        return await cls.get_or_create(defaults, db, **kwargs)
 
     @classmethod
     async def create(cls: Type[MODEL], **kwargs: Any) -> MODEL:
@@ -1106,12 +1118,55 @@ class Model(metaclass=ModelMeta):
         return instance
 
     @classmethod
-    async def bulk_create(
+    def bulk_update(
+        cls: Type[MODEL],
+        objects: Iterable[MODEL],
+        fields: Iterable[str],
+        batch_size: Optional[int] = None,
+    ) -> "BulkUpdateQuery":
+        """
+        Update the given fields in each of the given objects in the database.
+        This method efficiently updates the given fields on the provided model instances, generally with one query.
+
+        .. code-block:: python3
+
+            users = [
+                await User.create(name="...", email="..."),
+                await User.create(name="...", email="...")
+            ]
+            users[0].name = 'name1'
+            users[1].name = 'name2'
+
+            await User.bulk_update(users, fields=['name'])
+
+        :param objects: List of objects to bulk create
+        :param fields: The fields to update
+        :param batch_size: How many objects are created in a single query
+        """
+        return cls._meta.manager.get_queryset().bulk_update(objects, fields, batch_size)
+
+    @classmethod
+    async def in_bulk(
+        cls: Type[MODEL], id_list: Iterable[Union[str, int]], field_name: str = "pk"
+    ) -> Dict[str, MODEL]:
+        """
+        Return a dictionary mapping each of the given IDs to the object with
+        that ID. If `id_list` isn't provided, evaluate the entire QuerySet.
+
+        :param id_list: A list of field values
+        :param field_name: Must be a unique field
+        """
+        return await cls._meta.manager.get_queryset().in_bulk(id_list, field_name)
+
+    @classmethod
+    def bulk_create(
         cls: Type[MODEL],
         objects: Iterable[MODEL],
         batch_size: Optional[int] = None,
-        using_db: Optional[BaseDBAsyncClient] = None,
-    ) -> None:
+        ignore_conflicts: bool = False,
+        update_fields: Optional[Iterable[str]] = None,
+        on_conflict: Optional[Iterable[str]] = None,
+    ) -> "BulkCreateQuery":
         """
         Bulk insert operation:
 
@@ -1122,7 +1177,7 @@ class Model(metaclass=ModelMeta):
 
             e.g. ``IntField`` primary keys will not be populated.
 
-        This is recommend only for throw away inserts where you want to ensure optimal
+        This is recommended only for throw away inserts where you want to ensure optimal
         insert performance.
 
         .. code-block:: python3
@@ -1132,12 +1187,15 @@ class Model(metaclass=ModelMeta):
                 User(name="...", email="...")
             ])
 
+        :param on_conflict: On conflict index name
+        :param update_fields: Update fields when conflicts
+        :param ignore_conflicts: Ignore conflicts when inserting
         :param objects: List of objects to bulk create
         :param batch_size: How many objects are created in a single query
-        :param using_db: Specific DB connection to use instead of default bound
         """
-        db = using_db or cls._choose_db(True)
-        await db.executor_class(model=cls, db=db).execute_bulk_insert(objects, batch_size)
+        return cls._meta.manager.get_queryset().bulk_create(
+            objects, batch_size, ignore_conflicts, update_fields, on_conflict
+        )
 
     @classmethod
     def first(cls: Type[MODEL]) -> QuerySetSingle[Optional[MODEL]]:
@@ -1198,6 +1256,19 @@ class Model(metaclass=ModelMeta):
         :raises DoesNotExist: If object can not be found.
         """
         return cls._meta.manager.get_queryset().get(*args, **kwargs)
+
+    @classmethod
+    def raw(cls, sql: str) -> "RawSQLQuery":
+        """
+        Executes a RAW SQL and returns the result
+
+        .. code-block:: python3
+
+            result = await User.raw("select * from users where name like '%test%'")
+
+        :param sql: The raw sql.
+        """
+        return cls._meta.manager.get_queryset().raw(sql)
 
     @classmethod
     def exists(cls: Type[MODEL], *args: Q, **kwargs: Any) -> ExistsQuery:
@@ -1332,6 +1403,7 @@ class Model(metaclass=ModelMeta):
             "description": cls._meta.table_description or None,
             "docstring": inspect.cleandoc(cls.__doc__ or "") or None,
             "unique_together": cls._meta.unique_together or [],
+            "indexes": cls._meta.indexes or [],
             "pk_field": cls._meta.fields_map[cls._meta.pk_attr].describe(serializable),
             "data_fields": [
                 field.describe(serializable)

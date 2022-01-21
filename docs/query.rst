@@ -189,54 +189,6 @@ You can use them like this:
     await event.participants.add(participant_1, participant_2)
 
 
-Q objects
-=========
-
-Sometimes you need to do more complicated queries than the simple AND ``<model>.filter()`` provides. Luckily we have Q objects to spice things up and help you find what you need. These Q-objects can then be used as argument to ``<model>.filter()`` instead.
-
-Q objects are extremely versatile, some example use cases:
- - creating an OR filter
- - nested filters
- - inverted filters
- - combining any of the above to simply write complicated multilayer filters
-
-Q objects can take any (special) kwargs for filtering that ``<model>.filter()`` accepts, see those docs for a full list of filter options in that regard.
-
-They can also be combined by using bitwise operators (``|`` is OR and ``&`` is AND for those unfamiliar with bitwise operators)
-
-For example to find the events with as name ``Event 1`` or ``Event 2``:
-
-.. code-block:: python3
-
-    found_events = await Event.filter(
-        Q(name='Event 1') | Q(name='Event 2')
-    )
-
-Q objects can be nested as well, the above for example is equivalent to:
-
-.. code-block:: python3
-
-    found_events = await Event.filter(
-        Q(Q(name='Event 1'), Q(name='Event 2'), join_type="OR")
-    )
-
-If join type is omitted it defaults to ``AND``.
-
-.. note::
-    Q objects without filter arguments are considered NOP and will be ignored for the final query (regardless on if they are used as ``AND`` or ``OR`` param)
-
-
-Also, Q objects support negated to generate ``NOT`` (``~`` operator) clause in your query
-
-.. code-block:: python3
-
-    not_third_events = await Event.filter(~Q(name='3'))
-
-.. automodule:: tortoise.query_utils
-    :members: Q, QueryModifier
-    :undoc-members:
-
-
 .. _filtering-queries:
 
 Filtering
@@ -285,6 +237,46 @@ Specially, you can filter date part with one of following, note that current onl
     teams = await Team.filter(created_at__year=2020)
     teams = await Team.filter(created_at__month=12)
     teams = await Team.filter(created_at__day=5)
+
+In PostgreSQL and MYSQL, you can use the ``contains``, ``contained_by`` and ``filter`` options in ``JSONField``:
+
+.. code-block:: python3
+
+    class JSONModel:
+        data = fields.JSONField()
+
+    await JSONModel.create(data=["text", 3, {"msg": "msg2"}])
+    obj = await JSONModel.filter(data__contains=[{"msg": "msg2"}]).first()
+
+    await JSONModel.create(data=["text"])
+    await JSONModel.create(data=["tortoise", "msg"])
+    await JSONModel.create(data=["tortoise"])
+
+    objects = await JSONModel.filter(data__contained_by=["text", "tortoise", "msg"])
+
+.. code-block:: python3
+
+    class JSONModel:
+        data = fields.JSONField()
+
+    await JSONModel.create(data={"breed": "labrador",
+                                 "owner": {
+                                     "name": "Boby",
+                                     "last": None,
+                                     "other_pets": [
+                                         {
+                                             "name": "Fishy",
+                                         }
+                                     ],
+                                 },
+                             })
+
+    obj1 = await JSONModel.filter(data__filter={"breed": "labrador"}).first()
+    obj2 = await JSONModel.filter(data__filter={"owner__name": "Boby"}).first()
+    obj3 = await JSONModel.filter(data__filter={"owner__other_pets__0__name": "Fishy"}).first()
+    obj4 = await JSONModel.filter(data__filter={"breed__not": "a"}).first()
+    obj5 = await JSONModel.filter(data__filter={"owner__name__isnull": True}).first()
+    obj6 = await JSONModel.filter(data__filter={"owner__last__not_isnull": False}).first()
 
 Complex prefetch
 ================

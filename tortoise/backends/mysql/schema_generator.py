@@ -58,26 +58,26 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         default_str = " DEFAULT"
         if not (auto_now or auto_now_add):
             default_str += f" {default}"
-        else:
-            if auto_now_add:
-                default_str += " CURRENT_TIMESTAMP(6)"
-            if auto_now:
-                default_str += " ON UPDATE CURRENT_TIMESTAMP(6)"
+        if auto_now_add:
+            default_str += " CURRENT_TIMESTAMP(6)"
+        if auto_now:
+            default_str += " ON UPDATE CURRENT_TIMESTAMP(6)"
         return default_str
 
     def _escape_default_value(self, default: Any):
         return encoders.get(type(default))(default)  # type: ignore
 
     def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
-        """ Get index SQLs, but keep them for ourselves """
+        """Get index SQLs, but keep them for ourselves"""
         self._field_indexes.append(
             self.INDEX_CREATE_TEMPLATE.format(
                 exists="IF NOT EXISTS " if safe else "",
                 index_name=self._generate_index_name("idx", model, field_names),
                 table_name=model._meta.db_table,
-                fields=", ".join([self.quote(f) for f in field_names]),
+                fields=", ".join(self.quote(f) for f in field_names),
             )
         )
+
         return ""
 
     def _create_fk_string(
@@ -89,9 +89,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         on_delete: str,
         comment: str,
     ) -> str:
-        constraint = ""
-        if constraint_name:
-            constraint = f"CONSTRAINT `{constraint_name}` "
+        constraint = f"CONSTRAINT `{constraint_name}` " if constraint_name else ""
         fk = self.FK_TEMPLATE.format(
             constraint=constraint,
             db_column=db_column,

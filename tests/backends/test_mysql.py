@@ -8,14 +8,14 @@ from tortoise.contrib import test
 
 
 class TestMySQL(test.SimpleTestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
         if Tortoise._inited:
             await self._tearDownDB()
         self.db_config = test.getDBConfig(app_label="models", modules=["tests.testmodels"])
         if self.db_config["connections"]["models"]["engine"] != "tortoise.backends.mysql":
             raise test.SkipTest("MySQL only")
 
-    async def tearDown(self) -> None:
+    async def asyncTearDown(self) -> None:
         if Tortoise._inited:
             await Tortoise._drop_databases()
 

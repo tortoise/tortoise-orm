@@ -203,7 +203,7 @@ The ``Meta`` class
 
             unique_together=("field_a", "field_b")
             unique_together=(("field_a", "field_b"), )
-            unique_together=(("field_a", "field_b"), ("field_c", "field_d", "field_e")
+            unique_together=(("field_a", "field_b"), ("field_c", "field_d", "field_e"))
 
     .. attribute:: indexes
         :annotation: = None
@@ -216,7 +216,7 @@ The ``Meta`` class
 
             indexes=("field_a", "field_b")
             indexes=(("field_a", "field_b"), )
-            indexes=(("field_a", "field_b"), ("field_c", "field_d", "field_e")
+            indexes=(("field_a", "field_b"), ("field_c", "field_d", "field_e"))
 
     .. attribute:: ordering
         :annotation: = None
@@ -255,6 +255,10 @@ In event model we got some more fields, that could be interesting for us.
     Here we create foreign key reference to tournament. We create it by referring to model by it's literal, consisting of app name and model name. ``models`` is default app name, but you can change it in ``class Meta`` with ``app = 'other'``.
 ``related_name``
     Is keyword argument, that defines field for related query on referenced models, so with that you could fetch all tournaments's events with like this:
+
+.. code-block:: python3
+
+    await Tournament.first().prefetch_related("events")
 
 The DB-backing field
 ^^^^^^^^^^^^^^^^^^^^

@@ -5,16 +5,16 @@ on:
       - created
 jobs:
   publish:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v2
         with:
-          python-version: '3.x'
+          python-version: '3.9'
       - name: Install and configure Poetry
-        uses: snok/install-poetry@v1.1.1
-        with:
-          virtualenvs-create: false
+        run: |
+          pip install -U pip poetry
+          poetry config virtualenvs.create false
       - name: Install requirements
         run: make deps
       - name: Build dists

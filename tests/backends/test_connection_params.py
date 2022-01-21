@@ -1,13 +1,20 @@
+from unittest.mock import AsyncMock, patch
+
 import asyncpg
-from asynctest.mock import CoroutineMock, patch
 
 from tortoise import Tortoise
 from tortoise.contrib import test
 
 
 class TestConnectionParams(test.TestCase):
+    async def asyncSetUp(self) -> None:
+        pass
+
+    async def asyncTearDown(self) -> None:
+        pass
+
     async def test_mysql_connection_params(self):
-        with patch("asyncmy.create_pool", new=CoroutineMock()) as mysql_connect:
+        with patch("asyncmy.create_pool", new=AsyncMock()) as mysql_connect:
             await Tortoise._init_connections(
                 {
                     "models": {
@@ -42,7 +49,7 @@ class TestConnectionParams(test.TestCase):
 
     async def test_postres_connection_params(self):
         try:
-            with patch("asyncpg.create_pool", new=CoroutineMock()) as asyncpg_connect:
+            with patch("asyncpg.create_pool", new=AsyncMock()) as asyncpg_connect:
                 await Tortoise._init_connections(
                     {
                         "models": {
@@ -74,6 +81,7 @@ class TestConnectionParams(test.TestCase):
                     min_size=1,
                     connection_class=asyncpg.connection.Connection,
                     loop=None,
+                    server_settings={},
                 )
         except ImportError:
             self.skipTest("asyncpg not installed")

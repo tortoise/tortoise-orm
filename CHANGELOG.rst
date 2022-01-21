@@ -4,11 +4,102 @@
 Changelog
 =========
 
-
 .. rst-class:: emphasize-children
+
+0.18
+====
+0.18.2
+------
+Fixed
+^^^^^
+- Fix `bulk_create` doesn't work correctly with more than 1 update_fields. (#1046)
+
+0.18.1
+------
+Added
+^^^^^
+- Add on conflict do update for bulk_create. (#1024)
+Fixed
+^^^^^
+- Fix `bulk_create` error. (#1012)
+- Fix unittest invalid.
+- Fix `bulk_update` in `postgres` with some type. (#968) (#1022)
+
+0.18.0
+------
+Added
+^^^^^
+- Add Case-When support. (#943)
+- Add `Rand`/`Random` function in contrib. (#944)
+- Add `ON CONFLICT` support in `INSERT` statements. (#428)
+Fixed
+^^^^^
+- Fix `bulk_update` error when pk is uuid. (#986)
+- Fix mutable default value. (#969)
+Changed
+^^^^^^^
+- Move `Function`, `Aggregate` from `functions.py` to `expressions.py`. (#943)
+- Move `Q` from `query_utils.py` to `expressions.py`.
+- Replace `python-rapidjson` to `orjson`.
+Removed
+^^^^^^^
+- Remove `asynctest` and use `unittest.IsolatedAsyncioTestCase`. (#416)
+- Remove `py37` support in tests.
+- Remove `green` and `nose2` test runner.
 
 0.17
 ====
+0.17.8
+------
+Added
+^^^^^
+- Add `Model.raw` method to support the raw sql query.
+- Add `QuerySet.bulk_update` method. (#924)
+- Add `QuerySet.in_bulk` method.
+- Add `MaxValueValidator` and `MinValueValidator` (#927)
+Fixed
+^^^^^
+- Fix `QuerySet` subclass being lost when `_clone` is run on the instance.
+- Fix bug in `.values` with `source_field`. (#844)
+- Fix `contrib.blacksheep` exception handlers, use builtin json response. (#914)
+- Fix Indexes defined in Meta class do not make use of `exists` parameter in their template (#928)
+Changed
+^^^^^^^
+- Allow negative values with `IntEnumField`. (#889)
+- Make `.values()` and `.values_list()` awaited return more consistent. (#899)
+
+0.17.7
+------
+- Fix `select_related` behaviour for forward relation. (#825)
+- Fix bug in nested `QuerySet` and `Manager`. (#864)
+- Add `Concat` function for MySQL/PostgreSQL. (#873)
+- Patch for use_index/force_index mutable problem when making query. (#888)
+- Lift annotation field's priority in make query. (#883)
+- Make use/force index available in select type Query. (#893)
+- Fix all logging to use Tortoise's logger instead of root logger. (#879)
+- Rename `db_client` logger to `tortoise.db_client`.
+- Add `indexes` to `Model.describe`.
+
+0.17.6
+------
+- Add `RawSQL` expression.
+- Fix columns count with annotations in `_make_query`. (#776)
+- Make functions nested. (#828)
+- Add `db_constraint` in field describe.
+
+0.17.5
+------
+- Set `field_type` of fk and o2o same to which relation field type. (#443)
+- Fix error sql for `.sql()` call more than once. (#796)
+- Fix incorrect splitting of the import route when using Router (#798)
+- Fix `filter` error after `annotate` with `F`. (#806)
+- Fix `select_related` for reverse relation. (#808)
+
+0.17.4
+------
+- Fix `update_or_create`. (#782)
+- Add `contains`, `contained_by` and `filter` to `JSONField`
+
 0.17.3
 ------
 - Fix duplicates when using custom through association class on M2M relations

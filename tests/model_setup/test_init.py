@@ -6,7 +6,8 @@ from tortoise.exceptions import ConfigurationError
 
 
 class TestInitErrors(test.SimpleTestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         try:
             Tortoise.apps = {}
             Tortoise._connections = {}
@@ -15,9 +16,10 @@ class TestInitErrors(test.SimpleTestCase):
             pass
         Tortoise._inited = False
 
-    async def tearDown(self):
+    async def asyncTearDown(self) -> None:
         await Tortoise.close_connections()
         await Tortoise._reset_apps()
+        await super(TestInitErrors, self).asyncTearDown()
 
     async def test_basic_init(self):
         await Tortoise.init(

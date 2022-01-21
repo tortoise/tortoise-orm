@@ -295,7 +295,7 @@ def pydantic_model_creator(
         field_default = fdesc.get("default")
 
         def get_submodel(_model: "Type[Model]") -> Optional[Type[PydanticModel]]:
-            """ Get Pydantic model for the submodel """
+            """Get Pydantic model for the submodel"""
             nonlocal exclude, _name, has_submodel
 
             if _model:

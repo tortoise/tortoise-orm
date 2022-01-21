@@ -48,16 +48,16 @@ __all__ = (
 
 # Doing this we can replace json dumps/loads with different implementations
 JsonDumpsFunc = Callable[[Any], str]
-JsonLoadsFunc = Callable[[str], Any]
+JsonLoadsFunc = Callable[[Union[str, bytes]], Any]
 JSON_DUMPS: JsonDumpsFunc = functools.partial(json.dumps, separators=(",", ":"))
 JSON_LOADS: JsonLoadsFunc = json.loads
 
 try:
-    # Use python-rapidjson as an optional accelerator
-    import rapidjson
+    # Use orjson as an optional accelerator
+    import orjson
 
-    JSON_DUMPS = rapidjson.dumps
-    JSON_LOADS = rapidjson.loads
+    JSON_DUMPS = lambda x: orjson.dumps(x).decode()  # noqa: E731
+    JSON_LOADS = orjson.loads
 except ImportError:  # pragma: nocoverage
     pass
 
@@ -379,11 +379,9 @@ class DateField(Field, datetime.date):
     ) -> Optional[datetime.date]:
 
         if value is not None and not isinstance(value, datetime.date):
-            return_value = parse_datetime(value).date()
-        else:
-            return_value = value
-        self.validate(return_value)
-        return return_value
+            value = parse_datetime(value).date()
+        self.validate(value)
+        return value
 
 
 class TimeDeltaField(Field, datetime.timedelta):
@@ -462,7 +460,7 @@ class JSONField(Field, dict, list):  # type: ignore
     ) -> Optional[str]:
         self.validate(value)
 
-        if isinstance(value, str):
+        if isinstance(value, (str, bytes)):
             try:
                 self.decoder(value)
             except Exception:
@@ -471,13 +469,15 @@ class JSONField(Field, dict, list):  # type: ignore
         return None if value is None else self.encoder(value)
 
     def to_python_value(
-        self, value: Optional[Union[str, dict, list]]
+        self, value: Optional[Union[str, bytes, dict, list]]
     ) -> Optional[Union[dict, list]]:
-        if isinstance(value, str):
+        if isinstance(value, (str, bytes)):
             try:
                 return self.decoder(value)
             except Exception:
-                raise FieldError(f"Value {value} is invalid json value.")
+                raise FieldError(
+                    f"Value {value if isinstance(value,str) else value.decode()} is invalid json value."
+                )
 
         self.validate(value)
         return value
@@ -531,16 +531,23 @@ class BinaryField(Field, bytes):  # type: ignore
 
 class IntEnumFieldInstance(SmallIntField):
     def __init__(
-        self, enum_type: Type[IntEnum], description: Optional[str] = None, **kwargs: Any
+        self,
+        enum_type: Type[IntEnum],
+        description: Optional[str] = None,
+        generated: bool = False,
+        **kwargs: Any,
     ) -> None:
         # Validate values
+        minimum = 1 if generated else -32768
         for item in enum_type:
             try:
                 value = int(item.value)
             except ValueError:
                 raise ConfigurationError("IntEnumField only supports integer enums!")
-            if not 0 <= value < 32768:
-                raise ConfigurationError("The valid range of IntEnumField's values is 0..32767!")
+            if not minimum <= value < 32768:
+                raise ConfigurationError(
+                    "The valid range of IntEnumField's values is {}..32767!".format(minimum)
+                )
 
         # Automatic description for the field if not specified by the user
         if description is None:

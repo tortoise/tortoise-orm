@@ -10,5 +10,6 @@ omit =
     tortoise/contrib/starlette/*
     tortoise/contrib/fastapi/*
     tortoise/contrib/aiohttp/*
+    tortoise/contrib/blacksheep/*
 [report]
 show_missing = True
