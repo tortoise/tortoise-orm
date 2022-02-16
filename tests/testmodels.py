@@ -314,6 +314,7 @@ class UniqueName(Model):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=20, null=True, unique=True)
     optional = fields.CharField(max_length=20, null=True)
+    other_optional = fields.CharField(max_length=20, null=True)
 
 
 class UniqueTogetherFields(Model):
