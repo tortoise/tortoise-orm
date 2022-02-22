@@ -6,6 +6,12 @@ Changelog
 
 .. rst-class:: emphasize-children
 
+0.19.0
+------
+Added
+^^^^^
+- Added psycopg backend support
+
 0.18
 ====
 0.18.2

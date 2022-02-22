@@ -8,7 +8,7 @@ readme = "README.rst"
 homepage = "https://github.com/tortoise/tortoise-orm"
 repository = "https://github.com/tortoise/tortoise-orm.git"
 documentation = "https://tortoise-orm.readthedocs.io"
-keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio"]
+keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio", "psycopg"]
 packages = [
     { include = "tortoise" }
 ]
@@ -43,6 +43,8 @@ ciso8601 = { version = "*", markers = "sys_platform != 'win32' and implementatio
 uvloop = { version = "*", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
 orjson = { version = "*", optional = true }
 asyncpg = { version = "*", optional = true }
+psycopg = { version = "*", optional = true }
+psycopg-binary = { version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
 asyncmy = { version = "*", optional = true }
 
@@ -93,6 +95,7 @@ sphinx-copybutton = "*"
 [tool.poetry.extras]
 accel = ["ciso8601", "uvloop", "orjson"]
 asyncpg = ["asyncpg"]
+psycopg = ["psycopg", 'psycopg-binary']
 aiomysql = ["aiomysql"]
 asyncmy = ["asyncmy"]
 

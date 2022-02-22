@@ -4,10 +4,10 @@ from tortoise.backends.base_postgres.schema_generator import \
     BasePostgresSchemaGenerator
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.backends.asyncpg.client import AsyncpgDBClient
+    from tortoise.backends.asyncpg.client import PsycopgDBClient
 
 
-class AsyncpgSchemaGenerator(BasePostgresSchemaGenerator):
+class PsycopgSchemaGenerator(BasePostgresSchemaGenerator):
 
-    def __init__(self, client: "AsyncpgDBClient") -> None:
+    def __init__(self, client: "PsycopgDBClient") -> None:
         super().__init__(client)

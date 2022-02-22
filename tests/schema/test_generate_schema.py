@@ -773,31 +773,7 @@ CREATE TABLE `team_team` (
         )
 
 
-class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
-    async def init_for(self, module: str, safe=False) -> None:
-        try:
-            with patch("asyncpg.create_pool", new=AsyncMock()):
-                await Tortoise.init(
-                    {
-                        "connections": {
-                            "default": {
-                                "engine": "tortoise.backends.asyncpg",
-                                "credentials": {
-                                    "database": "test",
-                                    "host": "127.0.0.1",
-                                    "password": "foomip",
-                                    "port": 3306,
-                                    "user": "root",
-                                },
-                            }
-                        },
-                        "apps": {"models": {"models": [module], "default_connection": "default"}},
-                    }
-                )
-                self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
-        except ImportError:
-            raise test.SkipTest("asyncpg not installed")
-
+class GenerateSchemaPostgresSQLMixin:
     async def test_noid(self):
         await self.init_for("tests.testmodels")
         sql = self.get_sql('"noid"')
@@ -1167,3 +1143,57 @@ CREATE TABLE "team_team" (
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
 );""".strip(),
         )
+
+
+class TestGenerateSchemaAsyncpg(GenerateSchemaPostgresSQLMixin, TestGenerateSchema):
+
+    async def init_for(self, module: str, safe=False) -> None:
+        try:
+            with patch("asyncpg.create_pool", new=AsyncMock()):
+                await Tortoise.init(
+                    {
+                        "connections": {
+                            "default": {
+                                "engine": "tortoise.backends.asyncpg",
+                                "credentials": {
+                                    "database": "test",
+                                    "host": "127.0.0.1",
+                                    "password": "foomip",
+                                    "port": 5432,
+                                    "user": "root",
+                                },
+                            }
+                        },
+                        "apps": {"models": {"models": [module], "default_connection": "default"}},
+                    }
+                )
+                self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+        except ImportError:
+            raise test.SkipTest("asyncpg not installed")
+
+
+class TestGenerateSchemaPsycopg(GenerateSchemaPostgresSQLMixin, TestGenerateSchema):
+
+    async def init_for(self, module: str, safe=False) -> None:
+        try:
+            with patch("psycopg_pool.AsyncConnectionPool.open", new=AsyncMock()):
+                await Tortoise.init(
+                    {
+                        "connections": {
+                            "default": {
+                                "engine": "tortoise.backends.psycopg",
+                                "credentials": {
+                                    "database": "test",
+                                    "host": "127.0.0.1",
+                                    "password": "foomip",
+                                    "port": 5432,
+                                    "user": "root",
+                                },
+                            }
+                        },
+                        "apps": {"models": {"models": [module], "default_connection": "default"}},
+                    }
+                )
+                self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+        except ImportError:
+            raise test.SkipTest("psycopg not installed")

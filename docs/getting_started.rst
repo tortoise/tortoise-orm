@@ -22,6 +22,14 @@ You can also install with your db driver:
 
 ..
 
+Or PsycoPG:
+
+.. code-block:: bash
+
+    pip install tortoise-orm[psycopg]
+
+..
+
 Or MySQL:
 
 .. code-block:: bash
@@ -38,7 +46,7 @@ Or another driver `asyncmy <https://github.com/long2ice/asyncmy>`_ for MySQL:
 
 ..
 
-Apart from ``asyncpg`` there is also support for ``sqlite`` through ``aiosqlite`` and
+Apart from ``asyncpg`` and ``psycopg`` there is also support for ``sqlite`` through ``aiosqlite`` and
 ``mysql`` through ``aiomysql``.
 You can easily implement more backends if there is appropriate ``asyncio`` driver for this db.
 
