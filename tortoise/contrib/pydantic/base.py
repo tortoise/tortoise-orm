@@ -1,3 +1,4 @@
+import inspect
 from typing import TYPE_CHECKING, List, Type, Union
 
 import pydantic
@@ -20,7 +21,8 @@ def _get_fetch_fields(
     :return: The list of fields to be fetched
     """
     fetch_fields = []
-    for field_name, field_type in pydantic_class.__annotations__.items():
+    fields = inspect.get_annotations(pydantic_class, eval_str=True)
+    for field_name, field_type in fields.items():
         origin = getattr(field_type, "__origin__", None)
         if origin in (list, List, Union):
             field_type = field_type.__args__[0]
