@@ -27,7 +27,7 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval 10s --health-timeout 5s --health-retries 5
     env:
       TORTOISE_TEST_MODULES: tests.testmodels
-      TORTOISE_MYSQL_PASS: root
+      TORTOISE_MYSQL_PASS: 123456
       TORTOISE_POSTGRES_PASS: 123456
     strategy:
       matrix:
