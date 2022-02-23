@@ -11,23 +11,28 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:latest
+        image: postgres
         ports:
           - 5432:5432
         env:
           POSTGRES_PASSWORD: 123456
           POSTGRES_USER: postgres
         options: --health-cmd=pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      mysql:
+        image: mysql
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_ROOT_PASSWORD: 123456
+        options: --health-cmd="mysqladmin ping" --health-interval 10s --health-timeout 5s --health-retries 5
     env:
       TORTOISE_TEST_MODULES: tests.testmodels
-      TORTOISE_MYSQL_PASS: root
+      TORTOISE_MYSQL_PASS: 123456
       TORTOISE_POSTGRES_PASS: 123456
     strategy:
       matrix:
         python-version: [ "3.8", "3.9", "3.10" ]
     steps:
-      - name: Start MySQL
-        run: sudo systemctl start mysql.service
       - uses: actions/cache@v2
         with:
           path: ~/.cache/pip
