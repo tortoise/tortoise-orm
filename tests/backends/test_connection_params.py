@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 import asyncpg
 from psycopg import rows

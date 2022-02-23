@@ -1,6 +1,5 @@
 import asyncio
-from typing import Any, Callable, TypeVar, Tuple, List
-from typing import Optional
+from typing import Any, Callable, List, Optional, Tuple, TypeVar
 
 import asyncpg
 from asyncpg.transaction import Transaction

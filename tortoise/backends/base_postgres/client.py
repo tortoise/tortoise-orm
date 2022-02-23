@@ -1,7 +1,6 @@
 import abc
 from functools import wraps
-from typing import Any, Callable, List, Optional, SupportsInt, Tuple, TypeVar, Union
-from typing import Type
+from typing import Any, Callable, List, Optional, SupportsInt, Tuple, Type, TypeVar, Union
 
 from pypika import PostgreSQLQuery
 

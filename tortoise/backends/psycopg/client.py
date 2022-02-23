@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 from collections import namedtuple
 from ssl import SSLContext
-from typing import Any, Callable, Optional, TypeVar, Tuple, List
+from typing import Any, Callable, List, Optional, Tuple, TypeVar
 
 import psycopg
 import psycopg_pool
@@ -12,21 +12,21 @@ from psycopg.pq import ExecStatus
 from psycopg.rows import dict_row
 
 from tortoise.backends.base.client import (
+    BaseTransactionWrapper,
+    ConnectionWrapper,
+    NestedTransactionPooledContext,
     PoolConnectionWrapper,
     TransactionContext,
     TransactionContextPooled,
-    NestedTransactionPooledContext,
-    ConnectionWrapper,
-    BaseTransactionWrapper,
 )
 from tortoise.backends.base_postgres.client import BasePostgresClient, translate_exceptions
 from tortoise.backends.psycopg.executor import PsycopgExecutor
 from tortoise.backends.psycopg.schema_generator import PsycopgSchemaGenerator
 from tortoise.exceptions import (
+    DBConnectionError,
     IntegrityError,
     OperationalError,
     TransactionManagementError,
-    DBConnectionError,
 )
 
 FuncType = Callable[..., Any]

@@ -1,6 +1,4 @@
-from typing import Any
-from typing import List
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, List
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
