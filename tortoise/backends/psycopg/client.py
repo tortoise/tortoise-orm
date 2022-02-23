@@ -14,7 +14,9 @@ from psycopg.rows import dict_row
 from tortoise.backends.base.client import (
     PoolConnectionWrapper,
     TransactionContext,
-    TransactionContextPooled, NestedTransactionPooledContext, ConnectionWrapper,
+    TransactionContextPooled,
+    NestedTransactionPooledContext,
+    ConnectionWrapper,
     BaseTransactionWrapper,
 )
 from tortoise.backends.base_postgres.client import BasePostgresClient, translate_exceptions
@@ -23,7 +25,8 @@ from tortoise.backends.psycopg.schema_generator import PsycopgSchemaGenerator
 from tortoise.exceptions import (
     IntegrityError,
     OperationalError,
-    TransactionManagementError, DBConnectionError,
+    TransactionManagementError,
+    DBConnectionError,
 )
 
 FuncType = Callable[..., Any]
@@ -47,11 +50,11 @@ class PsycopgClient(BasePostgresClient):
     @translate_exceptions
     async def create_connection(self, with_db: bool) -> None:
         assert not self._pool, "Connection already created"
-        self.server_settings['options'] = f'-c search_path={self.schema}' if self.schema else None
+        self.server_settings["options"] = f"-c search_path={self.schema}" if self.schema else None
         self.server_settings["application_name"] = self.application_name
 
         extra = self.extra.copy()
-        extra.setdefault('timeout', 30)
+        extra.setdefault("timeout", 30)
         ssl: SSLContext = extra.pop("ssl", None)
         if ssl:
             if isinstance(ssl, SSLContext) and ssl.check_hostname:
@@ -59,14 +62,16 @@ class PsycopgClient(BasePostgresClient):
             else:
                 self.server_settings["sslmode"] = "require"
 
-        conninfo = make_conninfo(**{
-            "host": self.host,
-            "port": self.port,
-            "user": self.user,
-            "password": self.password,
-            "dbname": self.database if with_db else None,
-            **self.server_settings,
-        })
+        conninfo = make_conninfo(
+            **{
+                "host": self.host,
+                "port": self.port,
+                "user": self.user,
+                "password": self.password,
+                "dbname": self.database if with_db else None,
+                **self.server_settings,
+            }
+        )
 
         self._template = {
             "conninfo": conninfo,
@@ -84,7 +89,7 @@ class PsycopgClient(BasePostgresClient):
             self._pool = await self.create_pool(**self._template)
             # Immediately test the connection because the TortoiseORM test suite expects it to
             # check if the connection is valid.
-            await self._pool.open(wait=True, timeout=extra['timeout'])
+            await self._pool.open(wait=True, timeout=extra["timeout"])
 
             self.log.debug("Created connection pool %s with params: %s", self._pool, self._template)
         except (errors.InvalidCatalogName, psycopg_pool.PoolTimeout) as e:
@@ -119,7 +124,10 @@ class PsycopgClient(BasePostgresClient):
 
     @translate_exceptions
     async def execute_query(
-            self, query: str, values: Optional[list] = None, row_factory=dict_row,
+        self,
+        query: str,
+        values: Optional[list] = None,
+        row_factory=dict_row,
     ) -> Tuple[int, List[namedtuple]]:
         connection: psycopg.AsyncConnection
         async with self.acquire_connection() as connection:
@@ -160,8 +168,11 @@ class PsycopgClient(BasePostgresClient):
     async def _translate_exceptions(self, func, *args, **kwargs) -> Exception:
         try:
             return await func(self, *args, **kwargs)
-        except (errors.SyntaxErrorOrAccessRuleViolation, errors.DataException,
-                errors.UndefinedTable) as exc:
+        except (
+            errors.SyntaxErrorOrAccessRuleViolation,
+            errors.DataException,
+            errors.UndefinedTable,
+        ) as exc:
             raise OperationalError(exc)
         except errors.IntegrityError as exc:
             raise IntegrityError(exc)

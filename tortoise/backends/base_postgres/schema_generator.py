@@ -32,8 +32,7 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
         self.comments_array.append(comment)
         return ""
 
-    def _column_comment_generator(self, table: str, column: str,
-                                  comment: str) -> str:
+    def _column_comment_generator(self, table: str, column: str, comment: str) -> str:
         comment = self.COLUMN_COMMENT_TEMPLATE.format(
             table=table, column=column, comment=self._escape_comment(comment)
         )
@@ -49,12 +48,12 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
         return ""
 
     def _column_default_generator(
-            self,
-            table: str,
-            column: str,
-            default: Any,
-            auto_now_add: bool = False,
-            auto_now: bool = False,
+        self,
+        table: str,
+        column: str,
+        default: Any,
+        auto_now_add: bool = False,
+        auto_now: bool = False,
     ) -> str:
         default_str = " DEFAULT"
         default_str += " CURRENT_TIMESTAMP" if auto_now_add else f" {default}"

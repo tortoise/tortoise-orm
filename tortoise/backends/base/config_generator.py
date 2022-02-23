@@ -83,7 +83,7 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
     },
 }
 # Create an alias for backwards compatibility
-DB_LOOKUP['postgres'] = DB_LOOKUP['asyncpg']
+DB_LOOKUP["postgres"] = DB_LOOKUP["asyncpg"]
 
 
 def expand_db_url(db_url: str, testing: bool = False) -> dict:

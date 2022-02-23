@@ -8,9 +8,7 @@ from tortoise.backends.base_postgres.executor import BasePostgresExecutor
 
 
 class PsycopgExecutor(BasePostgresExecutor):
-    async def _process_insert_result(
-            self, instance: Model, results: Optional[dict]
-    ) -> None:
+    async def _process_insert_result(self, instance: Model, results: Optional[dict]) -> None:
         if results:
             db_projection = instance._meta.fields_db_projection_reverse
 

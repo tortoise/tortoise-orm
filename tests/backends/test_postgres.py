@@ -61,8 +61,8 @@ class TestPostgreSQL(test.SimpleTestCase):
         )
 
         self.assertEqual(len(res), 1)
-        self.assertEqual(tournament.id, res[0]['id'])
-        self.assertEqual(tournament.name, res[0]['name'])
+        self.assertEqual(tournament.id, res[0]["id"])
+        self.assertEqual(tournament.name, res[0]["name"])
 
     async def test_ssl_true(self):
         self.db_config["connections"]["models"]["credentials"]["ssl"] = True
@@ -97,4 +97,4 @@ class TestPostgreSQL(test.SimpleTestCase):
         )
 
         self.assertEqual(len(res), 1)
-        self.assertEqual("mytest_application", res[0]['application_name'])
+        self.assertEqual("mytest_application", res[0]["application_name"])

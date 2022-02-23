@@ -43,8 +43,13 @@ class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
     _connection: Optional[Any] = None
 
     def __init__(
-            self, user: str = None, password: str = None, database: str = None, host: str = None,
-            port: SupportsInt = 5432, **kwargs: Any
+        self,
+        user: str = None,
+        password: str = None,
+        database: str = None,
+        host: str = None,
+        port: SupportsInt = 5432,
+        **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
 
@@ -123,7 +128,7 @@ class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
 
     @abc.abstractmethod
     async def execute_query(
-            self, query: str, values: Optional[list] = None
+        self, query: str, values: Optional[list] = None
     ) -> Tuple[int, List[dict]]:
         raise NotImplementedError("execute_query is not implemented")
 

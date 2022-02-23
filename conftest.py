@@ -2,7 +2,8 @@ import os
 
 import pytest
 
-from tortoise.contrib.test import finalizer, initializer
+from tortoise.contrib.test import finalizer
+from tortoise.contrib.test import initializer
 
 
 @pytest.fixture(scope="session", autouse=True)

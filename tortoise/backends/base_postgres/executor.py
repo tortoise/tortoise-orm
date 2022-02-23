@@ -34,12 +34,12 @@ class BasePostgresExecutor(BaseExecutor):
         return Parameter("$%d" % (pos + 1,))
 
     def _prepare_insert_statement(
-            self, columns: Sequence[str], has_generated: bool = True, ignore_conflicts: bool = False
+        self, columns: Sequence[str], has_generated: bool = True, ignore_conflicts: bool = False
     ) -> PostgreSQLQueryBuilder:
         query = (
             self.db.query_class.into(self.model._meta.basetable)
-                .columns(*columns)
-                .insert(*[self.parameter(i) for i in range(len(columns))])
+            .columns(*columns)
+            .insert(*[self.parameter(i) for i in range(len(columns))])
         )
         if has_generated:
             generated_fields = self.model._meta.generated_db_fields

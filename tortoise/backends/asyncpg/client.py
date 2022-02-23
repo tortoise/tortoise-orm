@@ -114,7 +114,7 @@ class AsyncpgDBClient(BasePostgresClient):
 
     @translate_exceptions
     async def execute_query(
-            self, query: str, values: Optional[list] = None
+        self, query: str, values: Optional[list] = None
     ) -> Tuple[int, List[dict]]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)

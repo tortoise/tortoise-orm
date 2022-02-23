@@ -173,8 +173,9 @@ class TestConfigGenerator(test.SimpleTestCase):
 
     def test_postgres_testing(self):
         for scheme, engine in self._postgres_scheme_engines.items():
-            res = expand_db_url(db_url=(f"{scheme}://postgres@127.0.0.1:5432/" + r"test_\{\}"),
-                                testing=True)
+            res = expand_db_url(
+                db_url=(f"{scheme}://postgres@127.0.0.1:5432/" + r"test_\{\}"), testing=True
+            )
             database = res["credentials"]["database"]
             self.assertIn("test_", database)
             self.assertNotEqual("test_{}", database)

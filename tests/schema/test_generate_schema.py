@@ -1146,7 +1146,6 @@ CREATE TABLE "team_team" (
 
 
 class TestGenerateSchemaAsyncpg(GenerateSchemaPostgresSQLMixin, TestGenerateSchema):
-
     async def init_for(self, module: str, safe=False) -> None:
         try:
             with patch("asyncpg.create_pool", new=AsyncMock()):
@@ -1173,7 +1172,6 @@ class TestGenerateSchemaAsyncpg(GenerateSchemaPostgresSQLMixin, TestGenerateSche
 
 
 class TestGenerateSchemaPsycopg(GenerateSchemaPostgresSQLMixin, TestGenerateSchema):
-
     async def init_for(self, module: str, safe=False) -> None:
         try:
             with patch("psycopg_pool.AsyncConnectionPool.open", new=AsyncMock()):
