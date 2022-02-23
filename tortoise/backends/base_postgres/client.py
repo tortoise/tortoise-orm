@@ -43,10 +43,10 @@ class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
 
     def __init__(
         self,
-        user: str = None,
-        password: str = None,
-        database: str = None,
-        host: str = None,
+        user: Optional[str] = None,
+        password: Optional[str] = None,
+        database: Optional[str] = None,
+        host: Optional[str] = None,
         port: SupportsInt = 5432,
         **kwargs: Any,
     ) -> None:
@@ -110,7 +110,7 @@ class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
         finally:
             await self.close()
 
-    def acquire_connection(self) -> Union["PoolConnectionWrapper", "ConnectionWrapper"]:
+    def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
         return PoolConnectionWrapper(self._pool)
 
     @abc.abstractmethod

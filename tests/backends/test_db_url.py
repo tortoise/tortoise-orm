@@ -4,11 +4,11 @@ from tortoise.exceptions import ConfigurationError
 
 
 class TestConfigGenerator(test.SimpleTestCase):
-    _postgres_scheme_engines = dict(
-        postgres="tortoise.backends.asyncpg",
-        asyncpg="tortoise.backends.asyncpg",
-        psycopg="tortoise.backends.psycopg",
-    )
+    _postgres_scheme_engines = {
+        "postgres": "tortoise.backends.asyncpg",
+        "asyncpg": "tortoise.backends.asyncpg",
+        "psycopg": "tortoise.backends.psycopg",
+    }
 
     def test_unknown_scheme(self):
         with self.assertRaises(ConfigurationError):

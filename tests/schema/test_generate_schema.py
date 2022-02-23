@@ -25,6 +25,9 @@ class TestGenerateSchema(test.SimpleTestCase):
         ]
 
     async def asyncTearDown(self) -> None:
+        for connection in Tortoise._connections.values():
+            await connection.close()
+
         Tortoise._connections = {}
         await Tortoise._reset_apps()
 
@@ -773,7 +776,10 @@ CREATE TABLE `team_team` (
         )
 
 
-class GenerateSchemaPostgresSQLMixin:
+class GenerateSchemaPostgresSQL(TestGenerateSchema):
+    async def init_for(self, module: str, safe=False) -> None:
+        raise test.SkipTest("This class is abstract")
+
     async def test_noid(self):
         await self.init_for("tests.testmodels")
         sql = self.get_sql('"noid"')
@@ -1145,7 +1151,7 @@ CREATE TABLE "team_team" (
         )
 
 
-class TestGenerateSchemaAsyncpg(GenerateSchemaPostgresSQLMixin, TestGenerateSchema):
+class TestGenerateSchemaAsyncpg(GenerateSchemaPostgresSQL):
     async def init_for(self, module: str, safe=False) -> None:
         try:
             with patch("asyncpg.create_pool", new=AsyncMock()):
@@ -1171,7 +1177,7 @@ class TestGenerateSchemaAsyncpg(GenerateSchemaPostgresSQLMixin, TestGenerateSche
             raise test.SkipTest("asyncpg not installed")
 
 
-class TestGenerateSchemaPsycopg(GenerateSchemaPostgresSQLMixin, TestGenerateSchema):
+class TestGenerateSchemaPsycopg(GenerateSchemaPostgresSQL):
     async def init_for(self, module: str, safe=False) -> None:
         try:
             with patch("psycopg_pool.AsyncConnectionPool.open", new=AsyncMock()):

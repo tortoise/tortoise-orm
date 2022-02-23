@@ -1,10 +1,8 @@
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock, patch
 
 import asyncpg
-from psycopg import rows
 
 from tortoise import Tortoise
-from tortoise.backends.psycopg import client as psycopg_client
 from tortoise.contrib import test
 
 
