@@ -3,6 +3,7 @@ import copy
 from tests.testmodels import Address, Employee, Event, JSONFields, Reporter, Team, Tournament
 from tortoise.contrib import test
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
+from tortoise.contrib.pydantic.base import _get_fetch_fields
 
 
 class TestPydantic(test.TestCase):
@@ -1292,3 +1293,24 @@ class TestPydanticCycle(test.TestCase):
                 "team_size": 2,
             },
         )
+
+
+class TestGetFetchFields(test.TestCase):
+    async def asyncSetUp(self) -> None:
+        await super(TestGetFetchFields, self).asyncSetUp()
+
+        self.Tournament_Pydantic = pydantic_model_creator(Tournament)
+        self.Employee_Pydantic = pydantic_model_creator(Employee)
+
+
+    def test_tournament_fields(self):
+        tourment_fields = _get_fetch_fields(self.Tournament_Pydantic, Tournament)
+        expected_fields = ['events__reporter', 'events__participants', 'events__address']
+
+        self.assertEqual(tourment_fields, expected_fields)
+
+    def test_employee_fields(self):
+        employee_fields = _get_fetch_fields(self.Employee_Pydantic, Employee)
+        expected_fields = ['talks_to__talks_to', 'talks_to__team_members', 'team_members__talks_to', 'team_members__team_members']
+
+        self.assertEqual(employee_fields, expected_fields)
