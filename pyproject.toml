@@ -43,8 +43,7 @@ ciso8601 = { version = "*", markers = "sys_platform != 'win32' and implementatio
 uvloop = { version = "*", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
 orjson = { version = "*", optional = true }
 asyncpg = { version = "*", optional = true }
-psycopg = { version = "*", optional = true }
-psycopg-binary = { version = "*", optional = true }
+psycopg = {extras = ["binary"], version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
 asyncmy = { version = "*", optional = true }
 
@@ -95,7 +94,7 @@ sphinx-copybutton = "*"
 [tool.poetry.extras]
 accel = ["ciso8601", "uvloop", "orjson"]
 asyncpg = ["asyncpg"]
-psycopg = ["psycopg", 'psycopg-binary']
+psycopg = ["psycopg"]
 aiomysql = ["aiomysql"]
 asyncmy = ["asyncmy"]
 
