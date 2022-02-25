@@ -38,11 +38,12 @@ class TestBulk(test.TruncationTestCase):
         )
 
     async def test_bulk_create_with_batch_size(self):
-        await UniqueName.bulk_create([UniqueName() for _ in range(1000)], batch_size=100)
+        await UniqueName.bulk_create(
+            [UniqueName(id=id_ + 1) for id_ in range(1000)], batch_size=100
+        )
         all_ = await UniqueName.all().values("id", "name")
-        inc = all_[0]["id"]
         self.assertListSortEqual(
-            all_, [{"id": val + inc, "name": None} for val in range(1000)], sorted_key="id"
+            all_, [{"id": val + 1, "name": None} for val in range(1000)], sorted_key="id"
         )
 
     async def test_bulk_create_with_specified(self):
