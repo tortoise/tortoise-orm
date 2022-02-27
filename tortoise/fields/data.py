@@ -12,9 +12,9 @@ from pypika.enums import SqlTypes
 from pypika.terms import Term
 
 from tortoise import timezone
-from tortoise.exceptions import ConfigurationError, FieldError
+from tortoise.exceptions import ConfigurationError, FieldError, TimezoneError
 from tortoise.fields.base import Field
-from tortoise.timezone import get_timezone, get_use_tz, localtime
+from tortoise.timezone import get_timezone, should_use_tz, localtime
 from tortoise.validators import MaxLengthValidator
 
 try:
@@ -292,10 +292,10 @@ class DatetimeField(Field, datetime.datetime):
     SQL_TYPE = "TIMESTAMP"
 
     class _db_mysql:
-        SQL_TYPE = "DATETIME(6)"
+        SQL_TYPE = "DATETIME(6)" if should_use_tz() else "TIMESTAMP"
 
     class _db_postgres:
-        SQL_TYPE = "TIMESTAMPTZ"
+        SQL_TYPE = "TIMESTAMP WITH TIME ZONE" if should_use_tz() else "TIMESTAMP WITHOUT TIME ZONE"
 
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any) -> None:
         if auto_now_add and auto_now:
@@ -305,19 +305,17 @@ class DatetimeField(Field, datetime.datetime):
         self.auto_now_add = auto_now | auto_now_add
 
     def to_python_value(self, value: Any) -> Optional[datetime.datetime]:
-        if value is None:
-            value = None
-        else:
+        if value:
             if isinstance(value, datetime.datetime):
                 value = value
             elif isinstance(value, int):
                 value = datetime.datetime.fromtimestamp(value)
             else:
                 value = parse_datetime(value)
-            if timezone.is_naive(value):
-                value = timezone.make_aware(value, get_timezone())
-            else:
-                value = localtime(value)
+
+            # check that USE_TZ setting matches the datetime passed in
+            if should_use_tz() == timezone.is_naive(value):
+                raise TimezoneError(f"Value is incompatible with USE_TZ setting. USE_TZ: {should_use_tz()}, Value is tz-naive: {timezone.is_naive(value)}")
         self.validate(value)
         return value
 
@@ -333,15 +331,10 @@ class DatetimeField(Field, datetime.datetime):
             value = timezone.now()
             setattr(instance, self.model_field_name, value)
             return value
-        if value is not None:
-            if get_use_tz():
-                if timezone.is_naive(value):
-                    warnings.warn(
-                        "DateTimeField %s received a naive datetime (%s)"
-                        " while time zone support is active." % (self.model_field_name, value),
-                        RuntimeWarning,
-                    )
-                    value = timezone.make_aware(value, "UTC")
+
+        # check that USE_TZ setting matches the datetime passed in
+        if value and should_use_tz() == timezone.is_naive(value):
+            raise TimezoneError(f"Value is incompatible with  USE_TZ setting. USE_TZ: {should_use_tz()}, Value is tz-naive: {timezone.is_naive(value)} ")
         self.validate(value)
         return value
 
