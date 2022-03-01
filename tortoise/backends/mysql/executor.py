@@ -1,6 +1,7 @@
 from pypika import Parameter, functions
 from pypika.enums import SqlTypes
 from pypika.terms import Criterion
+from pypika.utils import format_quotes
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
@@ -17,7 +18,6 @@ from tortoise.filters import (
     ValueWrapper,
     contains,
     ends_with,
-    format_quotes,
     insensitive_contains,
     insensitive_ends_with,
     insensitive_exact,

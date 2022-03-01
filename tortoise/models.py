@@ -49,7 +49,15 @@ from tortoise.filters import get_filters_for_field
 from tortoise.functions import Function
 from tortoise.indexes import Index
 from tortoise.manager import Manager
-from tortoise.queryset import BulkUpdateQuery, ExistsQuery, Q, QuerySet, QuerySetSingle, RawSQLQuery
+from tortoise.queryset import (
+    BulkCreateQuery,
+    BulkUpdateQuery,
+    ExistsQuery,
+    Q,
+    QuerySet,
+    QuerySetSingle,
+    RawSQLQuery,
+)
 from tortoise.router import router
 from tortoise.signals import Signals
 from tortoise.transactions import current_transaction_map, in_transaction
@@ -659,7 +667,7 @@ class Model(metaclass=ModelMeta):
             if callable(field_object.default):
                 setattr(self, key, field_object.default())
             else:
-                setattr(self, key, field_object.default)
+                setattr(self, key, deepcopy(field_object.default))
 
     def __class_getitem__(cls: Type[MODEL], key: Any) -> QuerySetSingle[MODEL]:
         """
@@ -1159,12 +1167,14 @@ class Model(metaclass=ModelMeta):
         return await cls._meta.manager.get_queryset().in_bulk(id_list, field_name)
 
     @classmethod
-    async def bulk_create(
+    def bulk_create(
         cls: Type[MODEL],
         objects: Iterable[MODEL],
         batch_size: Optional[int] = None,
-        using_db: Optional[BaseDBAsyncClient] = None,
-    ) -> None:
+        ignore_conflicts: bool = False,
+        update_fields: Optional[Iterable[str]] = None,
+        on_conflict: Optional[Iterable[str]] = None,
+    ) -> "BulkCreateQuery":
         """
         Bulk insert operation:
 
@@ -1175,7 +1185,7 @@ class Model(metaclass=ModelMeta):
 
             e.g. ``IntField`` primary keys will not be populated.
 
-        This is recommend only for throw away inserts where you want to ensure optimal
+        This is recommended only for throw away inserts where you want to ensure optimal
         insert performance.
 
         .. code-block:: python3
@@ -1185,12 +1195,15 @@ class Model(metaclass=ModelMeta):
                 User(name="...", email="...")
             ])
 
+        :param on_conflict: On conflict index name
+        :param update_fields: Update fields when conflicts
+        :param ignore_conflicts: Ignore conflicts when inserting
         :param objects: List of objects to bulk create
         :param batch_size: How many objects are created in a single query
-        :param using_db: Specific DB connection to use instead of default bound
         """
-        db = using_db or cls._choose_db(True)
-        await db.executor_class(model=cls, db=db).execute_bulk_insert(objects, batch_size)
+        return cls._meta.manager.get_queryset().bulk_create(
+            objects, batch_size, ignore_conflicts, update_fields, on_conflict
+        )
 
     @classmethod
     def first(cls: Type[MODEL]) -> QuerySetSingle[Optional[MODEL]]:

@@ -12,7 +12,8 @@ from tortoise.exceptions import FieldError
 
 
 class TestCharFieldFilters(test.TestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         await CharFields.create(char="moo")
         await CharFields.create(char="baa", char_null="baa")
         await CharFields.create(char="oink")
@@ -170,7 +171,8 @@ class TestCharFieldFilters(test.TestCase):
 
 
 class TestBooleanFieldFilters(test.TestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         await BooleanFields.create(boolean=True)
         await BooleanFields.create(boolean=False)
         await BooleanFields.create(boolean=True, boolean_null=True)
@@ -218,7 +220,8 @@ class TestBooleanFieldFilters(test.TestCase):
 
 
 class TestDecimalFieldFilters(test.TestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         await DecimalFields.create(decimal="1.2345", decimal_nodec=1)
         await DecimalFields.create(decimal="2.34567", decimal_nodec=1)
         await DecimalFields.create(decimal="2.300", decimal_nodec=1)
@@ -249,7 +252,8 @@ class TestDecimalFieldFilters(test.TestCase):
 
 
 class TestCharFkFieldFilters(test.TestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         model1 = await CharPkModel.create(id=17)
         model2 = await CharPkModel.create(id=12)
         await CharPkModel.create(id=2001)

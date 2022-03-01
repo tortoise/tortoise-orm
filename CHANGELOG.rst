@@ -8,15 +8,34 @@ Changelog
 
 0.18
 ====
+0.18.2
+------
+Fixed
+^^^^^
+- Fix `bulk_create` doesn't work correctly with more than 1 update_fields. (#1046)
+
+0.18.1
+------
+Added
+^^^^^
+- Add on conflict do update for bulk_create. (#1024)
+Fixed
+^^^^^
+- Fix `bulk_create` error. (#1012)
+- Fix unittest invalid.
+- Fix `bulk_update` in `postgres` with some type. (#968) (#1022)
+
 0.18.0
 ------
 Added
 ^^^^^
 - Add Case-When support. (#943)
 - Add `Rand`/`Random` function in contrib. (#944)
+- Add `ON CONFLICT` support in `INSERT` statements. (#428)
 Fixed
 ^^^^^
 - Fix `bulk_update` error when pk is uuid. (#986)
+- Fix mutable default value. (#969)
 Changed
 ^^^^^^^
 - Move `Function`, `Aggregate` from `functions.py` to `expressions.py`. (#943)

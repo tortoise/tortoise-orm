@@ -8,7 +8,7 @@ from tortoise.contrib import test
 
 
 class TestMySQL(test.SimpleTestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
         if Tortoise._inited:
             await self._tearDownDB()
         self.db_config = test.getDBConfig(app_label="models", modules=["tests.testmodels"])

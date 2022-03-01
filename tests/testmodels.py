@@ -10,6 +10,8 @@ from decimal import Decimal
 from enum import Enum, IntEnum
 from typing import Union
 
+import pytz
+
 from tortoise import fields
 from tortoise.exceptions import NoValuesFetched, ValidationError
 from tortoise.manager import Manager
@@ -311,6 +313,8 @@ class NoID(Model):
 class UniqueName(Model):
     id = fields.IntField(pk=True)
     name = fields.CharField(max_length=20, null=True, unique=True)
+    optional = fields.CharField(max_length=20, null=True)
+    other_optional = fields.CharField(max_length=20, null=True)
 
 
 class UniqueTogetherFields(Model):
@@ -714,8 +718,10 @@ class DefaultModel(Model):
     decimal_default = fields.DecimalField(max_digits=8, decimal_places=2, default=Decimal(1))
     bool_default = fields.BooleanField(default=True)
     char_default = fields.CharField(max_length=20, default="tortoise")
-    date_default = fields.DateField(default=datetime.date.fromisoformat("2020-05-20"))
-    datetime_default = fields.DatetimeField(default=datetime.datetime(year=2020, month=5, day=20))
+    date_default = fields.DateField(default=datetime.date(year=2020, month=5, day=20))
+    datetime_default = fields.DatetimeField(
+        default=datetime.datetime(year=2020, month=5, day=20, tzinfo=pytz.utc)
+    )
 
 
 class RequiredPKModel(Model):

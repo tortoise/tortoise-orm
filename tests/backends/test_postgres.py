@@ -10,7 +10,8 @@ from tortoise.exceptions import OperationalError
 
 
 class TestPostgreSQL(test.SimpleTestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         if Tortoise._inited:
             await self._tearDownDB()
         self.db_config = test.getDBConfig(app_label="models", modules=["tests.testmodels"])

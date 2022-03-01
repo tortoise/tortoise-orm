@@ -698,6 +698,44 @@ class QuerySet(AwaitableQuery[MODEL]):
         objs = await self.filter(**{f"{field_name}__in": id_list})
         return {getattr(obj, field_name): obj for obj in objs}
 
+    def bulk_create(
+        self,
+        objects: Iterable[MODEL],
+        batch_size: Optional[int] = None,
+        ignore_conflicts: bool = False,
+        update_fields: Optional[Iterable[str]] = None,
+        on_conflict: Optional[Iterable[str]] = None,
+    ) -> "BulkCreateQuery":
+        """
+        This method inserts the provided list of objects into the database in an efficient manner
+        (generally only 1 query, no matter how many objects there are),
+        and returns created objects as a list, in the same order as provided
+
+        :param on_conflict: On conflict index name
+        :param update_fields: Update fields when conflicts
+        :param ignore_conflicts: Ignore conflicts when inserting
+        :param objects: List of objects to bulk create
+        :param batch_size: How many objects are created in a single query
+
+        :raises ValueError: If params do not meet specifications
+        """
+        if ignore_conflicts and update_fields:
+            raise ValueError(
+                "ignore_conflicts and update_fields are mutually exclusive.",
+            )
+        if not ignore_conflicts:
+            if (update_fields and not on_conflict) or (on_conflict and not update_fields):
+                raise ValueError("update_fields and on_conflict need set in same time.")
+        return BulkCreateQuery(  # type:ignore
+            db=self._db,
+            model=self.model,
+            objects=objects,
+            batch_size=batch_size,
+            ignore_conflicts=ignore_conflicts,
+            update_fields=update_fields,
+            on_conflict=on_conflict,
+        )
+
     def bulk_update(
         self,
         objects: Iterable[MODEL],
@@ -1659,8 +1697,8 @@ class BulkUpdateQuery(UpdateQuery):
                 pk_list = []
                 for obj in objects_item:
                     value = executor.column_map[pk_attr](obj.pk, None)
-                    attr = getattr(obj, field)
-                    case.when(pk == value, attr)
+                    field_value = getattr(obj, field)
+                    case.when(pk == value, self.query._wrapper_cls(field_value))
                     pk_list.append(value)
                 query = query.set(field, case)
                 query = query.where(pk.isin(pk_list))
@@ -1675,3 +1713,108 @@ class BulkUpdateQuery(UpdateQuery):
     def sql(self, **kwargs) -> str:
         self.as_query()
         return ";".join([str(query) for query in self.queries])
+
+
+class BulkCreateQuery(AwaitableQuery):
+    __slots__ = (
+        "objects",
+        "ignore_conflicts",
+        "batch_size",
+        "_db",
+        "executor",
+        "insert_query",
+        "insert_query_all",
+        "update_fields",
+        "on_conflict",
+    )
+
+    def __init__(
+        self,
+        model: Type[MODEL],
+        db: BaseDBAsyncClient,
+        objects: Iterable[MODEL],
+        batch_size: Optional[int] = None,
+        ignore_conflicts: bool = False,
+        update_fields: Optional[Iterable[str]] = None,
+        on_conflict: Optional[Iterable[str]] = None,
+    ):
+        super().__init__(model)
+        self.objects = list(objects)
+        self.ignore_conflicts = ignore_conflicts
+        self.batch_size = batch_size
+        self._db = db
+        self.update_fields = update_fields
+        self.on_conflict = on_conflict
+
+    def _make_query(self) -> None:
+        self.executor = self._db.executor_class(model=self.model, db=self._db)
+        if not self.ignore_conflicts and not self.update_fields:
+            self.insert_query_all = self.executor.insert_query_all
+            self.insert_query = self.executor.insert_query
+        else:
+            regular_columns, columns = self.executor._prepare_insert_columns()
+            self.insert_query = self.executor._prepare_insert_statement(
+                columns, ignore_conflicts=self.ignore_conflicts
+            )
+            self.insert_query_all = self.insert_query
+            if self.model._meta.generated_db_fields:
+                regular_columns_all, columns_all = self.executor._prepare_insert_columns(
+                    include_generated=True
+                )
+                self.insert_query_all = self.executor._prepare_insert_statement(
+                    columns_all, has_generated=False, ignore_conflicts=self.ignore_conflicts
+                )
+            if self.update_fields:
+                alias = f"new_{self.model._meta.db_table}"
+                self.insert_query_all = self.insert_query_all.as_(alias).on_conflict(  # type:ignore
+                    *self.on_conflict
+                )
+                self.insert_query = self.insert_query.as_(alias).on_conflict(  # type:ignore
+                    *self.on_conflict
+                )
+                for update_field in self.update_fields:
+                    self.insert_query_all = self.insert_query_all.do_update(  # type:ignore
+                        update_field
+                    )
+                    self.insert_query = self.insert_query.do_update(update_field)  # type:ignore
+
+    async def _execute(self) -> List[MODEL]:
+        for instance_chunk in chunk(self.objects, self.batch_size):
+            values_lists_all = []
+            values_lists = []
+            for instance in instance_chunk:
+                if instance._custom_generated_pk:
+                    values_lists_all.append(
+                        [
+                            self.executor.column_map[field_name](
+                                getattr(instance, field_name), instance
+                            )
+                            for field_name in self.executor.regular_columns_all
+                        ]
+                    )
+                else:
+                    values_lists.append(
+                        [
+                            self.executor.column_map[field_name](
+                                getattr(instance, field_name), instance
+                            )
+                            for field_name in self.executor.regular_columns
+                        ]
+                    )
+            if values_lists_all:
+                await self._db.execute_many(str(self.insert_query_all), values_lists_all)
+            if values_lists:
+                await self._db.execute_many(str(self.insert_query), values_lists)
+        return self.objects
+
+    def __await__(self) -> Generator[Any, None, List[MODEL]]:
+        if self._db is None:
+            self._db = self._choose_db(True)  # type: ignore
+        self._make_query()
+        return self._execute().__await__()  # type: ignore
+
+    def sql(self, **kwargs) -> str:
+        self.as_query()
+        if self.insert_query and self.insert_query_all:
+            return ";".join([str(self.insert_query), str(self.insert_query_all)])
+        return str(self.insert_query or self.insert_query_all)
