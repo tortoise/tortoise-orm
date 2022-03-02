@@ -185,7 +185,7 @@ name = "backports.zoneinfo"
 version = "0.2.1"
 description = "Backport of the standard library zoneinfo module"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.6"
 
 [package.extras]
@@ -912,7 +912,7 @@ name = "psycopg"
 version = "3.0.9"
 description = "PostgreSQL database adapter for Python"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -934,7 +934,7 @@ name = "psycopg-binary"
 version = "3.0.9"
 description = "PostgreSQL database adapter for Python -- C optimisation distribution"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=3.6"
 
 [[package]]
@@ -1119,7 +1119,7 @@ six = ">=1.5"
 
 [[package]]
 name = "python-slugify"
-version = "6.1.0"
+version = "6.1.1"
 description = "A Python slugify application that also handles Unicode"
 category = "dev"
 optional = false
@@ -1606,7 +1606,7 @@ name = "tzdata"
 version = "2021.5"
 description = "Provider of IANA time zone data"
 category = "main"
-optional = false
+optional = true
 python-versions = ">=2"
 
 [[package]]
@@ -1727,11 +1727,12 @@ accel = ["ciso8601", "uvloop", "orjson"]
 aiomysql = ["aiomysql"]
 asyncmy = ["asyncmy"]
 asyncpg = ["asyncpg"]
+psycopg = ["psycopg"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "2ea98aff91577a16c10c678b7d4f92acdf01ca740701ae625171f1a3f3f64690"
+content-hash = "1b5ff0c18509fb5bd4fd2d8dc6a78993ea50e1e4a2f0b4037b4f7dc9b9032538"
 
 [metadata.files]
 aiofiles = [
@@ -2824,8 +2825,8 @@ python-dateutil = [
     {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
 ]
 python-slugify = [
-    {file = "python-slugify-6.1.0.tar.gz", hash = "sha256:eff190e4dfac97d2f8c1890ee682709ecd23650742361687db82d95e1e5e25f5"},
-    {file = "python_slugify-6.1.0-py2.py3-none-any.whl", hash = "sha256:2e3fad0bf38b11514f8de911ea04e7a6c6a08bb1bac18abd96d9566c34404d56"},
+    {file = "python-slugify-6.1.1.tar.gz", hash = "sha256:00003397f4e31414e922ce567b3a4da28cf1436a53d332c9aeeb51c7d8c469fd"},
+    {file = "python_slugify-6.1.1-py2.py3-none-any.whl", hash = "sha256:8c0016b2d74503eb64761821612d58fcfc729493634b1eb0575d8f5b4aa1fbcf"},
 ]
 pytz = [
     {file = "pytz-2021.3-py2.py3-none-any.whl", hash = "sha256:3672058bc3453457b622aab7a1c3bfd5ab0bdae451512f6cf25f64ed37f5b87c"},
