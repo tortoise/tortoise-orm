@@ -45,7 +45,7 @@ orjson = { version = "*", optional = true }
 asyncpg = { version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
 asyncmy = { version = "*", optional = true }
-psycopg = {extras = ["binary"], version = "*", optional = true }
+psycopg = {extras = ["pool", "binary"], version = "*", optional = true }
 
 [tool.poetry.dev-dependencies]
 # Linter tools

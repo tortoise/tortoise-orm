@@ -918,6 +918,7 @@ python-versions = ">=3.6"
 [package.dependencies]
 "backports.zoneinfo" = {version = ">=0.2.0", markers = "python_version < \"3.9\""}
 psycopg-binary = {version = "3.0.9", optional = true, markers = "extra == \"binary\""}
+psycopg-pool = {version = "*", optional = true, markers = "extra == \"pool\""}
 typing-extensions = {version = ">=3.10", markers = "python_version < \"3.8\""}
 tzdata = {version = "*", markers = "sys_platform == \"win32\""}
 
@@ -936,6 +937,14 @@ description = "PostgreSQL database adapter for Python -- C optimisation distribu
 category = "main"
 optional = true
 python-versions = ">=3.6"
+
+[[package]]
+name = "psycopg-pool"
+version = "3.1.1"
+description = "Connection Pool for Psycopg"
+category = "main"
+optional = true
+python-versions = ">=3.7"
 
 [[package]]
 name = "py"
@@ -1732,7 +1741,7 @@ psycopg = ["psycopg"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "1b5ff0c18509fb5bd4fd2d8dc6a78993ea50e1e4a2f0b4037b4f7dc9b9032538"
+content-hash = "b67a1e92a265a8a7de809d4130428e036df16c2321799162be73d7f25aa5e825"
 
 [metadata.files]
 aiofiles = [
@@ -2730,6 +2739,10 @@ psycopg-binary = [
     {file = "psycopg_binary-3.0.9-cp39-cp39-musllinux_1_1_ppc64le.whl", hash = "sha256:3256757512228f715330f68ac84504e2bb0ab5599ba5729278d45dee0ac97702"},
     {file = "psycopg_binary-3.0.9-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:caf9557a83fd333e1f84f49395ea9ee60aed82e9e451cf805289ad5e0d2819d7"},
     {file = "psycopg_binary-3.0.9-cp39-cp39-win_amd64.whl", hash = "sha256:c3688bf7e539a184ecebcf47eccea8c3640c8176c2ccd75b9d07c5cb4a288446"},
+]
+psycopg-pool = [
+    {file = "psycopg-pool-3.1.1.tar.gz", hash = "sha256:bc579078dc8209f1ce280228460f96770756f24babb5d8ab2418800e9082a973"},
+    {file = "psycopg_pool-3.1.1-py3-none-any.whl", hash = "sha256:397beaa082f17255e6267850a00700aec4427fa214b4c55d2d49c7c154508ed5"},
 ]
 py = [
     {file = "py-1.11.0-py2.py3-none-any.whl", hash = "sha256:607c53218732647dff4acdfcd50cb62615cedf612e72d1724fb1a0cc6405b378"},
