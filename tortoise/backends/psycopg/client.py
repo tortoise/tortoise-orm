@@ -1,11 +1,7 @@
-from __future__ import annotations
-
 import asyncio
-import contextlib
 import typing
 from ssl import SSLContext
 
-import asyncpg
 import psycopg
 import psycopg.conninfo
 import psycopg.pq
@@ -31,12 +27,62 @@ class AsyncConnectionPool(psycopg_pool.AsyncConnectionPool):
         await self.putconn(connection)
 
 
+class PoolConnectionWrapper(base_client.PoolConnectionWrapper):
+    pool: AsyncConnectionPool
+    # Using _connection instead of connection because of mypy
+    _connection: typing.Optional[psycopg.AsyncConnection] = None
+
+    def __init__(self, pool: AsyncConnectionPool) -> None:
+        self.pool = pool
+
+    async def open(self, timeout: float = 30.0):
+        try:
+            await self.pool.open(wait=True, timeout=timeout)
+        except psycopg_pool.PoolTimeout as exception:
+            raise exceptions.DBConnectionError from exception
+
+    async def close(self, timeout: float = 0.0):
+        await self.pool.close(timeout=timeout)
+
+    async def __aenter__(self) -> psycopg.AsyncConnection:
+        if self.pool is None:
+            raise RuntimeError("Connection pool is not initialized")
+
+        if self._connection:
+            raise RuntimeError("Connection is already acquired")
+        else:
+            self._connection = await self.pool.getconn()
+
+        return await self._connection.__aenter__()
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        if self._connection:
+            await self._connection.__aexit__(exc_type, exc_val, exc_tb)
+            await self.pool.putconn(self._connection)
+
+        self._connection = None
+
+    # TortoiseORM has this interface hardcoded in the tests, so we need to support it
+    async def acquire(self) -> psycopg.AsyncConnection:
+        if not self._connection:
+            await self.__aenter__()
+
+        assert self._connection
+        return self._connection
+
+    # TortoiseORM has this interface hardcoded in the tests, so we need to support it
+    async def release(self, connection: psycopg.AsyncConnection) -> None:
+        assert connection is self._connection
+        await self.__aexit__(None, None, None)
+
+
 class PsycopgClient(postgres_client.BasePostgresClient):
     executor_class: typing.Type[executor.PsycopgExecutor] = executor.PsycopgExecutor
     schema_generator: typing.Type[PsycopgSchemaGenerator] = PsycopgSchemaGenerator
+    # _pool: typing.Optional[PoolConnectionWrapper] = None
     _pool: typing.Optional[AsyncConnectionPool] = None
     _connection: psycopg.AsyncConnection
-    default_timeout: int = 30
+    default_timeout: float = 30
 
     @postgres_client.translate_exceptions
     async def create_connection(self, with_db: bool) -> None:
@@ -78,10 +124,9 @@ class PsycopgClient(postgres_client.BasePostgresClient):
 
         try:
             self._pool = await self.create_pool(**self._template)
-            # Immediately test the connection because the TortoiseORM test suite expects it to
-            # check if the connection is valid.
+            # Immediately test the connection because the test suite expects it to check if the
+            # connection is valid.
             await self._pool.open(wait=True, timeout=extra["timeout"])
-
             self.log.debug("Created connection pool %s with params: %s", self._pool, self._template)
         except (psycopg.errors.InvalidCatalogName, psycopg_pool.PoolTimeout):
             raise exceptions.DBConnectionError(
@@ -106,9 +151,8 @@ class PsycopgClient(postgres_client.BasePostgresClient):
 
     @postgres_client.translate_exceptions
     async def execute_many(self, query: str, values: list) -> None:
-        connection: asyncpg.Connection
+        connection: psycopg.AsyncConnection
         async with self.acquire_connection() as connection:
-            cursor: psycopg.AsyncCursor | psycopg.AsyncServerCursor
             async with connection.cursor() as cursor:
                 self.log.debug("%s: %s", query, values)
                 try:
@@ -126,9 +170,9 @@ class PsycopgClient(postgres_client.BasePostgresClient):
         values: typing.Optional[list] = None,
         row_factory=psycopg.rows.dict_row,
     ) -> typing.Tuple[int, typing.List[dict]]:
-        connection: asyncpg.Connection
+        connection: psycopg.AsyncConnection
         async with self.acquire_connection() as connection:
-            cursor: psycopg.AsyncCursor | psycopg.AsyncServerCursor
+            cursor: typing.Union[psycopg.AsyncCursor, psycopg.AsyncServerCursor]
             async with connection.cursor(row_factory=row_factory) as cursor:
                 self.log.debug("%s: %s", query, values)
                 try:
@@ -181,18 +225,12 @@ class PsycopgClient(postgres_client.BasePostgresClient):
         ) as exc:
             raise exceptions.TransactionManagementError(exc)
 
-    @contextlib.asynccontextmanager
-    async def acquire_connection(self) -> typing.AsyncIterator[base_client.ConnectionWrapper]:  # type: ignore
-        if self._pool is None:
-            raise RuntimeError("Connection pool is not initialized")
-        try:
-            async with self._pool.connection() as connection:
-                yield connection  # type: ignore
-
-        except psycopg_pool.PoolTimeout:
-            raise exceptions.DBConnectionError(
-                f"Can't establish connection to database {self.database}"
-            )
+    def acquire_connection(
+        self,
+    ) -> typing.Union[base_client.ConnectionWrapper, PoolConnectionWrapper]:
+        assert self._pool
+        pool_wrapper: PoolConnectionWrapper = PoolConnectionWrapper(self._pool)
+        return pool_wrapper
 
     def _in_transaction(self) -> base_client.TransactionContext:
         return base_client.TransactionContextPooled(TransactionWrapper(self))

@@ -11,7 +11,7 @@ def initialize_tests(request):
     try:
         from tortoise.backends.psycopg import PsycopgClient
 
-        PsycopgClient.default_timeout = 10
+        PsycopgClient.default_timeout = float(os.environ.get("TORTOISE_POSTGRES_TIMEOUT", "15"))
     except ImportError:
         pass
 
