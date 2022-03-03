@@ -1,6 +1,6 @@
 checkfiles = tortoise/ examples/ tests/ conftest.py
 py_warn = PYTHONDEVMODE=1
-pytest_opts = -n auto --cov=tortoise --tb=native -q
+pytest_opts = -n 2 --cov=tortoise --tb=native -q
 
 help:
 	@echo  "Tortoise ORM development makefile"
@@ -18,7 +18,7 @@ up:
 	@poetry update
 
 deps:
-	@poetry install -E asyncpg -E aiomysql -E asyncmy -E accel
+	@poetry install -E asyncpg -E aiomysql -E asyncmy -E accel -E psycopg
 
 check: deps build
 ifneq ($(shell which black),)
