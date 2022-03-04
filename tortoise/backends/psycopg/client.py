@@ -67,12 +67,14 @@ class PoolConnectionWrapper(base_client.PoolConnectionWrapper):
         if not self._connection:
             await self.__aenter__()
 
-        assert self._connection
+        if not self._connection:
+            raise RuntimeError("Connection is not acquired")
         return self._connection
 
     # TortoiseORM has this interface hardcoded in the tests, so we need to support it
     async def release(self, connection: psycopg.AsyncConnection) -> None:
-        assert connection is self._connection
+        if self._connection is not connection:
+            raise RuntimeError("Wrong connection is being released")
         await self.__aexit__(None, None, None)
 
 
@@ -228,7 +230,9 @@ class PsycopgClient(postgres_client.BasePostgresClient):
     def acquire_connection(
         self,
     ) -> typing.Union[base_client.ConnectionWrapper, PoolConnectionWrapper]:
-        assert self._pool
+        if not self._pool:
+            raise exceptions.OperationalError("Connection pool not initialized")
+
         pool_wrapper: PoolConnectionWrapper = PoolConnectionWrapper(self._pool)
         return pool_wrapper
 
