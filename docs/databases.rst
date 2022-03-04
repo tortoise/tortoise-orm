@@ -7,10 +7,10 @@ Databases
 Tortoise currently supports the following databases:
 
 * SQLite
-* PostgreSQL >= 9.4 (using ``asyncpg``)
+* PostgreSQL >= 9.4 (using ``asyncpg`` or ``psycopg``)
 * MySQL/MariaDB (using ``aiomysql``)
 
-To use, please ensure that ``asyncpg`` and/or ``aiomysql`` is installed.
+To use, please ensure that ``asyncpg``, ``psycopg`` and/or ``aiomysql`` is installed.
 
 .. _db_url:
 
@@ -36,8 +36,14 @@ The supported ``DB_TYPE``:
 ``sqlite``:
     Typically in the form of :samp:`sqlite://{DB_FILE}`
     So if the ``DB_FILE`` is "/data/db.sqlite3" then the string will be ``sqlite:///data/db.sqlite`` (note the three /'s)
-``postgres``:
+``postgres``
+    Using ``asyncpg``:
     Typically in the form of :samp:`postgres://postgres:pass@db.host:5432/somedb`
+
+    Or specifically ``asyncpg``/``psycopg`` using:
+
+    - ``psycopg``: :samp:`psycopg://postgres:pass@db.host:5432/somedb`
+    - ``asyncpg``: :samp:`asyncpg://postgres:pass@db.host:5432/somedb`
 ``mysql``:
     Typically in the form of :samp:`mysql://myuser:mypass@db.host:3306/somedb`
 
@@ -123,7 +129,7 @@ PostgreSQL optional parameters are pass-though parameters to the driver, see `he
 ``ssl`` (defaults to ''False``):
     Either ``True`` or a custom SSL context for self-signed certificates. See :ref:`db_ssl` for more info.
 
-In case any of ``user``, ``password``, ``host``, ``port`` parameters is missing, we are letting ``asyncpg`` retrieve it from default sources (standard PostgreSQL environment variables or default values).
+In case any of ``user``, ``password``, ``host``, ``port`` parameters is missing, we are letting ``asyncpg``/``psycopg`` retrieve it from default sources (standard PostgreSQL environment variables or default values).
 
 
 MySQL/MariaDB

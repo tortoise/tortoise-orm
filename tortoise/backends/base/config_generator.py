@@ -6,10 +6,34 @@ from typing import Any, Dict, Iterable, Optional, Union
 from tortoise.exceptions import ConfigurationError
 
 urlparse.uses_netloc.append("postgres")
+urlparse.uses_netloc.append("asyncpg")
+urlparse.uses_netloc.append("psycopg")
 urlparse.uses_netloc.append("sqlite")
 urlparse.uses_netloc.append("mysql")
 DB_LOOKUP: Dict[str, Dict[str, Any]] = {
-    "postgres": {
+    "psycopg": {
+        "engine": "tortoise.backends.psycopg",
+        "vmap": {
+            "path": "database",
+            "hostname": "host",
+            "port": "port",
+            "username": "user",
+            "password": "password",
+        },
+        "defaults": {"port": 5432},
+        "cast": {
+            "min_size": int,
+            "max_size": int,
+            "max_queries": int,
+            "max_inactive_connection_lifetime": float,
+            "timeout": int,
+            "statement_cache_size": int,
+            "max_cached_statement_lifetime": int,
+            "max_cacheable_statement_size": int,
+            "ssl": bool,
+        },
+    },
+    "asyncpg": {
         "engine": "tortoise.backends.asyncpg",
         "vmap": {
             "path": "database",
@@ -58,6 +82,8 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
         },
     },
 }
+# Create an alias for backwards compatibility
+DB_LOOKUP["postgres"] = DB_LOOKUP["asyncpg"]
 
 
 def expand_db_url(db_url: str, testing: bool = False) -> dict:
@@ -107,7 +133,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         # asyncpg accepts None for password, but aiomysql not
         params[vmap["password"]] = (
             None
-            if (not url.password and db_backend == "postgres")
+            if (not url.password and db_backend in {"postgres", "asyncpg", "psycopg"})
             else urlparse.unquote_plus(url.password or "")
         )
 
