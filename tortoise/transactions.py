@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, cast
 from tortoise import connections
 from tortoise.exceptions import ParamsError
 
-current_transaction_map: dict = {}
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient, TransactionContext
@@ -14,7 +13,6 @@ F = TypeVar("F", bound=FuncType)
 
 
 def _get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
-
     if connection_name:
         connection = connections.get(connection_name)
     elif len(connections.db_config) == 1:
