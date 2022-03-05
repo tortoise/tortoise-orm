@@ -15,8 +15,16 @@ class TestPostgreSQL(test.SimpleTestCase):
         if Tortoise._inited:
             await self._tearDownDB()
         self.db_config = test.getDBConfig(app_label="models", modules=["tests.testmodels"])
-        if self.db_config["connections"]["models"]["engine"] != "tortoise.backends.asyncpg":
+        if not self.is_asyncpg and not self.is_psycopg:
             raise test.SkipTest("PostgreSQL only")
+
+    @property
+    def is_psycopg(self) -> bool:
+        return self.db_config["connections"]["models"]["engine"] == "tortoise.backends.psycopg"
+
+    @property
+    def is_asyncpg(self) -> bool:
+        return self.db_config["connections"]["models"]["engine"] == "tortoise.backends.asyncpg"
 
     async def asyncTearDown(self) -> None:
         if Tortoise._inited:
@@ -24,7 +32,10 @@ class TestPostgreSQL(test.SimpleTestCase):
         await super().asyncTearDown()
 
     async def test_schema(self):
-        from asyncpg.exceptions import InvalidSchemaNameError
+        if self.is_asyncpg:
+            from asyncpg.exceptions import InvalidSchemaNameError
+        else:
+            from psycopg.errors import InvalidSchemaName as InvalidSchemaNameError
 
         self.db_config["connections"]["models"]["credentials"]["schema"] = "mytestschema"
         await Tortoise.init(self.db_config, _create_db=True)
@@ -51,8 +62,8 @@ class TestPostgreSQL(test.SimpleTestCase):
         )
 
         self.assertEqual(len(res), 1)
-        self.assertEqual(tournament.id, res[0][0])
-        self.assertEqual(tournament.name, res[0][1])
+        self.assertEqual(tournament.id, res[0]["id"])
+        self.assertEqual(tournament.name, res[0]["name"])
 
     async def test_ssl_true(self):
         self.db_config["connections"]["models"]["credentials"]["ssl"] = True
@@ -87,4 +98,4 @@ class TestPostgreSQL(test.SimpleTestCase):
         )
 
         self.assertEqual(len(res), 1)
-        self.assertEqual("mytest_application", res[0][0])
+        self.assertEqual("mytest_application", res[0]["application_name"])

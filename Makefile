@@ -1,6 +1,6 @@
 checkfiles = tortoise/ examples/ tests/ conftest.py
 py_warn = PYTHONDEVMODE=1
-pytest_opts = -n auto --cov=tortoise --tb=native -q
+pytest_opts = -n 2 --cov=tortoise --tb=native -q
 
 help:
 	@echo  "Tortoise ORM development makefile"
@@ -18,7 +18,7 @@ up:
 	@poetry update
 
 deps:
-	@poetry install -E asyncpg -E aiomysql -E asyncmy -E accel
+	@poetry install -E asyncpg -E aiomysql -E asyncmy -E accel -E psycopg
 
 check: deps build
 ifneq ($(shell which black),)
@@ -46,8 +46,11 @@ test: deps
 test_sqlite:
 	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: pytest --cov-report= $(pytest_opts)
 
-test_postgres:
-	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="postgres://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" pytest $(pytest_opts) --cov-append --cov-report=
+test_postgres_asyncpg:
+	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="asyncpg://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" pytest $(pytest_opts) --cov-append --cov-report=
+
+test_postgres_psycopg:
+	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="psycopg://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" pytest $(pytest_opts) --cov-append --cov-report=
 
 test_mysql_myisam:
 	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}?storage_engine=MYISAM" pytest $(pytest_opts) --cov-append --cov-report=
@@ -55,7 +58,7 @@ test_mysql_myisam:
 test_mysql:
 	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}" pytest $(pytest_opts) --cov-append --cov-report=
 
-_testall: test_sqlite test_postgres test_mysql_myisam test_mysql
+_testall: test_sqlite test_postgres_asyncpg test_postgres_psycopg test_mysql_myisam test_mysql
 
 testall: deps _testall
 	coverage report

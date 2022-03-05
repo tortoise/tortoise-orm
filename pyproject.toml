@@ -8,7 +8,7 @@ readme = "README.rst"
 homepage = "https://github.com/tortoise/tortoise-orm"
 repository = "https://github.com/tortoise/tortoise-orm.git"
 documentation = "https://tortoise-orm.readthedocs.io"
-keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio"]
+keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio", "psycopg"]
 packages = [
     { include = "tortoise" }
 ]
@@ -45,6 +45,7 @@ orjson = { version = "*", optional = true }
 asyncpg = { version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
 asyncmy = { version = "*", optional = true }
+psycopg = {extras = ["pool", "binary"], version = "*", optional = true }
 
 [tool.poetry.dev-dependencies]
 # Linter tools
@@ -93,6 +94,7 @@ sphinx-copybutton = "*"
 [tool.poetry.extras]
 accel = ["ciso8601", "uvloop", "orjson"]
 asyncpg = ["asyncpg"]
+psycopg = ["psycopg"]
 aiomysql = ["aiomysql"]
 asyncmy = ["asyncmy"]
 

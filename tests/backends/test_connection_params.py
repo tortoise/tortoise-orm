@@ -48,7 +48,7 @@ class TestConnectionParams(test.SimpleTestCase):
                 sql_mode="STRICT_TRANS_TABLES",
             )
 
-    async def test_postres_connection_params(self):
+    async def test_asyncpg_connection_params(self):
         try:
             with patch("asyncpg.create_pool", new=AsyncMock()) as asyncpg_connect:
                 await connections._init(
@@ -87,3 +87,31 @@ class TestConnectionParams(test.SimpleTestCase):
                 )
         except ImportError:
             self.skipTest("asyncpg not installed")
+
+    async def test_psycopg_connection_params(self):
+        try:
+            with patch("psycopg_pool.AsyncConnectionPool.open", new=AsyncMock()) as psycopg_connect:
+                await Tortoise._init_connections(
+                    {
+                        "models": {
+                            "engine": "tortoise.backends.psycopg",
+                            "credentials": {
+                                "database": "test",
+                                "host": "127.0.0.1",
+                                "password": "foomip",
+                                "port": 5432,
+                                "user": "root",
+                                "timeout": 1,
+                                "ssl": True,
+                            },
+                        }
+                    },
+                    False,
+                )
+
+                psycopg_connect.assert_awaited_once_with(  # nosec
+                    wait=True,
+                    timeout=1,
+                )
+        except ImportError:
+            self.skipTest("psycopg not installed")
