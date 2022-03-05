@@ -6,16 +6,13 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.18.3
-------
-Added
-^^^^^
-- Added psycopg backend support
-
 0.18
 ====
 0.18.2
 ------
+Added
+^^^^^
+- Added psycopg backend support.
 Fixed
 ^^^^^
 - Fix `bulk_create` doesn't work correctly with more than 1 update_fields. (#1046)
