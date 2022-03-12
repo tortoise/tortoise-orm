@@ -619,8 +619,13 @@ class ModelMeta(type):
             meta.abstract = True
 
         new_class = super().__new__(mcs, name, bases, attrs)
-        for field in meta.fields_map.values():
+        for name, field in meta.fields_map.items():
             field.model = new_class  # type: ignore
+
+            # Call __set_name__ so fields know their own attribute name and parent model
+            # https://docs.python.org/3/reference/datamodel.html#object.__set_name__
+            if hasattr(field, "__set_name__"):
+                field.__set_name__(new_class, name)
 
         for fname, comment in _get_comments(new_class).items():  # type: ignore
             if fname in fields_map:

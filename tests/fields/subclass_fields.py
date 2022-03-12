@@ -76,3 +76,12 @@ class IntEnumField(IntField):
             return self.enum_type(value)
         except ValueError:
             raise ValueError(f"Database value {value} does not exist on Enum {self.enum_type}.")
+
+
+class NamedField(CharField):
+    def __init__(self, name: str, **kwargs):
+        super().__init__(128, **kwargs)
+        self.name = name
+
+    def __set_name__(self, owner: Type[Any], name: str) -> None:
+        assert self.name == name

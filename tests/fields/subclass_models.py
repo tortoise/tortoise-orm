@@ -1,6 +1,6 @@
 from enum import Enum, IntEnum
 
-from tests.fields.subclass_fields import EnumField, IntEnumField
+from tests.fields.subclass_fields import EnumField, IntEnumField, NamedField
 from tortoise import fields
 from tortoise.models import Model
 
@@ -29,3 +29,7 @@ class ContactTypeEnum(IntEnum):
 class Contact(Model):
     id = fields.IntField(pk=True)
     type = IntEnumField(ContactTypeEnum, default=ContactTypeEnum.other)
+
+
+class NamedFields(Model):
+    a = NamedField("a")
