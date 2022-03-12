@@ -13,6 +13,7 @@ Changelog
 Added
 ^^^^^
 - Added psycopg backend support.
+- Added __set_name__ support for custom fields
 Fixed
 ^^^^^
 - Fix `bulk_create` doesn't work correctly with more than 1 update_fields. (#1046)
