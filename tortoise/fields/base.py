@@ -169,7 +169,9 @@ class Field(metaclass=_FieldMeta):
         self.reference: "Optional[Field]" = None
 
     def __set_name__(self, owner: Type[Any], name: str) -> None:
-        """Set the name of the field on the model and the model.
+        """
+        Set the name of the field on the model and the model.
+
         Needed because Mypy is not yet __set_name__ aware:
         https://github.com/python/mypy/issues/8057
         """
