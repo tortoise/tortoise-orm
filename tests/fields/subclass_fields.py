@@ -84,4 +84,5 @@ class NamedField(CharField):
         self.name = name
 
     def __set_name__(self, owner: Type[Any], name: str) -> None:
-        assert self.name == name
+        if self.name != name:
+            raise RuntimeError(f"Field name {name} does not match {self.name}")
