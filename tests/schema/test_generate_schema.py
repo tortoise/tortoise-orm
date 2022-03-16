@@ -1168,7 +1168,7 @@ class TestGenerateSchemaAsyncpg(GenerateSchemaPostgresSQL):
                         "apps": {"models": {"models": [module], "default_connection": "default"}},
                     }
                 )
-                self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+                self.sqls = get_schema_sql(connections.get("default"), safe).split("; ")
         except ImportError:
             raise test.SkipTest("asyncpg not installed")
 
@@ -1194,6 +1194,6 @@ class TestGenerateSchemaPsycopg(GenerateSchemaPostgresSQL):
                         "apps": {"models": {"models": [module], "default_connection": "default"}},
                     }
                 )
-                self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+                self.sqls = get_schema_sql(connections.get("default"), safe).split("; ")
         except ImportError:
             raise test.SkipTest("psycopg not installed")

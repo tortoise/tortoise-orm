@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Callable, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
 
 import asyncpg
 from asyncpg.transaction import Transaction
@@ -11,7 +11,7 @@ from tortoise.backends.base.client import (
     ConnectionWrapper,
     NestedTransactionPooledContext,
     TransactionContext,
-    TransactionContextPooled,
+    TransactionContextPooled, PoolConnectionWrapper,
 )
 from tortoise.backends.base_postgres.client import BasePostgresClient, translate_exceptions
 from tortoise.exceptions import (
@@ -146,9 +146,6 @@ class AsyncpgDBClient(BasePostgresClient):
             if values:
                 return list(map(dict, await connection.fetch(query, *values)))
             return list(map(dict, await connection.fetch(query)))
-
-    def _in_transaction(self) -> "TransactionContext":
-        return TransactionContextPooled(TransactionWrapper(self))
 
 
 class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):

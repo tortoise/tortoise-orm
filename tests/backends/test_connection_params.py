@@ -14,7 +14,10 @@ class TestConnectionParams(test.SimpleTestCase):
         await super().asyncTearDown()
 
     async def test_mysql_connection_params(self):
-        with patch("asyncmy.create_pool", new=AsyncMock()) as mysql_connect:
+        with patch(
+                "tortoise.backends.mysql.client.mysql.create_pool",
+                new=AsyncMock()
+        ) as mysql_connect:
             await connections._init(
                 {
                     "models": {
@@ -50,7 +53,10 @@ class TestConnectionParams(test.SimpleTestCase):
 
     async def test_asyncpg_connection_params(self):
         try:
-            with patch("asyncpg.create_pool", new=AsyncMock()) as asyncpg_connect:
+            with patch(
+                    "tortoise.backends.asyncpg.client.asyncpg.create_pool",
+                    new=AsyncMock()
+            ) as asyncpg_connect:
                 await connections._init(
                     {
                         "models": {
@@ -90,8 +96,13 @@ class TestConnectionParams(test.SimpleTestCase):
 
     async def test_psycopg_connection_params(self):
         try:
-            with patch("psycopg_pool.AsyncConnectionPool.open", new=AsyncMock()) as psycopg_connect:
-                await Tortoise._init_connections(
+            with patch(
+                    "tortoise.backends.psycopg.client.PsycopgClient.create_pool",
+                    new=AsyncMock()
+            ) as patched_create_pool:
+                mocked_pool = AsyncMock()
+                patched_create_pool.return_value = mocked_pool
+                await connections._init(
                     {
                         "models": {
                             "engine": "tortoise.backends.psycopg",
@@ -108,8 +119,9 @@ class TestConnectionParams(test.SimpleTestCase):
                     },
                     False,
                 )
-
-                psycopg_connect.assert_awaited_once_with(  # nosec
+                await connections.get("models").create_connection(with_db=True)
+                patched_create_pool.assert_awaited_once()
+                mocked_pool.open.assert_awaited_once_with(  # nosec
                     wait=True,
                     timeout=1,
                 )

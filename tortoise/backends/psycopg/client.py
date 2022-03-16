@@ -12,6 +12,7 @@ import tortoise.backends.base.client as base_client
 import tortoise.backends.base_postgres.client as postgres_client
 import tortoise.backends.psycopg.executor as executor
 import tortoise.exceptions as exceptions
+from tortoise.backends.base.client import PoolConnectionWrapper
 from tortoise.backends.psycopg.schema_generator import PsycopgSchemaGenerator
 
 FuncType = typing.Callable[..., typing.Any]
@@ -27,61 +28,9 @@ class AsyncConnectionPool(psycopg_pool.AsyncConnectionPool):
         await self.putconn(connection)
 
 
-class PoolConnectionWrapper(base_client.PoolConnectionWrapper):
-    pool: AsyncConnectionPool
-    # Using _connection instead of connection because of mypy
-    _connection: typing.Optional[psycopg.AsyncConnection] = None
-
-    def __init__(self, pool: AsyncConnectionPool) -> None:
-        self.pool = pool
-
-    async def open(self, timeout: float = 30.0):
-        try:
-            await self.pool.open(wait=True, timeout=timeout)
-        except psycopg_pool.PoolTimeout as exception:
-            raise exceptions.DBConnectionError from exception
-
-    async def close(self, timeout: float = 0.0):
-        await self.pool.close(timeout=timeout)
-
-    async def __aenter__(self) -> psycopg.AsyncConnection:
-        if self.pool is None:
-            raise RuntimeError("Connection pool is not initialized")
-
-        if self._connection:
-            raise RuntimeError("Connection is already acquired")
-        else:
-            self._connection = await self.pool.getconn()
-
-        return await self._connection.__aenter__()
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        if self._connection:
-            await self._connection.__aexit__(exc_type, exc_val, exc_tb)
-            await self.pool.putconn(self._connection)
-
-        self._connection = None
-
-    # TortoiseORM has this interface hardcoded in the tests, so we need to support it
-    async def acquire(self) -> psycopg.AsyncConnection:
-        if not self._connection:
-            await self.__aenter__()
-
-        if not self._connection:
-            raise RuntimeError("Connection is not acquired")
-        return self._connection
-
-    # TortoiseORM has this interface hardcoded in the tests, so we need to support it
-    async def release(self, connection: psycopg.AsyncConnection) -> None:
-        if self._connection is not connection:
-            raise RuntimeError("Wrong connection is being released")
-        await self.__aexit__(None, None, None)
-
-
 class PsycopgClient(postgres_client.BasePostgresClient):
     executor_class: typing.Type[executor.PsycopgExecutor] = executor.PsycopgExecutor
     schema_generator: typing.Type[PsycopgSchemaGenerator] = PsycopgSchemaGenerator
-    # _pool: typing.Optional[PoolConnectionWrapper] = None
     _pool: typing.Optional[AsyncConnectionPool] = None
     _connection: psycopg.AsyncConnection
     default_timeout: float = 30
@@ -230,11 +179,7 @@ class PsycopgClient(postgres_client.BasePostgresClient):
     def acquire_connection(
         self,
     ) -> typing.Union[base_client.ConnectionWrapper, PoolConnectionWrapper]:
-        if not self._pool:
-            raise exceptions.OperationalError("Connection pool not initialized")
-
-        pool_wrapper: PoolConnectionWrapper = PoolConnectionWrapper(self._pool)
-        return pool_wrapper
+        return PoolConnectionWrapper(self)
 
     def _in_transaction(self) -> base_client.TransactionContext:
         return base_client.TransactionContextPooled(TransactionWrapper(self))
@@ -256,7 +201,7 @@ class TransactionWrapper(PsycopgClient, base_client.BaseTransactionWrapper):
         return base_client.NestedTransactionPooledContext(self)
 
     def acquire_connection(self) -> base_client.ConnectionWrapper:
-        return base_client.ConnectionWrapper(self._connection, self._lock)
+        return base_client.ConnectionWrapper(self._lock, self)
 
     @postgres_client.translate_exceptions
     async def start(self) -> None:
