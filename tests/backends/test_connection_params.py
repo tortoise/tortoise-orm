@@ -15,8 +15,7 @@ class TestConnectionParams(test.SimpleTestCase):
 
     async def test_mysql_connection_params(self):
         with patch(
-                "tortoise.backends.mysql.client.mysql.create_pool",
-                new=AsyncMock()
+            "tortoise.backends.mysql.client.mysql.create_pool", new=AsyncMock()
         ) as mysql_connect:
             await connections._init(
                 {
@@ -54,8 +53,7 @@ class TestConnectionParams(test.SimpleTestCase):
     async def test_asyncpg_connection_params(self):
         try:
             with patch(
-                    "tortoise.backends.asyncpg.client.asyncpg.create_pool",
-                    new=AsyncMock()
+                "tortoise.backends.asyncpg.client.asyncpg.create_pool", new=AsyncMock()
             ) as asyncpg_connect:
                 await connections._init(
                     {
@@ -97,8 +95,7 @@ class TestConnectionParams(test.SimpleTestCase):
     async def test_psycopg_connection_params(self):
         try:
             with patch(
-                    "tortoise.backends.psycopg.client.PsycopgClient.create_pool",
-                    new=AsyncMock()
+                "tortoise.backends.psycopg.client.PsycopgClient.create_pool", new=AsyncMock()
             ) as patched_create_pool:
                 mocked_pool = AsyncMock()
                 patched_create_pool.return_value = mocked_pool

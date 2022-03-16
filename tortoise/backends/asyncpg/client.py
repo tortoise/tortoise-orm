@@ -10,8 +10,9 @@ from tortoise.backends.base.client import (
     BaseTransactionWrapper,
     ConnectionWrapper,
     NestedTransactionPooledContext,
+    PoolConnectionWrapper,
     TransactionContext,
-    TransactionContextPooled, PoolConnectionWrapper,
+    TransactionContextPooled,
 )
 from tortoise.backends.base_postgres.client import BasePostgresClient, translate_exceptions
 from tortoise.exceptions import (

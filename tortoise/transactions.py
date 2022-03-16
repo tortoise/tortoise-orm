@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, cast
 from tortoise import connections
 from tortoise.exceptions import ParamsError
 
-
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient, TransactionContext
 
