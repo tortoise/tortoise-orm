@@ -20,7 +20,7 @@ from typing import (
 )
 
 from pypika import JoinType, Order, Table
-from pypika.functions import Count
+from pypika.functions import Cast, Count
 from pypika.queries import QueryBuilder
 from pypika.terms import Case, Field, Term, ValueWrapper
 from typing_extensions import Protocol
@@ -1698,7 +1698,17 @@ class BulkUpdateQuery(UpdateQuery):
                 for obj in objects_item:
                     value = executor.column_map[pk_attr](obj.pk, None)
                     field_value = getattr(obj, field)
-                    case.when(pk == value, self.query._wrapper_cls(field_value))
+                    case.when(
+                        pk == value,
+                        Cast(
+                            self.query._wrapper_cls(field_value),
+                            obj._meta.fields_map[field].get_for_dialect(
+                                self._db.schema_generator.DIALECT, "SQL_TYPE"
+                            ),
+                        )
+                        if self._db.schema_generator.DIALECT == "postgres"
+                        else self.query._wrapper_cls(field_value),
+                    )
                     pk_list.append(value)
                 query = query.set(field, case)
                 query = query.where(pk.isin(pk_list))
