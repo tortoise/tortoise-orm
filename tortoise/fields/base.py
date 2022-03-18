@@ -168,6 +168,15 @@ class Field(metaclass=_FieldMeta):
         self.model: Type["Model"] = model  # type: ignore
         self.reference: "Optional[Field]" = None
 
+    def __set_name__(self, owner: Type[Any], name: str) -> None:
+        """
+        Set the name of the field on the model and the model.
+
+        Needed because Mypy is not yet __set_name__ aware:
+        https://github.com/python/mypy/issues/8057
+        """
+        ...
+
     def to_db_value(self, value: Any, instance: "Union[Type[Model], Model]") -> Any:
         """
         Converts from the Python type to the DB type.

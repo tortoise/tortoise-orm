@@ -50,6 +50,7 @@ Contributors
 * Vinay Karanam ``@vinayinvicible``
 * Aleksandr Rozum ``@rozumalex``
 * Mojix Coder ``@MojixCoder``
+* Rick van Hattem ``@wolph``
 
 Special Thanks
 ==============
