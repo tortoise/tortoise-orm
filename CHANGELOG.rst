@@ -13,9 +13,21 @@ Changelog
 Added
 ^^^^^
 - Added psycopg backend support.
+- Added a new unified and robust connection management interface to access DB connections which includes support for
+  lazy connection creation and much more. For more details,
+  check out this `PR <https://github.com/tortoise/tortoise-orm/pull/1001>`_
 Fixed
 ^^^^^
 - Fix `bulk_create` doesn't work correctly with more than 1 update_fields. (#1046)
+Deprecated
+^^^^^
+- Existing connection management interface and related public APIs which are deprecated:
+ - `Tortoise.get_connection`
+ - `Tortoise.close_connections`
+Changed
+^^^^^
+- Refactored `tortoise.transactions.get_connection` method to `tortoise.transactions._get_connection`.
+ Note that this method has now been marked **private to this module and is not part of the public API**
 
 0.18.1
 ------
