@@ -11,6 +11,7 @@ from tests.testmodels import (
     Event,
     IntFields,
     JSONFields,
+    SmallIntFields,
     Tournament,
     UUIDFields,
 )
@@ -74,6 +75,18 @@ class TestUpdate(test.TestCase):
         self.assertEqual(rows_affected, 2)
         self.assertEqual((await JSONFields.get(pk=objs[0].pk)).data, objs[0].data)
         self.assertEqual((await JSONFields.get(pk=objs[1].pk)).data, objs[1].data)
+
+    async def test_bulk_update_smallint_none(self):
+        objs = [
+            await SmallIntFields.create(smallintnum=1, smallintnum_null=1),
+            await SmallIntFields.create(smallintnum=2, smallintnum_null=2),
+        ]
+        objs[0].smallintnum_null = None
+        objs[1].smallintnum_null = None
+        rows_affected = await SmallIntFields.bulk_update(objs, fields=["smallintnum_null"])
+        self.assertEqual(rows_affected, 2)
+        self.assertEqual((await SmallIntFields.get(pk=objs[0].pk)).smallintnum_null, None)
+        self.assertEqual((await SmallIntFields.get(pk=objs[1].pk)).smallintnum_null, None)
 
     async def test_update_auto_now(self):
         obj = await DefaultUpdate.create()

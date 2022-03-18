@@ -19,6 +19,7 @@ Added
 Fixed
 ^^^^^
 - Fix `bulk_create` doesn't work correctly with more than 1 update_fields. (#1046)
+- Fix `bulk_update` errors when setting null for a smallint column on postgres. (#1086)
 Deprecated
 ^^^^^
 - Existing connection management interface and related public APIs which are deprecated:
