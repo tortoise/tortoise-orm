@@ -1052,7 +1052,7 @@ class Model(metaclass=ModelMeta):
         db = using_db or cls._choose_db(True)
         async with in_transaction(connection_name=db.connection_name) as connection:
             try:
-                return await cls.filter(**kwargs).using_db(connection).get(), False
+                return await cls.select_for_update().filter(**kwargs).using_db(connection).get(), False
             except DoesNotExist:
                 try:
                     return await cls.create(using_db=connection, **defaults, **kwargs), True
