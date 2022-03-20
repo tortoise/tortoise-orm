@@ -384,6 +384,40 @@ class DateField(Field, datetime.date):
         return value
 
 
+class TimeField(Field, datetime.time):
+    """
+    Time field.
+    """
+
+    skip_to_python_if_native = True
+    SQL_TYPE = "TIME"
+
+    def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any) -> None:
+        if auto_now_add and auto_now:
+            raise ConfigurationError("You can choose only 'auto_now' or 'auto_now_add'")
+        super().__init__(**kwargs)
+        self.auto_now = auto_now
+        self.auto_now_add = auto_now | auto_now_add
+
+    def to_python_value(self, value: Any) -> Optional[datetime.time]:
+        if value is not None and not isinstance(value, datetime.time):
+            value = datetime.time.fromisoformat(value)
+        self.validate(value)
+        return value
+
+    def to_db_value(
+        self, value: Optional[Union[datetime.time, str]], instance: "Union[Type[Model], Model]"
+    ) -> Optional[datetime.time]:
+
+        if value is not None and not isinstance(value, datetime.time):
+            value = datetime.time.fromisoformat(value)
+        self.validate(value)
+        return value
+
+    class _db_mysql:
+        SQL_TYPE = "TIME(6)"
+
+
 class TimeDeltaField(Field, datetime.timedelta):
     """
     A field for storing time differences.
@@ -476,7 +510,7 @@ class JSONField(Field, dict, list):  # type: ignore
                 return self.decoder(value)
             except Exception:
                 raise FieldError(
-                    f"Value {value if isinstance(value,str) else value.decode()} is invalid json value."
+                    f"Value {value if isinstance(value, str) else value.decode()} is invalid json value."
                 )
 
         self.validate(value)

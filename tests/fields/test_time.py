@@ -1,5 +1,5 @@
 import os
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from time import sleep
 
 import pytz
@@ -146,6 +146,35 @@ class TestDatetimeFields(test.TestCase):
 
         os.environ["TIMEZONE"] = old_tz
         os.environ["USE_TZ"] = old_use_tz
+
+
+class TestTimeFields(test.TestCase):
+    async def test_create(self):
+        now = datetime.now().time()
+        obj = await testmodels.TimeFields.create(time=now)
+        self.assertEqual(obj.time, now)
+
+    async def test_cast(self):
+        obj = await testmodels.TimeFields.create(time="21:00")
+        self.assertEqual(obj.time, time.fromisoformat("21:00"))
+
+    async def test_values(self):
+        now = datetime.now().time()
+        obj0 = await testmodels.TimeFields.create(time=now)
+        values = await testmodels.TimeFields.get(id=obj0.id).values("time")
+        self.assertEqual(values["time"], now)
+
+    async def test_values_list(self):
+        now = datetime.now().time()
+        obj0 = await testmodels.TimeFields.create(time=now)
+        values = await testmodels.TimeFields.get(id=obj0.id).values_list("time", flat=True)
+        self.assertEqual(values, now)
+
+    async def test_get(self):
+        now = datetime.now().time()
+        await testmodels.TimeFields.create(time=now)
+        obj = await testmodels.TimeFields.get(time=now)
+        self.assertEqual(obj.time, now)
 
 
 class TestDateFields(test.TestCase):
