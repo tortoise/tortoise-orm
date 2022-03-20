@@ -254,6 +254,12 @@ class DateFields(Model):
     date_null = fields.DateField(null=True)
 
 
+class TimeFields(Model):
+    id = fields.IntField(pk=True)
+    time = fields.TimeField()
+    time_null = fields.TimeField(null=True)
+
+
 class FloatFields(Model):
     id = fields.IntField(pk=True)
     floatnum = fields.FloatField()

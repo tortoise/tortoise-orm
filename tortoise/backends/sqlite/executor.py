@@ -14,6 +14,7 @@ from tortoise.fields import (
     DecimalField,
     IntField,
     SmallIntField,
+    TimeField,
 )
 
 
@@ -54,11 +55,30 @@ def to_db_datetime(
     return None
 
 
+def to_db_time(
+    self: TimeField, value: Optional[datetime.time], instance: Union[Type[Model], Model]
+) -> Optional[str]:
+    if hasattr(instance, "_saved_in_db") and (
+        self.auto_now
+        or (self.auto_now_add and getattr(instance, self.model_field_name, None) is None)
+    ):
+        if timezone.get_use_tz():
+            value = datetime.datetime.now(tz=pytz.utc).time()
+        else:
+            value = datetime.datetime.now(tz=timezone.get_default_timezone()).time()
+        setattr(instance, self.model_field_name, value)
+        return value.isoformat()
+    if isinstance(value, datetime.time):
+        return value.isoformat()
+    return None
+
+
 class SqliteExecutor(BaseExecutor):
     TO_DB_OVERRIDE = {
         fields.BooleanField: to_db_bool,
         fields.DecimalField: to_db_decimal,
         fields.DatetimeField: to_db_datetime,
+        fields.TimeField: to_db_time,
     }
     EXPLAIN_PREFIX = "EXPLAIN QUERY PLAN"
     DB_NATIVE = {bytes, str, int, float}
