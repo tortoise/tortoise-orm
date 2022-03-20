@@ -1065,7 +1065,7 @@ develop = false
 type = "git"
 url = "https://github.com/tortoise/pypika-tortoise.git"
 reference = "main"
-resolved_reference = "fac8e6aec725fe01e7af426c15e1af93987dffb2"
+resolved_reference = "eaaa892ee13286d441b90a12374ad3f4cabc31a4"
 
 [[package]]
 name = "pytest"
