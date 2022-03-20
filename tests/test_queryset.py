@@ -1,5 +1,5 @@
 from tests.testmodels import Event, IntFields, MinRelation, Node, Reporter, Tournament, Tree
-from tortoise import Tortoise
+from tortoise import connections
 from tortoise.contrib import test
 from tortoise.exceptions import (
     DoesNotExist,
@@ -19,7 +19,7 @@ class TestQueryset(test.TestCase):
         await super().asyncSetUp()
         # Build large dataset
         self.intfields = [await IntFields.create(intnum=val) for val in range(10, 100, 3)]
-        self.db = Tortoise.get_connection("models")
+        self.db = connections.get("models")
 
     async def test_all_count(self):
         self.assertEqual(await IntFields.all().count(), 30)

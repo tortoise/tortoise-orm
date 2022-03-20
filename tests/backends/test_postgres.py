@@ -4,7 +4,7 @@ Test some PostgreSQL-specific features
 import ssl
 
 from tests.testmodels import Tournament
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
 from tortoise.contrib import test
 from tortoise.exceptions import OperationalError
 
@@ -29,6 +29,7 @@ class TestPostgreSQL(test.SimpleTestCase):
     async def asyncTearDown(self) -> None:
         if Tortoise._inited:
             await Tortoise._drop_databases()
+        await super().asyncTearDown()
 
     async def test_schema(self):
         if self.is_asyncpg:
@@ -42,12 +43,12 @@ class TestPostgreSQL(test.SimpleTestCase):
         with self.assertRaises(InvalidSchemaNameError):
             await Tortoise.generate_schemas()
 
-        conn = Tortoise.get_connection("models")
+        conn = connections.get("models")
         await conn.execute_script("CREATE SCHEMA mytestschema;")
         await Tortoise.generate_schemas()
 
         tournament = await Tournament.create(name="Test")
-        await Tortoise.close_connections()
+        await connections.close_all()
 
         del self.db_config["connections"]["models"]["credentials"]["schema"]
         await Tortoise.init(self.db_config)
@@ -55,7 +56,7 @@ class TestPostgreSQL(test.SimpleTestCase):
         with self.assertRaises(OperationalError):
             await Tournament.filter(name="Test").first()
 
-        conn = Tortoise.get_connection("models")
+        conn = connections.get("models")
         _, res = await conn.execute_query(
             "SELECT id, name FROM mytestschema.tournament WHERE name='Test' LIMIT 1"
         )
@@ -67,7 +68,7 @@ class TestPostgreSQL(test.SimpleTestCase):
     async def test_ssl_true(self):
         self.db_config["connections"]["models"]["credentials"]["ssl"] = True
         try:
-            await Tortoise.init(self.db_config)
+            await Tortoise.init(self.db_config, _create_db=True)
         except (ConnectionError, ssl.SSLError):
             pass
         else:
@@ -91,7 +92,7 @@ class TestPostgreSQL(test.SimpleTestCase):
         ] = "mytest_application"
         await Tortoise.init(self.db_config, _create_db=True)
 
-        conn = Tortoise.get_connection("models")
+        conn = connections.get("models")
         _, res = await conn.execute_query(
             "SELECT application_name FROM pg_stat_activity WHERE pid = pg_backend_pid()"
         )

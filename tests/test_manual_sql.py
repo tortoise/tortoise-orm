@@ -1,11 +1,11 @@
-from tortoise import Tortoise
+from tortoise import connections
 from tortoise.contrib import test
 from tortoise.transactions import in_transaction
 
 
 class TestManualSQL(test.TruncationTestCase):
     async def test_simple_insert(self):
-        conn = Tortoise.get_connection("models")
+        conn = connections.get("models")
         await conn.execute_query("INSERT INTO author (name) VALUES ('Foo')")
         self.assertEqual(
             await conn.execute_query_dict("SELECT name FROM author"), [{"name": "Foo"}]
@@ -15,7 +15,7 @@ class TestManualSQL(test.TruncationTestCase):
         async with in_transaction() as conn:
             await conn.execute_query("INSERT INTO author (name) VALUES ('Foo')")
 
-        conn = Tortoise.get_connection("models")
+        conn = connections.get("models")
         self.assertEqual(
             await conn.execute_query_dict("SELECT name FROM author"), [{"name": "Foo"}]
         )
@@ -29,7 +29,7 @@ class TestManualSQL(test.TruncationTestCase):
         except ValueError:
             pass
 
-        conn = Tortoise.get_connection("models")
+        conn = connections.get("models")
         self.assertEqual(await conn.execute_query_dict("SELECT name FROM author"), [])
 
     @test.requireCapability(supports_transactions=True)
@@ -38,7 +38,7 @@ class TestManualSQL(test.TruncationTestCase):
             await conn.execute_query("INSERT INTO author (name) VALUES ('Foo')")
             await conn.rollback()
 
-        conn = Tortoise.get_connection("models")
+        conn = connections.get("models")
         self.assertEqual(await conn.execute_query_dict("SELECT name FROM author"), [])
 
     async def test_in_transaction_commit(self):
@@ -50,7 +50,7 @@ class TestManualSQL(test.TruncationTestCase):
         except ValueError:
             pass
 
-        conn = Tortoise.get_connection("models")
+        conn = connections.get("models")
         self.assertEqual(
             await conn.execute_query_dict("SELECT name FROM author"), [{"name": "Foo"}]
         )

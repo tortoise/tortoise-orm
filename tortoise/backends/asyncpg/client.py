@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Callable, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
 
 import asyncpg
 from asyncpg.transaction import Transaction
@@ -10,6 +10,7 @@ from tortoise.backends.base.client import (
     BaseTransactionWrapper,
     ConnectionWrapper,
     NestedTransactionPooledContext,
+    PoolConnectionWrapper,
     TransactionContext,
     TransactionContextPooled,
 )
@@ -88,6 +89,13 @@ class AsyncpgDBClient(BasePostgresClient):
             return await super().db_delete()
         except asyncpg.InvalidCatalogNameError:  # pragma: nocoverage
             pass
+        await self.close()
+
+    def acquire_connection(self) -> Union["PoolConnectionWrapper", "ConnectionWrapper"]:
+        return PoolConnectionWrapper(self)
+
+    def _in_transaction(self) -> "TransactionContext":
+        return TransactionContextPooled(TransactionWrapper(self))
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> Optional[asyncpg.Record]:
@@ -140,9 +148,6 @@ class AsyncpgDBClient(BasePostgresClient):
                 return list(map(dict, await connection.fetch(query, *values)))
             return list(map(dict, await connection.fetch(query)))
 
-    def _in_transaction(self) -> "TransactionContext":
-        return TransactionContextPooled(TransactionWrapper(self))
-
 
 class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     def __init__(self, connection: AsyncpgDBClient) -> None:
@@ -153,13 +158,13 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         self.connection_name = connection.connection_name
         self.transaction: Transaction = None
         self._finalized = False
-        self._parent = connection
+        self._parent: AsyncpgDBClient = connection
 
     def _in_transaction(self) -> "TransactionContext":
         return NestedTransactionPooledContext(self)
 
     def acquire_connection(self) -> "ConnectionWrapper":
-        return ConnectionWrapper(self._connection, self._lock)
+        return ConnectionWrapper(self._lock, self)
 
     @translate_exceptions
     async def execute_many(self, query: str, values: list) -> None:

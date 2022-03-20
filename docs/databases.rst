@@ -214,6 +214,7 @@ handle complex objects.
         }
     )
 
+.. _base_db_client:
 
 Base DB client
 ==============
