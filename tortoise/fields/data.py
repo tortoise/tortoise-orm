@@ -14,7 +14,7 @@ from pypika.terms import Term
 from tortoise import timezone
 from tortoise.exceptions import ConfigurationError, FieldError
 from tortoise.fields.base import Field
-from tortoise.timezone import get_timezone, get_use_tz, localtime
+from tortoise.timezone import get_default_timezone, get_timezone, get_use_tz, localtime
 from tortoise.validators import MaxLengthValidator
 
 try:
@@ -368,7 +368,6 @@ class DateField(Field, datetime.date):
     SQL_TYPE = "DATE"
 
     def to_python_value(self, value: Any) -> Optional[datetime.date]:
-
         if value is not None and not isinstance(value, datetime.date):
             value = parse_datetime(value).date()
         self.validate(value)
@@ -400,22 +399,43 @@ class TimeField(Field, datetime.time):
         self.auto_now_add = auto_now | auto_now_add
 
     def to_python_value(self, value: Any) -> Optional[datetime.time]:
-        if value is not None and not isinstance(value, datetime.time):
-            value = datetime.time.fromisoformat(value)
+        if value is not None:
+            if isinstance(value, str):
+                value = datetime.time.fromisoformat(value)
+            if timezone.is_naive(value):
+                value = value.replace(tzinfo=get_default_timezone())
         self.validate(value)
         return value
 
     def to_db_value(
-        self, value: Optional[Union[datetime.time, str]], instance: "Union[Type[Model], Model]"
+        self, value: Optional[datetime.time], instance: "Union[Type[Model], Model]"
     ) -> Optional[datetime.time]:
 
-        if value is not None and not isinstance(value, datetime.time):
-            value = datetime.time.fromisoformat(value)
+        # Only do this if it is a Model instance, not class. Test for guaranteed instance var
+        if hasattr(instance, "_saved_in_db") and (
+            self.auto_now
+            or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
+        ):
+            now = timezone.now().time()
+            setattr(instance, self.model_field_name, now)
+            return now
+        if value is not None:
+            if get_use_tz():
+                if timezone.is_naive(value):
+                    warnings.warn(
+                        "TimeField %s received a naive time (%s)"
+                        " while time zone support is active." % (self.model_field_name, value),
+                        RuntimeWarning,
+                    )
+                    value = value.replace(tzinfo=get_default_timezone())
         self.validate(value)
         return value
 
     class _db_mysql:
         SQL_TYPE = "TIME(6)"
+
+    class _db_postgres:
+        SQL_TYPE = "TIMETZ"
 
 
 class TimeDeltaField(Field, datetime.timedelta):

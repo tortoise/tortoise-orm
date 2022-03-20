@@ -150,28 +150,28 @@ class TestDatetimeFields(test.TestCase):
 
 class TestTimeFields(test.TestCase):
     async def test_create(self):
-        now = datetime.now().time()
+        now = timezone.now().timetz()
         obj = await testmodels.TimeFields.create(time=now)
         self.assertEqual(obj.time, now)
 
     async def test_cast(self):
-        obj = await testmodels.TimeFields.create(time="21:00")
-        self.assertEqual(obj.time, time.fromisoformat("21:00"))
+        obj = await testmodels.TimeFields.create(time="21:00+00:00")
+        self.assertEqual(obj.time, time.fromisoformat("21:00+00:00"))
 
     async def test_values(self):
-        now = datetime.now().time()
+        now = timezone.now().timetz()
         obj0 = await testmodels.TimeFields.create(time=now)
         values = await testmodels.TimeFields.get(id=obj0.id).values("time")
         self.assertEqual(values["time"], now)
 
     async def test_values_list(self):
-        now = datetime.now().time()
+        now = timezone.now().timetz()
         obj0 = await testmodels.TimeFields.create(time=now)
         values = await testmodels.TimeFields.get(id=obj0.id).values_list("time", flat=True)
         self.assertEqual(values, now)
 
     async def test_get(self):
-        now = datetime.now().time()
+        now = timezone.now().timetz()
         await testmodels.TimeFields.create(time=now)
         obj = await testmodels.TimeFields.get(time=now)
         self.assertEqual(obj.time, now)

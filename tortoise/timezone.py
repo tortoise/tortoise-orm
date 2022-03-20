@@ -1,6 +1,6 @@
 import os
-from datetime import datetime, tzinfo
-from typing import Optional
+from datetime import datetime, time, tzinfo
+from typing import Optional, Union
 
 import pytz
 
@@ -58,9 +58,9 @@ def localtime(value: Optional[datetime] = None, timezone: Optional[str] = None) 
     return value.astimezone(tz)
 
 
-def is_aware(value: datetime) -> bool:
+def is_aware(value: Union[datetime, time]) -> bool:
     """
-    Determine if a given datetime.datetime is aware.
+    Determine if a given datetime.datetime or datetime.time is aware.
 
     The concept is defined in Python's docs:
     https://docs.python.org/library/datetime.html#datetime.tzinfo
@@ -71,9 +71,9 @@ def is_aware(value: datetime) -> bool:
     return value.utcoffset() is not None
 
 
-def is_naive(value: datetime) -> bool:
+def is_naive(value: Union[datetime, time]) -> bool:
     """
-    Determine if a given datetime.datetime is naive.
+    Determine if a given datetime.datetime or datetime.time is naive.
 
     The concept is defined in Python's docs:
     https://docs.python.org/library/datetime.html#datetime.tzinfo
