@@ -417,7 +417,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
                 )
                 self.sqls = get_schema_sql(connections.get("default"), safe).split("; ")
         except ImportError:
-            raise test.SkipTest("aiomysql not installed")
+            raise test.SkipTest("asyncmy not installed")
 
     async def test_noid(self):
         await self.init_for("tests.testmodels")

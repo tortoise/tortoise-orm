@@ -13,7 +13,6 @@ from typing import Union
 import pytz
 
 from tortoise import fields
-from tortoise.contrib.postgres.fields import ArrayField
 from tortoise.exceptions import NoValuesFetched, ValidationError
 from tortoise.manager import Manager
 from tortoise.models import Model
@@ -220,12 +219,6 @@ class BooleanFields(Model):
     id = fields.IntField(pk=True)
     boolean = fields.BooleanField()
     boolean_null = fields.BooleanField(null=True)
-
-
-class ArrayFields(Model):
-    id = fields.IntField(pk=True)
-    array = ArrayField()
-    array_null = ArrayField(null=True)
 
 
 class BinaryFields(Model):
