@@ -14,9 +14,9 @@ Added
 ^^^^^
 - Added psycopg backend support.
 - Added a new unified and robust connection management interface to access DB connections which includes support for
-  lazy connection creation and much more. For more details,
-  check out this `PR <https://github.com/tortoise/tortoise-orm/pull/1001>`_
+  lazy connection creation and much more. For more details, check out this `PR <https://github.com/tortoise/tortoise-orm/pull/1001>`_
 - Added `TimeField`. (#1054)
+- Added `ArrayField`.
 Fixed
 ^^^^^
 - Fix `bulk_create` doesn't work correctly with more than 1 update_fields. (#1046)
