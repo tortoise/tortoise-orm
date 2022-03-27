@@ -6,9 +6,9 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.18
+0.19
 ====
-0.18.2
+0.19.0
 ------
 Added
 ^^^^^

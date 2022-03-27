@@ -92,7 +92,7 @@ trio = ["trio (>=0.16)"]
 
 [[package]]
 name = "astroid"
-version = "2.11.1"
+version = "2.11.2"
 description = "An abstract syntax tree for Python with inference support."
 category = "dev"
 optional = false
@@ -121,14 +121,7 @@ version = "0.2.4"
 description = "A fast asyncio MySQL driver"
 category = "main"
 optional = false
-python-versions = "^3.7"
-develop = false
-
-[package.source]
-type = "git"
-url = "https://github.com/long2ice/asyncmy.git"
-reference = "dev"
-resolved_reference = "295fff234b3646458849b8554edfbd7b10df320e"
+python-versions = ">=3.7,<4.0"
 
 [[package]]
 name = "asyncpg"
@@ -1026,14 +1019,14 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "pylint"
-version = "2.13.0"
+version = "2.13.2"
 description = "python code static checker"
 category = "dev"
 optional = false
 python-versions = ">=3.6.2"
 
 [package.dependencies]
-astroid = ">=2.11.0,<=2.12.0-dev0"
+astroid = ">=2.11.2,<=2.12.0-dev0"
 colorama = {version = "*", markers = "sys_platform == \"win32\""}
 dill = ">=0.2"
 isort = ">=4.2.5,<6"
@@ -1073,14 +1066,7 @@ version = "0.1.4"
 description = "Forked from pypika and streamline just for tortoise-orm"
 category = "main"
 optional = false
-python-versions = "^3.7"
-develop = false
-
-[package.source]
-type = "git"
-url = "https://github.com/tortoise/pypika-tortoise.git"
-reference = "main"
-resolved_reference = "8f6e8522c2782cc302cab23ffe2596cf757a4d96"
+python-versions = ">=3.7,<4.0"
 
 [[package]]
 name = "pytest"
@@ -1201,7 +1187,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
 
 [[package]]
 name = "quart"
-version = "0.16.3"
+version = "0.17.0"
 description = "A Python ASGI web microframework with the same API as Flask"
 category = "dev"
 optional = false
@@ -1215,6 +1201,7 @@ hypercorn = ">=0.11.2"
 importlib_metadata = {version = "*", markers = "python_version < \"3.8\""}
 itsdangerous = "*"
 jinja2 = "*"
+markupsafe = "*"
 toml = "*"
 typing_extensions = {version = "*", markers = "python_version < \"3.8\""}
 werkzeug = ">=2.0.0"
@@ -1280,7 +1267,7 @@ idna2008 = ["idna"]
 
 [[package]]
 name = "rodi"
-version = "1.1.2"
+version = "1.1.3"
 description = "Implementation of dependency injection for Python 3"
 category = "dev"
 optional = false
@@ -1776,7 +1763,7 @@ psycopg = ["psycopg"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "64104c5e2eebc5415efd5e3a50ed2b82abd9cad077f9635818474bf0c4a294d9"
+content-hash = "0ad3dadd501c2b3a96c316518aba0b41967135d244d2beb78e48c77009e29931"
 
 [metadata.files]
 aiofiles = [
@@ -1878,14 +1865,28 @@ anyio = [
     {file = "anyio-3.5.0.tar.gz", hash = "sha256:a0aeffe2fb1fdf374a8e4b471444f0f3ac4fb9f5a5b542b48824475e0042a5a6"},
 ]
 astroid = [
-    {file = "astroid-2.11.1-py3-none-any.whl", hash = "sha256:e3ae0984c28b7bae2a107dffbc6e9acecf9b06506322f3465e914405dd652394"},
-    {file = "astroid-2.11.1.tar.gz", hash = "sha256:33f1c15fe9661348a50b7ec6789947089ead2a5de727bb4782d530d9d2fff2c8"},
+    {file = "astroid-2.11.2-py3-none-any.whl", hash = "sha256:cc8cc0d2d916c42d0a7c476c57550a4557a083081976bf42a73414322a6411d9"},
+    {file = "astroid-2.11.2.tar.gz", hash = "sha256:8d0a30fe6481ce919f56690076eafbb2fb649142a89dc874f1ec0e7a011492d0"},
 ]
 async-timeout = [
     {file = "async-timeout-4.0.2.tar.gz", hash = "sha256:2163e1640ddb52b7a8c80d0a67a08587e5d245cc9c553a74a847056bc2976b15"},
     {file = "async_timeout-4.0.2-py3-none-any.whl", hash = "sha256:8ca1e4fcf50d07413d66d1a5e416e42cfdf5851c981d679a09851a6853383b3c"},
 ]
-asyncmy = []
+asyncmy = [
+    {file = "asyncmy-0.2.4-cp310-cp310-macosx_10_16_x86_64.whl", hash = "sha256:191541afca78096b31f0b4d431d41b8c60074649193d4166ef01dfb78113b6b2"},
+    {file = "asyncmy-0.2.4-cp310-cp310-manylinux_2_31_x86_64.whl", hash = "sha256:59c625aa4a43727cb3e7dd55338eba52af900be018552eaf9b5747a7ba29dcc1"},
+    {file = "asyncmy-0.2.4-cp310-cp310-win_amd64.whl", hash = "sha256:e79d139cab4e31d7ec9eac9d49d471c13e5648c2cd3a8212d04bdbedba2cd717"},
+    {file = "asyncmy-0.2.4-cp37-cp37m-macosx_10_16_x86_64.whl", hash = "sha256:30a12e4f11adca65180400ab2b088afe02a43cf0f94c6b76fc329d565f5902c9"},
+    {file = "asyncmy-0.2.4-cp37-cp37m-manylinux_2_31_x86_64.whl", hash = "sha256:7096d3bce1612fcb78117944fd3279e32959c010b483c3eba22abde1a9f8905d"},
+    {file = "asyncmy-0.2.4-cp37-cp37m-win_amd64.whl", hash = "sha256:f38d167d0ce441125174a7357a9e72771b97e35739fd46c517c5f38be0bb2355"},
+    {file = "asyncmy-0.2.4-cp38-cp38-macosx_10_16_x86_64.whl", hash = "sha256:c1002b59ea568c96fc9dc8b3d7744dfcdbc2f7a2c64070844ce5f00d209ae428"},
+    {file = "asyncmy-0.2.4-cp38-cp38-manylinux_2_31_x86_64.whl", hash = "sha256:5712cd74d4bc95d047235744e5c5d14b3e835bcbdd141a2e5c4b2255ca81f2c7"},
+    {file = "asyncmy-0.2.4-cp38-cp38-win_amd64.whl", hash = "sha256:9a55a64d3753d3d0e000ae660ec0ea15f0e314f42cfab0fc43dbfbb7f6ea96ce"},
+    {file = "asyncmy-0.2.4-cp39-cp39-macosx_10_16_x86_64.whl", hash = "sha256:3d7d8cead8abbfe53efc80386302f320a3a1a66b00e0666f15f52a467264ff5b"},
+    {file = "asyncmy-0.2.4-cp39-cp39-manylinux_2_31_x86_64.whl", hash = "sha256:5697237913c2913b94f1908a76c880fb110e35532acfc50fa6578113ce8f4bfb"},
+    {file = "asyncmy-0.2.4-cp39-cp39-win_amd64.whl", hash = "sha256:012a79e4c3045ea2da23bb80d57dc659aad148d0a6b48abacfac31fdc858cf94"},
+    {file = "asyncmy-0.2.4.tar.gz", hash = "sha256:aa0639fcfea7db47e7b1c8cca4e5c30bfd597b8722c3f9df296eaded656758ed"},
+]
 asyncpg = [
     {file = "asyncpg-0.25.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:bf5e3408a14a17d480f36ebaf0401a12ff6ae5457fdf45e4e2775c51cc9517d3"},
     {file = "asyncpg-0.25.0-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:2bc197fc4aca2fd24f60241057998124012469d2e414aed3f992579db0c88e3a"},
@@ -2822,8 +2823,8 @@ pygments = [
     {file = "Pygments-2.11.2.tar.gz", hash = "sha256:4e426f72023d88d03b2fa258de560726ce890ff3b630f88c21cbb8b2503b8c6a"},
 ]
 pylint = [
-    {file = "pylint-2.13.0-py3-none-any.whl", hash = "sha256:ea1692d409487a93cdcc015ddf2fd92f2367fb1193d46ece76df98b6fefc0dda"},
-    {file = "pylint-2.13.0.tar.gz", hash = "sha256:f04508086a0772f1a459b4e9facd02416943b47dda5a98ed79d4d87e709da04f"},
+    {file = "pylint-2.13.2-py3-none-any.whl", hash = "sha256:3cd8eb401c6aa6c66b614d72cf0c54a02d6bf7752aa9890fc41de71030f3c81a"},
+    {file = "pylint-2.13.2.tar.gz", hash = "sha256:0c6dd0e53e6e17f2d0d62660905f3868611e734e9d9b310dc651a4b9f3dc70da"},
 ]
 pymysql = [
     {file = "PyMySQL-0.9.3-py2.py3-none-any.whl", hash = "sha256:3943fbbbc1e902f41daf7f9165519f140c4451c179380677e6a848587042561a"},
@@ -2833,7 +2834,10 @@ pyparsing = [
     {file = "pyparsing-3.0.7-py3-none-any.whl", hash = "sha256:a6c06a88f252e6c322f65faf8f418b16213b51bdfaece0524c1c1bc30c63c484"},
     {file = "pyparsing-3.0.7.tar.gz", hash = "sha256:18ee9022775d270c55187733956460083db60b37d0d0fb357445f3094eed3eea"},
 ]
-pypika-tortoise = []
+pypika-tortoise = [
+    {file = "pypika-tortoise-0.1.4.tar.gz", hash = "sha256:f4b4e6c72fc13f49058181928e66930b59fee988823c8fd01498f95e2ff788ca"},
+    {file = "pypika_tortoise-0.1.4-py3-none-any.whl", hash = "sha256:bdc7e63c88791679a8b3f0b008582b6d3fcd21830650d274db35a7012e7b8bcd"},
+]
 pytest = [
     {file = "pytest-7.1.1-py3-none-any.whl", hash = "sha256:92f723789a8fdd7180b6b06483874feca4c48a5c76968e03bb3e7f806a1869ea"},
     {file = "pytest-7.1.1.tar.gz", hash = "sha256:841132caef6b1ad17a9afde46dc4f6cfa59a05f9555aae5151f73bdf2820ca63"},
@@ -2898,8 +2902,8 @@ pyyaml = [
     {file = "PyYAML-5.4.1.tar.gz", hash = "sha256:607774cbba28732bfa802b54baa7484215f530991055bb562efbed5b2f20a45e"},
 ]
 quart = [
-    {file = "Quart-0.16.3-py3-none-any.whl", hash = "sha256:556d07f24a8789db3b2dca78e0fe764c5a97a75ca800b1b7e5c4cfb7c3da2ea1"},
-    {file = "Quart-0.16.3.tar.gz", hash = "sha256:16521d8cf062461b158433d820fff509f98fb997ae6c28740eda061d9cba7d5e"},
+    {file = "Quart-0.17.0-py3-none-any.whl", hash = "sha256:69480e7384935feff1f50293a8cb70c5d31f568af94ed792d043bb368b50bd50"},
+    {file = "Quart-0.17.0.tar.gz", hash = "sha256:2cf213d8b83fa701a83e3b3125e9102a937cefd1e97e9583f22ee2fa79139640"},
 ]
 readme-renderer = [
     {file = "readme_renderer-34.0-py3-none-any.whl", hash = "sha256:262510fe6aae81ed4e94d8b169077f325614c0b1a45916a80442c6576264a9c2"},
@@ -2918,8 +2922,8 @@ rfc3986 = [
     {file = "rfc3986-2.0.0.tar.gz", hash = "sha256:97aacf9dbd4bfd829baad6e6309fa6573aaf1be3f6fa735c8ab05e46cecb261c"},
 ]
 rodi = [
-    {file = "rodi-1.1.2-py3-none-any.whl", hash = "sha256:a1f5fdcd534bdc0cd7df6fbeddda7aab336baf8e742ffea6ed727d976f63d161"},
-    {file = "rodi-1.1.2.tar.gz", hash = "sha256:c2bde6428ecea9dc7febfca8574f7843bbfebb95c95304cde782978b9edde9b4"},
+    {file = "rodi-1.1.3-py3-none-any.whl", hash = "sha256:d30a34b5dd15200754bccf84cbd57d8be2bcf1da65510b6439d1922c2a185844"},
+    {file = "rodi-1.1.3.tar.gz", hash = "sha256:18bd3efccd5045920a27784ebd5fd01b48e8dbeb5d5dc3d880921ff69153446a"},
 ]
 sanic = [
     {file = "sanic-21.12.1-py3-none-any.whl", hash = "sha256:53230ba1a1081e6b075e58339a47c07d2bf618119fa40ba88c69fe57c99126f1"},
