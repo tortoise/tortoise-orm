@@ -44,7 +44,7 @@ uvloop = { version = "*", markers = "sys_platform != 'win32' and implementation_
 orjson = { version = "*", optional = true }
 asyncpg = { version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
-asyncmy = "^0.2.4"
+asyncmy = { version = "^0.2.5", optional = true }
 psycopg = { extras = ["pool", "binary"], version = "*", optional = true }
 
 [tool.poetry.dev-dependencies]

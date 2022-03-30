@@ -398,18 +398,22 @@ class TimeField(Field, datetime.time):
         self.auto_now = auto_now
         self.auto_now_add = auto_now | auto_now_add
 
-    def to_python_value(self, value: Any) -> Optional[datetime.time]:
+    def to_python_value(self, value: Any) -> Optional[Union[datetime.time, datetime.timedelta]]:
         if value is not None:
             if isinstance(value, str):
                 value = datetime.time.fromisoformat(value)
+            if isinstance(value, datetime.timedelta):
+                return value
             if timezone.is_naive(value):
                 value = value.replace(tzinfo=get_default_timezone())
         self.validate(value)
         return value
 
     def to_db_value(
-        self, value: Optional[datetime.time], instance: "Union[Type[Model], Model]"
-    ) -> Optional[datetime.time]:
+        self,
+        value: Optional[Union[datetime.time, datetime.timedelta]],
+        instance: "Union[Type[Model], Model]",
+    ) -> Optional[Union[datetime.time, datetime.timedelta]]:
 
         # Only do this if it is a Model instance, not class. Test for guaranteed instance var
         if hasattr(instance, "_saved_in_db") and (
@@ -420,6 +424,8 @@ class TimeField(Field, datetime.time):
             setattr(instance, self.model_field_name, now)
             return now
         if value is not None:
+            if isinstance(value, datetime.timedelta):
+                return value
             if get_use_tz():
                 if timezone.is_naive(value):
                     warnings.warn(

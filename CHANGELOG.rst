@@ -8,6 +8,12 @@ Changelog
 
 0.19
 ====
+0.19.1
+------
+Fixed
+^^^^^
+- `TimeField` for `MySQL` will return `datetime.timedelta` object instead of `datetime.time` object.
+
 0.19.0
 ------
 Added
