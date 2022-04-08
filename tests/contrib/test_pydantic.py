@@ -1,6 +1,6 @@
 import copy
 
-from tests.testmodels import Address, Employee, Event, JSONFields, Reporter, Team, Tournament
+from tests.testmodels import Address, Employee, Event, JSONFields, Reporter, Team, Tournament, User
 from tortoise.contrib import test
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 
@@ -1290,5 +1290,82 @@ class TestPydanticCycle(test.TestCase):
                 ],
                 "name_length": 4,
                 "team_size": 2,
+            },
+        )
+
+
+class TestPydanticUpdate(test.TestCase):
+    def setUp(self) -> None:
+        self.UserCreate_Pydantic = pydantic_model_creator(
+            User,
+            name="UserCreate",
+            exclude_readonly=True,
+        )
+        self.UserUpdate_Pydantic = pydantic_model_creator(
+            User,
+            name="UserUpdate",
+            exclude_readonly=True,
+            optional=("username", "mail", "bio"),
+        )
+
+    def test_create_schema(self):
+        self.assertEqual(
+            self.UserCreate_Pydantic.schema(),
+            {
+                "title": "UserCreate",
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "title": "Username",
+                        "maxLength": 32,
+                        "type": "string",
+                    },
+                    "mail": {
+                        "title": "Mail",
+                        "maxLength": 64,
+                        "type": "string",
+                    },
+                    "bio": {
+                        "title": "Bio",
+                        "type": "string",
+                    },
+                },
+                "required": [
+                    "username",
+                    "mail",
+                    "bio",
+                ],
+                "additionalProperties": False,
+            },
+        )
+
+    def test_update_schema(self):
+        """All fields of this schema should be optional.
+        This demonstrates an example PATCH endpoint in an API, where a client may want
+        to update a single field of a model without modifying the rest.
+        """
+
+        self.assertEqual(
+            self.UserUpdate_Pydantic.schema(),
+            {
+                "title": "UserUpdate",
+                "type": "object",
+                "properties": {
+                    "username": {
+                        "title": "Username",
+                        "maxLength": 32,
+                        "type": "string",
+                    },
+                    "mail": {
+                        "title": "Mail",
+                        "maxLength": 64,
+                        "type": "string",
+                    },
+                    "bio": {
+                        "title": "Bio",
+                        "type": "string",
+                    },
+                },
+                "additionalProperties": False,
             },
         )

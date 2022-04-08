@@ -121,6 +121,7 @@ def pydantic_model_creator(
     exclude: Tuple[str, ...] = (),
     include: Tuple[str, ...] = (),
     computed: Tuple[str, ...] = (),
+    optional: Tuple[str, ...] = (),
     allow_cycles: Optional[bool] = None,
     sort_alphabetically: Optional[bool] = None,
     _stack: tuple = (),
@@ -135,6 +136,7 @@ def pydantic_model_creator(
     :param exclude: Extra fields to exclude from the provided model.
     :param include: Extra fields to include from the provided model.
     :param computed: Extra computed fields to include from the provided model.
+    :param optional: Extra optional fields for the provided model.
     :param allow_cycles: Do we allow any cycles in the generated model?
         This is only useful for recursive/self-referential models.
 
@@ -371,7 +373,7 @@ def pydantic_model_creator(
             ptype = fdesc["python_type"]
             if fdesc.get("nullable"):
                 fconfig["nullable"] = True
-            if fdesc.get("nullable") or field_default is not None:
+            if fdesc.get("nullable") or field_default is not None or fname in optional:
                 ptype = Optional[ptype]
             if not (exclude_readonly and fdesc["constraints"].get("readOnly") is True):
                 pannotations[fname] = annotation or ptype
