@@ -121,6 +121,7 @@ class TestBasic(test.TestCase):
                         "constraints": {"readOnly": True},
                         "db_field_types": {
                             "": "TIMESTAMP",
+                            "mssql": "DATETIME",
                             "mysql": "DATETIME(6)",
                             "postgres": "TIMESTAMPTZ",
                         },
@@ -257,6 +258,7 @@ class TestBasic(test.TestCase):
                         "db_column": "created_at",
                         "db_field_types": {
                             "": "TIMESTAMP",
+                            "mssql": "DATETIME",
                             "mysql": "DATETIME(6)",
                             "postgres": "TIMESTAMPTZ",
                         },
