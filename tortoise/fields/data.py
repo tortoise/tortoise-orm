@@ -94,6 +94,9 @@ class IntField(Field, int):
     class _db_mysql:
         GENERATED_SQL = "INT NOT NULL PRIMARY KEY AUTO_INCREMENT"
 
+    class _db_mssql:
+        GENERATED_SQL = "INT IDENTITY(1,1) NOT NULL PRIMARY KEY"
+
 
 class BigIntField(Field, int):
     """
@@ -127,6 +130,9 @@ class BigIntField(Field, int):
     class _db_mysql:
         GENERATED_SQL = "BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT"
 
+    class _db_mssql:
+        GENERATED_SQL = "BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY"
+
 
 class SmallIntField(Field, int):
     """
@@ -159,6 +165,9 @@ class SmallIntField(Field, int):
 
     class _db_mysql:
         GENERATED_SQL = "SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT"
+
+    class _db_mssql:
+        GENERATED_SQL = "SMALLINT IDENTITY(1,1) NOT NULL PRIMARY KEY"
 
 
 class CharField(Field, str):  # type: ignore
@@ -217,6 +226,9 @@ class TextField(Field, str):  # type: ignore
 
     class _db_mysql:
         SQL_TYPE = "LONGTEXT"
+
+    class _db_mssql:
+        SQL_TYPE = "VARCHAR(MAX)"
 
 
 class BooleanField(Field):
@@ -296,6 +308,9 @@ class DatetimeField(Field, datetime.datetime):
 
     class _db_postgres:
         SQL_TYPE = "TIMESTAMPTZ"
+
+    class _db_mssql:
+        SQL_TYPE = "DATETIME"
 
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any) -> None:
         if auto_now_add and auto_now:

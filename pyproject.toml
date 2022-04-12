@@ -46,6 +46,7 @@ asyncpg = { version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
 asyncmy = { version = "^0.2.5", optional = true }
 psycopg = { extras = ["pool", "binary"], version = "*", optional = true }
+aioodbc = { version = "*", optional = true }
 
 [tool.poetry.dev-dependencies]
 # Linter tools
@@ -96,6 +97,7 @@ asyncpg = ["asyncpg"]
 psycopg = ["psycopg"]
 aiomysql = ["aiomysql"]
 asyncmy = ["asyncmy"]
+aioodbc = ["aioodbc"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -79,6 +79,20 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
             "echo": bool,
             "no_delay": bool,
             "use_unicode": bool,
+            "pool_recycle": int,
+        },
+    },
+    "mssql": {
+        "engine": "tortoise.backends.mssql",
+        "vmap": {
+            "path": "dsn",
+        },
+        "defaults": {},
+        "cast": {
+            "minsize": int,
+            "maxsize": int,
+            "echo": bool,
+            "pool_recycle": int,
         },
     },
 }

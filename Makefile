@@ -18,7 +18,7 @@ up:
 	@poetry update
 
 deps:
-	@poetry install -E asyncpg -E aiomysql -E asyncmy -E accel -E psycopg
+	@poetry install -E asyncpg -E aiomysql -E asyncmy -E accel -E psycopg -E aioodbc
 
 check: deps build
 ifneq ($(shell which black),)
@@ -57,6 +57,9 @@ test_mysql_myisam:
 
 test_mysql:
 	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}" pytest $(pytest_opts) --cov-append --cov-report=
+
+test_mssql:
+	$(py_warn) TORTOISE_TEST_DB="mssql:///DRIVER=$(TORTOISE_ODBC_DRIVER);Server=localhost;Database=test_\{\};UID=sa;PWD=$(TORTOISE_MSSQL_PASS);TrustServerCertificate=YES;"  pytest $(pytest_opts) --cov-append --cov-report=
 
 _testall: test_sqlite test_postgres_asyncpg test_postgres_psycopg test_mysql_myisam test_mysql
 
