@@ -50,10 +50,9 @@ psycopg = { extras = ["pool", "binary"], version = "*", optional = true }
 [tool.poetry.dev-dependencies]
 # Linter tools
 mypy = "*"
-importlib_metadata = "*" # required by flake8
 flake8 = "*"
-flake8-isort = "*"
 flake8-comprehensions = "*"
+pyproject-flake8 = "*"
 darglint = "*"
 pylint = "*"
 pygments = "*"
@@ -104,4 +103,73 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 100
-target-version = ['py36', 'py37', 'py38', 'py39']
+target-version = ["py36", "py37", "py38", "py39"]
+
+[tool.mypy]
+pretty = true
+ignore_missing_imports = true
+check_untyped_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_return_any = false
+warn_unused_configs = true
+warn_unreachable = true
+allow_redefinition = true
+strict_equality = true
+show_error_context = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+check_untyped_defs = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+warn_unreachable = false
+
+[[tool.mypy.overrides]]
+module = ["examples.*"]
+check_untyped_defs = false
+disallow_untyped_calls = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+module = ["tortoise.contrib.test.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+module = ["tortoise.contrib.sanic.*"]
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ["conftest"]
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ["tortoise.backends.base.client"]
+disallow_untyped_defs = false
+
+[tool.flake8]
+ignore = "E501,W503,DAR101,DAR201,DAR402"
+max-line-length = 100
+per-file-ignores = [
+    "tortoise/__init__.py:F401",
+    "tortoise/fields/__init__.py:F401",
+    "tortoise/backends/base/client.py:DAR401,DAR202",
+    "tortoise/contrib/test/__init__.py:DAR401",
+]
+docstring_style = "sphinx"
+
+[tool.coverage.run]
+branch = true
+source = "tortoise"
+
+[tool.coverage.report]
+show_missing = true

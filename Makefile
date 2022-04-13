@@ -24,7 +24,7 @@ check: deps build
 ifneq ($(shell which black),)
 	black --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
-	flake8 $(checkfiles)
+	pflake8 $(checkfiles)
 	mypy $(checkfiles)
 	#pylint -d C,W,R $(checkfiles)
 	bandit -r $(checkfiles)
