@@ -10,6 +10,9 @@ Changelog
 ====
 0.19.1
 ------
+Added
+^^^^^
+- Added `Postgres` partial indexes support. (#1103)
 Fixed
 ^^^^^
 - `TimeField` for `MySQL` will return `datetime.timedelta` object instead of `datetime.time` object.
