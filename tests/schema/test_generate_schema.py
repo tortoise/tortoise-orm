@@ -1076,7 +1076,6 @@ CREATE INDEX "idx_index_partial_c5be6a" ON "index" USING  ("partial") WHERE id =
     async def test_index_safe(self):
         await self.init_for("tests.schema.models_postgres_index")
         sql = get_schema_sql(connections.get("default"), safe=True)
-        print(sql)
         self.assertEqual(
             sql,
             """CREATE TABLE IF NOT EXISTS "index" (

@@ -6,11 +6,12 @@ Databases
 
 Tortoise currently supports the following databases:
 
-* SQLite
+* SQLite (using ``aiosqlite``）
 * PostgreSQL >= 9.4 (using ``asyncpg`` or ``psycopg``)
-* MySQL/MariaDB (using ``aiomysql``)
+* MySQL/MariaDB (using ``asyncmy``)
+* Microsoft SQL Server (using ``asyncodbc``)
 
-To use, please ensure that ``asyncpg``, ``psycopg`` and/or ``aiomysql`` is installed.
+To use, please ensure that corresponding asyncio driver is installed.
 
 .. _db_url:
 
@@ -46,6 +47,8 @@ The supported ``DB_TYPE``:
     - ``asyncpg``: :samp:`asyncpg://postgres:pass@db.host:5432/somedb`
 ``mysql``:
     Typically in the form of :samp:`mysql://myuser:mypass@db.host:3306/somedb`
+``mssql``:
+    Typically in the form of :samp:`mssql://myuser:mypass@db.host:1433/somedb?driver=the odbc driver`
 
 Capabilities
 ============
@@ -172,6 +175,41 @@ MySQL optional parameters are pass-though parameters to the driver, see `here <h
     Either ``True`` or a custom SSL context for self-signed certificates. See :ref:`db_ssl` for more info.
 
 .. _db_ssl:
+
+MSSQL
+=====
+
+DB URL is typically in the form of :samp:`mssql://myuser:mypass@db.host:1433/somedb?driver=the odbc driver`
+
+Required Parameters
+-------------------
+
+``user``:
+    Username to connect with.
+``password``:
+    Password for username.
+``host``:
+    Network host that database is available at.
+``port``:
+    Network port that database is available at. (defaults to ``1433``)
+``database``:
+    Database to use.
+``driver``:
+    The ODBC driver to use.
+
+Optional parameters:
+--------------------
+
+MSSQL optional parameters are pass-though parameters to the driver, see `here <https://github.com/tortoise/asyncodbc>`__ for more details.
+
+``minsize`` (defaults to ``1``):
+    Minimum connection pool size
+``maxsize`` (defaults to ``10``):
+    Maximum connection pool size
+``pool_recycle`` (defaults to ``-1``):
+    Pool recycle timeout in seconds.
+``echo`` (defaults to ``False``):
+    Set to `True`` to echo SQL queries (debug only)
 
 Passing in custom SSL Certificates
 ==================================

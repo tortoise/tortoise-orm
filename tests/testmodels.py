@@ -475,7 +475,7 @@ class Employee(Model):
     team_members: fields.ReverseRelation["Employee"]
 
     talks_to: fields.ManyToManyRelation["Employee"] = fields.ManyToManyField(
-        "models.Employee", related_name="gets_talked_to"
+        "models.Employee", related_name="gets_talked_to", on_delete=fields.NO_ACTION
     )
     gets_talked_to: fields.ManyToManyRelation["Employee"]
 
@@ -575,7 +575,10 @@ class StraightFields(Model):
     o2o_rev: fields.Field
 
     rel_to: fields.ManyToManyRelation["StraightFields"] = fields.ManyToManyField(
-        "models.StraightFields", related_name="rel_from", description="M2M to myself"
+        "models.StraightFields",
+        related_name="rel_from",
+        description="M2M to myself",
+        on_delete=fields.NO_ACTION,
     )
     rel_from: fields.ManyToManyRelation["StraightFields"]
 
@@ -623,6 +626,7 @@ class SourceFields(Model):
         forward_key="sts_forward",
         backward_key="backward_sts",
         description="M2M to myself",
+        on_delete=fields.NO_ACTION,
     )
     rel_from: fields.ManyToManyRelation["SourceFields"]
 
