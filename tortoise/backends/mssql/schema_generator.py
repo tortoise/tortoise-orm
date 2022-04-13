@@ -2,31 +2,29 @@ from typing import TYPE_CHECKING, Any, List, Type
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
-from tortoise.exceptions import OperationalError
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.backends.mssql.client import MSSQLClient
+    from tortoise.backends.mssql import MSSQLClient
     from tortoise.models import Model
 
 
 class MSSQLSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "mssql"
-    TABLE_CREATE_TEMPLATE = "CREATE TABLE {table_name} ({fields}){extra}{comment};"
-    INDEX_CREATE_TEMPLATE = "KEY {index_name} ({fields})"
-    UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE KEY {index_name} ({fields})"
-    FIELD_TEMPLATE = "{name} {type} {nullable} {unique}{primary}{comment}{default}"
-    GENERATED_PK_TEMPLATE = "{field_name} {generated_sql}{comment}"
+    TABLE_CREATE_TEMPLATE = "CREATE TABLE [{table_name}] ({fields}){extra};"
+    FIELD_TEMPLATE = "[{name}] {type} {nullable} {unique}{primary}{default}"
+    INDEX_CREATE_TEMPLATE = "CREATE INDEX [{index_name}] ON [{table_name}] ({fields});"
+    GENERATED_PK_TEMPLATE = "[{field_name}] {generated_sql}"
     FK_TEMPLATE = (
-        "{constraint}FOREIGN KEY ({db_column})"
-        " REFERENCES {table} ({field}) ON DELETE {on_delete}"
+        "{constraint}FOREIGN KEY ([{db_column}])"
+        " REFERENCES [{table}] ([{field}]) ON DELETE {on_delete}"
     )
     M2M_TABLE_TEMPLATE = (
-        "CREATE TABLE {table_name} (\n"
+        "CREATE TABLE [{table_name}] (\n"
         "    {backward_key} {backward_type} NOT NULL,\n"
         "    {forward_key} {forward_type} NOT NULL,\n"
         "    {backward_fk},\n"
         "    {forward_fk}\n"
-        "){extra}{comment};"
+        "){extra};"
     )
 
     def __init__(self, client: "MSSQLClient") -> None:
@@ -35,13 +33,13 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
         self._foreign_keys = []  # type: List[str]
 
     def quote(self, val: str) -> str:
-        return f"{val}"
+        return f"[{val}]"
 
     def _table_comment_generator(self, table: str, comment: str) -> str:
-        raise OperationalError("MSSQL does not support table comments")
+        return ""
 
     def _column_comment_generator(self, table: str, column: str, comment: str) -> str:
-        raise OperationalError("MSSQL does not support column comments")
+        return ""
 
     def _column_default_generator(
         self,
@@ -62,17 +60,10 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
         return encoders.get(type(default))(default)  # type: ignore
 
     def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
-        """Get index SQLs, but keep them for ourselves"""
-        self._field_indexes.append(
-            self.INDEX_CREATE_TEMPLATE.format(
-                exists="IF NOT EXISTS " if safe else "",
-                index_name=self._generate_index_name("idx", model, field_names),
-                table_name=model._meta.db_table,
-                fields=", ".join(self.quote(f) for f in field_names),
-            )
-        )
+        return super(MSSQLSchemaGenerator, self)._get_index_sql(model, field_names, False)
 
-        return ""
+    def _get_table_sql(self, model: "Type[Model]", safe: bool = True) -> dict:
+        return super(MSSQLSchemaGenerator, self)._get_table_sql(model, False)
 
     def _create_fk_string(
         self,
@@ -83,7 +74,7 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
         on_delete: str,
         comment: str,
     ) -> str:
-        constraint = f"CONSTRAINT {constraint_name} " if constraint_name else ""
+        constraint = f"CONSTRAINT [{constraint_name}] " if constraint_name else ""
         fk = self.FK_TEMPLATE.format(
             constraint=constraint,
             db_column=db_column,
@@ -93,11 +84,5 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
         )
         if constraint_name:
             self._foreign_keys.append(fk)
-            return comment
+            return ""
         return fk
-
-    def _get_inner_statements(self) -> List[str]:
-        extra = self._foreign_keys + list(dict.fromkeys(self._field_indexes))
-        self._field_indexes.clear()
-        self._foreign_keys.clear()
-        return extra

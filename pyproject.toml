@@ -46,7 +46,7 @@ asyncpg = { version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
 asyncmy = { version = "^0.2.5", optional = true }
 psycopg = { extras = ["pool", "binary"], version = "*", optional = true }
-aioodbc = { version = "*", optional = true }
+asyncodbc = { git = "https://github.com/tortoise/asyncodbc.git", optional = true, branch = "main" }
 
 [tool.poetry.dev-dependencies]
 # Linter tools
@@ -97,7 +97,7 @@ asyncpg = ["asyncpg"]
 psycopg = ["psycopg"]
 aiomysql = ["aiomysql"]
 asyncmy = ["asyncmy"]
-aioodbc = ["aioodbc"]
+asyncodbc = ["asyncodbc"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -171,7 +171,7 @@ docstring_style = "sphinx"
 
 [tool.coverage.run]
 branch = true
-source = "tortoise"
+source = ["tortoise"]
 
 [tool.coverage.report]
 show_missing = true

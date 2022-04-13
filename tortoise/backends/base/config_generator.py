@@ -85,9 +85,13 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
     "mssql": {
         "engine": "tortoise.backends.mssql",
         "vmap": {
-            "path": "dsn",
+            "path": "database",
+            "hostname": "host",
+            "port": "port",
+            "username": "user",
+            "password": "password",
         },
-        "defaults": {},
+        "defaults": {"port": 1433},
         "cast": {
             "minsize": int,
             "maxsize": int,

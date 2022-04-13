@@ -228,7 +228,7 @@ class TextField(Field, str):  # type: ignore
         SQL_TYPE = "LONGTEXT"
 
     class _db_mssql:
-        SQL_TYPE = "VARCHAR(MAX)"
+        SQL_TYPE = "NVARCHAR(MAX)"
 
 
 class BooleanField(Field):
@@ -242,6 +242,9 @@ class BooleanField(Field):
 
     class _db_sqlite:
         SQL_TYPE = "INT"
+
+    class _db_mssql:
+        SQL_TYPE = "BIT"
 
 
 class DecimalField(Field, Decimal):
@@ -520,6 +523,9 @@ class JSONField(Field, dict, list):  # type: ignore
     class _db_postgres:
         SQL_TYPE = "JSONB"
 
+    class _db_mssql:
+        SQL_TYPE = "NVARCHAR(MAX)"
+
     def __init__(
         self,
         encoder: JsonDumpsFunc = JSON_DUMPS,
@@ -602,6 +608,9 @@ class BinaryField(Field, bytes):  # type: ignore
 
     class _db_mysql:
         SQL_TYPE = "LONGBLOB"
+
+    class _db_mssql:
+        SQL_TYPE = "BINARY"
 
 
 class IntEnumFieldInstance(SmallIntField):
