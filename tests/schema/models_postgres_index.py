@@ -6,6 +6,7 @@ from tortoise.contrib.postgres.indexes import (
     GinIndex,
     GistIndex,
     HashIndex,
+    PostgreSQLIndex,
     SpGistIndex,
 )
 
@@ -17,6 +18,7 @@ class Index(Model):
     gist = TSVectorField()
     sp_gist = fields.CharField(max_length=200)
     hash = fields.CharField(max_length=200)
+    partial = fields.CharField(max_length=200)
 
     class Meta:
         indexes = [
@@ -26,4 +28,5 @@ class Index(Model):
             GistIndex(fields={"gist"}),
             SpGistIndex(fields={"sp_gist"}),
             HashIndex(fields={"hash"}),
+            PostgreSQLIndex(fields={"partial"}, condition={"id": 1}),
         ]
