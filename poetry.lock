@@ -126,21 +126,14 @@ python-versions = ">=3.7,<4.0"
 
 [[package]]
 name = "asyncodbc"
-version = "0.3.3"
+version = "0.1.0"
 description = "ODBC driver for asyncio."
 category = "main"
 optional = true
 python-versions = ">=3.5"
-develop = false
 
 [package.dependencies]
 pyodbc = "*"
-
-[package.source]
-type = "git"
-url = "https://github.com/tortoise/asyncodbc.git"
-reference = "main"
-resolved_reference = "03372c75f530a30bd29712e74f7b561256cf99d6"
 
 [[package]]
 name = "asyncpg"
@@ -1788,7 +1781,7 @@ psycopg = ["psycopg"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "c91b1f11e2ac60ff5db31f39a1fc20bfaa0c74b9a7aad76f9814cfe5cf4efb13"
+content-hash = "37a9d6db0e95620e1f2849695feacdceb8a13aa03473958e7701af8089d531ef"
 
 [metadata.files]
 aiofiles = [
@@ -1912,7 +1905,9 @@ asyncmy = [
     {file = "asyncmy-0.2.5-cp39-cp39-win_amd64.whl", hash = "sha256:f5dcc1a29d608cc5270f37328253032c554321b85bcf5653f1affa01f185c29c"},
     {file = "asyncmy-0.2.5.tar.gz", hash = "sha256:cf3ef3d1ada385d231f23fffcbf1fe040bae8575b187746633fbef6e7cff2844"},
 ]
-asyncodbc = []
+asyncodbc = [
+    {file = "asyncodbc-0.1.0-py3-none-any.whl", hash = "sha256:e055e4dd2d0e231e986647af67da96d5e32d5419682aef64d05f06718ff7aae2"},
+]
 asyncpg = [
     {file = "asyncpg-0.25.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:bf5e3408a14a17d480f36ebaf0401a12ff6ae5457fdf45e4e2775c51cc9517d3"},
     {file = "asyncpg-0.25.0-cp310-cp310-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:2bc197fc4aca2fd24f60241057998124012469d2e414aed3f992579db0c88e3a"},
