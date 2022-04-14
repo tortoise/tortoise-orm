@@ -13,7 +13,7 @@ Changelog
 Added
 ^^^^^
 - Added `Postgres` partial indexes support. (#1103)
-- Added `Microsoft SQL Server` support, powered by `asyncodbc <https://github.com/tortoise/asyncodbc>`_, note that which is not fully tested.
+- Added `Microsoft SQL Server`/`Oracle` support, powered by `asyncodbc <https://github.com/tortoise/asyncodbc>`_, note that which is **not fully tested**.
 Fixed
 ^^^^^
 - `TimeField` for `MySQL` will return `datetime.timedelta` object instead of `datetime.time` object.

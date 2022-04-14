@@ -176,10 +176,10 @@ MySQL optional parameters are pass-though parameters to the driver, see `here <h
 
 .. _db_ssl:
 
-MSSQL
-=====
+MSSQL/Oracle
+============
 
-DB URL is typically in the form of :samp:`mssql://myuser:mypass@db.host:1433/somedb?driver=the odbc driver`
+DB URL is typically in the form of :samp:`mssql or oracle://myuser:mypass@db.host:1433/somedb?driver=the odbc driver`
 
 Required Parameters
 -------------------
@@ -200,7 +200,7 @@ Required Parameters
 Optional parameters:
 --------------------
 
-MSSQL optional parameters are pass-though parameters to the driver, see `here <https://github.com/tortoise/asyncodbc>`__ for more details.
+MSSQL/Oracle optional parameters are pass-though parameters to the driver, see `here <https://github.com/tortoise/asyncodbc>`__ for more details.
 
 ``minsize`` (defaults to ``1``):
     Minimum connection pool size

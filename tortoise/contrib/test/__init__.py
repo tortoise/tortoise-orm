@@ -317,19 +317,19 @@ class TestCase(TruncationTestCase):
 
     async def asyncSetUp(self) -> None:
         await super(TestCase, self).asyncSetUp()
-        self.__db__ = connections.get("models")
-        self.__transaction__ = TransactionTestContext(self.__db__._in_transaction().connection)
-        await self.__transaction__.__aenter__()  # type: ignore
+        self._db = connections.get("models")
+        self._transaction = TransactionTestContext(self._db._in_transaction().connection)
+        await self._transaction.__aenter__()  # type: ignore
 
     async def asyncTearDown(self) -> None:
-        await self.__transaction__.__aexit__(None, None, None)
+        await self._transaction.__aexit__(None, None, None)
         await super(TestCase, self).asyncTearDown()
 
     async def _setUpDB(self) -> None:
         await super(TestCase, self)._setUpDB()
 
     async def _tearDownDB(self) -> None:
-        if self.__db__.capabilities.supports_transactions:
+        if self._db.capabilities.supports_transactions:
             _restore_default()
         else:
             await super()._tearDownDB()

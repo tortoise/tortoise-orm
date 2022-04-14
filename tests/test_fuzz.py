@@ -98,7 +98,7 @@ class TestFuzz(test.TestCase):
     async def test_char_fuzz(self):
         for char in DODGY_STRINGS:
             # print(repr(char))
-            if "\x00" in char and self.__db__.capabilities.dialect == "postgres":
+            if "\x00" in char and self._db.capabilities.dialect == "postgres":
                 # PostgreSQL doesn't support null values as text. Ever. So skip these.
                 continue
 
