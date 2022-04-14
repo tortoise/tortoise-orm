@@ -76,13 +76,13 @@ You can also install with your db driver (`aiosqlite` is builtin):
     pip install tortoise-orm[asyncpg]
 
 
-For MySQL:
+For `MySQL`:
 
 .. code-block:: bash
 
     pip install tortoise-orm[asyncmy]
 
-For Microsoft SQL Server (**not fully tested**):
+For `Microsoft SQL Server`/`Oracle` (**not fully tested**):
 
 .. code-block:: bash
 
@@ -150,10 +150,10 @@ Here we create a connection to an SQLite database in the local directory called 
 
 Tortoise ORM currently supports the following databases:
 
-* SQLite (requires ``aiosqlite``)
-* PostgreSQL (requires ``asyncpg``)
-* MySQL (requires ``asyncmy``)
-* Microsoft SQL Server (requires ``asyncodbc``)
+* `SQLite` (requires ``aiosqlite``)
+* `PostgreSQL` (requires ``asyncpg``)
+* `MySQL` (requires ``asyncmy``)
+* `Microsoft SQL Server`/`Oracle` (requires ``asyncodbc``)
 
 ``generate_schema`` generates the schema on an empty database. Tortoise generates schemas in safe mode by default which
 includes the ``IF NOT EXISTS`` clause, so you may include it in your main code.

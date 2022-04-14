@@ -7,7 +7,7 @@ from tortoise.models import Model
 
 class Event(Model):
     id = fields.IntField(pk=True)
-    name = fields.TextField()
+    name = fields.CharField(max_length=200)
     datetime = fields.DatetimeField(null=True)
 
     class Meta:
@@ -18,8 +18,11 @@ class Event(Model):
 
 
 async def run():
-    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
-    await Tortoise.generate_schemas()
+    await Tortoise.init(
+        db_url="oracle://test:123456@127.0.0.1:1521/test?driver=Oracle",
+        modules={"models": ["__main__"]},
+    )
+    # await Tortoise.generate_schemas()
 
     event = await Event.create(name="Test")
     await Event.filter(id=event.id).update(name="Updated name")

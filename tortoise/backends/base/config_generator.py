@@ -10,6 +10,8 @@ urlparse.uses_netloc.append("asyncpg")
 urlparse.uses_netloc.append("psycopg")
 urlparse.uses_netloc.append("sqlite")
 urlparse.uses_netloc.append("mysql")
+urlparse.uses_netloc.append("oracle")
+urlparse.uses_netloc.append("mssql")
 DB_LOOKUP: Dict[str, Dict[str, Any]] = {
     "psycopg": {
         "engine": "tortoise.backends.psycopg",
@@ -92,6 +94,23 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
             "password": "password",
         },
         "defaults": {"port": 1433},
+        "cast": {
+            "minsize": int,
+            "maxsize": int,
+            "echo": bool,
+            "pool_recycle": int,
+        },
+    },
+    "oracle": {
+        "engine": "tortoise.backends.oracle",
+        "vmap": {
+            "path": "database",
+            "hostname": "host",
+            "port": "port",
+            "username": "user",
+            "password": "password",
+        },
+        "defaults": {"port": 1521},
         "cast": {
             "minsize": int,
             "maxsize": int,

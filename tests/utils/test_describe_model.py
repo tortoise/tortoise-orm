@@ -1319,6 +1319,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "db_field_types": {
                             "": "JSON",
                             "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
                         "python_type": "Union[dict, list]",
@@ -1338,6 +1339,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "db_field_types": {
                             "": "JSON",
                             "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
                         "python_type": "Union[dict, list]",
@@ -1357,6 +1359,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "db_field_types": {
                             "": "JSON",
                             "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
                         "python_type": "Union[dict, list]",
@@ -1376,6 +1379,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "db_field_types": {
                             "": "JSON",
                             "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
                         "python_type": "Union[dict, list]",
@@ -1434,6 +1438,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "db_field_types": {
                             "": "JSON",
                             "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
                         "python_type": Union[dict, list],
@@ -1453,6 +1458,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "db_field_types": {
                             "": "JSON",
                             "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
                         "python_type": Union[dict, list],
@@ -1472,6 +1478,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "db_field_types": {
                             "": "JSON",
                             "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
                         "python_type": Union[dict, list],
@@ -1491,6 +1498,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "db_field_types": {
                             "": "JSON",
                             "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
                         "python_type": Union[dict, list],
