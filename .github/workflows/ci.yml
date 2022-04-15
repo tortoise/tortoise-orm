@@ -60,8 +60,8 @@ jobs:
         run: make deps
       - name: Install ODBC driver
         run: |
-          curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-          curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list > /etc/apt/sources.list.d/mssql-release.list
+          sudo curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+          sudo curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list > /etc/apt/sources.list.d/mssql-release.list
           sudo apt-get update
           ACCEPT_EULA=Y sudo apt-get install -y msodbcsql18
       - name: Run ci
