@@ -31,12 +31,12 @@ jobs:
           - 1433:1433
         env:
           ACCEPT_EULA: Y
-          SA_PASSWORD: TORTOISE-ORM
+          SA_PASSWORD: Abcd12345678
     env:
       TORTOISE_TEST_MODULES: tests.testmodels
       TORTOISE_MYSQL_PASS: 123456
       TORTOISE_POSTGRES_PASS: 123456
-      TORTOISE_MSSQL_PASS: TORTOISE-ORM
+      TORTOISE_MSSQL_PASS: Abcd12345678
       TORTOISE_MSSQL_DRIVER: ODBC Driver 18 for SQL Server
     strategy:
       matrix:
