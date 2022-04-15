@@ -33,7 +33,7 @@ jobs:
           ACCEPT_EULA: Y
           SA_PASSWORD: TORTOISE-ORM
         options: >-
-          --health-cmd="/opt/mssql-tools/bin/sqlcmd -U sa -P $SA_PASSWORD -Q 'SELECT 1' -b -o /dev/null"
+          --health-cmd="/opt/mssql-tools/bin/sqlcmd -U sa -P 'TORTOISE-ORM' -Q 'SELECT 1' -b -o /dev/null"
           --health-interval 10s
           --health-timeout 5s
           --health-start-period 20s
