@@ -2,10 +2,10 @@ from typing import Optional, Set
 
 from pypika.terms import Term, ValueWrapper
 
-from tortoise.indexes import Index
+from tortoise.indexes import PartialIndex
 
 
-class PostgreSQLIndex(Index):
+class PostgreSQLIndex(PartialIndex):
     INDEX_CREATE_TEMPLATE = (
         "CREATE INDEX {exists}{index_name} ON {table_name} USING{index_type}({fields}){extra};"
     )

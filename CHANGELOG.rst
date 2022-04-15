@@ -12,7 +12,7 @@ Changelog
 ------
 Added
 ^^^^^
-- Added `Postgres` partial indexes support. (#1103)
+- Added `Postgres`/`SQLite` partial indexes support. (#1103)
 - Added `Microsoft SQL Server`/`Oracle` support, powered by `asyncodbc <https://github.com/tortoise/asyncodbc>`_, note that which is **not fully tested**.
 Fixed
 ^^^^^
