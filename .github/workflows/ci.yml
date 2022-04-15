@@ -32,7 +32,7 @@ jobs:
         env:
           ACCEPT_EULA: Y
           SA_PASSWORD: TORTOISE-ORM
-        options: --health-cmd="/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'TORTOISE-ORM' -Q 'SELECT 1' -b -o /dev/null" --health-interval 10s --health-timeout 5s --health-retries 5
+        options: --health-cmd="/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'TORTOISE-ORM' -Q 'SELECT 1' -b -C -o /dev/null" --health-interval 10s --health-timeout 5s --health-retries 5
     env:
       TORTOISE_TEST_MODULES: tests.testmodels
       TORTOISE_MYSQL_PASS: 123456
