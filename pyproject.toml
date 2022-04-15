@@ -63,6 +63,7 @@ black = "*"
 coveralls = "*"
 pytest = "*"
 pytest-xdist = "*"
+pytest-sugar = "*"
 pytest-cov = "*"
 # Pypi
 twine = "*"

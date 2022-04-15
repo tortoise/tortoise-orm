@@ -2,6 +2,7 @@ import datetime
 
 from tests.testmodels import DatetimeFields, Event, IntFields, Reporter, Team, Tournament
 from tortoise.contrib import test
+from tortoise.contrib.test.condition import NotEQ
 from tortoise.expressions import F, Q
 from tortoise.functions import Coalesce, Count, Length, Lower, Max, Trim, Upper
 
@@ -299,6 +300,7 @@ class TestFiltering(test.TestCase):
         self.assertEqual(len(tournaments), 1)
         self.assertSetEqual({(t.name, t.trimmed_name) for t in tournaments}, {("  1 ", "1")})
 
+    @test.requireCapability(dialect=NotEQ("mssql"))
     async def test_filter_by_aggregation_field_length(self):
         await Tournament.create(name="12345")
         await Tournament.create(name="123")
@@ -343,6 +345,7 @@ class TestFiltering(test.TestCase):
         self.assertEqual(len(ints), 2)
         self.assertSetEqual({i.clean_intnum_null for i in ints}, {10, 4})
 
+    @test.requireCapability(dialect=NotEQ("mssql"))
     async def test_filter_by_aggregation_field_comparison_length(self):
         t1 = await Tournament.create(name="Tournament")
         await Event.create(name="event1", tournament=t1)

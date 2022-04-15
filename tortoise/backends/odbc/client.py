@@ -37,7 +37,6 @@ def translate_exceptions(func: F) -> F:
             pyodbc.DataError,
             pyodbc.InternalError,
             pyodbc.NotSupportedError,
-            pyodbc.Error,
         ) as exc:
             raise OperationalError(exc)
         except pyodbc.IntegrityError as exc:
@@ -69,16 +68,6 @@ class ODBCClient(BaseDBAsyncClient, ABC):
         self._pool: Optional[asyncodbc.Pool] = None
         self._connection = None
 
-    async def db_create(self) -> None:
-        await self.create_connection(with_db=False)
-        await self.execute_script(f"CREATE DATABASE {self.database}")
-        await self.close()
-
-    async def db_delete(self) -> None:
-        await self.create_connection(with_db=False)
-        await self.execute_script(f"DROP DATABASE {self.database}")
-        await self.close()
-
     async def create_connection(self, with_db: bool) -> None:
         self._template = {
             "minsize": self.minsize,
@@ -90,6 +79,8 @@ class ODBCClient(BaseDBAsyncClient, ABC):
         }
         if with_db:
             self._template["database"] = self.database
+        else:
+            self._template["autocommit"] = True
         try:
             self._pool = await asyncodbc.create_pool(
                 **self._template,
@@ -97,6 +88,21 @@ class ODBCClient(BaseDBAsyncClient, ABC):
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
         except pyodbc.InterfaceError:
             raise DBConnectionError(f"Can't establish connection to database {self.database}")
+
+    async def _expire_connections(self) -> None:
+        if self._pool:  # pragma: nobranch
+            for conn in self._pool._free:
+                del conn
+
+    async def db_create(self) -> None:
+        await self.create_connection(with_db=False)
+        await self.execute_script(f"CREATE DATABASE {self.database}")
+        await self.close()
+
+    async def db_delete(self) -> None:
+        await self.create_connection(with_db=False)
+        await self.execute_script(f"DROP DATABASE {self.database}")
+        await self.close()
 
     async def close(self) -> None:
         if self._pool:
@@ -112,14 +118,14 @@ class ODBCClient(BaseDBAsyncClient, ABC):
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            async with connection.cursor() as cursor:
-                try:
-                    await cursor.executemany(query, values)
-                except Exception:
-                    await connection.rollback()
-                    raise
-                else:
-                    await connection.commit()
+            cursor = await connection.cursor()
+            try:
+                await cursor.executemany(query, values)
+            except Exception:
+                await cursor.rollback()
+                raise
+            else:
+                await cursor.commit()
 
     @translate_exceptions
     async def execute_query(
@@ -127,19 +133,20 @@ class ODBCClient(BaseDBAsyncClient, ABC):
     ) -> Tuple[int, List[dict]]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            async with connection.cursor() as cursor:
-                if values:
-                    await cursor.execute(query, values)
-                else:
-                    await cursor.execute(query)
-                try:
-                    rows = await cursor.fetchall()
-                    if rows:
-                        fields = [c[0] for c in cursor.description]
-                        return cursor.rowcount, [dict(zip(fields, row)) for row in rows]
-                except pyodbc.ProgrammingError:
-                    pass
+            if values:
+                cursor = await connection.execute(query, values)
+            else:
+                cursor = await connection.execute(query)
+            if query.startswith("UPDATE") or query.startswith("DELETE"):
                 return cursor.rowcount, []
+            try:
+                rows = await cursor.fetchall()
+            except pyodbc.ProgrammingError:
+                return cursor.rowcount, []
+            if rows:
+                fields = [c[0] for c in cursor.description]
+                return cursor.rowcount, [dict(zip(fields, row)) for row in rows]
+            return cursor.rowcount, []
 
     async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
         return (await self.execute_query(query, values))[1]
@@ -152,7 +159,7 @@ class ODBCClient(BaseDBAsyncClient, ABC):
                 await cursor.execute(query)
 
 
-class ODBCTransactionWrapper(ODBCClient, BaseTransactionWrapper):
+class ODBCTransactionWrapper(BaseTransactionWrapper):
     def __init__(self, connection: ODBCClient) -> None:
         self.database = connection.database
         self.connection_name = connection.connection_name
@@ -170,14 +177,14 @@ class ODBCTransactionWrapper(ODBCClient, BaseTransactionWrapper):
     def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
         return ConnectionWrapper(self._lock, self)
 
+    @translate_exceptions
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            async with connection.cursor() as cursor:
-                await cursor.executemany(query, values)
+            cursor = await connection.cursor()
+            await cursor.executemany(query, values)
 
     async def start(self) -> None:
-        await self._connection.execute("BEGIN TRANSACTION")
         self._finalized = False
 
     async def commit(self) -> None:

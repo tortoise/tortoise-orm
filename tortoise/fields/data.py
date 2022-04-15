@@ -329,7 +329,7 @@ class DatetimeField(Field, datetime.datetime):
         SQL_TYPE = "TIMESTAMPTZ"
 
     class _db_mssql:
-        SQL_TYPE = "DATETIME"
+        SQL_TYPE = "DATETIME2"
 
     class _db_oracle:
         SQL_TYPE = "TIMESTAMP WITH TIME ZONE"
@@ -638,7 +638,7 @@ class BinaryField(Field, bytes):  # type: ignore
         SQL_TYPE = "LONGBLOB"
 
     class _db_mssql:
-        SQL_TYPE = "BINARY"
+        SQL_TYPE = "VARBINARY(MAX)"
 
 
 class IntEnumFieldInstance(SmallIntField):

@@ -337,7 +337,7 @@ class TestTimeDeltaFields(test.TestCase):
         self.assertEqual(values, timedelta(days=35, seconds=8, microseconds=1))
 
     async def test_get(self):
-        delta = timedelta(days=35, seconds=8, microseconds=1)
+        delta = timedelta(days=35, seconds=8, microseconds=2)
         await testmodels.TimeDeltaFields.create(timedelta=delta)
         obj = await testmodels.TimeDeltaFields.get(timedelta=delta)
         self.assertEqual(obj.timedelta, delta)
