@@ -83,6 +83,7 @@ class TestBulk(test.TruncationTestCase):
         self.assertIsInstance(res[0], UUID)
 
     @test.requireCapability(supports_transactions=True)
+    @test.requireCapability(dialect=NotEQ("mssql"))
     async def test_bulk_create_in_transaction(self):
         async with in_transaction():
             await UniqueName.bulk_create([UniqueName() for _ in range(1000)])

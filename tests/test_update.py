@@ -16,7 +16,7 @@ from tests.testmodels import (
     UUIDFields,
 )
 from tortoise.contrib import test
-from tortoise.contrib.test.condition import NotEQ
+from tortoise.contrib.test.condition import In, NotEQ
 from tortoise.expressions import F
 
 
@@ -109,8 +109,7 @@ class TestUpdate(test.TestCase):
         event = await Event.first()
         self.assertEqual(event.tournament_id, tournament_second.id)
 
-    @test.requireCapability(dialect="mysql")
-    @test.requireCapability(dialect="sqlite")
+    @test.requireCapability(dialect=In("mysql", "sqlite"))
     async def test_update_with_custom_function(self):
         class JsonSet(Function):
             def __init__(self, field: F, expression: str, value: Any):
