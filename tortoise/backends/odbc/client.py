@@ -91,9 +91,8 @@ class ODBCClient(BaseDBAsyncClient, ABC):
 
     async def _expire_connections(self) -> None:
         if self._pool:  # pragma: nobranch
-            self._pool.close()
-            await self._pool.wait_closed()
-            self._pool = await asyncodbc.create_pool(**self._template)
+            for conn in self._pool._free:
+                conn._expired = True
 
     async def db_create(self) -> None:
         await self.create_connection(with_db=False)
