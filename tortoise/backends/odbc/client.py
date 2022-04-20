@@ -56,7 +56,6 @@ class ODBCClient(BaseDBAsyncClient, ABC):
         self._kwargs = kwargs.copy()
         self._kwargs.pop("connection_name", None)
         self._kwargs.pop("fetch_inserted", None)
-
         self.database = self._kwargs.pop("database", None)
         self.minsize = self._kwargs.pop("minsize", 1)
         self.maxsize = self._kwargs.pop("maxsize", 10)
@@ -75,12 +74,11 @@ class ODBCClient(BaseDBAsyncClient, ABC):
             "echo": self.echo,
             "pool_recycle": self.pool_recycle,
             "dsn": self.dsn,
+            "autocommit": True,
             **self._kwargs,
         }
         if with_db:
             self._template["database"] = self.database
-        else:
-            self._template["autocommit"] = True
         try:
             self._pool = await asyncodbc.create_pool(
                 **self._template,
@@ -118,14 +116,14 @@ class ODBCClient(BaseDBAsyncClient, ABC):
     async def execute_many(self, query: str, values: list) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            cursor = await connection.cursor()
-            try:
-                await cursor.executemany(query, values)
-            except Exception:
-                await cursor.rollback()
-                raise
-            else:
-                await cursor.commit()
+            async with connection.cursor() as cursor:
+                try:
+                    await cursor.executemany(query, values)
+                except Exception:
+                    await cursor.rollback()
+                    raise
+                else:
+                    await cursor.commit()
 
     @translate_exceptions
     async def execute_query(
@@ -133,20 +131,21 @@ class ODBCClient(BaseDBAsyncClient, ABC):
     ) -> Tuple[int, List[dict]]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            if values:
-                cursor = await connection.execute(query, values)
-            else:
-                cursor = await connection.execute(query)
-            if query.startswith("UPDATE") or query.startswith("DELETE"):
+            async with connection.cursor() as cursor:
+                if values:
+                    await cursor.execute(query, values)
+                else:
+                    await cursor.execute(query)
+                if query.startswith("UPDATE") or query.startswith("DELETE"):
+                    return cursor.rowcount, []
+                try:
+                    rows = await cursor.fetchall()
+                except pyodbc.ProgrammingError:
+                    return cursor.rowcount, []
+                if rows:
+                    fields = [c[0] for c in cursor.description]
+                    return cursor.rowcount, [dict(zip(fields, row)) for row in rows]
                 return cursor.rowcount, []
-            try:
-                rows = await cursor.fetchall()
-            except pyodbc.ProgrammingError:
-                return cursor.rowcount, []
-            if rows:
-                fields = [c[0] for c in cursor.description]
-                return cursor.rowcount, [dict(zip(fields, row)) for row in rows]
-            return cursor.rowcount, []
 
     async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
         return (await self.execute_query(query, values))[1]
@@ -186,15 +185,18 @@ class ODBCTransactionWrapper(BaseTransactionWrapper):
 
     async def start(self) -> None:
         self._finalized = False
+        self._connection._conn.autocommit = False
 
     async def commit(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.commit()
         self._finalized = True
+        self._connection._conn.autocommit = True
 
     async def rollback(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.rollback()
         self._finalized = True
+        self._connection._conn.autocommit = True

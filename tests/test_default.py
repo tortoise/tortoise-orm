@@ -15,17 +15,17 @@ from tortoise.contrib import test
 class TestDefault(test.TestCase):
     async def asyncSetUp(self) -> None:
         await super(TestDefault, self).asyncSetUp()
-        connection = self._db
-        if isinstance(connection, MySQLClient):
-            await connection.execute_query(
+        db = self._db
+        if isinstance(db, MySQLClient):
+            await db.execute_query(
                 "insert into defaultmodel (`int_default`,`float_default`,`decimal_default`,`bool_default`,`char_default`,`date_default`,`datetime_default`) values (DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT)",
             )
-        elif isinstance(connection, SqliteClient):
-            await connection.execute_query(
+        elif isinstance(db, SqliteClient):
+            await db.execute_query(
                 "insert into defaultmodel default values",
             )
-        elif isinstance(connection, (AsyncpgDBClient, PsycopgClient, MSSQLClient)):
-            await connection.execute_query(
+        elif isinstance(db, (AsyncpgDBClient, PsycopgClient, MSSQLClient)):
+            await db.execute_query(
                 'insert into defaultmodel ("int_default","float_default","decimal_default","bool_default","char_default","date_default","datetime_default") values (DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT)',
             )
 

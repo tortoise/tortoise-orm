@@ -172,6 +172,20 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
     async def _tearDownDB(self) -> None:
         pass
 
+    def _setupAsyncioLoop(self):
+        loop = asyncio.get_event_loop()
+        loop.set_debug(True)
+        self._asyncioTestLoop = loop
+        fut = loop.create_future()
+        self._asyncioCallsTask = loop.create_task(self._asyncioLoopRunner(fut))  # type: ignore
+        loop.run_until_complete(fut)
+
+    def _tearDownAsyncioLoop(self):
+        loop = self._asyncioTestLoop
+        self._asyncioTestLoop = None  # type: ignore
+        self._asyncioCallsQueue.put_nowait(None)  # type: ignore
+        loop.run_until_complete(self._asyncioCallsQueue.join())  # type: ignore
+
     async def asyncSetUp(self) -> None:
         await self._setUpDB()
 

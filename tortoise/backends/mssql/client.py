@@ -43,10 +43,6 @@ class MSSQLClient(ODBCClient):
 
 
 class TransactionWrapper(ODBCTransactionWrapper, MSSQLClient):
-    @translate_exceptions
-    async def execute_insert(self, query: str, values: list) -> int:
-        async with self.acquire_connection() as connection:
-            self.log.debug("%s: %s", query, values)
-            await connection.execute(query, values)
-            cursor = await connection.execute("SELECT @@IDENTITY;")
-            return (await cursor.fetchone())[0]
+    async def start(self) -> None:
+        await self._connection.execute("BEGIN TRANSACTION")
+        await super().start()
