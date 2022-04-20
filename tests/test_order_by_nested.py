@@ -1,8 +1,10 @@
 from tests.testmodels import Event, Tournament
 from tortoise.contrib import test
+from tortoise.contrib.test.condition import NotEQ
 
 
 class TestOrderByNested(test.TestCase):
+    @test.requireCapability(dialect=NotEQ("oracle"))
     async def test_basic(self):
         await Event.create(
             name="Event 1", tournament=await Tournament.create(name="Tournament 1", desc="B")

@@ -728,7 +728,7 @@ class DefaultModel(Model):
     decimal_default = fields.DecimalField(max_digits=8, decimal_places=2, default=Decimal(1))
     bool_default = fields.BooleanField(default=True)
     char_default = fields.CharField(max_length=20, default="tortoise")
-    date_default = fields.DateField(default=datetime.date(year=2020, month=5, day=20))
+    date_default = fields.DateField(default=datetime.date(year=2020, month=5, day=21))
     datetime_default = fields.DatetimeField(
         default=datetime.datetime(year=2020, month=5, day=20, tzinfo=pytz.utc)
     )
