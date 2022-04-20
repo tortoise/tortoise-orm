@@ -1,6 +1,7 @@
 from tests.testmodels import Event, IntFields, MinRelation, Node, Reporter, Tournament, Tree
 from tortoise import connections
 from tortoise.contrib import test
+from tortoise.contrib.test.condition import NotEQ
 from tortoise.exceptions import (
     DoesNotExist,
     FieldError,
@@ -583,6 +584,7 @@ class TestQueryset(test.TestCase):
         ret = await Tournament.filter(pk=t1.pk).annotate(count=RawSQL("count(*)")).values("count")
         self.assertEqual(ret, [{"count": 1}])
 
+    @test.requireCapability(dialect=NotEQ("mssql"))
     async def test_raw_sql_select(self):
         t1 = await Tournament.create(id=1, name="1")
         ret = (

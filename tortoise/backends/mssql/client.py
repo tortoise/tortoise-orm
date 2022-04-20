@@ -2,7 +2,8 @@ from typing import Any, SupportsInt
 
 from pypika.dialects import MSSQLQuery
 
-from tortoise.backends.base.client import TransactionContext, TransactionContextPooled
+from tortoise.backends.base.client import Capabilities, TransactionContext, TransactionContextPooled
+from tortoise.backends.mssql.executor import MSSQLExecutor
 from tortoise.backends.mssql.schema_generator import MSSQLSchemaGenerator
 from tortoise.backends.odbc.client import ODBCClient, ODBCTransactionWrapper, translate_exceptions
 
@@ -10,6 +11,10 @@ from tortoise.backends.odbc.client import ODBCClient, ODBCTransactionWrapper, tr
 class MSSQLClient(ODBCClient):
     query_class = MSSQLQuery
     schema_generator = MSSQLSchemaGenerator
+    executor_class = MSSQLExecutor
+    capabilities = Capabilities(
+        "mssql", support_update_limit_order_by=False, support_for_update=False
+    )
 
     def __init__(
         self,
@@ -33,10 +38,11 @@ class MSSQLClient(ODBCClient):
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
                 await cursor.execute(query, values)
-                await cursor.execute("SELECT SCOPE_IDENTITY();")
+                await cursor.execute("SELECT @@IDENTITY;")
                 return (await cursor.fetchone())[0]
 
 
-class TransactionWrapper(MSSQLClient, ODBCTransactionWrapper):
-    def __init__(self, connection: ODBCClient) -> None:
-        ODBCTransactionWrapper.__init__(self, connection=connection)
+class TransactionWrapper(ODBCTransactionWrapper, MSSQLClient):
+    async def start(self) -> None:
+        await self._connection.execute("BEGIN TRANSACTION")
+        await super().start()

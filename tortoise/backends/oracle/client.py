@@ -52,27 +52,13 @@ class OracleClient(ODBCClient):
         await self.close()
 
     @translate_exceptions
-    async def execute_script(self, query: str) -> None:
-        async with self.acquire_connection() as connection:
-            self.log.debug(query)
-            async with connection.cursor() as cursor:
-                for sql in query.split(";"):
-                    if not sql.strip():
-                        continue
-                    await cursor.execute(sql)
-
-    @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            async with connection.cursor() as cursor:
-                await cursor.execute(query, values)
-                return 0
+            await connection.execute(query, values)
+            return 0
 
 
 class TransactionWrapper(OracleClient, ODBCTransactionWrapper):
     def __init__(self, connection: ODBCClient) -> None:
         ODBCTransactionWrapper.__init__(self, connection=connection)
-
-    async def start(self) -> None:
-        self._finalized = False

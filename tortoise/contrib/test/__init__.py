@@ -325,9 +325,6 @@ class TestCase(TruncationTestCase):
         await self._transaction.__aexit__(None, None, None)
         await super(TestCase, self).asyncTearDown()
 
-    async def _setUpDB(self) -> None:
-        await super(TestCase, self)._setUpDB()
-
     async def _tearDownDB(self) -> None:
         if self._db.capabilities.supports_transactions:
             _restore_default()

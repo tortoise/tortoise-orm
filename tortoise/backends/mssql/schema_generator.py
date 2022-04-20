@@ -86,3 +86,25 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
             self._foreign_keys.append(fk)
             return ""
         return fk
+
+    def _create_string(
+        self,
+        db_column: str,
+        field_type: str,
+        nullable: str,
+        unique: str,
+        is_primary_key: bool,
+        comment: str,
+        default: str,
+    ) -> str:
+        if nullable == "":
+            unique = ""
+        return super(MSSQLSchemaGenerator, self)._create_string(
+            db_column=db_column,
+            field_type=field_type,
+            nullable=nullable,
+            unique=unique,
+            is_primary_key=is_primary_key,
+            comment=comment,
+            default=default,
+        )
