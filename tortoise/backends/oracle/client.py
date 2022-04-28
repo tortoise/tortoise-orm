@@ -93,7 +93,8 @@ class OraclePoolConnectionWrapper(PoolConnectionWrapper):
 
     async def __aenter__(self):
         connection = await super(OraclePoolConnectionWrapper, self).__aenter__()  # type: ignore
-        if self.client._template.get("database"):
+        connection._conn.setdecoding(pyodbc.SQL_WMETADATA, encoding="utf-8")
+        if self.client._template.get("database") and not hasattr(connection, "current_schema"):
             await connection.execute(f'ALTER SESSION SET CURRENT_SCHEMA = "{self.client.database}"')
             await connection.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD'")
             await connection.execute(
@@ -102,6 +103,7 @@ class OraclePoolConnectionWrapper(PoolConnectionWrapper):
             await connection.add_output_converter(
                 pyodbc.SQL_TYPE_TIMESTAMP, self._timestamp_convert
             )
+            setattr(connection, "current_schema", self.client.database)
         return connection
 
 
