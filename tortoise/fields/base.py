@@ -34,7 +34,7 @@ class Field(metaclass=_FieldMeta):
     Base Field type.
 
     :param source_field: Provide a source_field name if the DB column name needs to be
-        something specific instead of enerated off the field name.
+        something specific instead of generated off the field name.
     :param generated: Is this field DB-generated?
     :param pk: Is this field a Primary Key? Can only have a single such field on the Model,
         and if none is specified it will autogenerate a default primary key called ``id``.
