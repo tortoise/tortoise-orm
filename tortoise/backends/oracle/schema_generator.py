@@ -102,7 +102,7 @@ class OracleSchemaGenerator(BaseSchemaGenerator):
     ) -> str:
         if on_delete not in [CASCADE, SET_NULL]:
             on_delete = CASCADE
-        constraint = f"CONSTRAINT {constraint_name} " if constraint_name else ""
+        constraint = f'CONSTRAINT "{constraint_name}" ' if constraint_name else ""
         fk = self.FK_TEMPLATE.format(
             constraint=constraint,
             db_column=db_column,

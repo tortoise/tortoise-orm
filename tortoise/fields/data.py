@@ -207,6 +207,14 @@ class CharField(Field, str):  # type: ignore
     def SQL_TYPE(self) -> str:  # type: ignore
         return f"VARCHAR({self.max_length})"
 
+    class _db_oracle:
+        def __init__(self, field: "CharField") -> None:
+            self.field = field
+
+        @property
+        def SQL_TYPE(self) -> str:
+            return f"NVARCHAR2({self.field.max_length})"
+
 
 class TextField(Field, str):  # type: ignore
     """
@@ -429,7 +437,7 @@ class TimeField(Field, datetime.time):
     SQL_TYPE = "TIME"
 
     class _db_oracle:
-        SQL_TYPE = "VARCHAR(8)"
+        SQL_TYPE = "NVARCHAR2(8)"
 
     def __init__(self, auto_now: bool = False, auto_now_add: bool = False, **kwargs: Any) -> None:
         if auto_now_add and auto_now:

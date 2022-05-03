@@ -233,14 +233,19 @@ class Field(metaclass=_FieldMeta):
         return {}
 
     def _get_dialects(self) -> Dict[str, dict]:
-        return {
-            dialect[4:]: {
-                key: val
-                for key, val in getattr(self, dialect).__dict__.items()
-                if not key.startswith("_")
-            }
-            for dialect in [key for key in dir(self) if key.startswith("_db_")]
-        }
+        ret = {}
+        for dialect in [key for key in dir(self) if key.startswith("_db_")]:
+            item = {}
+            cls = getattr(self, dialect)
+            try:
+                cls = cls(self)
+            except TypeError:
+                pass
+            for key, val in cls.__dict__.items():
+                if not key.startswith("_"):
+                    item[key] = val
+            ret[dialect[4:]] = item
+        return ret
 
     def get_db_field_types(self) -> Optional[Dict[str, str]]:
         """

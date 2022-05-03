@@ -37,9 +37,10 @@ def translate_exceptions(func: F) -> F:
             pyodbc.DataError,
             pyodbc.InternalError,
             pyodbc.NotSupportedError,
+            pyodbc.InterfaceError,
         ) as exc:
             raise OperationalError(exc)
-        except pyodbc.IntegrityError as exc:
+        except (pyodbc.IntegrityError, pyodbc.Error) as exc:
             raise IntegrityError(exc)
 
     return translate_exceptions_  # type: ignore
