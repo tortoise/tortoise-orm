@@ -822,7 +822,22 @@ class Model(metaclass=ModelMeta):
             (e.g. a reverse ForeignKey or ManyToMany relation)
         :raises ValueError: When a passed parameter is not type compatible
         """
-        self._set_kwargs(data)
+        async with in_transaction("default"):
+            m2m_fields = self.describe(serializable=False)['m2m_fields']
+            m2m_data = {field['name']: data.pop(field['name'], None) for field in m2m_fields}
+            for m2m_field in m2m_fields:
+                m2m_name = m2m_field['name']
+                m2m_pks = m2m_data.get(m2m_name)
+                if m2m_pks is not None:
+                    m2m_model = m2m_field['python_type']
+                    m2m_relation = getattr(self, m2m_name)
+                    await m2m_relation.clear()
+                    for m2m_pk in m2m_pks:
+                        m2m_pk_name = m2m_model.describe(serializable=False)['pk_field']['name']
+                        m2m_object = await m2m_model.get(**{m2m_pk_name: m2m_pk})
+                        await m2m_relation.add(m2m_object)
+            self._set_kwargs(data)
+            await self.save()
         return self
 
     @classmethod
@@ -1116,10 +1131,22 @@ class Model(metaclass=ModelMeta):
 
         :param kwargs: Model parameters.
         """
-        instance = cls(**kwargs)
-        instance._saved_in_db = False
-        db = kwargs.get("using_db") or cls._choose_db(True)
-        await instance.save(using_db=db, force_create=True)
+        async with in_transaction("default"):
+            m2m_fields = cls.describe(serializable=False)['m2m_fields']
+            m2m_data = {field['name']: kwargs.pop(field['name'], []) for field in m2m_fields}
+            instance = cls(**kwargs)
+            instance._saved_in_db = False
+            db = kwargs.get("using_db") or cls._choose_db(True)
+            await instance.save(using_db=db, force_create=True)
+            for m2m_field in m2m_fields:
+                m2m_model = m2m_field['python_type']
+                m2m_name = m2m_field['name']
+                m2m_relation = getattr(instance, m2m_name)
+                m2m_pks = m2m_data.get(m2m_name)
+                for m2m_pk in m2m_pks:
+                    m2m_pk_name = m2m_model.describe(serializable=False)['pk_field']['name']
+                    m2m_object = await m2m_model.get(**{m2m_pk_name: m2m_pk})
+                    await m2m_relation.add(m2m_object)
         return instance
 
     @classmethod
