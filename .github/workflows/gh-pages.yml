@@ -29,7 +29,7 @@ jobs:
           publish_branch: master
       - name: Deploy release docs
         uses: peaceiris/actions-gh-pages@v3
-        if: github.event_name == "release" && github.event.action == "created"
+        if: ${{ github.event_name }} == "release" && ${{ github.event.action }} == "created"
         with:
           personal_token: ${{ secrets.PERSONAL_TOKEN }}
           publish_dir: build/html
