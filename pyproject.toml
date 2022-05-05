@@ -86,10 +86,10 @@ types-pytz = "*"
 types-PyMySQL = "*"
 # Documentation tools
 sphinx = "^4.2.0"
-sphinx-material = "*"
+sphinx-immaterial = "*"
+sphinx-copybutton = "*"
 Pygments = "*"
 docutils = "*"
-sphinx-copybutton = "*"
 
 [tool.poetry.extras]
 accel = ["ciso8601", "uvloop", "orjson"]
