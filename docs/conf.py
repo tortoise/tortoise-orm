@@ -12,6 +12,7 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+import json
 import os
 import re
 import sys
@@ -35,6 +36,12 @@ def get_version():
         return mob.group(1)
     else:
         raise RuntimeError("Unable to find version string")
+
+
+def get_version_info():
+    with open("versions.json") as f:
+        versions = json.load(f)
+    return versions
 
 
 # The short X.Y version
@@ -172,13 +179,7 @@ html_theme_options = {
     ],
     "version_dropdown": True,
     "toc_title_is_page_title": True,
-    "version_info": [
-        {
-            "version": "https://tortoise.github.io",
-            "title": "latest",
-            "aliases": [],
-        },
-    ],
+    "version_info": get_version_info(),
 }
 
 # Add any paths that contain custom themes here, relative to this directory.
