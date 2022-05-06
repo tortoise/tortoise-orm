@@ -7,13 +7,13 @@ from tortoise.models import Model
 
 
 class Event(Model):
-    participants = fields.ManyToManyField(
+    participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team", related_name="events", through="event_team"
     )
 
 
 class Party(Model):
-    participants = fields.ManyToManyField(
+    participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team", related_name="events", through="event_team"
     )
 

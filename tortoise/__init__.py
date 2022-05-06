@@ -165,7 +165,7 @@ class Tortoise:
                         if related_field:
                             if related_field.unique:
                                 key_fk_object = deepcopy(related_field)
-                                fk_object.to_field_instance = related_field
+                                fk_object.to_field_instance = related_field  # type: ignore
                             else:
                                 raise ConfigurationError(
                                     f'field "{fk_object.to_field}" in model'
@@ -178,7 +178,7 @@ class Tortoise:
                             )
                     else:
                         key_fk_object = deepcopy(related_model._meta.pk)
-                        fk_object.to_field_instance = related_model._meta.pk
+                        fk_object.to_field_instance = related_model._meta.pk  # type: ignore
                         fk_object.to_field = related_model._meta.pk_attr
                     fk_object.field_type = fk_object.to_field_instance.field_type
                     key_field = f"{field}_id"
@@ -214,7 +214,7 @@ class Tortoise:
                             fk_object.null,
                             fk_object.description,
                         )
-                        fk_relation.to_field_instance = fk_object.to_field_instance
+                        fk_relation.to_field_instance = fk_object.to_field_instance  # type: ignore
                         related_model._meta.add_field(backward_relation_name, fk_relation)
 
                 for field in model._meta.o2o_fields:
@@ -230,7 +230,7 @@ class Tortoise:
                         if related_field:
                             if related_field.unique:
                                 key_o2o_object = deepcopy(related_field)
-                                o2o_object.to_field_instance = related_field
+                                o2o_object.to_field_instance = related_field  # type: ignore
                             else:
                                 raise ConfigurationError(
                                     f'field "{o2o_object.to_field}" in model'
@@ -243,7 +243,7 @@ class Tortoise:
                             )
                     else:
                         key_o2o_object = deepcopy(related_model._meta.pk)
-                        o2o_object.to_field_instance = related_model._meta.pk
+                        o2o_object.to_field_instance = related_model._meta.pk  # type: ignore
                         o2o_object.to_field = related_model._meta.pk_attr
 
                     o2o_object.field_type = o2o_object.to_field_instance.field_type
@@ -281,7 +281,7 @@ class Tortoise:
                             null=True,
                             description=o2o_object.description,
                         )
-                        o2o_relation.to_field_instance = o2o_object.to_field_instance
+                        o2o_relation.to_field_instance = o2o_object.to_field_instance  # type: ignore
                         related_model._meta.add_field(backward_relation_name, o2o_relation)
 
                     if o2o_object.pk:

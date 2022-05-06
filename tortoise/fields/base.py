@@ -1,5 +1,18 @@
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    overload,
+)
 
 from pypika.terms import Term
 
@@ -8,6 +21,8 @@ from tortoise.validators import Validator
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
+
+VALUE = TypeVar("VALUE")
 
 # TODO: Replace this with an enum
 CASCADE = "CASCADE"
@@ -29,7 +44,7 @@ class _FieldMeta(type):
         return type.__new__(mcs, name, bases, attrs)
 
 
-class Field(metaclass=_FieldMeta):
+class Field(Generic[VALUE], metaclass=_FieldMeta):
     """
     Base Field type.
 
@@ -125,9 +140,24 @@ class Field(metaclass=_FieldMeta):
     SQL_TYPE: str = None  # type: ignore
     GENERATED_SQL: str = None  # type: ignore
 
-    # This method is just to make IDE/Linters happy
-    def __new__(cls, *args: Any, **kwargs: Any) -> "Field":
+    # These methods are just to make IDE/Linters happy:
+
+    def __new__(cls, *args: Any, **kwargs: Any) -> "Field[VALUE]":
         return super().__new__(cls)
+
+    @overload
+    def __get__(self, instance: None, owner: Type["Model"]) -> "Field[VALUE]":
+        ...
+
+    @overload
+    def __get__(self, instance: "Model", owner: Type["Model"]) -> VALUE:
+        ...
+
+    def __get__(self, instance: Optional["Model"], owner: Type["Model"]):
+        ...
+
+    def __set__(self, instance: Optional["Model"], value: VALUE) -> None:
+        ...
 
     def __init__(
         self,
