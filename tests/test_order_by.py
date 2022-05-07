@@ -7,6 +7,7 @@ from tests.testmodels import (
     Tournament,
 )
 from tortoise.contrib import test
+from tortoise.contrib.test.condition import NotEQ
 from tortoise.exceptions import ConfigurationError, FieldError
 from tortoise.functions import Count, Sum
 
@@ -84,6 +85,7 @@ class TestOrderBy(test.TestCase):
 
 
 class TestDefaultOrdering(test.TestCase):
+    @test.requireCapability(dialect=NotEQ("oracle"))
     async def test_default_order(self):
         await DefaultOrdered.create(one="2", second=1)
         await DefaultOrdered.create(one="1", second=1)
@@ -91,6 +93,7 @@ class TestDefaultOrdering(test.TestCase):
         instance_list = await DefaultOrdered.all()
         self.assertEqual([i.one for i in instance_list], ["1", "2"])
 
+    @test.requireCapability(dialect=NotEQ("oracle"))
     async def test_default_order_desc(self):
         await DefaultOrderedDesc.create(one="1", second=1)
         await DefaultOrderedDesc.create(one="2", second=1)

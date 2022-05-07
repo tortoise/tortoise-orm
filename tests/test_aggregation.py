@@ -1,5 +1,6 @@
 from tests.testmodels import Author, Book, Event, MinRelation, Team, Tournament
 from tortoise.contrib import test
+from tortoise.contrib.test.condition import In
 from tortoise.exceptions import ConfigurationError
 from tortoise.expressions import Q
 from tortoise.functions import Avg, Coalesce, Concat, Count, Lower, Max, Min, Sum, Trim
@@ -149,8 +150,7 @@ class TestAggregation(test.TestCase):
         ret = await Book.all().annotate(max_name=Lower(Max("name"))).values("max_name")
         self.assertEqual(ret, [{"max_name": "third!"}])
 
-    @test.requireCapability(dialect="mysql")
-    @test.requireCapability(dialect="postgres")
+    @test.requireCapability(dialect=In("postgres", "mssql"))
     async def test_concat_functions(self):
         author = await Author.create(name="Some One")
         await Book.create(name="Physics Book", author=author, rating=4, subject="physics ")

@@ -22,6 +22,7 @@ from typing import (
 from pypika import Order, Query, Table
 from pypika.terms import Term
 
+from tortoise import connections
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import (
     ConfigurationError,
@@ -59,7 +60,7 @@ from tortoise.queryset import (
 )
 from tortoise.router import router
 from tortoise.signals import Signals
-from tortoise.transactions import current_transaction_map, in_transaction
+from tortoise.transactions import in_transaction
 
 MODEL = TypeVar("MODEL", bound="Model")
 EMPTY = object()
@@ -278,10 +279,11 @@ class MetaInfo:
 
     @property
     def db(self) -> BaseDBAsyncClient:
-        try:
-            return current_transaction_map[self.default_connection].get()
-        except KeyError:
-            raise ConfigurationError("No DB associated to model")
+        if self.default_connection is None:
+            raise ConfigurationError(
+                f"default_connection for the model {self._model} cannot be None"
+            )
+        return connections.get(self.default_connection)
 
     @property
     def ordering(self) -> Tuple[Tuple[str, Order], ...]:
@@ -1050,7 +1052,10 @@ class Model(metaclass=ModelMeta):
         db = using_db or cls._choose_db(True)
         async with in_transaction(connection_name=db.connection_name) as connection:
             try:
-                return await cls.filter(**kwargs).using_db(connection).get(), False
+                return (
+                    await cls.select_for_update().filter(**kwargs).using_db(connection).get(),
+                    False,
+                )
             except DoesNotExist:
                 try:
                     return await cls.create(using_db=connection, **defaults, **kwargs), True

@@ -7,7 +7,8 @@ from tortoise.indexes import Index
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
-    from tortoise.fields.relational import ForeignKeyFieldInstance, ManyToManyFieldInstance  # noqa
+    from tortoise.fields.relational import ForeignKeyFieldInstance  # noqa
+    from tortoise.fields.relational import ManyToManyFieldInstance
     from tortoise.models import Model
 
 # pylint: disable=R0201
@@ -444,5 +445,4 @@ class BaseSchemaGenerator:
         return schema_creation_string
 
     async def generate_from_string(self, creation_string: str) -> None:
-        # print(creation_string)
         await self.client.execute_script(creation_string)

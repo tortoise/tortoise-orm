@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tortoise-orm"
-version = "0.18.1"
+version = "0.19.1"
 description = "Easy async ORM for python, built with relations in mind"
 authors = ["Andrey Bondar <andrey@bondar.ru>", "Nickolas Grigoriadis <nagrigoriadis@gmail.com>", "long2ice <long2ice@gmail.com>"]
 license = "Apache-2.0"
@@ -8,7 +8,7 @@ readme = "README.rst"
 homepage = "https://github.com/tortoise/tortoise-orm"
 repository = "https://github.com/tortoise/tortoise-orm.git"
 documentation = "https://tortoise-orm.readthedocs.io"
-keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio"]
+keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio", "psycopg"]
 packages = [
     { include = "tortoise" }
 ]
@@ -35,8 +35,8 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-pypika-tortoise = "^0.1.3"
-iso8601 = "^0.1.13"
+pypika-tortoise = { git = "https://github.com/tortoise/pypika-tortoise.git", branch = "main" }
+iso8601 = "^1.0.2"
 aiosqlite = ">=0.16.0, <0.18.0"
 pytz = "*"
 ciso8601 = { version = "*", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
@@ -44,15 +44,16 @@ uvloop = { version = "*", markers = "sys_platform != 'win32' and implementation_
 orjson = { version = "*", optional = true }
 asyncpg = { version = "*", optional = true }
 aiomysql = { version = "*", optional = true }
-asyncmy = { version = "*", optional = true }
+asyncmy = { version = "^0.2.5", optional = true }
+psycopg = { extras = ["pool", "binary"], version = "*", optional = true }
+asyncodbc = { git = "https://github.com/tortoise/asyncodbc.git", branch = "main", optional = true }
 
 [tool.poetry.dev-dependencies]
 # Linter tools
 mypy = "*"
-importlib_metadata = "*" # required by flake8
 flake8 = "*"
-flake8-isort = "*"
 flake8-comprehensions = "*"
+pyproject-flake8 = "*"
 darglint = "*"
 pylint = "*"
 pygments = "*"
@@ -85,16 +86,18 @@ types-pytz = "*"
 types-PyMySQL = "*"
 # Documentation tools
 sphinx = "^4.2.0"
-sphinx-material = "*"
+sphinx-immaterial = "*"
+sphinx-copybutton = "*"
 Pygments = "*"
 docutils = "*"
-sphinx-copybutton = "*"
 
 [tool.poetry.extras]
 accel = ["ciso8601", "uvloop", "orjson"]
 asyncpg = ["asyncpg"]
+psycopg = ["psycopg"]
 aiomysql = ["aiomysql"]
 asyncmy = ["asyncmy"]
+asyncodbc = ["asyncodbc"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -102,4 +105,73 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 100
-target-version = ['py36', 'py37', 'py38', 'py39']
+target-version = ["py36", "py37", "py38", "py39"]
+
+[tool.mypy]
+pretty = true
+ignore_missing_imports = true
+check_untyped_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_return_any = false
+warn_unused_configs = true
+warn_unreachable = true
+allow_redefinition = true
+strict_equality = true
+show_error_context = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+check_untyped_defs = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+warn_unreachable = false
+
+[[tool.mypy.overrides]]
+module = ["examples.*"]
+check_untyped_defs = false
+disallow_untyped_calls = false
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+module = ["tortoise.contrib.test.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+module = ["tortoise.contrib.sanic.*"]
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ["conftest"]
+disallow_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = ["tortoise.backends.base.client"]
+disallow_untyped_defs = false
+
+[tool.flake8]
+ignore = "E501,W503,DAR101,DAR201,DAR402"
+max-line-length = 100
+per-file-ignores = [
+    "tortoise/__init__.py:F401",
+    "tortoise/fields/__init__.py:F401",
+    "tortoise/backends/base/client.py:DAR401,DAR202",
+    "tortoise/contrib/test/__init__.py:DAR401",
+]
+docstring_style = "sphinx"
+
+[tool.coverage.run]
+branch = true
+source = ["tortoise"]
+
+[tool.coverage.report]
+show_missing = true

@@ -22,15 +22,15 @@ You can also install with your db driver:
 
 ..
 
-Or MySQL:
+Or PsycoPG:
 
 .. code-block:: bash
 
-    pip install tortoise-orm[aiomysql]
+    pip install tortoise-orm[psycopg]
 
 ..
 
-Or another driver `asyncmy <https://github.com/long2ice/asyncmy>`_ for MySQL:
+For MySQL:
 
 .. code-block:: bash
 
@@ -38,8 +38,16 @@ Or another driver `asyncmy <https://github.com/long2ice/asyncmy>`_ for MySQL:
 
 ..
 
-Apart from ``asyncpg`` there is also support for ``sqlite`` through ``aiosqlite`` and
-``mysql`` through ``aiomysql``.
+For Microsoft SQL Server/Oracle:
+
+.. code-block:: bash
+
+    pip install tortoise-orm[asyncodbc]
+
+..
+
+Apart from ``asyncpg`` and ``psycopg`` there is also support for ``sqlite`` through ``aiosqlite`` and
+``mysql`` through ``asyncmy``.
 You can easily implement more backends if there is appropriate ``asyncio`` driver for this db.
 
 Optional Accelerators

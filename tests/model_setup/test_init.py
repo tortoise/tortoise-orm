@@ -1,6 +1,6 @@
 import os
 
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 
@@ -10,14 +10,12 @@ class TestInitErrors(test.SimpleTestCase):
         await super().asyncSetUp()
         try:
             Tortoise.apps = {}
-            Tortoise._connections = {}
             Tortoise._inited = False
         except ConfigurationError:
             pass
         Tortoise._inited = False
 
     async def asyncTearDown(self) -> None:
-        await Tortoise.close_connections()
         await Tortoise._reset_apps()
         await super(TestInitErrors, self).asyncTearDown()
 
@@ -36,7 +34,7 @@ class TestInitErrors(test.SimpleTestCase):
             }
         )
         self.assertIn("models", Tortoise.apps)
-        self.assertIsNotNone(Tortoise.get_connection("default"))
+        self.assertIsNotNone(connections.get("default"))
 
     async def test_empty_modules_init(self):
         with self.assertWarnsRegex(RuntimeWarning, 'Module "tests.model_setup" has no models'):
@@ -184,7 +182,11 @@ class TestInitErrors(test.SimpleTestCase):
             )
 
     async def test_unknown_connection(self):
-        with self.assertRaisesRegex(ConfigurationError, 'Unknown connection "fioop"'):
+        with self.assertRaisesRegex(
+            ConfigurationError,
+            "Unable to get db settings for alias 'fioop'. Please "
+            "check if the config dict contains this alias and try again",
+        ):
             await Tortoise.init(
                 {
                     "connections": {
@@ -218,7 +220,7 @@ class TestInitErrors(test.SimpleTestCase):
             }
         )
         self.assertIn("models", Tortoise.apps)
-        self.assertIsNotNone(Tortoise.get_connection("default"))
+        self.assertIsNotNone(connections.get("default"))
 
     async def test_db_url_init(self):
         await Tortoise.init(
@@ -230,14 +232,14 @@ class TestInitErrors(test.SimpleTestCase):
             }
         )
         self.assertIn("models", Tortoise.apps)
-        self.assertIsNotNone(Tortoise.get_connection("default"))
+        self.assertIsNotNone(connections.get("default"))
 
     async def test_shorthand_init(self):
         await Tortoise.init(
             db_url=f"sqlite://{':memory:'}", modules={"models": ["tests.testmodels"]}
         )
         self.assertIn("models", Tortoise.apps)
-        self.assertIsNotNone(Tortoise.get_connection("default"))
+        self.assertIsNotNone(connections.get("default"))
 
     async def test_init_wrong_connection_engine(self):
         with self.assertRaisesRegex(ImportError, "tortoise.backends.test"):
@@ -326,13 +328,13 @@ class TestInitErrors(test.SimpleTestCase):
     async def test_init_json_file(self):
         await Tortoise.init(config_file=os.path.dirname(__file__) + "/init.json")
         self.assertIn("models", Tortoise.apps)
-        self.assertIsNotNone(Tortoise.get_connection("default"))
+        self.assertIsNotNone(connections.get("default"))
 
     @test.skipIf(os.name == "nt", "path issue on Windows")
     async def test_init_yaml_file(self):
         await Tortoise.init(config_file=os.path.dirname(__file__) + "/init.yaml")
         self.assertIn("models", Tortoise.apps)
-        self.assertIsNotNone(Tortoise.get_connection("default"))
+        self.assertIsNotNone(connections.get("default"))
 
     async def test_generate_schema_without_init(self):
         with self.assertRaisesRegex(

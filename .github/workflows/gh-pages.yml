@@ -3,8 +3,11 @@ on:
   push:
     branches:
       - develop
+  release:
+    types:
+      - created
 jobs:
-  gh-pages:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -17,10 +20,19 @@ jobs:
           poetry config virtualenvs.create false
       - name: Build docs
         run: make docs
-      - name: Deploy docs
+      - name: Deploy latest docs
         uses: peaceiris/actions-gh-pages@v3
         with:
           personal_token: ${{ secrets.PERSONAL_TOKEN }}
           publish_dir: build/html
           external_repository: tortoise/tortoise.github.io
           publish_branch: master
+      - name: Deploy release docs
+        uses: peaceiris/actions-gh-pages@v3
+        if: ${{ github.event_name }} == "release" && ${{ github.event.action }} == "created"
+        with:
+          personal_token: ${{ secrets.PERSONAL_TOKEN }}
+          publish_dir: build/html
+          external_repository: tortoise/tortoise.github.io
+          publish_branch: master
+          destination_dir: ${{ github.ref_name }}

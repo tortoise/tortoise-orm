@@ -18,13 +18,13 @@ class Tournament(Model):
 class Event(Model):
     id = fields.BigIntField(pk=True, description="Event ID")
     name = fields.TextField()
-    tournament = fields.ForeignKeyField(
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
         "models.Tournament",
         db_constraint=False,
         related_name="events",
         description="FK to tournament",
     )
-    participants = fields.ManyToManyField(
+    participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team",
         db_constraint=False,
         related_name="events",
@@ -44,10 +44,10 @@ class Event(Model):
 class Team(Model):
     name = fields.CharField(max_length=50, pk=True, description="The TEAM name (and PK)")
     key = fields.IntField()
-    manager = fields.ForeignKeyField(
+    manager: fields.ForeignKeyRelation["Team"] = fields.ForeignKeyField(
         "models.Team", db_constraint=False, related_name="team_members", null=True
     )
-    talks_to = fields.ManyToManyField(
+    talks_to: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team", db_constraint=False, related_name="gets_talked_to"
     )
 
