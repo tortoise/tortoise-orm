@@ -18,6 +18,7 @@ Added
 Fixed
 ^^^^^
 - `TimeField` for `MySQL` will return `datetime.timedelta` object instead of `datetime.time` object.
+- Fix on conflict do nothing. (#1122)
 
 0.19.0
 ------
