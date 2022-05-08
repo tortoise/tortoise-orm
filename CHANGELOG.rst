@@ -15,6 +15,7 @@ Added
 - Added `Postgres`/`SQLite` partial indexes support. (#1103)
 - Added `Microsoft SQL Server`/`Oracle` support, powered by `asyncodbc <https://github.com/tortoise/asyncodbc>`_, note that which is **not fully tested**.
 - Added `optional` parameter to `pydantic_model_creator`. (#770)
+- Added `using_db` parameter to `Model` shortcut methods. (#1109)
 Fixed
 ^^^^^
 - `TimeField` for `MySQL` will return `datetime.timedelta` object instead of `datetime.time` object.
