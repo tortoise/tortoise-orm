@@ -1064,7 +1064,11 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def select_for_update(
-        cls, nowait: bool = False, skip_locked: bool = False, of: Tuple[str, ...] = ()
+        cls,
+        nowait: bool = False,
+        skip_locked: bool = False,
+        of: Tuple[str, ...] = (),
+        using_db: Optional[BaseDBAsyncClient] = None,
     ) -> QuerySet[MODEL]:
         """
         Make QuerySet select for update.
@@ -1072,7 +1076,10 @@ class Model(metaclass=ModelMeta):
         Returns a queryset that will lock rows until the end of the transaction,
         generating a SELECT ... FOR UPDATE SQL statement on supported databases.
         """
-        return cls._meta.manager.get_queryset().select_for_update(nowait, skip_locked, of)
+        db = using_db or cls._choose_db(True)
+        return (
+            cls._meta.manager.get_queryset().using_db(db).select_for_update(nowait, skip_locked, of)
+        )
 
     @classmethod
     async def update_or_create(
@@ -1099,7 +1106,9 @@ class Model(metaclass=ModelMeta):
         return await cls.get_or_create(defaults, db, **kwargs)
 
     @classmethod
-    async def create(cls: Type[MODEL], **kwargs: Any) -> MODEL:
+    async def create(
+        cls: Type[MODEL], using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
+    ) -> MODEL:
         """
         Create a record in the DB and returns the object.
 
@@ -1114,11 +1123,12 @@ class Model(metaclass=ModelMeta):
             user = User(name="...", email="...")
             await user.save()
 
+        :param using_db: Specific DB connection to use instead of default bound
         :param kwargs: Model parameters.
         """
         instance = cls(**kwargs)
         instance._saved_in_db = False
-        db = kwargs.get("using_db") or cls._choose_db(True)
+        db = using_db or cls._choose_db(True)
         await instance.save(using_db=db, force_create=True)
         return instance
 
@@ -1128,6 +1138,7 @@ class Model(metaclass=ModelMeta):
         objects: Iterable[MODEL],
         fields: Iterable[str],
         batch_size: Optional[int] = None,
+        using_db: Optional[BaseDBAsyncClient] = None,
     ) -> "BulkUpdateQuery":
         """
         Update the given fields in each of the given objects in the database.
@@ -1147,12 +1158,19 @@ class Model(metaclass=ModelMeta):
         :param objects: List of objects to bulk create
         :param fields: The fields to update
         :param batch_size: How many objects are created in a single query
+        :param using_db: Specific DB connection to use instead of default bound
         """
-        return cls._meta.manager.get_queryset().bulk_update(objects, fields, batch_size)
+        db = using_db or cls._choose_db(True)
+        return (
+            cls._meta.manager.get_queryset().using_db(db).bulk_update(objects, fields, batch_size)
+        )
 
     @classmethod
     async def in_bulk(
-        cls: Type[MODEL], id_list: Iterable[Union[str, int]], field_name: str = "pk"
+        cls: Type[MODEL],
+        id_list: Iterable[Union[str, int]],
+        field_name: str = "pk",
+        using_db: Optional[BaseDBAsyncClient] = None,
     ) -> Dict[str, MODEL]:
         """
         Return a dictionary mapping each of the given IDs to the object with
@@ -1160,8 +1178,10 @@ class Model(metaclass=ModelMeta):
 
         :param id_list: A list of field values
         :param field_name: Must be a unique field
+        :param using_db: Specific DB connection to use instead of default bound
         """
-        return await cls._meta.manager.get_queryset().in_bulk(id_list, field_name)
+        db = using_db or cls._choose_db()
+        return await cls._meta.manager.get_queryset().using_db(db).in_bulk(id_list, field_name)
 
     @classmethod
     def bulk_create(
@@ -1171,6 +1191,7 @@ class Model(metaclass=ModelMeta):
         ignore_conflicts: bool = False,
         update_fields: Optional[Iterable[str]] = None,
         on_conflict: Optional[Iterable[str]] = None,
+        using_db: Optional[BaseDBAsyncClient] = None,
     ) -> "BulkCreateQuery":
         """
         Bulk insert operation:
@@ -1197,17 +1218,24 @@ class Model(metaclass=ModelMeta):
         :param ignore_conflicts: Ignore conflicts when inserting
         :param objects: List of objects to bulk create
         :param batch_size: How many objects are created in a single query
+        :param using_db: Specific DB connection to use instead of default bound
         """
-        return cls._meta.manager.get_queryset().bulk_create(
-            objects, batch_size, ignore_conflicts, update_fields, on_conflict
+        db = using_db or cls._choose_db(True)
+        return (
+            cls._meta.manager.get_queryset()
+            .using_db(db)
+            .bulk_create(objects, batch_size, ignore_conflicts, update_fields, on_conflict)
         )
 
     @classmethod
-    def first(cls: Type[MODEL]) -> QuerySetSingle[Optional[MODEL]]:
+    def first(
+        cls: Type[MODEL], using_db: Optional[BaseDBAsyncClient] = None
+    ) -> QuerySetSingle[Optional[MODEL]]:
         """
         Generates a QuerySet that returns the first record.
         """
-        return cls._meta.manager.get_queryset().first()
+        db = using_db or cls._choose_db()
+        return cls._meta.manager.get_queryset().using_db(db).first()
 
     @classmethod
     def filter(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySet[MODEL]:
@@ -1239,14 +1267,17 @@ class Model(metaclass=ModelMeta):
         return cls._meta.manager.get_queryset().annotate(**kwargs)
 
     @classmethod
-    def all(cls: Type[MODEL]) -> QuerySet[MODEL]:
+    def all(cls: Type[MODEL], using_db: Optional[BaseDBAsyncClient] = None) -> QuerySet[MODEL]:
         """
         Returns the complete QuerySet.
         """
-        return cls._meta.manager.get_queryset()
+        db = using_db or cls._choose_db()
+        return cls._meta.manager.get_queryset().using_db(db)
 
     @classmethod
-    def get(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySetSingle[MODEL]:
+    def get(
+        cls: Type[MODEL], using_db: Optional[BaseDBAsyncClient] = None, *args: Q, **kwargs: Any
+    ) -> QuerySetSingle[MODEL]:
         """
         Fetches a single record for a Model type using the provided filter parameters.
 
@@ -1260,10 +1291,11 @@ class Model(metaclass=ModelMeta):
         :raises MultipleObjectsReturned: If provided search returned more than one object.
         :raises DoesNotExist: If object can not be found.
         """
-        return cls._meta.manager.get_queryset().get(*args, **kwargs)
+        db = using_db or cls._choose_db()
+        return cls._meta.manager.get_queryset().using_db(db).get(*args, **kwargs)
 
     @classmethod
-    def raw(cls, sql: str) -> "RawSQLQuery":
+    def raw(cls, sql: str, using_db: Optional[BaseDBAsyncClient] = None) -> "RawSQLQuery":
         """
         Executes a RAW SQL and returns the result
 
@@ -1273,10 +1305,13 @@ class Model(metaclass=ModelMeta):
 
         :param sql: The raw sql.
         """
-        return cls._meta.manager.get_queryset().raw(sql)
+        db = using_db or cls._choose_db()
+        return cls._meta.manager.get_queryset().using_db(db).raw(sql)
 
     @classmethod
-    def exists(cls: Type[MODEL], *args: Q, **kwargs: Any) -> ExistsQuery:
+    def exists(
+        cls: Type[MODEL], using_db: Optional[BaseDBAsyncClient] = None, *args: Q, **kwargs: Any
+    ) -> ExistsQuery:
         """
         Return True/False whether record exists with the provided filter parameters.
 
@@ -1287,10 +1322,13 @@ class Model(metaclass=ModelMeta):
         :param args: Q functions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
         """
-        return cls._meta.manager.get_queryset().filter(*args, **kwargs).exists()
+        db = using_db or cls._choose_db()
+        return cls._meta.manager.get_queryset().using_db(db).filter(*args, **kwargs).exists()
 
     @classmethod
-    def get_or_none(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySetSingle[Optional[MODEL]]:
+    def get_or_none(
+        cls: Type[MODEL], using_db: Optional[BaseDBAsyncClient] = None, *args: Q, **kwargs: Any
+    ) -> QuerySetSingle[Optional[MODEL]]:
         """
         Fetches a single record for a Model type using the provided filter parameters or None.
 
@@ -1301,7 +1339,8 @@ class Model(metaclass=ModelMeta):
         :param args: Q functions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
         """
-        return cls._meta.manager.get_queryset().get_or_none(*args, **kwargs)
+        db = using_db or cls._choose_db()
+        return cls._meta.manager.get_queryset().using_db(db).get_or_none(*args, **kwargs)
 
     @classmethod
     async def fetch_for_list(
