@@ -839,6 +839,40 @@ class TestPydantic(test.TestCase):
             },
         )
 
+    async def test_address_list(self):
+        addressp = await self.Address_Pydantic.from_tortoise_orm_list([await Address.get(street="Ocean")])
+        # print(addressp.json(indent=4))
+        addressdict = addressp[0].dict()
+
+        # Remove timestamps
+        del addressdict["event"]["tournament"]["created"]
+        del addressdict["event"]["modified"]
+
+        self.assertEqual(
+            addressdict,
+            {
+                "city": "Santa Monica",
+                "street": "Ocean",
+                "event": {
+                    "event_id": self.event.event_id,
+                    "name": "Test",
+                    "tournament": {
+                        "id": self.tournament.id,
+                        "name": "New Tournament",
+                        "desc": None,
+                    },
+                    "reporter": {"id": self.reporter.id, "name": "The Reporter"},
+                    "participants": [
+                        {"id": self.team1.id, "name": "Onesies", "alias": None},
+                        {"id": self.team2.id, "name": "T-Shirts", "alias": None},
+                    ],
+                    "token": self.event.token,
+                    "alias": None,
+                },
+                "event_id": self.address.event_id,
+            },
+        )
+
     async def test_tournament(self):
         tournamentp = await self.Tournament_Pydantic.from_tortoise_orm(
             await Tournament.all().first()
