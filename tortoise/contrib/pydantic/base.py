@@ -111,7 +111,7 @@ class PydanticModel(BaseModel):
         res = []
         for obj in objs:
             res.push(self.from_tortoise_orm(obj)
-        await asyncio.gather(*res)
+        res = await asyncio.gather(*res)
         return res
 
     @classmethod
