@@ -27,7 +27,7 @@ def generate_token():
 
 
 class Animal(Model):
-    """Model with no relation"""
+    """ Model with no relation """
 
     id = fields.IntField(pk=True, generated=True)
     name = fields.CharField(max_length=10)
