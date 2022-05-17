@@ -1365,7 +1365,7 @@ class TestPydanticMutlipleUses(test.TestCase):
     async def setUp(self) -> None:
         # Create models that are are not initiated
         class Animal(Model):
-            """Model with no relation"""
+            """ Model with no relation """
 
             id = fields.IntField(pk=True, generated=True)
             name = fields.CharField(max_length=10)
