@@ -273,6 +273,15 @@ class TestModelMethods(test.TestCase):
         mdls = list(await self.cls.all())
         self.assertEqual(len(mdls), 2)
 
+    async def test_clone_from_db(self):
+        mdl2 = await self.cls.get(pk=self.mdl.pk)
+        mdl3 = mdl2.clone()
+        mdl3.pk = None
+        await mdl3.save()
+        self.assertNotEqual(mdl3.pk, mdl2.pk)
+        mdls = list(await self.cls.all())
+        self.assertEqual(len(mdls), 2)
+
     async def test_implicit_clone(self):
         self.mdl.pk = None
         await self.mdl.save()
