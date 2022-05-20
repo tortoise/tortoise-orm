@@ -27,7 +27,7 @@ endif
 	pflake8 $(checkfiles)
 	mypy $(checkfiles)
 	#pylint -d C,W,R $(checkfiles)
-	bandit -r $(checkfiles)
+	#bandit -r $(checkfiles)
 	twine check dist/*
 
 lint: deps build

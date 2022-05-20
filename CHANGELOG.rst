@@ -20,6 +20,7 @@ Fixed
 ^^^^^
 - `TimeField` for `MySQL` will return `datetime.timedelta` object instead of `datetime.time` object.
 - Fix on conflict do nothing. (#1122)
+- Fix `_custom_generated_pk` attribute not set in `Model._init_from_db` method. (#633)
 
 0.19.0
 ------

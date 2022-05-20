@@ -715,6 +715,7 @@ class Model(metaclass=ModelMeta):
         self = cls.__new__(cls)
         self._partial = False
         self._saved_in_db = True
+        self._custom_generated_pk = self._meta.db_pk_column not in self._meta.generated_db_fields
 
         meta = self._meta
 
