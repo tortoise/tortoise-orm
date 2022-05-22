@@ -8,6 +8,12 @@ Changelog
 
 0.19
 ====
+0.19.2
+------
+Fixed
+^^^^^
+- Mixin does not work. (#1133)
+
 0.19.1
 ------
 Added
