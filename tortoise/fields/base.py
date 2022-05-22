@@ -156,9 +156,6 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
     def __get__(self, instance: Optional["Model"], owner: Type["Model"]):
         ...
 
-    def __set__(self, instance: Optional["Model"], value: VALUE) -> None:
-        ...
-
     def __init__(
         self,
         source_field: Optional[str] = None,

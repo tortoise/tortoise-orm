@@ -77,7 +77,7 @@ def _serialize_value(value: Any):
 def mysql_json_filter(field: Term, value: Dict) -> Criterion:
     ((key, filter_value),) = value.items()
     filter_value = _serialize_value(filter_value)
-    key_parts = list(map(lambda item: int(item) if item.isdigit() else str(item), key.split("__")))
+    key_parts = [int(item) if item.isdigit() else str(item) for item in key.split("__")]
     operator_ = operator.eq
     if key_parts[-1] in operator_keywords:
         operator_ = operator_keywords[str(key_parts.pop(-1))]  # type: ignore

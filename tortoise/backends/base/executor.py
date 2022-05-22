@@ -154,9 +154,9 @@ class BaseExecutor:
                         obj = model._init_from_db(
                             **dict(
                                 zip(
-                                    map(
-                                        lambda x: x.split(".")[1],
-                                        keys[current_idx : current_idx + index],  # noqa
+                                    (
+                                        x.split(".")[1]
+                                        for x in keys[current_idx : current_idx + index]
                                     ),
                                     related_values,
                                 )
