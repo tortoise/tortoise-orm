@@ -28,8 +28,8 @@ jobs:
           external_repository: tortoise/tortoise.github.io
           publish_branch: master
       - name: Deploy release docs
+        if: ${{ github.event_name }} == "release" && ${{ github.event.action }} == "created"
         uses: peaceiris/actions-gh-pages@v3
-        if: github.event_name == "release" && github.event.action == "created"
         with:
           personal_token: ${{ secrets.PERSONAL_TOKEN }}
           publish_dir: build/html
