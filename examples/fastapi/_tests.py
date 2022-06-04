@@ -2,6 +2,7 @@
 # pylint: disable=E0611,E0401
 from typing import Generator
 
+import anyio.abc
 import pytest
 from fastapi.testclient import TestClient
 from main import app
@@ -18,7 +19,13 @@ def client() -> Generator:
     finalizer()
 
 
-def test_create_user(client: TestClient):  # nosec
+@pytest.fixture(scope="module")
+def portal(client: TestClient) -> anyio.abc.BlockingPortal:
+    assert client.portal
+    return client.portal
+
+
+def test_create_user(client: TestClient, portal: anyio.abc.BlockingPortal):  # nosec
     response = client.post("/users", json={"username": "admin"})
     assert response.status_code == 200, response.text
     data = response.json()
@@ -30,5 +37,5 @@ def test_create_user(client: TestClient):  # nosec
         user = await Users.get(id=user_id)
         return user
 
-    user_obj = client.portal.call(get_user_by_db)
+    user_obj = portal.call(get_user_by_db)
     assert user_obj.id == user_id
