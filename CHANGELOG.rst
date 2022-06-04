@@ -13,6 +13,7 @@ Changelog
 Fixed
 ^^^^^
 - Mixin does not work. (#1133)
+- FastAPI example test not working. (#1029)
 
 0.19.1
 ------
