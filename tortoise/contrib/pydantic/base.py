@@ -108,11 +108,7 @@ class PydanticModel(BaseModel):
 
         :param objs: The List of Model instances you want serialized.
         """
-        res = []
-        for obj in objs:
-            res.push(self.from_tortoise_orm(obj)
-        res = await asyncio.gather(*res)
-        return res
+        return await asyncio.gather(*(self.from_tortoise_orm(obj) for obj in objs))
 
     @classmethod
     async def from_queryset_single(cls, queryset: "QuerySetSingle") -> "PydanticModel":
