@@ -841,7 +841,6 @@ class TestPydantic(test.TestCase):
 
     async def test_address_list(self):
         addressp = await self.Address_Pydantic.from_tortoise_orm_list([await Address.get(street="Ocean")])
-        # print(addressp.json(indent=4))
         addressdict = addressp[0].dict()
 
         # Remove timestamps
