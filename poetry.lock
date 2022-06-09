@@ -1044,11 +1044,18 @@ diagrams = ["railroad-diagrams", "jinja2"]
 
 [[package]]
 name = "pypika-tortoise"
-version = "0.1.5"
+version = "0.1.6"
 description = "Forked from pypika and streamline just for tortoise-orm"
 category = "main"
 optional = false
-python-versions = ">=3.7,<4.0"
+python-versions = "^3.7"
+develop = false
+
+[package.source]
+type = "git"
+url = "https://github.com/tortoise/pypika-tortoise.git"
+reference = "main"
+resolved_reference = "18af44750d1e6ce4b4ab5dd2a4cf61fdf014d173"
 
 [[package]]
 name = "pyproject-flake8"
@@ -1707,7 +1714,7 @@ psycopg = ["psycopg"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "5cbe3c775b920b806a9c1172359f7febbd2405fe8521ad1c694a6878b52c5220"
+content-hash = "458296506e18eafcbddd3eb81f2162df953699f903e698cabbb0a5ddf4b3e335"
 
 [metadata.files]
 aiofiles = [
@@ -2714,10 +2721,7 @@ pyparsing = [
     {file = "pyparsing-3.0.9-py3-none-any.whl", hash = "sha256:5026bae9a10eeaefb61dab2f09052b9f4307d44aee4eda64b309723d8d206bbc"},
     {file = "pyparsing-3.0.9.tar.gz", hash = "sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb"},
 ]
-pypika-tortoise = [
-    {file = "pypika-tortoise-0.1.5.tar.gz", hash = "sha256:2e2f747bfc645a25e097485651278cd7d920b709686ce54e43387ba1c9294048"},
-    {file = "pypika_tortoise-0.1.5-py3-none-any.whl", hash = "sha256:23d993558e3005ac7f7f2865d9add3d8168097f45246f8844fa46d6682a99d90"},
-]
+pypika-tortoise = []
 pyproject-flake8 = [
     {file = "pyproject-flake8-0.0.1a4.tar.gz", hash = "sha256:8ed9453f1d984cfe94c998f9840275359e29e7f435b8ddd188ae084e2dc1270c"},
     {file = "pyproject_flake8-0.0.1a4-py2.py3-none-any.whl", hash = "sha256:1a8f94e18d08677ee780625049d9d00a9ee823661c6606caab8a383351037a75"},
