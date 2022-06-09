@@ -1055,7 +1055,7 @@ develop = false
 type = "git"
 url = "https://github.com/tortoise/pypika-tortoise.git"
 reference = "main"
-resolved_reference = "18af44750d1e6ce4b4ab5dd2a4cf61fdf014d173"
+resolved_reference = "f3d125521dd096b4ea376d1105380f960ce18ea5"
 
 [[package]]
 name = "pyproject-flake8"
