@@ -1277,7 +1277,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def get(
-        cls: Type[MODEL], using_db: Optional[BaseDBAsyncClient] = None, *args: Q, **kwargs: Any
+        cls: Type[MODEL], *args: Q, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
     ) -> QuerySetSingle[MODEL]:
         """
         Fetches a single record for a Model type using the provided filter parameters.
@@ -1286,6 +1286,7 @@ class Model(metaclass=ModelMeta):
 
             user = await User.get(username="foo")
 
+        :param using_db: The DB connection to use
         :param args: Q functions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
 
@@ -1304,6 +1305,7 @@ class Model(metaclass=ModelMeta):
 
             result = await User.raw("select * from users where name like '%test%'")
 
+        :param using_db: The specific DB connection to use
         :param sql: The raw sql.
         """
         db = using_db or cls._choose_db()
@@ -1311,7 +1313,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def exists(
-        cls: Type[MODEL], using_db: Optional[BaseDBAsyncClient] = None, *args: Q, **kwargs: Any
+        cls: Type[MODEL], *args: Q, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
     ) -> ExistsQuery:
         """
         Return True/False whether record exists with the provided filter parameters.
@@ -1320,6 +1322,7 @@ class Model(metaclass=ModelMeta):
 
             result = await User.exists(username="foo")
 
+        :param using_db: The specific DB connection to use.
         :param args: Q functions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
         """
@@ -1328,7 +1331,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def get_or_none(
-        cls: Type[MODEL], using_db: Optional[BaseDBAsyncClient] = None, *args: Q, **kwargs: Any
+        cls: Type[MODEL], *args: Q, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
     ) -> QuerySetSingle[Optional[MODEL]]:
         """
         Fetches a single record for a Model type using the provided filter parameters or None.
@@ -1337,6 +1340,7 @@ class Model(metaclass=ModelMeta):
 
             user = await User.get_or_none(username="foo")
 
+        :param using_db: The specific DB connection to use.
         :param args: Q functions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
         """

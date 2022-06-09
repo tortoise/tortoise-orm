@@ -24,7 +24,7 @@ from tortoise.exceptions import (
     ParamsError,
     ValidationError,
 )
-from tortoise.expressions import F
+from tortoise.expressions import F, Q
 from tortoise.models import NoneAwaitable
 
 
@@ -208,6 +208,9 @@ class TestModelMethods(test.TestCase):
         self.assertTrue(ret)
 
         ret = await self.cls.exists(name="XXX")
+        self.assertFalse(ret)
+
+        ret = await self.cls.exists(Q(name="XXX") & Q(name="Test"))
         self.assertFalse(ret)
 
     async def test_get_or_none(self):
