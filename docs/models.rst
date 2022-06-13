@@ -182,6 +182,11 @@ The ``Meta`` class
 
         Set to ``True`` to indicate this is an abstract class
 
+    .. attribute:: schema
+        :annotation: = ""
+
+        Set this to configure a schema name, where table exists
+
     .. attribute:: table
         :annotation: = ""
 
