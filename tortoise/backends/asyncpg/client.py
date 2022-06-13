@@ -14,7 +14,10 @@ from tortoise.backends.base.client import (
     TransactionContext,
     TransactionContextPooled,
 )
-from tortoise.backends.base_postgres.client import BasePostgresClient, translate_exceptions
+from tortoise.backends.base_postgres.client import (
+    BasePostgresClient,
+    translate_exceptions,
+)
 from tortoise.exceptions import (
     DBConnectionError,
     IntegrityError,

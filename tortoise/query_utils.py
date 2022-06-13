@@ -5,7 +5,11 @@ from pypika import Table
 from pypika.terms import Criterion
 
 from tortoise.exceptions import OperationalError
-from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance, RelationalField
+from tortoise.fields.relational import (
+    BackwardFKRelation,
+    ManyToManyFieldInstance,
+    RelationalField,
+)
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.queryset import QuerySet

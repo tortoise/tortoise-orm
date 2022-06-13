@@ -20,7 +20,11 @@ from tortoise.backends.base.client import (
     TransactionContext,
     TransactionContextPooled,
 )
-from tortoise.backends.odbc.client import ODBCClient, ODBCTransactionWrapper, translate_exceptions
+from tortoise.backends.odbc.client import (
+    ODBCClient,
+    ODBCTransactionWrapper,
+    translate_exceptions,
+)
 from tortoise.backends.oracle.executor import OracleExecutor
 from tortoise.backends.oracle.schema_generator import OracleSchemaGenerator
 
@@ -44,9 +48,9 @@ class OracleClient(ODBCClient):
         super().__init__(**kwargs)
         self.user = user.upper()
         self.password = password
-        dbq = f'{host}:{port}'
+        dbq = f"{host}:{port}"
         if self.database:
-            dbq += f'/{self.database}'
+            dbq += f"/{self.database}"
         self.dsn = f"DRIVER={driver};DBQ={dbq};UID={user};PWD={password};"
 
     def _in_transaction(self) -> "TransactionContext":
@@ -97,7 +101,7 @@ class OraclePoolConnectionWrapper(PoolConnectionWrapper):
 
     async def __aenter__(self):
         connection = await super(OraclePoolConnectionWrapper, self).__aenter__()  # type: ignore
-        if getattr(self.client, 'database', False) and not hasattr(connection, "current_schema"):
+        if getattr(self.client, "database", False) and not hasattr(connection, "current_schema"):
             await connection.execute(f'ALTER SESSION SET CURRENT_SCHEMA = "{self.client.user}"')
             await connection.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD'")
             await connection.execute(

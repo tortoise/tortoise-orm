@@ -1,4 +1,12 @@
-from tests.testmodels import Event, IntFields, MinRelation, Node, Reporter, Tournament, Tree
+from tests.testmodels import (
+    Event,
+    IntFields,
+    MinRelation,
+    Node,
+    Reporter,
+    Tournament,
+    Tree,
+)
 from tortoise import connections
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotEQ
