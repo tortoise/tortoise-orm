@@ -14,6 +14,8 @@ Fixed
 ^^^^^
 - Mixin does not work. (#1133)
 - `using_db` wrong position in model shortcut methods. (#1150)
+- Added `schema` attribute to Model's Meta to specify exact schema to use with the model.
+- Fixed connection to Oracle database by adding database info to DBQ in connection string.
 
 0.19.1
 ------

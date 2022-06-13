@@ -438,8 +438,8 @@ class Tortoise:
         for app in cls.apps.values():
             for model in app.values():
                 model._meta.finalise_model()
-                model._meta.basetable = Table(model._meta.db_table)
-                model._meta.basequery = model._meta.db.query_class.from_(model._meta.db_table)
+                model._meta.basetable = Table(name=model._meta.db_table, schema=model._meta.schema)
+                model._meta.basequery = model._meta.db.query_class.from_(model._meta.basetable)
                 model._meta.basequery_all_fields = model._meta.basequery.select(
                     *model._meta.db_fields
                 )

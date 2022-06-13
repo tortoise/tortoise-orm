@@ -43,7 +43,10 @@ class OracleClient(ODBCClient):
     ) -> None:
         super().__init__(**kwargs)
         self.password = password
-        self.dsn = f"DRIVER={driver};DBQ={host}:{port};UID={user};PWD={password};"
+        dbq = f'{host}:{port}'
+        if self.database:
+            dbq += f'/{self.database}'
+        self.dsn = f"DRIVER={driver};DBQ={dbq};UID={user};PWD={password};"
 
     def _in_transaction(self) -> "TransactionContext":
         return TransactionContextPooled(TransactionWrapper(self))
