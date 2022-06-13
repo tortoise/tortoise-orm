@@ -42,6 +42,7 @@ class OracleClient(ODBCClient):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        self.user = user.upper()
         self.password = password
         dbq = f'{host}:{port}'
         if self.database:
@@ -96,8 +97,8 @@ class OraclePoolConnectionWrapper(PoolConnectionWrapper):
 
     async def __aenter__(self):
         connection = await super(OraclePoolConnectionWrapper, self).__aenter__()  # type: ignore
-        if self.client._template.get("database") and not hasattr(connection, "current_schema"):
-            await connection.execute(f'ALTER SESSION SET CURRENT_SCHEMA = "{self.client.database}"')
+        if getattr(self.client, 'database', False) and not hasattr(connection, "current_schema"):
+            await connection.execute(f'ALTER SESSION SET CURRENT_SCHEMA = "{self.client.user}"')
             await connection.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD'")
             await connection.execute(
                 "ALTER SESSION SET NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD\"T\"HH24:MI:SSTZH:TZM'"
@@ -105,7 +106,7 @@ class OraclePoolConnectionWrapper(PoolConnectionWrapper):
             await connection.add_output_converter(
                 pyodbc.SQL_TYPE_TIMESTAMP, self._timestamp_convert
             )
-            setattr(connection, "current_schema", self.client.database)
+            setattr(connection, "current_schema", self.client.user)
         return connection
 
 
