@@ -178,6 +178,7 @@ class MetaInfo:
     __slots__ = (
         "abstract",
         "db_table",
+        "schema",
         "app",
         "fields",
         "db_fields",
@@ -217,6 +218,7 @@ class MetaInfo:
         self.abstract: bool = getattr(meta, "abstract", False)
         self.manager: Manager = getattr(meta, "manager", Manager())
         self.db_table: str = getattr(meta, "table", "")
+        self.schema: Optional[str] = getattr(meta, "schema", None)
         self.app: Optional[str] = getattr(meta, "app", None)
         self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
         self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")

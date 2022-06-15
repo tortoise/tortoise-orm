@@ -20,7 +20,11 @@ from tortoise.backends.base.client import (
     TransactionContext,
     TransactionContextPooled,
 )
-from tortoise.backends.odbc.client import ODBCClient, ODBCTransactionWrapper, translate_exceptions
+from tortoise.backends.odbc.client import (
+    ODBCClient,
+    ODBCTransactionWrapper,
+    translate_exceptions,
+)
 from tortoise.backends.oracle.executor import OracleExecutor
 from tortoise.backends.oracle.schema_generator import OracleSchemaGenerator
 
@@ -42,8 +46,12 @@ class OracleClient(ODBCClient):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
+        self.user = user.upper()
         self.password = password
-        self.dsn = f"DRIVER={driver};DBQ={host}:{port};UID={user};PWD={password};"
+        dbq = f"{host}:{port}"
+        if self.database:
+            dbq += f"/{self.database}"
+        self.dsn = f"DRIVER={driver};DBQ={dbq};UID={user};PWD={password};"
 
     def _in_transaction(self) -> "TransactionContext":
         return TransactionContextPooled(TransactionWrapper(self))
@@ -93,8 +101,8 @@ class OraclePoolConnectionWrapper(PoolConnectionWrapper):
 
     async def __aenter__(self):
         connection = await super(OraclePoolConnectionWrapper, self).__aenter__()  # type: ignore
-        if self.client._template.get("database") and not hasattr(connection, "current_schema"):
-            await connection.execute(f'ALTER SESSION SET CURRENT_SCHEMA = "{self.client.database}"')
+        if getattr(self.client, "database", False) and not hasattr(connection, "current_schema"):
+            await connection.execute(f'ALTER SESSION SET CURRENT_SCHEMA = "{self.client.user}"')
             await connection.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD'")
             await connection.execute(
                 "ALTER SESSION SET NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD\"T\"HH24:MI:SSTZH:TZM'"
@@ -102,7 +110,7 @@ class OraclePoolConnectionWrapper(PoolConnectionWrapper):
             await connection.add_output_converter(
                 pyodbc.SQL_TYPE_TIMESTAMP, self._timestamp_convert
             )
-            setattr(connection, "current_schema", self.client.database)
+            setattr(connection, "current_schema", self.client.user)
         return connection
 
 

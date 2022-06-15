@@ -1,6 +1,15 @@
 import copy
 
-from tests.testmodels import Address, Employee, Event, JSONFields, Reporter, Team, Tournament, User
+from tests.testmodels import (
+    Address,
+    Employee,
+    Event,
+    JSONFields,
+    Reporter,
+    Team,
+    Tournament,
+    User,
+)
 from tortoise.contrib import test
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 

@@ -1,4 +1,8 @@
-from tests.testmodels import Tournament, UniqueTogetherFields, UniqueTogetherFieldsWithFK
+from tests.testmodels import (
+    Tournament,
+    UniqueTogetherFields,
+    UniqueTogetherFieldsWithFK,
+)
 from tortoise.contrib import test
 from tortoise.exceptions import IntegrityError
 
