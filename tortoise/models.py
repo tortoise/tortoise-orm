@@ -1061,7 +1061,7 @@ class Model(metaclass=ModelMeta):
                 )
             except DoesNotExist:
                 try:
-                    return await cls.create(using_db=connection, **defaults, **kwargs), True
+                    return await cls.create(using_db=connection, **defaults), True
                 except (IntegrityError, TransactionManagementError):
                     return await cls.filter(**kwargs).using_db(connection).get(), False
 

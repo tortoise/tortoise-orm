@@ -18,7 +18,8 @@ Fixed
 - Mixin does not work. (#1133)
 - `using_db` wrong position in model shortcut methods. (#1150)
 - Fixed connection to `Oracle` database by adding database info to DBQ in connection string.
-- Fixed ORA-01435 error while using `Oracle` database (#1155)
+- Fixed ORA-01435 error while using `Oracle` database. (#1155)
+- Fix `get_or_create`: KeyError when kwargs are passed. (#1154)
 
 0.19.1
 ------
