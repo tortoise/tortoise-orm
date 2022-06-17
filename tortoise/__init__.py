@@ -519,7 +519,6 @@ class Tortoise:
         """
         if cls._inited:
             await connections.close_all(discard=True)
-            await cls._reset_apps()
         if int(bool(config) + bool(config_file) + bool(db_url)) != 1:
             raise ConfigurationError(
                 'You should init either from "config", "config_file" or "db_url"'
