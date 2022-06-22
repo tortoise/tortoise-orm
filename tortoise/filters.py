@@ -314,6 +314,12 @@ def get_json_filter(field_name: str, source_field: str):
         f"{field_name}__contains": {
             "field": actual_field_name,
             "source_field": source_field,
+            "operator": contains,
+            "value_encoder": string_encoder,
+        },
+        f"{field_name}__json_contains": {
+            "field": actual_field_name,
+            "source_field": source_field,
             "operator": json_contains,
         },
         f"{field_name}__contained_by": {
