@@ -833,7 +833,7 @@ class Model(metaclass=ModelMeta):
         """
         Register listener to current model class for special Signal.
 
-        :param signal: one of tortoise.signals.Signal
+        :param signal: one of tortoise.signals.Signals
         :param listener: callable listener
 
         :raises ConfigurationError: When listener is not callable
