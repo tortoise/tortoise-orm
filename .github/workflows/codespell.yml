@@ -1,0 +1,10 @@
+name: codespell
+on: [pull_request, push]
+jobs:
+  codespell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - run: pip install codespell
+      - run: codespell

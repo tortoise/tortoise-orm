@@ -59,6 +59,7 @@ pylint = "*"
 pygments = "*"
 bandit = "*"
 black = "*"
+codespell = "*"
 # Test tools
 coveralls = "*"
 pytest = "*"

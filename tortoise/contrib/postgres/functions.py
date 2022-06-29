@@ -21,7 +21,7 @@ class ToTsQuery(Function):  # type: ignore
 
 class Random(Function):  # type: ignore
     """
-    Genrate random number.
+    Generate random number.
 
     :samp:`Random()`
     """
