@@ -29,6 +29,7 @@ endif
 	#pylint -d C,W,R $(checkfiles)
 	#bandit -r $(checkfiles)
 	twine check dist/*
+	codespell $(checkfiles)
 
 lint: deps build
 ifneq ($(shell which black),)
@@ -39,7 +40,6 @@ endif
 	#pylint $(checkfiles)
 	bandit -r $(checkfiles)
 	twine check dist/*
-	codespell $(checkfiles)
 
 test: deps
 	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: pytest $(pytest_opts)
