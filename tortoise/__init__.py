@@ -3,7 +3,6 @@ import importlib
 import json
 import os
 import warnings
-from contextvars import ContextVar
 from copy import deepcopy
 from inspect import isclass
 from types import ModuleType
@@ -13,6 +12,7 @@ from pypika import Table
 
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
+from tortoise.connection import connections
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields.relational import (
     BackwardFKRelation,
@@ -24,13 +24,11 @@ from tortoise.fields.relational import (
 from tortoise.filters import get_m2m_filters
 from tortoise.log import logger
 from tortoise.models import Model, ModelMeta
-from tortoise.transactions import current_transaction_map
 from tortoise.utils import generate_schema_for_client
 
 
 class Tortoise:
     apps: Dict[str, Dict[str, Type["Model"]]] = {}
-    _connections: Dict[str, BaseDBAsyncClient] = {}
     _inited: bool = False
 
     @classmethod
@@ -38,9 +36,13 @@ class Tortoise:
         """
         Returns the connection by name.
 
-        :raises KeyError: If connection name does not exist.
+        :raises ConfigurationError: If connection name does not exist.
+
+        .. warning::
+           This is deprecated and will be removed in a future release. Please use
+           :meth:`connections.get<tortoise.connection.ConnectionHandler.get>` instead.
         """
-        return cls._connections[connection_name]
+        return connections.get(connection_name)
 
     @classmethod
     def describe_model(
@@ -163,7 +165,7 @@ class Tortoise:
                         if related_field:
                             if related_field.unique:
                                 key_fk_object = deepcopy(related_field)
-                                fk_object.to_field_instance = related_field
+                                fk_object.to_field_instance = related_field  # type: ignore
                             else:
                                 raise ConfigurationError(
                                     f'field "{fk_object.to_field}" in model'
@@ -176,7 +178,7 @@ class Tortoise:
                             )
                     else:
                         key_fk_object = deepcopy(related_model._meta.pk)
-                        fk_object.to_field_instance = related_model._meta.pk
+                        fk_object.to_field_instance = related_model._meta.pk  # type: ignore
                         fk_object.to_field = related_model._meta.pk_attr
                     fk_object.field_type = fk_object.to_field_instance.field_type
                     key_field = f"{field}_id"
@@ -212,7 +214,7 @@ class Tortoise:
                             fk_object.null,
                             fk_object.description,
                         )
-                        fk_relation.to_field_instance = fk_object.to_field_instance
+                        fk_relation.to_field_instance = fk_object.to_field_instance  # type: ignore
                         related_model._meta.add_field(backward_relation_name, fk_relation)
 
                 for field in model._meta.o2o_fields:
@@ -228,7 +230,7 @@ class Tortoise:
                         if related_field:
                             if related_field.unique:
                                 key_o2o_object = deepcopy(related_field)
-                                o2o_object.to_field_instance = related_field
+                                o2o_object.to_field_instance = related_field  # type: ignore
                             else:
                                 raise ConfigurationError(
                                     f'field "{o2o_object.to_field}" in model'
@@ -241,7 +243,7 @@ class Tortoise:
                             )
                     else:
                         key_o2o_object = deepcopy(related_model._meta.pk)
-                        o2o_object.to_field_instance = related_model._meta.pk
+                        o2o_object.to_field_instance = related_model._meta.pk  # type: ignore
                         o2o_object.to_field = related_model._meta.pk_attr
 
                     o2o_object.field_type = o2o_object.to_field_instance.field_type
@@ -279,7 +281,7 @@ class Tortoise:
                             null=True,
                             description=o2o_object.description,
                         )
-                        o2o_relation.to_field_instance = o2o_object.to_field_instance
+                        o2o_relation.to_field_instance = o2o_object.to_field_instance  # type: ignore
                         related_model._meta.add_field(backward_relation_name, o2o_relation)
 
                     if o2o_object.pk:
@@ -337,17 +339,6 @@ class Tortoise:
                     related_model._meta.add_field(backward_relation_name, m2m_relation)
 
     @classmethod
-    def _discover_client_class(cls, engine: str) -> Type[BaseDBAsyncClient]:
-        # Let exception bubble up for transparency
-        engine_module = importlib.import_module(engine)
-
-        try:
-            client_class = engine_module.client_class
-        except AttributeError:
-            raise ConfigurationError(f'Backend for engine "{engine}" does not implement db client')
-        return client_class
-
-    @classmethod
     def _discover_models(
         cls, models_path: Union[ModuleType, str], app_label: str
     ) -> List[Type["Model"]]:
@@ -375,21 +366,6 @@ class Tortoise:
         if not discovered_models:
             warnings.warn(f'Module "{models_path}" has no models', RuntimeWarning, stacklevel=4)
         return discovered_models
-
-    @classmethod
-    async def _init_connections(cls, connections_config: dict, create_db: bool) -> None:
-        for name, info in connections_config.items():
-            if isinstance(info, str):
-                info = expand_db_url(info)
-            client_class = cls._discover_client_class(info.get("engine"))
-            db_params = info["credentials"].copy()
-            db_params.update({"connection_name": name})
-            connection = client_class(**db_params)
-            if create_db:
-                await connection.db_create()
-            await connection.create_connection(with_db=True)
-            cls._connections[name] = connection
-            current_transaction_map[name] = ContextVar(name, default=connection)
 
     @classmethod
     def init_models(
@@ -423,7 +399,7 @@ class Tortoise:
     def _init_apps(cls, apps_config: dict) -> None:
         for name, info in apps_config.items():
             try:
-                cls.get_connection(info.get("default_connection", "default"))
+                connections.get(info.get("default_connection", "default"))
             except KeyError:
                 raise ConfigurationError(
                     'Unknown connection "{}" for app "{}"'.format(
@@ -462,8 +438,8 @@ class Tortoise:
         for app in cls.apps.values():
             for model in app.values():
                 model._meta.finalise_model()
-                model._meta.basetable = Table(model._meta.db_table)
-                model._meta.basequery = model._meta.db.query_class.from_(model._meta.db_table)
+                model._meta.basetable = Table(name=model._meta.db_table, schema=model._meta.schema)
+                model._meta.basequery = model._meta.db.query_class.from_(model._meta.basetable)
                 model._meta.basequery_all_fields = model._meta.basequery.select(
                     *model._meta.db_fields
                 )
@@ -542,8 +518,7 @@ class Tortoise:
         :raises ConfigurationError: For any configuration error
         """
         if cls._inited:
-            await cls.close_connections()
-            await cls._reset_apps()
+            await connections.close_all(discard=True)
         if int(bool(config) + bool(config_file) + bool(db_url)) != 1:
             raise ConfigurationError(
                 'You should init either from "config", "config_file" or "db_url"'
@@ -595,7 +570,7 @@ class Tortoise:
         )
 
         cls._init_timezone(use_tz, timezone)
-        await cls._init_connections(connections_config, _create_db)
+        await connections._init(connections_config, _create_db)
         cls._init_apps(apps_config)
         cls._init_routers(routers)
 
@@ -628,12 +603,12 @@ class Tortoise:
         It is required for this to be called on exit,
         else your event loop may never complete
         as it is waiting for the connections to die.
+
+        .. warning::
+           This is deprecated and will be removed in a future release. Please use
+           :meth:`connections.close_all<tortoise.connection.ConnectionHandler.close_all>` instead.
         """
-        tasks = []
-        for connection in cls._connections.values():
-            tasks.append(connection.close())
-        await asyncio.gather(*tasks)
-        cls._connections = {}
+        await connections.close_all()
         logger.info("Tortoise-ORM shutdown")
 
     @classmethod
@@ -643,7 +618,6 @@ class Tortoise:
                 if isinstance(model, ModelMeta):
                     model._meta.default_connection = None
         cls.apps.clear()
-        current_transaction_map.clear()
 
     @classmethod
     async def generate_schemas(cls, safe: bool = True) -> None:
@@ -658,7 +632,7 @@ class Tortoise:
         """
         if not cls._inited:
             raise ConfigurationError("You have to call .init() first before generating schemas")
-        for connection in cls._connections.values():
+        for connection in connections.all():
             await generate_schema_for_client(connection, safe)
 
     @classmethod
@@ -671,10 +645,13 @@ class Tortoise:
         """
         if not cls._inited:
             raise ConfigurationError("You have to call .init() first before deleting schemas")
-        for connection in cls._connections.values():
-            await connection.close()
-            await connection.db_delete()
-        cls._connections = {}
+        # this closes any existing connections/pool if any and clears
+        # the storage
+        await connections.close_all(discard=False)
+        for conn in connections.all():
+            await conn.db_delete()
+            connections.discard(conn.connection_name)
+
         await cls._reset_apps()
 
     @classmethod
@@ -706,7 +683,7 @@ def run_async(coro: Coroutine) -> None:
     try:
         loop.run_until_complete(coro)
     finally:
-        loop.run_until_complete(Tortoise.close_connections())
+        loop.run_until_complete(connections.close_all(discard=True))
 
 
-__version__ = "0.18.2"
+__version__ = "0.19.2"

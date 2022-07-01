@@ -1,5 +1,5 @@
 import os
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from time import sleep
 
 import pytz
@@ -148,6 +148,112 @@ class TestDatetimeFields(test.TestCase):
         os.environ["USE_TZ"] = old_use_tz
 
 
+@test.requireCapability(dialect="sqlite")
+@test.requireCapability(dialect="postgres")
+class TestTimeFields(test.TestCase):
+    async def test_create(self):
+        now = timezone.now().timetz()
+        obj0 = await testmodels.TimeFields.create(time=now)
+        boj1 = await testmodels.TimeFields.get(id=obj0.id)
+        self.assertEqual(boj1.time, now)
+
+    async def test_cast(self):
+        obj0 = await testmodels.TimeFields.create(time="21:00+00:00")
+        obj1 = await testmodels.TimeFields.get(id=obj0.id)
+        self.assertEqual(obj1.time, time.fromisoformat("21:00+00:00"))
+
+    async def test_values(self):
+        now = timezone.now().timetz()
+        obj0 = await testmodels.TimeFields.create(time=now)
+        values = await testmodels.TimeFields.get(id=obj0.id).values("time")
+        self.assertEqual(values["time"], now)
+
+    async def test_values_list(self):
+        now = timezone.now().timetz()
+        obj0 = await testmodels.TimeFields.create(time=now)
+        values = await testmodels.TimeFields.get(id=obj0.id).values_list("time", flat=True)
+        self.assertEqual(values, now)
+
+    async def test_get(self):
+        now = timezone.now().timetz()
+        await testmodels.TimeFields.create(time=now)
+        obj = await testmodels.TimeFields.get(time=now)
+        self.assertEqual(obj.time, now)
+
+
+@test.requireCapability(dialect="mysql")
+class TestTimeFieldsMySQL(test.TestCase):
+    async def test_create(self):
+        now = timezone.now().timetz()
+        obj0 = await testmodels.TimeFields.create(time=now)
+        boj1 = await testmodels.TimeFields.get(id=obj0.id)
+        self.assertEqual(
+            boj1.time,
+            timedelta(
+                hours=now.hour,
+                minutes=now.minute,
+                seconds=now.second,
+                microseconds=now.microsecond,
+            ),
+        )
+
+    async def test_cast(self):
+        obj0 = await testmodels.TimeFields.create(time="21:00+00:00")
+        obj1 = await testmodels.TimeFields.get(id=obj0.id)
+        t = time.fromisoformat("21:00+00:00")
+        self.assertEqual(
+            obj1.time,
+            timedelta(
+                hours=t.hour,
+                minutes=t.minute,
+                seconds=t.second,
+                microseconds=t.microsecond,
+            ),
+        )
+
+    async def test_values(self):
+        now = timezone.now().timetz()
+        obj0 = await testmodels.TimeFields.create(time=now)
+        values = await testmodels.TimeFields.get(id=obj0.id).values("time")
+        self.assertEqual(
+            values["time"],
+            timedelta(
+                hours=now.hour,
+                minutes=now.minute,
+                seconds=now.second,
+                microseconds=now.microsecond,
+            ),
+        )
+
+    async def test_values_list(self):
+        now = timezone.now().timetz()
+        obj0 = await testmodels.TimeFields.create(time=now)
+        values = await testmodels.TimeFields.get(id=obj0.id).values_list("time", flat=True)
+        self.assertEqual(
+            values,
+            timedelta(
+                hours=now.hour,
+                minutes=now.minute,
+                seconds=now.second,
+                microseconds=now.microsecond,
+            ),
+        )
+
+    async def test_get(self):
+        now = timezone.now().timetz()
+        await testmodels.TimeFields.create(time=now)
+        obj = await testmodels.TimeFields.get(time=now)
+        self.assertEqual(
+            obj.time,
+            timedelta(
+                hours=now.hour,
+                minutes=now.minute,
+                seconds=now.second,
+                microseconds=now.microsecond,
+            ),
+        )
+
+
 class TestDateFields(test.TestCase):
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
@@ -231,7 +337,7 @@ class TestTimeDeltaFields(test.TestCase):
         self.assertEqual(values, timedelta(days=35, seconds=8, microseconds=1))
 
     async def test_get(self):
-        delta = timedelta(days=35, seconds=8, microseconds=1)
+        delta = timedelta(days=35, seconds=8, microseconds=2)
         await testmodels.TimeDeltaFields.create(timedelta=delta)
         obj = await testmodels.TimeDeltaFields.get(timedelta=delta)
         self.assertEqual(obj.timedelta, delta)

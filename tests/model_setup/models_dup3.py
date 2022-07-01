@@ -12,4 +12,6 @@ class Tournament(Model):
 
 
 class Event(Model):
-    tournament = fields.OneToOneField("models.Tournament", related_name="event")
+    tournament: fields.OneToOneRelation[Tournament] = fields.OneToOneField(
+        "models.Tournament", related_name="event"
+    )

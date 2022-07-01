@@ -1,5 +1,18 @@
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    overload,
+)
 
 from pypika.terms import Term
 
@@ -9,11 +22,14 @@ from tortoise.validators import Validator
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
+VALUE = TypeVar("VALUE")
+
 # TODO: Replace this with an enum
 CASCADE = "CASCADE"
 RESTRICT = "RESTRICT"
 SET_NULL = "SET NULL"
 SET_DEFAULT = "SET DEFAULT"
+NO_ACTION = "NO ACTION"
 
 
 class _FieldMeta(type):
@@ -28,12 +44,12 @@ class _FieldMeta(type):
         return type.__new__(mcs, name, bases, attrs)
 
 
-class Field(metaclass=_FieldMeta):
+class Field(Generic[VALUE], metaclass=_FieldMeta):
     """
     Base Field type.
 
     :param source_field: Provide a source_field name if the DB column name needs to be
-        something specific instead of enerated off the field name.
+        something specific instead of generated off the field name.
     :param generated: Is this field DB-generated?
     :param pk: Is this field a Primary Key? Can only have a single such field on the Model,
         and if none is specified it will autogenerate a default primary key called ``id``.
@@ -71,7 +87,7 @@ class Field(metaclass=_FieldMeta):
 
         If the DB driver natively supports this Python type, should we skip it?
         This is for optimization purposes only, where we don't need to force type conversion
-        to and fro between Python and the DB.
+        between Python and the DB.
 
     .. attribute:: allows_generated
         :annotation: bool = False
@@ -124,9 +140,21 @@ class Field(metaclass=_FieldMeta):
     SQL_TYPE: str = None  # type: ignore
     GENERATED_SQL: str = None  # type: ignore
 
-    # This method is just to make IDE/Linters happy
-    def __new__(cls, *args: Any, **kwargs: Any) -> "Field":
+    # These methods are just to make IDE/Linters happy:
+
+    def __new__(cls, *args: Any, **kwargs: Any) -> "Field[VALUE]":
         return super().__new__(cls)
+
+    @overload
+    def __get__(self, instance: None, owner: Type["Model"]) -> "Field[VALUE]":
+        ...
+
+    @overload
+    def __get__(self, instance: "Model", owner: Type["Model"]) -> VALUE:
+        ...
+
+    def __get__(self, instance: Optional["Model"], owner: Type["Model"]):
+        ...
 
     def __init__(
         self,
@@ -232,14 +260,19 @@ class Field(metaclass=_FieldMeta):
         return {}
 
     def _get_dialects(self) -> Dict[str, dict]:
-        return {
-            dialect[4:]: {
-                key: val
-                for key, val in getattr(self, dialect).__dict__.items()
-                if not key.startswith("_")
-            }
-            for dialect in [key for key in dir(self) if key.startswith("_db_")]
-        }
+        ret = {}
+        for dialect in [key for key in dir(self) if key.startswith("_db_")]:
+            item = {}
+            cls = getattr(self, dialect)
+            try:
+                cls = cls(self)
+            except TypeError:
+                pass
+            for key, val in cls.__dict__.items():
+                if not key.startswith("_"):
+                    item[key] = val
+            ret[dialect[4:]] = item
+        return ret
 
     def get_db_field_types(self) -> Optional[Dict[str, str]]:
         """

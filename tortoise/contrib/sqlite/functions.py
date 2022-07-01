@@ -3,7 +3,7 @@ from pypika.terms import Function
 
 class Random(Function):  # type: ignore
     """
-    Genrate random number.
+    Generate random number.
 
     :samp:`Random()`
     """

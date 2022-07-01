@@ -14,6 +14,7 @@ from tests.testmodels import (
     UUIDFkRelatedNullModel,
 )
 from tortoise.contrib import test
+from tortoise.contrib.test.condition import NotEQ
 from tortoise.exceptions import (
     ConfigurationError,
     DoesNotExist,
@@ -23,7 +24,7 @@ from tortoise.exceptions import (
     ParamsError,
     ValidationError,
 )
-from tortoise.expressions import F
+from tortoise.expressions import F, Q
 from tortoise.models import NoneAwaitable
 
 
@@ -38,6 +39,7 @@ class TestModelCreate(test.TestCase):
         mdl2 = await UUIDFkRelatedNullModel.get(id=mdl.id)
         self.assertEqual(mdl, mdl2)
 
+    @test.requireCapability(dialect=NotEQ("mssql"))
     async def test_save_generated_custom_id(self):
         cid = 12345
         mdl = await Tournament.create(id=cid, name="Test")
@@ -52,6 +54,7 @@ class TestModelCreate(test.TestCase):
         mdl2 = await UUIDFkRelatedNullModel.get(id=cid)
         self.assertEqual(mdl, mdl2)
 
+    @test.requireCapability(dialect=NotEQ("mssql"))
     async def test_save_generated_duplicate_custom_id(self):
         cid = 12345
         await Tournament.create(id=cid, name="TestOriginal")
@@ -207,6 +210,9 @@ class TestModelMethods(test.TestCase):
         ret = await self.cls.exists(name="XXX")
         self.assertFalse(ret)
 
+        ret = await self.cls.exists(Q(name="XXX") & Q(name="Test"))
+        self.assertFalse(ret)
+
     async def test_get_or_none(self):
         mdl = await self.cls.get_or_none(name="Test")
         self.assertEqual(self.mdl.id, mdl.id)
@@ -267,6 +273,15 @@ class TestModelMethods(test.TestCase):
         await mdl2.save()
         self.assertNotEqual(mdl2.pk, self.mdl.pk)
         await mdl2.save()
+        mdls = list(await self.cls.all())
+        self.assertEqual(len(mdls), 2)
+
+    async def test_clone_from_db(self):
+        mdl2 = await self.cls.get(pk=self.mdl.pk)
+        mdl3 = mdl2.clone()
+        mdl3.pk = None
+        await mdl3.save()
+        self.assertNotEqual(mdl3.pk, mdl2.pk)
         mdls = list(await self.cls.all())
         self.assertEqual(len(mdls), 2)
 

@@ -20,10 +20,10 @@ class Tournament(Model):
 class Event(Model):
     id = fields.BigIntField(pk=True, description="Event ID")
     name = fields.TextField()
-    tournament = fields.ForeignKeyField(
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
         "models.Tournament", related_name="events", description="FK to tournament"
     )
-    participants = fields.ManyToManyField(
+    participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team",
         related_name="events",
         through="teamevents",
@@ -43,8 +43,12 @@ class Event(Model):
 class Team(Model):
     name = fields.CharField(max_length=50, pk=True, description="The TEAM name (and PK)")
     key = fields.IntField()
-    manager = fields.ForeignKeyField("models.Team", related_name="team_members", null=True)
-    talks_to = fields.ManyToManyField("models.Team", related_name="gets_talked_to")
+    manager: fields.ForeignKeyRelation["Team"] = fields.ForeignKeyField(
+        "models.Team", related_name="team_members", null=True
+    )
+    talks_to: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
+        "models.Team", related_name="gets_talked_to"
+    )
 
     class Meta:
         table_description = "The TEAMS!"
@@ -61,7 +65,7 @@ class TeamAddress(Model):
     city = fields.CharField(max_length=50, description="City")
     country = fields.CharField(max_length=50, description="Country")
     street = fields.CharField(max_length=128, description="Street Address")
-    team = fields.OneToOneField(
+    team: fields.OneToOneRelation[Team] = fields.OneToOneField(
         "models.Team", related_name="address", on_delete=fields.CASCADE, pk=True
     )
 
@@ -73,18 +77,20 @@ class VenueInformation(Model):
     #: All this should not be part of the field description either!
     capacity = fields.IntField()
     rent = fields.FloatField()
-    team = fields.OneToOneField("models.Team", on_delete=fields.SET_NULL, null=True)
+    team: fields.OneToOneRelation[Team] = fields.OneToOneField(
+        "models.Team", on_delete=fields.SET_NULL, null=True
+    )
 
 
 class SourceFields(Model):
     id = fields.IntField(pk=True, source_field="sometable_id")
     chars = fields.CharField(max_length=255, source_field="some_chars_table", index=True)
 
-    fk = fields.ForeignKeyField(
+    fk: fields.ForeignKeyRelation["SourceFields"] = fields.ForeignKeyField(
         "models.SourceFields", related_name="team_members", null=True, source_field="fk_sometable"
     )
 
-    rel_to = fields.ManyToManyField(
+    rel_to: fields.ManyToManyRelation["SourceFields"] = fields.ManyToManyField(
         "models.SourceFields",
         related_name="rel_from",
         through="sometable_self",

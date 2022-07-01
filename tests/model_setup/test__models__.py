@@ -5,7 +5,7 @@ Tests for __models__
 import re
 from unittest.mock import AsyncMock, patch
 
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 from tortoise.utils import get_schema_sql
@@ -16,7 +16,6 @@ class TestGenerateSchema(test.SimpleTestCase):
         await super().asyncSetUp()
         try:
             Tortoise.apps = {}
-            Tortoise._connections = {}
             Tortoise._inited = False
         except ConfigurationError:
             pass
@@ -28,7 +27,6 @@ class TestGenerateSchema(test.SimpleTestCase):
         ]
 
     async def asyncTearDown(self) -> None:
-        Tortoise._connections = {}
         await Tortoise._reset_apps()
 
     async def init_for(self, module: str, safe=False) -> None:
@@ -48,7 +46,7 @@ class TestGenerateSchema(test.SimpleTestCase):
                     "apps": {"models": {"models": [module], "default_connection": "default"}},
                 }
             )
-            self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split(";\n")
+            self.sqls = get_schema_sql(connections.get("default"), safe).split(";\n")
 
     def get_sql(self, text: str) -> str:
         return str(re.sub(r"[ \t\n\r]+", " ", [sql for sql in self.sqls if text in sql][0]))

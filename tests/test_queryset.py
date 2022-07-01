@@ -1,6 +1,15 @@
-from tests.testmodels import Event, IntFields, MinRelation, Node, Reporter, Tournament, Tree
-from tortoise import Tortoise
+from tests.testmodels import (
+    Event,
+    IntFields,
+    MinRelation,
+    Node,
+    Reporter,
+    Tournament,
+    Tree,
+)
+from tortoise import connections
 from tortoise.contrib import test
+from tortoise.contrib.test.condition import NotEQ
 from tortoise.exceptions import (
     DoesNotExist,
     FieldError,
@@ -19,7 +28,7 @@ class TestQueryset(test.TestCase):
         await super().asyncSetUp()
         # Build large dataset
         self.intfields = [await IntFields.create(intnum=val) for val in range(10, 100, 3)]
-        self.db = Tortoise.get_connection("models")
+        self.db = connections.get("models")
 
     async def test_all_count(self):
         self.assertEqual(await IntFields.all().count(), 30)
@@ -583,6 +592,7 @@ class TestQueryset(test.TestCase):
         ret = await Tournament.filter(pk=t1.pk).annotate(count=RawSQL("count(*)")).values("count")
         self.assertEqual(ret, [{"count": 1}])
 
+    @test.requireCapability(dialect=NotEQ("mssql"))
     async def test_raw_sql_select(self):
         t1 = await Tournament.create(id=1, name="1")
         ret = (

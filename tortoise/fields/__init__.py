@@ -1,4 +1,11 @@
-from tortoise.fields.base import CASCADE, RESTRICT, SET_DEFAULT, SET_NULL, Field
+from tortoise.fields.base import (
+    CASCADE,
+    NO_ACTION,
+    RESTRICT,
+    SET_DEFAULT,
+    SET_NULL,
+    Field,
+)
 from tortoise.fields.data import (
     BigIntField,
     BinaryField,
@@ -15,6 +22,7 @@ from tortoise.fields.data import (
     SmallIntField,
     TextField,
     TimeDeltaField,
+    TimeField,
     UUIDField,
 )
 from tortoise.fields.relational import (
@@ -36,6 +44,7 @@ __all__ = [
     "RESTRICT",
     "SET_DEFAULT",
     "SET_NULL",
+    "NO_ACTION",
     "Field",
     "BigIntField",
     "BinaryField",
@@ -44,6 +53,7 @@ __all__ = [
     "CharField",
     "DateField",
     "DatetimeField",
+    "TimeField",
     "DecimalField",
     "FloatField",
     "IntEnumField",

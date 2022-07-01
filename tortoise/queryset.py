@@ -20,7 +20,7 @@ from typing import (
 )
 
 from pypika import JoinType, Order, Table
-from pypika.functions import Count
+from pypika.functions import Cast, Count
 from pypika.queries import QueryBuilder
 from pypika.terms import Case, Field, Term, ValueWrapper
 from typing_extensions import Protocol
@@ -142,7 +142,7 @@ class AwaitableQuery(Generic[MODEL]):
 
         if has_aggregate and (self._joined_tables or having_criterion or self.query._orderbys):
             self.query = self.query.groupby(
-                self.model._meta.basetable[self.model._meta.db_pk_column]
+                *[self.model._meta.basetable[field] for field in self.model._meta.db_fields]
             )
 
     def _join_table_by_field(
@@ -1029,6 +1029,7 @@ class UpdateQuery(AwaitableQuery):
         "custom_filters",
         "orderings",
         "limit",
+        "values",
     )
 
     def __init__(
@@ -1050,6 +1051,7 @@ class UpdateQuery(AwaitableQuery):
         self._db = db
         self.limit = limit
         self.orderings = orderings
+        self.values: List[Any] = []
 
     def _make_query(self) -> None:
         table = self.model._meta.basetable
@@ -1066,7 +1068,7 @@ class UpdateQuery(AwaitableQuery):
         )
         # Need to get executor to get correct column_map
         executor = self._db.executor_class(model=self.model, db=self._db)
-
+        count = 0
         for key, value in self.update_kwargs.items():
             field_object = self.model._meta.fields_map.get(key)
             if not field_object:
@@ -1090,8 +1092,12 @@ class UpdateQuery(AwaitableQuery):
                     value = value.resolve(self.model, table)["field"]
                 else:
                     value = executor.column_map[key](value, None)
-
-            self.query = self.query.set(db_field, value)
+            if isinstance(value, Term):
+                self.query = self.query.set(db_field, value)
+            else:
+                self.query = self.query.set(db_field, executor.parameter(count))
+                self.values.append(value)
+                count += 1
 
     def __await__(self) -> Generator[Any, None, int]:
         if self._db is None:
@@ -1100,7 +1106,7 @@ class UpdateQuery(AwaitableQuery):
         return self._execute().__await__()
 
     async def _execute(self) -> int:
-        return (await self._db.execute_query(str(self.query)))[0]
+        return (await self._db.execute_query(str(self.query), self.values))[0]
 
 
 class DeleteQuery(AwaitableQuery):
@@ -1698,7 +1704,17 @@ class BulkUpdateQuery(UpdateQuery):
                 for obj in objects_item:
                     value = executor.column_map[pk_attr](obj.pk, None)
                     field_value = getattr(obj, field)
-                    case.when(pk == value, self.query._wrapper_cls(field_value))
+                    case.when(
+                        pk == value,
+                        Cast(
+                            self.query._wrapper_cls(field_value),
+                            obj._meta.fields_map[field].get_for_dialect(
+                                self._db.schema_generator.DIALECT, "SQL_TYPE"
+                            ),
+                        )
+                        if self._db.schema_generator.DIALECT == "postgres"
+                        else self.query._wrapper_cls(field_value),
+                    )
                     pk_list.append(value)
                 query = query.set(field, case)
                 query = query.where(pk.isin(pk_list))

@@ -191,9 +191,9 @@ class TestTransactions(test.TruncationTestCase):
         self.assertEqual(await Tournament.all(), [])
 
     async def test_select_await_across_transaction_fail(self):
-        query = Tournament.all().values("name")
         try:
             async with in_transaction():
+                query = Tournament.all().values("name")
                 await Tournament.create(name="Test1")
                 result = await query
                 raise KeyError("moo")
@@ -204,8 +204,8 @@ class TestTransactions(test.TruncationTestCase):
         self.assertEqual(await Tournament.all(), [])
 
     async def test_select_await_across_transaction_success(self):
-        query = Tournament.all().values("id", "name")
         async with in_transaction():
+            query = Tournament.all().values("id", "name")
             obj = await Tournament.create(name="Test1")
             result = await query
 

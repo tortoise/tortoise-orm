@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Optional, Set, Type
 
-from pypika.terms import Term
+from pypika.terms import Term, ValueWrapper
 
 if TYPE_CHECKING:
     from tortoise import Model
@@ -63,3 +63,21 @@ class Index:
 
     def index_name(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]"):
         return self.name or schema_generator._generate_index_name("idx", model, self.fields)
+
+
+class PartialIndex(Index):
+    def __init__(
+        self,
+        *expressions: Term,
+        fields: Optional[Set[str]] = None,
+        name: Optional[str] = None,
+        condition: Optional[dict] = None,
+    ):
+        super().__init__(*expressions, fields=fields, name=name)
+        if condition:
+            cond = " WHERE "
+            items = []
+            for k, v in condition.items():
+                items.append(f"{k} = {ValueWrapper(v)}")
+            cond += " AND ".join(items)
+            self.extra = cond

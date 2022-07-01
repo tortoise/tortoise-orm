@@ -2,7 +2,7 @@
 import re
 from unittest.mock import AsyncMock, patch
 
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 from tortoise.utils import get_schema_sql
@@ -13,7 +13,6 @@ class TestGenerateSchema(test.SimpleTestCase):
         await super().asyncSetUp()
         try:
             Tortoise.apps = {}
-            Tortoise._connections = {}
             Tortoise._inited = False
         except ConfigurationError:
             pass
@@ -25,8 +24,8 @@ class TestGenerateSchema(test.SimpleTestCase):
         ]
 
     async def asyncTearDown(self) -> None:
-        Tortoise._connections = {}
         await Tortoise._reset_apps()
+        await super().asyncTearDown()
 
     async def init_for(self, module: str, safe=False) -> None:
         with patch(
@@ -43,7 +42,7 @@ class TestGenerateSchema(test.SimpleTestCase):
                     "apps": {"models": {"models": [module], "default_connection": "default"}},
                 }
             )
-            self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split(";\n")
+            self.sqls = get_schema_sql(connections.get("default"), safe).split(";\n")
 
     def get_sql(self, text: str) -> str:
         return re.sub(r"[ \t\n\r]+", " ", " ".join([sql for sql in self.sqls if text in sql]))
@@ -138,7 +137,7 @@ class TestGenerateSchema(test.SimpleTestCase):
     async def test_schema_no_db_constraint(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_no_db_constraint")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             r"""CREATE TABLE "team" (
@@ -178,7 +177,7 @@ CREATE TABLE "teamevents" (
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -265,7 +264,7 @@ CREATE TABLE "teamevents" (
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = get_schema_sql(connections.get("default"), safe=True)
         self.assertEqual(
             sql.strip(),
             """
@@ -352,7 +351,7 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
     async def test_m2m_no_auto_create(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_no_auto_create_m2m")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             r"""CREATE TABLE "team" (
@@ -416,9 +415,9 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
                         "apps": {"models": {"models": [module], "default_connection": "default"}},
                     }
                 )
-                self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
+                self.sqls = get_schema_sql(connections.get("default"), safe).split("; ")
         except ImportError:
-            raise test.SkipTest("aiomysql not installed")
+            raise test.SkipTest("asyncmy not installed")
 
     async def test_noid(self):
         await self.init_for("tests.testmodels")
@@ -459,7 +458,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def test_schema_no_db_constraint(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_no_db_constraint")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             r"""CREATE TABLE `team` (
@@ -499,7 +498,7 @@ CREATE TABLE `teamevents` (
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -598,7 +597,7 @@ CREATE TABLE `teamevents` (
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = get_schema_sql(connections.get("default"), safe=True)
 
         self.assertEqual(
             sql.strip(),
@@ -697,7 +696,7 @@ CREATE TABLE IF NOT EXISTS `teamevents` (
 
     async def test_index_safe(self):
         await self.init_for("tests.schema.models_mysql_index")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = get_schema_sql(connections.get("default"), safe=True)
         self.assertEqual(
             sql,
             """CREATE TABLE IF NOT EXISTS `index` (
@@ -711,7 +710,7 @@ CREATE SPATIAL INDEX IF NOT EXISTS `idx_index_geometr_0b4dfb` ON `index` (`geome
 
     async def test_index_unsafe(self):
         await self.init_for("tests.schema.models_mysql_index")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql,
             """CREATE TABLE `index` (
@@ -726,7 +725,7 @@ CREATE SPATIAL INDEX `idx_index_geometr_0b4dfb` ON `index` (`geometry`);""",
     async def test_m2m_no_auto_create(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_no_auto_create_m2m")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             r"""CREATE TABLE `team` (
@@ -773,30 +772,9 @@ CREATE TABLE `team_team` (
         )
 
 
-class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
+class GenerateSchemaPostgresSQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
-        try:
-            with patch("asyncpg.create_pool", new=AsyncMock()):
-                await Tortoise.init(
-                    {
-                        "connections": {
-                            "default": {
-                                "engine": "tortoise.backends.asyncpg",
-                                "credentials": {
-                                    "database": "test",
-                                    "host": "127.0.0.1",
-                                    "password": "foomip",
-                                    "port": 3306,
-                                    "user": "root",
-                                },
-                            }
-                        },
-                        "apps": {"models": {"models": [module], "default_connection": "default"}},
-                    }
-                )
-                self.sqls = get_schema_sql(Tortoise._connections["default"], safe).split("; ")
-        except ImportError:
-            raise test.SkipTest("asyncpg not installed")
+        raise test.SkipTest("This class is abstract")
 
     async def test_noid(self):
         await self.init_for("tests.testmodels")
@@ -820,7 +798,7 @@ class TestGenerateSchemaPostgresSQL(TestGenerateSchema):
     async def test_schema_no_db_constraint(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_no_db_constraint")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             r"""CREATE TABLE "team" (
@@ -870,7 +848,7 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';""",
     async def test_schema(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             """
@@ -972,7 +950,7 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = get_schema_sql(connections.get("default"), safe=True)
         self.assertEqual(
             sql.strip(),
             """
@@ -1073,7 +1051,7 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';
 
     async def test_index_unsafe(self):
         await self.init_for("tests.schema.models_postgres_index")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql,
             """CREATE TABLE "index" (
@@ -1083,19 +1061,21 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';
     "gin" TSVECTOR NOT NULL,
     "gist" TSVECTOR NOT NULL,
     "sp_gist" VARCHAR(200) NOT NULL,
-    "hash" VARCHAR(200) NOT NULL
+    "hash" VARCHAR(200) NOT NULL,
+    "partial" VARCHAR(200) NOT NULL
 );
 CREATE INDEX "idx_index_bloom_280137" ON "index" USING BLOOM ("bloom");
 CREATE INDEX "idx_index_brin_a54a00" ON "index" USING BRIN ("brin");
 CREATE INDEX "idx_index_gin_a403ee" ON "index" USING GIN ("gin");
 CREATE INDEX "idx_index_gist_c807bf" ON "index" USING GIST ("gist");
 CREATE INDEX "idx_index_sp_gist_2c0bad" ON "index" USING SPGIST ("sp_gist");
-CREATE INDEX "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");""",
+CREATE INDEX "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");
+CREATE INDEX "idx_index_partial_c5be6a" ON "index" USING  ("partial") WHERE id = 1;""",
         )
 
     async def test_index_safe(self):
         await self.init_for("tests.schema.models_postgres_index")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=True)
+        sql = get_schema_sql(connections.get("default"), safe=True)
         self.assertEqual(
             sql,
             """CREATE TABLE IF NOT EXISTS "index" (
@@ -1105,20 +1085,22 @@ CREATE INDEX "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");""",
     "gin" TSVECTOR NOT NULL,
     "gist" TSVECTOR NOT NULL,
     "sp_gist" VARCHAR(200) NOT NULL,
-    "hash" VARCHAR(200) NOT NULL
+    "hash" VARCHAR(200) NOT NULL,
+    "partial" VARCHAR(200) NOT NULL
 );
 CREATE INDEX IF NOT EXISTS "idx_index_bloom_280137" ON "index" USING BLOOM ("bloom");
 CREATE INDEX IF NOT EXISTS "idx_index_brin_a54a00" ON "index" USING BRIN ("brin");
 CREATE INDEX IF NOT EXISTS "idx_index_gin_a403ee" ON "index" USING GIN ("gin");
 CREATE INDEX IF NOT EXISTS "idx_index_gist_c807bf" ON "index" USING GIST ("gist");
 CREATE INDEX IF NOT EXISTS "idx_index_sp_gist_2c0bad" ON "index" USING SPGIST ("sp_gist");
-CREATE INDEX IF NOT EXISTS "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");""",
+CREATE INDEX IF NOT EXISTS "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");
+CREATE INDEX IF NOT EXISTS "idx_index_partial_c5be6a" ON "index" USING  ("partial") WHERE id = 1;""",
         )
 
     async def test_m2m_no_auto_create(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_no_auto_create_m2m")
-        sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+        sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
             r"""CREATE TABLE "team" (
@@ -1167,3 +1149,55 @@ CREATE TABLE "team_team" (
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
 );""".strip(),
         )
+
+
+class TestGenerateSchemaAsyncpg(GenerateSchemaPostgresSQL):
+    async def init_for(self, module: str, safe=False) -> None:
+        try:
+            with patch("asyncpg.create_pool", new=AsyncMock()):
+                await Tortoise.init(
+                    {
+                        "connections": {
+                            "default": {
+                                "engine": "tortoise.backends.asyncpg",
+                                "credentials": {
+                                    "database": "test",
+                                    "host": "127.0.0.1",
+                                    "password": "foomip",
+                                    "port": 5432,
+                                    "user": "root",
+                                },
+                            }
+                        },
+                        "apps": {"models": {"models": [module], "default_connection": "default"}},
+                    }
+                )
+                self.sqls = get_schema_sql(connections.get("default"), safe).split("; ")
+        except ImportError:
+            raise test.SkipTest("asyncpg not installed")
+
+
+class TestGenerateSchemaPsycopg(GenerateSchemaPostgresSQL):
+    async def init_for(self, module: str, safe=False) -> None:
+        try:
+            with patch("psycopg_pool.AsyncConnectionPool.open", new=AsyncMock()):
+                await Tortoise.init(
+                    {
+                        "connections": {
+                            "default": {
+                                "engine": "tortoise.backends.psycopg",
+                                "credentials": {
+                                    "database": "test",
+                                    "host": "127.0.0.1",
+                                    "password": "foomip",
+                                    "port": 5432,
+                                    "user": "root",
+                                },
+                            }
+                        },
+                        "apps": {"models": {"models": [module], "default_connection": "default"}},
+                    }
+                )
+                self.sqls = get_schema_sql(connections.get("default"), safe).split("; ")
+        except ImportError:
+            raise test.SkipTest("psycopg not installed")

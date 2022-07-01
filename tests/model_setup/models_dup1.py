@@ -11,8 +11,12 @@ class Tournament(Model):
 
 
 class Event(Model):
-    tournament = fields.ForeignKeyField("models.Tournament", related_name="events")
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
+        "models.Tournament", related_name="events"
+    )
 
 
 class Party(Model):
-    tournament = fields.ForeignKeyField("models.Tournament", related_name="events")
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
+        "models.Tournament", related_name="events"
+    )

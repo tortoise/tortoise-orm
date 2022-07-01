@@ -4,7 +4,7 @@ on:
     branches:
       - develop
 jobs:
-  gh-pages:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -17,7 +17,7 @@ jobs:
           poetry config virtualenvs.create false
       - name: Build docs
         run: make docs
-      - name: Deploy docs
+      - name: Deploy latest docs
         uses: peaceiris/actions-gh-pages@v3
         with:
           personal_token: ${{ secrets.PERSONAL_TOKEN }}

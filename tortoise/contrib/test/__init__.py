@@ -1,5 +1,4 @@
 import asyncio
-import os
 import os as _os
 import unittest
 from asyncio.events import AbstractEventLoop
@@ -8,10 +7,9 @@ from types import ModuleType
 from typing import Any, Iterable, List, Optional, Union
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 
-from tortoise import Model, Tortoise
+from tortoise import Model, Tortoise, connections
 from tortoise.backends.base.config_generator import generate_config as _generate_config
-from tortoise.exceptions import DBConnectionError
-from tortoise.transactions import current_transaction_map
+from tortoise.exceptions import DBConnectionError, OperationalError
 
 __all__ = (
     "SimpleTestCase",
@@ -33,7 +31,7 @@ _TORTOISE_TEST_DB = "sqlite://:memory:"
 # pylint: disable=W0201
 
 expectedFailure.__doc__ = """
-Mark test as expecting failiure.
+Mark test as expecting failure.
 
 On success it will be marked as unexpected success.
 """
@@ -43,7 +41,7 @@ _CONNECTIONS: dict = {}
 _SELECTOR = None
 _LOOP: AbstractEventLoop = None  # type: ignore
 _MODULES: Iterable[Union[str, ModuleType]] = []
-_CONN_MAP: dict = {}
+_CONN_CONFIG: dict = {}
 
 
 def getDBConfig(app_label: str, modules: Iterable[Union[str, ModuleType]]) -> dict:
@@ -62,10 +60,12 @@ def getDBConfig(app_label: str, modules: Iterable[Union[str, ModuleType]]) -> di
 
 
 async def _init_db(config: dict) -> None:
+    # Placing init outside the try block since it doesn't
+    # establish connections to the DB eagerly.
+    await Tortoise.init(config)
     try:
-        await Tortoise.init(config)
         await Tortoise._drop_databases()
-    except DBConnectionError:  # pragma: nocoverage
+    except (DBConnectionError, OperationalError):  # pragma: nocoverage
         pass
 
     await Tortoise.init(config, _create_db=True)
@@ -74,8 +74,8 @@ async def _init_db(config: dict) -> None:
 
 def _restore_default() -> None:
     Tortoise.apps = {}
-    Tortoise._connections = _CONNECTIONS.copy()
-    current_transaction_map.update(_CONN_MAP)
+    connections._get_storage().update(_CONNECTIONS.copy())
+    connections._db_config = _CONN_CONFIG.copy()
     Tortoise._init_apps(_CONFIG["apps"])
     Tortoise._inited = True
 
@@ -101,20 +101,20 @@ def initializer(
     global _LOOP
     global _TORTOISE_TEST_DB
     global _MODULES
-    global _CONN_MAP
+    global _CONN_CONFIG
     _MODULES = modules
     if db_url is not None:  # pragma: nobranch
         _TORTOISE_TEST_DB = db_url
     _CONFIG = getDBConfig(app_label=app_label, modules=_MODULES)
-
     loop = loop or asyncio.get_event_loop()
     _LOOP = loop
     _SELECTOR = loop._selector  # type: ignore
     loop.run_until_complete(_init_db(_CONFIG))
-    _CONNECTIONS = Tortoise._connections.copy()
-    _CONN_MAP = current_transaction_map.copy()
+    _CONNECTIONS = connections._copy_storage()
+    _CONN_CONFIG = connections.db_config.copy()
+    connections._clear_storage()
+    connections.db_config.clear()
     Tortoise.apps = {}
-    Tortoise._connections = {}
     Tortoise._inited = False
 
 
@@ -189,10 +189,15 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self) -> None:
         await self._setUpDB()
 
+    def _reset_conn_state(self) -> None:
+        # clearing the storage and db config
+        connections._clear_storage()
+        connections.db_config.clear()
+
     async def asyncTearDown(self) -> None:
         await self._tearDownDB()
+        self._reset_conn_state()
         Tortoise.apps = {}
-        Tortoise._connections = {}
         Tortoise._inited = False
 
     def assertListSortEqual(
@@ -231,13 +236,12 @@ class IsolatedTestCase(SimpleTestCase):
     tortoise_test_modules: Iterable[Union[str, ModuleType]] = []
 
     async def _setUpDB(self) -> None:
+        await super()._setUpDB()
         config = getDBConfig(app_label="models", modules=self.tortoise_test_modules or _MODULES)
         await Tortoise.init(config, _create_db=True)
         await Tortoise.generate_schemas(safe=False)
-        self._connections = Tortoise._connections.copy()
 
     async def _tearDownDB(self) -> None:
-        Tortoise._connections = self._connections.copy()
         await Tortoise._drop_databases()
 
 
@@ -268,25 +272,39 @@ class TruncationTestCase(SimpleTestCase):
 
 
 class TransactionTestContext:
-    __slots__ = ("connection", "connection_name", "token")
+    __slots__ = ("connection", "connection_name", "token", "uses_pool")
 
     def __init__(self, connection) -> None:
         self.connection = connection
         self.connection_name = connection.connection_name
+        self.uses_pool = hasattr(self.connection._parent, "_pool")
+
+    async def ensure_connection(self) -> None:
+        is_conn_established = self.connection._connection is not None
+        if self.uses_pool:
+            is_conn_established = self.connection._parent._pool is not None
+
+        # If the underlying pool/connection hasn't been established then
+        # first create the pool/connection
+        if not is_conn_established:
+            await self.connection._parent.create_connection(with_db=True)
+
+        if self.uses_pool:
+            self.connection._connection = await self.connection._parent._pool.acquire()
+        else:
+            self.connection._connection = self.connection._parent._connection
 
     async def __aenter__(self):
-        current_transaction = current_transaction_map[self.connection_name]
-        self.token = current_transaction.set(self.connection)
-        if hasattr(self.connection, "_parent"):
-            self.connection._connection = await self.connection._parent._pool.acquire()
+        await self.ensure_connection()
+        self.token = connections.set(self.connection_name, self.connection)
         await self.connection.start()
         return self.connection
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         await self.connection.rollback()
-        if hasattr(self.connection, "_parent"):
+        if self.uses_pool:
             await self.connection._parent._pool.release(self.connection._connection)
-        current_transaction_map[self.connection_name].reset(self.token)
+        connections.reset(self.token)
 
 
 class TestCase(TruncationTestCase):
@@ -299,20 +317,16 @@ class TestCase(TruncationTestCase):
 
     async def asyncSetUp(self) -> None:
         await super(TestCase, self).asyncSetUp()
-        _restore_default()
-        self.__db__ = Tortoise.get_connection("models")
-        self.__transaction__ = TransactionTestContext(self.__db__._in_transaction().connection)
-        await self.__transaction__.__aenter__()  # type: ignore
+        self._db = connections.get("models")
+        self._transaction = TransactionTestContext(self._db._in_transaction().connection)
+        await self._transaction.__aenter__()  # type: ignore
 
     async def asyncTearDown(self) -> None:
-        await self.__transaction__.__aexit__(None, None, None)
+        await self._transaction.__aexit__(None, None, None)
         await super(TestCase, self).asyncTearDown()
 
-    async def _setUpDB(self) -> None:
-        await super(TestCase, self)._setUpDB()
-
     async def _tearDownDB(self) -> None:
-        if self.__db__.capabilities.supports_transactions:
+        if self._db.capabilities.supports_transactions:
             _restore_default()
         else:
             await super()._tearDownDB()
@@ -350,7 +364,7 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
 
             @wraps(test_item)
             def skip_wrapper(*args, **kwargs):
-                db = Tortoise.get_connection(connection_name)
+                db = connections.get(connection_name)
                 for key, val in conditions.items():
                     if getattr(db.capabilities, key) != val:
                         raise SkipTest(f"Capability {key} != {val}")

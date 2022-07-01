@@ -2,7 +2,6 @@ from typing import (
     TYPE_CHECKING,
     Any,
     AsyncGenerator,
-    Awaitable,
     Generator,
     Generic,
     Iterator,
@@ -11,6 +10,7 @@ from typing import (
     Type,
     TypeVar,
     Union,
+    overload,
 )
 
 from pypika import Table
@@ -25,28 +25,6 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.queryset import Q, QuerySet
 
 MODEL = TypeVar("MODEL", bound="Model")
-
-OneToOneNullableRelation = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
-"""
-Type hint for the result of accessing the :func:`.OneToOneField` field in the model
-when obtained model can be nullable.
-"""
-
-OneToOneRelation = Union[Awaitable[MODEL], MODEL]
-"""
-Type hint for the result of accessing the :func:`.OneToOneField` field in the model.
-"""
-
-ForeignKeyNullableRelation = Union[Awaitable[Optional[MODEL]], Optional[MODEL]]
-"""
-Type hint for the result of accessing the :func:`.ForeignKeyField` field in the model
-when obtained model can be nullable.
-"""
-
-ForeignKeyRelation = Union[Awaitable[MODEL], MODEL]
-"""
-Type hint for the result of accessing the :func:`.ForeignKeyField` field in the model.
-"""
 
 
 class _NoneAwaitable:
@@ -167,11 +145,11 @@ class ReverseRelation(Generic[MODEL]):
 
 class ManyToManyRelation(ReverseRelation[MODEL]):
     """
-    Many to many relation container for :func:`.ManyToManyField`.
+    Many-to-many relation container for :func:`.ManyToManyField`.
     """
 
-    def __init__(self, instance: "Model", m2m_field: "ManyToManyFieldInstance") -> None:
-        super().__init__(m2m_field.related_model, m2m_field.related_name, instance, "pk")  # type: ignore
+    def __init__(self, instance: "Model", m2m_field: "ManyToManyFieldInstance[MODEL]") -> None:
+        super().__init__(m2m_field.related_model, m2m_field.related_name, instance, "pk")
         self.field = m2m_field
         self.instance = instance
 
@@ -292,21 +270,32 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         await db.execute_query(str(query))
 
 
-class RelationalField(Field):
+class RelationalField(Field[MODEL]):
     has_db_field = False
 
     def __init__(
         self,
-        related_model: "Type[Model]",
+        related_model: "Type[MODEL]",
         to_field: Optional[str] = None,
         db_constraint: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self.related_model: "Type[Model]" = related_model
+        self.related_model: "Type[MODEL]" = related_model
         self.to_field: str = to_field  # type: ignore
         self.to_field_instance: Field = None  # type: ignore
         self.db_constraint = db_constraint
+
+    @overload
+    def __get__(self, instance: None, owner: Type["Model"]) -> "RelationalField[MODEL]":
+        ...
+
+    @overload
+    def __get__(self, instance: "Model", owner: Type["Model"]) -> MODEL:
+        ...
+
+    def __get__(self, instance: Optional["Model"], owner: Type["Model"]):
+        ...
 
     def describe(self, serializable: bool) -> dict:
         desc = super().describe(serializable)
@@ -315,7 +304,7 @@ class RelationalField(Field):
         return desc
 
 
-class ForeignKeyFieldInstance(RelationalField):
+class ForeignKeyFieldInstance(RelationalField[MODEL]):
     def __init__(
         self,
         model_name: str,
@@ -341,10 +330,10 @@ class ForeignKeyFieldInstance(RelationalField):
         return desc
 
 
-class BackwardFKRelation(RelationalField):
+class BackwardFKRelation(RelationalField[MODEL]):
     def __init__(
         self,
-        field_type: "Type[Model]",
+        field_type: "Type[MODEL]",
         relation_field: str,
         relation_source_field: str,
         null: bool,
@@ -357,7 +346,7 @@ class BackwardFKRelation(RelationalField):
         self.description: Optional[str] = description
 
 
-class OneToOneFieldInstance(ForeignKeyFieldInstance):
+class OneToOneFieldInstance(ForeignKeyFieldInstance[MODEL]):
     def __init__(
         self,
         model_name: str,
@@ -370,11 +359,11 @@ class OneToOneFieldInstance(ForeignKeyFieldInstance):
         super().__init__(model_name, related_name, on_delete, unique=True, **kwargs)
 
 
-class BackwardOneToOneRelation(BackwardFKRelation):
+class BackwardOneToOneRelation(BackwardFKRelation[MODEL]):
     pass
 
 
-class ManyToManyFieldInstance(RelationalField):
+class ManyToManyFieldInstance(RelationalField[MODEL]):
     field_type = ManyToManyRelation
 
     def __init__(
@@ -385,7 +374,7 @@ class ManyToManyFieldInstance(RelationalField):
         backward_key: str = "",
         related_name: str = "",
         on_delete: str = CASCADE,
-        field_type: "Type[Model]" = None,  # type: ignore
+        field_type: "Type[MODEL]" = None,  # type: ignore
         **kwargs: Any,
     ) -> None:
         # TODO: rename through to through_table
@@ -419,7 +408,7 @@ def OneToOneField(
     on_delete: str = CASCADE,
     db_constraint: bool = True,
     **kwargs: Any,
-) -> OneToOneRelation:
+) -> "OneToOneRelation[MODEL]":
     """
     OneToOne relation field.
 
@@ -468,7 +457,7 @@ def ForeignKeyField(
     on_delete: str = CASCADE,
     db_constraint: bool = True,
     **kwargs: Any,
-) -> ForeignKeyRelation:
+) -> "ForeignKeyRelation[MODEL]":
     """
     ForeignKey relation field.
 
@@ -520,7 +509,7 @@ def ManyToManyField(
     on_delete: str = CASCADE,
     db_constraint: bool = True,
     **kwargs: Any,
-) -> "ManyToManyRelation":
+) -> "ManyToManyRelation[MODEL]":
     """
     ManyToMany relation field.
 
@@ -574,3 +563,26 @@ def ManyToManyField(
         db_constraint=db_constraint,
         **kwargs,
     )
+
+
+OneToOneNullableRelation = Optional[OneToOneFieldInstance[MODEL]]
+"""
+Type hint for the result of accessing the :func:`.OneToOneField` field in the model
+when obtained model can be nullable.
+"""
+
+OneToOneRelation = OneToOneFieldInstance[MODEL]
+"""
+Type hint for the result of accessing the :func:`.OneToOneField` field in the model.
+"""
+
+ForeignKeyNullableRelation = Optional[ForeignKeyFieldInstance[MODEL]]
+"""
+Type hint for the result of accessing the :func:`.ForeignKeyField` field in the model
+when obtained model can be nullable.
+"""
+
+ForeignKeyRelation = ForeignKeyFieldInstance[MODEL]
+"""
+Type hint for the result of accessing the :func:`.ForeignKeyField` field in the model.
+"""

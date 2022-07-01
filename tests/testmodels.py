@@ -37,14 +37,18 @@ class Author(Model):
 
 class Book(Model):
     name = fields.CharField(max_length=255)
-    author = fields.ForeignKeyField("models.Author", related_name="books")
+    author: fields.ForeignKeyRelation[Author] = fields.ForeignKeyField(
+        "models.Author", related_name="books"
+    )
     rating = fields.FloatField()
     subject = fields.CharField(max_length=255, null=True)
 
 
 class BookNoConstraint(Model):
     name = fields.CharField(max_length=255)
-    author = fields.ForeignKeyField("models.Author", db_constraint=False)
+    author: fields.ForeignKeyRelation[Author] = fields.ForeignKeyField(
+        "models.Author", db_constraint=False
+    )
     rating = fields.FloatField()
 
 
@@ -112,8 +116,12 @@ class Node(Model):
 
 
 class Tree(Model):
-    parent = fields.ForeignKeyField("models.Node", related_name="parent_trees")
-    child = fields.ForeignKeyField("models.Node", related_name="children_trees")
+    parent: fields.ForeignKeyRelation[Node] = fields.ForeignKeyField(
+        "models.Node", related_name="parent_trees"
+    )
+    child: fields.ForeignKeyRelation[Node] = fields.ForeignKeyField(
+        "models.Node", related_name="children_trees"
+    )
 
 
 class Address(Model):
@@ -254,6 +262,12 @@ class DateFields(Model):
     date_null = fields.DateField(null=True)
 
 
+class TimeFields(Model):
+    id = fields.IntField(pk=True)
+    time = fields.TimeField()
+    time_null = fields.TimeField(null=True)
+
+
 class FloatFields(Model):
     id = fields.IntField(pk=True)
     floatnum = fields.FloatField()
@@ -384,7 +398,7 @@ class UUIDPkSourceModel(Model):
 class UUIDFkRelatedSourceModel(Model):
     id = fields.UUIDField(pk=True, source_field="b")
     name = fields.CharField(max_length=50, null=True, source_field="c")
-    model = fields.ForeignKeyField(
+    model: fields.ForeignKeyRelation[UUIDPkSourceModel] = fields.ForeignKeyField(
         "models.UUIDPkSourceModel", related_name="children", source_field="d"
     )
 
@@ -395,7 +409,7 @@ class UUIDFkRelatedSourceModel(Model):
 class UUIDFkRelatedNullSourceModel(Model):
     id = fields.UUIDField(pk=True, source_field="i")
     name = fields.CharField(max_length=50, null=True, source_field="j")
-    model = fields.ForeignKeyField(
+    model: fields.ForeignKeyNullableRelation[UUIDPkSourceModel] = fields.ForeignKeyField(
         "models.UUIDPkSourceModel", related_name="children_null", source_field="k", null=True
     )
 
@@ -406,7 +420,7 @@ class UUIDFkRelatedNullSourceModel(Model):
 class UUIDM2MRelatedSourceModel(Model):
     id = fields.UUIDField(pk=True, source_field="e")
     value = fields.TextField(default="test", source_field="f")
-    models = fields.ManyToManyField(
+    models: fields.ManyToManyRelation[UUIDPkSourceModel] = fields.ManyToManyField(
         "models.UUIDPkSourceModel", related_name="peers", forward_key="e", backward_key="h"
     )
 
@@ -419,12 +433,16 @@ class CharPkModel(Model):
 
 
 class CharFkRelatedModel(Model):
-    model = fields.ForeignKeyField("models.CharPkModel", related_name="children")
+    model: fields.ForeignKeyRelation[CharPkModel] = fields.ForeignKeyField(
+        "models.CharPkModel", related_name="children"
+    )
 
 
 class CharM2MRelatedModel(Model):
     value = fields.TextField(default="test")
-    models = fields.ManyToManyField("models.CharPkModel", related_name="peers")
+    models: fields.ManyToManyRelation[CharPkModel] = fields.ManyToManyField(
+        "models.CharPkModel", related_name="peers"
+    )
 
 
 class TimestampMixin:
@@ -469,7 +487,7 @@ class Employee(Model):
     team_members: fields.ReverseRelation["Employee"]
 
     talks_to: fields.ManyToManyRelation["Employee"] = fields.ManyToManyField(
-        "models.Employee", related_name="gets_talked_to"
+        "models.Employee", related_name="gets_talked_to", on_delete=fields.NO_ACTION
     )
     gets_talked_to: fields.ManyToManyRelation["Employee"]
 
@@ -569,7 +587,10 @@ class StraightFields(Model):
     o2o_rev: fields.Field
 
     rel_to: fields.ManyToManyRelation["StraightFields"] = fields.ManyToManyField(
-        "models.StraightFields", related_name="rel_from", description="M2M to myself"
+        "models.StraightFields",
+        related_name="rel_from",
+        description="M2M to myself",
+        on_delete=fields.NO_ACTION,
     )
     rel_from: fields.ManyToManyRelation["StraightFields"]
 
@@ -617,6 +638,7 @@ class SourceFields(Model):
         forward_key="sts_forward",
         backward_key="backward_sts",
         description="M2M to myself",
+        on_delete=fields.NO_ACTION,
     )
     rel_from: fields.ManyToManyRelation["SourceFields"]
 
@@ -645,8 +667,12 @@ class EnumFields(Model):
 
 class DoubleFK(Model):
     name = fields.CharField(max_length=50)
-    left = fields.ForeignKeyField("models.DoubleFK", null=True, related_name="left_rel")
-    right = fields.ForeignKeyField("models.DoubleFK", null=True, related_name="right_rel")
+    left: fields.ForeignKeyRelation["DoubleFK"] = fields.ForeignKeyField(
+        "models.DoubleFK", null=True, related_name="left_rel"
+    )
+    right: fields.ForeignKeyRelation["DoubleFK"] = fields.ForeignKeyField(
+        "models.DoubleFK", null=True, related_name="right_rel"
+    )
 
 
 class DefaultOrdered(Model):
@@ -658,7 +684,9 @@ class DefaultOrdered(Model):
 
 
 class FKToDefaultOrdered(Model):
-    link = fields.ForeignKeyField("models.DefaultOrdered", related_name="related")
+    link: fields.ForeignKeyRelation[DefaultOrdered] = fields.ForeignKeyField(
+        "models.DefaultOrdered", related_name="related"
+    )
     value = fields.IntField()
 
 
@@ -718,7 +746,7 @@ class DefaultModel(Model):
     decimal_default = fields.DecimalField(max_digits=8, decimal_places=2, default=Decimal(1))
     bool_default = fields.BooleanField(default=True)
     char_default = fields.CharField(max_length=20, default="tortoise")
-    date_default = fields.DateField(default=datetime.date(year=2020, month=5, day=20))
+    date_default = fields.DateField(default=datetime.date(year=2020, month=5, day=21))
     datetime_default = fields.DatetimeField(
         default=datetime.datetime(year=2020, month=5, day=20, tzinfo=pytz.utc)
     )
@@ -764,7 +792,15 @@ class AbstractManagerModel(Model):
     status = fields.IntField(default=0)
 
     class Meta:
+        manager = StatusManager()
         abstract = True
+
+
+class User(Model):
+    id = fields.IntField(pk=True)
+    username = fields.CharField(max_length=32)
+    mail = fields.CharField(max_length=64)
+    bio = fields.TextField()
 
 
 class ManagerModel(AbstractManagerModel):
@@ -792,7 +828,9 @@ class Single(Model):
     """
 
     id = fields.IntField(pk=True)
-    extra = fields.ForeignKeyField("models.Extra", related_name="singles", null=True)
+    extra: fields.ForeignKeyRelation[Extra] = fields.ForeignKeyField(
+        "models.Extra", related_name="singles", null=True
+    )
 
 
 class Pair(Model):
@@ -801,5 +839,9 @@ class Pair(Model):
     """
 
     id = fields.IntField(pk=True)
-    left = fields.ForeignKeyField("models.Single", related_name="lefts", null=True)
-    right = fields.ForeignKeyField("models.Single", related_name="rights", null=True)
+    left: fields.ForeignKeyRelation[Single] = fields.ForeignKeyField(
+        "models.Single", related_name="lefts", null=True
+    )
+    right: fields.ForeignKeyRelation[Single] = fields.ForeignKeyField(
+        "models.Single", related_name="rights", null=True
+    )

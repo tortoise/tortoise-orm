@@ -154,9 +154,9 @@ class BaseExecutor:
                         obj = model._init_from_db(
                             **dict(
                                 zip(
-                                    map(
-                                        lambda x: x.split(".")[1],
-                                        keys[current_idx : current_idx + index],  # noqa
+                                    (
+                                        x.split(".")[1]
+                                        for x in keys[current_idx : current_idx + index]
                                     ),
                                     related_values,
                                 )
@@ -208,7 +208,7 @@ class BaseExecutor:
             .insert(*[self.parameter(i) for i in range(len(columns))])
         )
         if ignore_conflicts:
-            query = query.do_nothing()
+            query = query.on_conflict().do_nothing()
         return query
 
     async def _process_insert_result(self, instance: "Model", results: Any) -> None:

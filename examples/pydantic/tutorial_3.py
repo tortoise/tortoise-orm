@@ -30,7 +30,7 @@ class Event(Model):
     name = fields.CharField(max_length=100)
     created_at = fields.DatetimeField(auto_now_add=True)
 
-    tournament = fields.ForeignKeyField(
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
         "models.Tournament", related_name="events", description="The Tournement this happens in"
     )
 
