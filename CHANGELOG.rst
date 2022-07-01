@@ -20,6 +20,7 @@ Fixed
 - Fixed connection to `Oracle` database by adding database info to DBQ in connection string.
 - Fixed ORA-01435 error while using `Oracle` database (#1155)
 - Fixed processing of `ssl` option in MySQL connection string.
+- Fix for prefetch_related with foreign key id == 0.
 
 0.19.1
 ------

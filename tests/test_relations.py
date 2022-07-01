@@ -239,6 +239,13 @@ class TestRelations(test.TestCase):
         event2 = await Event.filter(name="Test").prefetch_related("tournament")
         self.assertEqual(event2[0].tournament, tournament)
 
+    async def test_prefetch_related_fk_id_zero(self):
+        tournament = await Tournament.create(id=0, name="New Tournament")
+        await Event.create(name="Test", tournament_id=tournament.id)
+
+        event2 = await Event.filter(name="Test").prefetch_related("tournament")
+        self.assertEqual(event2[0].tournament, tournament)
+
     async def test_prefetch_related_rfk(self):
         tournament = await Tournament.create(name="New Tournament")
         event = await Event.create(name="Test", tournament_id=tournament.id)
