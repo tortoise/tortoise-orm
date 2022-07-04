@@ -52,16 +52,15 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 MODEL = TypeVar("MODEL", bound="Model")
-T_co = TypeVar("T_co", covariant=True)
 
 
-class QuerySetSingle(Protocol[T_co]):
+class QuerySetSingle(Protocol[MODEL]):
     """
     Awaiting on this will resolve a single instance of the Model object, and not a sequence.
     """
 
     # pylint: disable=W0104
-    def __await__(self) -> Generator[Any, None, T_co]:
+    def __await__(self) -> Generator[Any, None, MODEL]:
         ...  # pragma: nocoverage
 
     def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySetSingle[MODEL]":
