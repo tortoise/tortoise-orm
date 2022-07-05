@@ -55,7 +55,7 @@ def transform_model(cls: ClassDef) -> None:
                     pass
                 else:
                     if attrname in ["OneToOneField", "ForeignKeyField", "ManyToManyField"]:
-                        tomodel = attr.value.args[0].value
+                        tomodel = attr.value.args[0].value if attr.value.args else ""
                         relname = ""
                         if attr.value.keywords:
                             for keyword in attr.value.keywords:
