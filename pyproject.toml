@@ -86,7 +86,6 @@ types-PyYAML = "*"
 types-pytz = "*"
 types-PyMySQL = "*"
 # Documentation tools
-sphinx = "^4.2.0"
 sphinx-immaterial = "*"
 sphinx-copybutton = "*"
 Pygments = "*"
