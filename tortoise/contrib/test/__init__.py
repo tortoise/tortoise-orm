@@ -31,7 +31,7 @@ _TORTOISE_TEST_DB = "sqlite://:memory:"
 # pylint: disable=W0201
 
 expectedFailure.__doc__ = """
-Mark test as expecting failiure.
+Mark test as expecting failure.
 
 On success it will be marked as unexpected success.
 """

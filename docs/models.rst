@@ -308,7 +308,7 @@ This can be chained if the next key is also a foreign object:
 
 There is however one major limitation. We don't want to restrict foreign column names, or have ambiguity (e.g. a foreign object may have a field called ``isnull``)
 
-Then this would be entirely ambigous:
+Then this would be entirely ambiguous:
 
     :samp:`{FKNAME}__isnull`
 
