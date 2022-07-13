@@ -311,7 +311,7 @@ class TestConfigGenerator(test.SimpleTestCase):
     def test_mysql_params(self):
         res = expand_db_url(
             "mysql://root:@127.0.0.1:3306/test?AHA=5&moo=yes&maxsize=20&minsize=5"
-            "&connect_timeout=1.5&echo=1"
+            "&connect_timeout=1.5&echo=1&ssl=True"
         )
         self.assertEqual(
             res,
@@ -331,6 +331,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                     "echo": True,
                     "charset": "utf8mb4",
                     "sql_mode": "STRICT_TRANS_TABLES",
+                    "ssl": True,
                 },
             },
         )

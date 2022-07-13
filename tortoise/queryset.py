@@ -64,16 +64,16 @@ class QuerySetSingle(Protocol[T_co]):
     def __await__(self) -> Generator[Any, None, T_co]:
         ...  # pragma: nocoverage
 
-    def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySetSingle[MODEL]":
+    def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySetSingle[T_co]":
         ...  # pragma: nocoverage
 
-    def select_related(self, *args: str) -> "QuerySetSingle[MODEL]":
+    def select_related(self, *args: str) -> "QuerySetSingle[T_co]":
         ...  # pragma: nocoverage
 
-    def annotate(self, **kwargs: Function) -> "QuerySetSingle[MODEL]":
+    def annotate(self, **kwargs: Function) -> "QuerySetSingle[T_co]":
         ...  # pragma: nocoverage
 
-    def only(self, *fields_for_select: str) -> "QuerySetSingle[MODEL]":
+    def only(self, *fields_for_select: str) -> "QuerySetSingle[T_co]":
         ...  # pragma: nocoverage
 
     def values_list(self, *fields_: str, flat: bool = False) -> "ValuesListQuery":

@@ -82,6 +82,7 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
             "no_delay": bool,
             "use_unicode": bool,
             "pool_recycle": int,
+            "ssl": bool,
         },
     },
     "mssql": {

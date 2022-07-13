@@ -35,7 +35,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.7"
-pypika-tortoise = { git = "https://github.com/tortoise/pypika-tortoise.git", branch = "main" }
+pypika-tortoise = "^0.1.6"
 iso8601 = "^1.0.2"
 aiosqlite = ">=0.16.0, <0.18.0"
 pytz = "*"
@@ -59,6 +59,7 @@ pylint = "*"
 pygments = "*"
 bandit = "*"
 black = "*"
+codespell = "*"
 # Test tools
 coveralls = "*"
 pytest = "*"
@@ -85,7 +86,6 @@ types-PyYAML = "*"
 types-pytz = "*"
 types-PyMySQL = "*"
 # Documentation tools
-sphinx = "^4.2.0"
 sphinx-immaterial = "*"
 sphinx-copybutton = "*"
 Pygments = "*"

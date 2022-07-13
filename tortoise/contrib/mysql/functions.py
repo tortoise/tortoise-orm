@@ -5,7 +5,7 @@ from pypika.terms import Function, Parameter
 
 class Rand(Function):  # type: ignore
     """
-    Genrate random number, with optional seed.
+    Generate random number, with optional seed.
 
     :samp:`Rand()`
     """
