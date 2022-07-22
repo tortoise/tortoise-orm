@@ -119,7 +119,9 @@ class Tortoise:
                 return cls.apps[related_app_name][related_model_name]
             except KeyError:
                 if related_app_name not in cls.apps:
-                    raise ConfigurationError(f"No app with name '{related_app_name}' registered.")
+                    raise ConfigurationError(f"No app with name '{related_app_name}' registered."
+                                             f" Please check your model names in ForeignKeyFields"
+                                             f" and configurations.")
                 raise ConfigurationError(
                     f"No model with name '{related_model_name}' registered in"
                     f" app '{related_app_name}'."
