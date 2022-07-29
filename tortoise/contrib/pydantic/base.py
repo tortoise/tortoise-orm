@@ -47,6 +47,7 @@ class PydanticModel(BaseModel):
 
     class Config:
         orm_mode = True  # It should be in ORM mode to convert tortoise data to pydantic
+        allow_population_by_field_name = True  # It should be true to work with aliases
 
     # noinspection PyMethodParameters
     @pydantic.validator("*", pre=True, each_item=False)  # It is a classmethod!
