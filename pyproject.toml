@@ -77,6 +77,8 @@ starlette = "*"
 pydantic = "*"
 # FastAPI support
 fastapi = "*"
+httpx = "*"
+asgi-lifespan = "*"
 # Aiohttp support
 aiohttp = "*"
 # BlackSheep support

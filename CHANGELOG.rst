@@ -21,6 +21,7 @@ Fixed
 - Fixed ORA-01435 error while using `Oracle` database (#1155)
 - Fixed processing of `ssl` option in MySQL connection string.
 - Fixed type hinting for `QuerySetSingle`.
+- Fastapi example test not working. (#1029)
 
 0.19.1
 ------
