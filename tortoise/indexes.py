@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Set, Type
+from typing import TYPE_CHECKING, Optional, Tuple, Type
 
 from pypika.terms import Term, ValueWrapper
 
@@ -16,7 +16,7 @@ class Index:
     def __init__(
         self,
         *expressions: Term,
-        fields: Optional[Set[str]] = None,
+        fields: Optional[Tuple[str]] = None,
         name: Optional[str] = None,
     ):
         """
@@ -69,7 +69,7 @@ class PartialIndex(Index):
     def __init__(
         self,
         *expressions: Term,
-        fields: Optional[Set[str]] = None,
+        fields: Optional[Tuple[str]] = None,
         name: Optional[str] = None,
         condition: Optional[dict] = None,
     ):
