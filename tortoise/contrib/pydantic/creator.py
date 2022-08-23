@@ -226,7 +226,7 @@ def pydantic_model_creator(
     # Get all annotations
     annotations = get_annotations(cls)
 
-    # Not: First ones override next ones' attributes
+    # Note: First ones override next ones' attributes
     pconfig_bases: list[Type] = [PydanticModel.Config]
     # If default config class is specified, we add it as first item of bases
     if default_config_class:
