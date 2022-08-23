@@ -27,8 +27,9 @@ endif
 	pflake8 $(checkfiles)
 	mypy $(checkfiles)
 	#pylint -d C,W,R $(checkfiles)
-	bandit -r $(checkfiles)
+	#bandit -r $(checkfiles)
 	twine check dist/*
+	codespell $(checkfiles)
 
 lint: deps build
 ifneq ($(shell which black),)

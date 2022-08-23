@@ -297,9 +297,6 @@ class RelationalField(Field[MODEL]):
     def __get__(self, instance: Optional["Model"], owner: Type["Model"]):
         ...
 
-    def __set__(self, instance: Optional["Model"], value: MODEL):
-        ...
-
     def describe(self, serializable: bool) -> dict:
         desc = super().describe(serializable)
         desc["db_constraint"] = self.db_constraint

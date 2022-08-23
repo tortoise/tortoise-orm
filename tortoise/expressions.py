@@ -1,5 +1,16 @@
 import operator
-from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Tuple, Type, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 from pypika import Case as PypikaCase
 from pypika import Field as PypikaField
@@ -11,7 +22,11 @@ from pypika.terms import Term
 from pypika.utils import format_alias_sql
 
 from tortoise.exceptions import ConfigurationError, FieldError, OperationalError
-from tortoise.fields.relational import BackwardFKRelation, ForeignKeyFieldInstance, RelationalField
+from tortoise.fields.relational import (
+    BackwardFKRelation,
+    ForeignKeyFieldInstance,
+    RelationalField,
+)
 from tortoise.query_utils import QueryModifier, _get_joins_for_related_field
 
 if TYPE_CHECKING:  # pragma: nocoverage

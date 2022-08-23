@@ -132,6 +132,7 @@ class TestBulk(test.TruncationTestCase):
     async def test_bulk_create_ignore_conflicts(self):
         name1 = UniqueName(name="name1")
         name2 = UniqueName(name="name2")
+        await UniqueName.bulk_create([name1, name2])
         await UniqueName.bulk_create([name1, name2], ignore_conflicts=True)
         with self.assertRaises(IntegrityError):
             await UniqueName.bulk_create([name1, name2])

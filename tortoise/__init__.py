@@ -119,7 +119,9 @@ class Tortoise:
                 return cls.apps[related_app_name][related_model_name]
             except KeyError:
                 if related_app_name not in cls.apps:
-                    raise ConfigurationError(f"No app with name '{related_app_name}' registered.")
+                    raise ConfigurationError(f"No app with name '{related_app_name}' registered."
+                                             f" Please check your model names in ForeignKeyFields"
+                                             f" and configurations.")
                 raise ConfigurationError(
                     f"No model with name '{related_model_name}' registered in"
                     f" app '{related_app_name}'."
@@ -438,8 +440,8 @@ class Tortoise:
         for app in cls.apps.values():
             for model in app.values():
                 model._meta.finalise_model()
-                model._meta.basetable = Table(model._meta.db_table)
-                model._meta.basequery = model._meta.db.query_class.from_(model._meta.db_table)
+                model._meta.basetable = Table(name=model._meta.db_table, schema=model._meta.schema)
+                model._meta.basequery = model._meta.db.query_class.from_(model._meta.basetable)
                 model._meta.basequery_all_fields = model._meta.basequery.select(
                     *model._meta.db_fields
                 )
@@ -519,7 +521,6 @@ class Tortoise:
         """
         if cls._inited:
             await connections.close_all(discard=True)
-            await cls._reset_apps()
         if int(bool(config) + bool(config_file) + bool(db_url)) != 1:
             raise ConfigurationError(
                 'You should init either from "config", "config_file" or "db_url"'
@@ -687,4 +688,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(connections.close_all(discard=True))
 
 
-__version__ = "0.19.1"
+__version__ = "0.19.2"

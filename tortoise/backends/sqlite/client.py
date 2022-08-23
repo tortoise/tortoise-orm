@@ -17,7 +17,11 @@ from tortoise.backends.base.client import (
 )
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
-from tortoise.exceptions import IntegrityError, OperationalError, TransactionManagementError
+from tortoise.exceptions import (
+    IntegrityError,
+    OperationalError,
+    TransactionManagementError,
+)
 
 FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)

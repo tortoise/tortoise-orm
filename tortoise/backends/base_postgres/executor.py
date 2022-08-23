@@ -46,7 +46,7 @@ class BasePostgresExecutor(BaseExecutor):
             if generated_fields:
                 query = query.returning(*generated_fields)
         if ignore_conflicts:
-            query = query.do_nothing()
+            query = query.on_conflict().do_nothing()
         return query
 
     async def _process_insert_result(self, instance: Model, results: Optional[dict]) -> None:

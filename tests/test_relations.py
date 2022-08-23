@@ -326,8 +326,8 @@ class TestRelations(test.TestCase):
             .select_related("left__left__left", "right")
             .get(id=getattr(root, "id"))  # noqa
         )
-        self.assertIsNone(retrieved_root.right)  # ignore
-        self.assertEqual(retrieved_root.left, left_1st_lvl)  # ignore
+        self.assertIsNone(retrieved_root.right)
+        self.assertEqual(retrieved_root.left, left_1st_lvl)
         self.assertEqual(retrieved_root.left.left, left_2nd_lvl)
 
     async def test_no_ambiguous_fk_relations_set(self):

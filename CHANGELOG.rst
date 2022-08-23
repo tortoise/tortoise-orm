@@ -8,6 +8,20 @@ Changelog
 
 0.19
 ====
+0.19.2
+------
+Added
+^^^^^
+- Added `schema` attribute to Model's Meta to specify exact schema to use with the model.
+Fixed
+^^^^^
+- Mixin does not work. (#1133)
+- `using_db` wrong position in model shortcut methods. (#1150)
+- Fixed connection to `Oracle` database by adding database info to DBQ in connection string.
+- Fixed ORA-01435 error while using `Oracle` database (#1155)
+- Fixed processing of `ssl` option in MySQL connection string.
+- Fixed type hinting for `QuerySetSingle`.
+
 0.19.1
 ------
 Added
@@ -15,9 +29,12 @@ Added
 - Added `Postgres`/`SQLite` partial indexes support. (#1103)
 - Added `Microsoft SQL Server`/`Oracle` support, powered by `asyncodbc <https://github.com/tortoise/asyncodbc>`_, note that which is **not fully tested**.
 - Added `optional` parameter to `pydantic_model_creator`. (#770)
+- Added `using_db` parameter to `Model` shortcut methods. (#1109)
 Fixed
 ^^^^^
 - `TimeField` for `MySQL` will return `datetime.timedelta` object instead of `datetime.time` object.
+- Fix on conflict do nothing. (#1122)
+- Fix `_custom_generated_pk` attribute not set in `Model._init_from_db` method. (#633)
 
 0.19.0
 ------
@@ -330,7 +347,7 @@ Other changes
 ------
 * More consistent escaping of db columns, fixes using SQL reserved keywords as field names with a function.
 * Fix the aggregates using the wrong side of the join when doing a self-referential aggregation.
-* Fix ``F`` funtions wrapped forgetting about ``distinct=True``
+* Fix ``F`` functions wrapped forgetting about ``distinct=True``
 
 0.16.3
 ------
@@ -452,7 +469,7 @@ New features:
   * Relationships (FK/O2O/M2M)
   * Callables
 
-  At this stage we only suport serialisation, not deserialisation.
+  At this stage we only support serialisation, not deserialisation.
 
   For mode information, please see :ref:`contrib_pydantic`
 
@@ -577,7 +594,7 @@ Removals:
 - Changed ``TextField`` to use ``LONGTEXT`` for MySQL to allow for larger than 64KB of text.
 - De-duplicate index if specified on both ``index=true`` and as part of ``indexes``
 - Primary Keyed ``TextField`` is marked as deprecated.
-  We can't guarnatee that it will be properly indexed or unique in all cases.
+  We can't guarantee that it will be properly indexed or unique in all cases.
 - One can now disable the backwards relation for FK/O2O relations by passing ``related_name=False``
 - One can now pass a PK value to a generated field, and Tortoise ORM will use that as the PK as expected.
   This allows one to have a model that has a autonumber PK, but setting it explicitly if required.
@@ -621,7 +638,7 @@ Removals:
      )
 
 - Prefetching is done concurrently now, sending all prefetch requests at the same time instead of in sequence.
-- Enabe foreign key enforcement on SQLite for builds where it was optional.
+- Enable foreign key enforcement on SQLite for builds where it was optional.
 
 0.15.2
 ------
@@ -871,7 +888,7 @@ Docs/examples:
     If you define the ``__models__`` variable in ``yourapp.models`` (or wherever you specify to load your models from),
     ``generate_schema()`` will use that list, rather than automatically finding all models for you.
 
-- Split model consructor into from-Python and from-DB paths, leading to 15-25% speedup for large fetch operations.
+- Split model constructor into from-Python and from-DB paths, leading to 15-25% speedup for large fetch operations.
 - More efficient queryset manipulation, 5-30% speedup for small fetches.
 
 0.12.5
@@ -921,7 +938,7 @@ Docs/examples:
   .. note::
      This is a big feature change. It should not break any existing implementations.
 
-  That primary key will be accesible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
+  That primary key will be accessible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
   That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc…
 
   We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
@@ -956,7 +973,7 @@ Docs/examples:
 0.11.13
 -------
 - Fixed connection retry to work with transactions
-- Added broader PostgreSQL connection failiure detection
+- Added broader PostgreSQL connection failure detection
 
 0.11.12
 -------
@@ -1120,7 +1137,7 @@ Docs/examples:
 
 0.10.2
 ------
-- Set single_connection to True by default, as there is known issues with conection pooling
+- Set single_connection to True by default, as there is known issues with connection pooling
 - Updated documentation
 
 0.10.1

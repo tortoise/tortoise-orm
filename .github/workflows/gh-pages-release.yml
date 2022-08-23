@@ -1,8 +1,8 @@
-name: gh-pages
+name: gh-pages-release
 on:
-  push:
-    branches:
-      - develop
+  release:
+    types:
+      - created
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -17,10 +17,11 @@ jobs:
           poetry config virtualenvs.create false
       - name: Build docs
         run: make docs
-      - name: Deploy latest docs
+      - name: Deploy release docs
         uses: peaceiris/actions-gh-pages@v3
         with:
           personal_token: ${{ secrets.PERSONAL_TOKEN }}
           publish_dir: build/html
           external_repository: tortoise/tortoise.github.io
           publish_branch: master
+          destination_dir: ${{ github.ref_name }}

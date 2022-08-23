@@ -42,7 +42,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.queryset import QuerySet
 
 EXECUTOR_CACHE: Dict[
-    str, Tuple[list, str, list, str, Dict[str, Callable], str, Dict[str, str]]
+    Tuple[str, Optional[str], str], Tuple[list, str, list, str, Dict[str, Callable], str, Dict[str, str]]
 ] = {}
 
 
@@ -67,7 +67,7 @@ class BaseExecutor:
         self.prefetch_map = prefetch_map or {}
         self._prefetch_queries = prefetch_queries or {}
         self.select_related_idx = select_related_idx
-        key = f"{self.db.connection_name}:{self.model._meta.db_table}"
+        key = (self.db.connection_name, self.model._meta.schema, self.model._meta.db_table)
         if key not in EXECUTOR_CACHE:
             self.regular_columns, columns = self._prepare_insert_columns()
             self.insert_query = str(self._prepare_insert_statement(columns))
@@ -154,9 +154,9 @@ class BaseExecutor:
                         obj = model._init_from_db(
                             **dict(
                                 zip(
-                                    map(
-                                        lambda x: x.split(".")[1],
-                                        keys[current_idx : current_idx + index],  # noqa
+                                    (
+                                        x.split(".")[1]
+                                        for x in keys[current_idx : current_idx + index]
                                     ),
                                     related_values,
                                 )
@@ -208,7 +208,7 @@ class BaseExecutor:
             .insert(*[self.parameter(i) for i in range(len(columns))])
         )
         if ignore_conflicts:
-            query = query.do_nothing()
+            query = query.on_conflict().do_nothing()
         return query
 
     async def _process_insert_result(self, instance: "Model", results: Any) -> None:

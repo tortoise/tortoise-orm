@@ -1,6 +1,13 @@
 import datetime
 
-from tests.testmodels import DatetimeFields, Event, IntFields, Reporter, Team, Tournament
+from tests.testmodels import (
+    DatetimeFields,
+    Event,
+    IntFields,
+    Reporter,
+    Team,
+    Tournament,
+)
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotEQ
 from tortoise.expressions import F, Q

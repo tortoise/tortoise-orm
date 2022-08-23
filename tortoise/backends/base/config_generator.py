@@ -82,6 +82,7 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
             "no_delay": bool,
             "use_unicode": bool,
             "pool_recycle": int,
+            "ssl": bool,
         },
     },
     "mssql": {
@@ -164,7 +165,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         raise ConfigurationError("Port is not an integer")
     if vmap.get("username"):
         # Pass username as None, instead of empty string,
-        # to let asyncpg retrieve username from evionment variable or OS user
+        # to let asyncpg retrieve username from environment variable or OS user
         params[vmap["username"]] = url.username or None
     if vmap.get("password"):
         # asyncpg accepts None for password, but aiomysql not

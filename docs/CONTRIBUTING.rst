@@ -119,7 +119,7 @@ Different types of tests
 - ``make test_postgres_psycopg``: Runs the psycopg tests on the postgres database
 - ``make test_mysql_myisam``: Runs the tests on the mysql database using the ``MYISAM`` storage engine (no transactions)
 - ``make test_mysql``: Runs the tests on the mysql database
-- ``make testall``: runs the tests on all 4 database types: sqlite (in memory), postgress, MySQL-MyISAM and MySQL-InnoDB
+- ``make testall``: runs the tests on all 4 database types: sqlite (in memory), postgresql, MySQL-MyISAM and MySQL-InnoDB
 - ``green``: runs the same tests as ``make test``, ensures the green plugin works
 - ``nose2 --plugin tortoise.contrib.test.nose2 --db-module tests.testmodels --db-url sqlite://:memory: ``: same test as ``make test`` , ensures the nose2 plugin works
 

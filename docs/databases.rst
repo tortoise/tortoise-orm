@@ -71,7 +71,7 @@ SQLite is an embedded database, and can run on a file or in-memory. Good databas
 
     For example ``DecimalField`` has precision preserved by storing values as strings, except when doing aggregates/ordering on it. In those cases we have to cast to/from floating-point numbers.
 
-    Similarily case-insensitivity is only partially implemented.
+    Similarly case-insensitivity is only partially implemented.
 
 DB URL is typically in the form of :samp:`sqlite://{DB_FILE}`
 So if the ``DB_FILE`` is "/data/db.sqlite3" then the string will be ``sqlite:///data/db.sqlite`` (note the three /'s)
@@ -179,7 +179,7 @@ MySQL optional parameters are pass-though parameters to the driver, see `here <h
 MSSQL/Oracle
 ============
 
-DB URL is typically in the form of :samp:`mssql or oracle://myuser:mypass@db.host:1433/somedb?driver=the odbc driver`
+DB URL is typically in the form of :samp:`mssql or oracle://myuser:mypass@db.host:1433/somedb?driver={the odbc driver}`
 
 Required Parameters
 -------------------
@@ -195,7 +195,7 @@ Required Parameters
 ``database``:
     Database to use.
 ``driver``:
-    The ODBC driver to use.
+    The ODBC driver to use. Actual name of the ODBC driver in your `odbcinst.ini` file (you can find it's location using `odbcinst -j` command). It requires `unixodbc` to be installed in your system.
 
 Optional parameters:
 --------------------
@@ -209,7 +209,13 @@ MSSQL/Oracle optional parameters are pass-though parameters to the driver, see `
 ``pool_recycle`` (defaults to ``-1``):
     Pool recycle timeout in seconds.
 ``echo`` (defaults to ``False``):
-    Set to `True`` to echo SQL queries (debug only)
+    Set to ``True`` to echo SQL queries (debug only)
+
+Encoding in Oracle:
+============
+
+If you get ``???`` values in Varchar fields instead of your actual text (russian/chinese/etc), then set ``NLS_LANG`` variable in your client environment to support UTF8. For example, `"American_America.UTF8"`.
+
 
 Passing in custom SSL Certificates
 ==================================

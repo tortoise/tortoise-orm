@@ -280,7 +280,7 @@ class DecimalField(Field[Decimal], Decimal):
     ``max_digits`` (int):
         Max digits of significance of the decimal field.
     ``decimal_places`` (int):
-        How many of those signifigant digits is after the decimal point.
+        How many of those significant digits is after the decimal point.
     """
 
     skip_to_python_if_native = True

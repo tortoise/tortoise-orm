@@ -87,7 +87,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
 
         If the DB driver natively supports this Python type, should we skip it?
         This is for optimization purposes only, where we don't need to force type conversion
-        to and fro between Python and the DB.
+        between Python and the DB.
 
     .. attribute:: allows_generated
         :annotation: bool = False
@@ -154,9 +154,6 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         ...
 
     def __get__(self, instance: Optional["Model"], owner: Type["Model"]):
-        ...
-
-    def __set__(self, instance: Optional["Model"], value: VALUE) -> None:
         ...
 
     def __init__(
