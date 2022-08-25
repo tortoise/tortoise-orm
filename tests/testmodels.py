@@ -11,6 +11,7 @@ from enum import Enum, IntEnum
 from typing import Union
 
 import pytz
+from pydantic import Extra as PydanticExtra
 
 from tortoise import fields
 from tortoise.exceptions import NoValuesFetched, ValidationError
@@ -845,3 +846,33 @@ class Pair(Model):
     right: fields.ForeignKeyRelation[Single] = fields.ForeignKeyField(
         "models.Single", related_name="rights", null=True
     )
+
+class CamelCaseAliasPerson(Model):
+    """CamelCaseAliasPerson model.
+
+    - A model that generates camelized aliases automatically by
+        configuring config_class.
+    """
+
+    id = fields.IntField(pk=True)
+    first_name = fields.CharField(max_length=255)
+    last_name = fields.CharField(max_length=255)
+    full_address = fields.TextField(null=True)
+
+    class PydanticMeta:
+        """Defines the default config for pydantic model generator."""
+
+        class PydanticConfig:
+            """Defines the default pydantic config for the model."""
+
+            @staticmethod
+            def camelize_var(var_name: str):
+                var_parts: list[str] = var_name.split("_")
+                return var_parts[0] + "".join([part.title() for part in var_parts[1:]])
+
+            title = "My custom title"
+            extra = PydanticExtra.ignore
+            alias_generator = camelize_var
+            allow_population_by_field_name = True
+
+        config_class = PydanticConfig

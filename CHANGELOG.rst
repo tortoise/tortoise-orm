@@ -8,6 +8,12 @@ Changelog
 
 0.19
 ====
+0.19.3
+------
+Added
+^^^^^
+- Added config_class option to pydantic model genator that allows the developer to customize the generated pydantic model's `Config` class. (#1048)
+
 0.19.2
 ------
 Added
