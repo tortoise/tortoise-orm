@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, List, Type, Union
 
+import asyncio
 import pydantic
 from pydantic import BaseModel  # pylint: disable=E0611
 
@@ -85,6 +86,29 @@ class PydanticModel(BaseModel):
         # Fetch fields
         await obj.fetch_related(*fetch_fields)
         return super().from_orm(obj)
+
+    @classmethod
+    async def from_tortoise_orm_list(cls, objs: List["Model"]) -> "List[PydanticModel]":
+        """
+        Returns a list of serializable pydantic models instances built from the provided model instance list.
+
+        .. note::
+
+            This will prefetch all the relations automatically. It is probably what you want.
+
+            If you don't want this, or require a ``sync`` method, look to using ``.from_orm()``.
+
+            In that case you'd have to manage  prefetching yourself,
+            or exclude relational fields from being part of the model using
+            :class:`tortoise.contrib.pydantic.creator.PydanticMeta`, or you would be
+            getting ``OperationalError`` exceptions.
+
+            This is due to how the ``asyncio`` framework forces I/O to happen in explicit ``await``
+            statements. Hence we can only do lazy-fetching during an awaited method.
+
+        :param objs: The List of Model instances you want serialized.
+        """
+        return await asyncio.gather(*(self.from_tortoise_orm(obj) for obj in objs))
 
     @classmethod
     async def from_queryset_single(cls, queryset: "QuerySetSingle") -> "PydanticModel":
