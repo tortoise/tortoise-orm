@@ -374,7 +374,7 @@ class Tortoise:
     @classmethod
     def init_models(
         cls,
-        models_paths: Iterable[Union[ModuleType, str]],
+        models_paths: Iterable[Union[ModuleType, str]] | str,
         app_label: str,
         _init_relations: bool = True,
     ) -> None:
@@ -390,9 +390,13 @@ class Tortoise:
 
         :raises ConfigurationError: If models are invalid.
         """
-        app_models: List[Type[Model]] = []
-        for models_path in models_paths:
-            app_models += cls._discover_models(models_path, app_label)
+        app_models: List[Type[Model]]
+        if isinstance(models_paths, str):
+            app_models = cls._discover_models(models_paths, app_label)
+        else:
+            app_models = []
+            for models_path in models_paths:
+                app_models += cls._discover_models(models_path, app_label)
 
         cls.apps[app_label] = {model.__name__: model for model in app_models}
 
