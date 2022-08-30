@@ -119,9 +119,11 @@ class Tortoise:
                 return cls.apps[related_app_name][related_model_name]
             except KeyError:
                 if related_app_name not in cls.apps:
-                    raise ConfigurationError(f"No app with name '{related_app_name}' registered."
-                                             f" Please check your model names in ForeignKeyFields"
-                                             f" and configurations.")
+                    raise ConfigurationError(
+                        f"No app with name '{related_app_name}' registered."
+                        f" Please check your model names in ForeignKeyFields"
+                        f" and configurations."
+                    )
                 raise ConfigurationError(
                     f"No model with name '{related_model_name}' registered in"
                     f" app '{related_app_name}'."
@@ -688,4 +690,4 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(connections.close_all(discard=True))
 
 
-__version__ = "0.19.2"
+__version__ = "0.19.3"

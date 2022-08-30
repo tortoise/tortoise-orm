@@ -847,6 +847,7 @@ class Pair(Model):
         "models.Single", related_name="rights", null=True
     )
 
+
 class CamelCaseAliasPerson(Model):
     """CamelCaseAliasPerson model.
 

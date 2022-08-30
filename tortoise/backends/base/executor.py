@@ -42,7 +42,8 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.queryset import QuerySet
 
 EXECUTOR_CACHE: Dict[
-    Tuple[str, Optional[str], str], Tuple[list, str, list, str, Dict[str, Callable], str, Dict[str, str]]
+    Tuple[str, Optional[str], str],
+    Tuple[list, str, list, str, Dict[str, Callable], str, Dict[str, str]],
 ] = {}
 
 
