@@ -435,7 +435,7 @@ class BaseSchemaGenerator:
                 if table["references"].issubset(created_tables | {table["table"]}):
                     next_table_to_create = table
                     break
-            else:   # if no break
+            else:  # if no break
                 # TODO: Better forensics to help developer track down the cyclic fk references
                 raise ConfigurationError("Can't create schema due to cyclic fk references")
 
