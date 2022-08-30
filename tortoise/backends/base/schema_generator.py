@@ -425,21 +425,24 @@ class BaseSchemaGenerator:
         created_tables: Set[dict] = set()
         ordered_tables_for_create: List[str] = []
         m2m_tables_to_create: List[str] = []
-        while True:
-            if len(created_tables) == tables_to_create_count:
-                break
-            try:
-                next_table_for_create = next(
-                    t
-                    for t in tables_to_create
-                    if t["references"].issubset(created_tables | {t["table"]})
-                )
-            except StopIteration:
+
+        while len(created_tables) != tables_to_create_count:
+            if not tables_to_create:
+                # TODO: Determine what this means, because it raised an error in previous versions
+                raise ConfigurationError
+
+            for table in tables_to_create:
+                if table["references"].issubset(created_tables | {table["table"]}):
+                    next_table_to_create = table
+                    break
+            else:   # if no break
+                # TODO: Better forensics to help developer track down the cyclic fk references
                 raise ConfigurationError("Can't create schema due to cyclic fk references")
-            tables_to_create.remove(next_table_for_create)
-            created_tables.add(next_table_for_create["table"])
-            ordered_tables_for_create.append(next_table_for_create["table_creation_string"])
-            m2m_tables_to_create += next_table_for_create["m2m_tables"]
+
+            tables_to_create.remove(next_table_to_create)
+            created_tables.add(next_table_to_create["table"])
+            ordered_tables_for_create.append(next_table_to_create["table_creation_string"])
+            m2m_tables_to_create += next_table_to_create["m2m_tables"]
 
         schema_creation_string = "\n".join(ordered_tables_for_create + m2m_tables_to_create)
         return schema_creation_string
