@@ -432,29 +432,35 @@ class BaseSchemaGenerator:
 
                 discovered_tables: Dict[str, Type[Model]] = {}
                 for model in models_to_create:
-                    table_name = str(model._meta.basetable).replace("\"", "")
+                    table_name = str(model._meta.basetable).replace('"', "")
                     if table_name in discovered_tables:
                         other_cyclic_model = discovered_tables[table_name]
                         msg = (
-                            f"Model {model._meta.full_name} has cyclic foreign key (FK) references with model "
-                            f"{other_cyclic_model._meta.full_name}. Make sure to use typing.TYPE_CHECKING if models "
-                            f"are in multiple Python modules."
+                            f"Model {model._meta.full_name} overlaps with model {other_cyclic_model._meta.full_name}. "
+                            f"Make sure to use typing.TYPE_CHECKING if models are in multiple Python modules."
                         )
                         raise ConfigurationError(msg)
                     discovered_tables[table_name] = model
 
-                raise ConfigurationError(
-                    "Something to do with cyclic FK references, raise an issue on GitHub, "
-                    "reference the previous PR: https://github.com/tortoise/tortoise-orm/pull/1236"
-                )
+                raise ConfigurationError(_FORENSIC_FAIL_MSG)
 
             for table in tables_to_create:
                 if table["references"].issubset(created_tables | {table["table"]}):
                     next_table_to_create = table
                     break
             else:  # if no break
-                # TODO: Better forensics to help developer track down the cyclic fk references
-                raise ConfigurationError("Can't create schema due to cyclic fk references")
+                try:
+                    t = tables_to_create[0]
+                except IndexError:
+                    raise ConfigurationError(
+                        f"Forensic of error regarding foreign key (FK) references failed:\n{_FORENSIC_FAIL_MSG}"
+                    )
+
+                table = t["table"]
+                refs = [i for i in t["references"] if i != table and i not in created_tables]
+                raise ConfigurationError(
+                    f"Failed to create schema(`{table}`) due to cyclic foreign key (FK) references({refs})"
+                )
 
             tables_to_create.remove(next_table_to_create)
             created_tables.add(next_table_to_create["table"])
@@ -466,3 +472,9 @@ class BaseSchemaGenerator:
 
     async def generate_from_string(self, creation_string: str) -> None:
         await self.client.execute_script(creation_string)
+
+
+_FORENSIC_FAIL_MSG = (
+    "Something to do with your model structure, raise an issue on GitHub, and perhaps "
+    "reference the previous PR: https://github.com/tortoise/tortoise-orm/pull/1236"
+)
