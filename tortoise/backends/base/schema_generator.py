@@ -1,5 +1,5 @@
 from hashlib import sha256
-from typing import TYPE_CHECKING, Any, List, Set, Type, cast
+from typing import TYPE_CHECKING, Any, List, Set, Type, cast, Dict
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields import JSONField, TextField, UUIDField
@@ -428,8 +428,25 @@ class BaseSchemaGenerator:
 
         while len(created_tables) != tables_to_create_count:
             if not tables_to_create:
-                # TODO: Determine what this means, because it raised an error in previous versions
-                raise ConfigurationError
+                # This means an exception will be raised! The following is forensics.
+
+                discovered_tables: Dict[str, Type[Model]] = {}
+                for model in models_to_create:
+                    table_name = str(model._meta.basetable).replace("\"", "")
+                    if table_name in discovered_tables:
+                        other_cyclic_model = discovered_tables[table_name]
+                        msg = (
+                            f"Model {model._meta.full_name} has cyclic foreign key (FK) references with model "
+                            f"{other_cyclic_model._meta.full_name}. Make sure to use typing.TYPE_CHECKING if models "
+                            f"are in multiple Python modules."
+                        )
+                        raise ConfigurationError(msg)
+                    discovered_tables[table_name] = model
+
+                raise ConfigurationError(
+                    "Something to do with cyclic FK references, raise an issue on GitHub, "
+                    "reference the previous PR: https://github.com/tortoise/tortoise-orm/pull/1236"
+                )
 
             for table in tables_to_create:
                 if table["references"].issubset(created_tables | {table["table"]}):
