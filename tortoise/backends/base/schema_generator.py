@@ -317,7 +317,7 @@ class BaseSchemaGenerator:
 
                     _indexes.append(self._get_index_sql(model, indexes_to_create, safe=safe))
                 else:
-                    _indexes.append(indexes_list.get_sql(self, model, safe))
+                    _indexes.append(indexes_list.get_sql(self, model))
 
         field_indexes_sqls = [val for val in list(dict.fromkeys(_indexes)) if val]
 
