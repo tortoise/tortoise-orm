@@ -38,9 +38,10 @@ class Index:
         self.expressions = expressions
         self.extra = ""
 
-    def get_sql(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]"):
+    def get_sql(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool):
         if self.fields:
             return self.INDEX_CREATE_TEMPLATE.format(
+                exists="IF NOT EXISTS " if safe else "",
                 index_name=schema_generator.quote(
                     self.name or schema_generator._generate_index_name("idx", model, self.fields)
                 ),
@@ -52,6 +53,7 @@ class Index:
 
         expressions = [f"({expression.get_sql()})" for expression in self.expressions]
         return self.INDEX_CREATE_TEMPLATE.format(
+            exists="IF NOT EXISTS " if safe else "",
             index_name=self.index_name(schema_generator, model),
             index_type=f" {self.INDEX_TYPE} ",
             table_name=schema_generator.quote(model._meta.db_table),
