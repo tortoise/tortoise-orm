@@ -1102,7 +1102,11 @@ class Model(metaclass=ModelMeta):
             defaults = {}
         db = using_db or cls._choose_db(True)
         async with in_transaction(connection_name=db.connection_name) as connection:
-            instance = await cls.select_for_update().using_db(connection).get_or_none(**kwargs)
+            instance = (
+                await cls.select_for_update()
+                .using_db(connection)
+                .get_or_none(**kwargs)  # type:ignore
+            )
             if instance:
                 await instance.update_from_dict(defaults).save(using_db=connection)  # type:ignore
                 return instance, False

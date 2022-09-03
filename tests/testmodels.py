@@ -8,7 +8,7 @@ import re
 import uuid
 from decimal import Decimal
 from enum import Enum, IntEnum
-from typing import Union
+from typing import List, Union
 
 import pytz
 from pydantic import Extra as PydanticExtra
@@ -868,7 +868,7 @@ class CamelCaseAliasPerson(Model):
 
             @staticmethod
             def camelize_var(var_name: str):
-                var_parts: list[str] = var_name.split("_")
+                var_parts: List[str] = var_name.split("_")
                 return var_parts[0] + "".join([part.title() for part in var_parts[1:]])
 
             title = "My custom title"

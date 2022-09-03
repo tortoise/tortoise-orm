@@ -6,6 +6,7 @@ on:
   pull_request:
     branches-ignore:
       - master
+    types: [ closed ]
 jobs:
   test:
     runs-on: ubuntu-latest

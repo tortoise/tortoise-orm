@@ -704,8 +704,8 @@ CREATE TABLE IF NOT EXISTS `teamevents` (
     `full_text` LONGTEXT NOT NULL,
     `geometry` GEOMETRY NOT NULL
 ) CHARACTER SET utf8mb4;
-CREATE FULLTEXT INDEX IF NOT EXISTS `idx_index_full_te_3caba4` ON `index` (`full_text`) WITH PARSER ngram;
-CREATE SPATIAL INDEX IF NOT EXISTS `idx_index_geometr_0b4dfb` ON `index` (`geometry`);""",
+CREATE FULLTEXT INDEX `idx_index_full_te_3caba4` ON `index` (`full_text`) WITH PARSER ngram;
+CREATE SPATIAL INDEX `idx_index_geometr_0b4dfb` ON `index` (`geometry`);""",
         )
 
     async def test_index_unsafe(self):
