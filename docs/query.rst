@@ -141,10 +141,10 @@ QuerySet also supports aggregation and database functions through ``.annotate()`
     # This query will fetch all tournaments with 10 or more events, and will
     # populate filed `.events_count` on instances with corresponding value
     await Tournament.annotate(events_count=Count('events')).filter(events_count__gte=10)
-    await Tournament.annotate(clean_name=Trim('name'))).filter(clean_name='tournament')
-    await Tournament.annotate(name_upper=Upper('name'))).filter(name_upper='TOURNAMENT')
-    await Tournament.annotate(name_lower=Lower('name'))).filter(name_lower='tournament')
-    await Tournament.annotate(desc_clean=Coalesce('desc', ''))).filter(desc_clean='')
+    await Tournament.annotate(clean_name=Trim('name')).filter(clean_name='tournament')
+    await Tournament.annotate(name_upper=Upper('name')).filter(name_upper='TOURNAMENT')
+    await Tournament.annotate(name_lower=Lower('name')).filter(name_lower='tournament')
+    await Tournament.annotate(desc_clean=Coalesce('desc', '')).filter(desc_clean='')
 
 Check `examples <https://github.com/tortoise/tortoise-orm/tree/master/examples>`_ to see it all in work
 
