@@ -293,7 +293,7 @@ We define our models with a relationship:
         created_at = fields.DatetimeField(auto_now_add=True)
 
         tournament = fields.ForeignKeyField(
-            "models.Tournament", related_name="events", description="The Tournement this happens in"
+            "models.Tournament", related_name="events", description="The Tournament this happens in"
         )
 
 Next we create our `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ using ``pydantic_model_creator``:
@@ -371,7 +371,7 @@ The JSON-Schema of ``Tournament_Pydantic`` is now:
             },
             'events': {
                 'title': 'Events',
-                'description': 'The Tournement this happens in',
+                'description': 'The Tournament this happens in',
                 'type': 'array',
                 'items': {
                     '$ref': '#/definitions/Event'
@@ -431,7 +431,7 @@ Note we can also create a model for ``Event`` the same way, and it should just w
             },
             'tournament': {
                 'title': 'Tournament',
-                'description': 'The Tournement this happens in',
+                'description': 'The Tournament this happens in',
                 'allOf': [
                     {
                         '$ref': '#/definitions/Tournament'
@@ -573,7 +573,7 @@ Let's add some methods that calculate data, and tell the creators to use them:
         created_at = fields.DatetimeField(auto_now_add=True)
 
         tournament = fields.ForeignKeyField(
-            "models.Tournament", related_name="events", description="The Tournement this happens in"
+            "models.Tournament", related_name="events", description="The Tournament this happens in"
         )
 
         class Meta:
@@ -625,7 +625,7 @@ The JSON-Schema of ``Tournament_Pydantic`` is now:
             },
             "events": {
                 "title": "Events",
-                "description": "The Tournement this happens in",
+                "description": "The Tournament this happens in",
                 "type": "array",
                 "items": {
                     "$ref": "#/definitions/Event"
