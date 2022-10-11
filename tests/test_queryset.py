@@ -54,6 +54,13 @@ class TestQueryset(test.TestCase):
         with self.assertRaisesRegex(ParamsError, "Limit should be non-negative number"):
             await IntFields.all().limit(-10)
 
+    async def test_limit_zero(self):
+        sql = IntFields.all().only("id").limit(0).sql()
+        self.assertEqual(
+            sql,
+            'SELECT "id" "id" FROM "intfields" LIMIT 0',
+        )
+
     async def test_offset_count(self):
         self.assertEqual(await IntFields.all().offset(10).count(), 20)
 

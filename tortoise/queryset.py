@@ -963,7 +963,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             annotations=self._annotations,
             custom_filters=self._custom_filters,
         )
-        if self._limit:
+        if self._limit is not None:
             self.query._limit = self._limit
         if self._offset:
             self.query._offset = self._offset
