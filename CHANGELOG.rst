@@ -18,6 +18,7 @@ Fixed
 - Fastapi example test not working. (#1029)
 - Fix create index sql error. (#1202)
 - Fix dependencies resolve error. (#1246)
+- Fix ignoring zero value of limit. (#1270)
 
 0.19.2
 ------
