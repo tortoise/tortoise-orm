@@ -14,7 +14,7 @@ from tests.testmodels import (
     UUIDFkRelatedNullModel,
 )
 from tortoise.contrib import test
-from tortoise.contrib.test.condition import NotEQ, NotIn
+from tortoise.contrib.test.condition import NotIn
 from tortoise.exceptions import FieldError, NoValuesFetched
 from tortoise.functions import Count, Trim
 
