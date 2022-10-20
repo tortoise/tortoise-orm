@@ -14,6 +14,7 @@ from tests.testmodels import (
     UUIDFkRelatedNullModel,
 )
 from tortoise.contrib import test
+from tortoise.contrib.test.condition import NotEQ
 from tortoise.exceptions import FieldError, NoValuesFetched
 from tortoise.functions import Count, Trim
 
@@ -357,6 +358,7 @@ class TestRelations(test.TestCase):
         )
         self.assertIsNone(pair.right.extra)  # should be None
 
+    @test.requireCapability(dialect=NotEQ("mysql"))
     async def test_0_value_fk(self):
         """ForegnKeyField should exits even if the the source_field looks like false, but not None
         src: https://github.com/tortoise/tortoise-orm/issues/1274
