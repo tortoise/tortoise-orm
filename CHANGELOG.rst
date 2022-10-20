@@ -726,7 +726,7 @@ Enhancements:
 - Annotations can be selected inside ``Queryset.values()`` and ``Queryset.values_list()`` expressions.
 - Added support for Python 3.8
 - The Foreign Key property is now ``await``-able as long as one didn't populate it via ``.prefetch_related()``
-- One can now specify compound indexes in the ``Meta:`` class using ``indexes``. It works just like ``unique_toghether``.
+- One can now specify compound indexes in the ``Meta:`` class using ``indexes``. It works just like ``unique_together``.
 
 Bugfixes:
 ^^^^^^^^^

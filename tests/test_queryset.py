@@ -438,7 +438,7 @@ class TestQueryset(test.TestCase):
         )
 
     @test.requireCapability(support_index_hint=True)
-    async def test_force_index_avaiable_in_more_query(self):
+    async def test_force_index_available_in_more_query(self):
         sql_ValuesQuery = IntFields.filter(pk=1).force_index("index_name").values("id").sql()
         self.assertEqual(
             sql_ValuesQuery,
@@ -480,7 +480,7 @@ class TestQueryset(test.TestCase):
         )
 
     @test.requireCapability(support_index_hint=True)
-    async def test_use_index_avaiable_in_more_query(self):
+    async def test_use_index_available_in_more_query(self):
         sql_ValuesQuery = IntFields.filter(pk=1).use_index("index_name").values("id").sql()
         self.assertEqual(
             sql_ValuesQuery,

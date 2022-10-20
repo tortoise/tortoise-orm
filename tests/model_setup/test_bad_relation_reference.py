@@ -3,7 +3,7 @@ from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 
 
-class TestBadReleationReferenceErrors(test.SimpleTestCase):
+class TestBadRelationReferenceErrors(test.SimpleTestCase):
     async def asyncSetUp(self):
         await super().asyncSetUp()
         try:
@@ -15,7 +15,7 @@ class TestBadReleationReferenceErrors(test.SimpleTestCase):
 
     async def asyncTearDown(self) -> None:
         await Tortoise._reset_apps()
-        await super(TestBadReleationReferenceErrors, self).asyncTearDown()
+        await super(TestBadRelationReferenceErrors, self).asyncTearDown()
 
     async def test_wrong_app_init(self):
         with self.assertRaisesRegex(ConfigurationError, "No app with name 'app' registered."):
