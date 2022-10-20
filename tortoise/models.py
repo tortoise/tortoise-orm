@@ -107,7 +107,7 @@ def _fk_getter(
         return getattr(self, _key)
     except AttributeError:
         value = getattr(self, relation_field)
-        if value:
+        if value is not None:
             return ftype.filter(**{to_field: value}).first()
         return NoneAwaitable
 
