@@ -365,7 +365,7 @@ class TestRelations(test.TestCase):
         single = await Single.create(extra=extra)
 
         single_reload = await Single.get(id=single.id)
-        assert await single_reload.extra is not None
+        assert (await single_reload.extra).id == 0
 
 
 class TestDoubleFK(test.TestCase):

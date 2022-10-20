@@ -54,6 +54,7 @@ class TestQueryset(test.TestCase):
         with self.assertRaisesRegex(ParamsError, "Limit should be non-negative number"):
             await IntFields.all().limit(-10)
 
+    @test.requireCapability(dialect="sqlite")
     async def test_limit_zero(self):
         sql = IntFields.all().only("id").limit(0).sql()
         self.assertEqual(
