@@ -357,6 +357,16 @@ class TestRelations(test.TestCase):
         )
         self.assertIsNone(pair.right.extra)  # should be None
 
+    async def test_0_value_fk(self):
+        """ForegnKeyField should exits even if the the source_field looks like false, but not None
+        src: https://github.com/tortoise/tortoise-orm/issues/1274
+        """
+        extra = await Extra.create(id=0)
+        single = await Single.create(extra=extra)
+
+        single_reload = await Single.get(id=single.id)
+        assert await single_reload.extra is not None
+
 
 class TestDoubleFK(test.TestCase):
     select_match = r'SELECT [`"]doublefk[`"].[`"]name[`"] [`"]name[`"]'
