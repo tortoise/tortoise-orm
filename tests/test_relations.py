@@ -358,7 +358,7 @@ class TestRelations(test.TestCase):
         )
         self.assertIsNone(pair.right.extra)  # should be None
 
-    @test.requireCapability(dialect=NotEQ("mysql"))
+    @test.requireCapability(dialect=NotEQ("mssql"))
     async def test_0_value_fk(self):
         """ForegnKeyField should exits even if the the source_field looks like false, but not None
         src: https://github.com/tortoise/tortoise-orm/issues/1274
