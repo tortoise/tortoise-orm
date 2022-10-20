@@ -1,6 +1,6 @@
 # pylint: disable=C0301
 import re
-from unittest.mock import AsyncMock, patch
+from unittest.mock import MagicMock, patch
 
 from tortoise import Tortoise, connections
 from tortoise.contrib import test
@@ -29,7 +29,7 @@ class TestGenerateSchema(test.SimpleTestCase):
 
     async def init_for(self, module: str, safe=False) -> None:
         with patch(
-            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=AsyncMock()
+            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=MagicMock()
         ):
             await Tortoise.init(
                 {
@@ -395,7 +395,7 @@ CREATE TABLE "team_team" (
 class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
         try:
-            with patch("asyncmy.create_pool", new=AsyncMock()):
+            with patch("asyncmy.create_pool", new=MagicMock()):
                 await Tortoise.init(
                     {
                         "connections": {
@@ -1154,7 +1154,7 @@ CREATE TABLE "team_team" (
 class TestGenerateSchemaAsyncpg(GenerateSchemaPostgresSQL):
     async def init_for(self, module: str, safe=False) -> None:
         try:
-            with patch("asyncpg.create_pool", new=AsyncMock()):
+            with patch("asyncpg.create_pool", new=MagicMock()):
                 await Tortoise.init(
                     {
                         "connections": {
@@ -1180,7 +1180,7 @@ class TestGenerateSchemaAsyncpg(GenerateSchemaPostgresSQL):
 class TestGenerateSchemaPsycopg(GenerateSchemaPostgresSQL):
     async def init_for(self, module: str, safe=False) -> None:
         try:
-            with patch("psycopg_pool.AsyncConnectionPool.open", new=AsyncMock()):
+            with patch("psycopg_pool.AsyncConnectionPool.open", new=MagicMock()):
                 await Tortoise.init(
                     {
                         "connections": {
