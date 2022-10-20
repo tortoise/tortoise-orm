@@ -19,6 +19,8 @@ Fixed
 - Fix create index sql error. (#1202)
 - Fix dependencies resolve error. (#1246)
 - Fix ignoring zero value of limit. (#1270)
+- Fix ForeignKeyField is none when fk is integer 0. (#1274)
+- Fix limit ignore zero. (#1270)
 
 0.19.2
 ------
