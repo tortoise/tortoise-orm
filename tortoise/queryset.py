@@ -884,13 +884,13 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query
         )
 
-    def using_db(self, _db: BaseDBAsyncClient) -> "QuerySet[MODEL]":
+    def using_db(self, _db: Optional[BaseDBAsyncClient]) -> "QuerySet[MODEL]":
         """
         Executes query in provided db client.
         Useful for transactions workaround.
         """
         queryset = self._clone()
-        queryset._db = _db
+        queryset._db = _db if _db else queryset._db
         return queryset
 
     def _join_table_with_select_related(
