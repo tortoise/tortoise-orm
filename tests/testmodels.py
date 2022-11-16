@@ -766,10 +766,10 @@ class ValidatorModel(Model):
     max_value = fields.IntField(null=True, validators=[MaxValueValidator(20.0)])
     min_value = fields.IntField(null=True, validators=[MinValueValidator(10.0)])
     max_value_decimal = fields.DecimalField(
-        null=True, validators=[MaxValueValidator(Decimal("2.0"))]
+        max_digits=12, decimal_places=3, null=True, validators=[MaxValueValidator(Decimal("2.0"))]
     )
     min_value_decimal = fields.DecimalField(
-        null=True, validators=[MinValueValidator(Decimal("1.0"))]
+        max_digits=12, decimal_places=3, null=True, validators=[MinValueValidator(Decimal("1.0"))]
     )
     comma_separated_integer_list = fields.CharField(
         max_length=100, null=True, validators=[CommaSeparatedIntegerListValidator()]
