@@ -32,7 +32,7 @@ class TestValues(test.TestCase):
         with self.assertRaises(ValidationError):
             await ValidatorModel.create(max_value=21)
         await ValidatorModel.create(max_value=20)
-        
+
         # max value is Decimal("2.0")
         with self.assertRaises(ValidationError):
             await ValidatorModel.create(max_value_decimal=Decimal("3.0"))
