@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from tests.testmodels import ValidatorModel
 from tortoise.contrib import test
 from tortoise.exceptions import ValidationError
@@ -20,11 +22,21 @@ class TestValues(test.TestCase):
             await ValidatorModel.create(min_value=9)
         await ValidatorModel.create(min_value=10)
 
+        # max value is Decimal("1.0")
+        with self.assertRaises(ValidationError):
+            await ValidatorModel.create(min_value_decimal=Decimal("0.9"))
+        await ValidatorModel.create(min_value_decimal=Decimal("0.1"))
+
     async def test_validator_max_value(self):
         # max value is 20
         with self.assertRaises(ValidationError):
             await ValidatorModel.create(max_value=21)
         await ValidatorModel.create(max_value=20)
+        
+        # max value is Decimal("2.0")
+        with self.assertRaises(ValidationError):
+            await ValidatorModel.create(max_value_decimal=Decimal("3.0"))
+        await ValidatorModel.create(max_value_decimal=Decimal("2.0"))
 
     async def test_validator_ipv4(self):
         with self.assertRaises(ValidationError):
