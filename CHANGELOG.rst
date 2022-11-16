@@ -21,6 +21,7 @@ Fixed
 - Fix ignoring zero value of limit. (#1270)
 - Fix ForeignKeyField is none when fk is integer 0. (#1274)
 - Fix limit ignore zero. (#1270)
+- Fix min/max value validators for decimal fields. (#1291)
 
 0.19.2
 ------
