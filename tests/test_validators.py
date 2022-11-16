@@ -22,10 +22,10 @@ class TestValues(test.TestCase):
             await ValidatorModel.create(min_value=9)
         await ValidatorModel.create(min_value=10)
 
-        # max value is Decimal("1.0")
+        # min value is Decimal("1.0")
         with self.assertRaises(ValidationError):
             await ValidatorModel.create(min_value_decimal=Decimal("0.9"))
-        await ValidatorModel.create(min_value_decimal=Decimal("0.1"))
+        await ValidatorModel.create(min_value_decimal=Decimal("1.0"))
 
     async def test_validator_max_value(self):
         # max value is 20
