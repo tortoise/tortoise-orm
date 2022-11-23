@@ -2,10 +2,10 @@ name: ci
 on:
   push:
     branches-ignore:
-      - master
+      - main
   pull_request:
     branches-ignore:
-      - master
+      - main
 jobs:
   test:
     runs-on: ubuntu-latest
