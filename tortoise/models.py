@@ -568,37 +568,37 @@ class ModelMeta(type):
                         " already present"
                     )
 
-            for key, value in attrs.items():
-                if isinstance(value, Field):
-                    if getattr(meta_class, "abstract", None):
-                        value = deepcopy(value)
+        for key, value in attrs.items():
+            if isinstance(value, Field):
+                if getattr(meta_class, "abstract", None):
+                    value = deepcopy(value)
 
-                    fields_map[key] = value
-                    value.model_field_name = key
+                fields_map[key] = value
+                value.model_field_name = key
 
-                    if isinstance(value, OneToOneFieldInstance):
-                        o2o_fields.add(key)
-                    elif isinstance(value, ForeignKeyFieldInstance):
-                        fk_fields.add(key)
-                    elif isinstance(value, ManyToManyFieldInstance):
-                        m2m_fields.add(key)
-                    else:
-                        fields_db_projection[key] = value.source_field or key
+                if isinstance(value, OneToOneFieldInstance):
+                    o2o_fields.add(key)
+                elif isinstance(value, ForeignKeyFieldInstance):
+                    fk_fields.add(key)
+                elif isinstance(value, ManyToManyFieldInstance):
+                    m2m_fields.add(key)
+                else:
+                    fields_db_projection[key] = value.source_field or key
+                    filters.update(
+                        get_filters_for_field(
+                            field_name=key,
+                            field=fields_map[key],
+                            source_field=fields_db_projection[key],
+                        )
+                    )
+                    if value.pk:
                         filters.update(
                             get_filters_for_field(
-                                field_name=key,
+                                field_name="pk",
                                 field=fields_map[key],
                                 source_field=fields_db_projection[key],
                             )
                         )
-                        if value.pk:
-                            filters.update(
-                                get_filters_for_field(
-                                    field_name="pk",
-                                    field=fields_map[key],
-                                    source_field=fields_db_projection[key],
-                                )
-                            )
 
         # Clean the class attributes
         for slot in fields_map:
