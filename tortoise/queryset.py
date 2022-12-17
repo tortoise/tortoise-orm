@@ -1484,7 +1484,9 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
             self.query = self.query.use_index(*self.use_indexes)
 
     @overload
-    def __await__(self: "ValuesListQuery[Literal[False]]") -> Generator[Any, None, List[Tuple[Any, ...]]]:
+    def __await__(
+        self: "ValuesListQuery[Literal[False]]",
+    ) -> Generator[Any, None, List[Tuple[Any, ...]]]:
         ...
 
     @overload
@@ -1607,9 +1609,11 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
             self.query = self.query.use_index(*self.use_indexes)
 
     @overload
-    def __await__(self: "ValuesQuery[Literal[False]]") -> Generator[Any, None, List[Dict[str, Any]]]:
+    def __await__(
+        self: "ValuesQuery[Literal[False]]",
+    ) -> Generator[Any, None, List[Dict[str, Any]]]:
         ...
-    
+
     @overload
     def __await__(self: "ValuesQuery[Literal[True]]") -> Generator[Any, None, Dict[str, Any]]:
         ...
