@@ -17,13 +17,14 @@ from typing import (
     TypeVar,
     Union,
     cast,
+    overload,
 )
 
 from pypika import JoinType, Order, Table
 from pypika.functions import Cast, Count
 from pypika.queries import QueryBuilder
 from pypika.terms import Case, Field, Term, ValueWrapper
-from typing_extensions import Protocol
+from typing_extensions import Literal, Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import (
@@ -53,6 +54,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 MODEL = TypeVar("MODEL", bound="Model")
 T_co = TypeVar("T_co", covariant=True)
+SINGLE = TypeVar("SINGLE", bound=bool)
 
 
 class QuerySetSingle(Protocol[T_co]):
@@ -76,10 +78,10 @@ class QuerySetSingle(Protocol[T_co]):
     def only(self, *fields_for_select: str) -> "QuerySetSingle[T_co]":
         ...  # pragma: nocoverage
 
-    def values_list(self, *fields_: str, flat: bool = False) -> "ValuesListQuery":
+    def values_list(self, *fields_: str, flat: bool = False) -> "ValuesListQuery[Literal[True]]":
         ...  # pragma: nocoverage
 
-    def values(self, *args: str, **kwargs: str) -> "ValuesQuery":
+    def values(self, *args: str, **kwargs: str) -> "ValuesQuery[Literal[True]]":
         ...  # pragma: nocoverage
 
 
@@ -500,7 +502,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._group_bys = fields
         return queryset
 
-    def values_list(self, *fields_: str, flat: bool = False) -> "ValuesListQuery":
+    def values_list(self, *fields_: str, flat: bool = False) -> "ValuesListQuery[Literal[False]]":
         """
         Make QuerySet returns list of tuples for given args instead of objects.
 
@@ -536,7 +538,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             use_indexes=self._use_indexes,
         )
 
-    def values(self, *args: str, **kwargs: str) -> "ValuesQuery":
+    def values(self, *args: str, **kwargs: str) -> "ValuesQuery[Literal[False]]":
         """
         Make QuerySet return dicts instead of objects.
 
@@ -1392,7 +1394,7 @@ class FieldSelectQuery(AwaitableQuery):
         return group_bys
 
 
-class ValuesListQuery(FieldSelectQuery):
+class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
     __slots__ = (
         "flat",
         "fields",
@@ -1416,7 +1418,7 @@ class ValuesListQuery(FieldSelectQuery):
         model: Type[MODEL],
         db: BaseDBAsyncClient,
         q_objects: List[Q],
-        single: bool,
+        single: SINGLE,
         raise_does_not_exist: bool,
         fields_for_select_list: List[str],
         limit: Optional[int],
@@ -1481,7 +1483,15 @@ class ValuesListQuery(FieldSelectQuery):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self.use_indexes)
 
-    def __await__(self) -> Generator[Any, None, Union[List[Any], Tuple]]:
+    @overload
+    def __await__(self: "ValuesListQuery[Literal[False]]") -> Generator[Any, None, List[Tuple[Any, ...]]]:
+        ...
+
+    @overload
+    def __await__(self: "ValuesListQuery[Literal[True]]") -> Generator[Any, None, Tuple[Any, ...]]:
+        ...
+
+    def __await__(self) -> Generator[Any, None, Union[List[Any], Tuple[Any, ...]]]:
         if self._db is None:
             self._db = self._choose_db()  # type: ignore
         self._make_query()
@@ -1516,7 +1526,7 @@ class ValuesListQuery(FieldSelectQuery):
         return lst_values
 
 
-class ValuesQuery(FieldSelectQuery):
+class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
     __slots__ = (
         "fields_for_select",
         "limit",
@@ -1538,7 +1548,7 @@ class ValuesQuery(FieldSelectQuery):
         model: Type[MODEL],
         db: BaseDBAsyncClient,
         q_objects: List[Q],
-        single: bool,
+        single: SINGLE,
         raise_does_not_exist: bool,
         fields_for_select: Dict[str, str],
         limit: Optional[int],
@@ -1596,13 +1606,21 @@ class ValuesQuery(FieldSelectQuery):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self.use_indexes)
 
-    def __await__(self) -> Generator[Any, None, Union[List[dict], Dict]]:
+    @overload
+    def __await__(self: "ValuesQuery[Literal[False]]") -> Generator[Any, None, List[Dict[str, Any]]]:
+        ...
+    
+    @overload
+    def __await__(self: "ValuesQuery[Literal[True]]") -> Generator[Any, None, Dict[str, Any]]:
+        ...
+
+    def __await__(self) -> Generator[Any, None, Union[List[Dict[str, Any]], Dict[str, Any]]]:
         if self._db is None:
             self._db = self._choose_db()  # type: ignore
         self._make_query()
         return self._execute().__await__()  # pylint: disable=E1101
 
-    async def __aiter__(self) -> AsyncIterator[dict]:
+    async def __aiter__(self) -> AsyncIterator[dict[str, Any]]:
         for val in await self:
             yield val
 
