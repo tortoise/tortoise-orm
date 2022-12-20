@@ -1418,7 +1418,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         model: Type[MODEL],
         db: BaseDBAsyncClient,
         q_objects: List[Q],
-        single: SINGLE,
+        single: bool,
         raise_does_not_exist: bool,
         fields_for_select_list: List[str],
         limit: Optional[int],
@@ -1499,7 +1499,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         self._make_query()
         return self._execute().__await__()  # pylint: disable=E1101
 
-    async def __aiter__(self) -> AsyncIterator[Any]:
+    async def __aiter__(self: "ValuesListQuery[Any]") -> AsyncIterator[Any]:
         for val in await self:
             yield val
 
@@ -1550,7 +1550,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         model: Type[MODEL],
         db: BaseDBAsyncClient,
         q_objects: List[Q],
-        single: SINGLE,
+        single: bool,
         raise_does_not_exist: bool,
         fields_for_select: Dict[str, str],
         limit: Optional[int],
@@ -1624,7 +1624,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         self._make_query()
         return self._execute().__await__()  # pylint: disable=E1101
 
-    async def __aiter__(self) -> AsyncIterator[dict[str, Any]]:
+    async def __aiter__(self: "ValuesQuery[Any]") -> AsyncIterator[dict[str, Any]]:
         for val in await self:
             yield val
 
