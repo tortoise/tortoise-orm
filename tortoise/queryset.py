@@ -1624,7 +1624,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         self._make_query()
         return self._execute().__await__()  # pylint: disable=E1101
 
-    async def __aiter__(self: "ValuesQuery[Any]") -> AsyncIterator[dict[str, Any]]:
+    async def __aiter__(self: "ValuesQuery[Any]") -> AsyncIterator[Dict[str, Any]]:
         for val in await self:
             yield val
 
