@@ -399,6 +399,13 @@ def pydantic_model_creator(
                 pannotations[fname] = annotation
         # Json fields
         elif field_type is fields.JSONField:
+            if fdesc.get("nullable"):
+                fconfig["nullable"] = True
+            if fdesc.get("nullable") or field_default is not None:
+                pannotations[fname] = Optional[dict]
+            else:
+                pannotations[fname] = dict
+        elif field_type is fields.JSONField:
             pannotations[fname] = Any  # type: ignore
         # Any other tortoise fields
         else:
