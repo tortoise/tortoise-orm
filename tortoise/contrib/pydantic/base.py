@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, List, Type, Union
 
 import pydantic
-from pydantic import BaseModel  # pylint: disable=E0611
+from pydantic import BaseModel, BaseConfig  # pylint: disable=E0611
 
 from tortoise import fields
 
@@ -45,7 +45,7 @@ class PydanticModel(BaseModel):
     `model properties <https://pydantic-docs.helpmanual.io/usage/models/#model-properties>`__
     """
 
-    class Config:
+    class Config(BaseConfig):
         orm_mode = True  # It should be in ORM mode to convert tortoise data to pydantic
 
     # noinspection PyMethodParameters
