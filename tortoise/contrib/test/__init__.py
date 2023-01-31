@@ -43,7 +43,7 @@ _SELECTOR = None
 _LOOP: AbstractEventLoop = None  # type: ignore
 _MODULES: Iterable[Union[str, ModuleType]] = []
 _CONN_CONFIG: dict = {}
-_APP_LABEL = None
+_APP_LABEL: str | None = None
 
 
 def getDBConfig(app_label: str, modules: Iterable[Union[str, ModuleType]]) -> dict:
