@@ -1,10 +1,13 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from pymysql.constants import COMMAND
 from tortoise import connections
 from tortoise.backends.base.client import TransactionContextPooled
 from tortoise.backends.mysql.client import MySQLClient, TransactionWrapper, translate_exceptions
 from tortoise.exceptions import ParamsError, TransactionManagementError
+
+if TYPE_CHECKING:  # pragma: nocoverage
+    from tortoise.backends.base.client import TransactionContext
 
 
 class XATransactionWrapper(TransactionWrapper):
@@ -52,11 +55,11 @@ class XATransactionWrapper(TransactionWrapper):
 
 
 class XAMySQLClient(MySQLClient):
-    def xa_in_transaction(self, transaction_id: str) -> "TransactionContext":
+    def xa_in_transaction(self: MySQLClient, transaction_id: str) -> "TransactionContext":
         return TransactionContextPooled(XATransactionWrapper(self, transaction_id))
 
 
-def _get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
+def _get_connection(connection_name: Optional[str]) -> "MySQLClient":
     if connection_name:
         connection = connections.get(connection_name)
     elif len(connections.db_config) == 1:
