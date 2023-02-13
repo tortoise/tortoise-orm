@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-# @Time    : 2023/2/13 17:53
-# @Author  : Tuffy
-# @Description : 
-
-# -*- coding: utf-8 -*-
-# @Time    : 2022/7/26 16:07
-# @Author  : Tuffy
-# @Description :
 from typing import Optional
 
 from pymysql.constants import COMMAND
@@ -32,7 +23,7 @@ class XATransactionWrapper(TransactionWrapper):
             raise TransactionManagementError("Transaction already finalised")
         await self._connection._execute_command(COMMAND.COM_QUERY, f"XA END '{self.transaction_id}'")
         await self._connection._read_ok_packet()
-        await self._connection._execute_command(COMMAND.COM_QUERY, f"XA COMMIT '{self.transaction_id}'")
+        await self._connection._execute_command(COMMAND.COM_QUERY, f"XA PREPARE '{self.transaction_id}'")
         await self._connection._read_ok_packet()
         self._finalized = True
 
@@ -41,6 +32,20 @@ class XATransactionWrapper(TransactionWrapper):
             raise TransactionManagementError("Transaction already finalised")
         await self._connection._execute_command(COMMAND.COM_QUERY, f"XA END '{self.transaction_id}'")
         await self._connection._read_ok_packet()
+        await self._connection._execute_command(COMMAND.COM_QUERY, f"XA PREPARE '{self.transaction_id}'")
+        await self._connection._read_ok_packet()
+        self._finalized = True
+
+    async def xa_commit(self) -> None:
+        if self._finalized:
+            raise TransactionManagementError("Transaction already finalised")
+        await self._connection._execute_command(COMMAND.COM_QUERY, f"XA COMMIT '{self.transaction_id}'")
+        await self._connection._read_ok_packet()
+        self._finalized = True
+
+    async def xa_rollback(self) -> None:
+        if self._finalized:
+            raise TransactionManagementError("Transaction already finalised")
         await self._connection._execute_command(COMMAND.COM_QUERY, f"XA ROLLBACK '{self.transaction_id}'")
         await self._connection._read_ok_packet()
         self._finalized = True
