@@ -13,7 +13,7 @@ class PostgreSQLIndex(PartialIndex):
     def __init__(
         self,
         *expressions: Term,
-        fields: Optional[Tuple[str]] = None,
+        fields: Optional[Tuple[str, ...]] = None,
         name: Optional[str] = None,
         condition: Optional[dict] = None,
     ):

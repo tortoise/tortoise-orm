@@ -11,7 +11,7 @@ class FullTextIndex(Index):
     def __init__(
         self,
         *expressions: Term,
-        fields: Optional[Tuple[str]] = None,
+        fields: Optional[Tuple[str, ...]] = None,
         name: Optional[str] = None,
         parser_name: Optional[str] = None,
     ):
