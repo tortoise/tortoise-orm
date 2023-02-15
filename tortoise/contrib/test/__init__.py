@@ -361,15 +361,16 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
 
     def decorator(test_item):
         if not isinstance(test_item, type):
-
             @wraps(test_item)
-            def skip_wrapper(*args, **kwargs):
+            async def skip_wrapper(*args, **kwargs):
                 db = connections.get(connection_name)
                 for key, val in conditions.items():
                     if getattr(db.capabilities, key) != val:
                         raise SkipTest(f"Capability {key} != {val}")
-                return test_item(*args, **kwargs)
-
+                test_result = test_item(*args, **kwargs)
+                if asyncio.iscoroutinefunction(test_item):
+                    return await test_result
+                return test_result
             return skip_wrapper
 
         # Assume a class is decorated
