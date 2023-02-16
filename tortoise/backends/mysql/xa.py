@@ -55,7 +55,7 @@ class XATransactionWrapper(TransactionWrapper):
 
 
 class XAMySQLClient(MySQLClient):
-    def xa_in_transaction(self: MySQLClient, transaction_id: str) -> "TransactionContext":
+    def xa_in_transaction(self: MySQLClient, transaction_id: str) -> TransactionContext:
         return TransactionContextPooled(XATransactionWrapper(self, transaction_id))
 
 
@@ -73,6 +73,15 @@ def _get_connection(connection_name: Optional[str]) -> "MySQLClient":
     return connection
 
 
-def xa_in_transaction(transaction_id: str, connection_name: Optional[str] = None) -> "TransactionContext":
+def xa_in_transaction(transaction_id: str, connection_name: Optional[str] = None) -> TransactionContext:
+    """
+    XA Transaction context manager.
+
+    You can run your code inside ``async with xa_in_transaction():`` statement to run it
+    into one transaction. If error occurs transaction will rollback.
+
+    :param connection_name: name of connection to run with, optional if you have only
+                            one db connection
+    """
     connection = _get_connection(connection_name)
     return XAMySQLClient.xa_in_transaction(connection, transaction_id)
