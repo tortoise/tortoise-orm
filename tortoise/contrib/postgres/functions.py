@@ -19,6 +19,15 @@ class ToTsQuery(Function):  # type: ignore
         super(ToTsQuery, self).__init__("TO_TSQUERY", field)
 
 
+class PlainToTsQuery(Function):  # type: ignore
+    """
+    plainto_tsquery function
+    """
+
+    def __init__(self, field: Term):
+        super(PlainToTsQuery, self).__init__("PLAINTO_TSQUERY", field)
+
+
 class Random(Function):  # type: ignore
     """
     Generate random number.
