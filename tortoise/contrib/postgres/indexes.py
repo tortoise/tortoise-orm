@@ -1,4 +1,4 @@
-from typing import Optional, Set
+from typing import Optional, Tuple
 
 from pypika.terms import Term, ValueWrapper
 
@@ -13,7 +13,7 @@ class PostgreSQLIndex(PartialIndex):
     def __init__(
         self,
         *expressions: Term,
-        fields: Optional[Set[str]] = None,
+        fields: Optional[Tuple[str, ...]] = None,
         name: Optional[str] = None,
         condition: Optional[dict] = None,
     ):

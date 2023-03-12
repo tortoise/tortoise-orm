@@ -3,10 +3,10 @@ from base64 import b32encode
 from hashlib import sha3_224
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, cast
 
-import pydantic
-from pydantic.main import BaseConfig as PydanticBaseConfig
+from pydantic import BaseConfig as PydanticBaseConfig
+from pydantic import Extra
 
-from tortoise import fields
+from tortoise.fields import relational, JSONField
 from tortoise.contrib.pydantic.base import PydanticListModel, PydanticModel
 from tortoise.contrib.pydantic.utils import get_annotations
 
@@ -246,10 +246,10 @@ def pydantic_model_creator(
     # If at least one of default_config_class or config_class have extra,
     #   we don't add extra automatically.
     if not hasattr(default_config_class, "extra") and not hasattr(config_class, "extra"):
-        pconfig_attrs["extra"] = pydantic.main.Extra.forbid
+        pconfig_attrs["extra"] = Extra.forbid
 
     # Properties and their annotations` store
-    pconfig: Type[pydantic.main.BaseConfig] = type(
+    pconfig: Type[PydanticBaseConfig] = type(
         "Config",
         tuple(pconfig_bases),
         pconfig_attrs,
@@ -368,9 +368,9 @@ def pydantic_model_creator(
 
         # Foreign keys and OneToOne fields are embedded schemas
         if (
-            field_type is fields.relational.ForeignKeyFieldInstance
-            or field_type is fields.relational.OneToOneFieldInstance
-            or field_type is fields.relational.BackwardOneToOneRelation
+            field_type is relational.ForeignKeyFieldInstance
+            or field_type is relational.OneToOneFieldInstance
+            or field_type is relational.BackwardOneToOneRelation
         ):
             model = get_submodel(fdesc["python_type"])
             if model:
@@ -383,8 +383,8 @@ def pydantic_model_creator(
 
         # Backward FK and ManyToMany fields are list of embedded schemas
         elif (
-            field_type is fields.relational.BackwardFKRelation
-            or field_type is fields.relational.ManyToManyFieldInstance
+            field_type is relational.BackwardFKRelation
+            or field_type is relational.ManyToManyFieldInstance
         ):
             model = get_submodel(fdesc["python_type"])
             if model:
@@ -398,7 +398,7 @@ def pydantic_model_creator(
             if annotation is not None:
                 pannotations[fname] = annotation
         # Json fields
-        elif field_type is fields.JSONField:
+        elif field_type is JSONField:
             pannotations[fname] = Any  # type: ignore
         # Any other tortoise fields
         else:

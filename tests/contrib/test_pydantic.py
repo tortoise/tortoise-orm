@@ -18,6 +18,8 @@ from tortoise.contrib.pydantic import (
     pydantic_queryset_creator,
 )
 
+from pydantic import BaseConfig as PydanticBaseConfig
+
 
 class TestPydantic(test.TestCase):
     async def asyncSetUp(self) -> None:
@@ -1074,7 +1076,7 @@ class TestPydantic(test.TestCase):
             model PydanticMeta's config_class.
         """
 
-        class AnotherConfigClass:
+        class AnotherConfigClass(PydanticBaseConfig):
             title = "Another title!"
 
         ModelPydantic = pydantic_model_creator(
@@ -1088,7 +1090,7 @@ class TestPydantic(test.TestCase):
     def test_config_class_ignore_fields_config(self):
         """Generated config class should ignore config_class's fields parameter."""
 
-        class FieldsConfig:
+        class FieldsConfig(PydanticBaseConfig):
             fields = ["id"]
 
         ModelPydantic = pydantic_model_creator(
@@ -1103,7 +1105,7 @@ class TestPydantic(test.TestCase):
         - It merges (Default, Meta's config_class and creator's config_class) together.
         """
 
-        class MinLengthConfig:
+        class MinLengthConfig(PydanticBaseConfig):
             min_anystr_length = 3
 
         ModelPydantic = pydantic_model_creator(

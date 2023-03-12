@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Set, Type
+from typing import TYPE_CHECKING, Optional, Tuple, Type
 
 from pypika.terms import Term, ValueWrapper
 
@@ -16,14 +16,14 @@ class Index:
     def __init__(
         self,
         *expressions: Term,
-        fields: Optional[Set[str]] = None,
+        fields: Optional[Tuple[str, ...]] = None,
         name: Optional[str] = None,
     ):
         """
         All kinds of index parent class, default is BTreeIndex.
 
         :param expressions: The expressions of on which the index is desired.
-        :param fields: A list or tuple of the name of the fields on which the index is desired.
+        :param fields: A tuple of names of the fields on which the index is desired.
         :param name: The name of the index.
         :raises ValueError: If params conflict.
         """
@@ -69,7 +69,7 @@ class PartialIndex(Index):
     def __init__(
         self,
         *expressions: Term,
-        fields: Optional[Set[str]] = None,
+        fields: Optional[Tuple[str, ...]] = None,
         name: Optional[str] = None,
         condition: Optional[dict] = None,
     ):

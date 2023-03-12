@@ -22,11 +22,11 @@ class Index(Model):
 
     class Meta:
         indexes = [
-            BloomIndex(fields={"bloom"}),
-            BrinIndex(fields={"brin"}),
-            GinIndex(fields={"gin"}),
-            GistIndex(fields={"gist"}),
-            SpGistIndex(fields={"sp_gist"}),
-            HashIndex(fields={"hash"}),
-            PostgreSQLIndex(fields={"partial"}, condition={"id": 1}),
+            BloomIndex(fields=("bloom",)),
+            BrinIndex(fields=("brin",)),
+            GinIndex(fields=("gin",)),
+            GistIndex(fields=("gist",)),
+            SpGistIndex(fields=("sp_gist",)),
+            HashIndex(fields=("hash",)),
+            PostgreSQLIndex(fields=("partial",), condition={"id": 1}),
         ]

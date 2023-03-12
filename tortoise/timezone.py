@@ -94,7 +94,7 @@ def make_aware(
     """
     tz = get_default_timezone() if timezone is None else pytz.timezone(timezone)
     if hasattr(tz, "localize"):
-        return tz.localize(value, is_dst=is_dst)  # type: ignore
+        return tz.localize(value, is_dst=is_dst)
     if is_aware(value):
         raise ValueError("make_aware expects a naive datetime, got %s" % value)
     # This may be wrong around DST changes!

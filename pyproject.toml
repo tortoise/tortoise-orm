@@ -51,9 +51,7 @@ asyncodbc = { version = "^0.1.1", optional = true }
 [tool.poetry.dev-dependencies]
 # Linter tools
 mypy = "*"
-flake8 = "*"
-flake8-comprehensions = "*"
-pyproject-flake8 = "*"
+ruff = "*"
 darglint = "*"
 pylint = "*"
 pygments = "*"
@@ -180,3 +178,6 @@ source = ["tortoise"]
 
 [tool.coverage.report]
 show_missing = true
+
+[tool.ruff]
+ignore = ["E501"]
