@@ -20,7 +20,7 @@ from tortoise.exceptions import ConfigurationError, ValidationError
 from tortoise.validators import Validator
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.models import Model
+    from tortoise.models import MODEL_CLASS, MODEL_INSTANCE
 
 VALUE = TypeVar("VALUE")
 
@@ -146,14 +146,14 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         return super().__new__(cls)
 
     @overload
-    def __get__(self, instance: None, owner: Type["Model"]) -> "Field[VALUE]":
+    def __get__(self, instance: None, owner: "MODEL_CLASS") -> "Field[VALUE]":
         ...
 
     @overload
-    def __get__(self, instance: "Model", owner: Type["Model"]) -> VALUE:
+    def __get__(self, instance: "MODEL_INSTANCE", owner: "MODEL_CLASS") -> VALUE:
         ...
 
-    def __get__(self, instance: Optional["Model"], owner: Type["Model"]):
+    def __get__(self, instance: Optional["MODEL_INSTANCE"], owner: "MODEL_CLASS"):
         ...
 
     def __init__(
@@ -166,7 +166,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         unique: bool = False,
         index: bool = False,
         description: Optional[str] = None,
-        model: "Optional[Model]" = None,
+        model: Optional["MODEL_CLASS"] = None,
         validators: Optional[List[Union[Validator, Callable]]] = None,
         **kwargs: Any,
     ) -> None:
@@ -193,10 +193,10 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         self.docstring: Optional[str] = None
         self.validators: List[Union[Validator, Callable]] = validators or []
         # TODO: consider making this not be set from constructor
-        self.model: Type["Model"] = model  # type: ignore
+        self.model: "MODEL_CLASS" = model  # type: ignore
         self.reference: "Optional[Field]" = None
 
-    def to_db_value(self, value: Any, instance: "Union[Type[Model], Model]") -> Any:
+    def to_db_value(self, value: Any, instance: Union["MODEL_CLASS", "MODEL_INSTANCE"]) -> Any:
         """
         Converts from the Python type to the DB type.
 

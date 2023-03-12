@@ -3,7 +3,7 @@ from pypika.enums import SqlTypes
 from pypika.terms import Criterion
 from pypika.utils import format_quotes
 
-from tortoise import Model
+from tortoise import MODEL_INSTANCE
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.contrib.mysql.json_functions import (
     mysql_json_contained_by,
@@ -114,7 +114,7 @@ class MySQLExecutor(BaseExecutor):
     def parameter(self, pos: int) -> Parameter:
         return Parameter("%s")
 
-    async def _process_insert_result(self, instance: Model, results: int) -> None:
+    async def _process_insert_result(self, instance: MODEL_INSTANCE, results: int) -> None:
         pk_field_object = self.model._meta.pk
         if (
             isinstance(pk_field_object, (SmallIntField, IntField, BigIntField))

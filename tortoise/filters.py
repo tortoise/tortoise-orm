@@ -11,7 +11,7 @@ from tortoise.fields import Field, JSONField
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.models import Model
+    from tortoise.models import MODEL_INSTANCE
 
 
 ##############################################################################
@@ -43,31 +43,31 @@ def escape_like(val: str) -> str:
 
 ##############################################################################
 # Encoders
-# Should be type: (Any, instance: "Model", field: Field) -> type:
+# Should be type: (Any, instance: "MODEL_INSTANCE", field: Field) -> type:
 ##############################################################################
 
 
-def list_encoder(values: Iterable[Any], instance: "Model", field: Field) -> list:
+def list_encoder(values: Iterable[Any], instance: "MODEL_INSTANCE", field: Field) -> list:
     """Encodes an iterable of a given field into a database-compatible format."""
     return [field.to_db_value(element, instance) for element in values]
 
 
-def related_list_encoder(values: Iterable[Any], instance: "Model", field: Field) -> list:
+def related_list_encoder(values: Iterable[Any], instance: "MODEL_INSTANCE", field: Field) -> list:
     return [
         field.to_db_value(element.pk if hasattr(element, "pk") else element, instance)
         for element in values
     ]
 
 
-def bool_encoder(value: Any, instance: "Model", field: Field) -> bool:
+def bool_encoder(value: Any, instance: "MODEL_INSTANCE", field: Field) -> bool:
     return bool(value)
 
 
-def string_encoder(value: Any, instance: "Model", field: Field) -> str:
+def string_encoder(value: Any, instance: "MODEL_INSTANCE", field: Field) -> str:
     return str(value)
 
 
-def json_encoder(value: Any, instance: "Model", field: Field) -> Dict:
+def json_encoder(value: Any, instance: "MODEL_INSTANCE", field: Field) -> Dict:
     return value
 
 

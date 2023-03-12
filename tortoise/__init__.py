@@ -23,12 +23,12 @@ from tortoise.fields.relational import (
 )
 from tortoise.filters import get_m2m_filters
 from tortoise.log import logger
-from tortoise.models import Model, ModelMeta
+from tortoise.models import Model, ModelMeta, MODEL_CLASS, MODEL_INSTANCE
 from tortoise.utils import generate_schema_for_client
 
 
 class Tortoise:
-    apps: Dict[str, Dict[str, Type["Model"]]] = {}
+    apps: Dict[str, Dict[str, MODEL_CLASS]] = {}
     _inited: bool = False
 
     @classmethod
@@ -46,7 +46,7 @@ class Tortoise:
 
     @classmethod
     def describe_model(
-        cls, model: Type["Model"], serializable: bool = True
+        cls, model: MODEL_CLASS, serializable: bool = True
     ) -> dict:  # pragma: nocoverage
         """
         Describes the given list of models or ALL registered models.
@@ -64,7 +64,7 @@ class Tortoise:
            This is deprecated, please use :meth:`tortoise.models.Model.describe` instead
         """
         warnings.warn(
-            "Tortoise.describe_model(<MODEL>) is deprecated, please use <MODEL>.describe() instead",
+            "Tortoise.describe_model(<MODEL_INSTANCE>) is deprecated, please use <MODEL_INSTANCE>.describe() instead",
             DeprecationWarning,
             stacklevel=2,
         )
@@ -72,7 +72,7 @@ class Tortoise:
 
     @classmethod
     def describe_models(
-        cls, models: Optional[List[Type["Model"]]] = None, serializable: bool = True
+        cls, models: Optional[List[MODEL_CLASS]] = None, serializable: bool = True
     ) -> Dict[str, dict]:
         """
         Describes the given list of models or ALL registered models.
@@ -108,7 +108,7 @@ class Tortoise:
 
     @classmethod
     def _init_relations(cls) -> None:
-        def get_related_model(related_app_name: str, related_model_name: str) -> Type["Model"]:
+        def get_related_model(related_app_name: str, related_model_name: str) -> MODEL_CLASS:
             """
             Test, if app and model really exist. Throws a ConfigurationError with a hopefully
             helpful message. If successful, returns the requested model.
@@ -345,7 +345,7 @@ class Tortoise:
     @classmethod
     def _discover_models(
         cls, models_path: Union[ModuleType, str], app_label: str
-    ) -> List[Type["Model"]]:
+    ) -> List[MODEL_CLASS]:
         if isinstance(models_path, ModuleType):
             module = models_path
         else:
@@ -390,7 +390,7 @@ class Tortoise:
 
         :raises ConfigurationError: If models are invalid.
         """
-        app_models: List[Type[Model]] = []
+        app_models: List[MODEL_CLASS] = []
         for models_path in models_paths:
             app_models += cls._discover_models(models_path, app_label)
 

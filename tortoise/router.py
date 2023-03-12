@@ -4,7 +4,7 @@ from tortoise.connection import connections
 from tortoise.exceptions import ConfigurationError
 
 if TYPE_CHECKING:
-    from tortoise import BaseDBAsyncClient, Model
+    from tortoise import BaseDBAsyncClient, MODEL_CLASS
 
 
 class ConnectionRouter:
@@ -26,16 +26,16 @@ class ConnectionRouter:
                 if chosen_db:
                     return chosen_db
 
-    def _db_route(self, model: Type["Model"], action: str):
+    def _db_route(self, model: "MODEL_CLASS", action: str):
         try:
             return connections.get(self._router_func(model, action))
         except ConfigurationError:
             return None
 
-    def db_for_read(self, model: Type["Model"]) -> Optional["BaseDBAsyncClient"]:
+    def db_for_read(self, model: "MODEL_CLASS") -> Optional["BaseDBAsyncClient"]:
         return self._db_route(model, "db_for_read")
 
-    def db_for_write(self, model: Type["Model"]) -> Optional["BaseDBAsyncClient"]:
+    def db_for_write(self, model: "MODEL_CLASS") -> Optional["BaseDBAsyncClient"]:
         return self._db_route(model, "db_for_write")
 
 

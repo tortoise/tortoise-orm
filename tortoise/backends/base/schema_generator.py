@@ -1,5 +1,5 @@
 from hashlib import sha256
-from typing import TYPE_CHECKING, Any, List, Set, Type, cast
+from typing import TYPE_CHECKING, Any, List, Set, cast
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields import JSONField, TextField, UUIDField
@@ -8,8 +8,7 @@ from tortoise.indexes import Index
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
     from tortoise.fields.relational import ForeignKeyFieldInstance  # noqa
-    from tortoise.fields.relational import ManyToManyFieldInstance
-    from tortoise.models import Model
+    from tortoise.models import MODEL_CLASS
 
 # pylint: disable=R0201
 
@@ -134,7 +133,7 @@ class BaseSchemaGenerator:
         return sha256(";".join(args).encode("utf-8")).hexdigest()[:length]
 
     def _generate_index_name(
-        self, prefix: str, model: "Type[Model]", field_names: List[str]
+        self, prefix: str, model: "MODEL_CLASS", field_names: List[str]
     ) -> str:
         # NOTE: for compatibility, index name should not be longer than 30
         # characters (Oracle limit).
@@ -161,7 +160,7 @@ class BaseSchemaGenerator:
         )
         return index_name
 
-    def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
+    def _get_index_sql(self, model: "MODEL_CLASS", field_names: List[str], safe: bool) -> str:
         return self.INDEX_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
             index_name=self._generate_index_name("idx", model, field_names),
@@ -169,18 +168,18 @@ class BaseSchemaGenerator:
             fields=", ".join([self.quote(f) for f in field_names]),
         )
 
-    def _get_unique_constraint_sql(self, model: "Type[Model]", field_names: List[str]) -> str:
+    def _get_unique_constraint_sql(self, model: "MODEL_CLASS", field_names: List[str]) -> str:
         return self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(
             index_name=self._generate_index_name("uid", model, field_names),
             fields=", ".join([self.quote(f) for f in field_names]),
         )
 
-    def _get_table_sql(self, model: "Type[Model]", safe: bool = True) -> dict:
+    def _get_table_sql(self, model: "MODEL_CLASS", safe: bool = True) -> dict:
         fields_to_create = []
         fields_with_index = []
         m2m_tables_for_create = []
         references = set()
-        models_to_create: "List[Type[Model]]" = []
+        models_to_create: List["MODEL_CLASS"] = []
 
         self._get_models_to_create(models_to_create)
         models_tables = [model._meta.db_table for model in models_to_create]
@@ -402,7 +401,7 @@ class BaseSchemaGenerator:
             "m2m_tables": m2m_tables_for_create,
         }
 
-    def _get_models_to_create(self, models_to_create: "List[Type[Model]]") -> None:
+    def _get_models_to_create(self, models_to_create: List["MODEL_CLASS"]) -> None:
         from tortoise import Tortoise
 
         for app in Tortoise.apps.values():
@@ -412,7 +411,7 @@ class BaseSchemaGenerator:
                     models_to_create.append(model)
 
     def get_create_schema_sql(self, safe: bool = True) -> str:
-        models_to_create: "List[Type[Model]]" = []
+        models_to_create: List["MODEL_CLASS"] = []
 
         self._get_models_to_create(models_to_create)
 

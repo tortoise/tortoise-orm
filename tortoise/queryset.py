@@ -17,7 +17,7 @@ from typing import (
     TypeVar,
     Union,
     cast,
-    overload,
+    overload, TypeAlias,
 )
 
 from pypika import JoinType, Order, Table
@@ -50,9 +50,12 @@ from tortoise.utils import chunk
 QUERY: QueryBuilder = QueryBuilder()
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.models import Model
+    pass
 
-MODEL = TypeVar("MODEL", bound="Model")
+MODEL_INSTANCE = TypeVar("MODEL_INSTANCE", bound="Model")
+MODEL_CLASS: TypeAlias = Type[MODEL_INSTANCE]
+MODEL_META_INSTANCE = TypeVar("MODEL_META_INSTANCE", bound="ModelMeta")
+
 T_co = TypeVar("T_co", covariant=True)
 SINGLE = TypeVar("SINGLE", bound=bool)
 
@@ -85,12 +88,12 @@ class QuerySetSingle(Protocol[T_co]):
         ...  # pragma: nocoverage
 
 
-class AwaitableQuery(Generic[MODEL]):
+class AwaitableQuery(Generic[MODEL_INSTANCE]):
     __slots__ = ("_joined_tables", "query", "model", "_db", "capabilities", "_annotations")
 
-    def __init__(self, model: Type[MODEL]) -> None:
+    def __init__(self, model: MODEL_CLASS) -> None:
         self._joined_tables: List[Table] = []
-        self.model: "Type[Model]" = model
+        self.model: MODEL_CLASS = model
         self.query: QueryBuilder = QUERY
         self._db: BaseDBAsyncClient = None  # type: ignore
         self.capabilities: Capabilities = model._meta.db.capabilities
@@ -112,7 +115,7 @@ class AwaitableQuery(Generic[MODEL]):
 
     def resolve_filters(
         self,
-        model: "Type[Model]",
+        model: MODEL_CLASS,
         q_objects: List[Q],
         annotations: Dict[str, Any],
         custom_filters: Dict[str, Dict[str, Any]],
@@ -170,7 +173,7 @@ class AwaitableQuery(Generic[MODEL]):
 
     def resolve_ordering(
         self,
-        model: "Type[Model]",
+        model: MODEL_CLASS,
         table: Table,
         orderings: Iterable[Tuple[str, str]],
         annotations: Dict[str, Any],
@@ -267,7 +270,7 @@ class AwaitableQuery(Generic[MODEL]):
         raise NotImplementedError()  # pragma: nocoverage
 
 
-class QuerySet(AwaitableQuery[MODEL]):
+class QuerySet(AwaitableQuery[MODEL_INSTANCE]):
     __slots__ = (
         "fields",
         "_prefetch_map",
@@ -295,7 +298,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_force_indexes",
     )
 
-    def __init__(self, model: Type[MODEL]) -> None:
+    def __init__(self, model: MODEL_CLASS) -> None:
         super().__init__(model)
         self.fields: Set[str] = model._meta.db_fields
         self._prefetch_map: Dict[str, Set[Union[str, Prefetch]]] = {}
@@ -318,12 +321,12 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._select_for_update_of: Set[str] = set()
         self._select_related: Set[str] = set()
         self._select_related_idx: List[
-            Tuple["Type[Model]", int, str, "Type[Model]", Iterable[Optional[str]]]
+            Tuple[MODEL_CLASS, int, str, MODEL_CLASS, Iterable[Optional[str]]]
         ] = []  # format with: model,idx,model_name,parent_model
         self._force_indexes: Set[str] = set()
         self._use_indexes: Set[str] = set()
 
-    def _clone(self) -> "QuerySet[MODEL]":
+    def _clone(self) -> "QuerySet[MODEL_INSTANCE]":
         queryset = self.__class__.__new__(self.__class__)
         queryset.fields = self.fields
         queryset.model = self.model
@@ -356,7 +359,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._use_indexes = self._use_indexes
         return queryset
 
-    def _filter_or_exclude(self, *args: Q, negate: bool, **kwargs: Any) -> "QuerySet[MODEL]":
+    def _filter_or_exclude(self, *args: Q, negate: bool, **kwargs: Any) -> "QuerySet[MODEL_INSTANCE]":
         queryset = self._clone()
         for arg in args:
             if not isinstance(arg, Q):
@@ -374,7 +377,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         return queryset
 
-    def filter(self, *args: Q, **kwargs: Any) -> "QuerySet[MODEL]":
+    def filter(self, *args: Q, **kwargs: Any) -> "QuerySet[MODEL_INSTANCE]":
         """
         Filters QuerySet by given kwargs. You can filter by related objects like this:
 
@@ -386,13 +389,13 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         return self._filter_or_exclude(negate=False, *args, **kwargs)
 
-    def exclude(self, *args: Q, **kwargs: Any) -> "QuerySet[MODEL]":
+    def exclude(self, *args: Q, **kwargs: Any) -> "QuerySet[MODEL_INSTANCE]":
         """
         Same as .filter(), but with appends all args with NOT
         """
         return self._filter_or_exclude(negate=True, *args, **kwargs)
 
-    def order_by(self, *orderings: str) -> "QuerySet[MODEL]":
+    def order_by(self, *orderings: str) -> "QuerySet[MODEL_INSTANCE]":
         """
         Accept args to filter by in format like this:
 
@@ -419,7 +422,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._orderings = new_ordering
         return queryset
 
-    def limit(self, limit: int) -> "QuerySet[MODEL]":
+    def limit(self, limit: int) -> "QuerySet[MODEL_INSTANCE]":
         """
         Limits QuerySet to given length.
 
@@ -432,7 +435,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._limit = limit
         return queryset
 
-    def offset(self, offset: int) -> "QuerySet[MODEL]":
+    def offset(self, offset: int) -> "QuerySet[MODEL_INSTANCE]":
         """
         Query offset for QuerySet.
 
@@ -447,7 +450,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             queryset._limit = 1000000
         return queryset
 
-    def distinct(self) -> "QuerySet[MODEL]":
+    def distinct(self) -> "QuerySet[MODEL_INSTANCE]":
         """
         Make QuerySet distinct.
 
@@ -460,7 +463,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
     def select_for_update(
         self, nowait: bool = False, skip_locked: bool = False, of: Tuple[str, ...] = ()
-    ) -> "QuerySet[MODEL]":
+    ) -> "QuerySet[MODEL_INSTANCE]":
         """
         Make QuerySet select for update.
 
@@ -476,7 +479,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             return queryset
         return self
 
-    def annotate(self, **kwargs: Union[Expression, Term]) -> "QuerySet[MODEL]":
+    def annotate(self, **kwargs: Union[Expression, Term]) -> "QuerySet[MODEL_INSTANCE]":
         """
         Annotate result with aggregation or function result.
 
@@ -492,7 +495,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             queryset._custom_filters.update(get_filters_for_field(key, None, key))
         return queryset
 
-    def group_by(self, *fields: str) -> "QuerySet[MODEL]":
+    def group_by(self, *fields: str) -> "QuerySet[MODEL_INSTANCE]":
         """
         Make QuerySet returns list of dict or tuple with group by.
 
@@ -655,7 +658,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             use_indexes=self._use_indexes,
         )
 
-    def all(self) -> "QuerySet[MODEL]":
+    def all(self) -> "QuerySet[MODEL_INSTANCE]":
         """
         Return the whole QuerySet.
         Essentially a no-op except as the only operation.
@@ -668,7 +671,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         return RawSQLQuery(model=self.model, db=self._db, sql=sql)
 
-    def first(self) -> QuerySetSingle[Optional[MODEL]]:
+    def first(self) -> QuerySetSingle[Optional[MODEL_INSTANCE]]:
         """
         Limit queryset to one object and return one object instead of list.
         """
@@ -677,7 +680,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._single = True
         return queryset  # type: ignore
 
-    def get(self, *args: Q, **kwargs: Any) -> QuerySetSingle[MODEL]:
+    def get(self, *args: Q, **kwargs: Any) -> QuerySetSingle[MODEL_INSTANCE]:
         """
         Fetch exactly one object matching the parameters.
         """
@@ -689,7 +692,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
     async def in_bulk(
         self, id_list: Iterable[Union[str, int]], field_name: str
-    ) -> Dict[str, MODEL]:
+    ) -> Dict[str, MODEL_INSTANCE]:
         """
         Return a dictionary mapping each of the given IDs to the object with
         that ID. If `id_list` isn't provided, evaluate the entire QuerySet.
@@ -702,7 +705,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
     def bulk_create(
         self,
-        objects: Iterable[MODEL],
+        objects: Iterable[MODEL_INSTANCE],
         batch_size: Optional[int] = None,
         ignore_conflicts: bool = False,
         update_fields: Optional[Iterable[str]] = None,
@@ -740,7 +743,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
     def bulk_update(
         self,
-        objects: Iterable[MODEL],
+        objects: Iterable[MODEL_INSTANCE],
         fields: Iterable[str],
         batch_size: Optional[int] = None,
     ) -> "BulkUpdateQuery":
@@ -768,7 +771,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             batch_size=batch_size,
         )
 
-    def get_or_none(self, *args: Q, **kwargs: Any) -> QuerySetSingle[Optional[MODEL]]:
+    def get_or_none(self, *args: Q, **kwargs: Any) -> QuerySetSingle[Optional[MODEL_INSTANCE]]:
         """
         Fetch exactly one object matching the parameters.
         """
@@ -777,7 +780,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._single = True
         return queryset  # type: ignore
 
-    def only(self, *fields_for_select: str) -> "QuerySet[MODEL]":
+    def only(self, *fields_for_select: str) -> "QuerySet[MODEL_INSTANCE]":
         """
         Fetch ONLY the specified fields to create a partial model.
 
@@ -799,7 +802,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._fields_for_select = fields_for_select
         return queryset
 
-    def select_related(self, *fields: str) -> "QuerySet[MODEL]":
+    def select_related(self, *fields: str) -> "QuerySet[MODEL_INSTANCE]":
         """
         Return a new QuerySet instance that will select related objects.
 
@@ -812,7 +815,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             queryset._select_related.add(field)
         return queryset
 
-    def force_index(self, *index_names: str) -> "QuerySet[MODEL]":
+    def force_index(self, *index_names: str) -> "QuerySet[MODEL_INSTANCE]":
         """
         The FORCE INDEX hint acts like USE INDEX (index_list),
         with the addition that a table scan is assumed to be very expensive.
@@ -824,7 +827,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             return queryset
         return self
 
-    def use_index(self, *index_names: str) -> "QuerySet[MODEL]":
+    def use_index(self, *index_names: str) -> "QuerySet[MODEL_INSTANCE]":
         """
         The USE INDEX (index_list) hint tells MySQL to use only one of the named indexes to find rows in the table.
         """
@@ -835,7 +838,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             return queryset
         return self
 
-    def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySet[MODEL]":
+    def prefetch_related(self, *args: Union[str, Prefetch]) -> "QuerySet[MODEL_INSTANCE]":
         """
         Like ``.fetch_related()`` on instance, but works on all objects in QuerySet.
 
@@ -886,7 +889,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query
         )
 
-    def using_db(self, _db: Optional[BaseDBAsyncClient]) -> "QuerySet[MODEL]":
+    def using_db(self, _db: Optional[BaseDBAsyncClient]) -> "QuerySet[MODEL_INSTANCE]":
         """
         Executes query in provided db client.
         Useful for transactions workaround.
@@ -897,7 +900,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
     def _join_table_with_select_related(
         self,
-        model: "Type[Model]",
+        model: MODEL_CLASS,
         table: Table,
         field: str,
         forwarded_fields: str,
@@ -994,17 +997,17 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
 
-    def __await__(self) -> Generator[Any, None, List[MODEL]]:
+    def __await__(self) -> Generator[Any, None, List[MODEL_INSTANCE]]:
         if self._db is None:
             self._db = self._choose_db(self._select_for_update)  # type: ignore
         self._make_query()
         return self._execute().__await__()
 
-    async def __aiter__(self) -> AsyncIterator[MODEL]:
+    async def __aiter__(self) -> AsyncIterator[MODEL_INSTANCE]:
         for val in await self:
             yield val
 
-    async def _execute(self) -> List[MODEL]:
+    async def _execute(self) -> List[MODEL_INSTANCE]:
         instance_list = await self._db.executor_class(
             model=self.model,
             db=self._db,
@@ -1036,7 +1039,7 @@ class UpdateQuery(AwaitableQuery):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: MODEL_CLASS,
         update_kwargs: Dict[str, Any],
         db: BaseDBAsyncClient,
         q_objects: List[Q],
@@ -1122,7 +1125,7 @@ class DeleteQuery(AwaitableQuery):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: MODEL_CLASS,
         db: BaseDBAsyncClient,
         q_objects: List[Q],
         annotations: Dict[str, Any],
@@ -1174,7 +1177,7 @@ class ExistsQuery(AwaitableQuery):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: MODEL_CLASS,
         db: BaseDBAsyncClient,
         q_objects: List[Q],
         annotations: Dict[str, Any],
@@ -1232,7 +1235,7 @@ class CountQuery(AwaitableQuery):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: MODEL_CLASS,
         db: BaseDBAsyncClient,
         q_objects: List[Q],
         annotations: Dict[str, Any],
@@ -1287,12 +1290,12 @@ class FieldSelectQuery(AwaitableQuery):
     # pylint: disable=W0223
     __slots__ = ("annotations",)
 
-    def __init__(self, model: Type[MODEL], annotations: Dict[str, Any]) -> None:
+    def __init__(self, model: MODEL_CLASS, annotations: Dict[str, Any]) -> None:
         super().__init__(model)
         self.annotations = annotations
 
     def _join_table_with_forwarded_fields(
-        self, model: Type[MODEL], table: Table, field: str, forwarded_fields: str
+        self, model: MODEL_CLASS, table: Table, field: str, forwarded_fields: str
     ) -> Tuple[Table, str]:
         if field in model._meta.fields_db_projection and not forwarded_fields:
             return table, model._meta.fields_db_projection[field]
@@ -1351,7 +1354,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')
 
-    def resolve_to_python_value(self, model: Type[MODEL], field: str) -> Callable:
+    def resolve_to_python_value(self, model: MODEL_CLASS, field: str) -> Callable:
         if field in model._meta.fetch_fields:
             # return as is to get whole model objects
             return lambda x: x
@@ -1415,7 +1418,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: MODEL_CLASS,
         db: BaseDBAsyncClient,
         q_objects: List[Q],
         single: bool,
@@ -1547,7 +1550,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: MODEL_CLASS,
         db: BaseDBAsyncClient,
         q_objects: List[Q],
         single: bool,
@@ -1658,7 +1661,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
 class RawSQLQuery(AwaitableQuery):
     __slots__ = ("_sql", "_db")
 
-    def __init__(self, model: Type[MODEL], db: BaseDBAsyncClient, sql: str):
+    def __init__(self, model: MODEL_CLASS, db: BaseDBAsyncClient, sql: str):
         super().__init__(model)
         self._sql = sql
         self._db = db
@@ -1673,7 +1676,7 @@ class RawSQLQuery(AwaitableQuery):
         ).execute_select(self.query)
         return instance_list
 
-    def __await__(self) -> Generator[Any, None, List[MODEL]]:
+    def __await__(self) -> Generator[Any, None, List[MODEL_INSTANCE]]:
         if self._db is None:
             self._db = self._choose_db()  # type: ignore
         self._make_query()
@@ -1685,14 +1688,14 @@ class BulkUpdateQuery(UpdateQuery):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: MODEL_CLASS,
         db: BaseDBAsyncClient,
         q_objects: List[Q],
         annotations: Dict[str, Any],
         custom_filters: Dict[str, Dict[str, Any]],
         limit: Optional[int],
         orderings: List[Tuple[str, str]],
-        objects: Iterable[MODEL],
+        objects: Iterable[MODEL_INSTANCE],
         fields: Iterable[str],
         batch_size: Optional[int] = None,
     ):
@@ -1768,9 +1771,9 @@ class BulkCreateQuery(AwaitableQuery):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: MODEL_CLASS,
         db: BaseDBAsyncClient,
-        objects: Iterable[MODEL],
+        objects: Iterable[MODEL_INSTANCE],
         batch_size: Optional[int] = None,
         ignore_conflicts: bool = False,
         update_fields: Optional[Iterable[str]] = None,
@@ -1816,7 +1819,7 @@ class BulkCreateQuery(AwaitableQuery):
                     )
                     self.insert_query = self.insert_query.do_update(update_field)  # type:ignore
 
-    async def _execute(self) -> List[MODEL]:
+    async def _execute(self) -> List[MODEL_INSTANCE]:
         for instance_chunk in chunk(self.objects, self.batch_size):
             values_lists_all = []
             values_lists = []
@@ -1845,7 +1848,7 @@ class BulkCreateQuery(AwaitableQuery):
                 await self._db.execute_many(str(self.insert_query), values_lists)
         return self.objects
 
-    def __await__(self) -> Generator[Any, None, List[MODEL]]:
+    def __await__(self) -> Generator[Any, None, List[MODEL_INSTANCE]]:
         if self._db is None:
             self._db = self._choose_db(True)  # type: ignore
         self._make_query()

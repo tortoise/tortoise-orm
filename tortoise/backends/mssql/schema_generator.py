@@ -1,11 +1,11 @@
-from typing import TYPE_CHECKING, Any, List, Type
+from typing import TYPE_CHECKING, Any, List
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.mssql import MSSQLClient
-    from tortoise.models import Model
+    from tortoise.models import MODEL_CLASS
 
 
 class MSSQLSchemaGenerator(BaseSchemaGenerator):
@@ -59,10 +59,10 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
     def _escape_default_value(self, default: Any):
         return encoders.get(type(default))(default)  # type: ignore
 
-    def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
+    def _get_index_sql(self, model: "MODEL_CLASS", field_names: List[str], safe: bool) -> str:
         return super(MSSQLSchemaGenerator, self)._get_index_sql(model, field_names, False)
 
-    def _get_table_sql(self, model: "Type[Model]", safe: bool = True) -> dict:
+    def _get_table_sql(self, model: "MODEL_CLASS", safe: bool = True) -> dict:
         return super(MSSQLSchemaGenerator, self)._get_table_sql(model, False)
 
     def _create_fk_string(

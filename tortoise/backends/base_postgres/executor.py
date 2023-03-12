@@ -5,7 +5,7 @@ from pypika import Parameter
 from pypika.dialects import PostgreSQLQueryBuilder
 from pypika.terms import Term
 
-from tortoise import Model
+from tortoise import MODEL_INSTANCE
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.contrib.postgres.json_functions import (
     postgres_json_contained_by,
@@ -49,7 +49,7 @@ class BasePostgresExecutor(BaseExecutor):
             query = query.on_conflict().do_nothing()
         return query
 
-    async def _process_insert_result(self, instance: Model, results: Optional[dict]) -> None:
+    async def _process_insert_result(self, instance: MODEL_INSTANCE, results: Optional[dict]) -> None:
         if results:
             generated_fields = self.model._meta.generated_db_fields
             db_projection = instance._meta.fields_db_projection_reverse

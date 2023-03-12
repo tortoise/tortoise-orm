@@ -4,13 +4,13 @@ from typing import Optional
 
 from pypika import Parameter
 
-from tortoise import Model
+from tortoise import MODEL_INSTANCE
 from tortoise.backends.base_postgres.executor import BasePostgresExecutor
 
 
 class PsycopgExecutor(BasePostgresExecutor):
     async def _process_insert_result(
-        self, instance: Model, results: Optional[dict | tuple]
+        self, instance: MODEL_INSTANCE, results: Optional[dict | tuple]
     ) -> None:
         if results:
             db_projection = instance._meta.fields_db_projection_reverse

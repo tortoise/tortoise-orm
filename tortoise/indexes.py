@@ -1,9 +1,9 @@
-from typing import TYPE_CHECKING, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Optional, Tuple
 
 from pypika.terms import Term, ValueWrapper
 
 if TYPE_CHECKING:
-    from tortoise import Model
+    from tortoise import MODEL_CLASS
     from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 
 
@@ -38,7 +38,7 @@ class Index:
         self.expressions = expressions
         self.extra = ""
 
-    def get_sql(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool):
+    def get_sql(self, schema_generator: "BaseSchemaGenerator", model: "MODEL_CLASS", safe: bool):
         if self.fields:
             return self.INDEX_CREATE_TEMPLATE.format(
                 exists="IF NOT EXISTS " if safe else "",
@@ -61,7 +61,7 @@ class Index:
             extra=self.extra,
         )
 
-    def index_name(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]"):
+    def index_name(self, schema_generator: "BaseSchemaGenerator", model: "MODEL_CLASS"):
         return self.name or schema_generator._generate_index_name("idx", model, self.fields)
 
 
