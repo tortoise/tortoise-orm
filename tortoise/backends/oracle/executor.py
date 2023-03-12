@@ -1,9 +1,9 @@
-from tortoise import Model
+from tortoise import MODEL_INSTANCE
 from tortoise.backends.odbc.executor import ODBCExecutor
 
 
 class OracleExecutor(ODBCExecutor):
-    async def _process_insert_result(self, instance: Model, results: int) -> None:
+    async def _process_insert_result(self, instance: MODEL_INSTANCE, results: int) -> None:
         sql = "SELECT SEQUENCE_NAME FROM ALL_TAB_IDENTITY_COLS where TABLE_NAME = ? and OWNER = ?"
         ret = await self.db.execute_query_dict(
             sql, values=[instance._meta.db_table, self.db.database]  # type: ignore

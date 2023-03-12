@@ -1,11 +1,11 @@
 import datetime
 from decimal import Decimal
-from typing import Optional, Type, Union
+from typing import Optional, Union
 
 import pytz
 from pypika import Parameter
 
-from tortoise import Model, fields, timezone
+from tortoise import MODEL_CLASS, MODEL_INSTANCE, fields, timezone
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.fields import (
     BigIntField,
@@ -19,7 +19,7 @@ from tortoise.fields import (
 
 
 def to_db_bool(
-    self: BooleanField, value: Optional[Union[bool, int]], instance: Union[Type[Model], Model]
+    self: BooleanField, value: Optional[Union[bool, int]], instance: Union[MODEL_CLASS, MODEL_INSTANCE]
 ) -> Optional[int]:
     if value is None:
         return None
@@ -29,7 +29,7 @@ def to_db_bool(
 def to_db_decimal(
     self: DecimalField,
     value: Optional[Union[str, float, int, Decimal]],
-    instance: Union[Type[Model], Model],
+    instance: Union[MODEL_CLASS, MODEL_INSTANCE],
 ) -> Optional[str]:
     if value is None:
         return None
@@ -37,7 +37,7 @@ def to_db_decimal(
 
 
 def to_db_datetime(
-    self: DatetimeField, value: Optional[datetime.datetime], instance: Union[Type[Model], Model]
+    self: DatetimeField, value: Optional[datetime.datetime], instance: Union[MODEL_CLASS, MODEL_INSTANCE]
 ) -> Optional[str]:
     # Only do this if it is a Model instance, not class. Test for guaranteed instance var
     if hasattr(instance, "_saved_in_db") and (
@@ -56,7 +56,7 @@ def to_db_datetime(
 
 
 def to_db_time(
-    self: TimeField, value: Optional[datetime.time], instance: Union[Type[Model], Model]
+    self: TimeField, value: Optional[datetime.time], instance: Union[MODEL_CLASS, MODEL_INSTANCE]
 ) -> Optional[str]:
     if hasattr(instance, "_saved_in_db") and (
         self.auto_now
@@ -86,7 +86,7 @@ class SqliteExecutor(BaseExecutor):
     def parameter(self, pos: int) -> Parameter:
         return Parameter("?")
 
-    async def _process_insert_result(self, instance: Model, results: int) -> None:
+    async def _process_insert_result(self, instance: MODEL_INSTANCE, results: int) -> None:
         pk_field_object = self.model._meta.pk
         if (
             isinstance(pk_field_object, (SmallIntField, IntField, BigIntField))

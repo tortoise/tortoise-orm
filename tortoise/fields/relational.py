@@ -7,11 +7,8 @@ from typing import (
     Iterator,
     List,
     Optional,
-    Type,
-    TypeVar,
     Union,
-    overload,
-)
+    overload, TypeVar, TypeAlias, Type, )
 
 from pypika import Table
 from typing_extensions import Literal
@@ -21,10 +18,10 @@ from tortoise.fields.base import CASCADE, RESTRICT, SET_NULL, Field
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
-    from tortoise.models import Model
     from tortoise.queryset import Q, QuerySet
 
-MODEL = TypeVar("MODEL", bound="Model")
+MODEL_INSTANCE = TypeVar("MODEL_INSTANCE", bound="Model")
+MODEL_CLASS: TypeAlias = Type[MODEL_INSTANCE]
 
 
 class _NoneAwaitable:
@@ -40,16 +37,16 @@ class _NoneAwaitable:
 NoneAwaitable = _NoneAwaitable()
 
 
-class ReverseRelation(Generic[MODEL]):
+class ReverseRelation(Generic[MODEL_INSTANCE]):
     """
     Relation container for :func:`.ForeignKeyField`.
     """
 
     def __init__(
         self,
-        remote_model: Type[MODEL],
+        remote_model: MODEL_CLASS,
         relation_field: str,
-        instance: "Model",
+        instance: MODEL_INSTANCE,
         from_field: str,
     ) -> None:
         self.remote_model = remote_model
@@ -58,10 +55,10 @@ class ReverseRelation(Generic[MODEL]):
         self.from_field = from_field
         self._fetched = False
         self._custom_query = False
-        self.related_objects: List[MODEL] = []
+        self.related_objects: List[MODEL_INSTANCE] = []
 
     @property
-    def _query(self) -> "QuerySet[MODEL]":
+    def _query(self) -> "QuerySet[MODEL_INSTANCE]":
         if not self.instance._saved_in_db:
             raise OperationalError(
                 "This objects hasn't been instanced, call .save() before calling related queries"
@@ -74,7 +71,7 @@ class ReverseRelation(Generic[MODEL]):
         self._raise_if_not_fetched()
         return item in self.related_objects
 
-    def __iter__(self) -> "Iterator[MODEL]":
+    def __iter__(self) -> "Iterator[MODEL_INSTANCE]":
         self._raise_if_not_fetched()
         return self.related_objects.__iter__()
 
@@ -86,51 +83,51 @@ class ReverseRelation(Generic[MODEL]):
         self._raise_if_not_fetched()
         return bool(self.related_objects)
 
-    def __getitem__(self, item: int) -> MODEL:
+    def __getitem__(self, item: int) -> MODEL_INSTANCE:
         self._raise_if_not_fetched()
         return self.related_objects[item]
 
-    def __await__(self) -> Generator[Any, None, List[MODEL]]:
+    def __await__(self) -> Generator[Any, None, List[MODEL_INSTANCE]]:
         return self._query.__await__()
 
-    async def __aiter__(self) -> AsyncGenerator[Any, MODEL]:
+    async def __aiter__(self) -> AsyncGenerator[Any, MODEL_INSTANCE]:
         if not self._fetched:
             self._set_result_for_query(await self)
 
         for val in self.related_objects:
             yield val
 
-    def filter(self, *args: "Q", **kwargs: Any) -> "QuerySet[MODEL]":
+    def filter(self, *args: "Q", **kwargs: Any) -> "QuerySet[MODEL_INSTANCE]":
         """
         Returns a QuerySet with related elements filtered by args/kwargs.
         """
         return self._query.filter(*args, **kwargs)
 
-    def all(self) -> "QuerySet[MODEL]":
+    def all(self) -> "QuerySet[MODEL_INSTANCE]":
         """
         Returns a QuerySet with all related elements.
         """
         return self._query
 
-    def order_by(self, *orderings: str) -> "QuerySet[MODEL]":
+    def order_by(self, *orderings: str) -> "QuerySet[MODEL_INSTANCE]":
         """
         Returns a QuerySet related elements in order.
         """
         return self._query.order_by(*orderings)
 
-    def limit(self, limit: int) -> "QuerySet[MODEL]":
+    def limit(self, limit: int) -> "QuerySet[MODEL_INSTANCE]":
         """
         Returns a QuerySet with at most «limit» related elements.
         """
         return self._query.limit(limit)
 
-    def offset(self, offset: int) -> "QuerySet[MODEL]":
+    def offset(self, offset: int) -> "QuerySet[MODEL_INSTANCE]":
         """
         Returns a QuerySet with all related elements offset by «offset».
         """
         return self._query.offset(offset)
 
-    def _set_result_for_query(self, sequence: List[MODEL], attr: Optional[str] = None) -> None:
+    def _set_result_for_query(self, sequence: List[MODEL_INSTANCE], attr: Optional[str] = None) -> None:
         self._fetched = True
         self.related_objects = sequence
         if attr:
@@ -143,17 +140,17 @@ class ReverseRelation(Generic[MODEL]):
             )
 
 
-class ManyToManyRelation(ReverseRelation[MODEL]):
+class ManyToManyRelation(ReverseRelation[MODEL_INSTANCE]):
     """
     Many-to-many relation container for :func:`.ManyToManyField`.
     """
 
-    def __init__(self, instance: "Model", m2m_field: "ManyToManyFieldInstance[MODEL]") -> None:
+    def __init__(self, instance: MODEL_INSTANCE, m2m_field: "ManyToManyFieldInstance[MODEL_INSTANCE]") -> None:
         super().__init__(m2m_field.related_model, m2m_field.related_name, instance, "pk")
         self.field = m2m_field
         self.instance = instance
 
-    async def add(self, *instances: MODEL, using_db: "Optional[BaseDBAsyncClient]" = None) -> None:
+    async def add(self, *instances: MODEL_INSTANCE, using_db: "Optional[BaseDBAsyncClient]" = None) -> None:
         """
         Adds one or more of ``instances`` to the relation.
 
@@ -235,7 +232,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         await db.execute_query(str(query))
 
     async def remove(
-        self, *instances: MODEL, using_db: "Optional[BaseDBAsyncClient]" = None
+        self, *instances: MODEL_INSTANCE, using_db: "Optional[BaseDBAsyncClient]" = None
     ) -> None:
         """
         Removes one or more of ``instances`` from the relation.
@@ -251,50 +248,50 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
 
         if len(instances) == 1:
             condition = (
-                through_table[self.field.forward_key]
-                == related_pk_formatting_func(instances[0].pk, instances[0])
-            ) & (
-                through_table[self.field.backward_key]
-                == pk_formatting_func(self.instance.pk, self.instance)
-            )
+                            through_table[self.field.forward_key]
+                            == related_pk_formatting_func(instances[0].pk, instances[0])
+                        ) & (
+                            through_table[self.field.backward_key]
+                            == pk_formatting_func(self.instance.pk, self.instance)
+                        )
         else:
             condition = (
-                through_table[self.field.backward_key]
-                == pk_formatting_func(self.instance.pk, self.instance)
-            ) & (
-                through_table[self.field.forward_key].isin(
-                    [related_pk_formatting_func(i.pk, i) for i in instances]
-                )
-            )
+                            through_table[self.field.backward_key]
+                            == pk_formatting_func(self.instance.pk, self.instance)
+                        ) & (
+                            through_table[self.field.forward_key].isin(
+                                [related_pk_formatting_func(i.pk, i) for i in instances]
+                            )
+                        )
         query = db.query_class.from_(through_table).where(condition).delete()
         await db.execute_query(str(query))
 
 
-class RelationalField(Field[MODEL]):
+class RelationalField(Field[MODEL_INSTANCE]):
     has_db_field = False
 
     def __init__(
         self,
-        related_model: "Type[MODEL]",
+        related_model: MODEL_CLASS,
         to_field: Optional[str] = None,
         db_constraint: bool = True,
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self.related_model: "Type[MODEL]" = related_model
+        self.related_model: MODEL_CLASS = related_model
         self.to_field: str = to_field  # type: ignore
         self.to_field_instance: Field = None  # type: ignore
         self.db_constraint = db_constraint
 
     @overload
-    def __get__(self, instance: None, owner: Type["Model"]) -> "RelationalField[MODEL]":
+    def __get__(self, instance: None, owner: MODEL_CLASS) -> "RelationalField[MODEL_INSTANCE]":
         ...
 
     @overload
-    def __get__(self, instance: "Model", owner: Type["Model"]) -> MODEL:
+    def __get__(self, instance: MODEL_INSTANCE, owner: MODEL_CLASS) -> MODEL_INSTANCE:
         ...
 
-    def __get__(self, instance: Optional["Model"], owner: Type["Model"]):
+    def __get__(self, instance: Optional[MODEL_INSTANCE], owner: MODEL_CLASS):
         ...
 
     def describe(self, serializable: bool) -> dict:
@@ -304,7 +301,7 @@ class RelationalField(Field[MODEL]):
         return desc
 
 
-class ForeignKeyFieldInstance(RelationalField[MODEL]):
+class ForeignKeyFieldInstance(RelationalField[MODEL_INSTANCE]):
     def __init__(
         self,
         model_name: str,
@@ -330,10 +327,10 @@ class ForeignKeyFieldInstance(RelationalField[MODEL]):
         return desc
 
 
-class BackwardFKRelation(RelationalField[MODEL]):
+class BackwardFKRelation(RelationalField[MODEL_INSTANCE]):
     def __init__(
         self,
-        field_type: "Type[MODEL]",
+        field_type: MODEL_CLASS,
         relation_field: str,
         relation_source_field: str,
         null: bool,
@@ -346,7 +343,7 @@ class BackwardFKRelation(RelationalField[MODEL]):
         self.description: Optional[str] = description
 
 
-class OneToOneFieldInstance(ForeignKeyFieldInstance[MODEL]):
+class OneToOneFieldInstance(ForeignKeyFieldInstance[MODEL_INSTANCE]):
     def __init__(
         self,
         model_name: str,
@@ -359,11 +356,11 @@ class OneToOneFieldInstance(ForeignKeyFieldInstance[MODEL]):
         super().__init__(model_name, related_name, on_delete, unique=True, **kwargs)
 
 
-class BackwardOneToOneRelation(BackwardFKRelation[MODEL]):
+class BackwardOneToOneRelation(BackwardFKRelation[MODEL_INSTANCE]):
     pass
 
 
-class ManyToManyFieldInstance(RelationalField[MODEL]):
+class ManyToManyFieldInstance(RelationalField[MODEL_INSTANCE]):
     field_type = ManyToManyRelation
 
     def __init__(
@@ -374,7 +371,7 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         backward_key: str = "",
         related_name: str = "",
         on_delete: str = CASCADE,
-        field_type: "Type[MODEL]" = None,  # type: ignore
+        field_type: MODEL_CLASS = None,  # type: ignore
         **kwargs: Any,
     ) -> None:
         # TODO: rename through to through_table
@@ -408,7 +405,7 @@ def OneToOneField(
     on_delete: str = CASCADE,
     db_constraint: bool = True,
     **kwargs: Any,
-) -> "OneToOneRelation[MODEL]":
+) -> "OneToOneRelation[MODEL_INSTANCE]":
     """
     OneToOne relation field.
 
@@ -457,7 +454,7 @@ def ForeignKeyField(
     on_delete: str = CASCADE,
     db_constraint: bool = True,
     **kwargs: Any,
-) -> "ForeignKeyRelation[MODEL]":
+) -> "ForeignKeyRelation[MODEL_INSTANCE]":
     """
     ForeignKey relation field.
 
@@ -509,7 +506,7 @@ def ManyToManyField(
     on_delete: str = CASCADE,
     db_constraint: bool = True,
     **kwargs: Any,
-) -> "ManyToManyRelation[MODEL]":
+) -> "ManyToManyRelation[MODEL_INSTANCE]":
     """
     ManyToMany relation field.
 
@@ -565,24 +562,24 @@ def ManyToManyField(
     )
 
 
-OneToOneNullableRelation = Optional[OneToOneFieldInstance[MODEL]]
+OneToOneNullableRelation = Optional[OneToOneFieldInstance[MODEL_INSTANCE]]
 """
 Type hint for the result of accessing the :func:`.OneToOneField` field in the model
 when obtained model can be nullable.
 """
 
-OneToOneRelation = OneToOneFieldInstance[MODEL]
+OneToOneRelation = OneToOneFieldInstance[MODEL_INSTANCE]
 """
 Type hint for the result of accessing the :func:`.OneToOneField` field in the model.
 """
 
-ForeignKeyNullableRelation = Optional[ForeignKeyFieldInstance[MODEL]]
+ForeignKeyNullableRelation = Optional[ForeignKeyFieldInstance[MODEL_INSTANCE]]
 """
 Type hint for the result of accessing the :func:`.ForeignKeyField` field in the model
 when obtained model can be nullable.
 """
 
-ForeignKeyRelation = ForeignKeyFieldInstance[MODEL]
+ForeignKeyRelation = ForeignKeyFieldInstance[MODEL_INSTANCE]
 """
 Type hint for the result of accessing the :func:`.ForeignKeyField` field in the model.
 """

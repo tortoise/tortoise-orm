@@ -16,7 +16,7 @@ from typing import (
     Tuple,
     Type,
     TypeVar,
-    Union,
+    Union, TypeAlias,
 )
 
 from pypika import Order, Query, Table
@@ -62,14 +62,16 @@ from tortoise.router import router
 from tortoise.signals import Signals
 from tortoise.transactions import in_transaction
 
-MODEL = TypeVar("MODEL", bound="Model")
+MODEL_INSTANCE = TypeVar("MODEL_INSTANCE", bound="Model")
+MODEL_CLASS: TypeAlias = Type[MODEL_INSTANCE]
+MODEL_META_INSTANCE = TypeVar("MODEL_META_INSTANCE", bound="ModelMeta")
 EMPTY = object()
 
 
 # TODO: Define Filter type object. Possibly tuple?
 
 
-def get_together(meta: "Model.Meta", together: str) -> Tuple[Tuple[str, ...], ...]:
+def get_together(meta: MODEL_META_INSTANCE, together: str) -> Tuple[Tuple[str, ...], ...]:
     _together = getattr(meta, together, ())
 
     if _together and isinstance(_together, (list, tuple)) and isinstance(_together[0], str):
@@ -79,7 +81,7 @@ def get_together(meta: "Model.Meta", together: str) -> Tuple[Tuple[str, ...], ..
     return _together
 
 
-def prepare_default_ordering(meta: "Model.Meta") -> Tuple[Tuple[str, Order], ...]:
+def prepare_default_ordering(meta: MODEL_META_INSTANCE) -> Tuple[Tuple[str, Order], ...]:
     ordering_list = getattr(meta, "ordering", ())
 
     parsed_ordering = tuple(
@@ -90,8 +92,8 @@ def prepare_default_ordering(meta: "Model.Meta") -> Tuple[Tuple[str, Order], ...
 
 
 def _fk_setter(
-    self: "Model",
-    value: "Optional[Model]",
+    self: MODEL_INSTANCE,
+    value: Optional[MODEL_INSTANCE],
     _key: str,
     relation_field: str,
     to_field: str,
@@ -101,7 +103,7 @@ def _fk_setter(
 
 
 def _fk_getter(
-    self: "Model", _key: str, ftype: "Type[Model]", relation_field: str, to_field: str
+    self: MODEL_INSTANCE, _key: str, ftype: MODEL_CLASS, relation_field: str, to_field: str
 ) -> Awaitable:
     try:
         return getattr(self, _key)
@@ -113,7 +115,7 @@ def _fk_getter(
 
 
 def _rfk_getter(
-    self: "Model", _key: str, ftype: "Type[Model]", frelfield: str, from_field: str
+    self: MODEL_INSTANCE, _key: str, ftype: MODEL_CLASS, frelfield: str, from_field: str
 ) -> ReverseRelation:
     val = getattr(self, _key, None)
     if val is None:
@@ -123,8 +125,8 @@ def _rfk_getter(
 
 
 def _ro2o_getter(
-    self: "Model", _key: str, ftype: "Type[Model]", frelfield: str, from_field: str
-) -> "QuerySetSingle[Optional[Model]]":
+    self: MODEL_INSTANCE, _key: str, ftype: MODEL_CLASS, frelfield: str, from_field: str
+) -> QuerySetSingle[Optional[MODEL_INSTANCE]]:
     if hasattr(self, _key):
         return getattr(self, _key)
 
@@ -134,7 +136,7 @@ def _ro2o_getter(
 
 
 def _m2m_getter(
-    self: "Model", _key: str, field_object: ManyToManyFieldInstance
+    self: MODEL_INSTANCE, _key: str, field_object: ManyToManyFieldInstance
 ) -> ManyToManyRelation:
     val = getattr(self, _key, None)
     if val is None:
@@ -143,7 +145,7 @@ def _m2m_getter(
     return val
 
 
-def _get_comments(cls: "Type[Model]") -> Dict[str, str]:
+def _get_comments(cls: MODEL_CLASS) -> Dict[str, str]:
     """
     Get comments exactly before attributes
 
@@ -214,7 +216,7 @@ class MetaInfo:
         "_ordering_validated",
     )
 
-    def __init__(self, meta: "Model.Meta") -> None:
+    def __init__(self, meta: MODEL_META_INSTANCE) -> None:
         self.abstract: bool = getattr(meta, "abstract", False)
         self.manager: Manager = getattr(meta, "manager", Manager())
         self.db_table: str = getattr(meta, "table", "")
@@ -244,7 +246,7 @@ class MetaInfo:
         self.basetable: Table = Table("")
         self.pk_attr: str = getattr(meta, "pk_attr", "")
         self.generated_db_fields: Tuple[str] = None  # type: ignore
-        self._model: Type["Model"] = None  # type: ignore
+        self._model: MODEL_CLASS = None  # type: ignore
         self.table_description: str = getattr(meta, "table_description", "")
         self.pk: Field = None  # type: ignore
         self.db_pk_column: str = ""
@@ -494,7 +496,7 @@ class ModelMeta(type):
         fk_fields: Set[str] = set()
         m2m_fields: Set[str] = set()
         o2o_fields: Set[str] = set()
-        meta_class: "Model.Meta" = attrs.get("Meta", type("Meta", (), {}))
+        meta_class: MODEL_META_INSTANCE = attrs.get("Meta", type("Meta", (), {}))
         pk_attr: str = "id"
 
         # Searching for Field attributes in the class hierarchy
@@ -642,7 +644,7 @@ class ModelMeta(type):
         meta.finalise_fields()
         return new_class
 
-    def __getitem__(cls: Type[MODEL], key: Any) -> QuerySetSingle[MODEL]:  # type: ignore
+    def __getitem__(cls: MODEL_CLASS, key: Any) -> QuerySetSingle[MODEL_INSTANCE]:  # type: ignore
         return cls._getbypk(key)  # type: ignore
 
 
@@ -653,7 +655,7 @@ class Model(metaclass=ModelMeta):
 
     # I don' like this here, but it makes auto completion and static analysis much happier
     _meta = MetaInfo(None)  # type: ignore
-    _listeners: Dict[Signals, Dict[Type[MODEL], List[Callable]]] = {  # type: ignore
+    _listeners: Dict[Signals, Dict[MODEL_CLASS, List[Callable]]] = {  # type: ignore
         Signals.pre_save: {},
         Signals.post_save: {},
         Signals.pre_delete: {},
@@ -713,7 +715,7 @@ class Model(metaclass=ModelMeta):
         return passed_fields
 
     @classmethod
-    def _init_from_db(cls: Type[MODEL], **kwargs: Any) -> MODEL:
+    def _init_from_db(cls: MODEL_CLASS, **kwargs: Any) -> MODEL_INSTANCE:
         self = cls.__new__(cls)
         self._partial = False
         self._saved_in_db = True
@@ -781,13 +783,13 @@ class Model(metaclass=ModelMeta):
     """
 
     @classmethod
-    async def _getbypk(cls: Type[MODEL], key: Any) -> MODEL:
+    async def _getbypk(cls: MODEL_CLASS, key: Any) -> MODEL_INSTANCE:
         try:
             return await cls.get(pk=key)
         except (DoesNotExist, ValueError):
             raise KeyError(f"{cls._meta.full_name} has no object {repr(key)}")
 
-    def clone(self: MODEL, pk: Any = EMPTY) -> MODEL:
+    def clone(self: MODEL_INSTANCE, pk: Any = EMPTY) -> MODEL_INSTANCE:
         """
         Create a new clone of the object that when you do a ``.save()`` will create a new record.
 
@@ -810,7 +812,7 @@ class Model(metaclass=ModelMeta):
         obj._saved_in_db = False
         return obj
 
-    def update_from_dict(self: MODEL, data: dict) -> MODEL:
+    def update_from_dict(self: MODEL_INSTANCE, data: dict) -> MODEL_INSTANCE:
         """
         Updates the current model with the provided dict.
         This can allow mass-updating a model from a dict, also ensuring that datatype conversions happen.
@@ -1035,11 +1037,11 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def get_or_create(
-        cls: Type[MODEL],
+        cls: MODEL_CLASS,
         defaults: Optional[dict] = None,
         using_db: Optional[BaseDBAsyncClient] = None,
         **kwargs: Any,
-    ) -> Tuple[MODEL, bool]:
+    ) -> Tuple[MODEL_INSTANCE, bool]:
         """
         Fetches the object if exists (filtering on the provided parameters),
         else creates an instance with any unspecified parameters as default values.
@@ -1072,7 +1074,7 @@ class Model(metaclass=ModelMeta):
         skip_locked: bool = False,
         of: Tuple[str, ...] = (),
         using_db: Optional[BaseDBAsyncClient] = None,
-    ) -> QuerySet[MODEL]:
+    ) -> QuerySet[MODEL_INSTANCE]:
         """
         Make QuerySet select for update.
 
@@ -1086,11 +1088,11 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def update_or_create(
-        cls: Type[MODEL],
+        cls: MODEL_CLASS,
         defaults: Optional[dict] = None,
         using_db: Optional[BaseDBAsyncClient] = None,
         **kwargs: Any,
-    ) -> Tuple[MODEL, bool]:
+    ) -> Tuple[MODEL_INSTANCE, bool]:
         """
         A convenience method for updating an object with the given kwargs, creating a new one if necessary.
 
@@ -1114,8 +1116,8 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def create(
-        cls: Type[MODEL], using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
-    ) -> MODEL:
+        cls: MODEL_CLASS, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
+    ) -> MODEL_INSTANCE:
         """
         Create a record in the DB and returns the object.
 
@@ -1141,12 +1143,12 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def bulk_update(
-        cls: Type[MODEL],
-        objects: Iterable[MODEL],
+        cls: MODEL_CLASS,
+        objects: Iterable[MODEL_INSTANCE],
         fields: Iterable[str],
         batch_size: Optional[int] = None,
         using_db: Optional[BaseDBAsyncClient] = None,
-    ) -> "BulkUpdateQuery":
+    ) -> BulkUpdateQuery:
         """
         Update the given fields in each of the given objects in the database.
         This method efficiently updates the given fields on the provided model instances, generally with one query.
@@ -1174,11 +1176,11 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def in_bulk(
-        cls: Type[MODEL],
+        cls: MODEL_CLASS,
         id_list: Iterable[Union[str, int]],
         field_name: str = "pk",
         using_db: Optional[BaseDBAsyncClient] = None,
-    ) -> Dict[str, MODEL]:
+    ) -> Dict[str, MODEL_INSTANCE]:
         """
         Return a dictionary mapping each of the given IDs to the object with
         that ID. If `id_list` isn't provided, evaluate the entire QuerySet.
@@ -1192,14 +1194,14 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def bulk_create(
-        cls: Type[MODEL],
-        objects: Iterable[MODEL],
+        cls: MODEL_CLASS,
+        objects: Iterable[MODEL_INSTANCE],
         batch_size: Optional[int] = None,
         ignore_conflicts: bool = False,
         update_fields: Optional[Iterable[str]] = None,
         on_conflict: Optional[Iterable[str]] = None,
         using_db: Optional[BaseDBAsyncClient] = None,
-    ) -> "BulkCreateQuery":
+    ) -> BulkCreateQuery:
         """
         Bulk insert operation:
 
@@ -1236,8 +1238,8 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def first(
-        cls: Type[MODEL], using_db: Optional[BaseDBAsyncClient] = None
-    ) -> QuerySetSingle[Optional[MODEL]]:
+        cls: MODEL_CLASS, using_db: Optional[BaseDBAsyncClient] = None
+    ) -> QuerySetSingle[Optional[MODEL_INSTANCE]]:
         """
         Generates a QuerySet that returns the first record.
         """
@@ -1245,7 +1247,7 @@ class Model(metaclass=ModelMeta):
         return cls._meta.manager.get_queryset().using_db(db).first()
 
     @classmethod
-    def filter(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySet[MODEL]:
+    def filter(cls: MODEL_CLASS, *args: Q, **kwargs: Any) -> QuerySet[MODEL_INSTANCE]:
         """
         Generates a QuerySet with the filter applied.
 
@@ -1255,7 +1257,7 @@ class Model(metaclass=ModelMeta):
         return cls._meta.manager.get_queryset().filter(*args, **kwargs)
 
     @classmethod
-    def exclude(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySet[MODEL]:
+    def exclude(cls: MODEL_CLASS, *args: Q, **kwargs: Any) -> QuerySet[MODEL_INSTANCE]:
         """
         Generates a QuerySet with the exclude applied.
 
@@ -1265,7 +1267,7 @@ class Model(metaclass=ModelMeta):
         return cls._meta.manager.get_queryset().exclude(*args, **kwargs)
 
     @classmethod
-    def annotate(cls: Type[MODEL], **kwargs: Union[Function, Term]) -> QuerySet[MODEL]:
+    def annotate(cls: MODEL_CLASS, **kwargs: Union[Function, Term]) -> QuerySet[MODEL_INSTANCE]:
         """
         Annotates the result set with extra Functions/Aggregations/Expressions.
 
@@ -1274,7 +1276,7 @@ class Model(metaclass=ModelMeta):
         return cls._meta.manager.get_queryset().annotate(**kwargs)
 
     @classmethod
-    def all(cls: Type[MODEL], using_db: Optional[BaseDBAsyncClient] = None) -> QuerySet[MODEL]:
+    def all(cls: MODEL_CLASS, using_db: Optional[BaseDBAsyncClient] = None) -> QuerySet[MODEL_INSTANCE]:
         """
         Returns the complete QuerySet.
         """
@@ -1283,8 +1285,8 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def get(
-        cls: Type[MODEL], *args: Q, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
-    ) -> QuerySetSingle[MODEL]:
+        cls: MODEL_CLASS, *args: Q, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
+    ) -> QuerySetSingle[MODEL_INSTANCE]:
         """
         Fetches a single record for a Model type using the provided filter parameters.
 
@@ -1319,7 +1321,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def exists(
-        cls: Type[MODEL], *args: Q, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
+        cls: MODEL_CLASS, *args: Q, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
     ) -> ExistsQuery:
         """
         Return True/False whether record exists with the provided filter parameters.
@@ -1337,8 +1339,8 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def get_or_none(
-        cls: Type[MODEL], *args: Q, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
-    ) -> QuerySetSingle[Optional[MODEL]]:
+        cls: MODEL_CLASS, *args: Q, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
+    ) -> QuerySetSingle[Optional[MODEL_INSTANCE]]:
         """
         Fetches a single record for a Model type using the provided filter parameters or None.
 
@@ -1356,7 +1358,7 @@ class Model(metaclass=ModelMeta):
     @classmethod
     async def fetch_for_list(
         cls,
-        instance_list: "Iterable[Model]",
+        instance_list: Iterable[MODEL_INSTANCE],
         *args: Any,
         using_db: Optional[BaseDBAsyncClient] = None,
     ) -> None:
@@ -1492,8 +1494,8 @@ class Model(metaclass=ModelMeta):
             ],
         }
 
-    def __await__(self: MODEL) -> Generator[Any, None, MODEL]:
-        async def _self() -> MODEL:
+    def __await__(self: MODEL_INSTANCE) -> Generator[Any, None, MODEL_INSTANCE]:
+        async def _self() -> MODEL_INSTANCE:
             return self
 
         return _self().__await__()

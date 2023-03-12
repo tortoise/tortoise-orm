@@ -7,7 +7,6 @@ from typing import (
     List,
     Optional,
     Tuple,
-    Type,
     Union,
     cast,
 )
@@ -33,7 +32,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from pypika.queries import Selectable
 
     from tortoise.fields.base import Field
-    from tortoise.models import Model
+    from tortoise.models import MODEL_CLASS
     from tortoise.queryset import AwaitableQuery
 
 
@@ -41,7 +40,7 @@ class F(PypikaField):  # type: ignore
     @classmethod
     def resolver_arithmetic_expression(
         cls,
-        model: "Type[Model]",
+        model: "MODEL_CLASS",
         arithmetic_expression_or_field: Term,
     ) -> Tuple[Term, Optional[PypikaField]]:
         field_object = None
@@ -118,7 +117,7 @@ class Expression:
     Parent class for expressions
     """
 
-    def resolve(self, model: "Type[Model]", table: Table) -> Any:
+    def resolve(self, model: "MODEL_CLASS", table: Table) -> Any:
         raise NotImplementedError()
 
 
@@ -198,7 +197,7 @@ class Q(Expression):
         self._is_negated = not self._is_negated
 
     def _resolve_nested_filter(
-        self, model: "Type[Model]", key: str, value: Any, table: Table
+        self, model: "MODEL_CLASS", key: str, value: Any, table: Table
     ) -> QueryModifier:
         related_field_name, __, forwarded_fields = key.partition("__")
         related_field = cast(RelationalField, model._meta.fields_map[related_field_name])
@@ -213,7 +212,7 @@ class Q(Expression):
         return QueryModifier(joins=required_joins) & modifier
 
     def _resolve_custom_kwarg(
-        self, model: "Type[Model]", key: str, value: Any, table: Table
+        self, model: "MODEL_CLASS", key: str, value: Any, table: Table
     ) -> QueryModifier:
         having_info = self._custom_filters[key]
         annotation = self._annotations[having_info["field"]]
@@ -235,7 +234,7 @@ class Q(Expression):
         return modifier
 
     def _process_filter_kwarg(
-        self, model: "Type[Model]", key: str, value: Any, table: Table
+        self, model: "MODEL_CLASS", key: str, value: Any, table: Table
     ) -> Tuple[Criterion, Optional[Tuple[Table, Criterion]]]:
         join = None
 
@@ -272,7 +271,7 @@ class Q(Expression):
         return criterion, join
 
     def _resolve_regular_kwarg(
-        self, model: "Type[Model]", key: str, value: Any, table: Table
+        self, model: "MODEL_CLASS", key: str, value: Any, table: Table
     ) -> QueryModifier:
         if key not in model._meta.filters and key.split("__")[0] in model._meta.fetch_fields:
             modifier = self._resolve_nested_filter(model, key, value, table)
@@ -283,7 +282,7 @@ class Q(Expression):
         return modifier
 
     def _get_actual_filter_params(
-        self, model: "Type[Model]", key: str, value: Table
+        self, model: "MODEL_CLASS", key: str, value: Table
     ) -> Tuple[str, Any]:
         filter_key = key
         if key in model._meta.fk_fields or key in model._meta.o2o_fields:
@@ -311,7 +310,7 @@ class Q(Expression):
             raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
         return filter_key, filter_value
 
-    def _resolve_kwargs(self, model: "Type[Model]", table: Table) -> QueryModifier:
+    def _resolve_kwargs(self, model: "MODEL_CLASS", table: Table) -> QueryModifier:
         modifier = QueryModifier()
         for raw_key, raw_value in self.filters.items():
             key, value = self._get_actual_filter_params(model, raw_key, raw_value)
@@ -328,7 +327,7 @@ class Q(Expression):
             modifier = ~modifier
         return modifier
 
-    def _resolve_children(self, model: "Type[Model]", table: Table) -> QueryModifier:
+    def _resolve_children(self, model: "MODEL_CLASS", table: Table) -> QueryModifier:
         modifier = QueryModifier()
         for node in self.children:
             node._annotations = self._annotations
@@ -345,7 +344,7 @@ class Q(Expression):
 
     def resolve(
         self,
-        model: "Type[Model]",
+        model: "MODEL_CLASS",
         table: Table,
     ) -> QueryModifier:
         """
@@ -396,7 +395,7 @@ class Function(Expression):
     ):
         return self.database_func(field, *default_values)
 
-    def _resolve_field_for_model(self, model: "Type[Model]", table: Table, field: str) -> dict:
+    def _resolve_field_for_model(self, model: "MODEL_CLASS", table: Table, field: str) -> dict:
         joins = []
         fields = field.split("__")
 
@@ -443,14 +442,14 @@ class Function(Expression):
 
         return {"joins": joins, "field": field}
 
-    def _resolve_default_values(self, model: "Type[Model]", table: Table) -> Iterator[Any]:
+    def _resolve_default_values(self, model: "MODEL_CLASS", table: Table) -> Iterator[Any]:
         for default_value in self.default_values:
             if isinstance(default_value, Function):
                 yield default_value.resolve(model, table)["field"]
             else:
                 yield default_value
 
-    def resolve(self, model: "Type[Model]", table: Table) -> dict:
+    def resolve(self, model: "MODEL_CLASS", table: Table) -> dict:
         """
         Used to resolve the Function statement for SQL generation.
 
@@ -506,7 +505,7 @@ class Aggregate(Function):
             return self.database_func(field, *default_values).distinct()
         return self.database_func(field, *default_values)
 
-    def _resolve_field_for_model(self, model: "Type[Model]", table: Table, field: str) -> dict:
+    def _resolve_field_for_model(self, model: "MODEL_CLASS", table: Table, field: str) -> dict:
         ret = super()._resolve_field_for_model(model, table, field)
         if self.filter:
             modifier = QueryModifier()
@@ -556,7 +555,7 @@ class When(Expression):
                 q_objects.append(Q(**{key: value}))
         return q_objects
 
-    def resolve(self, model: "Type[Model]", table: Table) -> tuple:
+    def resolve(self, model: "MODEL_CLASS", table: Table) -> tuple:
         q_objects = self._resolve_q_objects()
 
         modifier = QueryModifier()
@@ -587,7 +586,7 @@ class Case(Expression):
         self.args = args
         self.default = default
 
-    def resolve(self, model: "Type[Model]", table: Table) -> dict:
+    def resolve(self, model: "MODEL_CLASS", table: Table) -> dict:
         case = PypikaCase()
         for arg in self.args:
             if not isinstance(arg, When):

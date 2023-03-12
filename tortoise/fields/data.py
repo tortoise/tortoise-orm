@@ -25,7 +25,7 @@ except ImportError:  # pragma: nocoverage
     parse_datetime = functools.partial(parse_date, default_timezone=None)
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.models import Model
+    from tortoise.models import MODEL_INSTANCE, MODEL_CLASS
 
 __all__ = (
     "BigIntField",
@@ -369,7 +369,7 @@ class DatetimeField(Field[datetime.datetime], datetime.datetime):
         return value
 
     def to_db_value(
-        self, value: Optional[datetime.datetime], instance: "Union[Type[Model], Model]"
+        self, value: Optional[datetime.datetime], instance: Union["MODEL_CLASS", "MODEL_INSTANCE"]
     ) -> Optional[datetime.datetime]:
 
         # Only do this if it is a Model instance, not class. Test for guaranteed instance var
@@ -421,7 +421,7 @@ class DateField(Field[datetime.date], datetime.date):
         return value
 
     def to_db_value(
-        self, value: Optional[Union[datetime.date, str]], instance: "Union[Type[Model], Model]"
+        self, value: Optional[Union[datetime.date, str]], instance: Union["MODEL_CLASS", "MODEL_INSTANCE"]
     ) -> Optional[datetime.date]:
 
         if value is not None and not isinstance(value, datetime.date):
@@ -462,7 +462,7 @@ class TimeField(Field[datetime.time], datetime.time):
     def to_db_value(
         self,
         value: Optional[Union[datetime.time, datetime.timedelta]],
-        instance: "Union[Type[Model], Model]",
+        instance: Union["MODEL_CLASS", "MODEL_INSTANCE"],
     ) -> Optional[Union[datetime.time, datetime.timedelta]]:
 
         # Only do this if it is a Model instance, not class. Test for guaranteed instance var
@@ -512,7 +512,7 @@ class TimeDeltaField(Field[datetime.timedelta]):
         return datetime.timedelta(microseconds=value)
 
     def to_db_value(
-        self, value: Optional[datetime.timedelta], instance: "Union[Type[Model], Model]"
+        self, value: Optional[datetime.timedelta], instance: Union["MODEL_CLASS", "MODEL_INSTANCE"]
     ) -> Optional[int]:
         self.validate(value)
 
@@ -575,7 +575,7 @@ class JSONField(Field[Union[dict, list]], dict, list):  # type: ignore
         self.decoder = decoder
 
     def to_db_value(
-        self, value: Optional[Union[dict, list, str]], instance: "Union[Type[Model], Model]"
+        self, value: Optional[Union[dict, list, str]], instance: Union["MODEL_CLASS", "MODEL_INSTANCE"]
     ) -> Optional[str]:
         self.validate(value)
 
@@ -621,7 +621,7 @@ class UUIDField(Field[UUID], UUID):
             kwargs["default"] = uuid4
         super().__init__(**kwargs)
 
-    def to_db_value(self, value: Any, instance: "Union[Type[Model], Model]") -> Optional[str]:
+    def to_db_value(self, value: Any, instance: Union["MODEL_CLASS", "MODEL_INSTANCE"]) -> Optional[str]:
         return value and str(value)
 
     def to_python_value(self, value: Any) -> Optional[UUID]:
@@ -685,7 +685,7 @@ class IntEnumFieldInstance(SmallIntField):
         return value
 
     def to_db_value(
-        self, value: Union[IntEnum, None, int], instance: "Union[Type[Model], Model]"
+        self, value: Union[IntEnum, None, int], instance: Union["MODEL_CLASS", "MODEL_INSTANCE"]
     ) -> Union[int, None]:
 
         if isinstance(value, IntEnum):
@@ -752,7 +752,7 @@ class CharEnumFieldInstance(CharField):
         return self.enum_type(value) if value is not None else None
 
     def to_db_value(
-        self, value: Union[Enum, None, str], instance: "Union[Type[Model], Model]"
+        self, value: Union[Enum, None, str], instance: Union["MODEL_CLASS", "MODEL_INSTANCE"]
     ) -> Union[str, None]:
         self.validate(value)
         if isinstance(value, Enum):
