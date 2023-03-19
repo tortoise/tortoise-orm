@@ -376,7 +376,7 @@ def pydantic_model_creator(
             if model:
                 if fdesc.get("nullable"):
                     fconfig["nullable"] = True
-                if fdesc.get("nullable") or field_default is not None:
+                if fdesc.get("nullable") or field_default is not None or fname in optional:
                     model = Optional[model]  # type: ignore
 
                 pannotations[fname] = model
@@ -388,7 +388,12 @@ def pydantic_model_creator(
         ):
             model = get_submodel(fdesc["python_type"])
             if model:
-                pannotations[fname] = List[model]  # type: ignore
+                if fdesc.get("nullable") or field_default is not None or fname in optional:
+                    model = Optional[List[model]]  # type: ignore
+                else:
+                    model = List[model]  # type: ignore
+
+                pannotations[fname] = model  # type: ignore
 
         # Computed fields as methods
         elif field_type is callable:
