@@ -1032,6 +1032,7 @@ class UpdateQuery(AwaitableQuery):
         "orderings",
         "limit",
         "values",
+        "returning_columns",
     )
 
     def __init__(
@@ -1054,6 +1055,7 @@ class UpdateQuery(AwaitableQuery):
         self.limit = limit
         self.orderings = orderings
         self.values: List[Any] = []
+        self.returning_columns = []
 
     def _make_query(self) -> None:
         table = self.model._meta.basetable
@@ -1100,6 +1102,8 @@ class UpdateQuery(AwaitableQuery):
                 self.query = self.query.set(db_field, executor.parameter(count))
                 self.values.append(value)
                 count += 1
+        if self.returning_columns:
+            self.query = self.query.returning(*self.return_columns)
 
     def __await__(self) -> Generator[Any, None, int]:
         if self._db is None:
@@ -1107,8 +1111,13 @@ class UpdateQuery(AwaitableQuery):
         self._make_query()
         return self._execute().__await__()
 
-    async def _execute(self) -> int:
-        return (await self._db.execute_query(str(self.query), self.values))[0]
+    async def _execute(self) -> List[dict]:
+        res = await self._db.execute_query_dict(str(self.query))
+        return res
+
+    def returning(self, *columns):
+        self.return_columns = columns
+        return self    
 
 
 class DeleteQuery(AwaitableQuery):
