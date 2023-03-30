@@ -38,6 +38,7 @@ from tortoise.fields.data import IntField
 from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
+    RelationalField,
     ForeignKeyFieldInstance,
     ManyToManyFieldInstance,
     ManyToManyRelation,
@@ -618,6 +619,8 @@ class ModelMeta(type):
         meta.pk = fields_map.get(pk_attr)  # type: ignore
         if meta.pk:
             meta.db_pk_column = meta.pk.source_field or meta.pk_attr
+            if isinstance(meta.pk, RelationalField) and meta.pk.source_field is None:
+                meta.db_pk_column = f"{meta.db_pk_column}_id"
         meta._inited = False
         if not fields_map:
             meta.abstract = True
