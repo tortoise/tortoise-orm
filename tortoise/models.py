@@ -277,6 +277,12 @@ class MetaInfo:
         field_filters = get_filters_for_field(
             field_name=name, field=value, source_field=value.source_field or name
         )
+        if value.pk:
+            field_filters.update(
+                get_filters_for_field(
+                    field_name="pk", field=value, source_field=value.source_field or name
+                )
+            )
         self._filters.update(field_filters)
         self.finalise_fields()
 
