@@ -8,6 +8,7 @@ if TYPE_CHECKING:
 
 
 class Index:
+    INDEX_TYPE = ""
     INDEX_CREATE_TEMPLATE = (
         "CREATE{index_type}INDEX {index_name} ON {table_name} ({fields}){extra};"
     )
@@ -17,7 +18,7 @@ class Index:
         *expressions: Term,
         fields: Optional[Tuple[str, ...]] = None,
         name: Optional[str] = None,
-        index_type: Optional[str] = ""
+        index_type: Optional[str] = None
     ):
         """
         All kinds of index parent class, default is BTreeIndex.
@@ -37,7 +38,7 @@ class Index:
         self.name = name
         self.expressions = expressions
         self.extra = ""
-        self.index_type = index_type
+        self.index_type = index_type or self.INDEX_TYPE
         
 
     def get_sql(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool):
