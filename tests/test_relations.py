@@ -75,24 +75,6 @@ class TestRelations(test.TestCase):
         result = await Event.filter(pk=event.pk).values_list("event_id", "participants__name")
         self.assertEqual(len(result), 2)
 
-    async def test_fetch_fk_zero(self):
-        tournament_0 = await Tournament.create(name="tournament zero", id=0)
-        tournament_1 = await Tournament.create(name="tournament one", id=1)
-        await Event.create(name="event-one", tournament=tournament_1)
-        await Event.create(name="event-zero", tournament=tournament_0)
-
-        for name in ("event-one", "event-zero"):
-            e = await Event.get(name=name)
-            id_before_fetch = e.tournament_id
-            await e.fetch_related("tournament")
-            id_after_fetch = e.tournament_id
-            self.assertEqual(id_before_fetch, id_after_fetch)
-
-        event_0 = await Event.get(name="event-zero").prefetch_related("tournament")
-        self.assertEqual(event_0.tournament, tournament_0)
-        event_1 = await Event.get(name="event-one").prefetch_related("tournament")
-        self.assertEqual(event_1.tournament, tournament_1)
-
     async def test_reset_queryset_on_query(self):
         tournament = await Tournament.create(name="New Tournament")
         event = await Event.create(name="Test", tournament_id=tournament.id)
@@ -386,6 +368,18 @@ class TestRelations(test.TestCase):
 
         single_reload = await Single.get(id=single.id)
         assert (await single_reload.extra).id == 0
+
+        tournament_0 = await Tournament.create(name="tournament zero", id=0)
+        await Event.create(name="event-zero", tournament=tournament_0)
+
+        e = await Event.get(name="event-zero")
+        id_before_fetch = e.tournament_id
+        await e.fetch_related("tournament")
+        id_after_fetch = e.tournament_id
+        self.assertEqual(id_before_fetch, id_after_fetch)
+
+        event_0 = await Event.get(name="event-zero").prefetch_related("tournament")
+        self.assertEqual(event_0.tournament, tournament_0)
 
 
 class TestDoubleFK(test.TestCase):
