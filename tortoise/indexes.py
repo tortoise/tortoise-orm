@@ -75,7 +75,7 @@ class PartialIndex(Index):
         fields: Optional[Tuple[str, ...]] = None,
         name: Optional[str] = None,
         condition: Optional[dict] = None,
-        index_type: Optional[str] = ""
+        index_type: Optional[str] = None
     ):
         super().__init__(*expressions, fields=fields, name=name, index_type=index_type)
         if condition:
