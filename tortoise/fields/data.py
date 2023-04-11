@@ -542,8 +542,8 @@ class JSONField(Field[Union[dict, list]], dict, list):  # type: ignore
     This field can store dictionaries or lists of any JSON-compliant structure.
 
     You can specify your own custom JSON encoder/decoder, leaving at the default should work well.
-    If you have ``orjson`` installed, we default to using that, else the default ``json`` module
-    will be used.
+    If you have ``orjson`` installed, we default to using that,
+    else the default ``json`` module will be used.
 
     ``encoder``:
         The custom JSON encoder.
