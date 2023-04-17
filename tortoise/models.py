@@ -58,6 +58,7 @@ from tortoise.queryset import (
     QuerySetSingle,
     RawSQLQuery,
 )
+from typing_extensions import Self
 from tortoise.router import router
 from tortoise.signals import Signals
 from tortoise.transactions import in_transaction
@@ -1035,11 +1036,11 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def get_or_create(
-        cls: Type[MODEL],
+        cls,
         defaults: Optional[dict] = None,
         using_db: Optional[BaseDBAsyncClient] = None,
         **kwargs: Any,
-    ) -> Tuple[MODEL, bool]:
+    ) -> Tuple[Self, bool]:
         """
         Fetches the object if exists (filtering on the provided parameters),
         else creates an instance with any unspecified parameters as default values.
@@ -1072,7 +1073,7 @@ class Model(metaclass=ModelMeta):
         skip_locked: bool = False,
         of: Tuple[str, ...] = (),
         using_db: Optional[BaseDBAsyncClient] = None,
-    ) -> QuerySet[MODEL]:
+    ) -> QuerySet[Self]:
         """
         Make QuerySet select for update.
 
@@ -1146,7 +1147,7 @@ class Model(metaclass=ModelMeta):
         fields: Iterable[str],
         batch_size: Optional[int] = None,
         using_db: Optional[BaseDBAsyncClient] = None,
-    ) -> "BulkUpdateQuery":
+    ) -> "BulkUpdateQuery[MODEL]":
         """
         Update the given fields in each of the given objects in the database.
         This method efficiently updates the given fields on the provided model instances, generally with one query.
@@ -1199,7 +1200,7 @@ class Model(metaclass=ModelMeta):
         update_fields: Optional[Iterable[str]] = None,
         on_conflict: Optional[Iterable[str]] = None,
         using_db: Optional[BaseDBAsyncClient] = None,
-    ) -> "BulkCreateQuery":
+    ) -> "BulkCreateQuery[MODEL]":
         """
         Bulk insert operation:
 
@@ -1236,8 +1237,8 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def first(
-        cls: Type[MODEL], using_db: Optional[BaseDBAsyncClient] = None
-    ) -> QuerySetSingle[Optional[MODEL]]:
+        cls, using_db: Optional[BaseDBAsyncClient] = None
+    ) -> QuerySetSingle[Optional[Self]]:
         """
         Generates a QuerySet that returns the first record.
         """
@@ -1245,7 +1246,7 @@ class Model(metaclass=ModelMeta):
         return cls._meta.manager.get_queryset().using_db(db).first()
 
     @classmethod
-    def filter(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySet[MODEL]:
+    def filter(cls, *args: Q, **kwargs: Any) -> QuerySet[Self]:
         """
         Generates a QuerySet with the filter applied.
 
@@ -1255,7 +1256,7 @@ class Model(metaclass=ModelMeta):
         return cls._meta.manager.get_queryset().filter(*args, **kwargs)
 
     @classmethod
-    def exclude(cls: Type[MODEL], *args: Q, **kwargs: Any) -> QuerySet[MODEL]:
+    def exclude(cls, *args: Q, **kwargs: Any) -> QuerySet[Self]:
         """
         Generates a QuerySet with the exclude applied.
 
@@ -1265,7 +1266,7 @@ class Model(metaclass=ModelMeta):
         return cls._meta.manager.get_queryset().exclude(*args, **kwargs)
 
     @classmethod
-    def annotate(cls: Type[MODEL], **kwargs: Union[Function, Term]) -> QuerySet[MODEL]:
+    def annotate(cls, **kwargs: Union[Function, Term]) -> QuerySet[Self]:
         """
         Annotates the result set with extra Functions/Aggregations/Expressions.
 
@@ -1274,7 +1275,7 @@ class Model(metaclass=ModelMeta):
         return cls._meta.manager.get_queryset().annotate(**kwargs)
 
     @classmethod
-    def all(cls: Type[MODEL], using_db: Optional[BaseDBAsyncClient] = None) -> QuerySet[MODEL]:
+    def all(cls, using_db: Optional[BaseDBAsyncClient] = None) -> QuerySet[Self]:
         """
         Returns the complete QuerySet.
         """
@@ -1283,8 +1284,8 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def get(
-        cls: Type[MODEL], *args: Q, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
-    ) -> QuerySetSingle[MODEL]:
+        cls, *args: Q, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
+    ) -> QuerySetSingle[Self]:
         """
         Fetches a single record for a Model type using the provided filter parameters.
 
@@ -1337,8 +1338,8 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def get_or_none(
-        cls: Type[MODEL], *args: Q, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
-    ) -> QuerySetSingle[Optional[MODEL]]:
+        cls, *args: Q, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
+    ) -> QuerySetSingle[Optional[Self]]:
         """
         Fetches a single record for a Model type using the provided filter parameters or None.
 
