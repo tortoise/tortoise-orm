@@ -1849,7 +1849,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         if self._db is None:
             self._db = self._choose_db(True)  # type: ignore
         self._make_query()
-        return self._execute().__await__()  # type: ignore
+        return self._execute().__await__()
 
     def sql(self, **kwargs) -> str:
         self.as_query()

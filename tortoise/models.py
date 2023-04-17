@@ -1106,10 +1106,10 @@ class Model(metaclass=ModelMeta):
             instance = (
                 await cls.select_for_update()
                 .using_db(connection)
-                .get_or_none(**kwargs)  # type:ignore
+                .get_or_none(**kwargs)
             )
             if instance:
-                await instance.update_from_dict(defaults).save(using_db=connection)  # type:ignore
+                await instance.update_from_dict(defaults).save(using_db=connection)
                 return instance, False
         return await cls.get_or_create(defaults, db, **kwargs)
 
