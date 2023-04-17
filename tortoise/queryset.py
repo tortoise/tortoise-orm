@@ -90,7 +90,7 @@ class AwaitableQuery(Generic[MODEL]):
 
     def __init__(self, model: Type[MODEL]) -> None:
         self._joined_tables: List[Table] = []
-        self.model: "Type[Model]" = model
+        self.model: "Type[MODEL]" = model
         self.query: QueryBuilder = QUERY
         self._db: BaseDBAsyncClient = None  # type: ignore
         self.capabilities: Capabilities = model._meta.db.capabilities
@@ -728,7 +728,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         if not ignore_conflicts:
             if (update_fields and not on_conflict) or (on_conflict and not update_fields):
                 raise ValueError("update_fields and on_conflict need set in same time.")
-        return BulkCreateQuery(  # type:ignore
+        return BulkCreateQuery(
             db=self._db,
             model=self.model,
             objects=objects,
