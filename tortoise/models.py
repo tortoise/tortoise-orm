@@ -1236,9 +1236,7 @@ class Model(metaclass=ModelMeta):
         )
 
     @classmethod
-    def first(
-        cls, using_db: Optional[BaseDBAsyncClient] = None
-    ) -> QuerySetSingle[Optional[Self]]:
+    def first(cls, using_db: Optional[BaseDBAsyncClient] = None) -> QuerySetSingle[Optional[Self]]:
         """
         Generates a QuerySet that returns the first record.
         """
