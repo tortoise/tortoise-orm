@@ -21,6 +21,7 @@ from typing import (
 
 from pypika import Order, Query, Table
 from pypika.terms import Term
+from typing_extensions import Self
 
 from tortoise import connections
 from tortoise.backends.base.client import BaseDBAsyncClient
@@ -58,7 +59,6 @@ from tortoise.queryset import (
     QuerySetSingle,
     RawSQLQuery,
 )
-from typing_extensions import Self
 from tortoise.router import router
 from tortoise.signals import Signals
 from tortoise.transactions import in_transaction
@@ -1103,11 +1103,7 @@ class Model(metaclass=ModelMeta):
             defaults = {}
         db = using_db or cls._choose_db(True)
         async with in_transaction(connection_name=db.connection_name) as connection:
-            instance = (
-                await cls.select_for_update()
-                .using_db(connection)
-                .get_or_none(**kwargs)
-            )
+            instance = await cls.select_for_update().using_db(connection).get_or_none(**kwargs)
             if instance:
                 await instance.update_from_dict(defaults).save(using_db=connection)
                 return instance, False
