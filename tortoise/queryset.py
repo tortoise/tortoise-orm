@@ -755,7 +755,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         if any(obj.pk is None for obj in objects):
             raise ValueError("All bulk_update() objects must have a primary key set.")
-        return BulkUpdateQuery(  # type:ignore
+        return BulkUpdateQuery(
             db=self._db,
             model=self.model,
             q_objects=self._q_objects,
