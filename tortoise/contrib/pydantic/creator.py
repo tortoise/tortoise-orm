@@ -6,9 +6,9 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, cast
 from pydantic import BaseConfig as PydanticBaseConfig
 from pydantic import Extra
 
-from tortoise.fields import relational, JSONField
 from tortoise.contrib.pydantic.base import PydanticListModel, PydanticModel
 from tortoise.contrib.pydantic.utils import get_annotations
+from tortoise.fields import JSONField, relational
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model

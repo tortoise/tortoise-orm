@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, List, Type, Union
 
 import pydantic
-from pydantic import BaseModel, BaseConfig  # pylint: disable=E0611
+from pydantic import BaseConfig, BaseModel  # pylint: disable=E0611
 
 from tortoise import fields
 

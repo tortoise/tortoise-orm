@@ -23,4 +23,4 @@ jobs:
           personal_token: ${{ secrets.PERSONAL_TOKEN }}
           publish_dir: build/html
           external_repository: tortoise/tortoise.github.io
-          publish_branch: master
+          publish_branch: main

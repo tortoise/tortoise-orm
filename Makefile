@@ -29,7 +29,6 @@ endif
 	#pylint -d C,W,R $(checkfiles)
 	#bandit -r $(checkfiles)make
 	twine check dist/*
-	codespell $(checkfiles)
 
 lint: deps build
 ifneq ($(shell which black),)
