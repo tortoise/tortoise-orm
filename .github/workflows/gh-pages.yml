@@ -22,7 +22,7 @@ jobs:
       - name: Deploy latest docs
         uses: peaceiris/actions-gh-pages@v3
         with:
-          personal_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: build/html
           external_repository: tortoise/tortoise.github.io
           publish_branch: main
