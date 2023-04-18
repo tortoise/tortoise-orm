@@ -1,5 +1,7 @@
 import copy
 
+from pydantic import BaseConfig as PydanticBaseConfig
+
 from tests.testmodels import (
     Address,
     CamelCaseAliasPerson,
@@ -17,8 +19,6 @@ from tortoise.contrib.pydantic import (
     pydantic_model_creator,
     pydantic_queryset_creator,
 )
-
-from pydantic import BaseConfig as PydanticBaseConfig
 
 
 class TestPydantic(test.TestCase):

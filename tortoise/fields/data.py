@@ -298,7 +298,6 @@ class DecimalField(Field[Decimal], Decimal):
         self.quant = Decimal("1" if decimal_places == 0 else f"1.{('0' * decimal_places)}")
 
     def to_python_value(self, value: Any) -> Optional[Decimal]:
-
         if value is None:
             value = None
         else:
@@ -371,7 +370,6 @@ class DatetimeField(Field[datetime.datetime], datetime.datetime):
     def to_db_value(
         self, value: Optional[datetime.datetime], instance: "Union[Type[Model], Model]"
     ) -> Optional[datetime.datetime]:
-
         # Only do this if it is a Model instance, not class. Test for guaranteed instance var
         if hasattr(instance, "_saved_in_db") and (
             self.auto_now
@@ -423,7 +421,6 @@ class DateField(Field[datetime.date], datetime.date):
     def to_db_value(
         self, value: Optional[Union[datetime.date, str]], instance: "Union[Type[Model], Model]"
     ) -> Optional[datetime.date]:
-
         if value is not None and not isinstance(value, datetime.date):
             value = parse_datetime(value).date()
         self.validate(value)
@@ -464,7 +461,6 @@ class TimeField(Field[datetime.time], datetime.time):
         value: Optional[Union[datetime.time, datetime.timedelta]],
         instance: "Union[Type[Model], Model]",
     ) -> Optional[Union[datetime.time, datetime.timedelta]]:
-
         # Only do this if it is a Model instance, not class. Test for guaranteed instance var
         if hasattr(instance, "_saved_in_db") and (
             self.auto_now
@@ -542,7 +538,7 @@ class JSONField(Field[Union[dict, list]], dict, list):  # type: ignore
     This field can store dictionaries or lists of any JSON-compliant structure.
 
     You can specify your own custom JSON encoder/decoder, leaving at the default should work well.
-    If you have ``python-rapidjson`` installed, we default to using that,
+    If you have ``orjson`` installed, we default to using that,
     else the default ``json`` module will be used.
 
     ``encoder``:
@@ -679,7 +675,6 @@ class IntEnumFieldInstance(SmallIntField):
         self.enum_type = enum_type
 
     def to_python_value(self, value: Union[int, None]) -> Union[IntEnum, None]:
-
         value = self.enum_type(value) if value is not None else None
         self.validate(value)
         return value
@@ -687,7 +682,6 @@ class IntEnumFieldInstance(SmallIntField):
     def to_db_value(
         self, value: Union[IntEnum, None, int], instance: "Union[Type[Model], Model]"
     ) -> Union[int, None]:
-
         if isinstance(value, IntEnum):
             value = int(value.value)
         if isinstance(value, int):
