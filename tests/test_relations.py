@@ -369,6 +369,18 @@ class TestRelations(test.TestCase):
         single_reload = await Single.get(id=single.id)
         assert (await single_reload.extra).id == 0
 
+        tournament_0 = await Tournament.create(name="tournament zero", id=0)
+        await Event.create(name="event-zero", tournament=tournament_0)
+
+        e = await Event.get(name="event-zero")
+        id_before_fetch = e.tournament_id
+        await e.fetch_related("tournament")
+        id_after_fetch = e.tournament_id
+        self.assertEqual(id_before_fetch, id_after_fetch)
+
+        event_0 = await Event.get(name="event-zero").prefetch_related("tournament")
+        self.assertEqual(event_0.tournament, tournament_0)
+
 
 class TestDoubleFK(test.TestCase):
     select_match = r'SELECT [`"]doublefk[`"].[`"]name[`"] [`"]name[`"]'
