@@ -361,6 +361,7 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
 
     def decorator(test_item):
         if not isinstance(test_item, type):
+
             @wraps(test_item)
             async def skip_wrapper(*args, **kwargs):
                 db = connections.get(connection_name)
@@ -371,6 +372,7 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
                 if asyncio.iscoroutinefunction(test_item):
                     return await test_result
                 return test_result
+
             return skip_wrapper
 
         # Assume a class is decorated
