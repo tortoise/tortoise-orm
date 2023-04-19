@@ -90,23 +90,23 @@ class TestQueryset(test.TestCase):
 
     def test_slicing_negative_values(self) -> None:
         with self.assertRaisesRegex(
-                expected_exception=ParamsError,
-                expected_regex="Slice start should be non-negative number or None.",
+            expected_exception=ParamsError,
+            expected_regex="Slice start should be non-negative number or None.",
         ):
             _ = IntFields.all()[-1:]
 
         with self.assertRaisesRegex(
-                expected_exception=ParamsError,
-                expected_regex="Slice stop should be non-negative number greater that slice start, "
-                               "or None.",
+            expected_exception=ParamsError,
+            expected_regex="Slice stop should be non-negative number greater that slice start, "
+            "or None.",
         ):
             _ = IntFields.all()[:-1]
 
     def test_slicing_stop_before_start(self) -> None:
         with self.assertRaisesRegex(
-                expected_exception=ParamsError,
-                expected_regex="Slice stop should be non-negative number greater that slice start, "
-                               "or None.",
+            expected_exception=ParamsError,
+            expected_regex="Slice stop should be non-negative number greater that slice start, "
+            "or None.",
         ):
             _ = IntFields.all()[2:1]
 
@@ -116,8 +116,8 @@ class TestQueryset(test.TestCase):
         self.assertSequenceEqual(await sliced_queryset, await manually_sliced_queryset)
 
         with self.assertRaisesRegex(
-                expected_exception=ParamsError,
-                expected_regex="Slice steps should be 1 or None.",
+            expected_exception=ParamsError,
+            expected_regex="Slice steps should be 1 or None.",
         ):
             _ = IntFields.all()[::2]
 
