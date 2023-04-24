@@ -298,6 +298,9 @@ class RelationalField(Field[MODEL]):
         self, instance: Optional["Model"], owner: Type["Model"]
     ) -> "RelationalField[MODEL] | MODEL":
         ...
+    
+    def __set__(self, instance: "Model", value: MODEL) -> None:
+        ...
 
     def describe(self, serializable: bool) -> dict:
         desc = super().describe(serializable)
