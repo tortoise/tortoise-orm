@@ -286,21 +286,23 @@ class RelationalField(Field[MODEL]):
         self.to_field_instance: Field = None  # type: ignore
         self.db_constraint = db_constraint
 
-    @overload
-    def __get__(self, instance: None, owner: Type["Model"]) -> "RelationalField[MODEL]":
-        ...
+    if TYPE_CHECKING:
 
-    @overload
-    def __get__(self, instance: "Model", owner: Type["Model"]) -> MODEL:
-        ...
+        @overload
+        def __get__(self, instance: None, owner: Type["Model"]) -> "RelationalField[MODEL]":
+            ...
 
-    def __get__(  # type: ignore[empty-body]
-        self, instance: Optional["Model"], owner: Type["Model"]
-    ) -> "RelationalField[MODEL] | MODEL":
-        ...
+        @overload
+        def __get__(self, instance: "Model", owner: Type["Model"]) -> MODEL:
+            ...
 
-    def __set__(self, instance: "Model", value: MODEL) -> None:
-        ...
+        def __get__(
+            self, instance: Optional["Model"], owner: Type["Model"]
+        ) -> "RelationalField[MODEL] | MODEL":
+            ...
+
+        def __set__(self, instance: "Model", value: MODEL) -> None:
+            ...
 
     def describe(self, serializable: bool) -> dict:
         desc = super().describe(serializable)

@@ -141,25 +141,26 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
     GENERATED_SQL: str = None  # type: ignore
 
     # These methods are just to make IDE/Linters happy:
+    if TYPE_CHECKING:
 
-    def __new__(cls, *args: Any, **kwargs: Any) -> "Field[VALUE]":
-        return super().__new__(cls)
+        def __new__(cls, *args: Any, **kwargs: Any) -> "Field[VALUE]":
+            return super().__new__(cls)
 
-    @overload
-    def __get__(self, instance: None, owner: Type["Model"]) -> "Field[VALUE]":
-        ...
+        @overload
+        def __get__(self, instance: None, owner: Type["Model"]) -> "Field[VALUE]":
+            ...
 
-    @overload
-    def __get__(self, instance: "Model", owner: Type["Model"]) -> VALUE:
-        ...
+        @overload
+        def __get__(self, instance: "Model", owner: Type["Model"]) -> VALUE:
+            ...
 
-    def __get__(  # type: ignore[empty-body]
-        self, instance: Optional["Model"], owner: Type["Model"]
-    ) -> "Field[VALUE] | VALUE":
-        ...
+        def __get__(
+            self, instance: Optional["Model"], owner: Type["Model"]
+        ) -> "Field[VALUE] | VALUE":
+            ...
 
-    def __set__(self, instance: "Model", value: VALUE) -> None:
-        ...
+        def __set__(self, instance: "Model", value: VALUE) -> None:
+            ...
 
     def __init__(
         self,
