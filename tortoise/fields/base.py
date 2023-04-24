@@ -157,7 +157,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         self, instance: Optional["Model"], owner: Type["Model"]
     ) -> "Field[VALUE] | VALUE":
         ...
-    
+
     def __set__(self, instance: "Model", value: VALUE) -> None:
         ...
 
