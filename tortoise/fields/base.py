@@ -153,7 +153,9 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
     def __get__(self, instance: "Model", owner: Type["Model"]) -> VALUE:
         ...
 
-    def __get__(self, instance: Optional["Model"], owner: Type["Model"]):
+    def __get__(  # type: ignore[empty-body]
+        self, instance: Optional["Model"], owner: Type["Model"]
+    ) -> "Field[VALUE] | VALUE":
         ...
 
     def __init__(

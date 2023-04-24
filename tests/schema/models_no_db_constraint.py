@@ -44,7 +44,7 @@ class Event(Model):
 class Team(Model):
     name = fields.CharField(max_length=50, pk=True, description="The TEAM name (and PK)")
     key = fields.IntField()
-    manager: fields.ForeignKeyRelation["Team"] = fields.ForeignKeyField(
+    manager: fields.ForeignKeyNullableRelation["Team"] = fields.ForeignKeyField(
         "models.Team", db_constraint=False, related_name="team_members", null=True
     )
     talks_to: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
