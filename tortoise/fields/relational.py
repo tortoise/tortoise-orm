@@ -286,16 +286,23 @@ class RelationalField(Field[MODEL]):
         self.to_field_instance: Field = None  # type: ignore
         self.db_constraint = db_constraint
 
-    @overload
-    def __get__(self, instance: None, owner: Type["Model"]) -> "RelationalField[MODEL]":
-        ...
+    if TYPE_CHECKING:
 
-    @overload
-    def __get__(self, instance: "Model", owner: Type["Model"]) -> MODEL:
-        ...
+        @overload
+        def __get__(self, instance: None, owner: Type["Model"]) -> "RelationalField[MODEL]":
+            ...
 
-    def __get__(self, instance: Optional["Model"], owner: Type["Model"]):
-        ...
+        @overload
+        def __get__(self, instance: "Model", owner: Type["Model"]) -> MODEL:
+            ...
+
+        def __get__(
+            self, instance: Optional["Model"], owner: Type["Model"]
+        ) -> "RelationalField[MODEL] | MODEL":
+            ...
+
+        def __set__(self, instance: "Model", value: MODEL) -> None:
+            ...
 
     def describe(self, serializable: bool) -> dict:
         desc = super().describe(serializable)
@@ -402,13 +409,39 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         return desc
 
 
+@overload
 def OneToOneField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
     on_delete: str = CASCADE,
     db_constraint: bool = True,
+    *,
+    null: Literal[True],
+    **kwargs: Any,
+) -> "OneToOneNullableRelation[MODEL]":
+    ...
+
+
+@overload
+def OneToOneField(
+    model_name: str,
+    related_name: Union[Optional[str], Literal[False]] = None,
+    on_delete: str = CASCADE,
+    db_constraint: bool = True,
+    null: Literal[False] = False,
     **kwargs: Any,
 ) -> "OneToOneRelation[MODEL]":
+    ...
+
+
+def OneToOneField(
+    model_name: str,
+    related_name: Union[Optional[str], Literal[False]] = None,
+    on_delete: str = CASCADE,
+    db_constraint: bool = True,
+    null: bool = False,
+    **kwargs: Any,
+) -> "OneToOneRelation[MODEL] | OneToOneNullableRelation[MODEL]":
     """
     OneToOne relation field.
 
@@ -447,8 +480,33 @@ def OneToOneField(
     """
 
     return OneToOneFieldInstance(
-        model_name, related_name, on_delete, db_constraint=db_constraint, **kwargs
+        model_name, related_name, on_delete, db_constraint=db_constraint, null=null, **kwargs
     )
+
+
+@overload
+def ForeignKeyField(
+    model_name: str,
+    related_name: Union[Optional[str], Literal[False]] = None,
+    on_delete: str = CASCADE,
+    db_constraint: bool = True,
+    *,
+    null: Literal[True],
+    **kwargs: Any,
+) -> "ForeignKeyNullableRelation[MODEL]":
+    ...
+
+
+@overload
+def ForeignKeyField(
+    model_name: str,
+    related_name: Union[Optional[str], Literal[False]] = None,
+    on_delete: str = CASCADE,
+    db_constraint: bool = True,
+    null: Literal[False] = False,
+    **kwargs: Any,
+) -> "ForeignKeyRelation[MODEL]":
+    ...
 
 
 def ForeignKeyField(
@@ -456,8 +514,9 @@ def ForeignKeyField(
     related_name: Union[Optional[str], Literal[False]] = None,
     on_delete: str = CASCADE,
     db_constraint: bool = True,
+    null: bool = False,
     **kwargs: Any,
-) -> "ForeignKeyRelation[MODEL]":
+) -> "ForeignKeyRelation[MODEL] | ForeignKeyNullableRelation[MODEL]":
     """
     ForeignKey relation field.
 
@@ -496,7 +555,7 @@ def ForeignKeyField(
     """
 
     return ForeignKeyFieldInstance(
-        model_name, related_name, on_delete, db_constraint=db_constraint, **kwargs
+        model_name, related_name, on_delete, db_constraint=db_constraint, null=null, **kwargs
     )
 
 
@@ -509,7 +568,7 @@ def ManyToManyField(
     on_delete: str = CASCADE,
     db_constraint: bool = True,
     **kwargs: Any,
-) -> "ManyToManyRelation[MODEL]":
+) -> "ManyToManyRelation[Any]":
     """
     ManyToMany relation field.
 

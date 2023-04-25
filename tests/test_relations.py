@@ -328,6 +328,7 @@ class TestRelations(test.TestCase):
             .get(id=getattr(root, "id"))  # noqa
         )
         self.assertIsNone(retrieved_root.right)
+        assert retrieved_root.left is not None
         self.assertEqual(retrieved_root.left, left_1st_lvl)
         self.assertEqual(retrieved_root.left.left, left_2nd_lvl)
 
