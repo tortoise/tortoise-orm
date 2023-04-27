@@ -214,6 +214,14 @@ Contributing
 
 Please have a look at the `Contribution Guide <docs/CONTRIBUTING.rst>`_.
 
+ThanksTo
+========
+
+Powerful Python IDE `Pycharm <https://www.jetbrains.com/pycharm/>`_
+from `Jetbrains <https://jb.gg/OpenSourceSupport>`_.
+
+.. image:: https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg
+    :target: https://jb.gg/OpenSourceSupport
 
 License
 =======
