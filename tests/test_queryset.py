@@ -69,6 +69,58 @@ class TestQueryset(test.TestCase):
         with self.assertRaisesRegex(ParamsError, "Offset should be non-negative number"):
             await IntFields.all().offset(-10)
 
+    async def test_slicing_start_and_stop(self) -> None:
+        sliced_queryset = IntFields.all().order_by("intnum")[1:5]
+        manually_sliced_queryset = IntFields.all().order_by("intnum").offset(1).limit(4)
+        self.assertSequenceEqual(await sliced_queryset, await manually_sliced_queryset)
+
+    async def test_slicing_only_limit(self) -> None:
+        sliced_queryset = IntFields.all().order_by("intnum")[:5]
+        manually_sliced_queryset = IntFields.all().order_by("intnum").limit(5)
+        self.assertSequenceEqual(await sliced_queryset, await manually_sliced_queryset)
+
+    async def test_slicing_only_offset(self) -> None:
+        sliced_queryset = IntFields.all().order_by("intnum")[5:]
+        manually_sliced_queryset = IntFields.all().order_by("intnum").offset(5)
+        self.assertSequenceEqual(await sliced_queryset, await manually_sliced_queryset)
+
+    async def test_slicing_count(self) -> None:
+        queryset = IntFields.all().order_by("intnum")[1:5]
+        self.assertEqual(await queryset.count(), 4)
+
+    def test_slicing_negative_values(self) -> None:
+        with self.assertRaisesRegex(
+            expected_exception=ParamsError,
+            expected_regex="Slice start should be non-negative number or None.",
+        ):
+            _ = IntFields.all()[-1:]
+
+        with self.assertRaisesRegex(
+            expected_exception=ParamsError,
+            expected_regex="Slice stop should be non-negative number greater that slice start, "
+            "or None.",
+        ):
+            _ = IntFields.all()[:-1]
+
+    def test_slicing_stop_before_start(self) -> None:
+        with self.assertRaisesRegex(
+            expected_exception=ParamsError,
+            expected_regex="Slice stop should be non-negative number greater that slice start, "
+            "or None.",
+        ):
+            _ = IntFields.all()[2:1]
+
+    async def test_slicing_steps(self) -> None:
+        sliced_queryset = IntFields.all().order_by("intnum")[::1]
+        manually_sliced_queryset = IntFields.all().order_by("intnum")
+        self.assertSequenceEqual(await sliced_queryset, await manually_sliced_queryset)
+
+        with self.assertRaisesRegex(
+            expected_exception=ParamsError,
+            expected_regex="Slice steps should be 1 or None.",
+        ):
+            _ = IntFields.all()[::2]
+
     async def test_join_count(self):
         tour = await Tournament.create(name="moo")
         await MinRelation.create(tournament=tour)

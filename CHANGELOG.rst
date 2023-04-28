@@ -13,6 +13,7 @@ Changelog
 Added
 ^^^^^
 - Added config_class option to pydantic model genator that allows the developer to customize the generated pydantic model's `Config` class. (#1048)
+- Add support for queryset slicing. (#1341)
 Fixed
 ^^^^^
 - Fastapi example test not working. (#1029)
