@@ -65,7 +65,7 @@ Base function class
 
 Custom functions
 ================
-You can custom functions which not builtin, such as ``TruncMonth`` and ``JsonExtract`` etc.
+You can define custom functions which are not builtin, such as ``TruncMonth`` and ``JsonExtract`` etc.
 
 .. code-block:: python3
 
