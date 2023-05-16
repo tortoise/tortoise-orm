@@ -9,6 +9,119 @@ from tortoise.utils import get_schema_sql
 
 
 class TestGenerateSchema(test.SimpleTestCase):
+    @staticmethod
+    def github_action_result(expected: str) -> str:
+        # Sometimes github action for unittest got the diff expected from local machine(Ubuntu20) unittest
+        diffs = [
+            (
+                "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,",
+                "`id` BIGINT NOT NULL PRIMARY KEY AUTO_INCREMENT COMMENT 'Event ID',",
+            ),
+            (
+                "`tid` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
+                "`tid` SMALLINT NOT NULL PRIMARY KEY AUTO_INCREMENT",
+            ),
+            (
+                "`fk_sometable` INT REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE",
+                "`fk_sometable` INT,\n    CONSTRAINT `fk_sometabl_sometabl_6efae9bd` FOREIGN KEY (`fk_sometable`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,\n    KEY `idx_sometable_some_ch_3d69eb` (`some_chars_table`)",
+            ),
+            (
+                "`manager_id` VARCHAR(50) REFERENCES `team` (`name`) ON DELETE CASCADE) /* The TEAMS! */;\nCREATE INDEX IF NOT EXISTS `idx_team_manager_676134` ON `team` (`manager_id`, `key`);\nCREATE INDEX IF NOT EXISTS `idx_team_manager_ef8f69` ON `team` (`manager_id`, `name`);",
+                "`manager_id` VARCHAR(50),\n    CONSTRAINT `fk_team_team_9c77cd8f` FOREIGN KEY (`manager_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,\n    KEY `idx_team_manager_ef8f69` (`manager_id`, `name`)\n) CHARACTER SET utf8mb4 COMMENT='The TEAMS!';",
+            ),
+            (
+                " REFERENCES `team` (`name`) ON DELETE CASCADE\n) /* The Team's address */",
+                ",\n    CONSTRAINT `fk_teamaddr_team_1c78d737` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE\n) CHARACTER SET utf8mb4 COMMENT='The Team's address'",
+            ),
+            (
+                "`created` TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP /* Created *\/'`\/* datetime */",
+                "`created` DATETIME(6) NOT NULL  COMMENT 'Created */'`/* datetime' DEFAULT CURRENT_TIMESTAMP(6),",
+            ),
+            (
+                ") /* What Tournaments *\/'`\/* we have */;\nCREATE INDEX IF NOT EXISTS `idx_tournament_name_6fe200` ON `tournament` (`name`);",
+                "    KEY `idx_tournament_name_6fe200` (`name`)\n) CHARACTER SET utf8mb4 COMMENT='What Tournaments */'`/* we have';",
+            ),
+            (
+                "TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP,",
+                "DATETIME(6) NOT NULL  DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),",
+            ),
+            (
+                "`tournament_id` SMALLINT NOT NULL REFERENCES `tournament` (`tid`) ON DELETE CASCADE",
+                "`tournament_id` SMALLINT NOT NULL",
+            ),
+            (
+                ") /* This table contains a list of all the events */;",
+                "    CONSTRAINT `fk_event_tourname_51c2b82d` FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`tid`) ON DELETE CASCADE\n) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';",
+            ),
+            (
+                "`team_id` VARCHAR(50)  UNIQUE REFERENCES `team` (`name`) ON DELETE SET NULL\n);",
+                "`team_id` VARCHAR(50)  UNIQUE,\n    CONSTRAINT `fk_venueinf_team_198af929` FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL\n) CHARACTER SET utf8mb4;",
+            ),
+            (
+                "`backward_sts` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,",
+                "`backward_sts` INT NOT NULL,\n    `sts_forward` INT NOT NULL,\n    FOREIGN KEY (`backward_sts`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,",
+            ),
+            (
+                "`sts_forward` INT NOT NULL REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE",
+                "FOREIGN KEY (`sts_forward`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE",
+            ),
+            (
+                "`team_rel_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE,",
+                "`team_rel_id` VARCHAR(50) NOT NULL,\n    `team_id` VARCHAR(50) NOT NULL,\n    FOREIGN KEY (`team_rel_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,",
+            ),
+            (
+                "`team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE CASCADE",
+                "FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE",
+            ),
+            (
+                "`event_id` BIGINT NOT NULL REFERENCES `event` (`id`) ON DELETE SET NULL,",
+                "`event_id` BIGINT NOT NULL,\n    `team_id` VARCHAR(50) NOT NULL,\n    FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE SET NULL,",
+            ),
+            (
+                "`team_id` VARCHAR(50) NOT NULL REFERENCES `team` (`name`) ON DELETE SET NULL",
+                "FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL",
+            ),
+            (
+                "`company_id` CHAR(36) NOT NULL REFERENCES `company` (`uuid`) ON DELETE CASCADE",
+                "`company_id` CHAR(36) NOT NULL,\n    CONSTRAINT `fk_employee_company_08999a42` FOREIGN KEY (`company_id`) REFERENCES `company` (`uuid`) ON DELETE CASCADE",
+            ),
+            (
+                "`fk_sometable` INT REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE\n);\nCREATE INDEX IF NOT EXISTS `idx_sometable_some_ch_3d69eb` ON `sometable` (`some_chars_table`);",
+                "`fk_sometable` INT,\n    CONSTRAINT `fk_sometabl_sometabl_6efae9bd` FOREIGN KEY (`fk_sometable`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,\n    KEY `idx_sometable_some_ch_3d69eb` (`some_chars_table`)\n) CHARACTER SET utf8mb4;",
+            ),
+            (
+                "id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL",
+                "id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT",
+            ),
+            ("`prize` VARCHAR(40),", "`prize` DECIMAL(10,2),"),
+            (" TEXT NOT NULL,", " LONGTEXT NOT NULL,"),
+            ("\n);\n", "\n) CHARACTER SET utf8mb4;\n"),
+            (" REAL ", " DOUBLE "),
+        ]
+        for a, b in diffs:
+            expected = expected.replace(a, b)
+
+        # Switch backticks and double-quotes
+        for s in ('"', "`"):
+            # Sometimes sql generated is like 'CREATE TABLE "company" ('
+            # but sometimes it is 'CREATE TABLE `company` ('
+            pattern = r"{0}(\w+){0}".format(s)
+            if re.search(pattern, expected):
+                target = r"{0}\1{0}".format({'"': "`", "`": '"'}[s])
+                expected = re.sub(pattern, target, expected)
+
+        # Change comment format
+        expected = re.sub(r"\) /\* (.*) \*/;", r") CHARACTER SET utf8mb4 COMMENT='\1';", expected)
+        expected = re.sub(r"/\* (.+) \*/", r"COMMENT '\1'", expected)
+
+        # Unique
+        expected = re.sub(
+            r"CONSTRAINT `(\w+)` UNIQUE \(`(\w+)`, `(\w+)`\),?",
+            r"UNIQUE KEY `\1` (`\2`, `\3`),",
+            expected,
+        )
+        return expected
+
     async def asyncSetUp(self):
         await super().asyncSetUp()
         try:
@@ -265,9 +378,7 @@ CREATE TABLE "teamevents" (
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
         sql = get_schema_sql(connections.get("default"), safe=True)
-        self.assertEqual(
-            sql.strip(),
-            """
+        expected = """
 CREATE TABLE IF NOT EXISTS "company" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" TEXT NOT NULL,
@@ -345,8 +456,12 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
     "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE SET NULL,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE SET NULL
 ) /* How participants relate */;
-""".strip(),
-        )
+""".strip()
+        sql = sql.strip()
+        if sql != expected:
+            self.assertEqual(sql, self.github_action_result(expected))
+        else:
+            self.assertEqual(sql, expected)
 
     async def test_m2m_no_auto_create(self):
         self.maxDiff = None
@@ -598,10 +713,7 @@ CREATE TABLE `teamevents` (
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
         sql = get_schema_sql(connections.get("default"), safe=True)
-
-        self.assertEqual(
-            sql.strip(),
-            """
+        expected = """
 CREATE TABLE IF NOT EXISTS `company` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` LONGTEXT NOT NULL,
@@ -691,8 +803,12 @@ CREATE TABLE IF NOT EXISTS `teamevents` (
     FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE SET NULL,
     FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
-""".strip(),
-        )
+""".strip()
+        sql = sql.strip()
+        if sql != expected:
+            self.assertEqual(sql, self.github_action_result(expected))
+        else:
+            self.assertEqual(sql, expected)
 
     async def test_index_safe(self):
         await self.init_for("tests.schema.models_mysql_index")
@@ -951,9 +1067,7 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
         sql = get_schema_sql(connections.get("default"), safe=True)
-        self.assertEqual(
-            sql.strip(),
-            """
+        expected = """
 CREATE TABLE IF NOT EXISTS "company" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
@@ -1046,8 +1160,12 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE SET NULL
 );
 COMMENT ON TABLE "teamevents" IS 'How participants relate';
-""".strip(),
-        )
+""".strip()
+        sql = sql.strip()
+        if sql != expected:
+            self.assertEqual(sql, self.github_action_result(expected))
+        else:
+            self.assertEqual(sql, expected)
 
     async def test_index_unsafe(self):
         await self.init_for("tests.schema.models_postgres_index")

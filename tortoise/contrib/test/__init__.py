@@ -186,6 +186,14 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
         self._asyncioCallsQueue.put_nowait(None)  # type: ignore
         loop.run_until_complete(self._asyncioCallsQueue.join())  # type: ignore
 
+    def _setupAsyncioRunner(self):
+        if hasattr(asyncio, "Runner"):  # For python3.11+
+            runner = asyncio.Runner(debug=True, loop_factory=asyncio.get_event_loop)
+            self._asyncioRunner = runner
+
+    def _tearDownAsyncioRunner(self):
+        pass
+
     async def asyncSetUp(self) -> None:
         await self._setUpDB()
 
