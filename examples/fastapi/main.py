@@ -1,13 +1,28 @@
 # pylint: disable=E0611,E0401
+from contextlib import asynccontextmanager
 from typing import List
 
 from fastapi import FastAPI, HTTPException
 from models import User_Pydantic, UserIn_Pydantic, Users
 from pydantic import BaseModel
 
-from tortoise.contrib.fastapi import HTTPNotFoundError, register_tortoise
+from tortoise.contrib.fastapi import HTTPNotFoundError, RegisterTortoise
 
-app = FastAPI(title="Tortoise ORM FastAPI example")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await RegisterTortoise(
+        app,
+        db_url="sqlite://:memory:",
+        modules={"models": ["models"]},
+        generate_schemas=True,
+        add_exception_handlers=True,
+    ).init()
+    yield
+    await RegisterTortoise.close()
+
+
+app = FastAPI(title="Tortoise ORM FastAPI example", lifespan=lifespan)
 
 
 class Status(BaseModel):
@@ -46,12 +61,3 @@ async def delete_user(user_id: int):
     if not deleted_count:
         raise HTTPException(status_code=404, detail=f"User {user_id} not found")
     return Status(message=f"Deleted user {user_id}")
-
-
-register_tortoise(
-    app,
-    db_url="sqlite://:memory:",
-    modules={"models": ["models"]},
-    generate_schemas=True,
-    add_exception_handlers=True,
-)
