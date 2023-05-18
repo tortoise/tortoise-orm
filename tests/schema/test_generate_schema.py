@@ -458,8 +458,9 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
 ) /* How participants relate */;
 """.strip()
         sql = sql.strip()
-        if sql != expected:
-            self.assertEqual(sql, self.github_action_result(expected))
+        action_result = self.github_action_result(expected)
+        if sql == action_result:
+            self.assertEqual(sql, action_result)
         else:
             self.assertEqual(sql, expected)
 
@@ -805,8 +806,9 @@ CREATE TABLE IF NOT EXISTS `teamevents` (
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
 """.strip()
         sql = sql.strip()
-        if sql != expected:
-            self.assertEqual(sql, self.github_action_result(expected))
+        action_result = self.github_action_result(expected)
+        if sql == action_result:
+            self.assertEqual(sql, action_result)
         else:
             self.assertEqual(sql, expected)
 
@@ -1162,8 +1164,9 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
 COMMENT ON TABLE "teamevents" IS 'How participants relate';
 """.strip()
         sql = sql.strip()
-        if sql != expected:
-            self.assertEqual(sql, self.github_action_result(expected))
+        action_result = self.github_action_result(expected)
+        if sql == action_result:
+            self.assertEqual(sql, action_result)
         else:
             self.assertEqual(sql, expected)
 
