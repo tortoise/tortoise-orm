@@ -8,6 +8,12 @@ Changelog
 
 0.19
 ====
+0.19.4
+------
+Fixed
+^^^^^
+- Fix foreign key constraint not generated on MSSQL Server. (#1400)
+
 0.19.3
 ------
 Added
