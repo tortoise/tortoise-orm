@@ -512,7 +512,7 @@ class BaseExecutor:
         related_objects_for_fetch: Dict[str, list] = {}
         relation_key_field = f"{field}_id"
         for instance in instance_list:
-            if getattr(instance, relation_key_field):
+            if getattr(instance, relation_key_field) is not None:
                 key = cast(RelationalField, instance._meta.fields_map[field]).to_field
                 if key not in related_objects_for_fetch:
                     related_objects_for_fetch[key] = []

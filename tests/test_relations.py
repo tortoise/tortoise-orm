@@ -328,6 +328,7 @@ class TestRelations(test.TestCase):
             .get(id=getattr(root, "id"))  # noqa
         )
         self.assertIsNone(retrieved_root.right)
+        assert retrieved_root.left is not None
         self.assertEqual(retrieved_root.left, left_1st_lvl)
         self.assertEqual(retrieved_root.left.left, left_2nd_lvl)
 
@@ -368,6 +369,18 @@ class TestRelations(test.TestCase):
 
         single_reload = await Single.get(id=single.id)
         assert (await single_reload.extra).id == 0
+
+        tournament_0 = await Tournament.create(name="tournament zero", id=0)
+        await Event.create(name="event-zero", tournament=tournament_0)
+
+        e = await Event.get(name="event-zero")
+        id_before_fetch = e.tournament_id
+        await e.fetch_related("tournament")
+        id_after_fetch = e.tournament_id
+        self.assertEqual(id_before_fetch, id_after_fetch)
+
+        event_0 = await Event.get(name="event-zero").prefetch_related("tournament")
+        self.assertEqual(event_0.tournament, tournament_0)
 
 
 class TestDoubleFK(test.TestCase):

@@ -51,6 +51,8 @@ Contributors
 * Aleksandr Rozum ``@rozumalex``
 * Mojix Coder ``@MojixCoder``
 * Paul Serov ``@thakryptex``
+* Stanislav Zmiev ``@Ovsyanka83``
+* Waket Zheng ``@waketzheng``
 
 Special Thanks
 ==============

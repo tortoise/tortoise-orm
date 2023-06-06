@@ -140,7 +140,7 @@ class Dest_null(Model):
 
 class O2O_null(Model):
     name = fields.CharField(max_length=64)
-    event: fields.OneToOneRelation[Event] = fields.OneToOneField(
+    event: fields.OneToOneNullableRelation[Event] = fields.OneToOneField(
         "models.Dest_null", on_delete=fields.CASCADE, related_name="address_null", null=True
     )
 
@@ -668,10 +668,10 @@ class EnumFields(Model):
 
 class DoubleFK(Model):
     name = fields.CharField(max_length=50)
-    left: fields.ForeignKeyRelation["DoubleFK"] = fields.ForeignKeyField(
+    left: fields.ForeignKeyNullableRelation["DoubleFK"] = fields.ForeignKeyField(
         "models.DoubleFK", null=True, related_name="left_rel"
     )
-    right: fields.ForeignKeyRelation["DoubleFK"] = fields.ForeignKeyField(
+    right: fields.ForeignKeyNullableRelation["DoubleFK"] = fields.ForeignKeyField(
         "models.DoubleFK", null=True, related_name="right_rel"
     )
 
@@ -835,7 +835,7 @@ class Single(Model):
     """
 
     id = fields.IntField(pk=True)
-    extra: fields.ForeignKeyRelation[Extra] = fields.ForeignKeyField(
+    extra: fields.ForeignKeyNullableRelation[Extra] = fields.ForeignKeyField(
         "models.Extra", related_name="singles", null=True
     )
 
@@ -846,10 +846,10 @@ class Pair(Model):
     """
 
     id = fields.IntField(pk=True)
-    left: fields.ForeignKeyRelation[Single] = fields.ForeignKeyField(
+    left: fields.ForeignKeyNullableRelation[Single] = fields.ForeignKeyField(
         "models.Single", related_name="lefts", null=True
     )
-    right: fields.ForeignKeyRelation[Single] = fields.ForeignKeyField(
+    right: fields.ForeignKeyNullableRelation[Single] = fields.ForeignKeyField(
         "models.Single", related_name="rights", null=True
     )
 

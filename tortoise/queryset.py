@@ -90,7 +90,7 @@ class AwaitableQuery(Generic[MODEL]):
 
     def __init__(self, model: Type[MODEL]) -> None:
         self._joined_tables: List[Table] = []
-        self.model: "Type[Model]" = model
+        self.model: "Type[MODEL]" = model
         self.query: QueryBuilder = QUERY
         self._db: BaseDBAsyncClient = None  # type: ignore
         self.capabilities: Capabilities = model._meta.db.capabilities
@@ -707,7 +707,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         ignore_conflicts: bool = False,
         update_fields: Optional[Iterable[str]] = None,
         on_conflict: Optional[Iterable[str]] = None,
-    ) -> "BulkCreateQuery":
+    ) -> "BulkCreateQuery[MODEL]":
         """
         This method inserts the provided list of objects into the database in an efficient manner
         (generally only 1 query, no matter how many objects there are),
@@ -728,7 +728,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         if not ignore_conflicts:
             if (update_fields and not on_conflict) or (on_conflict and not update_fields):
                 raise ValueError("update_fields and on_conflict need set in same time.")
-        return BulkCreateQuery(  # type:ignore
+        return BulkCreateQuery(
             db=self._db,
             model=self.model,
             objects=objects,
@@ -743,7 +743,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         objects: Iterable[MODEL],
         fields: Iterable[str],
         batch_size: Optional[int] = None,
-    ) -> "BulkUpdateQuery":
+    ) -> "BulkUpdateQuery[MODEL]":
         """
         Update the given fields in each of the given objects in the database.
 
@@ -755,7 +755,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         if any(obj.pk is None for obj in objects):
             raise ValueError("All bulk_update() objects must have a primary key set.")
-        return BulkUpdateQuery(  # type:ignore
+        return BulkUpdateQuery(
             db=self._db,
             model=self.model,
             q_objects=self._q_objects,
@@ -1680,7 +1680,7 @@ class RawSQLQuery(AwaitableQuery):
         return self._execute().__await__()
 
 
-class BulkUpdateQuery(UpdateQuery):
+class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
     __slots__ = ("objects", "fields", "batch_size", "queries")
 
     def __init__(
@@ -1753,7 +1753,7 @@ class BulkUpdateQuery(UpdateQuery):
         return ";".join([str(query) for query in self.queries])
 
 
-class BulkCreateQuery(AwaitableQuery):
+class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
     __slots__ = (
         "objects",
         "ignore_conflicts",
@@ -1849,7 +1849,7 @@ class BulkCreateQuery(AwaitableQuery):
         if self._db is None:
             self._db = self._choose_db(True)  # type: ignore
         self._make_query()
-        return self._execute().__await__()  # type: ignore
+        return self._execute().__await__()
 
     def sql(self, **kwargs) -> str:
         self.as_query()
