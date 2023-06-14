@@ -1060,8 +1060,11 @@ class Model(metaclass=ModelMeta):
             try:
                 async with in_transaction(connection_name=db.connection_name) as connection:
                     return await cls.create(using_db=connection, **defaults, **kwargs), True
-            except (IntegrityError, TransactionManagementError):
-                return await cls.filter(**kwargs).using_db(db).get(), False
+            except (IntegrityError, TransactionManagementError) as exc:
+                try:
+                    return await cls.filter(**kwargs).using_db(db).get(), False
+                except Exception:
+                    raise exc
 
     @classmethod
     def select_for_update(
