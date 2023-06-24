@@ -13,6 +13,7 @@ Changelog
 Fixed
 ^^^^^
 - Fix foreign key constraint not generated on MSSQL Server. (#1400)
+- Fix testcase error with python3.11 (#1308)
 
 0.19.3
 ------
