@@ -598,6 +598,7 @@ CREATE TABLE `teamevents` (
         await self.init_for("tests.schema.models_schema_create")
         sql = get_schema_sql(connections.get("default"), safe=True).strip()
         if sql == self.safe_schema_sql:
+            # Sometimes github action get different result from local machine(Ubuntu20)
             self.assertEqual(sql, self.safe_schema_sql)
             return
         self.assertEqual(
