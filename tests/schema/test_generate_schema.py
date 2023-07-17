@@ -99,7 +99,8 @@ class TestGenerateSchema(test.SimpleTestCase):
 
     async def test_fk_bad_on_delete(self):
         with self.assertRaisesRegex(
-            ConfigurationError, "on_delete can only be CASCADE, RESTRICT or SET_NULL"
+            ConfigurationError,
+            "on_delete can only be CASCADE, RESTRICT, SET_NULL, SET_DEFAULT or NO_ACTION",
         ):
             await self.init_for("tests.schema.models_fk_2")
 
@@ -111,7 +112,8 @@ class TestGenerateSchema(test.SimpleTestCase):
 
     async def test_o2o_bad_on_delete(self):
         with self.assertRaisesRegex(
-            ConfigurationError, "on_delete can only be CASCADE, RESTRICT or SET_NULL"
+            ConfigurationError,
+            "on_delete can only be CASCADE, RESTRICT, SET_NULL, SET_DEFAULT or NO_ACTION",
         ):
             await self.init_for("tests.schema.models_o2o_2")
 
