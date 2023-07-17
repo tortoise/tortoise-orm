@@ -8,5 +8,5 @@ from tortoise.models import Model
 
 class One(Model):
     tournament: fields.ForeignKeyRelation[Two] = fields.ForeignKeyField(
-        "models.Two", on_delete="WABOOM"
+        "models.Two", on_delete="WABOOM"  # type:ignore
     )
