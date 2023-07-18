@@ -167,13 +167,14 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
     Based on `asynctest <http://asynctest.readthedocs.io/>`_
     """
 
-    def _setupAsyncioRunner(self):
+    def _setupAsyncioRunner(self) -> None:
         if hasattr(asyncio, "Runner"):  # For python3.11+
             runner = asyncio.Runner(debug=True, loop_factory=asyncio.get_event_loop)
             self._asyncioRunner = runner
 
-    def _tearDownAsyncioRunner(self):
-        ...
+    def _tearDownAsyncioRunner(self) -> None:
+        # Override runner tear down to avoid eventloop closing before testing completed.
+        pass
 
     async def _setUpDB(self) -> None:
         pass
