@@ -73,7 +73,7 @@ sanic = "*"
 # Sample integration - Starlette
 starlette = "*"
 # Pydantic support
-pydantic = "*"
+pydantic = "^2.0"
 # FastAPI support
 fastapi = "*"
 asgi_lifespan = "*"

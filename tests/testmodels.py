@@ -11,7 +11,7 @@ from enum import Enum, IntEnum
 from typing import List, Union
 
 import pytz
-from pydantic import Extra as PydanticExtra
+from pydantic import ConfigDict
 
 from tortoise import fields
 from tortoise.exceptions import NoValuesFetched, ValidationError
@@ -865,6 +865,11 @@ class Pair(Model):
     )
 
 
+def camelize_var(var_name: str):
+    var_parts: List[str] = var_name.split("_")
+    return var_parts[0] + "".join([part.title() for part in var_parts[1:]])
+
+
 class CamelCaseAliasPerson(Model):
     """CamelCaseAliasPerson model.
 
@@ -880,17 +885,9 @@ class CamelCaseAliasPerson(Model):
     class PydanticMeta:
         """Defines the default config for pydantic model generator."""
 
-        class PydanticConfig:
-            """Defines the default pydantic config for the model."""
-
-            @staticmethod
-            def camelize_var(var_name: str):
-                var_parts: List[str] = var_name.split("_")
-                return var_parts[0] + "".join([part.title() for part in var_parts[1:]])
-
-            title = "My custom title"
-            extra = PydanticExtra.ignore
-            alias_generator = camelize_var
-            allow_population_by_field_name = True
-
-        config_class = PydanticConfig
+        model_config = ConfigDict(
+            title="My custom title",
+            extra="ignore",
+            alias_generator=camelize_var,
+            populate_by_name=True,
+        )

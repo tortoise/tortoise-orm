@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, List, Type, Union
 
 import pydantic
-from pydantic import BaseConfig, BaseModel  # pylint: disable=E0611
+from pydantic import BaseModel, ConfigDict, RootModel
 
 from tortoise import fields
 
@@ -28,7 +28,7 @@ def _get_fetch_fields(
         # noinspection PyProtectedMember
         if field_name in model_class._meta.fetch_fields and issubclass(field_type, PydanticModel):
             subclass_fetch_fields = _get_fetch_fields(
-                field_type, getattr(field_type.__config__, "orig_model")
+                field_type, field_type.model_config["orig_model"]
             )
             if subclass_fetch_fields:
                 fetch_fields.extend([field_name + "__" + f for f in subclass_fetch_fields])
@@ -45,11 +45,10 @@ class PydanticModel(BaseModel):
     `model properties <https://pydantic-docs.helpmanual.io/usage/models/#model-properties>`__
     """
 
-    class Config(BaseConfig):
-        orm_mode = True  # It should be in ORM mode to convert tortoise data to pydantic
+    model_config = ConfigDict(from_attributes=True)
 
     # noinspection PyMethodParameters
-    @pydantic.validator("*", pre=True, each_item=False)  # It is a classmethod!
+    @pydantic.field_validator("*")  # It is a classmethod!
     def _tortoise_convert(cls, value):  # pylint: disable=E0213
         # Computed fields
         if callable(value):
@@ -81,10 +80,10 @@ class PydanticModel(BaseModel):
         :param obj: The Model instance you want serialized.
         """
         # Get fields needed to fetch
-        fetch_fields = _get_fetch_fields(cls, getattr(cls.__config__, "orig_model"))
+        fetch_fields = _get_fetch_fields(cls, cls.model_config["orig_model"])  # type: ignore
         # Fetch fields
         await obj.fetch_related(*fetch_fields)
-        return super().from_orm(obj)
+        return cls.model_validate(obj)
 
     @classmethod
     async def from_queryset_single(cls, queryset: "QuerySetSingle") -> "PydanticModel":
@@ -96,8 +95,8 @@ class PydanticModel(BaseModel):
 
         :param queryset: a queryset on the model this PydanticModel is based on.
         """
-        fetch_fields = _get_fetch_fields(cls, getattr(cls.__config__, "orig_model"))
-        return cls.from_orm(await queryset.prefetch_related(*fetch_fields))
+        fetch_fields = _get_fetch_fields(cls, cls.model_config["orig_model"])  # type: ignore
+        return cls.model_validate(await queryset.prefetch_related(*fetch_fields))
 
     @classmethod
     async def from_queryset(cls, queryset: "QuerySet") -> "List[PydanticModel]":
@@ -109,11 +108,11 @@ class PydanticModel(BaseModel):
 
         :param queryset: a queryset on the model this PydanticModel is based on.
         """
-        fetch_fields = _get_fetch_fields(cls, getattr(cls.__config__, "orig_model"))
-        return [cls.from_orm(e) for e in await queryset.prefetch_related(*fetch_fields)]
+        fetch_fields = _get_fetch_fields(cls, cls.model_config["orig_model"])  # type: ignore
+        return [cls.model_validate(e) for e in await queryset.prefetch_related(*fetch_fields)]
 
 
-class PydanticListModel(BaseModel):
+class PydanticListModel(RootModel):
     """
     Pydantic BaseModel for List of Tortoise Models
 
@@ -131,8 +130,8 @@ class PydanticListModel(BaseModel):
 
         :param queryset: a queryset on the model this PydanticListModel is based on.
         """
-        submodel = getattr(cls.__config__, "submodel")
-        fetch_fields = _get_fetch_fields(submodel, getattr(submodel.__config__, "orig_model"))
-        return cls(
-            __root__=[submodel.from_orm(e) for e in await queryset.prefetch_related(*fetch_fields)]
+        submodel = cls.model_config["submodel"]  # type: ignore
+        fetch_fields = _get_fetch_fields(submodel, submodel.model_config["orig_model"])
+        return cls.model_validate(
+            [submodel.model_validate(e) for e in await queryset.prefetch_related(*fetch_fields)]
         )

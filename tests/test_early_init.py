@@ -40,7 +40,7 @@ class TestBasic(test.TestCase):
         self.maxDiff = None
         Event_TooEarly = pydantic_model_creator(Event)
         self.assertEqual(
-            Event_TooEarly.schema(),
+            Event_TooEarly.model_json_schema(),
             {
                 "title": "Event",
                 "type": "object",
@@ -159,7 +159,7 @@ class TestBasic(test.TestCase):
 
         Event_Pydantic = pydantic_model_creator(Event)
         self.assertEqual(
-            Event_Pydantic.schema(),
+            Event_Pydantic.model_json_schema(),
             {
                 "title": "Event",
                 "type": "object",

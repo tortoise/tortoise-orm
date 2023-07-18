@@ -1,10 +1,9 @@
 import inspect
 from base64 import b32encode
 from hashlib import sha3_224
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type
 
-from pydantic import BaseConfig as PydanticBaseConfig
-from pydantic import Extra
+from pydantic import ConfigDict, Field, computed_field, create_model
 
 from tortoise.contrib.pydantic.base import PydanticListModel, PydanticModel
 from tortoise.contrib.pydantic.utils import get_annotations
@@ -12,7 +11,6 @@ from tortoise.fields import JSONField, relational
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
-
 
 _MODEL_INDEX: Dict[str, Type[PydanticModel]] = {}
 
@@ -60,8 +58,8 @@ class PydanticMeta:
     #: If not set (or ``False``) then leave fields in declaration order
     sort_alphabetically: bool = False
 
-    #: Allows user to specify custom config class for generated model
-    config_class: Optional[Type[PydanticBaseConfig]] = None
+    #: Allows user to specify custom config for generated model
+    model_config: Optional[ConfigDict] = None
 
 
 def _br_it(val: str) -> str:
@@ -131,7 +129,7 @@ def pydantic_model_creator(
     _stack: tuple = (),
     exclude_readonly: bool = False,
     meta_override: Optional[Type] = None,
-    config_class: Optional[Type[PydanticBaseConfig]] = None,
+    model_config: Optional[ConfigDict] = None,
 ) -> Type[PydanticModel]:
     """
     Function to build `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ off Tortoise Model.
@@ -155,7 +153,7 @@ def pydantic_model_creator(
             * order of computed functions (as provided).
     :param exclude_readonly: Build a subset model that excludes any readonly fields
     :param meta_override: A PydanticMeta class to override model's values.
-    :param config_class: A custom config class to use as pydantic config.
+    :param model_config: A custom config to use as pydantic config.
 
         Note: Created pydantic model uses config_class parameter and PydanticMeta's
             config_class as its Config class's bases(Only if provided!), but it
@@ -205,7 +203,7 @@ def pydantic_model_creator(
     default_include: Tuple[str, ...] = tuple(get_param("include"))
     default_exclude: Tuple[str, ...] = tuple(get_param("exclude"))
     default_computed: Tuple[str, ...] = tuple(get_param("computed"))
-    default_config_class: Optional[Type[PydanticBaseConfig]] = get_param("config_class")
+    default_config: Optional[ConfigDict] = get_param("model_config")
 
     backward_relations: bool = bool(get_param("backward_relations"))
 
@@ -223,39 +221,19 @@ def pydantic_model_creator(
     exclude = tuple(exclude) + default_exclude
     computed = tuple(computed) + default_computed
 
-    # Get all annotations
     annotations = get_annotations(cls)
 
-    # Note: First ones override next ones' attributes
-    pconfig_bases: List[Type] = [PydanticModel.Config]
-    # If default config class is specified, we add it as first item of bases
-    if default_config_class:
-        pconfig_bases.insert(0, default_config_class)
-    # If config class is specified, we add it as first item of bases
-    if config_class:
-        pconfig_bases.insert(0, config_class)
+    pconfig = PydanticModel.model_config.copy()
+    if default_config:
+        pconfig.update(default_config)
+    if model_config:
+        pconfig.update(model_config)
+    if "title" not in pconfig:
+        pconfig["title"] = name or cls.__name__
+    if "extra" not in pconfig:
+        pconfig["extra"] = "forbid"
 
-    # fields will be filled BY using include/exclude/computed
-    pconfig_attrs: Dict[Any, Any] = {"fields": {}}
-
-    # If at least one of default_config_class or config_class have title,
-    #   we don't add title automatically.
-    if not hasattr(default_config_class, "title") and not hasattr(config_class, "title"):
-        pconfig_attrs["title"] = name or cls.__name__
-
-    # If at least one of default_config_class or config_class have extra,
-    #   we don't add extra automatically.
-    if not hasattr(default_config_class, "extra") and not hasattr(config_class, "extra"):
-        pconfig_attrs["extra"] = Extra.forbid
-
-    # Properties and their annotations` store
-    pconfig: Type[PydanticBaseConfig] = type(
-        "Config",
-        tuple(pconfig_bases),
-        pconfig_attrs,
-    )
-    pannotations: Dict[str, Optional[Type]] = {}
-    properties: Dict[str, Any] = {"__annotations__": pannotations, "Config": pconfig}
+    properties: Dict[str, Any] = {}
 
     # Get model description
     model_description = cls.describe(serializable=False)
@@ -379,7 +357,7 @@ def pydantic_model_creator(
                 if fdesc.get("nullable") or field_default is not None:
                     model = Optional[model]  # type: ignore
 
-                pannotations[fname] = model
+                properties[fname] = model
 
         # Backward FK and ManyToMany fields are list of embedded schemas
         elif (
@@ -388,18 +366,18 @@ def pydantic_model_creator(
         ):
             model = get_submodel(fdesc["python_type"])
             if model:
-                pannotations[fname] = List[model]  # type: ignore
+                properties[fname] = List[model]  # type: ignore
 
         # Computed fields as methods
         elif field_type is callable:
             func = fdesc["function"]
-            annotation = get_annotations(cls, func).get("return", None)
+            annotation = get_annotations(cls, func).get("return", Any)
             comment = _cleandoc(func)
-            if annotation is not None:
-                pannotations[fname] = annotation
+            properties[fname] = computed_field(return_type=annotation, description=comment)(func)
+
         # Json fields
         elif field_type is JSONField:
-            pannotations[fname] = Any  # type: ignore
+            properties[fname] = Any
         # Any other tortoise fields
         else:
             annotation = annotations.get(fname, None)
@@ -410,17 +388,16 @@ def pydantic_model_creator(
             if fdesc.get("nullable") or field_default is not None or fname in optional:
                 ptype = Optional[ptype]
             if not (exclude_readonly and fdesc["constraints"].get("readOnly") is True):
-                pannotations[fname] = annotation or ptype
+                properties[fname] = annotation or ptype
 
-        # Create a schema for the field
-        if fname in pannotations:
-            # Use comment if we have and enabled or use the field description if specified
-            description = comment or _br_it(fdesc.get("docstring") or fdesc["description"] or "")
-            fconfig["description"] = description
+        if fname in properties:
             fconfig["title"] = fname.replace("_", " ").title()
+            description = comment or _br_it(fdesc.get("docstring") or fdesc["description"] or "")
+            if description:
+                fconfig["description"] = description
             if field_default is not None and not callable(field_default):
                 properties[fname] = field_default
-            pconfig.fields[fname] = fconfig
+            properties[fname] = (properties[fname], Field(**fconfig))
 
     # Here we endure that the name is unique, but complete objects are still labeled verbatim
     if not has_submodel:
@@ -434,15 +411,18 @@ def pydantic_model_creator(
         return _MODEL_INDEX[_name]
 
     # Creating Pydantic class for the properties generated before
-    model = cast(Type[PydanticModel], type(_name, (PydanticModel,), properties))
+    model = create_model(
+        _name,
+        __base__=PydanticModel,
+        **properties,
+    )
+    model.model_config = pconfig
     # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)
     # Store the base class
-    setattr(model.__config__, "orig_model", cls)
-
+    model.model_config["orig_model"] = cls  # type: ignore
     # Store model reference so we can de-dup it later on if needed.
     _MODEL_INDEX[_name] = model
-
     return model
 
 
@@ -491,14 +471,14 @@ def pydantic_queryset_creator(
     )
     lname = name or f"{submodel.__name__}_list"
 
-    properties = {"__annotations__": {"__root__": List[submodel]}}  # type: ignore
     # Creating Pydantic class for the properties generated before
-    model = cast(Type[PydanticListModel], type(lname, (PydanticListModel,), properties))
+    model = create_model(
+        lname,
+        __base__=PydanticListModel,
+    )
     # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)
     # The title of the model to hide the hash postfix
-    setattr(model.__config__, "title", name or f"{getattr(submodel.__config__,'title')}_list")
-    # Store the base class & submodel
-    setattr(model.__config__, "submodel", submodel)
-
+    model.model_config["title"] = name or f"{submodel.model_config['title']}_list"
+    model.model_config["submodel"] = submodel  # type: ignore
     return model
