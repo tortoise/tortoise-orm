@@ -371,9 +371,12 @@ def pydantic_model_creator(
         # Computed fields as methods
         elif field_type is callable:
             func = fdesc["function"]
-            annotation = get_annotations(cls, func).get("return", Any)
+            annotation = get_annotations(cls, func).get("return", None)
             comment = _cleandoc(func)
-            properties[fname] = computed_field(return_type=annotation, description=comment)(func)
+            if annotation is not None:
+                properties[fname] = computed_field(return_type=annotation, description=comment)(
+                    func
+                )
 
         # Json fields
         elif field_type is JSONField:
@@ -396,8 +399,9 @@ def pydantic_model_creator(
             if description:
                 fconfig["description"] = description
             if field_default is not None and not callable(field_default):
-                properties[fname] = field_default
-            properties[fname] = (properties[fname], Field(**fconfig))
+                properties[fname] = (properties[fname], Field(default=field_default, **fconfig))
+            else:
+                properties[fname] = (properties[fname], Field(**fconfig))
 
     # Here we endure that the name is unique, but complete objects are still labeled verbatim
     if not has_submodel:
@@ -475,6 +479,7 @@ def pydantic_queryset_creator(
     model = create_model(
         lname,
         __base__=PydanticListModel,
+        __annotations__={"root": List[submodel]},  # type: ignore
     )
     # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)

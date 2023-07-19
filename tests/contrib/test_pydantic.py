@@ -64,133 +64,160 @@ class TestPydantic(test.TestCase):
         self.assertEqual(
             self.Event_Pydantic.model_json_schema(),
             {
-                "title": "Event",
-                "description": "Events on the calendar",
-                "type": "object",
-                "properties": {
-                    "event_id": {
-                        "title": "Event Id",
-                        "minimum": 1,
-                        "maximum": 9223372036854775807,
-                        "type": "integer",
-                    },
-                    "name": {"title": "Name", "description": "The name", "type": "string"},
-                    "tournament": {
-                        "title": "Tournament",
-                        "description": "What tournaments is a happenin'",
-                        "allOf": [{"$ref": "#/$defs/tests.testmodels.Tournament.leaf"}],
-                    },
-                    "reporter": {
-                        "title": "Reporter",
-                        "nullable": True,
-                        "allOf": [{"$ref": "#/$defs/tests.testmodels.Reporter.leaf"}],
-                    },
-                    "participants": {
-                        "title": "Participants",
-                        "type": "array",
-                        "items": {"$ref": "#/$defs/tests.testmodels.Team.leaf"},
-                    },
-                    "modified": {
-                        "title": "Modified",
-                        "readOnly": True,
-                        "type": "string",
-                        "format": "date-time",
-                    },
-                    "token": {"title": "Token", "type": "string"},
-                    "alias": {
-                        "title": "Alias",
-                        "minimum": -2147483648,
-                        "maximum": 2147483647,
-                        "nullable": True,
-                        "type": "integer",
-                    },
-                    "address": {
-                        "title": "Address",
-                        "nullable": True,
-                        "allOf": [{"$ref": "#/$defs/tests.testmodels.Address.leaf"}],
-                    },
-                },
-                "required": ["event_id", "name", "tournament", "participants", "modified"],
-                "additionalProperties": False,
                 "$defs": {
-                    "tests.testmodels.Tournament.leaf": {
-                        "title": "Tournament",
-                        "type": "object",
+                    "pydantic__main__tests__testmodels__Address__leaf": {
+                        "additionalProperties": False,
                         "properties": {
-                            "id": {
-                                "title": "Id",
+                            "city": {"maxLength": 64, "title": "City", "type": "string"},
+                            "street": {"maxLength": 128, "title": "Street", "type": "string"},
+                            "event_id": {
+                                "maximum": 9223372036854775807,
                                 "minimum": 1,
-                                "maximum": 32767,
+                                "title": "Event Id",
                                 "type": "integer",
                             },
-                            "name": {"title": "Name", "maxLength": 255, "type": "string"},
-                            "desc": {"title": "Desc", "nullable": True, "type": "string"},
-                            "created": {
-                                "title": "Created",
-                                "readOnly": True,
-                                "type": "string",
-                                "format": "date-time",
-                            },
                         },
-                        "required": ["id", "name", "created"],
-                        "additionalProperties": False,
-                    },
-                    "tests.testmodels.Reporter.leaf": {
-                        "title": "Reporter",
-                        "description": "Whom is assigned as the reporter",
+                        "required": ["city", "street", "event_id"],
+                        "title": "Address",
                         "type": "object",
+                    },
+                    "pydantic__main__tests__testmodels__Reporter__leaf": {
+                        "additionalProperties": False,
+                        "description": "Whom is assigned as the reporter",
                         "properties": {
                             "id": {
-                                "title": "Id",
-                                "minimum": 1,
                                 "maximum": 2147483647,
+                                "minimum": 1,
+                                "title": "Id",
                                 "type": "integer",
                             },
                             "name": {"title": "Name", "type": "string"},
                         },
                         "required": ["id", "name"],
-                        "additionalProperties": False,
-                    },
-                    "tests.testmodels.Team.leaf": {
-                        "title": "Team",
-                        "description": "Team that is a playing",
+                        "title": "Reporter",
                         "type": "object",
+                    },
+                    "pydantic__main__tests__testmodels__Team__leaf": {
+                        "additionalProperties": False,
+                        "description": "Team that is a playing",
                         "properties": {
                             "id": {
-                                "title": "Id",
-                                "minimum": 1,
                                 "maximum": 2147483647,
+                                "minimum": 1,
+                                "title": "Id",
                                 "type": "integer",
                             },
                             "name": {"title": "Name", "type": "string"},
                             "alias": {
-                                "title": "Alias",
-                                "minimum": -2147483648,
-                                "maximum": 2147483647,
+                                "anyOf": [
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer",
+                                    },
+                                    {"type": "null"},
+                                ],
                                 "nullable": True,
-                                "type": "integer",
+                                "title": "Alias",
                             },
                         },
-                        "required": ["id", "name"],
-                        "additionalProperties": False,
-                    },
-                    "tests.testmodels.Address.leaf": {
-                        "title": "Address",
+                        "required": ["id", "name", "alias"],
+                        "title": "Team",
                         "type": "object",
+                    },
+                    "pydantic__main__tests__testmodels__Tournament__leaf": {
+                        "additionalProperties": False,
                         "properties": {
-                            "event_id": {
-                                "title": "Event Id",
+                            "id": {
+                                "maximum": 32767,
                                 "minimum": 1,
-                                "maximum": 9223372036854775807,
+                                "title": "Id",
                                 "type": "integer",
                             },
-                            "city": {"title": "City", "maxLength": 64, "type": "string"},
-                            "street": {"title": "Street", "maxLength": 128, "type": "string"},
+                            "name": {"maxLength": 255, "title": "Name", "type": "string"},
+                            "desc": {
+                                "anyOf": [{"type": "string"}, {"type": "null"}],
+                                "nullable": True,
+                                "title": "Desc",
+                            },
+                            "created": {
+                                "format": "date-time",
+                                "readOnly": True,
+                                "title": "Created",
+                                "type": "string",
+                            },
                         },
-                        "required": ["city", "street", "event_id"],
-                        "additionalProperties": False,
+                        "required": ["id", "name", "desc", "created"],
+                        "title": "Tournament",
+                        "type": "object",
                     },
                 },
+                "additionalProperties": False,
+                "description": "Events on the calendar",
+                "properties": {
+                    "event_id": {
+                        "maximum": 9223372036854775807,
+                        "minimum": 1,
+                        "title": "Event Id",
+                        "type": "integer",
+                    },
+                    "name": {"description": "The name", "title": "Name", "type": "string"},
+                    "tournament": {
+                        "allOf": [
+                            {"$ref": "#/$defs/pydantic__main__tests__testmodels__Tournament__leaf"}
+                        ],
+                        "description": "What tournaments is a happenin'",
+                    },
+                    "reporter": {
+                        "anyOf": [
+                            {"$ref": "#/$defs/pydantic__main__tests__testmodels__Reporter__leaf"},
+                            {"type": "null"},
+                        ],
+                        "nullable": True,
+                        "title": "Reporter",
+                    },
+                    "participants": {
+                        "items": {"$ref": "#/$defs/pydantic__main__tests__testmodels__Team__leaf"},
+                        "title": "Participants",
+                        "type": "array",
+                    },
+                    "modified": {
+                        "format": "date-time",
+                        "readOnly": True,
+                        "title": "Modified",
+                        "type": "string",
+                    },
+                    "token": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Token"},
+                    "alias": {
+                        "anyOf": [
+                            {"maximum": 2147483647, "minimum": -2147483648, "type": "integer"},
+                            {"type": "null"},
+                        ],
+                        "nullable": True,
+                        "title": "Alias",
+                    },
+                    "address": {
+                        "anyOf": [
+                            {"$ref": "#/$defs/pydantic__main__tests__testmodels__Address__leaf"},
+                            {"type": "null"},
+                        ],
+                        "nullable": True,
+                        "title": "Address",
+                    },
+                },
+                "required": [
+                    "event_id",
+                    "name",
+                    "tournament",
+                    "reporter",
+                    "participants",
+                    "modified",
+                    "token",
+                    "alias",
+                    "address",
+                ],
+                "title": "Event",
+                "type": "object",
             },
         )
 
@@ -198,139 +225,181 @@ class TestPydantic(test.TestCase):
         self.assertEqual(
             self.Event_Pydantic_List.model_json_schema(),
             {
-                "title": "Event_list",
-                "description": "Events on the calendar",
-                "type": "array",
-                "items": {"$ref": "#/$defs/tests.testmodels.Event"},
                 "$defs": {
-                    "tests.testmodels.Tournament.leaf": {
-                        "title": "Tournament",
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "title": "Id",
-                                "minimum": 1,
-                                "maximum": 32767,
-                                "type": "integer",
-                            },
-                            "name": {"title": "Name", "maxLength": 255, "type": "string"},
-                            "desc": {"title": "Desc", "nullable": True, "type": "string"},
-                            "created": {
-                                "title": "Created",
-                                "readOnly": True,
-                                "type": "string",
-                                "format": "date-time",
-                            },
-                        },
-                        "required": ["id", "name", "created"],
+                    "Event": {
                         "additionalProperties": False,
-                    },
-                    "tests.testmodels.Reporter.leaf": {
-                        "title": "Reporter",
-                        "description": "Whom is assigned as the reporter",
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "title": "Id",
-                                "minimum": 1,
-                                "maximum": 2147483647,
-                                "type": "integer",
-                            },
-                            "name": {"title": "Name", "type": "string"},
-                        },
-                        "required": ["id", "name"],
-                        "additionalProperties": False,
-                    },
-                    "tests.testmodels.Team.leaf": {
-                        "title": "Team",
-                        "description": "Team that is a playing",
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "title": "Id",
-                                "minimum": 1,
-                                "maximum": 2147483647,
-                                "type": "integer",
-                            },
-                            "name": {"title": "Name", "type": "string"},
-                            "alias": {
-                                "title": "Alias",
-                                "minimum": -2147483648,
-                                "maximum": 2147483647,
-                                "nullable": True,
-                                "type": "integer",
-                            },
-                        },
-                        "required": ["id", "name"],
-                        "additionalProperties": False,
-                    },
-                    "tests.testmodels.Address.leaf": {
-                        "title": "Address",
-                        "type": "object",
-                        "properties": {
-                            "event_id": {
-                                "title": "Event Id",
-                                "minimum": 1,
-                                "maximum": 9223372036854775807,
-                                "type": "integer",
-                            },
-                            "city": {"title": "City", "maxLength": 64, "type": "string"},
-                            "street": {"title": "Street", "maxLength": 128, "type": "string"},
-                        },
-                        "required": ["city", "street", "event_id"],
-                        "additionalProperties": False,
-                    },
-                    "tests.testmodels.Event": {
-                        "title": "Event",
                         "description": "Events on the calendar",
-                        "type": "object",
                         "properties": {
                             "event_id": {
-                                "title": "Event Id",
-                                "minimum": 1,
                                 "maximum": 9223372036854775807,
+                                "minimum": 1,
+                                "title": "Event Id",
                                 "type": "integer",
                             },
-                            "name": {"title": "Name", "description": "The name", "type": "string"},
+                            "name": {"description": "The name", "title": "Name", "type": "string"},
                             "tournament": {
-                                "title": "Tournament",
+                                "allOf": [
+                                    {
+                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Tournament__leaf"
+                                    }
+                                ],
                                 "description": "What tournaments is a happenin'",
-                                "allOf": [{"$ref": "#/$defs/tests.testmodels.Tournament.leaf"}],
                             },
                             "reporter": {
-                                "title": "Reporter",
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Reporter__leaf"
+                                    },
+                                    {"type": "null"},
+                                ],
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/$defs/tests.testmodels.Reporter.leaf"}],
+                                "title": "Reporter",
                             },
                             "participants": {
+                                "items": {
+                                    "$ref": "#/$defs/pydantic__main__tests__testmodels__Team__leaf"
+                                },
                                 "title": "Participants",
                                 "type": "array",
-                                "items": {"$ref": "#/$defs/tests.testmodels.Team.leaf"},
                             },
                             "modified": {
-                                "title": "Modified",
-                                "readOnly": True,
-                                "type": "string",
                                 "format": "date-time",
+                                "readOnly": True,
+                                "title": "Modified",
+                                "type": "string",
                             },
-                            "token": {"title": "Token", "type": "string"},
+                            "token": {
+                                "anyOf": [{"type": "string"}, {"type": "null"}],
+                                "title": "Token",
+                            },
                             "alias": {
-                                "title": "Alias",
-                                "minimum": -2147483648,
-                                "maximum": 2147483647,
+                                "anyOf": [
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer",
+                                    },
+                                    {"type": "null"},
+                                ],
                                 "nullable": True,
-                                "type": "integer",
+                                "title": "Alias",
                             },
                             "address": {
-                                "title": "Address",
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Address__leaf"
+                                    },
+                                    {"type": "null"},
+                                ],
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/$defs/tests.testmodels.Address.leaf"}],
+                                "title": "Address",
                             },
                         },
-                        "required": ["event_id", "name", "tournament", "participants", "modified"],
+                        "required": [
+                            "event_id",
+                            "name",
+                            "tournament",
+                            "reporter",
+                            "participants",
+                            "modified",
+                            "token",
+                            "alias",
+                            "address",
+                        ],
+                        "title": "Event",
+                        "type": "object",
+                    },
+                    "pydantic__main__tests__testmodels__Address__leaf": {
                         "additionalProperties": False,
+                        "properties": {
+                            "city": {"maxLength": 64, "title": "City", "type": "string"},
+                            "street": {"maxLength": 128, "title": "Street", "type": "string"},
+                            "event_id": {
+                                "maximum": 9223372036854775807,
+                                "minimum": 1,
+                                "title": "Event Id",
+                                "type": "integer",
+                            },
+                        },
+                        "required": ["city", "street", "event_id"],
+                        "title": "Address",
+                        "type": "object",
+                    },
+                    "pydantic__main__tests__testmodels__Reporter__leaf": {
+                        "additionalProperties": False,
+                        "description": "Whom is assigned as the reporter",
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": 1,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"title": "Name", "type": "string"},
+                        },
+                        "required": ["id", "name"],
+                        "title": "Reporter",
+                        "type": "object",
+                    },
+                    "pydantic__main__tests__testmodels__Team__leaf": {
+                        "additionalProperties": False,
+                        "description": "Team that is a playing",
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": 1,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"title": "Name", "type": "string"},
+                            "alias": {
+                                "anyOf": [
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer",
+                                    },
+                                    {"type": "null"},
+                                ],
+                                "nullable": True,
+                                "title": "Alias",
+                            },
+                        },
+                        "required": ["id", "name", "alias"],
+                        "title": "Team",
+                        "type": "object",
+                    },
+                    "pydantic__main__tests__testmodels__Tournament__leaf": {
+                        "additionalProperties": False,
+                        "properties": {
+                            "id": {
+                                "maximum": 32767,
+                                "minimum": 1,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"maxLength": 255, "title": "Name", "type": "string"},
+                            "desc": {
+                                "anyOf": [{"type": "string"}, {"type": "null"}],
+                                "nullable": True,
+                                "title": "Desc",
+                            },
+                            "created": {
+                                "format": "date-time",
+                                "readOnly": True,
+                                "title": "Created",
+                                "type": "string",
+                            },
+                        },
+                        "required": ["id", "name", "desc", "created"],
+                        "title": "Tournament",
+                        "type": "object",
                     },
                 },
+                "description": "Events on the calendar",
+                "items": {"$ref": "#/$defs/Event"},
+                "title": "Event_list",
+                "type": "array",
             },
         )
 
@@ -338,132 +407,165 @@ class TestPydantic(test.TestCase):
         self.assertEqual(
             self.Address_Pydantic.model_json_schema(),
             {
-                "title": "Address",
-                "type": "object",
-                "properties": {
-                    "city": {"title": "City", "maxLength": 64, "type": "string"},
-                    "street": {"title": "Street", "maxLength": 128, "type": "string"},
-                    "event": {
+                "$defs": {
+                    "orhjcw": {
+                        "additionalProperties": False,
+                        "description": "Events on the calendar",
+                        "properties": {
+                            "event_id": {
+                                "maximum": 9223372036854775807,
+                                "minimum": 1,
+                                "title": "Event Id",
+                                "type": "integer",
+                            },
+                            "name": {"description": "The name", "title": "Name", "type": "string"},
+                            "tournament": {
+                                "allOf": [
+                                    {
+                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Tournament__leaf"
+                                    }
+                                ],
+                                "description": "What tournaments is a happenin'",
+                            },
+                            "reporter": {
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Reporter__leaf"
+                                    },
+                                    {"type": "null"},
+                                ],
+                                "nullable": True,
+                                "title": "Reporter",
+                            },
+                            "participants": {
+                                "items": {
+                                    "$ref": "#/$defs/pydantic__main__tests__testmodels__Team__leaf"
+                                },
+                                "title": "Participants",
+                                "type": "array",
+                            },
+                            "modified": {
+                                "format": "date-time",
+                                "readOnly": True,
+                                "title": "Modified",
+                                "type": "string",
+                            },
+                            "token": {
+                                "anyOf": [{"type": "string"}, {"type": "null"}],
+                                "title": "Token",
+                            },
+                            "alias": {
+                                "anyOf": [
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer",
+                                    },
+                                    {"type": "null"},
+                                ],
+                                "nullable": True,
+                                "title": "Alias",
+                            },
+                        },
+                        "required": [
+                            "event_id",
+                            "name",
+                            "tournament",
+                            "reporter",
+                            "participants",
+                            "modified",
+                            "token",
+                            "alias",
+                        ],
                         "title": "Event",
-                        "allOf": [{"$ref": "#/$defs/tests.testmodels.Event.orhjcw"}],
+                        "type": "object",
                     },
+                    "pydantic__main__tests__testmodels__Reporter__leaf": {
+                        "additionalProperties": False,
+                        "description": "Whom is assigned as the reporter",
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": 1,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"title": "Name", "type": "string"},
+                        },
+                        "required": ["id", "name"],
+                        "title": "Reporter",
+                        "type": "object",
+                    },
+                    "pydantic__main__tests__testmodels__Team__leaf": {
+                        "additionalProperties": False,
+                        "description": "Team that is a playing",
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": 1,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"title": "Name", "type": "string"},
+                            "alias": {
+                                "anyOf": [
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer",
+                                    },
+                                    {"type": "null"},
+                                ],
+                                "nullable": True,
+                                "title": "Alias",
+                            },
+                        },
+                        "required": ["id", "name", "alias"],
+                        "title": "Team",
+                        "type": "object",
+                    },
+                    "pydantic__main__tests__testmodels__Tournament__leaf": {
+                        "additionalProperties": False,
+                        "properties": {
+                            "id": {
+                                "maximum": 32767,
+                                "minimum": 1,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"maxLength": 255, "title": "Name", "type": "string"},
+                            "desc": {
+                                "anyOf": [{"type": "string"}, {"type": "null"}],
+                                "nullable": True,
+                                "title": "Desc",
+                            },
+                            "created": {
+                                "format": "date-time",
+                                "readOnly": True,
+                                "title": "Created",
+                                "type": "string",
+                            },
+                        },
+                        "required": ["id", "name", "desc", "created"],
+                        "title": "Tournament",
+                        "type": "object",
+                    },
+                },
+                "additionalProperties": False,
+                "properties": {
+                    "city": {"maxLength": 64, "title": "City", "type": "string"},
+                    "street": {"maxLength": 128, "title": "Street", "type": "string"},
+                    "event": {"$ref": "#/$defs/orhjcw"},
                     "event_id": {
-                        "title": "Event Id",
-                        "minimum": 1,
                         "maximum": 9223372036854775807,
+                        "minimum": 1,
+                        "title": "Event Id",
                         "type": "integer",
                     },
                 },
                 "required": ["city", "street", "event", "event_id"],
-                "additionalProperties": False,
-                "$defs": {
-                    "tests.testmodels.Tournament.leaf": {
-                        "title": "Tournament",
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "title": "Id",
-                                "minimum": 1,
-                                "maximum": 32767,
-                                "type": "integer",
-                            },
-                            "name": {"title": "Name", "maxLength": 255, "type": "string"},
-                            "desc": {"title": "Desc", "nullable": True, "type": "string"},
-                            "created": {
-                                "title": "Created",
-                                "readOnly": True,
-                                "type": "string",
-                                "format": "date-time",
-                            },
-                        },
-                        "required": ["id", "name", "created"],
-                        "additionalProperties": False,
-                    },
-                    "tests.testmodels.Reporter.leaf": {
-                        "title": "Reporter",
-                        "description": "Whom is assigned as the reporter",
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "title": "Id",
-                                "minimum": 1,
-                                "maximum": 2147483647,
-                                "type": "integer",
-                            },
-                            "name": {"title": "Name", "type": "string"},
-                        },
-                        "required": ["id", "name"],
-                        "additionalProperties": False,
-                    },
-                    "tests.testmodels.Team.leaf": {
-                        "title": "Team",
-                        "description": "Team that is a playing",
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "title": "Id",
-                                "minimum": 1,
-                                "maximum": 2147483647,
-                                "type": "integer",
-                            },
-                            "name": {"title": "Name", "type": "string"},
-                            "alias": {
-                                "title": "Alias",
-                                "minimum": -2147483648,
-                                "maximum": 2147483647,
-                                "nullable": True,
-                                "type": "integer",
-                            },
-                        },
-                        "required": ["id", "name"],
-                        "additionalProperties": False,
-                    },
-                    "tests.testmodels.Event.orhjcw": {
-                        "title": "Event",
-                        "description": "Events on the calendar",
-                        "type": "object",
-                        "properties": {
-                            "event_id": {
-                                "title": "Event Id",
-                                "minimum": 1,
-                                "maximum": 9223372036854775807,
-                                "type": "integer",
-                            },
-                            "name": {"title": "Name", "description": "The name", "type": "string"},
-                            "tournament": {
-                                "title": "Tournament",
-                                "description": "What tournaments is a happenin'",
-                                "allOf": [{"$ref": "#/$defs/tests.testmodels.Tournament.leaf"}],
-                            },
-                            "reporter": {
-                                "title": "Reporter",
-                                "nullable": True,
-                                "allOf": [{"$ref": "#/$defs/tests.testmodels.Reporter.leaf"}],
-                            },
-                            "participants": {
-                                "title": "Participants",
-                                "type": "array",
-                                "items": {"$ref": "#/$defs/tests.testmodels.Team.leaf"},
-                            },
-                            "modified": {
-                                "title": "Modified",
-                                "readOnly": True,
-                                "type": "string",
-                                "format": "date-time",
-                            },
-                            "token": {"title": "Token", "type": "string"},
-                            "alias": {
-                                "title": "Alias",
-                                "minimum": -2147483648,
-                                "maximum": 2147483647,
-                                "nullable": True,
-                                "type": "integer",
-                            },
-                        },
-                        "required": ["event_id", "name", "tournament", "participants", "modified"],
-                        "additionalProperties": False,
-                    },
-                },
+                "title": "Address",
+                "type": "object",
             },
         )
 
@@ -471,129 +573,167 @@ class TestPydantic(test.TestCase):
         self.assertEqual(
             self.Tournament_Pydantic.model_json_schema(),
             {
-                "title": "Tournament",
-                "type": "object",
-                "properties": {
-                    "id": {"title": "Id", "minimum": 1, "maximum": 32767, "type": "integer"},
-                    "name": {"title": "Name", "maxLength": 255, "type": "string"},
-                    "desc": {"title": "Desc", "nullable": True, "type": "string"},
-                    "created": {
-                        "title": "Created",
-                        "readOnly": True,
-                        "type": "string",
-                        "format": "date-time",
-                    },
-                    "events": {
-                        "title": "Events",
-                        "description": "What tournaments is a happenin'",
-                        "type": "array",
-                        "items": {"$ref": "#/$defs/tests.testmodels.Event.b4oydv"},
-                    },
-                },
-                "required": ["id", "name", "created", "events"],
-                "additionalProperties": False,
                 "$defs": {
-                    "tests.testmodels.Reporter.leaf": {
-                        "title": "Reporter",
-                        "description": "Whom is assigned as the reporter",
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "title": "Id",
-                                "minimum": 1,
-                                "maximum": 2147483647,
-                                "type": "integer",
-                            },
-                            "name": {"title": "Name", "type": "string"},
-                        },
-                        "required": ["id", "name"],
+                    "b4oydv": {
                         "additionalProperties": False,
-                    },
-                    "tests.testmodels.Team.leaf": {
-                        "title": "Team",
-                        "description": "Team that is a playing",
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "title": "Id",
-                                "minimum": 1,
-                                "maximum": 2147483647,
-                                "type": "integer",
-                            },
-                            "name": {"title": "Name", "type": "string"},
-                            "alias": {
-                                "title": "Alias",
-                                "minimum": -2147483648,
-                                "maximum": 2147483647,
-                                "nullable": True,
-                                "type": "integer",
-                            },
-                        },
-                        "required": ["id", "name"],
-                        "additionalProperties": False,
-                    },
-                    "tests.testmodels.Address.leaf": {
-                        "title": "Address",
-                        "type": "object",
-                        "properties": {
-                            "event_id": {
-                                "title": "Event Id",
-                                "minimum": 1,
-                                "maximum": 9223372036854775807,
-                                "type": "integer",
-                            },
-                            "city": {"title": "City", "maxLength": 64, "type": "string"},
-                            "street": {"title": "Street", "maxLength": 128, "type": "string"},
-                        },
-                        "required": ["city", "street", "event_id"],
-                        "additionalProperties": False,
-                    },
-                    "tests.testmodels.Event.b4oydv": {
-                        "title": "Event",
                         "description": "Events on the calendar",
-                        "type": "object",
                         "properties": {
                             "event_id": {
-                                "title": "Event Id",
-                                "minimum": 1,
                                 "maximum": 9223372036854775807,
+                                "minimum": 1,
+                                "title": "Event Id",
                                 "type": "integer",
                             },
-                            "name": {"title": "Name", "description": "The name", "type": "string"},
+                            "name": {"description": "The name", "title": "Name", "type": "string"},
                             "reporter": {
-                                "title": "Reporter",
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Reporter__leaf"
+                                    },
+                                    {"type": "null"},
+                                ],
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/$defs/tests.testmodels.Reporter.leaf"}],
+                                "title": "Reporter",
                             },
                             "participants": {
+                                "items": {
+                                    "$ref": "#/$defs/pydantic__main__tests__testmodels__Team__leaf"
+                                },
                                 "title": "Participants",
                                 "type": "array",
-                                "items": {"$ref": "#/$defs/tests.testmodels.Team.leaf"},
                             },
                             "modified": {
-                                "title": "Modified",
-                                "readOnly": True,
-                                "type": "string",
                                 "format": "date-time",
+                                "readOnly": True,
+                                "title": "Modified",
+                                "type": "string",
                             },
-                            "token": {"title": "Token", "type": "string"},
+                            "token": {
+                                "anyOf": [{"type": "string"}, {"type": "null"}],
+                                "title": "Token",
+                            },
                             "alias": {
-                                "title": "Alias",
-                                "minimum": -2147483648,
-                                "maximum": 2147483647,
+                                "anyOf": [
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer",
+                                    },
+                                    {"type": "null"},
+                                ],
                                 "nullable": True,
-                                "type": "integer",
+                                "title": "Alias",
                             },
                             "address": {
-                                "title": "Address",
+                                "anyOf": [
+                                    {
+                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Address__leaf"
+                                    },
+                                    {"type": "null"},
+                                ],
                                 "nullable": True,
-                                "allOf": [{"$ref": "#/$defs/tests.testmodels.Address.leaf"}],
+                                "title": "Address",
                             },
                         },
-                        "required": ["event_id", "name", "participants", "modified"],
+                        "required": [
+                            "event_id",
+                            "name",
+                            "reporter",
+                            "participants",
+                            "modified",
+                            "token",
+                            "alias",
+                            "address",
+                        ],
+                        "title": "Event",
+                        "type": "object",
+                    },
+                    "pydantic__main__tests__testmodels__Address__leaf": {
                         "additionalProperties": False,
+                        "properties": {
+                            "city": {"maxLength": 64, "title": "City", "type": "string"},
+                            "street": {"maxLength": 128, "title": "Street", "type": "string"},
+                            "event_id": {
+                                "maximum": 9223372036854775807,
+                                "minimum": 1,
+                                "title": "Event Id",
+                                "type": "integer",
+                            },
+                        },
+                        "required": ["city", "street", "event_id"],
+                        "title": "Address",
+                        "type": "object",
+                    },
+                    "pydantic__main__tests__testmodels__Reporter__leaf": {
+                        "additionalProperties": False,
+                        "description": "Whom is assigned as the reporter",
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": 1,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"title": "Name", "type": "string"},
+                        },
+                        "required": ["id", "name"],
+                        "title": "Reporter",
+                        "type": "object",
+                    },
+                    "pydantic__main__tests__testmodels__Team__leaf": {
+                        "additionalProperties": False,
+                        "description": "Team that is a playing",
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": 1,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"title": "Name", "type": "string"},
+                            "alias": {
+                                "anyOf": [
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer",
+                                    },
+                                    {"type": "null"},
+                                ],
+                                "nullable": True,
+                                "title": "Alias",
+                            },
+                        },
+                        "required": ["id", "name", "alias"],
+                        "title": "Team",
+                        "type": "object",
                     },
                 },
+                "additionalProperties": False,
+                "properties": {
+                    "id": {"maximum": 32767, "minimum": 1, "title": "Id", "type": "integer"},
+                    "name": {"maxLength": 255, "title": "Name", "type": "string"},
+                    "desc": {
+                        "anyOf": [{"type": "string"}, {"type": "null"}],
+                        "nullable": True,
+                        "title": "Desc",
+                    },
+                    "created": {
+                        "format": "date-time",
+                        "readOnly": True,
+                        "title": "Created",
+                        "type": "string",
+                    },
+                    "events": {
+                        "description": "What tournaments is a happenin'",
+                        "items": {"$ref": "#/$defs/b4oydv"},
+                        "title": "Events",
+                        "type": "array",
+                    },
+                },
+                "required": ["id", "name", "desc", "created", "events"],
+                "title": "Tournament",
+                "type": "object",
             },
         )
 
