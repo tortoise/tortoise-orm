@@ -39,7 +39,7 @@ class Address(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
 
     event: fields.OneToOneRelation[Event] = fields.OneToOneField(
-        "models.Event", on_delete=fields.CASCADE, related_name="address", pk=True
+        "models.Event", on_delete=fields.OnDelete.CASCADE, related_name="address", pk=True
     )
 
     class Meta:

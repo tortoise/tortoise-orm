@@ -45,7 +45,7 @@ jobs:
       TORTOISE_MSSQL_DRIVER: ODBC Driver 18 for SQL Server
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
     steps:
       - uses: actions/cache@v3
         with:

@@ -39,7 +39,7 @@ class Address(Model):
     street = fields.CharField(max_length=128)
 
     event: fields.OneToOneRelation[Event] = fields.OneToOneField(
-        "models.Event", on_delete=fields.CASCADE, related_name="address", pk=True
+        "models.Event", on_delete=fields.OnDelete.CASCADE, related_name="address", pk=True
     )
 
     def __str__(self):

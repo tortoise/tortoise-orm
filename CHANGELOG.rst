@@ -10,9 +10,13 @@ Changelog
 ====
 0.19.4
 ------
+Added
+^^^^^
+- Allow ForeignKeyField(on_delete=NO_ACTION) (#1393)
 Fixed
 ^^^^^
 - Fix foreign key constraint not generated on MSSQL Server. (#1400)
+- Fix testcase error with python3.11 (#1308)
 
 0.19.3
 ------
