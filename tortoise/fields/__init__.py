@@ -5,6 +5,7 @@ from tortoise.fields.base import (
     SET_DEFAULT,
     SET_NULL,
     Field,
+    OnDelete,
 )
 from tortoise.fields.data import (
     BigIntField,
@@ -45,6 +46,7 @@ __all__ = [
     "SET_DEFAULT",
     "SET_NULL",
     "NO_ACTION",
+    "OnDelete",
     "Field",
     "BigIntField",
     "BinaryField",

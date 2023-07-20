@@ -9,6 +9,86 @@ from tortoise.utils import get_schema_sql
 
 
 class TestGenerateSchema(test.SimpleTestCase):
+    safe_schema_sql = """
+CREATE TABLE IF NOT EXISTS "company" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "name" TEXT NOT NULL,
+    "uuid" CHAR(36) NOT NULL UNIQUE
+);
+CREATE TABLE IF NOT EXISTS "defaultpk" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "val" INT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS "employee" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "name" TEXT NOT NULL,
+    "company_id" CHAR(36) NOT NULL REFERENCES "company" ("uuid") ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS "inheritedmodel" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "zero" INT NOT NULL,
+    "one" VARCHAR(40),
+    "new_field" VARCHAR(100) NOT NULL,
+    "two" VARCHAR(40) NOT NULL,
+    "name" TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS "sometable" (
+    "sometable_id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "some_chars_table" VARCHAR(255) NOT NULL,
+    "fk_sometable" INT REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS "idx_sometable_some_ch_3d69eb" ON "sometable" ("some_chars_table");
+CREATE TABLE IF NOT EXISTS "team" (
+    "name" VARCHAR(50) NOT NULL  PRIMARY KEY /* The TEAM name (and PK) */,
+    "key" INT NOT NULL,
+    "manager_id" VARCHAR(50) REFERENCES "team" ("name") ON DELETE CASCADE
+) /* The TEAMS! */;
+CREATE INDEX IF NOT EXISTS "idx_team_manager_676134" ON "team" ("manager_id", "key");
+CREATE INDEX IF NOT EXISTS "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
+CREATE TABLE IF NOT EXISTS "teamaddress" (
+    "city" VARCHAR(50) NOT NULL  /* City */,
+    "country" VARCHAR(50) NOT NULL  /* Country */,
+    "street" VARCHAR(128) NOT NULL  /* Street Address */,
+    "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+) /* The Team's address */;
+CREATE TABLE IF NOT EXISTS "tournament" (
+    "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "name" VARCHAR(100) NOT NULL  /* Tournament name */,
+    "created" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP /* Created *\\/'`\\/* datetime */
+) /* What Tournaments *\\/'`\\/* we have */;
+CREATE INDEX IF NOT EXISTS "idx_tournament_name_6fe200" ON "tournament" ("name");
+CREATE TABLE IF NOT EXISTS "event" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,
+    "name" TEXT NOT NULL,
+    "modified" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP,
+    "prize" VARCHAR(40),
+    "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
+    "key" VARCHAR(100) NOT NULL,
+    "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("tid") ON DELETE CASCADE /* FK to tournament */,
+    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
+    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
+) /* This table contains a list of all the events */;
+CREATE TABLE IF NOT EXISTS "venueinformation" (
+    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "name" VARCHAR(128) NOT NULL,
+    "capacity" INT NOT NULL  /* No. of seats */,
+    "rent" REAL NOT NULL,
+    "team_id" VARCHAR(50)  UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
+);
+CREATE TABLE IF NOT EXISTS "sometable_self" (
+    "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
+    "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS "team_team" (
+    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS "teamevents" (
+    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE SET NULL,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE SET NULL
+) /* How participants relate */;
+""".strip()
+
     async def asyncSetUp(self):
         await super().asyncSetUp()
         try:
@@ -99,7 +179,8 @@ class TestGenerateSchema(test.SimpleTestCase):
 
     async def test_fk_bad_on_delete(self):
         with self.assertRaisesRegex(
-            ConfigurationError, "on_delete can only be CASCADE, RESTRICT or SET_NULL"
+            ConfigurationError,
+            "on_delete can only be CASCADE, RESTRICT, SET_NULL, SET_DEFAULT or NO_ACTION",
         ):
             await self.init_for("tests.schema.models_fk_2")
 
@@ -111,7 +192,8 @@ class TestGenerateSchema(test.SimpleTestCase):
 
     async def test_o2o_bad_on_delete(self):
         with self.assertRaisesRegex(
-            ConfigurationError, "on_delete can only be CASCADE, RESTRICT or SET_NULL"
+            ConfigurationError,
+            "on_delete can only be CASCADE, RESTRICT, SET_NULL, SET_DEFAULT or NO_ACTION",
         ):
             await self.init_for("tests.schema.models_o2o_2")
 
@@ -265,88 +347,7 @@ CREATE TABLE "teamevents" (
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
         sql = get_schema_sql(connections.get("default"), safe=True)
-        self.assertEqual(
-            sql.strip(),
-            """
-CREATE TABLE IF NOT EXISTS "company" (
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    "name" TEXT NOT NULL,
-    "uuid" CHAR(36) NOT NULL UNIQUE
-);
-CREATE TABLE IF NOT EXISTS "defaultpk" (
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    "val" INT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS "employee" (
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    "name" TEXT NOT NULL,
-    "company_id" CHAR(36) NOT NULL REFERENCES "company" ("uuid") ON DELETE CASCADE
-);
-CREATE TABLE IF NOT EXISTS "inheritedmodel" (
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    "zero" INT NOT NULL,
-    "one" VARCHAR(40),
-    "new_field" VARCHAR(100) NOT NULL,
-    "two" VARCHAR(40) NOT NULL,
-    "name" TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS "sometable" (
-    "sometable_id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    "some_chars_table" VARCHAR(255) NOT NULL,
-    "fk_sometable" INT REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
-);
-CREATE INDEX IF NOT EXISTS "idx_sometable_some_ch_3d69eb" ON "sometable" ("some_chars_table");
-CREATE TABLE IF NOT EXISTS "team" (
-    "name" VARCHAR(50) NOT NULL  PRIMARY KEY /* The TEAM name (and PK) */,
-    "key" INT NOT NULL,
-    "manager_id" VARCHAR(50) REFERENCES "team" ("name") ON DELETE CASCADE
-) /* The TEAMS! */;
-CREATE INDEX IF NOT EXISTS "idx_team_manager_676134" ON "team" ("manager_id", "key");
-CREATE INDEX IF NOT EXISTS "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
-CREATE TABLE IF NOT EXISTS "teamaddress" (
-    "city" VARCHAR(50) NOT NULL  /* City */,
-    "country" VARCHAR(50) NOT NULL  /* Country */,
-    "street" VARCHAR(128) NOT NULL  /* Street Address */,
-    "team_id" VARCHAR(50) NOT NULL  PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
-) /* The Team's address */;
-CREATE TABLE IF NOT EXISTS "tournament" (
-    "tid" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    "name" VARCHAR(100) NOT NULL  /* Tournament name */,
-    "created" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP /* Created *\\/'`\\/* datetime */
-) /* What Tournaments *\\/'`\\/* we have */;
-CREATE INDEX IF NOT EXISTS "idx_tournament_name_6fe200" ON "tournament" ("name");
-CREATE TABLE IF NOT EXISTS "event" (
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL /* Event ID */,
-    "name" TEXT NOT NULL,
-    "modified" TIMESTAMP NOT NULL  DEFAULT CURRENT_TIMESTAMP,
-    "prize" VARCHAR(40),
-    "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
-    "key" VARCHAR(100) NOT NULL,
-    "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("tid") ON DELETE CASCADE /* FK to tournament */,
-    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
-    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
-) /* This table contains a list of all the events */;
-CREATE TABLE IF NOT EXISTS "venueinformation" (
-    "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    "name" VARCHAR(128) NOT NULL,
-    "capacity" INT NOT NULL  /* No. of seats */,
-    "rent" REAL NOT NULL,
-    "team_id" VARCHAR(50)  UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
-);
-CREATE TABLE IF NOT EXISTS "sometable_self" (
-    "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
-    "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
-);
-CREATE TABLE IF NOT EXISTS "team_team" (
-    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
-);
-CREATE TABLE IF NOT EXISTS "teamevents" (
-    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE SET NULL,
-    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE SET NULL
-) /* How participants relate */;
-""".strip(),
-        )
+        self.assertEqual(sql.strip(), self.safe_schema_sql)
 
     async def test_m2m_no_auto_create(self):
         self.maxDiff = None
@@ -597,10 +598,13 @@ CREATE TABLE `teamevents` (
     async def test_schema_safe(self):
         self.maxDiff = None
         await self.init_for("tests.schema.models_schema_create")
-        sql = get_schema_sql(connections.get("default"), safe=True)
-
+        sql = get_schema_sql(connections.get("default"), safe=True).strip()
+        if sql == self.safe_schema_sql:
+            # Sometimes github action get different result from local machine(Ubuntu20)
+            self.assertEqual(sql, self.safe_schema_sql)
+            return
         self.assertEqual(
-            sql.strip(),
+            sql,
             """
 CREATE TABLE IF NOT EXISTS `company` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,

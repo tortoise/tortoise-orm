@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 import os as _os
 import unittest
 from asyncio.events import AbstractEventLoop
@@ -166,6 +167,15 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
     Based on `asynctest <http://asynctest.readthedocs.io/>`_
     """
 
+    def _setupAsyncioRunner(self) -> None:
+        if hasattr(asyncio, "Runner"):  # For python3.11+
+            runner = asyncio.Runner(debug=True, loop_factory=asyncio.get_event_loop)
+            self._asyncioRunner = runner
+
+    def _tearDownAsyncioRunner(self) -> None:
+        # Override runner tear down to avoid eventloop closing before testing completed.
+        pass
+
     async def _setUpDB(self) -> None:
         pass
 
@@ -256,7 +266,7 @@ class TruncationTestCase(SimpleTestCase):
     """
 
     async def _setUpDB(self) -> None:
-        await super(TruncationTestCase, self)._setUpDB()
+        await super()._setUpDB()
         _restore_default()
 
     async def _tearDownDB(self) -> None:
@@ -268,7 +278,7 @@ class TruncationTestCase(SimpleTestCase):
                 await model._meta.db.execute_script(  # nosec
                     f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"
                 )
-        await super(TruncationTestCase, self)._tearDownDB()
+        await super()._tearDownDB()
 
 
 class TransactionTestContext:
@@ -316,14 +326,14 @@ class TestCase(TruncationTestCase):
     """
 
     async def asyncSetUp(self) -> None:
-        await super(TestCase, self).asyncSetUp()
+        await super().asyncSetUp()
         self._db = connections.get("models")
         self._transaction = TransactionTestContext(self._db._in_transaction().connection)
         await self._transaction.__aenter__()  # type: ignore
 
     async def asyncTearDown(self) -> None:
         await self._transaction.__aexit__(None, None, None)
-        await super(TestCase, self).asyncTearDown()
+        await super().asyncTearDown()
 
     async def _tearDownDB(self) -> None:
         if self._db.capabilities.supports_transactions:
@@ -362,13 +372,26 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
     def decorator(test_item):
         if not isinstance(test_item, type):
 
-            @wraps(test_item)
-            def skip_wrapper(*args, **kwargs):
+            def check_capabilities() -> None:
                 db = connections.get(connection_name)
                 for key, val in conditions.items():
                     if getattr(db.capabilities, key) != val:
                         raise SkipTest(f"Capability {key} != {val}")
-                return test_item(*args, **kwargs)
+
+            if hasattr(asyncio, "Runner") and inspect.iscoroutinefunction(test_item):
+                # For python3.11+
+
+                @wraps(test_item)
+                async def skip_wrapper(*args, **kwargs):
+                    check_capabilities()
+                    return await test_item(*args, **kwargs)
+
+            else:
+
+                @wraps(test_item)
+                def skip_wrapper(*args, **kwargs):
+                    check_capabilities()
+                    return test_item(*args, **kwargs)
 
             return skip_wrapper
 

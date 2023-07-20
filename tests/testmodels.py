@@ -15,6 +15,7 @@ from pydantic import Extra as PydanticExtra
 
 from tortoise import fields
 from tortoise.exceptions import NoValuesFetched, ValidationError
+from tortoise.fields import NO_ACTION
 from tortoise.manager import Manager
 from tortoise.models import Model
 from tortoise.queryset import QuerySet
@@ -121,7 +122,7 @@ class Tree(Model):
         "models.Node", related_name="parent_trees"
     )
     child: fields.ForeignKeyRelation[Node] = fields.ForeignKeyField(
-        "models.Node", related_name="children_trees"
+        "models.Node", related_name="children_trees", on_delete=NO_ACTION
     )
 
 
@@ -377,7 +378,7 @@ class UUIDFkRelatedNullModel(Model):
         "models.UUIDPkModel", related_name=False, null=True
     )
     parent: fields.OneToOneNullableRelation[UUIDPkModel] = fields.OneToOneField(
-        "models.UUIDPkModel", related_name=False, null=True
+        "models.UUIDPkModel", related_name=False, null=True, on_delete=NO_ACTION
     )
 
 
@@ -483,12 +484,12 @@ class Employee(Model):
     name = fields.CharField(max_length=50)
 
     manager: fields.ForeignKeyNullableRelation["Employee"] = fields.ForeignKeyField(
-        "models.Employee", related_name="team_members", null=True
+        "models.Employee", related_name="team_members", null=True, on_delete=NO_ACTION
     )
     team_members: fields.ReverseRelation["Employee"]
 
     talks_to: fields.ManyToManyRelation["Employee"] = fields.ManyToManyField(
-        "models.Employee", related_name="gets_talked_to", on_delete=fields.NO_ACTION
+        "models.Employee", related_name="gets_talked_to", on_delete=NO_ACTION
     )
     gets_talked_to: fields.ManyToManyRelation["Employee"]
 
@@ -578,12 +579,20 @@ class StraightFields(Model):
     nullable = fields.CharField(max_length=50, null=True)
 
     fk: fields.ForeignKeyNullableRelation["StraightFields"] = fields.ForeignKeyField(
-        "models.StraightFields", related_name="fkrev", null=True, description="Tree!"
+        "models.StraightFields",
+        related_name="fkrev",
+        null=True,
+        description="Tree!",
+        on_delete=NO_ACTION,
     )
     fkrev: fields.ReverseRelation["StraightFields"]
 
     o2o: fields.OneToOneNullableRelation["StraightFields"] = fields.OneToOneField(
-        "models.StraightFields", related_name="o2o_rev", null=True, description="Line"
+        "models.StraightFields",
+        related_name="o2o_rev",
+        null=True,
+        description="Line",
+        on_delete=NO_ACTION,
     )
     o2o_rev: fields.Field
 
@@ -620,6 +629,7 @@ class SourceFields(Model):
         null=True,
         source_field="fk_sometable",
         description="Tree!",
+        on_delete=NO_ACTION,
     )
     fkrev: fields.ReverseRelation["SourceFields"]
 
@@ -629,6 +639,7 @@ class SourceFields(Model):
         null=True,
         source_field="o2o_sometable",
         description="Line",
+        on_delete=NO_ACTION,
     )
     o2o_rev: fields.Field
 
@@ -669,10 +680,10 @@ class EnumFields(Model):
 class DoubleFK(Model):
     name = fields.CharField(max_length=50)
     left: fields.ForeignKeyNullableRelation["DoubleFK"] = fields.ForeignKeyField(
-        "models.DoubleFK", null=True, related_name="left_rel"
+        "models.DoubleFK", null=True, related_name="left_rel", on_delete=NO_ACTION
     )
     right: fields.ForeignKeyNullableRelation["DoubleFK"] = fields.ForeignKeyField(
-        "models.DoubleFK", null=True, related_name="right_rel"
+        "models.DoubleFK", null=True, related_name="right_rel", on_delete=NO_ACTION
     )
 
 
@@ -850,7 +861,7 @@ class Pair(Model):
         "models.Single", related_name="lefts", null=True
     )
     right: fields.ForeignKeyNullableRelation[Single] = fields.ForeignKeyField(
-        "models.Single", related_name="rights", null=True
+        "models.Single", related_name="rights", null=True, on_delete=NO_ACTION
     )
 
 

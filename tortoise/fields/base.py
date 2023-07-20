@@ -24,12 +24,24 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 VALUE = TypeVar("VALUE")
 
-# TODO: Replace this with an enum
-CASCADE = "CASCADE"
-RESTRICT = "RESTRICT"
-SET_NULL = "SET NULL"
-SET_DEFAULT = "SET DEFAULT"
-NO_ACTION = "NO ACTION"
+
+class StrEnum(str, Enum):
+    __str__ = str.__str__
+
+
+class OnDelete(StrEnum):
+    CASCADE = "CASCADE"
+    RESTRICT = "RESTRICT"
+    SET_NULL = "SET NULL"
+    SET_DEFAULT = "SET DEFAULT"
+    NO_ACTION = "NO ACTION"
+
+
+CASCADE = OnDelete.CASCADE
+RESTRICT = OnDelete.RESTRICT
+SET_NULL = OnDelete.SET_NULL
+SET_DEFAULT = OnDelete.SET_DEFAULT
+NO_ACTION = OnDelete.NO_ACTION
 
 
 class _FieldMeta(type):

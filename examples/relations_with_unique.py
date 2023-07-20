@@ -30,7 +30,7 @@ class Principal(Model):
     id = fields.IntField(pk=True)
     name = fields.TextField()
     school: fields.OneToOneRelation[School] = fields.OneToOneField(
-        "models.School", on_delete=fields.CASCADE, related_name="principal", to_field="id"
+        "models.School", on_delete=fields.OnDelete.CASCADE, related_name="principal", to_field="id"
     )
 
 

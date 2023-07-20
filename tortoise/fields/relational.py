@@ -17,7 +17,7 @@ from pypika import Table
 from typing_extensions import Literal
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
-from tortoise.fields.base import CASCADE, RESTRICT, SET_NULL, Field
+from tortoise.fields.base import CASCADE, SET_NULL, Field, OnDelete
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
@@ -316,7 +316,7 @@ class ForeignKeyFieldInstance(RelationalField[MODEL]):
         self,
         model_name: str,
         related_name: Union[Optional[str], Literal[False]] = None,
-        on_delete: str = CASCADE,
+        on_delete: OnDelete = CASCADE,
         **kwargs: Any,
     ) -> None:
         super().__init__(None, **kwargs)  # type: ignore
@@ -324,8 +324,10 @@ class ForeignKeyFieldInstance(RelationalField[MODEL]):
             raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
         self.model_name = model_name
         self.related_name = related_name
-        if on_delete not in {CASCADE, RESTRICT, SET_NULL}:
-            raise ConfigurationError("on_delete can only be CASCADE, RESTRICT or SET_NULL")
+        if on_delete not in set(OnDelete):
+            raise ConfigurationError(
+                "on_delete can only be CASCADE, RESTRICT, SET_NULL, SET_DEFAULT or NO_ACTION"
+            )
         if on_delete == SET_NULL and not bool(kwargs.get("null")):
             raise ConfigurationError("If on_delete is SET_NULL, then field must have null=True set")
         self.on_delete = on_delete
@@ -333,7 +335,7 @@ class ForeignKeyFieldInstance(RelationalField[MODEL]):
     def describe(self, serializable: bool) -> dict:
         desc = super().describe(serializable)
         desc["raw_field"] = self.source_field
-        desc["on_delete"] = self.on_delete
+        desc["on_delete"] = str(self.on_delete)
         return desc
 
 
@@ -358,7 +360,7 @@ class OneToOneFieldInstance(ForeignKeyFieldInstance[MODEL]):
         self,
         model_name: str,
         related_name: Union[Optional[str], Literal[False]] = None,
-        on_delete: str = CASCADE,
+        on_delete: OnDelete = CASCADE,
         **kwargs: Any,
     ) -> None:
         if len(model_name.split(".")) != 2:
@@ -380,7 +382,7 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         forward_key: Optional[str] = None,
         backward_key: str = "",
         related_name: str = "",
-        on_delete: str = CASCADE,
+        on_delete: OnDelete = CASCADE,
         field_type: "Type[MODEL]" = None,  # type: ignore
         **kwargs: Any,
     ) -> None:
@@ -404,7 +406,7 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         desc["forward_key"] = self.forward_key
         desc["backward_key"] = self.backward_key
         desc["through"] = self.through
-        desc["on_delete"] = self.on_delete
+        desc["on_delete"] = str(self.on_delete)
         desc["_generated"] = self._generated
         return desc
 
@@ -413,7 +415,7 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
 def OneToOneField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
-    on_delete: str = CASCADE,
+    on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     *,
     null: Literal[True],
@@ -426,7 +428,7 @@ def OneToOneField(
 def OneToOneField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
-    on_delete: str = CASCADE,
+    on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     null: Literal[False] = False,
     **kwargs: Any,
@@ -437,7 +439,7 @@ def OneToOneField(
 def OneToOneField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
-    on_delete: str = CASCADE,
+    on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     null: bool = False,
     **kwargs: Any,
@@ -471,6 +473,8 @@ def OneToOneField(
             ``field.SET_DEFAULT``:
                 Resets the field to ``default`` value in case the related model gets deleted.
                 Can only be set is field has a ``default`` set.
+            ``field.NO_ACTION``:
+                Take no action.
     ``to_field``:
         The attribute name on the related model to establish foreign key relationship.
         If not set, pk is used
@@ -488,7 +492,7 @@ def OneToOneField(
 def ForeignKeyField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
-    on_delete: str = CASCADE,
+    on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     *,
     null: Literal[True],
@@ -501,7 +505,7 @@ def ForeignKeyField(
 def ForeignKeyField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
-    on_delete: str = CASCADE,
+    on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     null: Literal[False] = False,
     **kwargs: Any,
@@ -512,7 +516,7 @@ def ForeignKeyField(
 def ForeignKeyField(
     model_name: str,
     related_name: Union[Optional[str], Literal[False]] = None,
-    on_delete: str = CASCADE,
+    on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     null: bool = False,
     **kwargs: Any,
@@ -546,6 +550,8 @@ def ForeignKeyField(
             ``field.SET_DEFAULT``:
                 Resets the field to ``default`` value in case the related model gets deleted.
                 Can only be set is field has a ``default`` set.
+            ``field.NO_ACTION``:
+                Take no action.
     ``to_field``:
         The attribute name on the related model to establish foreign key relationship.
         If not set, pk is used
@@ -565,7 +571,7 @@ def ManyToManyField(
     forward_key: Optional[str] = None,
     backward_key: str = "",
     related_name: str = "",
-    on_delete: str = CASCADE,
+    on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     **kwargs: Any,
 ) -> "ManyToManyRelation[Any]":
@@ -610,6 +616,8 @@ def ManyToManyField(
             ``field.SET_DEFAULT``:
                 Resets the field to ``default`` value in case the related model gets deleted.
                 Can only be set is field has a ``default`` set.
+            ``field.NO_ACTION``:
+                Take no action.
     """
 
     return ManyToManyFieldInstance(  # type: ignore
