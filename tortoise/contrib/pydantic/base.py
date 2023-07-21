@@ -42,7 +42,7 @@ class PydanticModel(BaseModel):
     Pydantic BaseModel for Tortoise objects.
 
     This provides an extra method above the usual Pydantic
-    `model properties <https://pydantic-docs.helpmanual.io/usage/models/#model-properties>`__
+    `model properties <https://docs.pydantic.dev/latest/usage/models/#model-properties>`__
     """
 
     model_config = ConfigDict(from_attributes=True)

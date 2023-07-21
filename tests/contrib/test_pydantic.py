@@ -1293,157 +1293,123 @@ class TestPydanticCycle(test.TestCase):
         self.assertEqual(
             self.Employee_Pydantic.model_json_schema(),
             {
-                "title": "Employee",
-                "type": "object",
+                "$defs": {
+                    "4fgkwn": {
+                        "additionalProperties": False,
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": 1,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"maxLength": 50, "title": "Name", "type": "string"},
+                            "talks_to": {
+                                "items": {"$ref": "#/$defs/leaf"},
+                                "title": "Talks To",
+                                "type": "array",
+                            },
+                            "manager_id": {
+                                "anyOf": [
+                                    {"maximum": 2147483647, "minimum": 1, "type": "integer"},
+                                    {"type": "null"},
+                                ],
+                                "nullable": True,
+                                "title": "Manager Id",
+                            },
+                            "team_members": {
+                                "items": {"$ref": "#/$defs/leaf"},
+                                "title": "Team Members",
+                                "type": "array",
+                            },
+                        },
+                        "required": ["id", "name", "talks_to", "manager_id", "team_members"],
+                        "title": "Employee",
+                        "type": "object",
+                    },
+                    "5gupxf": {
+                        "additionalProperties": False,
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": 1,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"maxLength": 50, "title": "Name", "type": "string"},
+                            "talks_to": {
+                                "items": {"$ref": "#/$defs/leaf"},
+                                "title": "Talks To",
+                                "type": "array",
+                            },
+                            "manager_id": {
+                                "anyOf": [
+                                    {"maximum": 2147483647, "minimum": 1, "type": "integer"},
+                                    {"type": "null"},
+                                ],
+                                "nullable": True,
+                                "title": "Manager Id",
+                            },
+                            "team_members": {
+                                "items": {"$ref": "#/$defs/leaf"},
+                                "title": "Team Members",
+                                "type": "array",
+                            },
+                        },
+                        "required": ["id", "name", "talks_to", "manager_id", "team_members"],
+                        "title": "Employee",
+                        "type": "object",
+                    },
+                    "leaf": {
+                        "additionalProperties": False,
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": 1,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"maxLength": 50, "title": "Name", "type": "string"},
+                            "manager_id": {
+                                "anyOf": [
+                                    {"maximum": 2147483647, "minimum": 1, "type": "integer"},
+                                    {"type": "null"},
+                                ],
+                                "nullable": True,
+                                "title": "Manager Id",
+                            },
+                        },
+                        "required": ["id", "name", "manager_id"],
+                        "title": "Employee",
+                        "type": "object",
+                    },
+                },
+                "additionalProperties": False,
                 "properties": {
-                    "id": {"title": "Id", "minimum": 1, "maximum": 2147483647, "type": "integer"},
-                    "name": {"title": "Name", "maxLength": 50, "type": "string"},
+                    "id": {"maximum": 2147483647, "minimum": 1, "title": "Id", "type": "integer"},
+                    "name": {"maxLength": 50, "title": "Name", "type": "string"},
                     "talks_to": {
+                        "items": {"$ref": "#/$defs/5gupxf"},
                         "title": "Talks To",
                         "type": "array",
-                        "items": {"$ref": "#/$defs/tests.testmodels.Employee.5gupxf"},
                     },
                     "manager_id": {
-                        "title": "Manager Id",
-                        "minimum": 1,
-                        "maximum": 2147483647,
+                        "anyOf": [
+                            {"maximum": 2147483647, "minimum": 1, "type": "integer"},
+                            {"type": "null"},
+                        ],
                         "nullable": True,
-                        "type": "integer",
+                        "title": "Manager Id",
                     },
                     "team_members": {
+                        "items": {"$ref": "#/$defs/4fgkwn"},
                         "title": "Team Members",
                         "type": "array",
-                        "items": {"$ref": "#/$defs/tests.testmodels.Employee.4fgkwn"},
-                    },
-                    "name_length": {"title": "Name Length", "type": "integer"},
-                    "team_size": {
-                        "title": "Team Size",
-                        "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
-                        "type": "integer",
                     },
                 },
-                "required": ["id", "name", "talks_to", "team_members", "name_length", "team_size"],
-                "additionalProperties": False,
-                "$defs": {
-                    "tests.testmodels.Employee.leaf": {
-                        "title": "Employee",
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "title": "Id",
-                                "minimum": 1,
-                                "maximum": 2147483647,
-                                "type": "integer",
-                            },
-                            "name": {"title": "Name", "maxLength": 50, "type": "string"},
-                            "manager_id": {
-                                "title": "Manager Id",
-                                "minimum": 1,
-                                "maximum": 2147483647,
-                                "nullable": True,
-                                "type": "integer",
-                            },
-                            "name_length": {"title": "Name Length", "type": "integer"},
-                            "team_size": {
-                                "title": "Team Size",
-                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
-                                "type": "integer",
-                            },
-                        },
-                        "required": ["id", "name", "name_length", "team_size"],
-                        "additionalProperties": False,
-                    },
-                    "tests.testmodels.Employee.5gupxf": {
-                        "title": "Employee",
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "title": "Id",
-                                "minimum": 1,
-                                "maximum": 2147483647,
-                                "type": "integer",
-                            },
-                            "name": {"title": "Name", "maxLength": 50, "type": "string"},
-                            "talks_to": {
-                                "title": "Talks To",
-                                "type": "array",
-                                "items": {"$ref": "#/$defs/tests.testmodels.Employee.leaf"},
-                            },
-                            "manager_id": {
-                                "title": "Manager Id",
-                                "minimum": 1,
-                                "maximum": 2147483647,
-                                "nullable": True,
-                                "type": "integer",
-                            },
-                            "team_members": {
-                                "title": "Team Members",
-                                "type": "array",
-                                "items": {"$ref": "#/$defs/tests.testmodels.Employee.leaf"},
-                            },
-                            "name_length": {"title": "Name Length", "type": "integer"},
-                            "team_size": {
-                                "title": "Team Size",
-                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
-                                "type": "integer",
-                            },
-                        },
-                        "required": [
-                            "id",
-                            "name",
-                            "talks_to",
-                            "team_members",
-                            "name_length",
-                            "team_size",
-                        ],
-                        "additionalProperties": False,
-                    },
-                    "tests.testmodels.Employee.4fgkwn": {
-                        "title": "Employee",
-                        "type": "object",
-                        "properties": {
-                            "id": {
-                                "title": "Id",
-                                "minimum": 1,
-                                "maximum": 2147483647,
-                                "type": "integer",
-                            },
-                            "name": {"title": "Name", "maxLength": 50, "type": "string"},
-                            "talks_to": {
-                                "title": "Talks To",
-                                "type": "array",
-                                "items": {"$ref": "#/$defs/tests.testmodels.Employee.leaf"},
-                            },
-                            "manager_id": {
-                                "title": "Manager Id",
-                                "minimum": 1,
-                                "maximum": 2147483647,
-                                "nullable": True,
-                                "type": "integer",
-                            },
-                            "team_members": {
-                                "title": "Team Members",
-                                "type": "array",
-                                "items": {"$ref": "#/$defs/tests.testmodels.Employee.leaf"},
-                            },
-                            "name_length": {"title": "Name Length", "type": "integer"},
-                            "team_size": {
-                                "title": "Team Size",
-                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
-                                "type": "integer",
-                            },
-                        },
-                        "required": [
-                            "id",
-                            "name",
-                            "talks_to",
-                            "team_members",
-                            "name_length",
-                            "team_size",
-                        ],
-                        "additionalProperties": False,
-                    },
-                },
+                "required": ["id", "name", "talks_to", "manager_id", "team_members"],
+                "title": "Employee",
+                "type": "object",
             },
         )
 

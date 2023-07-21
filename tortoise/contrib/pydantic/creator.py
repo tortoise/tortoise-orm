@@ -4,6 +4,7 @@ from hashlib import sha3_224
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type
 
 from pydantic import ConfigDict, Field, computed_field, create_model
+from pydantic._internal._decorators import PydanticDescriptorProxy
 
 from tortoise.contrib.pydantic.base import PydanticListModel, PydanticModel
 from tortoise.contrib.pydantic.utils import get_annotations
@@ -134,6 +135,7 @@ def pydantic_model_creator(
     """
     Function to build `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ off Tortoise Model.
 
+    :param _stack: Internal parameter to track recursion
     :param cls: The Tortoise Model
     :param name: Specify a custom name explicitly, instead of a generated name.
     :param exclude: Extra fields to exclude from the provided model.
@@ -297,7 +299,6 @@ def pydantic_model_creator(
         field_map = {
             k: field_map[k] for k in tuple(cls._meta.fields_map.keys()) + computed if k in field_map
         }
-
     # Process fields
     for fname, fdesc in field_map.items():
         comment = ""
@@ -393,15 +394,18 @@ def pydantic_model_creator(
             if not (exclude_readonly and fdesc["constraints"].get("readOnly") is True):
                 properties[fname] = annotation or ptype
 
-        if fname in properties:
+        if fname in properties and not isinstance(properties[fname], tuple):
             fconfig["title"] = fname.replace("_", " ").title()
             description = comment or _br_it(fdesc.get("docstring") or fdesc["description"] or "")
             if description:
                 fconfig["description"] = description
+            ftype = properties[fname]
+            if isinstance(ftype, PydanticDescriptorProxy):
+                continue
             if field_default is not None and not callable(field_default):
-                properties[fname] = (properties[fname], Field(default=field_default, **fconfig))
+                properties[fname] = (ftype, Field(default=field_default, **fconfig))
             else:
-                properties[fname] = (properties[fname], Field(**fconfig))
+                properties[fname] = (ftype, Field(**fconfig))
 
     # Here we endure that the name is unique, but complete objects are still labeled verbatim
     if not has_submodel:
@@ -415,12 +419,12 @@ def pydantic_model_creator(
         return _MODEL_INDEX[_name]
 
     # Creating Pydantic class for the properties generated before
+    properties["model_config"] = pconfig
     model = create_model(
         _name,
         __base__=PydanticModel,
         **properties,
     )
-    model.model_config = pconfig
     # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)
     # Store the base class
