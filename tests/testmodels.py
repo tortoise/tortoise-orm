@@ -14,9 +14,8 @@ import pytz
 from pydantic import ConfigDict
 
 from tortoise import fields
-from tortoise.exceptions import NoValuesFetched, ValidationError
-from tortoise.fields import NO_ACTION
 from tortoise.exceptions import ValidationError
+from tortoise.fields import NO_ACTION
 from tortoise.manager import Manager
 from tortoise.models import Model
 from tortoise.queryset import QuerySet
