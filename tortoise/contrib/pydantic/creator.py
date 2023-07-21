@@ -488,7 +488,7 @@ def pydantic_queryset_creator(
     model = create_model(
         lname,
         __base__=PydanticListModel,
-        root=(List[submodel], Field(default_factory=list)),
+        root=(List[submodel], Field(default_factory=list)),  # type: ignore
     )
     # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)
