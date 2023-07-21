@@ -302,8 +302,10 @@ def pydantic_model_creator(
     # Process fields
     for fname, fdesc in field_map.items():
         comment = ""
-        fconfig: Dict[str, Any] = {}
-
+        json_schema_extra: Dict[str, Any] = {}
+        fconfig: Dict[str, Any] = {
+            "json_schema_extra": json_schema_extra,
+        }
         field_type = fdesc["field_type"]
         field_default = fdesc.get("default")
 
@@ -354,7 +356,7 @@ def pydantic_model_creator(
             model = get_submodel(fdesc["python_type"])
             if model:
                 if fdesc.get("nullable"):
-                    fconfig["nullable"] = True
+                    json_schema_extra["nullable"] = True
                 if fdesc.get("nullable") or field_default is not None:
                     model = Optional[model]  # type: ignore
 
@@ -385,10 +387,13 @@ def pydantic_model_creator(
         # Any other tortoise fields
         else:
             annotation = annotations.get(fname, None)
+            if "readOnly" in fdesc["constraints"]:
+                json_schema_extra["readOnly"] = fdesc["constraints"]["readOnly"]
+                del fdesc["constraints"]["readOnly"]
             fconfig.update(fdesc["constraints"])
             ptype = fdesc["python_type"]
             if fdesc.get("nullable"):
-                fconfig["nullable"] = True
+                json_schema_extra["nullable"] = True
             if fdesc.get("nullable") or field_default is not None or fname in optional:
                 ptype = Optional[ptype]
             if not (exclude_readonly and fdesc["constraints"].get("readOnly") is True):
@@ -483,7 +488,7 @@ def pydantic_queryset_creator(
     model = create_model(
         lname,
         __base__=PydanticListModel,
-        __annotations__={"root": List[submodel]},  # type: ignore
+        root=(List[submodel], Field(default_factory=list)),
     )
     # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)
