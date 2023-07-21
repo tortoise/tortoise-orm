@@ -6,9 +6,10 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.19
+0.20
 ====
-0.19.4
+
+0.20.0
 ------
 Added
 ^^^^^
@@ -23,8 +24,12 @@ Fixed
 Breaking Changes
 ^^^^^^^^^^^^^^^^
 - Drop support for `pydantic` 1.x.
+- Drop support for `python` 3.7.
 - Param `config_class` of `pydantic_model_creator` is renamed to `model_config`.
 - Attr `config_class` of `PydanticMeta` is renamed to `model_config`.
+
+0.19
+====
 
 0.19.3
 ------
