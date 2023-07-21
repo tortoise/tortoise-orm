@@ -40,7 +40,7 @@ class TestBasic(test.TestCase):
         self.maxDiff = None
         Event_TooEarly = pydantic_model_creator(Event)
         self.assertEqual(
-            Event_TooEarly.schema(),
+            Event_TooEarly.model_json_schema(),
             {
                 "title": "Event",
                 "type": "object",
@@ -159,56 +159,56 @@ class TestBasic(test.TestCase):
 
         Event_Pydantic = pydantic_model_creator(Event)
         self.assertEqual(
-            Event_Pydantic.schema(),
+            Event_Pydantic.model_json_schema(),
             {
-                "title": "Event",
-                "type": "object",
-                "description": "The Event model docstring.<br/><br/>This is multiline docs.",
-                "properties": {
-                    "id": {"title": "Id", "type": "integer", "maximum": 2147483647, "minimum": 1},
-                    "name": {
-                        "title": "Name",
-                        "type": "string",
-                        "description": "The Event NAME<br/>It's pretty important",
-                        "maxLength": 255,
-                    },
-                    "created_at": {
-                        "title": "Created At",
-                        "type": "string",
-                        "format": "date-time",
-                        "readOnly": True,
-                    },
-                    "tournament": {
-                        "title": "Tournament",
-                        "nullable": True,
-                        "allOf": [{"$ref": "#/definitions/tests.test_early_init.Tournament.leaf"}],
-                    },
-                },
-                "definitions": {
-                    "tests.test_early_init.Tournament.leaf": {
-                        "title": "Tournament",
-                        "type": "object",
+                "$defs": {
+                    "leaf": {
+                        "additionalProperties": False,
                         "properties": {
                             "id": {
-                                "title": "Id",
-                                "type": "integer",
                                 "maximum": 2147483647,
                                 "minimum": 1,
+                                "title": "Id",
+                                "type": "integer",
                             },
-                            "name": {"title": "Name", "type": "string", "maxLength": 100},
+                            "name": {"maxLength": 100, "title": "Name", "type": "string"},
                             "created_at": {
-                                "title": "Created At",
-                                "type": "string",
                                 "format": "date-time",
                                 "readOnly": True,
+                                "title": "Created At",
+                                "type": "string",
                             },
                         },
                         "required": ["id", "name", "created_at"],
-                        "additionalProperties": False,
+                        "title": "Tournament",
+                        "type": "object",
                     }
                 },
-                "required": ["id", "name", "created_at"],
                 "additionalProperties": False,
+                "description": "The Event model docstring.<br/><br/>This is multiline docs.",
+                "properties": {
+                    "id": {"maximum": 2147483647, "minimum": 1, "title": "Id", "type": "integer"},
+                    "name": {
+                        "description": "The Event NAME<br/>It's pretty important",
+                        "maxLength": 255,
+                        "title": "Name",
+                        "type": "string",
+                    },
+                    "created_at": {
+                        "format": "date-time",
+                        "readOnly": True,
+                        "title": "Created At",
+                        "type": "string",
+                    },
+                    "tournament": {
+                        "anyOf": [{"$ref": "#/$defs/leaf"}, {"type": "null"}],
+                        "nullable": True,
+                        "title": "Tournament",
+                    },
+                },
+                "required": ["id", "name", "created_at", "tournament"],
+                "title": "Event",
+                "type": "object",
             },
         )
         self.assertEqual(

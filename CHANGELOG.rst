@@ -13,10 +13,18 @@ Changelog
 Added
 ^^^^^
 - Allow ForeignKeyField(on_delete=NO_ACTION) (#1393)
+- Support `pydantic` 2.0. (#1433)
+
 Fixed
 ^^^^^
 - Fix foreign key constraint not generated on MSSQL Server. (#1400)
 - Fix testcase error with python3.11 (#1308)
+
+Breaking Changes
+^^^^^^^^^^^^^^^^
+- Drop support for `pydantic` 1.x.
+- Param `config_class` of `pydantic_model_creator` is renamed to `model_config`.
+- Attr `config_class` of `PydanticMeta` is renamed to `model_config`.
 
 0.19.3
 ------

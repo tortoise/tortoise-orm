@@ -87,16 +87,16 @@ async def run():
     await event3.participants.add(team1, team3)
 
     p = await Event_Pydantic.from_tortoise_orm(await Event.get(name="Test"))
-    print("One Event:", p.json(indent=4))
+    print("One Event:", p.model_dump_json(indent=4))
 
     p = await Tournament_Pydantic.from_tortoise_orm(await Tournament.get(name="New Tournament"))
-    print("One Tournament:", p.json(indent=4))
+    print("One Tournament:", p.model_dump_json(indent=4))
 
     p = await Team_Pydantic.from_tortoise_orm(await Team.get(name="Onesies"))
-    print("One Team:", p.json(indent=4))
+    print("One Team:", p.model_dump_json(indent=4))
 
     pl = await Event_Pydantic_List.from_queryset(Event.filter(address__event_id__isnull=True))
-    print("All Events without addresses:", pl.json(indent=4))
+    print("All Events without addresses:", pl.model_dump_json(indent=4))
 
 
 if __name__ == "__main__":
