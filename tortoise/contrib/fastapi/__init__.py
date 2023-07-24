@@ -89,7 +89,7 @@ def register_tortoise(
         For any configuration error
     """
 
-    @app.on_event("startup")  # type: ignore
+    @app.on_event("startup")
     async def init_orm() -> None:  # pylint: disable=W0612
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
         logger.info("Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps)
@@ -97,18 +97,18 @@ def register_tortoise(
             logger.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()
 
-    @app.on_event("shutdown")  # type: ignore
+    @app.on_event("shutdown")
     async def close_orm() -> None:  # pylint: disable=W0612
         await connections.close_all()
         logger.info("Tortoise-ORM shutdown")
 
     if add_exception_handlers:
 
-        @app.exception_handler(DoesNotExist)  # type: ignore
+        @app.exception_handler(DoesNotExist)
         async def doesnotexist_exception_handler(request: Request, exc: DoesNotExist):
             return JSONResponse(status_code=404, content={"detail": str(exc)})
 
-        @app.exception_handler(IntegrityError)  # type: ignore
+        @app.exception_handler(IntegrityError)
         async def integrityerror_exception_handler(request: Request, exc: IntegrityError):
             return JSONResponse(
                 status_code=422,
