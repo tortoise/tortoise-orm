@@ -74,7 +74,7 @@ starlette = "*"
 # Pydantic support
 pydantic = "^2.0"
 # FastAPI support
-fastapi = "*"
+fastapi = "^0.100.0"
 asgi_lifespan = "*"
 httpx = "*"
 # Aiohttp support
