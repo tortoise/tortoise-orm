@@ -4,16 +4,16 @@ from tortoise.exceptions import IntegrityError, OperationalError
 from tortoise.exceptions import ConfigurationError
 
 @test.requireCapability(dialect="mssql")
-class TestArrayFields(test.IsolatedTestCase):
+class TestNVARCHARFields(test.IsolatedTestCase):
     tortoise_test_modules = ["tests.testmodels_mssql"]
 
-    def test_max_length_missing(self):
+    async def test_max_length_missing(self):
         with self.assertRaisesRegex(
             TypeError, "missing 1 required positional argument: 'max_length'"
         ):
             testmodels.NVARCHAR()  # pylint: disable=E1120
 
-    def test_max_length_bad(self):
+    async def test_max_length_bad(self):
         with self.assertRaisesRegex(ConfigurationError, "'max_length' must be >= 1"):
             testmodels.NVARCHAR(max_length=0)
 
@@ -34,7 +34,7 @@ class TestArrayFields(test.IsolatedTestCase):
         obj0 = await testmodels.NVARCHAR.create(nvarchar="سلام")
         obj = await testmodels.NVARCHAR.get(id=obj0.id)
         self.assertEqual(obj.nvarchar, "سلام")
-        self.assertIs(obj.array_null, None)
+        self.assertIs(obj.nvarchar_null, None)
         await obj.save()
         obj2 = await testmodels.NVARCHAR.get(id=obj.id)
         self.assertEqual(obj, obj2)
@@ -43,8 +43,8 @@ class TestArrayFields(test.IsolatedTestCase):
         obj0 = await testmodels.NVARCHAR.create(nvarchar="سلام")
         await testmodels.NVARCHAR.filter(id=obj0.id).update(nvarchar="non-utf8")
         obj = await testmodels.NVARCHAR.get(id=obj0.id)
-        self.assertEqual(obj.array, "non-utf8")
-        self.assertIs(obj.array_null, None)
+        self.assertEqual(obj.nvarchar, "non-utf8")
+        self.assertIs(obj.nvarchar_null, None)
 
     async def test_cast(self):
         obj0 = await testmodels.NVARCHAR.create(nvarchar=33)
@@ -54,7 +54,7 @@ class TestArrayFields(test.IsolatedTestCase):
     async def test_values(self):
         obj0 = await testmodels.NVARCHAR.create(nvarchar="سلام")
         values = await testmodels.NVARCHAR.get(id=obj0.id).values("nvarchar")
-        self.assertEqual(values["array"], "سلام")
+        self.assertEqual(values["nvarchar"], "سلام")
 
     async def test_values_list(self):
         obj0 = await testmodels.NVARCHAR.create(nvarchar="سلام")
