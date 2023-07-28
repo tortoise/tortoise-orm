@@ -39,6 +39,12 @@ class TestNVARCHARFields(test.IsolatedTestCase):
         obj2 = await testmodels.NVARCHAR.get(id=obj.id)
         self.assertEqual(obj, obj2)
 
+    async def test_filterUTF8Chars(self):
+        await testmodels.NVARCHAR.create(nvarchar="سلام")
+        obj = await testmodels.NVARCHAR.get(nvarchar="سلام")
+        self.assertIsNotNone(obj)
+        self.assertEqual(obj.nvarchar, "سلام")
+
     async def test_update(self):
         obj0 = await testmodels.NVARCHAR.create(nvarchar="سلام")
         await testmodels.NVARCHAR.filter(id=obj0.id).update(nvarchar="non-utf8")
