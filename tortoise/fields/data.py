@@ -605,23 +605,42 @@ class UUIDField(Field[UUID], UUID):
     This field can store uuid value.
 
     If used as a primary key, it will auto-generate a UUID4 by default.
+
+    ``binary_compression``: (bool)
+        If True, the UUID will be stored in binary format.
+        This will save 6 bytes per UUID in the database.
+        Note: that this is a MySQL-only feature. See https://dev.mysql.com/blog-archive/mysql-8-0-uuid-support/ 
     """
 
     SQL_TYPE = "CHAR(36)"
 
+    class _db_mysql:
+        SQL_TYPE = "CHAR(36)"
+
     class _db_postgres:
         SQL_TYPE = "UUID"
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, binary_compression: bool = False, **kwargs: Any) -> None:
         if kwargs.get("pk", False) and "default" not in kwargs:
             kwargs["default"] = uuid4
         super().__init__(**kwargs)
 
-    def to_db_value(self, value: Any, instance: "Union[Type[Model], Model]") -> Optional[str]:
+        if binary_compression:
+            self._db_mysql.SQL_TYPE = "BINARY(16)"
+        
+        self._binary_compression = binary_compression
+
+    def to_db_value(self, value: Any, instance: "Union[Type[Model], Model]") -> Optional[Union[str, bytes]]:
+        # Convert to UUID if binary_compression is True
+        if self._binary_compression:
+            return value.bytes.hex()
         return value and str(value)
 
     def to_python_value(self, value: Any) -> Optional[UUID]:
         if value is None or isinstance(value, UUID):
+            # Convert to UUID if binary_compression is True
+            if self._binary_compression and isinstance(value, bytes):
+                return UUID(bytes=bytes.fromhex(value))
             return value
         return UUID(value)
 
