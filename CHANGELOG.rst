@@ -8,6 +8,11 @@ Changelog
 
 0.20
 ====
+0.20.1
+------
+Added
+^^^^^
+- Add field to ValidationError. (#1460)
 
 0.20.0
 ------

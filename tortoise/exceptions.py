@@ -1,3 +1,6 @@
+from typing import Optional
+
+
 class BaseORMException(Exception):
     """
     Base ORM Exception.
@@ -75,6 +78,13 @@ class ValidationError(BaseORMException):
     """
     The ValidationError is raised when validators of field validate failed.
     """
+
+    def __init__(self, msg: str, field: Optional[str] = None):
+        self.field = field
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg
 
 
 class UnSupportedError(BaseORMException):

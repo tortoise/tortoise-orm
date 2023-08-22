@@ -259,7 +259,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
                 else:
                     v(value)
             except ValidationError as exc:
-                raise ValidationError(f"{self.model_field_name}: {exc}")
+                raise ValidationError(f"{self.model_field_name}: {exc}", self.model_field_name)
 
     @property
     def required(self) -> bool:
