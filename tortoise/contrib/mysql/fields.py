@@ -10,7 +10,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 class GeometryField(Field):
     SQL_TYPE = "GEOMETRY"
 
-class UUIDField(UUIDFieldBase[Union[UUID, bytes]],  Union[UUID, bytes]):
+class UUIDField(UUIDFieldBase[Union[UUID, bytes]], bytes, UUID):
     """
     UUID Field
 
