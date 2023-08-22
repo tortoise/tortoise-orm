@@ -1,16 +1,12 @@
 from tortoise.fields import Field
-from tortoise.fields.data import UUIDField as UUIDFieldBase
 from uuid import UUID, uuid4
-from typing import Any, Optional, Type, Union, TYPE_CHECKING
-
-if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.models import Model
+from typing import Any, Optional, Union
 
 
 class GeometryField(Field):
     SQL_TYPE = "GEOMETRY"
 
-class UUIDField(UUIDFieldBase[Union[UUID, bytes]], bytes, UUID):
+class UUIDField(Field[Union[UUID, bytes]], bytes, UUID):
     """
     UUID Field
 
