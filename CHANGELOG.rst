@@ -9,6 +9,12 @@ Changelog
 0.20
 ====
 
+0.20.1
+------
+Added
+^^^^^
+- Add binary compression support for `UUIDField` in `MySQL`. (#1458)
+
 0.20.0
 ------
 Added
