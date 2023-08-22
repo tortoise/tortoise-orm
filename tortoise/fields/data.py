@@ -609,7 +609,7 @@ class UUIDField(Field[UUID], UUID):
     ``binary_compression``: (bool)
         If True, the UUID will be stored in binary format.
         This will save 6 bytes per UUID in the database.
-        Note: that this is a MySQL-only feature. See https://dev.mysql.com/blog-archive/mysql-8-0-uuid-support/ 
+        Note: that this is a MySQL-only feature. See https://dev.mysql.com/blog-archive/mysql-8-0-uuid-support/ for more details.
     """
 
     SQL_TYPE = "CHAR(36)"
@@ -627,7 +627,6 @@ class UUIDField(Field[UUID], UUID):
 
         if binary_compression:
             self._db_mysql.SQL_TYPE = "BINARY(16)"
-        
         self._binary_compression = binary_compression
 
     def to_db_value(self, value: Any, instance: "Union[Type[Model], Model]") -> Optional[Union[str, bytes]]:
