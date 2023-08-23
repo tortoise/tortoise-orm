@@ -1,10 +1,12 @@
-from tortoise.fields import Field
-from uuid import UUID, uuid4
 from typing import Any, Optional, Union
+from uuid import UUID, uuid4
+
+from tortoise.fields import Field
 
 
 class GeometryField(Field):
     SQL_TYPE = "GEOMETRY"
+
 
 class UUIDField(Field[Union[UUID, bytes]], bytes, UUID):
     """
@@ -17,7 +19,7 @@ class UUIDField(Field[Union[UUID, bytes]], bytes, UUID):
     ``binary_compression``: (bool)
         If True, the UUID will be stored in binary format.
         This will save 6 bytes per UUID in the database.
-        Note: that this is a MySQL-only feature. 
+        Note: that this is a MySQL-only feature.
         See https://dev.mysql.com/blog-archive/mysql-8-0-uuid-support/ for more details.
     """
 
@@ -33,13 +35,13 @@ class UUIDField(Field[Union[UUID, bytes]], bytes, UUID):
         self._binary_compression = binary_compression
 
     def to_db_value(self, value: Any) -> Optional[Union[str, bytes]]:
-       # Make sure that value is a UUIDv4
-       # If not, raise an error
-       # This is to prevent UUIDv1 or any other version from being stored in the database
+        # Make sure that value is a UUIDv4
+        # If not, raise an error
+        # This is to prevent UUIDv1 or any other version from being stored in the database
         if self._binary_compression and isinstance(value, UUID):
             return value.bytes
         return value and str(value)
-    
+
     def to_python_value(self, value: Any) -> Optional[Union[UUID, bytes]]:
         if value is None or isinstance(value, UUID):
             # Convert to UUID if binary_compression is True
