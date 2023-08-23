@@ -1,4 +1,7 @@
-from typing import Optional
+import typing
+
+if typing.TYPE_CHECKING:
+    from tortoise.fields import Field
 
 
 class BaseORMException(Exception):
@@ -79,15 +82,21 @@ class ValidationError(BaseORMException):
     The ValidationError is raised when validators of field validate failed.
     """
 
-    def __init__(self, msg: str, field: Optional[str] = None):
-        self.field = field
-        self.msg = msg
-
-    def __str__(self):
-        return self.msg
-
 
 class UnSupportedError(BaseORMException):
     """
     The UnSupportedError is raised when operation is not supported.
     """
+
+
+class FieldValidationError(ValidationError):
+    """
+    The FieldValidationError is raised when validators of field validate failed.
+    """
+
+    def __init__(self, field: Field, msg: str):
+        self.field = field
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg

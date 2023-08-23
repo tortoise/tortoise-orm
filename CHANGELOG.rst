@@ -12,7 +12,7 @@ Changelog
 ------
 Added
 ^^^^^
-- Add field to ValidationError. (#1460)
+- Add `FieldValidationError` to raise error when field validation error. (#1460)
 
 0.20.0
 ------

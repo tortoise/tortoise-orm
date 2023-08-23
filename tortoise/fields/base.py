@@ -16,7 +16,7 @@ from typing import (
 
 from pypika.terms import Term
 
-from tortoise.exceptions import ConfigurationError, ValidationError
+from tortoise.exceptions import ConfigurationError, ValidationError, FieldValidationError
 from tortoise.validators import Validator
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -259,7 +259,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
                 else:
                     v(value)
             except ValidationError as exc:
-                raise ValidationError(f"{self.model_field_name}: {exc}", self.model_field_name)
+                raise FieldValidationError(self, f"{self.model_field_name}: {exc}") from exc
 
     @property
     def required(self) -> bool:
