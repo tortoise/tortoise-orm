@@ -2,13 +2,14 @@ from typing import Any, Optional, Union
 from uuid import UUID, uuid4
 
 from tortoise.fields import Field
+from tortoise.fields import UUIDField as UUIDFieldBase
 
 
 class GeometryField(Field):
     SQL_TYPE = "GEOMETRY"
 
 
-class UUIDField(Field[Union[UUID, bytes]], bytes, UUID):
+class UUIDField(UUIDFieldBase):
     """
     UUID Field
 
@@ -34,19 +35,20 @@ class UUIDField(Field[Union[UUID, bytes]], bytes, UUID):
             self.SQL_TYPE = "BINARY(16)"
         self._binary_compression = binary_compression
 
-    def to_db_value(self, value: Any) -> Optional[Union[str, bytes]]:
+    def to_db_value(self, value: Any) -> Optional[Union[str, bytes]]:  # type: ignore
         # Make sure that value is a UUIDv4
         # If not, raise an error
         # This is to prevent UUIDv1 or any other version from being stored in the database
-        if self._binary_compression and isinstance(value, UUID):
+        if self._binary_compression:
+            if value is not isinstance(value, UUID):
+                raise ValueError("UUIDField only accepts UUID values")
             return value.bytes
         return value and str(value)
 
-    def to_python_value(self, value: Any) -> Optional[Union[UUID, bytes]]:
+    def to_python_value(self, value: Any) -> Optional[UUID]:
         if value is None or isinstance(value, UUID):
-            # Convert to UUID if binary_compression is True
-            # and value is bytes Type
-            if self._binary_compression and isinstance(value, bytes):
-                return UUID(bytes=bytes(value))
             return value
-        return UUID(value)
+        elif self._binary_compression:
+            return UUID(bytes=value)
+        else:
+            return UUID(value)
