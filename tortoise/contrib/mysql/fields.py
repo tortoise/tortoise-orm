@@ -1,8 +1,11 @@
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, Type, TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from tortoise.fields import Field
-from tortoise.fields import UUIDField as UUIDFieldBase
+from tortoise.fields import Field, UUIDField as UUIDFieldBase
+
+
+if TYPE_CHECKING:  # pragma: nocoverage
+    from tortoise.models import Model
 
 
 class GeometryField(Field):
