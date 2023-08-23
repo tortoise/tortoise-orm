@@ -38,7 +38,7 @@ class UUIDField(UUIDFieldBase):
             self.SQL_TYPE = "BINARY(16)"
         self._binary_compression = binary_compression
 
-    def to_db_value(self, value: Any, instance: Union[Type[Model], Model]) -> Optional[Union[str, bytes]]:  # type: ignore
+    def to_db_value(self, value: Any, instance: "Union[Type[Model], Model]") -> Optional[Union[str, bytes]]:  # type: ignore
         # Make sure that value is a UUIDv4
         # If not, raise an error
         # This is to prevent UUIDv1 or any other version from being stored in the database
