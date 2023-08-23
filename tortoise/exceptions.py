@@ -94,7 +94,7 @@ class FieldValidationError(ValidationError):
     The FieldValidationError is raised when validators of field validate failed.
     """
 
-    def __init__(self, field: Field, msg: str):
+    def __init__(self, field: "Field", msg: str):
         self.field = field
         self.msg = msg
 
