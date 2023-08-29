@@ -208,7 +208,7 @@ And one could get the contents by using `regular Pydantic-object methods <https:
 
     >>> print(tourpy.model_dump())
     {
-        '__root__': [
+        'root': [
             {
                 'id': 2,
                 'name': 'Another',
