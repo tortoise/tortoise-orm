@@ -46,7 +46,7 @@ async def run():
 
     # As Python dict with Python objects (e.g. datetime)
     # Note that the root element is '__root__' that contains the root element.
-    print(tourpy.dict())
+    print(tourpy.model_dump())
     # As serialised JSON (e.g. datetime is ISO8601 string representation)
     print(tourpy.json(indent=4))
 
