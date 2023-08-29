@@ -245,7 +245,7 @@ And one could get the contents by using `regular Pydantic-object methods <https:
         }
     ]
 
-Note how ``.model_dump()`` has a ``_root__`` element with the list, but the ``.model_dump_json()`` has the list as root.
+Note how ``.model_dump()`` has a ``root`` element with the list, but the ``.model_dump_json()`` has the list as root.
 Also note how the results are sorted alphabetically by ``name``.
 
 
