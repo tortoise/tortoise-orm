@@ -25,7 +25,7 @@ Here we introduce:
 * Creating a Pydantic model from a Tortoise model
 * Docstrings & doc-comments are used
 * Evaluating the generated schema
-* Simple serialisation with both ``.dict()`` and ``.json()``
+* Simple serialisation with both ``.model_dump()`` and ``.model_dump_json()``
 
 Source to example: :ref:`example_pydantic_tut1`
 
@@ -92,17 +92,17 @@ To serialise an object it is simply *(in an async context)*:
     tournament = await Tournament.create(name="New Tournament")
     tourpy = await Tournament_Pydantic.from_tortoise_orm(tournament)
 
-And one could get the contents by using `regular Pydantic-object methods <https://pydantic-docs.helpmanual.io/usage/exporting_models/>`_, such as ``.dict()`` or ``.json()``
+And one could get the contents by using `regular Pydantic-object methods <https://pydantic-docs.helpmanual.io/usage/exporting_models/>`_, such as ``.model_dump()`` or ``.model_dump_json()``
 
 .. code-block:: py3
 
-    >>> print(tourpy.dict())
+    >>> print(tourpy.model_dump())
     {
         'id': 1,
         'name': 'New Tournament',
         'created_at': datetime.datetime(2020, 3, 1, 20, 28, 9, 346808)
     }
-    >>> print(tourpy.json())
+    >>> print(tourpy.model_dump_json())
     {
         "id": 1,
         "name": "New Tournament",
@@ -202,13 +202,13 @@ To serialise an object it is simply *(in an async context)*:
 
     tourpy = await Tournament_Pydantic_List.from_queryset(Tournament.all())
 
-And one could get the contents by using `regular Pydantic-object methods <https://pydantic-docs.helpmanual.io/usage/exporting_models/>`_, such as ``.dict()`` or ``.json()``
+And one could get the contents by using `regular Pydantic-object methods <https://pydantic-docs.helpmanual.io/usage/exporting_models/>`_, such as ``.model_dump()`` or ``.model_dump_json()``
 
 .. code-block:: py3
 
-    >>> print(tourpy.dict())
+    >>> print(tourpy.model_dump())
     {
-        '__root__': [
+        'root': [
             {
                 'id': 2,
                 'name': 'Another',
@@ -226,7 +226,7 @@ And one could get the contents by using `regular Pydantic-object methods <https:
             }
         ]
     }
-    >>> print(tourpy.json())
+    >>> print(tourpy.model_dump_json())
     [
         {
             "id": 2,
@@ -245,7 +245,7 @@ And one could get the contents by using `regular Pydantic-object methods <https:
         }
     ]
 
-Note how ``.dict()`` has a ``_root__`` element with the list, but the ``.json()`` has the list as root.
+Note how ``.model_dump()`` has a ``root`` element with the list, but the ``.model_dump_json()`` has the list as root.
 Also note how the results are sorted alphabetically by ``name``.
 
 
@@ -479,7 +479,7 @@ Lets create and serialise the objects and see what they look like *(in an async 
     # Serialise Tournament
     tourpy = await Tournament_Pydantic.from_tortoise_orm(tournament)
 
-    >>> print(tourpy.json())
+    >>> print(tourpy.model_dump_json())
     {
         "id": 1,
         "name": "New Tournament",
@@ -499,7 +499,7 @@ And serialising the event *(in an async context)*:
 
     eventpy = await Event_Pydantic.from_tortoise_orm(event)
 
-    >>> print(eventpy.json())
+    >>> print(eventpy.model_dump_json())
     {
         "id": 1,
         "name": "The Event",
@@ -675,7 +675,7 @@ Lets create and serialise the objects and see what they look like *(in an async 
     # Serialise Tournament
     tourpy = await Tournament_Pydantic.from_tortoise_orm(tournament)
 
-    >>> print(tourpy.json())
+    >>> print(tourpy.model_dump_json())
     {
         "id": 1,
         "name": "New Tournament",
