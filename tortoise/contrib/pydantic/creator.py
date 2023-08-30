@@ -131,6 +131,7 @@ def pydantic_model_creator(
     exclude_readonly: bool = False,
     meta_override: Optional[Type] = None,
     model_config: Optional[ConfigDict] = None,
+    __validators__: dict[str, Any] | None = None,
 ) -> Type[PydanticModel]:
     """
     Function to build `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ off Tortoise Model.
@@ -439,6 +440,7 @@ def pydantic_model_creator(
     model = create_model(
         _name,
         __base__=PydanticModel,
+        __validators__=__validators__,
         **properties,
     )
     # Copy the Model docstring over
