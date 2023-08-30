@@ -9,6 +9,12 @@ Changelog
 0.20
 ====
 
+0.20.1
+------
+Added
+^^^^^
+- NVARCHAR non-ascii char support on mssql
+
 0.20.0
 ------
 Added
