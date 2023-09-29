@@ -329,7 +329,7 @@ class MetaInfo:
             if not field.generated:
                 continue
             generated_fields.append(field.source_field or field.model_field_name)
-        self.generated_db_fields = tuple(generated_fields)  # type: ignore
+        self.generated_db_fields = tuple(generated_fields)
 
         self._ordering_validated = True
         for field_name, _ in self._default_ordering:
