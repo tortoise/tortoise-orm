@@ -244,7 +244,7 @@ class MetaInfo:
         self.basequery_all_fields: Query = Query()
         self.basetable: Table = Table("")
         self.pk_attr: str = getattr(meta, "pk_attr", "")
-        self.generated_db_fields: Tuple[str] = None  # type: ignore
+        self.generated_db_fields: Tuple[str, ...] = None  # type: ignore
         self._model: Type["Model"] = None  # type: ignore
         self.table_description: str = getattr(meta, "table_description", "")
         self.pk: Field = None  # type: ignore
@@ -329,7 +329,7 @@ class MetaInfo:
             if not field.generated:
                 continue
             generated_fields.append(field.source_field or field.model_field_name)
-        self.generated_db_fields = tuple(generated_fields)  # type: ignore
+        self.generated_db_fields = tuple(generated_fields)
 
         self._ordering_validated = True
         for field_name, _ in self._default_ordering:
