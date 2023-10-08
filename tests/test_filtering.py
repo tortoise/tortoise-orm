@@ -7,6 +7,7 @@ from tests.testmodels import (
     Reporter,
     Team,
     Tournament,
+    DateFields,
 )
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotEQ
@@ -181,6 +182,11 @@ class TestFiltering(test.TestCase):
         self.assertEqual(await DatetimeFields.filter(datetime__minute=0).count(), 1)
         self.assertEqual(await DatetimeFields.filter(datetime__second=0).count(), 1)
         self.assertEqual(await DatetimeFields.filter(datetime__microsecond=0).count(), 1)
+
+        await DateFields.create(date=datetime.date(year=2021, month=6, day=21))
+        self.assertEqual(await DateFields.filter(date__year=2021).count(), 0)
+        self.assertEqual(await DateFields.filter(date__month=6).count(), 0)
+        self.assertEqual(await DateFields.filter(date__day=21).count(), 0)
 
     async def test_filter_by_aggregation_field(self):
         tournament = await Tournament.create(name="0")
