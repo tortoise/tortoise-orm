@@ -691,3 +691,11 @@ def run_async(coro: Coroutine) -> None:
 
 
 __version__ = "0.20.0"
+
+__all__ = [
+    "Model",
+    "Tortoise",
+    "BaseDBAsyncClient",
+    "__version__",
+    "connections",
+]
