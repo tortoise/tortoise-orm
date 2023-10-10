@@ -9,6 +9,10 @@ Changelog
 0.20
 ====
 
+Added
+^^^^^
+- Only `Model`, `Tortoise`, `BaseDBAsyncClient`, `__version__`, and `connections` are now exported from `tortoise`
+
 0.20.0
 ------
 Added
