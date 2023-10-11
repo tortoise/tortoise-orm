@@ -9,6 +9,12 @@ Changelog
 0.20
 ====
 
+0.20.1
+------
+Fixed
+^^^^^
+- Fix order of fields in `ValuesListQuery` when it has more than 10 fields. (#1492)
+
 0.20.0
 ------
 Added
