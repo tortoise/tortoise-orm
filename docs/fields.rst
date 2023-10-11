@@ -56,7 +56,7 @@ MySQL
 ^^^^^
 
 .. automodule:: tortoise.contrib.mysql.fields
-    :members: GeometryField
+    :members: GeometryField, UUIDField
 
 Postgres
 ^^^^^^^^
