@@ -9,8 +9,11 @@ Changelog
 0.20
 ====
 
+0.20.1
+------
 Added
 ^^^^^
+- Add binary compression support for `UUIDField` in `MySQL`. (#1458)
 - Only `Model`, `Tortoise`, `BaseDBAsyncClient`, `__version__`, and `connections` are now exported from `tortoise`
 
 0.20.0
