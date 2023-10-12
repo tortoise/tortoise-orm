@@ -98,7 +98,7 @@ async def run():
     tourpy = await Tournament_Pydantic.from_tortoise_orm(tournament)
 
     # As serialised JSON
-    print(tourpy.json(indent=4))
+    print(tourpy.model_dump_json(indent=4))
 
 
 if __name__ == "__main__":
