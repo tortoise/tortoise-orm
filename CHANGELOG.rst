@@ -18,6 +18,7 @@ Added
 
 Fixed
 ^^^^^
+- Fix order of fields in `ValuesListQuery` when it has more than 10 fields. (#1492)
 - Fix pydantic v2 pydantic_model_creator nullable field not optional. (#1454)
 
 0.20.0
