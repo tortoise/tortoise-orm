@@ -40,7 +40,7 @@ async def run():
     # As Python dict with Python objects (e.g. datetime)
     print(tourpy.model_dump())
     # As serialised JSON (e.g. datetime is ISO8601 string representation)
-    print(tourpy.json(indent=4))
+    print(tourpy.model_dump_json(indent=4))
 
 
 if __name__ == "__main__":
