@@ -8,7 +8,7 @@ from pydantic._internal._decorators import PydanticDescriptorProxy
 
 from tortoise.contrib.pydantic.base import PydanticListModel, PydanticModel
 from tortoise.contrib.pydantic.utils import get_annotations
-from tortoise.fields import JSONField, relational
+from tortoise.fields import IntField, JSONField, TextField, relational
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -348,11 +348,13 @@ def pydantic_model_creator(
             return pmodel
 
         # Foreign keys and OneToOne fields are embedded schemas
+        is_to_one_relation = False
         if (
             field_type is relational.ForeignKeyFieldInstance
             or field_type is relational.OneToOneFieldInstance
             or field_type is relational.BackwardOneToOneRelation
         ):
+            is_to_one_relation = True
             model = get_submodel(fdesc["python_type"])
             if model:
                 if fdesc.get("nullable"):
@@ -410,6 +412,15 @@ def pydantic_model_creator(
             if field_default is not None and not callable(field_default):
                 properties[fname] = (ftype, Field(default=field_default, **fconfig))
             else:
+                if (j := fconfig.get("json_schema_extra")) and (
+                    (
+                        j.get("nullable")
+                        and not is_to_one_relation
+                        and field_type not in (IntField, TextField)
+                    )
+                    or (exclude_readonly and j.get("readOnly"))
+                ):
+                    fconfig["default_factory"] = lambda: None
                 properties[fname] = (ftype, Field(**fconfig))
 
     # Here we endure that the name is unique, but complete objects are still labeled verbatim

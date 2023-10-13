@@ -22,7 +22,7 @@ async def get_users():
 
 @app.post("/users", response_model=User_Pydantic)
 async def create_user(user: UserIn_Pydantic):
-    user_obj = await Users.create(**user.dict(exclude_unset=True))
+    user_obj = await Users.create(**user.model_dump(exclude_unset=True))
     return await User_Pydantic.from_tortoise_orm(user_obj)
 
 
@@ -33,7 +33,7 @@ async def get_user(user_id: int):
 
 @app.put("/user/{user_id}", response_model=User_Pydantic)
 async def update_user(user_id: int, user: UserIn_Pydantic):
-    await Users.filter(id=user_id).update(**user.dict(exclude_unset=True))
+    await Users.filter(id=user_id).update(**user.model_dump(exclude_unset=True))
     return await User_Pydantic.from_queryset_single(Users.get(id=user_id))
 
 
