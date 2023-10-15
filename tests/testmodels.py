@@ -892,3 +892,17 @@ class CamelCaseAliasPerson(Model):
             alias_generator=camelize_var,
             populate_by_name=True,
         )
+
+
+def callable_default() -> str:
+    return "callable_default"
+
+
+async def async_callable_default() -> str:
+    return "async_callable_default"
+
+
+class CallableDefault(Model):
+    id = fields.IntField(pk=True)
+    callable_default = fields.CharField(max_length=32, default=callable_default)
+    async_default = fields.CharField(max_length=32, default=async_callable_default)

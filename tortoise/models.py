@@ -859,7 +859,7 @@ class Model(metaclass=ModelMeta):
     async def _set_async_default_field(self) -> None:
         """retrieve value from field's async default value"""
         if hasattr(self, "_await_when_save"):
-            for k, v in self._await_when_save.items():
+            for k, v in self._await_when_save.copy().items():
                 setattr(self, k, await v())
             self._await_when_save = {}
 
