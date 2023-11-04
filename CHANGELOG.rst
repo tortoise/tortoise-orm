@@ -15,6 +15,7 @@ Added
 ^^^^^
 - Add binary compression support for `UUIDField` in `MySQL`. (#1458)
 - Only `Model`, `Tortoise`, `BaseDBAsyncClient`, `__version__`, and `connections` are now exported from `tortoise`
+- Add parameter `validators` to `pydantic_model_creator`. (#1471)
 
 Fixed
 ^^^^^
