@@ -131,7 +131,7 @@ def pydantic_model_creator(
     exclude_readonly: bool = False,
     meta_override: Optional[Type] = None,
     model_config: Optional[ConfigDict] = None,
-    __validators__: dict[str, Any] | None = None,
+    validators: Optional[Dict[str, Any]] = None,
 ) -> Type[PydanticModel]:
     """
     Function to build `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ off Tortoise Model.
@@ -157,6 +157,7 @@ def pydantic_model_creator(
     :param exclude_readonly: Build a subset model that excludes any readonly fields
     :param meta_override: A PydanticMeta class to override model's values.
     :param model_config: A custom config to use as pydantic config.
+    :param validators: A dictionary of methods that validate fields.
 
         Note: Created pydantic model uses config_class parameter and PydanticMeta's
             config_class as its Config class's bases(Only if provided!), but it
@@ -440,7 +441,7 @@ def pydantic_model_creator(
     model = create_model(
         _name,
         __base__=PydanticModel,
-        __validators__=__validators__,
+        __validators__=validators,
         **properties,
     )
     # Copy the Model docstring over
