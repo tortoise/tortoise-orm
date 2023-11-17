@@ -1486,6 +1486,15 @@ class Model(metaclass=ModelMeta):
                 if name in cls._meta.m2m_fields
             ],
         }
+        
+    @classmethod
+    def get_table_name(cls):
+        """
+        Return the name of the table associated with the model.
+
+        :return: A string representing the name of the table.
+        """
+        return cls._meta.db_table
 
     def __await__(self: MODEL) -> Generator[Any, None, MODEL]:
         async def _self() -> MODEL:
