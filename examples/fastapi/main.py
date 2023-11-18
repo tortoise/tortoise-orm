@@ -1,4 +1,5 @@
 # pylint: disable=E0611,E0401
+from contextlib import asynccontextmanager
 from typing import List
 
 from fastapi import FastAPI
@@ -8,7 +9,14 @@ from starlette.exceptions import HTTPException
 
 from tortoise.contrib.fastapi import register_tortoise
 
-app = FastAPI(title="Tortoise ORM FastAPI example")
+
+@asynccontextmanager
+async def lifespan(app):
+    # Feel free to use tortoise-orm with or without custom lifespan
+    yield
+
+
+app = FastAPI(title="Tortoise ORM FastAPI example", lifespan=lifespan)
 
 
 class Status(BaseModel):

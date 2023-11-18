@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from contextlib import AbstractAsyncContextManager
 from types import ModuleType
 from typing import Dict, Iterable, Optional, Union
 
@@ -25,7 +28,7 @@ def register_tortoise(
     add_exception_handlers: bool = False,
 ) -> None:
     """
-    Registers ``startup`` and ``shutdown`` events to set-up and tear-down Tortoise-ORM
+    Registers lifespan context to set-up and tear-down Tortoise-ORM
     inside a FastAPI application.
 
     You can configure using only one of ``config``, ``config_file``
@@ -89,7 +92,6 @@ def register_tortoise(
         For any configuration error
     """
 
-    @app.on_event("startup")
     async def init_orm() -> None:  # pylint: disable=W0612
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
         logger.info("Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps)
@@ -97,7 +99,6 @@ def register_tortoise(
             logger.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()
 
-    @app.on_event("shutdown")
     async def close_orm() -> None:  # pylint: disable=W0612
         await connections.close_all()
         logger.info("Tortoise-ORM shutdown")
@@ -114,3 +115,15 @@ def register_tortoise(
                 status_code=422,
                 content={"detail": [{"loc": [], "msg": str(exc), "type": "IntegrityError"}]},
             )
+
+    class Manager(AbstractAsyncContextManager):
+        def __call__(self, *args, **kwargs) -> "Manager":
+            return self
+
+        async def __aenter__(self) -> None:
+            await init_orm()
+
+        async def __aexit__(self, *args, **kwargs) -> None:
+            await close_orm()
+
+    app.router.lifespan_context = Manager()
