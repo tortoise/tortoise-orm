@@ -1486,7 +1486,7 @@ class Model(metaclass=ModelMeta):
                 if name in cls._meta.m2m_fields
             ],
         }
-        
+
     @classmethod
     def get_table_name(cls):
         """
