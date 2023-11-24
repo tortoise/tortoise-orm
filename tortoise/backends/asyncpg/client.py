@@ -58,8 +58,13 @@ class AsyncpgDBClient(BasePostgresClient):
         try:
             self._pool = await self.create_pool(password=self.password, **self._template)
             self.log.debug("Created connection pool %s with params: %s", self._pool, self._template)
-        except asyncpg.InvalidCatalogNameError:
-            raise DBConnectionError(f"Can't establish connection to database {self.database}")
+        except asyncpg.InvalidCatalogNameError as ex:
+            msg = "Can't establish connection to "
+            if with_db:
+                msg += f"database {self.database}"
+            else:
+                msg += f"default database. Verify environment PGDATABASE. Exception: {ex}"
+            raise DBConnectionError(msg)
 
     async def create_pool(self, **kwargs) -> asyncpg.Pool:
         return await asyncpg.create_pool(None, **kwargs)
