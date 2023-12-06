@@ -229,7 +229,7 @@ handle complex objects.
     import ssl
     ctx = ssl.create_default_context()
     # And in this example we disable validation...
-    # Please don't do this. Loot at the official Python ``ssl`` module documentation
+    # Please don't do this. Look at the official Python ``ssl`` module documentation
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
 
