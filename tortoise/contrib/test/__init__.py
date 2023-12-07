@@ -109,7 +109,7 @@ def initializer(
     _CONFIG = getDBConfig(app_label=app_label, modules=_MODULES)
     loop = loop or asyncio.get_event_loop()
     _LOOP = loop
-    _SELECTOR = loop._selector  # type: ignore
+    _SELECTOR = getattr(loop, "_selector", None)  # type: ignore
     loop.run_until_complete(_init_db(_CONFIG))
     _CONNECTIONS = connections._copy_storage()
     _CONN_CONFIG = connections.db_config.copy()
@@ -125,7 +125,8 @@ def finalizer() -> None:
     """
     _restore_default()
     loop = _LOOP
-    loop._selector = _SELECTOR  # type: ignore
+    if _SELECTOR:
+        loop._selector = _SELECTOR  # type: ignore
     loop.run_until_complete(Tortoise._drop_databases())
 
 
