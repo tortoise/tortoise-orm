@@ -1,3 +1,8 @@
+from typing import TYPE_CHECKING, Type
+
+if TYPE_CHECKING:
+    from tortoise import Model
+
 class BaseORMException(Exception):
     """
     Base ORM Exception.
@@ -57,7 +62,13 @@ class DoesNotExist(OperationalError):
     """
     The DoesNotExist exception is raised when expecting data, such as a ``.get()`` operation.
     """
+    def __init__(self, model: 'Type[Model]', *args):
+        self.model: 'Type[Model]' = model
+        # todo: add primary key name and value
+        super().__init__(*args)
 
+    def __str__(self):
+        return f'Object "{self.model.__name__}" does not exist'
 
 class IncompleteInstanceError(OperationalError):
     """
