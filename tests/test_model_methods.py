@@ -23,6 +23,7 @@ from tortoise.exceptions import (
     OperationalError,
     ParamsError,
     ValidationError,
+    ObjectDoesNotExistError,
 )
 from tortoise.expressions import F, Q
 from tortoise.models import NoneAwaitable
@@ -252,11 +253,11 @@ class TestModelMethods(test.TestCase):
         self.assertEqual(obj, self.mdl)
 
     async def test_index_badval(self):
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ObjectDoesNotExistError):
             await self.cls[100000]
 
     async def test_index_badtype(self):
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ObjectDoesNotExistError):
             await self.cls["asdf"]
 
     async def test_clone(self):
