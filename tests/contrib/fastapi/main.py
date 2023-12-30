@@ -1,5 +1,7 @@
 # pylint: disable=E0611,E0401
+import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import List
 
 from fastapi import FastAPI
@@ -7,26 +9,26 @@ from models import User_Pydantic, UserIn_Pydantic, Users
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException
 
-from tortoise.contrib.fastapi import RegisterTortoise
+from tortoise.contrib.fastapi import register_tortoise
+
+LOG_FILE = Path(__file__).parent / "foo.log"
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("app startup")
-    async with RegisterTortoise(
-        app,
-        db_url="sqlite://:memory:",
-        modules={"models": ["models"]},
-        generate_schemas=True,
-        add_exception_handlers=True,
-    ):
-        print("db connected")
-        yield
-        print("db connections closed")
+    if not LOG_FILE.exists():
+        LOG_FILE.touch()
+    yield
     print("app teardown")
+    if LOG_FILE.exists():
+        LOG_FILE.unlink()
 
 
-app = FastAPI(title="Tortoise ORM FastAPI example", lifespan=lifespan)
+if os.getenv("USE_LIFESPAN"):
+    app = FastAPI(title="Tortoise ORM FastAPI test", lifespan=lifespan)
+else:
+    app = FastAPI(title="Tortoise ORM FastAPI test")
 
 
 class Status(BaseModel):
@@ -61,3 +63,12 @@ async def delete_user(user_id: int):
     if not deleted_count:
         raise HTTPException(status_code=404, detail=f"User {user_id} not found")
     return Status(message=f"Deleted user {user_id}")
+
+
+register_tortoise(
+    app,
+    db_url="sqlite://:memory:",
+    modules={"models": ["models"]},
+    generate_schemas=True,
+    add_exception_handlers=True,
+)
