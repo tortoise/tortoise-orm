@@ -3,6 +3,7 @@ from base64 import b32encode
 from hashlib import sha3_224
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type
 
+from pydantic import VERSION as PYDANTIC_VERSION
 from pydantic import ConfigDict, Field, computed_field, create_model
 from pydantic._internal._decorators import PydanticDescriptorProxy
 
@@ -438,9 +439,13 @@ def pydantic_model_creator(
 
     # Creating Pydantic class for the properties generated before
     properties["model_config"] = pconfig
+    __module__: Optional[str] = None
+    if PYDANTIC_VERSION < "2.5":
+        __module__ = __name__
     model = create_model(
         _name,
         __base__=PydanticModel,
+        __module__=__module__,  # type:ignore[arg-type]
         __validators__=validators,
         **properties,
     )
