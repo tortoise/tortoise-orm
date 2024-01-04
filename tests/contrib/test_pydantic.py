@@ -65,7 +65,7 @@ class TestPydantic(test.TestCase):
             self.Event_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "pydantic__main__tests__testmodels__Address__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -81,7 +81,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Reporter__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -97,7 +97,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Team__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -125,7 +125,7 @@ class TestPydantic(test.TestCase):
                         "title": "Team",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Tournament__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -164,20 +164,26 @@ class TestPydantic(test.TestCase):
                     "name": {"description": "The name", "title": "Name", "type": "string"},
                     "tournament": {
                         "allOf": [
-                            {"$ref": "#/$defs/pydantic__main__tests__testmodels__Tournament__leaf"}
+                            {
+                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf"
+                            }
                         ],
                         "description": "What tournaments is a happenin'",
                     },
                     "reporter": {
                         "anyOf": [
-                            {"$ref": "#/$defs/pydantic__main__tests__testmodels__Reporter__leaf"},
+                            {
+                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf"
+                            },
                             {"type": "null"},
                         ],
                         "nullable": True,
                         "title": "Reporter",
                     },
                     "participants": {
-                        "items": {"$ref": "#/$defs/pydantic__main__tests__testmodels__Team__leaf"},
+                        "items": {
+                            "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf"
+                        },
                         "title": "Participants",
                         "type": "array",
                     },
@@ -198,7 +204,9 @@ class TestPydantic(test.TestCase):
                     },
                     "address": {
                         "anyOf": [
-                            {"$ref": "#/$defs/pydantic__main__tests__testmodels__Address__leaf"},
+                            {
+                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf"
+                            },
                             {"type": "null"},
                         ],
                         "nullable": True,
@@ -240,7 +248,7 @@ class TestPydantic(test.TestCase):
                             "tournament": {
                                 "allOf": [
                                     {
-                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Tournament__leaf"
+                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf"
                                     }
                                 ],
                                 "description": "What tournaments is a happenin'",
@@ -248,7 +256,7 @@ class TestPydantic(test.TestCase):
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Reporter__leaf"
+                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -257,7 +265,7 @@ class TestPydantic(test.TestCase):
                             },
                             "participants": {
                                 "items": {
-                                    "$ref": "#/$defs/pydantic__main__tests__testmodels__Team__leaf"
+                                    "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf"
                                 },
                                 "title": "Participants",
                                 "type": "array",
@@ -287,7 +295,7 @@ class TestPydantic(test.TestCase):
                             "address": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Address__leaf"
+                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -309,7 +317,7 @@ class TestPydantic(test.TestCase):
                         "title": "Event",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Address__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -325,7 +333,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Reporter__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -341,7 +349,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Team__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -369,7 +377,7 @@ class TestPydantic(test.TestCase):
                         "title": "Team",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Tournament__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -422,7 +430,7 @@ class TestPydantic(test.TestCase):
                             "tournament": {
                                 "allOf": [
                                     {
-                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Tournament__leaf"
+                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf"
                                     }
                                 ],
                                 "description": "What tournaments is a happenin'",
@@ -430,7 +438,7 @@ class TestPydantic(test.TestCase):
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Reporter__leaf"
+                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -439,7 +447,7 @@ class TestPydantic(test.TestCase):
                             },
                             "participants": {
                                 "items": {
-                                    "$ref": "#/$defs/pydantic__main__tests__testmodels__Team__leaf"
+                                    "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf"
                                 },
                                 "title": "Participants",
                                 "type": "array",
@@ -480,7 +488,7 @@ class TestPydantic(test.TestCase):
                         "title": "Event",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Reporter__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -496,7 +504,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Team__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -524,7 +532,7 @@ class TestPydantic(test.TestCase):
                         "title": "Team",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Tournament__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -588,7 +596,7 @@ class TestPydantic(test.TestCase):
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Reporter__leaf"
+                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -597,7 +605,7 @@ class TestPydantic(test.TestCase):
                             },
                             "participants": {
                                 "items": {
-                                    "$ref": "#/$defs/pydantic__main__tests__testmodels__Team__leaf"
+                                    "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf"
                                 },
                                 "title": "Participants",
                                 "type": "array",
@@ -627,7 +635,7 @@ class TestPydantic(test.TestCase):
                             "address": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Address__leaf"
+                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -648,7 +656,7 @@ class TestPydantic(test.TestCase):
                         "title": "Event",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Address__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -664,7 +672,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Reporter__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -680,7 +688,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Team__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -756,7 +764,7 @@ class TestPydantic(test.TestCase):
                             "tournament": {
                                 "allOf": [
                                     {
-                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Tournament__leaf"
+                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf"
                                     }
                                 ],
                                 "description": "What tournaments is a happenin'",
@@ -764,7 +772,7 @@ class TestPydantic(test.TestCase):
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Reporter__leaf"
+                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -796,7 +804,7 @@ class TestPydantic(test.TestCase):
                             "address": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/pydantic__main__tests__testmodels__Address__leaf"
+                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -817,7 +825,7 @@ class TestPydantic(test.TestCase):
                         "title": "Event",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Address__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -833,7 +841,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Reporter__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -849,7 +857,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "pydantic__main__tests__testmodels__Tournament__leaf": {
+                    "tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {

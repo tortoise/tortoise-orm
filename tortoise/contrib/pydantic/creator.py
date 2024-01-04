@@ -132,6 +132,7 @@ def pydantic_model_creator(
     meta_override: Optional[Type] = None,
     model_config: Optional[ConfigDict] = None,
     validators: Optional[Dict[str, Any]] = None,
+    module: str = __name__,
 ) -> Type[PydanticModel]:
     """
     Function to build `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ off Tortoise Model.
@@ -158,6 +159,7 @@ def pydantic_model_creator(
     :param meta_override: A PydanticMeta class to override model's values.
     :param model_config: A custom config to use as pydantic config.
     :param validators: A dictionary of methods that validate fields.
+    :param module: The name of the module that the model belongs to.
 
         Note: Created pydantic model uses config_class parameter and PydanticMeta's
             config_class as its Config class's bases(Only if provided!), but it
@@ -441,6 +443,7 @@ def pydantic_model_creator(
     model = create_model(
         _name,
         __base__=PydanticModel,
+        __module__=module,
         __validators__=validators,
         **properties,
     )
