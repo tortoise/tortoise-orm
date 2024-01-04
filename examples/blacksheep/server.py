@@ -31,13 +31,13 @@ async def users_list() -> Union[UserPydanticOut]:
 
 @app.router.post("/")
 async def users_create(user: UserPydanticIn) -> UserPydanticOut:
-    user = await Users.create(**user.dict(exclude_unset=True))
+    user = await Users.create(**user.model_dump(exclude_unset=True))
     return created(await UserPydanticOut.from_tortoise_orm(user))
 
 
 @app.router.patch("/{id}")
 async def users_patch(id: UUID, user: UserPydanticIn) -> UserPydanticOut:
-    await Users.filter(id=id).update(**user.dict(exclude_unset=True))
+    await Users.filter(id=id).update(**user.model_dump(exclude_unset=True))
     return ok(await UserPydanticOut.from_tortoise_orm(await Users.get(id=id)))
 
 

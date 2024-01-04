@@ -3,13 +3,16 @@
 import asyncio
 
 import pytest
+import pytest_asyncio
 from blacksheep import JSONContent
 from blacksheep.testing import TestClient
 from models import Users
 from server import app
 
+pytestmark = pytest.mark.asyncio(scope="session")
 
-@pytest.fixture(scope="session")
+
+@pytest_asyncio.fixture(scope="session")
 async def client(api):
     return TestClient(api)
 
@@ -21,29 +24,13 @@ def event_loop(request):
     loop.close()
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def api():
     await app.start()
     yield app
     await app.stop()
 
 
-@pytest.mark.asyncio
-async def test_create_user(client: TestClient) -> None:
-    username = "john"
-
-    response = await client.post("/", content=JSONContent({"username": username}))
-    assert response.status == 201  # nosec
-
-    data = await response.json()
-    assert data["username"] == username  # nosec
-    user_id = data["id"]
-
-    user_obj = await Users.get(id=user_id)
-    assert str(user_obj.id) == user_id  # nosec
-
-
-@pytest.mark.asyncio
 async def test_get_uses_list(client: TestClient) -> None:
     username = "john"
     await Users.create(username=username)
@@ -62,7 +49,20 @@ async def test_get_uses_list(client: TestClient) -> None:
     assert str(user_obj.id) == user_id  # nosec
 
 
-@pytest.mark.asyncio
+async def test_create_user(client: TestClient) -> None:
+    username = "john"
+
+    response = await client.post("/", content=JSONContent({"username": username}))
+    assert response.status == 201  # nosec
+
+    data = await response.json()
+    assert data["username"] == username  # nosec
+    user_id = data["id"]
+
+    user_obj = await Users.get(id=user_id)
+    assert str(user_obj.id) == user_id  # nosec
+
+
 async def test_update_user(client: TestClient) -> None:  # nosec
     user = await Users.create(username="john")
 
@@ -78,7 +78,6 @@ async def test_update_user(client: TestClient) -> None:  # nosec
     assert str(user_obj.id) == user_id  # nosec
 
 
-@pytest.mark.asyncio
 async def test_delete_user(client: TestClient) -> None:
     user = await Users.create(username="john")
 

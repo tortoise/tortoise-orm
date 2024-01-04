@@ -80,7 +80,8 @@ httpx = "*"
 # Aiohttp support
 aiohttp = "*"
 # BlackSheep support
-blacksheep = "^1.0.9"
+blacksheep = "^2.0"
+pytest_asyncio = "^0.21.1"
 # mypy
 types-PyYAML = "*"
 types-pytz = "*"
