@@ -321,7 +321,7 @@ class TestModelMethodsNoID(TestModelMethods):
         self.cls = NoID
 
     def test_str(self):
-        self.assertEqual(str(self.mdl), "<NoID>")
+        self.assertEqual(str(self.mdl), "<NoID: 1>")
 
     def test_repr(self):
         self.assertEqual(repr(self.mdl), f"<NoID: {self.mdl.id}>")
