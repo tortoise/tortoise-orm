@@ -413,7 +413,7 @@ def pydantic_model_creator(
             ftype = properties[fname]
             if isinstance(ftype, PydanticDescriptorProxy):
                 continue
-            if field_default is not None and not callable(field_default):
+            if field_default is not None and not callable(field_default) or fname in optional:
                 properties[fname] = (ftype, Field(default=field_default, **fconfig))
             else:
                 if (j := fconfig.get("json_schema_extra")) and (
