@@ -92,6 +92,27 @@ class TestQ(_TestCase):
         self.assertEqual(q.filters, {"moo": "cow"})
         self.assertEqual(q.join_type, "OR")
 
+    def test_q_equality(self):
+        # basic query
+        basic_q1 = Q(moo="cow")
+        basic_q2 = Q(moo="cow")
+        self.assertEqual(basic_q1, basic_q2)
+
+        # and query
+        and_q1 = Q(firstname="John") & Q(lastname="Doe")
+        and_q2 = Q(firstname="John") & Q(lastname="Doe")
+        self.assertEqual(and_q1, and_q2)
+
+        # or query
+        or_q1 = Q(firstname="John") | Q(lastname="Doe")
+        or_q2 = Q(firstname="John") | Q(lastname="Doe")
+        self.assertEqual(or_q1, or_q2)
+
+        # complex query
+        complex_q1 = (Q(firstname="John") & Q(lastname="Doe")) | Q(mother_name="Jane")
+        complex_q2 = (Q(firstname="John") & Q(lastname="Doe")) | Q(mother_name="Jane")
+        self.assertEqual(complex_q1, complex_q2)
+
 
 class TestQCall(TestCase):
     def test_q_basic(self):
