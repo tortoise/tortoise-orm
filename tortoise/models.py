@@ -667,14 +667,24 @@ class Model(metaclass=ModelMeta):
         self._partial = False
         self._saved_in_db = False
         self._custom_generated_pk = False
+        self._await_when_save: Dict[str, Callable[[], Awaitable[Any]]] = {}
 
         # Assign defaults for missing fields
         for key in meta.fields.difference(self._set_kwargs(kwargs)):
             field_object = meta.fields_map[key]
-            if callable(field_object.default):
-                setattr(self, key, field_object.default())
+            field_default = field_object.default
+            if inspect.iscoroutinefunction(field_default):
+                self._await_when_save[key] = field_default
+            elif callable(field_default):
+                setattr(self, key, field_default())
             else:
                 setattr(self, key, deepcopy(field_object.default))
+
+    def __setattr__(self, key, value):
+        # set field value override async default function
+        if hasattr(self, "_await_when_save"):
+            self._await_when_save.pop(key, None)
+        super().__setattr__(key, value)
 
     def _set_kwargs(self, kwargs: dict) -> Set[str]:
         meta = self._meta
@@ -719,6 +729,7 @@ class Model(metaclass=ModelMeta):
         self._partial = False
         self._saved_in_db = True
         self._custom_generated_pk = self._meta.db_pk_column not in self._meta.generated_db_fields
+        self._await_when_save = {}
 
         meta = self._meta
 
@@ -845,6 +856,13 @@ class Model(metaclass=ModelMeta):
         if listener not in cls_listeners:
             cls_listeners.append(listener)
 
+    async def _set_async_default_field(self) -> None:
+        """retrieve value from field's async default value"""
+        if hasattr(self, "_await_when_save"):
+            for k, v in self._await_when_save.copy().items():
+                setattr(self, k, await v())
+            self._await_when_save = {}
+
     async def _pre_delete(
         self,
         using_db: Optional[BaseDBAsyncClient] = None,
@@ -921,6 +939,7 @@ class Model(metaclass=ModelMeta):
         :raises IncompleteInstanceError: If the model is partial and the fields are not available for persistence.
         :raises IntegrityError: If the model can't be created or updated (specifically if force_create or force_update has been set)
         """
+        await self._set_async_default_field()
         db = using_db or self._choose_db(True)
         executor = db.executor_class(model=self.__class__, db=db)
         if self._partial:
