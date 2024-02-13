@@ -1054,17 +1054,17 @@ class Model(metaclass=ModelMeta):
         if not defaults:
             defaults = {}
         db = using_db or cls._choose_db(True)
-        async with in_transaction(connection_name=db.connection_name) as connection:
+        try:
+            return await cls.filter(**kwargs).using_db(db).get(), False
+        except DoesNotExist:
             try:
-                return (
-                    await cls.select_for_update().filter(**kwargs).using_db(connection).get(),
-                    False,
-                )
-            except DoesNotExist:
-                try:
+                async with in_transaction(connection_name=db.connection_name) as connection:
                     return await cls.create(using_db=connection, **defaults, **kwargs), True
-                except (IntegrityError, TransactionManagementError):
-                    return await cls.filter(**kwargs).using_db(connection).get(), False
+            except (IntegrityError, TransactionManagementError) as exc:
+                try:
+                    return await cls.filter(**kwargs).using_db(db).get(), False
+                except Exception:
+                    raise exc
 
     @classmethod
     def select_for_update(
