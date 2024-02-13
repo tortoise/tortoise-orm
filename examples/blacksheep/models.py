@@ -1,6 +1,6 @@
 import tortoise
 from tortoise import fields, models
-from tortoise.contrib.pydantic import pydantic_model_creator
+from tortoise.contrib.pydantic.creator import pydantic_model_creator
 
 if tortoise.__version__ >= "0.20":
     raise RuntimeError("blacksheep not support pydantic V2, use tortoise-orm<0.20 instead!")
