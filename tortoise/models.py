@@ -745,7 +745,8 @@ class Model(metaclass=ModelMeta):
             self._partial = True
             # TODO: Apply similar perf optimisation as above for partial
             for key, value in kwargs.items():
-                setattr(self, key, meta.fields_map[key].to_python_value(value))
+                if hasattr(self, key):
+                    setattr(self, key, meta.fields_map[key].to_python_value(value))
 
         return self
 
