@@ -18,6 +18,7 @@ class Index:
         *expressions: Term,
         fields: Optional[Tuple[str, ...]] = None,
         name: Optional[str] = None,
+        index_type: Optional[str] = None
     ):
         """
         All kinds of index parent class, default is BTreeIndex.
@@ -37,6 +38,8 @@ class Index:
         self.name = name
         self.expressions = expressions
         self.extra = ""
+        self.index_type = index_type or self.INDEX_TYPE
+        
 
     def get_sql(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool):
         if self.fields:
@@ -45,7 +48,7 @@ class Index:
                 index_name=schema_generator.quote(
                     self.name or schema_generator._generate_index_name("idx", model, self.fields)
                 ),
-                index_type=f" {self.INDEX_TYPE} ",
+                index_type=f" {self.index_type} ",
                 table_name=schema_generator.quote(model._meta.db_table),
                 fields=", ".join(schema_generator.quote(f) for f in self.fields),
                 extra=self.extra,
@@ -55,7 +58,7 @@ class Index:
         return self.INDEX_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
             index_name=self.index_name(schema_generator, model),
-            index_type=f" {self.INDEX_TYPE} ",
+            index_type=f" {self.index_type} ",
             table_name=schema_generator.quote(model._meta.db_table),
             fields=", ".join(expressions),
             extra=self.extra,
@@ -72,8 +75,9 @@ class PartialIndex(Index):
         fields: Optional[Tuple[str, ...]] = None,
         name: Optional[str] = None,
         condition: Optional[dict] = None,
+        index_type: Optional[str] = None
     ):
-        super().__init__(*expressions, fields=fields, name=name)
+        super().__init__(*expressions, fields=fields, name=name, index_type=index_type)
         if condition:
             cond = " WHERE "
             items = []
