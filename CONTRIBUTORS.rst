@@ -53,6 +53,7 @@ Contributors
 * Paul Serov ``@thakryptex``
 * Stanislav Zmiev ``@Ovsyanka83``
 * Waket Zheng ``@waketzheng``
+* Stephan Klein ``@privatwolke``
 
 Special Thanks
 ==============
