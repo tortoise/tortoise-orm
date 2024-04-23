@@ -234,7 +234,7 @@ class TestPydantic(test.TestCase):
             self.Event_Pydantic_List.model_json_schema(),
             {
                 "$defs": {
-                    "Event": {
+                    "Event_ct5gv4": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -405,7 +405,7 @@ class TestPydantic(test.TestCase):
                     },
                 },
                 "description": "Events on the calendar",
-                "items": {"$ref": "#/$defs/Event"},
+                "items": {"$ref": "#/$defs/Event_ct5gv4"},
                 "title": "Event_list",
                 "type": "array",
             },
@@ -416,7 +416,7 @@ class TestPydantic(test.TestCase):
             self.Address_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "orhjcw": {
+                    "Event_aajoh6": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -563,7 +563,7 @@ class TestPydantic(test.TestCase):
                 "properties": {
                     "city": {"maxLength": 64, "title": "City", "type": "string"},
                     "street": {"maxLength": 128, "title": "Street", "type": "string"},
-                    "event": {"$ref": "#/$defs/orhjcw"},
+                    "event": {"$ref": "#/$defs/Event_aajoh6"},
                     "event_id": {
                         "maximum": 9223372036854775807,
                         "minimum": 1,
@@ -582,7 +582,7 @@ class TestPydantic(test.TestCase):
             self.Tournament_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "b4oydv": {
+                    "Event_h4reuz": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -734,7 +734,7 @@ class TestPydantic(test.TestCase):
                     },
                     "events": {
                         "description": "What tournaments is a happenin'",
-                        "items": {"$ref": "#/$defs/b4oydv"},
+                        "items": {"$ref": "#/$defs/Event_h4reuz"},
                         "title": "Events",
                         "type": "array",
                     },
@@ -750,7 +750,7 @@ class TestPydantic(test.TestCase):
             self.Team_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "dlqoeq": {
+                    "Event_mfn2l6": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -898,7 +898,7 @@ class TestPydantic(test.TestCase):
                         "title": "Alias",
                     },
                     "events": {
-                        "items": {"$ref": "#/$defs/dlqoeq"},
+                        "items": {"$ref": "#/$defs/Event_mfn2l6"},
                         "title": "Events",
                         "type": "array",
                     },
@@ -1302,7 +1302,7 @@ class TestPydanticCycle(test.TestCase):
             self.Employee_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "4fgkwn": {
+                    "Employee_4fgkwn": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -1335,7 +1335,7 @@ class TestPydanticCycle(test.TestCase):
                         "title": "Employee",
                         "type": "object",
                     },
-                    "5gupxf": {
+                    "Employee_5gupxf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -1397,7 +1397,7 @@ class TestPydanticCycle(test.TestCase):
                     "id": {"maximum": 2147483647, "minimum": 1, "title": "Id", "type": "integer"},
                     "name": {"maxLength": 50, "title": "Name", "type": "string"},
                     "talks_to": {
-                        "items": {"$ref": "#/$defs/5gupxf"},
+                        "items": {"$ref": "#/$defs/Employee_5gupxf"},
                         "title": "Talks To",
                         "type": "array",
                     },
@@ -1410,7 +1410,7 @@ class TestPydanticCycle(test.TestCase):
                         "title": "Manager Id",
                     },
                     "team_members": {
-                        "items": {"$ref": "#/$defs/4fgkwn"},
+                        "items": {"$ref": "#/$defs/Employee_4fgkwn"},
                         "title": "Team Members",
                         "type": "array",
                     },

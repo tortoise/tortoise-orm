@@ -1616,7 +1616,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         self.resolve_filters(
             model=self.model,
             q_objects=self.q_objects,
-            annotations=self._annotations,
+            annotations=self.annotations,
             custom_filters=self.custom_filters,
         )
         if self.limit:
