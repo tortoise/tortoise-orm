@@ -65,15 +65,15 @@ class TestBulk(test.TruncationTestCase):
             + [UniqueName() for _ in range(1000)]
         )
 
-        all_ = await UniqueName.all().values("id", "name")
+        all_ = await UniqueName.all().order_by("id").values("id", "name")
         self.assertEqual(len(all_), 2000)
 
         self.assertListSortEqual(
-            all_[:1000], [{"id": id_, "name": None} for id_ in range(10000, 11000)], sorted_key="id"
+            all_[1000:], [{"id": id_, "name": None} for id_ in range(10000, 11000)], sorted_key="id"
         )
-        inc = all_[1000]["id"]
+        inc = all_[0]["id"]
         self.assertListSortEqual(
-            all_[1000:], [{"id": val + inc, "name": None} for val in range(1000)], sorted_key="id"
+            all_[:1000], [{"id": val + inc, "name": None} for val in range(1000)], sorted_key="id"
         )
 
     async def test_bulk_create_uuidpk(self):
