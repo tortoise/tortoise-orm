@@ -2,6 +2,7 @@
 Testing Models for a bad/wrong relation reference
 Wrong reference. o2o field parameter `to_field` with non exist field.
 """
+
 from tortoise import fields
 from tortoise.models import Model
 

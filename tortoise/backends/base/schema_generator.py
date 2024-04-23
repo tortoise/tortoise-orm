@@ -351,26 +351,30 @@ class BaseSchemaGenerator:
             m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
                 exists="IF NOT EXISTS " if safe else "",
                 table_name=field_object.through,
-                backward_fk=self._create_fk_string(
-                    "",
-                    field_object.backward_key,
-                    model._meta.db_table,
-                    model._meta.db_pk_column,
-                    field_object.on_delete,
-                    "",
-                )
-                if field_object.db_constraint
-                else "",
-                forward_fk=self._create_fk_string(
-                    "",
-                    field_object.forward_key,
-                    field_object.related_model._meta.db_table,
-                    field_object.related_model._meta.db_pk_column,
-                    field_object.on_delete,
-                    "",
-                )
-                if field_object.db_constraint
-                else "",
+                backward_fk=(
+                    self._create_fk_string(
+                        "",
+                        field_object.backward_key,
+                        model._meta.db_table,
+                        model._meta.db_pk_column,
+                        field_object.on_delete,
+                        "",
+                    )
+                    if field_object.db_constraint
+                    else ""
+                ),
+                forward_fk=(
+                    self._create_fk_string(
+                        "",
+                        field_object.forward_key,
+                        field_object.related_model._meta.db_table,
+                        field_object.related_model._meta.db_pk_column,
+                        field_object.on_delete,
+                        "",
+                    )
+                    if field_object.db_constraint
+                    else ""
+                ),
                 backward_key=field_object.backward_key,
                 backward_type=model._meta.pk.get_for_dialect(self.DIALECT, "SQL_TYPE"),
                 forward_key=field_object.forward_key,
@@ -378,11 +382,13 @@ class BaseSchemaGenerator:
                     self.DIALECT, "SQL_TYPE"
                 ),
                 extra=self._table_generate_extra(table=field_object.through),
-                comment=self._table_comment_generator(
-                    table=field_object.through, comment=field_object.description
-                )
-                if field_object.description
-                else "",
+                comment=(
+                    self._table_comment_generator(
+                        table=field_object.through, comment=field_object.description
+                    )
+                    if field_object.description
+                    else ""
+                ),
             )
             if not field_object.db_constraint:
                 m2m_create_string = m2m_create_string.replace(

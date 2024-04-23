@@ -2,6 +2,7 @@
 Testing Models for a bad/wrong relation reference
 Wrong reference. Two '.' in reference.
 """
+
 from tortoise import fields
 from tortoise.models import Model
 

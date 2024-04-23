@@ -36,7 +36,7 @@ class PydanticMeta:
     include: Tuple[str, ...] = ()
 
     #: Fields listed in this property will be excluded from pydantic model
-    exclude: Tuple[str, ...] = ()
+    exclude: Tuple[str, ...] = ("Meta",)
 
     #: Computed fields can be listed here to use in pydantic model
     computed: Tuple[str, ...] = ()

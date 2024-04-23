@@ -5,6 +5,7 @@ Key points in this example are use of ForeignKeyField and ManyToManyField
 to declare relations and use of .prefetch_related() and .fetch_related()
 to get this related objects
 """
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.exceptions import NoValuesFetched
 from tortoise.models import Model

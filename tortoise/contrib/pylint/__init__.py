@@ -1,6 +1,7 @@
 """
 Tortoise PyLint plugin
 """
+
 from typing import Any, Dict, Iterator, List
 
 from astroid import MANAGER, inference_tip, nodes

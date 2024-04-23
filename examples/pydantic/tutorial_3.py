@@ -5,6 +5,7 @@ Here we introduce:
 * Relationships
 * Early model init
 """
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.models import Model

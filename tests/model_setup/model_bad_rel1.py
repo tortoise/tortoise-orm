@@ -1,6 +1,7 @@
 """
 Testing Models for a bad/wrong relation reference
 """
+
 from tortoise import fields
 from tortoise.models import Model
 

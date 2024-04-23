@@ -1,6 +1,7 @@
 """
 This example demonstrates executing manual SQL queries
 """
+
 from tortoise import Tortoise, connections, fields, run_async
 from tortoise.models import Model
 from tortoise.transactions import in_transaction

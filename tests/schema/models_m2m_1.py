@@ -1,6 +1,7 @@
 """
 This is the testing Models — Cyclic
 """
+
 from tests.schema.models_cyclic import Two
 from tortoise import fields
 from tortoise.models import Model

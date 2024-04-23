@@ -311,9 +311,9 @@ class Tortoise:
 
                     backward_relation_name = m2m_object.related_name
                     if not backward_relation_name:
-                        backward_relation_name = (
-                            m2m_object.related_name
-                        ) = f"{model._meta.db_table}s"
+                        backward_relation_name = m2m_object.related_name = (
+                            f"{model._meta.db_table}s"
+                        )
                     if backward_relation_name in related_model._meta.fields:
                         raise ConfigurationError(
                             f'backward relation "{backward_relation_name}" duplicates in'

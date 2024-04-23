@@ -1,6 +1,7 @@
 """
 Test some mysql-specific features
 """
+
 import ssl
 
 from tortoise import Tortoise
