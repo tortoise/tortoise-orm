@@ -5,6 +5,7 @@ Here we introduce:
 * Configuring model creator via PydanticMeta class.
 * Using callable functions to annotate extra data.
 """
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.exceptions import NoValuesFetched

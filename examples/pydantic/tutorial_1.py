@@ -7,6 +7,7 @@ Here we introduce:
 * Evaluating the generated schema
 * Simple serialisation with both .model_dump() and .model_dump_json()
 """
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.models import Model

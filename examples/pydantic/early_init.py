@@ -1,6 +1,7 @@
 """
 This example demonstrates pydantic serialisation, and how to use early partial init.
 """
+
 from tortoise import Tortoise, fields
 from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.models import Model

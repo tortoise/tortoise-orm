@@ -5,6 +5,7 @@ Here we introduce:
 * Creating a list-model to serialise a queryset
 * Default sorting is honoured
 """
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.contrib.pydantic import pydantic_queryset_creator
 from tortoise.models import Model

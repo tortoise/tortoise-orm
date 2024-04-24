@@ -1,6 +1,7 @@
 """
 This example demonstrates SQL Schema generation for each DB type supported.
 """
+
 from uuid import uuid4
 
 from tortoise import fields

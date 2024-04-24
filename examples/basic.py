@@ -1,6 +1,7 @@
 """
 This example demonstrates most basic operations with single model
 """
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
 

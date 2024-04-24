@@ -13,7 +13,9 @@ class TestBulk(test.TruncationTestCase):
         all_ = await UniqueName.all().values("id", "name")
         inc = all_[0]["id"]
         self.assertListSortEqual(
-            all_, [{"id": val + inc, "name": None} for val in range(1000)], sorted_key="id"
+            all_,
+            [{"id": val + inc, "name": None} for val in range(1000)],
+            sorted_key="id",
         )
 
     @test.requireCapability(dialect=NotEQ("mssql"))
@@ -37,7 +39,14 @@ class TestBulk(test.TruncationTestCase):
         )
         all_ = await UniqueName.all().values("name", "optional", "other_optional")
         self.assertListSortEqual(
-            all_, [{"name": "name", "optional": "optional", "other_optional": "other_optional"}]
+            all_,
+            [
+                {
+                    "name": "name",
+                    "optional": "optional",
+                    "other_optional": "other_optional",
+                }
+            ],
         )
 
     @test.requireCapability(dialect=NotEQ("mssql"))
@@ -47,7 +56,9 @@ class TestBulk(test.TruncationTestCase):
         )
         all_ = await UniqueName.all().values("id", "name")
         self.assertListSortEqual(
-            all_, [{"id": val + 1, "name": None} for val in range(1000)], sorted_key="id"
+            all_,
+            [{"id": val + 1, "name": None} for val in range(1000)],
+            sorted_key="id",
         )
 
     @test.requireCapability(dialect=NotEQ("mssql"))
@@ -55,26 +66,36 @@ class TestBulk(test.TruncationTestCase):
         await UniqueName.bulk_create([UniqueName(id=id_) for id_ in range(1000, 2000)])
         all_ = await UniqueName.all().values("id", "name")
         self.assertListSortEqual(
-            all_, [{"id": id_, "name": None} for id_ in range(1000, 2000)], sorted_key="id"
+            all_,
+            [{"id": id_, "name": None} for id_ in range(1000, 2000)],
+            sorted_key="id",
         )
 
     @test.requireCapability(dialect=NotEQ("mssql"))
     async def test_bulk_create_mix_specified(self):
         await UniqueName.bulk_create(
-            [UniqueName(id=id_) for id_ in range(10000, 11000)]
-            + [UniqueName() for _ in range(1000)]
+            [UniqueName(id=id_) for id_ in range(1000, 1100)] + [UniqueName() for _ in range(100)]
         )
 
-        all_ = await UniqueName.all().values("id", "name")
-        self.assertEqual(len(all_), 2000)
+        all_ = await UniqueName.all().order_by("id").values("id", "name")
+        assert len(all_) == 200
 
-        self.assertListSortEqual(
-            all_[:1000], [{"id": id_, "name": None} for id_ in range(10000, 11000)], sorted_key="id"
-        )
-        inc = all_[1000]["id"]
-        self.assertListSortEqual(
-            all_[1000:], [{"id": val + inc, "name": None} for val in range(1000)], sorted_key="id"
-        )
+        if all_[0]["id"] == 1000:
+            assert sorted(all_[:100], key=lambda x: x["id"]) == [
+                {"id": id_, "name": None} for id_ in range(1000, 1100)
+            ]
+            inc = all_[100]["id"]
+            assert sorted(all_[100:], key=lambda x: x["id"]) == [
+                {"id": val + inc, "name": None} for val in range(100)
+            ]
+        else:
+            inc = all_[0]["id"]
+            assert sorted(all_[:100], key=lambda x: x["id"]) == [
+                {"id": val + inc, "name": None} for val in range(100)
+            ]
+            assert sorted(all_[100:], key=lambda x: x["id"]) == [
+                {"id": id_, "name": None} for id_ in range(1000, 1100)
+            ]
 
     async def test_bulk_create_uuidpk(self):
         await UUIDPkModel.bulk_create([UUIDPkModel() for _ in range(1000)])

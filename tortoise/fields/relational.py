@@ -289,20 +289,16 @@ class RelationalField(Field[MODEL]):
     if TYPE_CHECKING:
 
         @overload
-        def __get__(self, instance: None, owner: Type["Model"]) -> "RelationalField[MODEL]":
-            ...
+        def __get__(self, instance: None, owner: Type["Model"]) -> "RelationalField[MODEL]": ...
 
         @overload
-        def __get__(self, instance: "Model", owner: Type["Model"]) -> MODEL:
-            ...
+        def __get__(self, instance: "Model", owner: Type["Model"]) -> MODEL: ...
 
         def __get__(
             self, instance: Optional["Model"], owner: Type["Model"]
-        ) -> "RelationalField[MODEL] | MODEL":
-            ...
+        ) -> "RelationalField[MODEL] | MODEL": ...
 
-        def __set__(self, instance: "Model", value: MODEL) -> None:
-            ...
+        def __set__(self, instance: "Model", value: MODEL) -> None: ...
 
     def describe(self, serializable: bool) -> dict:
         desc = super().describe(serializable)
@@ -420,8 +416,7 @@ def OneToOneField(
     *,
     null: Literal[True],
     **kwargs: Any,
-) -> "OneToOneNullableRelation[MODEL]":
-    ...
+) -> "OneToOneNullableRelation[MODEL]": ...
 
 
 @overload
@@ -432,8 +427,7 @@ def OneToOneField(
     db_constraint: bool = True,
     null: Literal[False] = False,
     **kwargs: Any,
-) -> "OneToOneRelation[MODEL]":
-    ...
+) -> "OneToOneRelation[MODEL]": ...
 
 
 def OneToOneField(
@@ -497,8 +491,7 @@ def ForeignKeyField(
     *,
     null: Literal[True],
     **kwargs: Any,
-) -> "ForeignKeyNullableRelation[MODEL]":
-    ...
+) -> "ForeignKeyNullableRelation[MODEL]": ...
 
 
 @overload
@@ -509,8 +502,7 @@ def ForeignKeyField(
     db_constraint: bool = True,
     null: Literal[False] = False,
     **kwargs: Any,
-) -> "ForeignKeyRelation[MODEL]":
-    ...
+) -> "ForeignKeyRelation[MODEL]": ...
 
 
 def ForeignKeyField(

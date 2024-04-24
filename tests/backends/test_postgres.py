@@ -1,6 +1,7 @@
 """
 Test some PostgreSQL-specific features
 """
+
 import ssl
 
 from tests.testmodels import Tournament

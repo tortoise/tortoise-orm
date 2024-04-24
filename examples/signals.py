@@ -1,6 +1,7 @@
 """
 This example demonstrates model signals usage
 """
+
 from typing import List, Optional, Type
 
 from tortoise import BaseDBAsyncClient, Tortoise, fields, run_async
