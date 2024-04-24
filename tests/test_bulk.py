@@ -84,7 +84,7 @@ class TestBulk(test.TruncationTestCase):
             assert sorted(all_[:100], key=lambda x: x["id"]) == [
                 {"id": id_, "name": None} for id_ in range(1000, 1100)
             ]
-            inc = all_[1000]["id"]
+            inc = all_[100]["id"]
             assert sorted(all_[100:], key=lambda x: x["id"]) == [
                 {"id": val + inc, "name": None} for val in range(1000, 1100)
             ]
