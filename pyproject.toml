@@ -47,6 +47,7 @@ aiomysql = { version = "*", optional = true }
 asyncmy = { version = "^0.2.8", optional = true, allow-prereleases = true }
 psycopg = { extras = ["pool", "binary"], version = "^3.0.12", optional = true }
 asyncodbc = { version = "^0.1.1", optional = true }
+pydantic = { version = "^2.0,!=2.7.0", optional = true }
 
 [tool.poetry.dev-dependencies]
 # Linter tools
@@ -72,7 +73,7 @@ sanic = "*"
 # Sample integration - Starlette
 starlette = "*"
 # Pydantic support
-pydantic = "^2.0"
+pydantic = "^2.0,!=2.7.0"
 # FastAPI support
 fastapi = "^0.100.0"
 asgi_lifespan = "*"
