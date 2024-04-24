@@ -63,6 +63,7 @@ coveralls = "*"
 pytest = "*"
 pytest-xdist = "*"
 pytest-cov = "*"
+coverage = "<5"
 # Pypi
 twine = "*"
 # Sample integration - Quart
