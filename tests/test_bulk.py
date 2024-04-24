@@ -86,12 +86,12 @@ class TestBulk(test.TruncationTestCase):
             ]
             inc = all_[100]["id"]
             assert sorted(all_[100:], key=lambda x: x["id"]) == [
-                {"id": val + inc, "name": None} for val in range(1000, 1100)
+                {"id": val + inc, "name": None} for val in range(100)
             ]
         else:
             inc = all_[0]["id"]
             assert sorted(all_[:100], key=lambda x: x["id"]) == [
-                {"id": val + inc, "name": None} for val in range(1000, 1100)
+                {"id": val + inc, "name": None} for val in range(100)
             ]
             assert sorted(all_[100:], key=lambda x: x["id"]) == [
                 {"id": id_, "name": None} for id_ in range(1000, 1100)
