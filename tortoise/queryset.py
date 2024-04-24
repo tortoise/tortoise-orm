@@ -21,7 +21,8 @@ from typing import (
 )
 
 from pypika import JoinType, Order, Table
-from pypika.functions import Cast, Count
+from pypika.analytics import Count
+from pypika.functions import Cast
 from pypika.queries import QueryBuilder
 from pypika.terms import Case, Field, Term, ValueWrapper
 from typing_extensions import Literal, Protocol
@@ -131,7 +132,7 @@ class AwaitableQuery(Generic[MODEL]):
         :param annotations: Extra annotations to add.
         :param custom_filters: Pre-resolved filters to be passed through.
         """
-        has_aggregate = self._resolve_annotate()
+        has_aggregate = self._resolve_annotate(annotations)
 
         modifier = QueryModifier()
         for node in q_objects:
@@ -236,13 +237,14 @@ class AwaitableQuery(Generic[MODEL]):
 
                 self.query = self.query.orderby(field, order=ordering[1])
 
-    def _resolve_annotate(self) -> bool:
-        if not self._annotations:
+    def _resolve_annotate(self, extra_annotations: Dict[str, Any]) -> bool:
+        if not self._annotations and not extra_annotations:
             return False
 
         table = self.model._meta.basetable
+        all_annotations = {**self._annotations, **extra_annotations}
         annotation_info = {}
-        for key, annotation in self._annotations.items():
+        for key, annotation in all_annotations.items():
             if isinstance(annotation, Term):
                 annotation_info[key] = {"joins": [], "field": annotation}
             else:
@@ -251,7 +253,8 @@ class AwaitableQuery(Generic[MODEL]):
         for key, info in annotation_info.items():
             for join in info["joins"]:
                 self._join_table_by_field(*join)
-            self.query._select_other(info["field"].as_(key))
+            if key in self._annotations:
+                self.query._select_other(info["field"].as_(key))
 
         return any(info["field"].is_aggregate for info in annotation_info.values())
 
@@ -1282,7 +1285,10 @@ class CountQuery(AwaitableQuery):
             annotations=self.annotations,
             custom_filters=self.custom_filters,
         )
-        self.query._select_other(Count("*"))
+        count_term = Count("*")
+        if self.query._groupbys:
+            count_term = count_term.over()
+        self.query._select_other(count_term)
 
         if self.force_indexes:
             self.query._force_indexes = []

@@ -46,7 +46,8 @@ class TestAggregation(test.TestCase):
             await Event.all().annotate(tournament_test_id=Sum("tournament__id")).first()
         )
         self.assertEqual(
-            event_with_annotation.tournament_test_id, event_with_annotation.tournament_id
+            event_with_annotation.tournament_test_id,
+            event_with_annotation.tournament_id,
         )
 
         with self.assertRaisesRegex(ConfigurationError, "name__id not resolvable"):
@@ -162,3 +163,76 @@ class TestAggregation(test.TestCase):
             .values("long_info")
         )
         self.assertEqual(ret, [{"long_info": "Physics Book(physics)"}])
+
+    async def test_count_after_aggregate(self):
+        author = await Author.create(name="1")
+        await Book.create(name="First!", author=author, rating=4)
+        await Book.create(name="Second!", author=author, rating=3)
+        await Book.create(name="Third!", author=author, rating=3)
+
+        author2 = await Author.create(name="2")
+        await Book.create(name="F-2", author=author2, rating=3)
+        await Book.create(name="F-3", author=author2, rating=3)
+
+        author3 = await Author.create(name="3")
+        await Book.create(name="F-4", author=author3, rating=3)
+        await Book.create(name="F-5", author=author3, rating=2)
+        ret = (
+            await Author.all()
+            .annotate(average_rating=Avg("books__rating"))
+            .filter(average_rating__gte=3)
+            .count()
+        )
+
+        assert ret == 2
+
+    async def test_exist_after_aggregate(self):
+        author = await Author.create(name="1")
+        await Book.create(name="First!", author=author, rating=4)
+        await Book.create(name="Second!", author=author, rating=3)
+        await Book.create(name="Third!", author=author, rating=3)
+
+        ret = (
+            await Author.all()
+            .annotate(average_rating=Avg("books__rating"))
+            .filter(average_rating__gte=3)
+            .exists()
+        )
+
+        assert ret is True
+
+        ret = (
+            await Author.all()
+            .annotate(average_rating=Avg("books__rating"))
+            .filter(average_rating__gte=4)
+            .exists()
+        )
+        assert ret is False
+
+    async def test_count_after_aggregate_m2m(self):
+        tournament = await Tournament.create(name="1")
+        event1 = await Event.create(name="First!", tournament=tournament)
+        event2 = await Event.create(name="Second!", tournament=tournament)
+        event3 = await Event.create(name="Third!", tournament=tournament)
+        event4 = await Event.create(name="Fourth!", tournament=tournament)
+
+        team1 = await Team.create(name="1")
+        team2 = await Team.create(name="2")
+        team3 = await Team.create(name="3")
+
+        await event1.participants.add(team1, team2, team3)
+        await event2.participants.add(team1, team2)
+        await event3.participants.add(team1)
+        await event4.participants.add(team1, team2, team3)
+
+        query = (
+            Event.filter(participants__id__in=[team1.id, team2.id, team3.id])
+            .annotate(count=Count("event_id"))
+            .filter(count=3)
+            .prefetch_related("participants")
+        )
+        result = await query
+        assert len(result) == 2
+
+        res = await query.count()
+        assert res == 2
