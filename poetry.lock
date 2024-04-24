@@ -2848,13 +2848,13 @@ rtd = ["ipython", "myst-nb", "sphinx", "sphinx-book-theme", "sphinx-examples"]
 
 [[package]]
 name = "sphinx-immaterial"
-version = "0.11.10"
+version = "0.11.11"
 description = "Adaptation of mkdocs-material theme for the Sphinx documentation system"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "sphinx_immaterial-0.11.10-py3-none-any.whl", hash = "sha256:be5058b2857b0797887c30f82b20ceb244f30f4847f018c96dade8cc533c1125"},
-    {file = "sphinx_immaterial-0.11.10.tar.gz", hash = "sha256:235381da410c1661219057864337eed92a284b40babccaa65c151688ceeafaa7"},
+    {file = "sphinx_immaterial-0.11.11-py3-none-any.whl", hash = "sha256:174c7ce0f39c87413af0fbff17d0821e2f1fbae0d578b7074c9a6e17f1ef295c"},
+    {file = "sphinx_immaterial-0.11.11.tar.gz", hash = "sha256:f98f3019cbb1d77b259c7ab09dc977ca220dff931dd0f2fabee76e9f9c77b3b4"},
 ]
 
 [package.dependencies]
