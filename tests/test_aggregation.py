@@ -1,5 +1,3 @@
-import pytest
-
 from tests.testmodels import Author, Book, Event, MinRelation, Team, Tournament
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import In
