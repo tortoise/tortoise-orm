@@ -406,7 +406,7 @@ def pydantic_model_creator(
                 json_schema_extra["nullable"] = True
             if fdesc.get("nullable") or field_default is not None or fname in optional:
                 ptype = Optional[ptype]
-            if not (exclude_readonly and fdesc["constraints"].get("readOnly") is True):
+            if not (exclude_readonly and json_schema_extra.get("readOnly") is True):
                 properties[fname] = annotation or ptype
 
         if fname in properties and not isinstance(properties[fname], tuple):
