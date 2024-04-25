@@ -1278,6 +1278,11 @@ class TestPydantic(test.TestCase):
             PydanticModel.model_config["from_attributes"],
         )
 
+    def test_exclude_read_only(self):
+        ModelPydantic = pydantic_model_creator(User, exclude_readonly=True)
+
+        self.assertNotIn("id", ModelPydantic.model_json_schema()["properties"])
+
 
 class TestPydanticCycle(test.TestCase):
     async def asyncSetUp(self) -> None:
