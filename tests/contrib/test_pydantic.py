@@ -1279,9 +1279,9 @@ class TestPydantic(test.TestCase):
         )
 
     def test_exclude_read_only(self):
-        ModelPydantic = pydantic_model_creator(User, exclude_readonly=True)
+        ModelPydantic = pydantic_model_creator(Event, exclude_readonly=True)
 
-        self.assertNotIn("id", ModelPydantic.model_json_schema()["properties"])
+        self.assertNotIn("modified", ModelPydantic.model_json_schema()["properties"])
 
 
 class TestPydanticCycle(test.TestCase):
