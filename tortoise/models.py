@@ -9,6 +9,7 @@ from typing import (
     Callable,
     Dict,
     Generator,
+    Generic,
     Iterable,
     List,
     Optional,
@@ -643,9 +644,6 @@ class ModelMeta(type):
         meta.finalise_fields()
         return new_class
 
-    def __getitem__(cls: Type[MODEL], key: Any) -> QuerySetSingle[MODEL]:  # type: ignore
-        return cls._getbypk(key)  # type: ignore
-
 
 class Model(metaclass=ModelMeta):
     """
@@ -675,6 +673,16 @@ class Model(metaclass=ModelMeta):
                 setattr(self, key, field_object.default())
             else:
                 setattr(self, key, deepcopy(field_object.default))
+
+    def __class_getitem__(cls: Type[MODEL], key: Any) -> QuerySetSingle[MODEL]:
+        """
+        Creates a QuerySetSingle when accessed key is not a Class,
+        or a Generic class, when key is a class.
+        """
+        if (isinstance(key, tuple) and inspect.isclass(key[0])) or inspect.isclass(key):
+            if issubclass(cls, Generic):  # type: ignore
+                return Generic.__class_getitem__.__func__(cls, key)  # type: ignore
+        return cls._getbypk(key)  # type: ignore
 
     def _set_kwargs(self, kwargs: dict) -> Set[str]:
         meta = self._meta
