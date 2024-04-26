@@ -23,6 +23,7 @@ Fixed
 - Fix pydantic v2 pydantic_model_creator nullable field not optional. (#1454)
 - Fix pydantic v2.5 unittest error. (#1535)
 - Fix pydantic_model_creator `exclude_readonly` parameter not working.
+- Fix annotation propagation for non-filter queries. (#1590)
 
 0.20.0
 ------
