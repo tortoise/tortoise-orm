@@ -456,6 +456,39 @@ class QuerySet(AwaitableQuery[MODEL]):
             queryset._limit = 1000000
         return queryset
 
+    def __getitem__(self, key: slice) -> "QuerySet[MODEL]":
+        """
+        Query offset and limit for Queryset.
+
+        :raises ParamsError: QuerySet indices must be slices.
+
+        :raises ParamsError: Slice steps should be 1 or None.
+
+        :raises ParamsError: Slice start should be non-negative number or None.
+
+        :raises ParamsError: Slice stop should be non-negative number greater that slice start,
+        or None.
+        """
+        if not isinstance(key, slice):
+            raise ParamsError("QuerySet indices must be slices.")
+
+        if not (key.step is None or (isinstance(key.step, int) and key.step == 1)):
+            raise ParamsError("Slice steps should be 1 or None.")
+
+        start = key.start if key.start is not None else 0
+
+        if not isinstance(start, int) or start < 0:
+            raise ParamsError("Slice start should be non-negative number or None.")
+        if key.stop is not None and (not isinstance(key.stop, int) or key.stop <= start):
+            raise ParamsError(
+                "Slice stop should be non-negative number greater that slice start, or None.",
+            )
+
+        queryset = self.offset(start)
+        if key.stop:
+            queryset = queryset.limit(key.stop - start)
+        return queryset
+
     def distinct(self) -> "QuerySet[MODEL]":
         """
         Make QuerySet distinct.
