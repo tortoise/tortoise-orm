@@ -1,7 +1,7 @@
 Tortoise-ORM FastAPI example
 ============================
 
-We have a lightweight integration util ``tortoise.contrib.fastapi`` which has a single function ``register_tortoise`` which sets up Tortoise-ORM on startup and cleans up on teardown.
+We have a lightweight integration util ``tortoise.contrib.fastapi`` which has a class ``RegisterTortoise`` that can be used to set/clean up Tortoise-ORM in lifespan context.
 
 Usage
 -----
