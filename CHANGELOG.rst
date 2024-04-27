@@ -9,6 +9,15 @@ Changelog
 0.20
 ====
 
+0.21.0
+------
+Added
+^^^^^
+
+Fixed
+^^^^^
+- Fix `DatetimeField` use '__year' report `'int' object has no attribute 'utcoffset'`. (#1575)
+
 0.20.1
 ------
 Added
@@ -24,7 +33,6 @@ Fixed
 - Fix pydantic v2.5 unittest error. (#1535)
 - Fix pydantic_model_creator `exclude_readonly` parameter not working.
 - Fix annotation propagation for non-filter queries. (#1590)
-- Fix `DatetimeField` use '__year' report `'int' object has no attribute 'utcoffset'`. (#1575)
 
 0.20.0
 ------
