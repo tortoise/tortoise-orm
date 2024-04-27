@@ -1,6 +1,7 @@
 import os
 from datetime import date, datetime, time, timedelta
 from time import sleep
+from unittest.mock import patch
 
 import pytz
 from iso8601 import ParseError
@@ -8,6 +9,7 @@ from iso8601 import ParseError
 from tests import testmodels
 from tortoise import fields, timezone
 from tortoise.contrib import test
+from tortoise.contrib.test.condition import NotIn
 from tortoise.exceptions import ConfigurationError, IntegrityError
 from tortoise.timezone import get_default_timezone
 
@@ -146,6 +148,17 @@ class TestDatetimeFields(test.TestCase):
 
         os.environ["TIMEZONE"] = old_tz
         os.environ["USE_TZ"] = old_use_tz
+
+    @test.requireCapability(dialect=NotIn("sqlite", "mssql"))
+    async def test_filter_by_year_month_day(self):
+        with patch.dict(os.environ, {"USE_TZ": "True"}):
+            obj = await testmodels.DatetimeFields.create(datetime=datetime(2024, 1, 2))
+            same_year_objs = await testmodels.DatetimeFields.filter(datetime__year=2024)
+            filtered_obj = await testmodels.DatetimeFields.filter(
+                datetime__year=2024, datetime__month=1, datetime__day=2
+            ).first()
+            assert obj == filtered_obj
+            assert obj.id in [i.id for i in same_year_objs]
 
 
 @test.requireCapability(dialect="sqlite")
