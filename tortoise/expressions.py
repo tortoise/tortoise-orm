@@ -191,6 +191,13 @@ class Q(Expression):
         q.negate()
         return q
 
+    def __eq__(self, other: "Q") -> bool:
+        return (
+            self.children == other.children
+            and self.join_type == other.join_type
+            and self.filters == other.filters
+        )
+
     def negate(self) -> None:
         """
         Negates the current Q object. (mutation)
