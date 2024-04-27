@@ -16,6 +16,7 @@ Added
 - Enhancement for FastAPI lifespan support (#1371)
 - Add __eq__ method to Q to more easily test dynamically-built queries (#1506)
 - Added PlainToTsQuery function for postgres (#1347)
+- Allow field's default keyword to be async function (#1498)
 
 Fixed
 ^^^^^
