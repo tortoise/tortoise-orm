@@ -298,9 +298,7 @@ class DecimalField(Field[Decimal], Decimal):
         self.quant = Decimal("1" if decimal_places == 0 else f"1.{('0' * decimal_places)}")
 
     def to_python_value(self, value: Any) -> Optional[Decimal]:
-        if value is None:
-            value = None
-        else:
+        if value is not None:
             value = Decimal(value).quantize(self.quant).normalize()
         self.validate(value)
         return value
@@ -314,6 +312,15 @@ class DecimalField(Field[Decimal], Decimal):
 
         def function_cast(self, term: Term) -> Term:
             return functions.Cast(term, SqlTypes.NUMERIC)
+
+
+# In case of queryset with filter `__year`/`__month`/`__day` ..., value can be int, float or str. Example:
+# `await MyModel.filter(created_at__year=2024)`
+# `await MyModel.filter(created_at__year=2024.0)`
+# `await MyModel.filter(created_at__year='2024')`
+DatetimeFieldQueryValueType = TypeVar(
+    "DatetimeFieldQueryValueType", datetime.datetime, int, float, str
+)
 
 
 class DatetimeField(Field[datetime.datetime], datetime.datetime):
@@ -351,9 +358,7 @@ class DatetimeField(Field[datetime.datetime], datetime.datetime):
         self.auto_now_add = auto_now | auto_now_add
 
     def to_python_value(self, value: Any) -> Optional[datetime.datetime]:
-        if value is None:
-            value = None
-        else:
+        if value is not None:
             if isinstance(value, datetime.datetime):
                 value = value
             elif isinstance(value, int):
@@ -368,18 +373,18 @@ class DatetimeField(Field[datetime.datetime], datetime.datetime):
         return value
 
     def to_db_value(
-        self, value: Optional[datetime.datetime], instance: "Union[Type[Model], Model]"
-    ) -> Optional[datetime.datetime]:
+        self, value: Optional[DatetimeFieldQueryValueType], instance: "Union[Type[Model], Model]"
+    ) -> Optional[DatetimeFieldQueryValueType]:
         # Only do this if it is a Model instance, not class. Test for guaranteed instance var
         if hasattr(instance, "_saved_in_db") and (
             self.auto_now
             or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
         ):
-            value = timezone.now()
-            setattr(instance, self.model_field_name, value)
-            return value
+            now = timezone.now()
+            setattr(instance, self.model_field_name, now)
+            return now  # type:ignore[return-value]
         if value is not None:
-            if get_use_tz():
+            if isinstance(value, datetime.datetime) and get_use_tz():
                 if timezone.is_naive(value):
                     warnings.warn(
                         "DateTimeField %s received a naive datetime (%s)"
