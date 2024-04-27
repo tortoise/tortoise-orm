@@ -28,6 +28,7 @@ Functions
 
 .. autoclass:: tortoise.contrib.postgres.functions.ToTsVector
 .. autoclass:: tortoise.contrib.postgres.functions.ToTsQuery
+.. autoclass:: tortoise.contrib.postgres.functions.PlainToTsQuery
 
 Search
 ======
