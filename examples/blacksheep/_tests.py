@@ -3,13 +3,14 @@
 import asyncio
 
 import pytest
+import pytest_asyncio
 from blacksheep import JSONContent
 from blacksheep.testing import TestClient
 from models import Users
 from server import app
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def client(api):
     return TestClient(api)
 
@@ -21,26 +22,11 @@ def event_loop(request):
     loop.close()
 
 
-@pytest.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session")
 async def api():
     await app.start()
     yield app
     await app.stop()
-
-
-@pytest.mark.asyncio
-async def test_create_user(client: TestClient) -> None:
-    username = "john"
-
-    response = await client.post("/", content=JSONContent({"username": username}))
-    assert response.status == 201  # nosec
-
-    data = await response.json()
-    assert data["username"] == username  # nosec
-    user_id = data["id"]
-
-    user_obj = await Users.get(id=user_id)
-    assert str(user_obj.id) == user_id  # nosec
 
 
 @pytest.mark.asyncio
@@ -57,6 +43,21 @@ async def test_get_uses_list(client: TestClient) -> None:
     user_data = data[0]
     assert user_data["username"] == username  # nosec
     user_id = user_data["id"]
+
+    user_obj = await Users.get(id=user_id)
+    assert str(user_obj.id) == user_id  # nosec
+
+
+@pytest.mark.asyncio
+async def test_create_user(client: TestClient) -> None:
+    username = "john"
+
+    response = await client.post("/", content=JSONContent({"username": username}))
+    assert response.status == 201  # nosec
+
+    data = await response.json()
+    assert data["username"] == username  # nosec
+    user_id = data["id"]
 
     user_obj = await Users.get(id=user_id)
     assert str(user_obj.id) == user_id  # nosec
