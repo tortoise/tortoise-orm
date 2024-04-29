@@ -1807,7 +1807,7 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
                 pk_list = []
                 for obj in objects_item:
                     value = executor.column_map[pk_attr](obj.pk, None)
-                    field_value = getattr(obj, field)
+                    field_value = obj._meta.fields_map[field].to_db_value(getattr(obj, field), obj)
                     case.when(
                         pk == value,
                         (

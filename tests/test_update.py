@@ -6,11 +6,14 @@ import pytz
 from pypika.terms import Function
 
 from tests.testmodels import (
+    Currency,
     DatetimeFields,
     DefaultUpdate,
+    EnumFields,
     Event,
     IntFields,
     JSONFields,
+    Service,
     SmallIntFields,
     Tournament,
     UUIDFields,
@@ -89,6 +92,20 @@ class TestUpdate(test.TestCase):
         self.assertEqual(rows_affected, 2)
         self.assertEqual((await SmallIntFields.get(pk=objs[0].pk)).smallintnum_null, None)
         self.assertEqual((await SmallIntFields.get(pk=objs[1].pk)).smallintnum_null, None)
+
+    async def test_bulk_update_custom_field(self):
+        objs = [
+            await EnumFields.create(service=Service.python_programming, currency=Currency.EUR),
+            await EnumFields.create(service=Service.database_design, currency=Currency.USD),
+        ]
+        objs[0].currency = Currency.USD
+        objs[1].service = Service.system_administration
+        rows_affected = await EnumFields.bulk_update(objs, fields=["service", "currency"])
+        self.assertEqual(rows_affected, 2)
+        self.assertEqual((await EnumFields.get(pk=objs[0].pk)).currency, Currency.USD)
+        self.assertEqual(
+            (await EnumFields.get(pk=objs[1].pk)).service, Service.system_administration
+        )
 
     async def test_update_auto_now(self):
         obj = await DefaultUpdate.create()
