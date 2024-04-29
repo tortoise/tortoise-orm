@@ -21,7 +21,7 @@ deps:
 	@poetry install -E asyncpg -E aiomysql -E accel -E psycopg -E asyncodbc
 
 check: deps build
-ifneq ($(shell which black),)
+ifneq ($(shell which ruff),)
 	ruff format --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
 	ruff check $(checkfiles)
@@ -31,7 +31,7 @@ endif
 	twine check dist/*
 
 lint: deps build
-ifneq ($(shell which black),)
+ifneq ($(shell which ruff),)
 	ruff format --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
 	ruff check $(checkfiles)
