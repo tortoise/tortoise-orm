@@ -77,6 +77,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
           COVERALLS_PARALLEL: true
+      - name: Test Examples
+        run: cd examples/blacksheep && pytest _tests.py && cd ../fastapi && pytest _tests.py && cd ../..
 
   coveralls:
     name: Finish Coveralls

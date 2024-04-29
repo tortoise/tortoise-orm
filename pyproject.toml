@@ -58,7 +58,6 @@ darglint = "*"
 pylint = "*"
 pygments = "*"
 bandit = "*"
-black = "*"
 codespell = "*"
 # Test tools
 coveralls = "*"
@@ -105,13 +104,6 @@ asyncodbc = ["asyncodbc"]
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.isort]
-profile = "black"
-
-[tool.black]
-line-length = 100
-target-version = ["py38", "py39", "py310", "py311"]
 
 [tool.mypy]
 pretty = true
