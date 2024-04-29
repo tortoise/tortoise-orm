@@ -22,9 +22,9 @@ deps:
 
 check: deps build
 ifneq ($(shell which black),)
-	black --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
+	ruff format --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
-	ruff $(checkfiles)
+	ruff check $(checkfiles)
 	mypy $(checkfiles)
 	#pylint -d C,W,R $(checkfiles)
 	#bandit -r $(checkfiles)make
@@ -32,9 +32,9 @@ endif
 
 lint: deps build
 ifneq ($(shell which black),)
-	black --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
+	ruff format --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
-	ruff $(checkfiles)
+	ruff check $(checkfiles)
 	mypy $(checkfiles)
 	#pylint $(checkfiles)
 	bandit -r $(checkfiles)
@@ -76,8 +76,8 @@ docs: deps
 	sphinx-build -M html docs build
 
 style: deps
-	isort -src $(checkfiles)
-	black $(checkfiles)
+	ruff check --fix $(checkfiles)
+	ruff format $(checkfiles)
 
 build: deps
 	rm -fR dist/
