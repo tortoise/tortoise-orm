@@ -2,9 +2,8 @@ from enum import Enum
 from typing import Any, Optional
 
 from pypika.enums import Comparator
-from pypika.terms import BasicCriterion
+from pypika.terms import BasicCriterion, Term
 from pypika.terms import Function as PypikaFunction
-from pypika.terms import Term
 
 
 class Comp(Comparator):  # type: ignore

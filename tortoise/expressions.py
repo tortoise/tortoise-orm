@@ -16,9 +16,8 @@ from pypika import Case as PypikaCase
 from pypika import Field as PypikaField
 from pypika import Table
 from pypika.functions import DistinctOptionFunction
-from pypika.terms import ArithmeticExpression, Criterion
+from pypika.terms import ArithmeticExpression, Criterion, Term
 from pypika.terms import Function as PypikaFunction
-from pypika.terms import Term
 from pypika.utils import format_alias_sql
 
 from tortoise.exceptions import ConfigurationError, FieldError, OperationalError

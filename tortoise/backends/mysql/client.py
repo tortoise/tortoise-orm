@@ -8,8 +8,8 @@ try:
     from asyncmy.charset import charset_by_name
 except ImportError:
     import aiomysql as mysql
-    from pymysql.charset import charset_by_name
     from pymysql import err as errors
+    from pymysql.charset import charset_by_name
 
 from pypika import MySQLQuery
 

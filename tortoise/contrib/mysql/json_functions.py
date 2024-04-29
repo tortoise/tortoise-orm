@@ -3,9 +3,8 @@ import operator
 from typing import Any, Dict, List
 
 from pypika.functions import Cast
-from pypika.terms import Criterion
+from pypika.terms import Criterion, Term, ValueWrapper
 from pypika.terms import Function as PypikaFunction
-from pypika.terms import Term, ValueWrapper
 
 from tortoise.filters import not_equal
 
