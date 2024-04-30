@@ -23,6 +23,7 @@ Fixed
 ^^^^^
 - Fix `DatetimeField` use '__year' report `'int' object has no attribute 'utcoffset'`. (#1575)
 - Fix `bulk_update` when using custom fields. (#1564)
+- Fix issues where the naming of classmethods caused conflicts with field names (#1559) (#1550)
 
 0.20.1
 ------
