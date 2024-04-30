@@ -414,7 +414,7 @@ class BaseSchemaGenerator:
         for app in Tortoise.apps.values():
             for model in app.values():
                 if model._meta.db == self.client:
-                    model.check()
+                    model._check()
                     models_to_create.append(model)
 
     def get_create_schema_sql(self, safe: bool = True) -> str:

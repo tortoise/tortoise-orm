@@ -1385,7 +1385,7 @@ class Model(metaclass=ModelMeta):
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
 
     @classmethod
-    def check(cls) -> None:
+    def _check(cls) -> None:
         """
         Calls various checks to validate the model.
 
