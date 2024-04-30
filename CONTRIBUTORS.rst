@@ -55,6 +55,7 @@ Contributors
 * Waket Zheng ``@waketzheng``
 * Yuval Ben-Arie ``@yuvalbenarie``
 * Stephan Klein ``@privatwolke``
+* Andrea Magistà ``@vlakius``
 
 Special Thanks
 ==============
