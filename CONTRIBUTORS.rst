@@ -54,6 +54,7 @@ Contributors
 * Stanislav Zmiev ``@Ovsyanka83``
 * Waket Zheng ``@waketzheng``
 * Yuval Ben-Arie ``@yuvalbenarie``
+* Stephan Klein ``@privatwolke``
 
 Special Thanks
 ==============
