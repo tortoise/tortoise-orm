@@ -1523,17 +1523,6 @@ class TestPydanticUpdate(test.TestCase):
             optional=("username", "mail", "bio"),
         )
 
-    def test_optional_update(self):
-        self.assertEqual(self.UserUpdate_Pydantic().model_dump(exclude_unset=True), {})
-        self.assertEqual(
-            self.UserUpdate_Pydantic(bio="foo").model_dump(exclude_unset=True),
-            {"bio": "foo"},
-        )
-        self.assertEqual(
-            self.UserUpdate_Pydantic(username="name", mail="a@example.com").model_dump(),
-            {"username": "name", "mail": "a@example.com", "bio": None},
-        )
-
     def test_create_schema(self):
         self.assertEqual(
             self.UserCreate_Pydantic.model_json_schema(),
@@ -1590,4 +1579,15 @@ class TestPydanticUpdate(test.TestCase):
                 "title": "UserUpdate",
                 "type": "object",
             },
+        )
+
+    def test_optional_update(self):
+        self.assertEqual(self.UserUpdate_Pydantic().model_dump(exclude_unset=True), {})
+        self.assertEqual(
+            self.UserUpdate_Pydantic(bio="foo").model_dump(exclude_unset=True),
+            {"bio": "foo"},
+        )
+        self.assertEqual(
+            self.UserUpdate_Pydantic(username="name", mail="a@example.com").model_dump(),
+            {"username": "name", "mail": "a@example.com", "bio": None},
         )
