@@ -22,7 +22,8 @@ Added
 Fixed
 ^^^^^
 - Fix `DatetimeField` use '__year' report `'int' object has no attribute 'utcoffset'`. (#1575)
-- Fix `bulk_update` when using custom fields. (#1564)
+- Fix `bulk_update` when using custom fields. (#1564)\
+- Fix `update_or_create` errors when field value changed
 
 0.20.1
 ------
