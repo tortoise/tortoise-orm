@@ -1080,12 +1080,9 @@ class Model(metaclass=ModelMeta):
                     False,
                 )
             except DoesNotExist:
+                merged_defaults = {**kwargs, **defaults}
                 try:
-                    merged_defaults = {**defaults, **kwargs}
-                    return (
-                        await cls.create(using_db=connection, **merged_defaults),
-                        True,
-                    )
+                    return await cls.create(using_db=connection, **merged_defaults), True
                 except (IntegrityError, TransactionManagementError):
                     return await cls.filter(**kwargs).using_db(connection).get(), False
 
