@@ -1,6 +1,7 @@
 import copy
 
-from pydantic import ConfigDict
+import pytest
+from pydantic import ConfigDict, ValidationError
 
 from tests.testmodels import (
     Address,
@@ -1559,24 +1560,99 @@ class TestPydanticUpdate(test.TestCase):
         This demonstrates an example PATCH endpoint in an API, where a client may want
         to update a single field of a model without modifying the rest.
         """
-
         self.assertEqual(
             self.UserUpdate_Pydantic.model_json_schema(),
             {
                 "additionalProperties": False,
                 "properties": {
-                    "bio": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Bio"},
+                    "bio": {
+                        "anyOf": [{"type": "string"}, {"type": "null"}],
+                        "default": None,
+                        "title": "Bio",
+                    },
                     "mail": {
                         "anyOf": [{"maxLength": 64, "type": "string"}, {"type": "null"}],
+                        "default": None,
                         "title": "Mail",
                     },
                     "username": {
                         "anyOf": [{"maxLength": 32, "type": "string"}, {"type": "null"}],
+                        "default": None,
                         "title": "Username",
                     },
                 },
-                "required": ["username", "mail", "bio"],
                 "title": "UserUpdate",
                 "type": "object",
             },
+        )
+
+
+class TestPydanticOptionalUpdate(test.TestCase):
+    def setUp(self) -> None:
+        self.UserUpdateAllOptional_Pydantic = pydantic_model_creator(
+            User,
+            name="UserUpdateAllOptional",
+            exclude_readonly=True,
+            optional=("username", "mail", "bio"),
+        )
+        self.UserUpdatePartialOptional_Pydantic = pydantic_model_creator(
+            User,
+            name="UserUpdatePartialOptional",
+            exclude_readonly=True,
+            optional=("username", "mail"),
+        )
+        self.UserUpdateWithoutOptional_Pydantic = pydantic_model_creator(
+            User,
+            name="UserUpdateWithoutOptional",
+            exclude_readonly=True,
+        )
+
+    def test_optional_update(self):
+        # All fields are optional
+        self.assertEqual(self.UserUpdateAllOptional_Pydantic().model_dump(exclude_unset=True), {})
+        self.assertEqual(
+            self.UserUpdateAllOptional_Pydantic(bio="foo").model_dump(exclude_unset=True),
+            {"bio": "foo"},
+        )
+        self.assertEqual(
+            self.UserUpdateAllOptional_Pydantic(username="name", mail="a@example.com").model_dump(
+                exclude_unset=True
+            ),
+            {"username": "name", "mail": "a@example.com"},
+        )
+        self.assertEqual(
+            self.UserUpdateAllOptional_Pydantic(username="name", mail="a@example.com").model_dump(),
+            {"username": "name", "mail": "a@example.com", "bio": None},
+        )
+        # Some fields are optional
+        with pytest.raises(ValidationError):
+            self.UserUpdatePartialOptional_Pydantic()
+        with pytest.raises(ValidationError):
+            self.UserUpdatePartialOptional_Pydantic(username="name")
+        self.assertEqual(
+            self.UserUpdatePartialOptional_Pydantic(bio="foo").model_dump(exclude_unset=True),
+            {"bio": "foo"},
+        )
+        self.assertEqual(
+            self.UserUpdatePartialOptional_Pydantic(
+                username="name", mail="a@example.com", bio=""
+            ).model_dump(exclude_unset=True),
+            {"username": "name", "mail": "a@example.com", "bio": ""},
+        )
+        self.assertEqual(
+            self.UserUpdatePartialOptional_Pydantic(mail="a@example.com", bio="").model_dump(),
+            {"username": None, "mail": "a@example.com", "bio": ""},
+        )
+        # None of the fields is optional
+        with pytest.raises(ValidationError):
+            self.UserUpdateWithoutOptional_Pydantic()
+        with pytest.raises(ValidationError):
+            self.UserUpdateWithoutOptional_Pydantic(username="name")
+        with pytest.raises(ValidationError):
+            self.UserUpdateWithoutOptional_Pydantic(username="name", email="")
+        self.assertEqual(
+            self.UserUpdateWithoutOptional_Pydantic(
+                username="name", mail="a@example.com", bio=""
+            ).model_dump(),
+            {"username": "name", "mail": "a@example.com", "bio": ""},
         )
