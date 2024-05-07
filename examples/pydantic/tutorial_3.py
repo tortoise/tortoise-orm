@@ -7,7 +7,7 @@ Here we introduce:
 """
 
 from tortoise import Tortoise, fields, run_async
-from tortoise.contrib.pydantic import pydantic_model_creator
+from tortoise.contrib.pydantic.creator import pydantic_model_creator
 from tortoise.models import Model
 
 

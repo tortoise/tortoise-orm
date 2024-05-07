@@ -50,7 +50,7 @@ Lets start with a basic Tortoise Model:
 
 .. code-block:: py3
 
-    from tortoise.contrib.pydantic import pydantic_model_creator
+    from tortoise.contrib.pydantic.creator import pydantic_model_creator
 
     Tournament_Pydantic = pydantic_model_creator(Tournament)
 
@@ -300,7 +300,7 @@ Next we create our `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/mo
 
 .. code-block:: py3
 
-    from tortoise.contrib.pydantic import pydantic_model_creator
+    from tortoise.contrib.pydantic.creator import pydantic_model_creator
 
     Tournament_Pydantic = pydantic_model_creator(Tournament)
 
