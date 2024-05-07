@@ -1075,7 +1075,8 @@ class Model(metaclass=ModelMeta):
             return await cls.filter(**kwargs).using_db(db).get(), False
         except DoesNotExist:
             try:
-                return await cls.create(using_db=db, **defaults, **kwargs), True
+                async with in_transaction(connection_name=db.connection_name) as connection:
+                    return await cls.create(using_db=connection, **defaults, **kwargs), True
             except IntegrityError as exc:
                 try:
                     return await cls.filter(**kwargs).using_db(db).get(), False
