@@ -1,8 +1,6 @@
 import typing
 from typing import Any, Callable, Dict, Optional, Type
 
-import tortoise
-
 if typing.TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
