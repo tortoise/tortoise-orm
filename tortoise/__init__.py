@@ -1,10 +1,12 @@
 import asyncio
 import importlib
+import importlib.metadata as importlib_metadata
 import json
 import os
 import warnings
 from copy import deepcopy
 from inspect import isclass
+from pathlib import Path
 from types import ModuleType
 from typing import Coroutine, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
 
@@ -690,7 +692,7 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(connections.close_all(discard=True))
 
 
-__version__ = "0.20.1"
+__version__ = importlib_metadata.version(Path(__file__).parent.parent.name)
 
 __all__ = [
     "Model",
