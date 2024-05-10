@@ -13,10 +13,10 @@ from tortoise.contrib.pydantic import PydanticModel
 if TYPE_CHECKING:  # pragma: nocoverage
 
     class UserIn_Pydantic(Users, PydanticModel):  # type:ignore[misc]
-        ...
+        pass
 
     class User_Pydantic(Users, PydanticModel):  # type:ignore[misc]
-        ...
+        pass
 
 else:
     from models import User_Pydantic, UserIn_Pydantic
