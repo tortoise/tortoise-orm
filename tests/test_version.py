@@ -9,7 +9,7 @@ else:
     import tomlkit as tomllib
 
 
-def _read_version() -> str:
+def _read_version():
     text = Path("pyproject.toml").read_text()
     data = tomllib.loads(text)
     return data["tool"]["poetry"]["version"]
