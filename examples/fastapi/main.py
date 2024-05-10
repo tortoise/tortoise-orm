@@ -2,10 +2,9 @@
 from contextlib import asynccontextmanager
 from typing import List
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from models import User_Pydantic, UserIn_Pydantic, Users
 from pydantic import BaseModel
-from starlette.exceptions import HTTPException
 
 from tortoise.contrib.fastapi import RegisterTortoise
 

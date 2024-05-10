@@ -24,6 +24,7 @@ Fixed
 - Fix `DatetimeField` use '__year' report `'int' object has no attribute 'utcoffset'`. (#1575)
 - Fix `bulk_update` when using custom fields. (#1564)
 - Fix `optional` parameter in `pydantic_model_creator` does not work for pydantic v2. (#1551)
+- Fix `get_annotations` now evaluates annotations in the default scope instead of the app namespace. (#1552)
 
 0.20.1
 ------
