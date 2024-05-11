@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import copy
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from pypika import Table
 from pypika.terms import Criterion
@@ -124,24 +124,24 @@ class QueryModifier:
         return _and(self.where_criterion, self.having_criterion)
 
     def __or__(self, other: QueryModifier) -> QueryModifier:
-        kw: Dict[str, Criterion] = {}
+        where_criterion = having_criterion = None
         if self.having_criterion or other.having_criterion:
-            kw["having_criterion"] = _or(self._and_criterion(), other._and_criterion())
+            having_criterion = _or(self._and_criterion(), other._and_criterion())
         else:
-            kw["where_criterion"] = (
+            where_criterion = (
                 (self.where_criterion | other.where_criterion)
                 if self.where_criterion and other.where_criterion
                 else (self.where_criterion or other.where_criterion)
             )
-        return self.__class__(joins=self.joins + other.joins, **kw)
+        return self.__class__(where_criterion, self.joins + other.joins, having_criterion)
 
     def __invert__(self) -> QueryModifier:
-        kw: Dict[str, Criterion] = {}
+        where_criterion = having_criterion = None
         if self.having_criterion:
-            kw["having_criterion"] = (self.where_criterion & self.having_criterion).negate()
+            having_criterion = (self.where_criterion & self.having_criterion).negate()
         elif self.where_criterion:
-            kw["where_criterion"] = self.where_criterion.negate()
-        return self.__class__(joins=self.joins, **kw)
+            where_criterion = self.where_criterion.negate()
+        return self.__class__(where_criterion, self.joins, having_criterion)
 
     def get_query_modifiers(self) -> Tuple[Criterion, List[TableCriterionTuple], Criterion]:
         """
