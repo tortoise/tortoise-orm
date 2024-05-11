@@ -1,5 +1,5 @@
 from hashlib import sha256
-from typing import TYPE_CHECKING, Any, List, Set, Type, cast
+from typing import TYPE_CHECKING, Any, List, Set, Type, cast, Dict
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields import JSONField, TextField, UUIDField
@@ -431,24 +431,56 @@ class BaseSchemaGenerator:
         created_tables: Set[dict] = set()
         ordered_tables_for_create: List[str] = []
         m2m_tables_to_create: List[str] = []
-        while True:
-            if len(created_tables) == tables_to_create_count:
-                break
-            try:
-                next_table_for_create = next(
-                    t
-                    for t in tables_to_create
-                    if t["references"].issubset(created_tables | {t["table"]})
+
+        while len(created_tables) != tables_to_create_count:
+            if not tables_to_create:
+                # This means an exception will be raised! The following is forensics.
+
+                discovered_tables: Dict[str, Type[Model]] = {}
+                for model in models_to_create:
+                    table_name = str(model._meta.basetable).replace('"', "")
+                    if table_name in discovered_tables:
+                        other_cyclic_model = discovered_tables[table_name]
+                        msg = (
+                            f"Model {model._meta.full_name} overlaps with model {other_cyclic_model._meta.full_name}. "
+                            f"Make sure to use typing.TYPE_CHECKING if models are in multiple Python modules."
+                        )
+                        raise ConfigurationError(msg)
+                    discovered_tables[table_name] = model
+
+                raise ConfigurationError(_FORENSIC_FAIL_MSG)
+
+            for table in tables_to_create:
+                if table["references"].issubset(created_tables | {table["table"]}):
+                    next_table_to_create = table
+                    break
+            else:  # if no break
+                try:
+                    t = tables_to_create[0]
+                except IndexError:
+                    raise ConfigurationError(
+                        f"Forensic of error regarding foreign key (FK) references failed:\n{_FORENSIC_FAIL_MSG}"
+                    )
+
+                table = t["table"]
+                refs = [i for i in t["references"] if i != table and i not in created_tables]
+                raise ConfigurationError(
+                    f"Failed to create schema(`{table}`) due to cyclic foreign key (FK) references({refs})"
                 )
-            except StopIteration:
-                raise ConfigurationError("Can't create schema due to cyclic fk references")
-            tables_to_create.remove(next_table_for_create)
-            created_tables.add(next_table_for_create["table"])
-            ordered_tables_for_create.append(next_table_for_create["table_creation_string"])
-            m2m_tables_to_create += next_table_for_create["m2m_tables"]
+
+            tables_to_create.remove(next_table_to_create)
+            created_tables.add(next_table_to_create["table"])
+            ordered_tables_for_create.append(next_table_to_create["table_creation_string"])
+            m2m_tables_to_create += next_table_to_create["m2m_tables"]
 
         schema_creation_string = "\n".join(ordered_tables_for_create + m2m_tables_to_create)
         return schema_creation_string
 
     async def generate_from_string(self, creation_string: str) -> None:
         await self.client.execute_script(creation_string)
+
+
+_FORENSIC_FAIL_MSG = (
+    "Something to do with your model structure, raise an issue on GitHub, and perhaps "
+    "reference the previous PR: https://github.com/tortoise/tortoise-orm/pull/1236"
+)
