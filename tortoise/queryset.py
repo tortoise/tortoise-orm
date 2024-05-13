@@ -1861,7 +1861,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         on_conflict: Optional[Iterable[str]] = None,
     ):
         super().__init__(model)
-        self.objects = list(objects)
+        self.objects = objects
         self.ignore_conflicts = ignore_conflicts
         self.batch_size = batch_size
         self._db = db
