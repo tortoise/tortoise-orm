@@ -32,6 +32,9 @@ Changed
 - Change `utils.chunk` from function to return iterables lazily.
 - Removed lower bound of id keys in generated pydantic models. (#1602)
 
+Breaking Changes
+^^^^^^^^^^^^^^^^
+- `bulk_create` now does not return anything. (#1614)
 
 0.20
 ====
