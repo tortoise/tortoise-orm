@@ -1,5 +1,7 @@
 # mypy: no-disallow-untyped-decorators
 # pylint: disable=E0611,E0401
+from typing import AsyncGenerator
+
 import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
@@ -8,12 +10,12 @@ from models import Users
 
 
 @pytest.fixture(scope="module")
-def anyio_backend():
+def anyio_backend() -> str:
     return "asyncio"
 
 
 @pytest.fixture(scope="module")
-async def client():
+async def client() -> AsyncGenerator[AsyncClient, None]:
     async with LifespanManager(app):
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as c:
@@ -21,7 +23,7 @@ async def client():
 
 
 @pytest.mark.anyio
-async def test_create_user(client: AsyncClient):  # nosec
+async def test_create_user(client: AsyncClient) -> None:  # nosec
     response = await client.post("/users", json={"username": "admin"})
     assert response.status_code == 200, response.text
     data = response.json()
