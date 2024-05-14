@@ -888,7 +888,12 @@ class TestPydantic(test.TestCase):
                 "additionalProperties": False,
                 "description": "Team that is a playing",
                 "properties": {
-                    "id": {"maximum": 2147483647, "minimum": -2147483648, "title": "Id", "type": "integer"},
+                    "id": {
+                        "maximum": 2147483647,
+                        "minimum": -2147483648,
+                        "title": "Id",
+                        "type": "integer",
+                    },
                     "name": {"title": "Name", "type": "string"},
                     "alias": {
                         "anyOf": [
@@ -1325,7 +1330,11 @@ class TestPydanticCycle(test.TestCase):
                             },
                             "manager_id": {
                                 "anyOf": [
-                                    {"maximum": 2147483647, "minimum": -2147483648, "type": "integer"},
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer",
+                                    },
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -1358,7 +1367,11 @@ class TestPydanticCycle(test.TestCase):
                             },
                             "manager_id": {
                                 "anyOf": [
-                                    {"maximum": 2147483647, "minimum": -2147483648, "type": "integer"},
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer",
+                                    },
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -1386,7 +1399,11 @@ class TestPydanticCycle(test.TestCase):
                             "name": {"maxLength": 50, "title": "Name", "type": "string"},
                             "manager_id": {
                                 "anyOf": [
-                                    {"maximum": 2147483647, "minimum": -2147483648, "type": "integer"},
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer",
+                                    },
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -1400,7 +1417,12 @@ class TestPydanticCycle(test.TestCase):
                 },
                 "additionalProperties": False,
                 "properties": {
-                    "id": {"maximum": 2147483647, "minimum": -2147483648, "title": "Id", "type": "integer"},
+                    "id": {
+                        "maximum": 2147483647,
+                        "minimum": -2147483648,
+                        "title": "Id",
+                        "type": "integer",
+                    },
                     "name": {"maxLength": 50, "title": "Name", "type": "string"},
                     "talks_to": {
                         "items": {"$ref": "#/$defs/Employee_5gupxf"},

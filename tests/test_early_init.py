@@ -46,7 +46,12 @@ class TestBasic(test.TestCase):
                 "type": "object",
                 "description": "The Event model docstring.<br/><br/>This is multiline docs.",
                 "properties": {
-                    "id": {"title": "Id", "type": "integer", "maximum": 2147483647, "minimum": -2147483648},
+                    "id": {
+                        "title": "Id",
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": -2147483648,
+                    },
                     "name": {
                         "title": "Name",
                         "type": "string",
@@ -187,7 +192,12 @@ class TestBasic(test.TestCase):
                 "additionalProperties": False,
                 "description": "The Event model docstring.<br/><br/>This is multiline docs.",
                 "properties": {
-                    "id": {"maximum": 2147483647, "minimum": -2147483648, "title": "Id", "type": "integer"},
+                    "id": {
+                        "maximum": 2147483647,
+                        "minimum": -2147483648,
+                        "title": "Id",
+                        "type": "integer",
+                    },
                     "name": {
                         "description": "The Event NAME<br/>It's pretty important",
                         "maxLength": 255,
