@@ -752,8 +752,7 @@ class QuerySet(AwaitableQuery[MODEL]):
     ) -> "BulkCreateQuery[MODEL]":
         """
         This method inserts the provided list of objects into the database in an efficient manner
-        (generally only 1 query, no matter how many objects there are),
-        and returns created objects as a list, in the same order as provided
+        (generally only 1 query, no matter how many objects there are).
 
         :param on_conflict: On conflict index name
         :param update_fields: Update fields when conflicts
@@ -1861,7 +1860,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         on_conflict: Optional[Iterable[str]] = None,
     ):
         super().__init__(model)
-        self.objects = list(objects)
+        self.objects = objects
         self.ignore_conflicts = ignore_conflicts
         self.batch_size = batch_size
         self._db = db
@@ -1902,7 +1901,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
                     )
                     self.insert_query = self.insert_query.do_update(update_field)  # type:ignore
 
-    async def _execute(self) -> List[MODEL]:
+    async def _execute(self) -> None:
         for instance_chunk in chunk(self.objects, self.batch_size):
             values_lists_all = []
             values_lists = []
@@ -1929,9 +1928,8 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
                 await self._db.execute_many(str(self.insert_query_all), values_lists_all)
             if values_lists:
                 await self._db.execute_many(str(self.insert_query), values_lists)
-        return self.objects
 
-    def __await__(self) -> Generator[Any, None, List[MODEL]]:
+    def __await__(self) -> Generator[Any, None, None]:
         if self._db is None:
             self._db = self._choose_db(True)  # type: ignore
         self._make_query()
