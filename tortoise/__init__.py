@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import importlib.metadata as importlib_metadata
 import json
 import os
 import warnings
@@ -690,7 +691,7 @@ def run_async(coro: Coroutine) -> None:
         loop.run_until_complete(connections.close_all(discard=True))
 
 
-__version__ = "0.20.1"
+__version__ = importlib_metadata.version("tortoise-orm")
 
 __all__ = [
     "Model",
