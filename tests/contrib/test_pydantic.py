@@ -73,7 +73,7 @@ class TestPydantic(test.TestCase):
                             "street": {"maxLength": 128, "title": "Street", "type": "string"},
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -88,7 +88,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -104,7 +104,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -131,7 +131,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 32767,
-                                "minimum": 1,
+                                "minimum": -32768,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -158,7 +158,7 @@ class TestPydantic(test.TestCase):
                 "properties": {
                     "event_id": {
                         "maximum": 9223372036854775807,
-                        "minimum": 1,
+                        "minimum": -9223372036854775808,
                         "title": "Event Id",
                         "type": "integer",
                     },
@@ -241,7 +241,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -325,7 +325,7 @@ class TestPydantic(test.TestCase):
                             "street": {"maxLength": 128, "title": "Street", "type": "string"},
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -340,7 +340,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -356,7 +356,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -383,7 +383,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 32767,
-                                "minimum": 1,
+                                "minimum": -32768,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -423,7 +423,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -495,7 +495,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -511,7 +511,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -538,7 +538,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 32767,
-                                "minimum": 1,
+                                "minimum": -32768,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -567,7 +567,7 @@ class TestPydantic(test.TestCase):
                     "event": {"$ref": "#/$defs/Event_aajoh6"},
                     "event_id": {
                         "maximum": 9223372036854775807,
-                        "minimum": 1,
+                        "minimum": -9223372036854775808,
                         "title": "Event Id",
                         "type": "integer",
                     },
@@ -589,7 +589,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -664,7 +664,7 @@ class TestPydantic(test.TestCase):
                             "street": {"maxLength": 128, "title": "Street", "type": "string"},
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -679,7 +679,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -695,7 +695,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -720,7 +720,7 @@ class TestPydantic(test.TestCase):
                 },
                 "additionalProperties": False,
                 "properties": {
-                    "id": {"maximum": 32767, "minimum": 1, "title": "Id", "type": "integer"},
+                    "id": {"maximum": 32767, "minimum": -32768, "title": "Id", "type": "integer"},
                     "name": {"maxLength": 255, "title": "Name", "type": "string"},
                     "desc": {
                         "anyOf": [{"type": "string"}, {"type": "null"}],
@@ -757,7 +757,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -833,7 +833,7 @@ class TestPydantic(test.TestCase):
                             "street": {"maxLength": 128, "title": "Street", "type": "string"},
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -848,7 +848,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -863,7 +863,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 32767,
-                                "minimum": 1,
+                                "minimum": -32768,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -888,7 +888,7 @@ class TestPydantic(test.TestCase):
                 "additionalProperties": False,
                 "description": "Team that is a playing",
                 "properties": {
-                    "id": {"maximum": 2147483647, "minimum": 1, "title": "Id", "type": "integer"},
+                    "id": {"maximum": 2147483647, "minimum": -2147483648, "title": "Id", "type": "integer"},
                     "name": {"title": "Name", "type": "string"},
                     "alias": {
                         "anyOf": [
@@ -1313,7 +1313,7 @@ class TestPydanticCycle(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -1325,7 +1325,7 @@ class TestPydanticCycle(test.TestCase):
                             },
                             "manager_id": {
                                 "anyOf": [
-                                    {"maximum": 2147483647, "minimum": 1, "type": "integer"},
+                                    {"maximum": 2147483647, "minimum": -2147483648, "type": "integer"},
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -1346,7 +1346,7 @@ class TestPydanticCycle(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -1358,7 +1358,7 @@ class TestPydanticCycle(test.TestCase):
                             },
                             "manager_id": {
                                 "anyOf": [
-                                    {"maximum": 2147483647, "minimum": 1, "type": "integer"},
+                                    {"maximum": 2147483647, "minimum": -2147483648, "type": "integer"},
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -1379,14 +1379,14 @@ class TestPydanticCycle(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
                             "name": {"maxLength": 50, "title": "Name", "type": "string"},
                             "manager_id": {
                                 "anyOf": [
-                                    {"maximum": 2147483647, "minimum": 1, "type": "integer"},
+                                    {"maximum": 2147483647, "minimum": -2147483648, "type": "integer"},
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -1400,7 +1400,7 @@ class TestPydanticCycle(test.TestCase):
                 },
                 "additionalProperties": False,
                 "properties": {
-                    "id": {"maximum": 2147483647, "minimum": 1, "title": "Id", "type": "integer"},
+                    "id": {"maximum": 2147483647, "minimum": -2147483648, "title": "Id", "type": "integer"},
                     "name": {"maxLength": 50, "title": "Name", "type": "string"},
                     "talks_to": {
                         "items": {"$ref": "#/$defs/Employee_5gupxf"},
@@ -1409,7 +1409,7 @@ class TestPydanticCycle(test.TestCase):
                     },
                     "manager_id": {
                         "anyOf": [
-                            {"maximum": 2147483647, "minimum": 1, "type": "integer"},
+                            {"maximum": 2147483647, "minimum": -2147483648, "type": "integer"},
                             {"type": "null"},
                         ],
                         "nullable": True,
