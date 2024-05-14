@@ -1,6 +1,18 @@
-from typing import TYPE_CHECKING, Any, Iterable, Optional
+import sys
+from typing import TYPE_CHECKING, Any, Iterable, Optional, Tuple
 
 from tortoise.log import logger
+
+if sys.version_info >= (3, 12):
+    from itertools import batched
+else:
+    from itertools import islice
+
+    def batched(iterable: Iterable[Any], n: int) -> Iterable[Tuple[Any]]:
+        it = iter(iterable)
+        while batch := tuple(islice(it, n)):
+            yield batch
+
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
@@ -39,6 +51,4 @@ def chunk(instances: Iterable[Any], batch_size: Optional[int] = None) -> Iterabl
     if not batch_size:
         yield instances
     else:
-        instances = list(instances)
-        for i in range(0, len(instances), batch_size):
-            yield instances[i : i + batch_size]  # noqa:E203
+        yield from batched(instances, batch_size)

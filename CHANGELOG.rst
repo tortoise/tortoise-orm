@@ -26,6 +26,10 @@ Fixed
 - Fix `optional` parameter in `pydantic_model_creator` does not work for pydantic v2. (#1551)
 - Fix `get_annotations` now evaluates annotations in the default scope instead of the app namespace. (#1552)
 
+Changed
+^^^^^^^
+- Change `utils.chunk` from function to return iterables lazily.
+
 0.20.1
 ------
 Added

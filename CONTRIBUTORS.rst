@@ -56,6 +56,7 @@ Contributors
 * Yuval Ben-Arie ``@yuvalbenarie``
 * Stephan Klein ``@privatwolke``
 * ``@WizzyGeek``
+* Abdeldjalil Hezouat ``@Abdeldjalil-H``
 
 Special Thanks
 ==============
