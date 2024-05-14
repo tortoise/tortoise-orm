@@ -6,7 +6,7 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.20
+0.21
 ====
 
 0.21.0
@@ -29,6 +29,11 @@ Fixed
 Changed
 ^^^^^^^
 - Change `utils.chunk` from function to return iterables lazily.
+- Removed lower bound of id keys in generated pydantic models. (#1602)
+
+
+0.20
+====
 
 0.20.1
 ------
