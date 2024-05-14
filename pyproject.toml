@@ -148,6 +148,13 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
 [[tool.mypy.overrides]]
+module = ["examples.fastapi.*"]
+check_untyped_defs = true
+disallow_untyped_calls = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
 module = ["tortoise.contrib.test.*"]
 disallow_untyped_defs = false
 disallow_incomplete_defs = false

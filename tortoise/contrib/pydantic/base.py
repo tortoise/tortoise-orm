@@ -1,9 +1,15 @@
+import sys
 from typing import TYPE_CHECKING, List, Type, Union
 
 import pydantic
 from pydantic import BaseModel, ConfigDict, RootModel
 
 from tortoise import fields
+
+if sys.version_info >= (3, 11):  # pragma: nocoverage
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -59,7 +65,7 @@ class PydanticModel(BaseModel):
         return value
 
     @classmethod
-    async def from_tortoise_orm(cls, obj: "Model") -> "PydanticModel":
+    async def from_tortoise_orm(cls, obj: "Model") -> Self:
         """
         Returns a serializable pydantic model instance built from the provided model instance.
 
@@ -86,7 +92,7 @@ class PydanticModel(BaseModel):
         return cls.model_validate(obj)
 
     @classmethod
-    async def from_queryset_single(cls, queryset: "QuerySetSingle") -> "PydanticModel":
+    async def from_queryset_single(cls, queryset: "QuerySetSingle") -> Self:
         """
         Returns a serializable pydantic model instance for a single model
         from the provided queryset.
@@ -99,7 +105,7 @@ class PydanticModel(BaseModel):
         return cls.model_validate(await queryset.prefetch_related(*fetch_fields))
 
     @classmethod
-    async def from_queryset(cls, queryset: "QuerySet") -> "List[PydanticModel]":
+    async def from_queryset(cls, queryset: "QuerySet") -> List[Self]:
         """
         Returns a serializable pydantic model instance that contains a list of models,
         from the provided queryset.
@@ -121,7 +127,7 @@ class PydanticListModel(RootModel):
     """
 
     @classmethod
-    async def from_queryset(cls, queryset: "QuerySet") -> "PydanticListModel":
+    async def from_queryset(cls, queryset: "QuerySet") -> Self:
         """
         Returns a serializable pydantic model instance that contains a list of models,
         from the provided queryset.
