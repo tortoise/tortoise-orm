@@ -26,6 +26,7 @@ Fixed
 - Fix `optional` parameter in `pydantic_model_creator` does not work for pydantic v2. (#1551)
 - Fix `get_annotations` now evaluates annotations in the default scope instead of the app namespace. (#1552)
 - Fix `get_or_create` method. (#1404)
+- Use `index_name` instead of `BaseSchemaGenerator._generate_index_name` to generate index name.
 
 Changed
 ^^^^^^^
