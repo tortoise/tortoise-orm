@@ -108,7 +108,7 @@ class TestBulk(test.TruncationTestCase):
     async def test_bulk_create_in_transaction(self):
         async with in_transaction():
             await UniqueName.bulk_create([UniqueName() for _ in range(1000)])
-        all_ = await UniqueName.all().values("id", "name")
+        all_ = await UniqueName.all().order_by("id").values("id", "name")
         inc = all_[0]["id"]
         self.assertEqual(all_, [{"id": val + inc, "name": None} for val in range(1000)])
 
