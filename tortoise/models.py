@@ -23,6 +23,7 @@ from pypika import Order, Query, Table
 from pypika.terms import Term
 from typing_extensions import Self
 
+import tortoise
 from tortoise import connections
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import (
@@ -1078,10 +1079,11 @@ class Model(metaclass=ModelMeta):
             try:
                 for key in (defaults.keys() & kwargs.keys()):
                     if (default_value := defaults[key]) != (query_value := kwargs[key]):
-                        raise tortoise.exceptions.ParamError(
+                        raise tortoise.exceptions.ParamsError(
                             f'Conflict value with {key=}: {default_value=}  vs {query_value=}')
                 async with in_transaction(connection_name=db.connection_name) as connection:
-                    return await cls.create(using_db=connection, **defaults, **kwargs), True
+                    merged_defaults = {**kwargs, **defaults}
+                    return await cls.create(using_db=connection, **merged_defaults), True
             except IntegrityError as exc:
                 try:
                     return await cls.filter(**kwargs).using_db(db).get(), False

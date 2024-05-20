@@ -1,6 +1,7 @@
 import os
 from uuid import uuid4
 
+import tortoise
 from tests.testmodels import (
     Dest_null,
     Event,
@@ -174,8 +175,10 @@ class TestModelMethods(test.TestCase):
         self.assertNotEqual(self.mdl, mdl)
         mdl2 = await self.cls.get(name="Test2")
         self.assertEqual(mdl, mdl2)
+        mdl_dict = dict(mdl)
         mdl.id = 135
-        await self.cls.update_or_create(id=mdl.id, defaults=dict(mdl))
+        with self.assertRaises(tortoise.exceptions.ParamsError):
+            await self.cls.update_or_create(id=mdl.id, defaults=mdl_dict)
 
     async def test_first(self):
         mdl = await self.cls.first()
