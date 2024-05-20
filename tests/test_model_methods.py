@@ -174,6 +174,8 @@ class TestModelMethods(test.TestCase):
         self.assertNotEqual(self.mdl, mdl)
         mdl2 = await self.cls.get(name="Test2")
         self.assertEqual(mdl, mdl2)
+        mdl.id = 135
+        await self.cls.update_or_create(id=mdl.id, defaults=dict(mdl))
 
     async def test_first(self):
         mdl = await self.cls.first()
