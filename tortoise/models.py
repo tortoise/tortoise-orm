@@ -1076,6 +1076,10 @@ class Model(metaclass=ModelMeta):
             return await cls.filter(**kwargs).using_db(db).get(), False
         except DoesNotExist:
             try:
+                for key in (defaults.keys() & kwargs.keys()):
+                    if (default_value := defaults[key]) != (query_value := kwargs[key]):
+                        raise tortoise.exceptions.ParamError(
+                            f'Conflict value with {key=}: {default_value=}  vs {query_value=}')
                 async with in_transaction(connection_name=db.connection_name) as connection:
                     return await cls.create(using_db=connection, **defaults, **kwargs), True
             except IntegrityError as exc:
