@@ -132,23 +132,18 @@ class Tortoise:
 
         def split_reference(reference: str) -> Tuple[str, str]:
             """
-            Test, if reference follow the official naming conventions. Throws a
+            Validate, if reference follow the official naming conventions. Throws a
             ConfigurationError with a hopefully helpful message. If successful,
             returns the app and the model name.
 
-            :raises ConfigurationError: If no model reference is invalid.
+            :raises ConfigurationError: If reference is invalid.
             """
-            items = reference.split(".")
-            if len(items) != 2:  # pragma: nocoverage
+            if len(app_model := reference.split(".")) != 2:  # pragma: nocoverage
                 raise ConfigurationError(
-                    (
-                        "'%s' is not a valid model reference Bad Reference."
-                        " Should be something like <appname>.<modelname>."
-                    )
-                    % reference
+                    f"'{reference}' is not a valid model reference Bad Reference."
+                    " Should be something like '<appname>.<modelname>'."
                 )
-
-            return (items[0], items[1])
+            return tuple(app_model)
 
         for app_name, app in cls.apps.items():
             for model_name, model in app.items():
@@ -167,38 +162,28 @@ class Tortoise:
 
                     if fk_object.to_field:
                         related_field = related_model._meta.fields_map.get(fk_object.to_field, None)
-                        if related_field:
-                            if related_field.unique:
-                                key_fk_object = deepcopy(related_field)
-                                fk_object.to_field_instance = related_field  # type: ignore
-                            else:
-                                raise ConfigurationError(
-                                    f'field "{fk_object.to_field}" in model'
-                                    f' "{related_model_name}" is not unique'
-                                )
-                        else:
+                        if not related_field:
                             raise ConfigurationError(
-                                f'there is no field named "{fk_object.to_field}"'
-                                f' in model "{related_model_name}"'
+                                f'there is no field named "{fk_object.to_field}" in model "{related_model_name}"'
                             )
+                        if not related_field.unique:
+                            raise ConfigurationError(
+                                f'field "{fk_object.to_field}" in model "{related_model_name}" is not unique'
+                            )
+                        key_fk_object = deepcopy(related_field)
+                        fk_object.to_field_instance = related_field
                     else:
                         key_fk_object = deepcopy(related_model._meta.pk)
-                        fk_object.to_field_instance = related_model._meta.pk  # type: ignore
+                        fk_object.to_field_instance = related_model._meta.pk
                         fk_object.to_field = related_model._meta.pk_attr
                     fk_object.field_type = fk_object.to_field_instance.field_type
                     key_field = f"{field}_id"
                     key_fk_object.pk = False
                     key_fk_object.unique = False
-                    key_fk_object.index = fk_object.index
-                    key_fk_object.default = fk_object.default
-                    key_fk_object.null = fk_object.null
-                    key_fk_object.generated = fk_object.generated
                     key_fk_object.reference = fk_object
-                    key_fk_object.description = fk_object.description
-                    if fk_object.source_field:
-                        key_fk_object.source_field = fk_object.source_field
-                    else:
-                        key_fk_object.source_field = key_field
+                    key_fk_object.source_field = fk_object.source_field or key_field
+                    for attr in ("index", "default", "null", "generated", "description"):
+                        setattr(key_fk_object, attr, getattr(fk_object, attr))
                     model._meta.add_field(key_field, key_fk_object)
 
                     fk_object.related_model = related_model
