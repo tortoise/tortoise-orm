@@ -143,9 +143,9 @@ class Tortoise:
                     f"'{reference}' is not a valid model reference Bad Reference."
                     " Should be something like '<appname>.<modelname>'."
                 )
-            return (items[0], items[1])
+            return items[0], items[1]
 
-        def init_fk_o2o_field(field: str, is_o2o=False) -> None:
+        def init_fk_o2o_field(model: Type["Model"], field: str, is_o2o=False) -> None:
             if is_o2o:
                 fk_object: Union[OneToOneFieldInstance, ForeignKeyFieldInstance] = cast(
                     OneToOneFieldInstance, model._meta.fields_map[field]
@@ -226,10 +226,10 @@ class Tortoise:
                     model._meta.db_table = model.__name__.lower()
 
                 for field in sorted(model._meta.fk_fields):
-                    init_fk_o2o_field(field)
+                    init_fk_o2o_field(model, field)
 
                 for field in model._meta.o2o_fields:
-                    init_fk_o2o_field(field, True)
+                    init_fk_o2o_field(model, field, True)
 
                 for field in list(model._meta.m2m_fields):
                     m2m_object = cast(ManyToManyFieldInstance, model._meta.fields_map[field])
