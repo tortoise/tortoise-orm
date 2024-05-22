@@ -229,7 +229,7 @@ class Tortoise:
                     init_fk_o2o_field(model, field)
 
                 for field in model._meta.o2o_fields:
-                    init_fk_o2o_field(model, field, True)
+                    init_fk_o2o_field(model, field, is_o2o=True)
 
                 for field in list(model._meta.m2m_fields):
                     m2m_object = cast(ManyToManyFieldInstance, model._meta.fields_map[field])
