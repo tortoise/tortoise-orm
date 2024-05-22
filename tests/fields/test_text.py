@@ -29,7 +29,7 @@ class TestTextFields(test.TestCase):
         self.assertEqual(values, "baa")
 
     def test_unique_fail(self):
-        msg = "TextField doesn't support unique indexes, consider CharField"
+        msg = "TextField can't be indexed, consider CharField"
         with self.assertRaisesRegex(ConfigurationError, msg):
             with self.assertWarnsRegex(
                 DeprecationWarning, "`index` is deprecated, please use `db_index` instead"
