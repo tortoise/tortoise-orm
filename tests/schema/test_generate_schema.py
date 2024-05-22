@@ -173,7 +173,7 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
 
     async def test_fk_bad_model_name(self):
         with self.assertRaisesRegex(
-            ConfigurationError, 'Foreign key accepts model name in format "app.Model"'
+            ConfigurationError, 'ForeignKeyField accepts model name in format "app.Model"'
         ):
             await self.init_for("tests.schema.models_fk_1")
 
@@ -205,7 +205,7 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
 
     async def test_m2m_bad_model_name(self):
         with self.assertRaisesRegex(
-            ConfigurationError, 'Foreign key accepts model name in format "app.Model"'
+            ConfigurationError, 'ManyToManyField accepts model name in format "app.Model"'
         ):
             await self.init_for("tests.schema.models_m2m_1")
 

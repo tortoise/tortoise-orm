@@ -59,7 +59,7 @@ class TestBadRelationReferenceErrors(test.SimpleTestCase):
 
     async def test_no_app_in_reference_init(self):
         with self.assertRaisesRegex(
-            ConfigurationError, 'Foreign key accepts model name in format "app.Model"'
+            ConfigurationError, 'ForeignKeyField accepts model name in format "app.Model"'
         ):
             await Tortoise.init(
                 {
@@ -80,7 +80,7 @@ class TestBadRelationReferenceErrors(test.SimpleTestCase):
 
     async def test_more_than_two_dots_in_reference_init(self):
         with self.assertRaisesRegex(
-            ConfigurationError, 'Foreign key accepts model name in format "app.Model"'
+            ConfigurationError, 'ForeignKeyField accepts model name in format "app.Model"'
         ):
             await Tortoise.init(
                 {
