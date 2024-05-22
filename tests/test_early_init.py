@@ -5,7 +5,7 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=100)
     created_at = fields.DatetimeField(auto_now_add=True)
 
@@ -22,7 +22,7 @@ class Event(Model):
     This is multiline docs.
     """
 
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     #: The Event NAME
     #:  It's pretty important
     name = fields.CharField(max_length=255)

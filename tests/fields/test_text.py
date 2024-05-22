@@ -42,4 +42,4 @@ class TestTextFields(test.TestCase):
         with self.assertWarnsRegex(
             DeprecationWarning, "TextField as a PrimaryKey is Deprecated, use CharField"
         ):
-            TextField(pk=True)
+            TextField(primary_key=True)

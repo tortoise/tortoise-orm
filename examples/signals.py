@@ -10,7 +10,7 @@ from tortoise.signals import post_delete, post_save, pre_delete, pre_save
 
 
 class Signal(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     class Meta:

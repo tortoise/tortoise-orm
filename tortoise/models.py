@@ -560,7 +560,7 @@ class ModelMeta(type):
 
             if not custom_pk_present and not getattr(meta_class, "abstract", None):
                 if "id" not in attrs:
-                    attrs = {"id": IntField(pk=True), **attrs}
+                    attrs = {"id": IntField(primary_key=True), **attrs}
 
                 if not isinstance(attrs["id"], Field) or not attrs["id"].pk:
                     raise ConfigurationError(
