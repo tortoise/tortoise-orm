@@ -4,7 +4,7 @@
 Indexes
 =======
 
-Default tortoise use `BTree` index when define index use `index=True` in field, or define indexes use in `Meta` class, but if you want use other index types, like `FullTextIndex` in `MySQL`, or `GinIndex` in `Postgres`, you should use `tortoise.indexes.Index` and its subclasses.
+Default tortoise use `BTree` index when define index use `db_index=True` in field, or define indexes use in `Meta` class, but if you want use other index types, like `FullTextIndex` in `MySQL`, or `GinIndex` in `Postgres`, you should use `tortoise.indexes.Index` and its subclasses.
 
 Usage
 =====

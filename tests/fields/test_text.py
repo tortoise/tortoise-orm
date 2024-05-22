@@ -29,10 +29,14 @@ class TestTextFields(test.TestCase):
         self.assertEqual(values, "baa")
 
     def test_unique_fail(self):
-        with self.assertRaisesRegex(
-            ConfigurationError, "TextField doesn't support unique indexes, consider CharField"
-        ):
-            TextField(unique=True)
+        msg = "TextField can't be indexed, consider CharField"
+        with self.assertRaisesRegex(ConfigurationError, msg):
+            with self.assertWarnsRegex(
+                DeprecationWarning, "`index` is deprecated, please use `db_index` instead"
+            ):
+                TextField(index=True)
+        with self.assertRaisesRegex(ConfigurationError, msg):
+            TextField(db_index=True)
 
     def test_index_fail(self):
         with self.assertRaisesRegex(ConfigurationError, "can't be indexed, consider CharField"):
@@ -42,4 +46,4 @@ class TestTextFields(test.TestCase):
         with self.assertWarnsRegex(
             DeprecationWarning, "TextField as a PrimaryKey is Deprecated, use CharField"
         ):
-            TextField(pk=True)
+            TextField(primary_key=True)

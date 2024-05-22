@@ -44,7 +44,7 @@ class TestDescribeModel(test.SimpleTestCase):
     maxDiff = None
 
     def test_describe_field_noninit_ser(self):
-        field = fields.IntField(pk=True)
+        field = fields.IntField(primary_key=True)
         self.assertEqual(
             field.describe(serializable=True),
             {
@@ -65,7 +65,7 @@ class TestDescribeModel(test.SimpleTestCase):
         )
 
     def test_describe_field_noninit(self):
-        field = fields.IntField(pk=True)
+        field = fields.IntField(primary_key=True)
         self.assertEqual(
             field.describe(serializable=False),
             {

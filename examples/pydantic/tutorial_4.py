@@ -17,7 +17,7 @@ class Tournament(Model):
     This references a Tournament
     """
 
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=100)
     created_at = fields.DatetimeField(auto_now_add=True)
 
@@ -62,7 +62,7 @@ class Event(Model):
     This references an Event in a Tournament
     """
 
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=100)
     created_at = fields.DatetimeField(auto_now_add=True)
 

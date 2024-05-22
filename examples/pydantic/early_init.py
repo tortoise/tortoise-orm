@@ -8,7 +8,7 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
 
@@ -19,7 +19,7 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
     tournament: fields.ForeignKeyNullableRelation[Tournament] = fields.ForeignKeyField(
