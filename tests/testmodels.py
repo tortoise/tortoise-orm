@@ -473,7 +473,9 @@ class CommentModel(Model):
         table = "comments"
         table_description = "Test Table comment"
 
-    id = fields.IntField(primary_key=True, description="Primary key \r*/'`/*\n field for the comments")
+    id = fields.IntField(
+        primary_key=True, description="Primary key \r*/'`/*\n field for the comments"
+    )
     message = fields.TextField(description="Comment messages entered in the blog post")
     rating = fields.IntField(description="Upvotes done on the comment")
     escaped_comment_field = fields.TextField(description="This column acts as it's own comment")
