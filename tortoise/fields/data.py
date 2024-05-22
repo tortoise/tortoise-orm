@@ -73,7 +73,7 @@ class IntField(Field[int], int):
     SQL_TYPE = "INT"
     allows_generated = True
 
-    def __init__(self, primary_key: bool = False, **kwargs: Any) -> None:
+    def __init__(self, primary_key: Optional[bool] = None, **kwargs: Any) -> None:
         if primary_key:
             kwargs["generated"] = bool(kwargs.get("generated", True))
         super().__init__(primary_key=primary_key, **kwargs)
@@ -112,7 +112,7 @@ class BigIntField(Field[int], int):
     SQL_TYPE = "BIGINT"
     allows_generated = True
 
-    def __init__(self, primary_key: bool = False, **kwargs: Any) -> None:
+    def __init__(self, primary_key: Optional[bool] = None, **kwargs: Any) -> None:
         if primary_key:
             kwargs["generated"] = bool(kwargs.get("generated", True))
         super().__init__(primary_key=primary_key, **kwargs)
@@ -152,7 +152,7 @@ class SmallIntField(Field[int], int):
     SQL_TYPE = "SMALLINT"
     allows_generated = True
 
-    def __init__(self, primary_key: bool = False, **kwargs: Any) -> None:
+    def __init__(self, primary_key: Optional[bool] = None, **kwargs: Any) -> None:
         if primary_key:
             kwargs["generated"] = bool(kwargs.get("generated", True))
         super().__init__(primary_key=primary_key, **kwargs)
@@ -227,7 +227,11 @@ class TextField(Field[str], str):  # type: ignore
     SQL_TYPE = "TEXT"
 
     def __init__(
-        self, primary_key: bool = False, unique: bool = False, db_index: bool = False, **kwargs: Any
+        self,
+        primary_key: Optional[bool] = None,
+        unique: bool = False,
+        db_index: bool = False,
+        **kwargs: Any,
     ) -> None:
         if primary_key or kwargs.get("pk"):
             warnings.warn(

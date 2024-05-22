@@ -1,4 +1,5 @@
 import uuid
+from typing import Any
 
 from tests.testmodels import (
     CharFkRelatedModel,
@@ -9,7 +10,9 @@ from tests.testmodels import (
     UUIDM2MRelatedModel,
     UUIDPkModel,
 )
+from tortoise import fields
 from tortoise.contrib import test
+from tortoise.exceptions import ConfigurationError
 
 
 class TestQueryset(test.TestCase):
@@ -139,3 +142,97 @@ class TestQueryset(test.TestCase):
         related_instance_list = await CharM2MRelatedModel.filter(models__in=[instance2])
         self.assertEqual(len(related_instance_list), 1)
         self.assertEqual(related_instance_list[0], related_instance2)
+
+
+class TestPkIndexAlias(test.TestCase):
+    Field: Any = fields.CharField
+    init_kwargs = {"max_length": 10}
+
+    async def test_pk_alias_warning(self):
+        msg = "`pk` is deprecated, please use `primary_key` instead"
+        with self.assertWarnsRegex(DeprecationWarning, msg):
+            f = self.Field(pk=True, **self.init_kwargs)
+        assert f.pk is True
+        with self.assertWarnsRegex(DeprecationWarning, msg):
+            f = self.Field(pk=False, **self.init_kwargs)
+        assert f.pk is False
+
+    async def test_pk_alias_error(self):
+        with self.assertRaises(ConfigurationError):
+            self.Field(pk=True, primary_key=False, **self.init_kwargs)
+        with self.assertRaises(ConfigurationError):
+            self.Field(pk=False, primary_key=True, **self.init_kwargs)
+
+    async def test_pk_alias_compare(self):
+        # Only for compare, not recommended
+        f = self.Field(pk=True, primary_key=True, **self.init_kwargs)
+        assert f.pk is True
+        f = self.Field(pk=False, primary_key=False, **self.init_kwargs)
+        assert f.pk is False
+
+
+class TestPkIndexAliasUUID(TestPkIndexAlias):
+    Field: Any = fields.UUIDField
+    init_kwargs = {}
+
+    async def test_default(self):
+        msg = "`pk` is deprecated, please use `primary_key` instead"
+        with self.assertWarnsRegex(DeprecationWarning, msg):
+            f = self.Field(pk=True)
+        assert f.default == uuid.uuid4
+        f = self.Field(primary_key=True)
+        assert f.default == uuid.uuid4
+        f = self.Field()
+        assert f.default is None
+        f = self.Field(default=1)
+        assert f.default == 1
+
+
+class TestPkIndexAliasInt(TestPkIndexAlias):
+    Field: Any = fields.IntField
+    init_kwargs = {}
+
+    async def test_argument(self):
+        f = self.Field(True)
+        assert f.pk is True
+        f = self.Field(False)
+        assert f.pk is False
+
+
+class TestPkIndexAliasBigInt(TestPkIndexAliasInt):
+    Field = fields.BigIntField
+
+
+class TestPkIndexAliasSmallInt(TestPkIndexAliasInt):
+    Field = fields.SmallIntField
+
+
+class TestPkIndexAliasText(TestPkIndexAlias):
+    Field = fields.TextField
+    message = "TextField as a PrimaryKey is Deprecated, use CharField instead"
+
+    def test_warning(self):
+        with self.assertWarnsRegex(DeprecationWarning, self.message):
+            f = self.Field(pk=True)
+        assert f.pk is True
+        with self.assertWarnsRegex(DeprecationWarning, self.message):
+            f = self.Field(primary_key=True)
+        assert f.pk is True
+        with self.assertWarnsRegex(DeprecationWarning, self.message):
+            f = self.Field(True)
+        assert f.pk is True
+
+    async def test_pk_alias_error(self):
+        with self.assertRaises(ConfigurationError):
+            with self.assertWarnsRegex(DeprecationWarning, self.message):
+                self.Field(pk=True, primary_key=False, **self.init_kwargs)
+        with self.assertRaises(ConfigurationError):
+            with self.assertWarnsRegex(DeprecationWarning, self.message):
+                self.Field(pk=False, primary_key=True, **self.init_kwargs)
+
+    async def test_pk_alias_compare(self):
+        with self.assertWarnsRegex(DeprecationWarning, self.message):
+            f = self.Field(pk=True, primary_key=True, **self.init_kwargs)
+        assert f.pk is True
+        f = self.Field(pk=False, primary_key=False, **self.init_kwargs)
+        assert f.pk is False
