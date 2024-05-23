@@ -32,6 +32,8 @@ Changed
 ^^^^^^^
 - Change `utils.chunk` from function to return iterables lazily.
 - Removed lower bound of id keys in generated pydantic models. (#1602)
+- Rename Field initial arguments `pk`/`index` to `primary_key`/`db_index`. (#1621)
+- Renamed `Model.check` method to `Model._check` to avoid naming collision issues  (#1559) (#1550)
 
 Breaking Changes
 ^^^^^^^^^^^^^^^^

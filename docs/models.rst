@@ -20,7 +20,7 @@ With that you can start describing your own models like that
 .. code-block:: python3
 
     class Tournament(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
         created = fields.DatetimeField(auto_now_add=True)
 
@@ -29,7 +29,7 @@ With that you can start describing your own models like that
 
 
     class Event(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
         tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
         participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
@@ -41,7 +41,7 @@ With that you can start describing your own models like that
 
 
     class Team(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
 
         def __str__(self):
@@ -58,7 +58,7 @@ Every model should be derived from base model. You also can derive from your own
 .. code-block:: python3
 
     class AbstractTournament(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
         created = fields.DatetimeField(auto_now_add=True)
 
@@ -97,7 +97,7 @@ That alias field can be used as a field name when doing filtering e.g. ``.filter
     CharField
     UUIDField
 
-One must define a primary key by setting a ``pk`` parameter to ``True``. 
+One must define a primary key by setting a ``primary_key`` parameter to ``True``.
 If you don't define a primary key, we will create a primary key of type ``IntField`` with name of ``id`` for you.
 
 .. note::
@@ -107,11 +107,11 @@ Any of these are valid primary key definitions in a Model:
 
 .. code-block:: python3
 
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
 
-    checksum = fields.CharField(pk=True)
+    checksum = fields.CharField(primary_key=True)
 
-    guid = fields.UUIDField(pk=True)
+    guid = fields.UUIDField(primary_key=True)
 
 
 Inheritance
@@ -141,7 +141,7 @@ Let's have a look at some examples.
         name = fields.CharField(40, unique=True)
 
     class MyAbstractBaseModel(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
 
         class Meta:
             abstract = True
@@ -149,7 +149,7 @@ Let's have a look at some examples.
     class UserModel(TimestampMixin, MyAbstractBaseModel):
         # Overriding the id definition
         # from MyAbstractBaseModel
-        id = fields.UUIDField(pk=True)
+        id = fields.UUIDField(primary_key=True)
 
         # Adding additional fields
         first_name = fields.CharField(20, null=True)
@@ -413,7 +413,7 @@ all models including fields for the relations between models.
 
 
     class Tournament(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=255)
 
         events: fields.ReverseRelation["Event"]
@@ -423,7 +423,7 @@ all models including fields for the relations between models.
 
 
     class Event(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=255)
         tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
             "models.Tournament", related_name="events"
@@ -437,7 +437,7 @@ all models including fields for the relations between models.
 
 
     class Team(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=255)
 
         events: fields.ManyToManyRelation[Event]

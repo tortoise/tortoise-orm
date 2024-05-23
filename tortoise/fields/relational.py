@@ -284,6 +284,12 @@ class RelationalField(Field[MODEL]):
         del desc["db_column"]
         return desc
 
+    @classmethod
+    def validate_model_name(cls, model_name: str) -> None:
+        if len(model_name.split(".")) != 2:
+            field_type = cls.__name__.replace("Instance", "")
+            raise ConfigurationError(f'{field_type} accepts model name in format "app.Model"')
+
 
 class ForeignKeyFieldInstance(RelationalField[MODEL]):
     def __init__(
@@ -294,8 +300,7 @@ class ForeignKeyFieldInstance(RelationalField[MODEL]):
         **kwargs: Any,
     ) -> None:
         super().__init__(None, **kwargs)  # type: ignore
-        if len(model_name.split(".")) != 2:
-            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
+        self.validate_model_name(model_name)
         self.model_name = model_name
         self.related_name = related_name
         if on_delete not in set(OnDelete):
@@ -337,8 +342,7 @@ class OneToOneFieldInstance(ForeignKeyFieldInstance[MODEL]):
         on_delete: OnDelete = CASCADE,
         **kwargs: Any,
     ) -> None:
-        if len(model_name.split(".")) != 2:
-            raise ConfigurationError('OneToOneField accepts model name in format "app.Model"')
+        self.validate_model_name(model_name)
         super().__init__(model_name, related_name, on_delete, unique=True, **kwargs)
 
 
@@ -363,8 +367,7 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         # TODO: rename through to through_table
         # TODO: add through to use a Model
         super().__init__(field_type, **kwargs)
-        if len(model_name.split(".")) != 2:
-            raise ConfigurationError('Foreign key accepts model name in format "app.Model"')
+        self.validate_model_name(model_name)
         self.model_name: str = model_name
         self.related_name: str = related_name
         self.forward_key: str = forward_key or f"{model_name.split('.')[1].lower()}_id"

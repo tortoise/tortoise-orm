@@ -36,7 +36,7 @@ class UUIDField(UUIDFieldBase):
     SQL_TYPE = "CHAR(36)"
 
     def __init__(self, binary_compression: bool = True, **kwargs: Any) -> None:
-        if kwargs.get("pk", False) and "default" not in kwargs:
+        if (kwargs.get("primary_key") or kwargs.get("pk", False)) and "default" not in kwargs:
             kwargs["default"] = uuid4
         super().__init__(**kwargs)
 

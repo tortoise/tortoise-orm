@@ -560,7 +560,7 @@ class ModelMeta(type):
 
             if not custom_pk_present and not getattr(meta_class, "abstract", None):
                 if "id" not in attrs:
-                    attrs = {"id": IntField(pk=True), **attrs}
+                    attrs = {"id": IntField(primary_key=True), **attrs}
 
                 if not isinstance(attrs["id"], Field) or not attrs["id"].pk:
                     raise ConfigurationError(
@@ -1384,7 +1384,7 @@ class Model(metaclass=ModelMeta):
         await db.executor_class(model=cls, db=db).fetch_for_list(instance_list, *args)
 
     @classmethod
-    def check(cls) -> None:
+    def _check(cls) -> None:
         """
         Calls various checks to validate the model.
 
