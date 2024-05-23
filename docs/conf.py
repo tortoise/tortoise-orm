@@ -5,6 +5,7 @@
 # This file does only contain a selection of the most common options. For a
 # full list see the documentation:
 # http://www.sphinx-doc.org/en/stable/config
+import json
 
 # -- Path setup --------------------------------------------------------------
 
@@ -113,10 +114,17 @@ napoleon_use_rtype = True
 html_theme = "sphinx_immaterial"
 html_show_sourcelink = True
 
+
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
+def get_version_info():
+    with open("versions.json") as f:
+        versions = json.load(f)
+    return versions
+
+
 html_theme_options = {
     "google_analytics": ["G-MJ7RHW2FRB", "auto"],
     "repo_url": "https://github.com/tortoise/tortoise-orm",
