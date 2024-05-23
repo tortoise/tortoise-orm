@@ -257,7 +257,12 @@ class TestJSONFields(test.TestCase):
 
     def test_index_fail(self):
         with self.assertRaisesRegex(ConfigurationError, "can't be indexed"):
-            JSONField(index=True)
+            with self.assertWarnsRegex(
+                DeprecationWarning, "`index` is deprecated, please use `db_index` instead"
+            ):
+                JSONField(index=True)
+        with self.assertRaisesRegex(ConfigurationError, "can't be indexed"):
+            JSONField(db_index=True)
 
     async def test_validate_str(self):
         obj0 = await testmodels.JSONFields.create(data=[], data_validate='["text", 5]')

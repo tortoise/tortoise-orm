@@ -58,6 +58,7 @@ Contributors
 * ``@WizzyGeek``
 * Ivan Pakeev ``@ipakeev``
 * Abdeldjalil Hezouat ``@Abdeldjalil-H``
+* Andrea Magistà ``@vlakius``
 
 Special Thanks
 ==============

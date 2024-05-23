@@ -58,7 +58,7 @@ Define your models like so:
     from tortoise import fields
 
     class Tournament(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
 
 Initialise your models and database like so:

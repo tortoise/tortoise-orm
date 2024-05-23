@@ -40,7 +40,7 @@ Lets start with a basic Tortoise Model:
         """
         This references a Tournament
         """
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=100)
         #: The date-time the Tournament record was created at
         created_at = fields.DatetimeField(auto_now_add=True)
@@ -131,7 +131,7 @@ Source to example: :ref:`example_pydantic_tut2`
         """
         This references a Tournament
         """
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=100)
         #: The date-time the Tournament record was created at
         created_at = fields.DatetimeField(auto_now_add=True)
@@ -278,7 +278,7 @@ We define our models with a relationship:
         This references a Tournament
         """
 
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=100)
         #: The date-time the Tournament record was created at
         created_at = fields.DatetimeField(auto_now_add=True)
@@ -288,7 +288,7 @@ We define our models with a relationship:
         This references an Event in a Tournament
         """
 
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=100)
         created_at = fields.DatetimeField(auto_now_add=True)
 
@@ -533,7 +533,7 @@ Let's add some methods that calculate data, and tell the creators to use them:
         This references a Tournament
         """
 
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=100)
         created_at = fields.DatetimeField(auto_now_add=True)
 
@@ -568,7 +568,7 @@ Let's add some methods that calculate data, and tell the creators to use them:
         This references an Event in a Tournament
         """
 
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=100)
         created_at = fields.DatetimeField(auto_now_add=True)
 
