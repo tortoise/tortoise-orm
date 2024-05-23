@@ -1076,21 +1076,26 @@ class Model(metaclass=ModelMeta):
         try:
             return await cls.filter(**kwargs).using_db(db).get(), False
         except DoesNotExist:
+            return await cls._create_or_get(db, defaults, **kwargs)
+
+    @classmethod
+    async def _create_or_get(
+        cls, db: BaseDBAsyncClient, defaults: dict, **kwargs
+    ) -> Tuple[Self, bool]:
+        """Try to create, if fails with IntegrityError then try to get"""
+        for key in defaults.keys() & kwargs.keys():
+            if (default_value := defaults[key]) != (query_value := kwargs[key]):
+                raise ParamsError(f"Conflict value with {key=}: {default_value=} vs {query_value=}")
+        merged_defaults = {**kwargs, **defaults}
+        try:
+            async with in_transaction(connection_name=db.connection_name) as connection:
+                return await cls.create(using_db=connection, **merged_defaults), True
+        except IntegrityError as exc:
             try:
-                for key in defaults.keys() & kwargs.keys():
-                    if (default_value := defaults[key]) != (query_value := kwargs[key]):
-                        raise ParamsError(
-                            f"Conflict value with {key=}: {default_value=} vs {query_value=}"
-                        )
-                async with in_transaction(connection_name=db.connection_name) as connection:
-                    merged_defaults = {**kwargs, **defaults}
-                    return await cls.create(using_db=connection, **merged_defaults), True
-            except IntegrityError as exc:
-                try:
-                    return await cls.filter(**kwargs).using_db(db).get(), False
-                except DoesNotExist:
-                    pass
-                raise exc
+                return await cls.filter(**kwargs).using_db(db).get(), False
+            except DoesNotExist:
+                pass
+            raise exc
 
     @classmethod
     def select_for_update(
@@ -1133,7 +1138,7 @@ class Model(metaclass=ModelMeta):
             if instance:
                 await instance.update_from_dict(defaults).save(using_db=connection)
                 return instance, False
-        return await cls.get_or_create(defaults, db, **kwargs)
+        return await cls._create_or_get(db, defaults, **kwargs)
 
     @classmethod
     async def create(

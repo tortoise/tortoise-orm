@@ -177,7 +177,7 @@ class TestModelMethods(test.TestCase):
         mdl_dict = dict(mdl)
         oldid = mdl.id
         mdl.id = 135
-        with self.assertRaises(ParamsError):
+        with self.assertRaisesRegex(ParamsError, "Conflict value with key='id':"):
             # Missing query: check conflict with kwargs and defaults before create
             await self.cls.update_or_create(id=mdl.id, defaults=mdl_dict)
         # Hint query: use defauts to update without checking conflict
