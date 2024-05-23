@@ -7,6 +7,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    Tuple,
     Type,
     TypeVar,
     Union,
@@ -199,18 +200,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         """
         Clears ALL relations.
         """
-        db = using_db if using_db else self.remote_model._meta.db
-        through_table = Table(self.field.through)
-        pk_formatting_func = type(self.instance)._meta.pk.to_db_value
-        query = (
-            db.query_class.from_(through_table)
-            .where(
-                through_table[self.field.backward_key]
-                == pk_formatting_func(self.instance.pk, self.instance)
-            )
-            .delete()
-        )
-        await db.execute_query(str(query))
+        await self._remove_or_clear(using_db=using_db)
 
     async def remove(
         self, *instances: MODEL, using_db: "Optional[BaseDBAsyncClient]" = None
@@ -220,30 +210,32 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
 
         :raises OperationalError: remove() was called with no instances.
         """
-        db = using_db if using_db else self.remote_model._meta.db
         if not instances:
             raise OperationalError("remove() called on no instances")
+        await self._remove_or_clear(instances, using_db)
+
+    async def _remove_or_clear(
+        self,
+        instances: Optional[Tuple[MODEL, ...]] = None,
+        using_db: "Optional[BaseDBAsyncClient]" = None,
+    ) -> None:
+        db = using_db or self.remote_model._meta.db
         through_table = Table(self.field.through)
         pk_formatting_func = type(self.instance)._meta.pk.to_db_value
-        related_pk_formatting_func = type(instances[0])._meta.pk.to_db_value
 
-        if len(instances) == 1:
-            condition = (
-                through_table[self.field.forward_key]
-                == related_pk_formatting_func(instances[0].pk, instances[0])
-            ) & (
-                through_table[self.field.backward_key]
-                == pk_formatting_func(self.instance.pk, self.instance)
-            )
-        else:
-            condition = (
-                through_table[self.field.backward_key]
-                == pk_formatting_func(self.instance.pk, self.instance)
-            ) & (
-                through_table[self.field.forward_key].isin(
+        condition = through_table[self.field.backward_key] == pk_formatting_func(
+            self.instance.pk, self.instance
+        )
+        if instances:
+            related_pk_formatting_func = type(instances[0])._meta.pk.to_db_value
+            if len(instances) == 1:
+                condition &= through_table[self.field.forward_key] == related_pk_formatting_func(
+                    instances[0].pk, instances[0]
+                )
+            else:
+                condition &= through_table[self.field.forward_key].isin(
                     [related_pk_formatting_func(i.pk, i) for i in instances]
                 )
-            )
         query = db.query_class.from_(through_table).where(condition).delete()
         await db.execute_query(str(query))
 
