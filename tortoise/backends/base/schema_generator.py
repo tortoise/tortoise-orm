@@ -19,7 +19,7 @@ class BaseSchemaGenerator:
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment};'
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{default}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
-    UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace(" INDEX", " UNIQUE INDEX")
+    UNIQUE_INDEX_TEMPLATE = "CREATE UNIQUE INDEX {exists}{index_name} ON {table_name} ({fields});"
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{index_name}" UNIQUE ({fields})'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}{comment}'
     FK_TEMPLATE = ' REFERENCES "{table}" ("{field}") ON DELETE {on_delete}{comment}'
@@ -403,10 +403,10 @@ class BaseSchemaGenerator:
                     "uidx", table_name, [backward_key, forward_key]
                 )
                 m2m_create_string += "\n" + (
-                    self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
+                    self.UNIQUE_INDEX_TEMPLATE.format(
                         exists=exists,
-                        index_name=index_name,
-                        table_name=table_name,
+                        index_name=self.quote(index_name),
+                        table_name=self.quote(table_name),
                         fields=", ".join([self.quote(f) for f in (backward_key, forward_key)]),
                     )
                 )
