@@ -89,9 +89,9 @@ class TestModelCreate(test.TestCase):
 class TestModelMethods(test.TestCase):
     async def asyncSetUp(self):
         await super().asyncSetUp()
-        self.mdl = await Tournament.create(name="Test")
-        self.mdl2 = Tournament(name="Test")
         self.cls = Tournament
+        self.mdl = await self.cls.create(name="Test")
+        self.mdl2 = self.cls(name="Test")
 
     async def test_save(self):
         oldid = self.mdl.id
@@ -175,9 +175,27 @@ class TestModelMethods(test.TestCase):
         mdl2 = await self.cls.get(name="Test2")
         self.assertEqual(mdl, mdl2)
         mdl_dict = dict(mdl)
+        oldid = mdl.id
         mdl.id = 135
         with self.assertRaises(ParamsError):
+            # Missing query: check conflict with kwargs and defaults before create
             await self.cls.update_or_create(id=mdl.id, defaults=mdl_dict)
+        # Hint query: use defauts to update without checking conflict
+        mdl, created = await self.cls.update_or_create(id=oldid, defaults=dict(mdl_dict, id=mdl.id))
+        self.assertFalse(created)
+        self.assertNotEqual(self.mdl, mdl)
+        # If there is no conflict with defaults and kwargs, it will be success to update or create
+        defaults = dict(mdl_dict, desc=str(uuid4()))
+        kwargs = {"id": defaults["id"], "name": defaults["name"]}
+        mdl, created = await self.cls.update_or_create(defaults, **kwargs)
+        self.assertFalse(created)
+        self.assertEqual(defaults["desc"], mdl.desc)
+        self.assertNotEqual(self.mdl.desc, mdl.desc)
+        not_exist_id = 136
+        defaults["id"] = kwargs["id"] = not_exist_id
+        mdl, created = await self.cls.update_or_create(defaults, **kwargs)
+        self.assertTrue(created)
+        self.assertEqual(not_exist_id, mdl.id)
 
     async def test_first(self):
         mdl = await self.cls.first()
