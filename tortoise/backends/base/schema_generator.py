@@ -1,3 +1,4 @@
+import re
 from hashlib import sha256
 from typing import TYPE_CHECKING, Any, List, Set, Type, Union, cast
 
@@ -19,7 +20,7 @@ class BaseSchemaGenerator:
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment};'
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{default}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
-    UNIQUE_INDEX_TEMPLATE = "CREATE UNIQUE INDEX {exists}{index_name} ON {table_name} ({fields});"
+    UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace(" INDEX", " UNIQUE INDEX")
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{index_name}" UNIQUE ({fields})'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}{comment}'
     FK_TEMPLATE = ' REFERENCES "{table}" ("{field}") ON DELETE {on_delete}{comment}'
@@ -167,6 +168,15 @@ class BaseSchemaGenerator:
             exists="IF NOT EXISTS " if safe else "",
             index_name=self._generate_index_name("idx", model, field_names),
             table_name=model._meta.db_table,
+            fields=", ".join([self.quote(f) for f in field_names]),
+        )
+
+    def _get_unique_index_sql(self, exists: str, table_name: str, field_names: List[str]) -> str:
+        index_name = self._generate_index_name("uidx", table_name, field_names)
+        return self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
+            exists=exists,
+            index_name=index_name,
+            table_name=table_name,
             fields=", ".join([self.quote(f) for f in field_names]),
         )
 
@@ -399,17 +409,17 @@ class BaseSchemaGenerator:
                 )  # may have better way
             m2m_create_string += self._post_table_hook()
             if field_object.create_unique_index:
-                index_name = self._generate_index_name(
-                    "uidx", table_name, [backward_key, forward_key]
+                unique_index_create_sql = self._get_unique_index_sql(
+                    exists, table_name, [backward_key, forward_key]
                 )
-                m2m_create_string += "\n" + (
-                    self.UNIQUE_INDEX_TEMPLATE.format(
-                        exists=exists,
-                        index_name=self.quote(index_name),
-                        table_name=self.quote(table_name),
-                        fields=", ".join([self.quote(f) for f in (backward_key, forward_key)]),
-                    )
-                )
+                if unique_index_create_sql.endswith(";"):
+                    m2m_create_string += "\n" + unique_index_create_sql
+                else:
+                    lines = m2m_create_string.splitlines()
+                    lines[-2] += ","
+                    indent = m.group() if (m := re.match(r"\s+", lines[-2])) else ""
+                    lines.insert(-1, indent + unique_index_create_sql)
+                    m2m_create_string = "\n".join(lines)
             m2m_tables_for_create.append(m2m_create_string)
 
         return {
