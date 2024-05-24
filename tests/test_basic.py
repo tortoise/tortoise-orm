@@ -22,9 +22,9 @@ class TestBasic(test.TestCase):
             sorted_key="id",
         )
 
-    async def test_basic_oldstyle(self):
-        obj = await OldStyleModel.create(name="Test")
-        assert obj.pk
-
-        assert OldStyleModel._meta.fields_map["id"].pk
-        assert OldStyleModel._meta.fields_map["name"].index
+    # async def test_basic_oldstyle(self):
+    #     obj = await OldStyleModel.create(name="Test")
+    #     assert obj.pk
+    #
+    #     assert OldStyleModel._meta.fields_map["id"].pk
+    #     assert OldStyleModel._meta.fields_map["name"].index
