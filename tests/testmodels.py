@@ -868,9 +868,9 @@ class Pair(Model):
     )
 
 
-# class OldStyleModel(Model):
-#     id = fields.IntField(pk=True)
-#     name = fields.CharField(max_length=255, index=True)
+class OldStyleModel(Model):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=255, index=True)
 
 
 def camelize_var(var_name: str):
