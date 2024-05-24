@@ -101,7 +101,10 @@ class Event(Model):
         "models.Reporter", null=True
     )
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
-        "models.Team", related_name="events", through="event_team", backward_key="idEvent"
+        "models.Team",
+        related_name="events",
+        through="event_team",
+        backward_key="idEvent",
     )
     modified = fields.DatetimeField(auto_now=True)
     token = fields.TextField(default=generate_token)
@@ -132,7 +135,10 @@ class Address(Model):
     street = fields.CharField(max_length=128)
 
     event: fields.OneToOneRelation[Event] = fields.OneToOneField(
-        "models.Event", on_delete=fields.CASCADE, related_name="address", primary_key=True
+        "models.Event",
+        on_delete=fields.CASCADE,
+        related_name="address",
+        primary_key=True,
     )
 
 
@@ -143,7 +149,10 @@ class Dest_null(Model):
 class O2O_null(Model):
     name = fields.CharField(max_length=64)
     event: fields.OneToOneNullableRelation[Event] = fields.OneToOneField(
-        "models.Dest_null", on_delete=fields.CASCADE, related_name="address_null", null=True
+        "models.Dest_null",
+        on_delete=fields.CASCADE,
+        related_name="address_null",
+        null=True,
     )
 
 
@@ -174,7 +183,9 @@ class EventTwo(Model):
     name = fields.TextField()
     tournament_id = fields.IntField()
     # Here we make link to events.Team, not models.Team
-    participants: fields.ManyToManyRelation["TeamTwo"] = fields.ManyToManyField("events.TeamTwo")
+    participants: fields.ManyToManyRelation["TeamTwo"] = fields.ManyToManyField(
+        "events.TeamTwo"
+    )
 
     class Meta:
         app = "events"
@@ -291,7 +302,9 @@ class JSONFields(Model):
     data = fields.JSONField()
     data_null = fields.JSONField(null=True)
     data_default = fields.JSONField(default={"a": 1})
-    data_validate = fields.JSONField(null=True, validators=[lambda v: JSONFields.dict_or_list(v)])
+    data_validate = fields.JSONField(
+        null=True, validators=[lambda v: JSONFields.dict_or_list(v)]
+    )
 
 
 class UUIDFields(Model):
@@ -303,8 +316,12 @@ class UUIDFields(Model):
 
 class MinRelation(Model):
     id = fields.IntField(primary_key=True)
-    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField("models.Tournament")
-    participants: fields.ManyToManyRelation[Team] = fields.ManyToManyField("models.Team")
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
+        "models.Tournament"
+    )
+    participants: fields.ManyToManyRelation[Team] = fields.ManyToManyField(
+        "models.Team"
+    )
 
 
 class M2MOne(Model):
@@ -346,7 +363,9 @@ class UniqueTogetherFields(Model):
 class UniqueTogetherFieldsWithFK(Model):
     id = fields.IntField(primary_key=True)
     text = fields.CharField(max_length=64)
-    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField("models.Tournament")
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
+        "models.Tournament"
+    )
 
     class Meta:
         unique_together = ("text", "tournament")
@@ -412,8 +431,13 @@ class UUIDFkRelatedSourceModel(Model):
 class UUIDFkRelatedNullSourceModel(Model):
     id = fields.UUIDField(primary_key=True, source_field="i")
     name = fields.CharField(max_length=50, null=True, source_field="j")
-    model: fields.ForeignKeyNullableRelation[UUIDPkSourceModel] = fields.ForeignKeyField(
-        "models.UUIDPkSourceModel", related_name="children_null", source_field="k", null=True
+    model: fields.ForeignKeyNullableRelation[UUIDPkSourceModel] = (
+        fields.ForeignKeyField(
+            "models.UUIDPkSourceModel",
+            related_name="children_null",
+            source_field="k",
+            null=True,
+        )
     )
 
     class Meta:
@@ -424,7 +448,10 @@ class UUIDM2MRelatedSourceModel(Model):
     id = fields.UUIDField(primary_key=True, source_field="e")
     value = fields.TextField(default="test", source_field="f")
     models: fields.ManyToManyRelation[UUIDPkSourceModel] = fields.ManyToManyField(
-        "models.UUIDPkSourceModel", related_name="peers", forward_key="e", backward_key="h"
+        "models.UUIDPkSourceModel",
+        related_name="peers",
+        forward_key="e",
+        backward_key="h",
     )
 
     class Meta:
@@ -478,7 +505,9 @@ class CommentModel(Model):
     )
     message = fields.TextField(description="Comment messages entered in the blog post")
     rating = fields.IntField(description="Upvotes done on the comment")
-    escaped_comment_field = fields.TextField(description="This column acts as it's own comment")
+    escaped_comment_field = fields.TextField(
+        description="This column acts as it's own comment"
+    )
     multiline_comment = fields.TextField(description="Some \n comment")
     commented_by = fields.TextField()
 
@@ -510,7 +539,9 @@ class Employee(Model):
                 level * "  ",
                 self,
                 ", ".join(sorted([str(val) async for val in self.talks_to])),  # noqa
-                ", ".join(sorted([str(val) async for val in self.gets_talked_to])),  # noqa
+                ", ".join(
+                    sorted([str(val) async for val in self.gets_talked_to])
+                ),  # noqa
             )
         ]
         async for member in self.team_members:
@@ -617,10 +648,15 @@ class SourceFields(Model):
     A Docstring.
     """
 
-    eyedee = fields.IntField(primary_key=True, source_field="sometable_id", description="Da PK")
+    eyedee = fields.IntField(
+        primary_key=True, source_field="sometable_id", description="Da PK"
+    )
     # A regular comment
     chars = fields.CharField(
-        max_length=50, source_field="some_chars_table", db_index=True, description="Some chars"
+        max_length=50,
+        source_field="some_chars_table",
+        db_index=True,
+        description="Some chars",
     )
     #: A docstring comment
     blip = fields.CharField(max_length=50, default="BLIP", source_field="da_blip")
@@ -742,7 +778,10 @@ class Principal(Model):
     id = fields.IntField(primary_key=True)
     name = fields.TextField()
     school: fields.OneToOneRelation[School] = fields.OneToOneField(
-        "models.School", on_delete=fields.CASCADE, related_name="principal", to_field="id"
+        "models.School",
+        on_delete=fields.CASCADE,
+        related_name="principal",
+        to_field="id",
     )
 
 
@@ -758,7 +797,9 @@ class DefaultUpdate(Model):
 class DefaultModel(Model):
     int_default = fields.IntField(default=1)
     float_default = fields.FloatField(default=1.5)
-    decimal_default = fields.DecimalField(max_digits=8, decimal_places=2, default=Decimal(1))
+    decimal_default = fields.DecimalField(
+        max_digits=8, decimal_places=2, default=Decimal(1)
+    )
     bool_default = fields.BooleanField(default=True)
     char_default = fields.CharField(max_length=20, default="tortoise")
     date_default = fields.DateField(default=datetime.date(year=2020, month=5, day=21))
@@ -773,17 +814,29 @@ class RequiredPKModel(Model):
 
 
 class ValidatorModel(Model):
-    regex = fields.CharField(max_length=100, null=True, validators=[RegexValidator("abc.+", re.I)])
+    regex = fields.CharField(
+        max_length=100, null=True, validators=[RegexValidator("abc.+", re.I)]
+    )
     max_length = fields.CharField(max_length=5, null=True)
-    ipv4 = fields.CharField(max_length=100, null=True, validators=[validate_ipv4_address])
-    ipv6 = fields.CharField(max_length=100, null=True, validators=[validate_ipv6_address])
+    ipv4 = fields.CharField(
+        max_length=100, null=True, validators=[validate_ipv4_address]
+    )
+    ipv6 = fields.CharField(
+        max_length=100, null=True, validators=[validate_ipv6_address]
+    )
     max_value = fields.IntField(null=True, validators=[MaxValueValidator(20.0)])
     min_value = fields.IntField(null=True, validators=[MinValueValidator(10.0)])
     max_value_decimal = fields.DecimalField(
-        max_digits=12, decimal_places=3, null=True, validators=[MaxValueValidator(Decimal("2.0"))]
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        validators=[MaxValueValidator(Decimal("2.0"))],
     )
     min_value_decimal = fields.DecimalField(
-        max_digits=12, decimal_places=3, null=True, validators=[MinValueValidator(Decimal("1.0"))]
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        validators=[MinValueValidator(Decimal("1.0"))],
     )
     comma_separated_integer_list = fields.CharField(
         max_length=100, null=True, validators=[CommaSeparatedIntegerListValidator()]
@@ -870,7 +923,7 @@ class Pair(Model):
 
 class OldStyleModel(Model):
     id = fields.IntField(pk=True)
-    name = fields.CharField(max_length=255, index=True)
+    external_id = fields.IntField(index=True)
 
 
 def camelize_var(var_name: str):
