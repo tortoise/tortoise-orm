@@ -33,11 +33,7 @@ class TestBulk(test.TruncationTestCase):
     async def test_bulk_create_more_that_one_update_fields(self):
         await UniqueName.bulk_create([UniqueName(name="name")])
         await UniqueName.bulk_create(
-            [
-                UniqueName(
-                    name="name", optional="optional", other_optional="other_optional"
-                )
-            ],
+            [UniqueName(name="name", optional="optional", other_optional="other_optional")],
             update_fields=["optional", "other_optional"],
             on_conflict=["name"],
         )
@@ -92,8 +88,7 @@ class TestBulk(test.TruncationTestCase):
 
         if all_[0]["id"] == predefined_start:
             assert sorted(all_[:predefined_count], key=lambda x: x["id"]) == [
-                {"id": id_, "name": None}
-                for id_ in range(predefined_start, predefined_end)
+                {"id": id_, "name": None} for id_ in range(predefined_start, predefined_end)
             ]
             inc = all_[predefined_count]["id"]
             assert sorted(all_[100:], key=lambda x: x["id"]) == [
@@ -105,8 +100,7 @@ class TestBulk(test.TruncationTestCase):
                 {"id": val + inc, "name": None} for val in range(undefined_count)
             ]
             assert sorted(all_[undefined_count:], key=lambda x: x["id"]) == [
-                {"id": id_, "name": None}
-                for id_ in range(predefined_start, predefined_end)
+                {"id": id_, "name": None} for id_ in range(predefined_start, predefined_end)
             ]
 
     async def test_bulk_create_uuidpk(self):
