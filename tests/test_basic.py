@@ -23,8 +23,8 @@ class TestBasic(test.TestCase):
         )
 
     async def test_basic_oldstyle(self):
-        obj = await OldStyleModel.create(name="Test")
+        obj = await OldStyleModel.create(external_id=123)
         assert obj.pk
 
         assert OldStyleModel._meta.fields_map["id"].pk
-        assert OldStyleModel._meta.fields_map["name"].index
+        assert OldStyleModel._meta.fields_map["external_id"].index
