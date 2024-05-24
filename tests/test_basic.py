@@ -1,4 +1,4 @@
-from tests.testmodels import OldStyleModel, Tournament
+from tests.testmodels import Tournament
 from tortoise.contrib import test
 
 
