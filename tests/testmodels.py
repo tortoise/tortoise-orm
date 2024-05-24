@@ -868,6 +868,11 @@ class Pair(Model):
     )
 
 
+class OldStyleModel(Model):
+    id = fields.IntField(pk=True)
+    name = fields.CharField(max_length=255, index=True)
+
+
 def camelize_var(var_name: str):
     var_parts: List[str] = var_name.split("_")
     return var_parts[0] + "".join([part.title() for part in var_parts[1:]])

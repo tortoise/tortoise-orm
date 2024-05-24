@@ -74,7 +74,7 @@ class IntField(Field[int], int):
     allows_generated = True
 
     def __init__(self, primary_key: Optional[bool] = None, **kwargs: Any) -> None:
-        if primary_key:
+        if primary_key or kwargs.get("pk"):
             kwargs["generated"] = bool(kwargs.get("generated", True))
         super().__init__(primary_key=primary_key, **kwargs)
 
@@ -113,7 +113,7 @@ class BigIntField(Field[int], int):
     allows_generated = True
 
     def __init__(self, primary_key: Optional[bool] = None, **kwargs: Any) -> None:
-        if primary_key:
+        if primary_key or kwargs.get("pk"):
             kwargs["generated"] = bool(kwargs.get("generated", True))
         super().__init__(primary_key=primary_key, **kwargs)
 
@@ -153,7 +153,7 @@ class SmallIntField(Field[int], int):
     allows_generated = True
 
     def __init__(self, primary_key: Optional[bool] = None, **kwargs: Any) -> None:
-        if primary_key:
+        if primary_key or kwargs.get("pk"):
             kwargs["generated"] = bool(kwargs.get("generated", True))
         super().__init__(primary_key=primary_key, **kwargs)
 
