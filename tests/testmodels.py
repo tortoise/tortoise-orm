@@ -101,7 +101,10 @@ class Event(Model):
         "models.Reporter", null=True
     )
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
-        "models.Team", related_name="events", through="event_team", backward_key="idEvent"
+        "models.Team",
+        related_name="events",
+        through="event_team",
+        backward_key="idEvent",
     )
     modified = fields.DatetimeField(auto_now=True)
     token = fields.TextField(default=generate_token)
@@ -132,7 +135,10 @@ class Address(Model):
     street = fields.CharField(max_length=128)
 
     event: fields.OneToOneRelation[Event] = fields.OneToOneField(
-        "models.Event", on_delete=fields.CASCADE, related_name="address", primary_key=True
+        "models.Event",
+        on_delete=fields.CASCADE,
+        related_name="address",
+        primary_key=True,
     )
 
 
@@ -143,7 +149,10 @@ class Dest_null(Model):
 class O2O_null(Model):
     name = fields.CharField(max_length=64)
     event: fields.OneToOneNullableRelation[Event] = fields.OneToOneField(
-        "models.Dest_null", on_delete=fields.CASCADE, related_name="address_null", null=True
+        "models.Dest_null",
+        on_delete=fields.CASCADE,
+        related_name="address_null",
+        null=True,
     )
 
 
@@ -413,7 +422,10 @@ class UUIDFkRelatedNullSourceModel(Model):
     id = fields.UUIDField(primary_key=True, source_field="i")
     name = fields.CharField(max_length=50, null=True, source_field="j")
     model: fields.ForeignKeyNullableRelation[UUIDPkSourceModel] = fields.ForeignKeyField(
-        "models.UUIDPkSourceModel", related_name="children_null", source_field="k", null=True
+        "models.UUIDPkSourceModel",
+        related_name="children_null",
+        source_field="k",
+        null=True,
     )
 
     class Meta:
@@ -424,7 +436,10 @@ class UUIDM2MRelatedSourceModel(Model):
     id = fields.UUIDField(primary_key=True, source_field="e")
     value = fields.TextField(default="test", source_field="f")
     models: fields.ManyToManyRelation[UUIDPkSourceModel] = fields.ManyToManyField(
-        "models.UUIDPkSourceModel", related_name="peers", forward_key="e", backward_key="h"
+        "models.UUIDPkSourceModel",
+        related_name="peers",
+        forward_key="e",
+        backward_key="h",
     )
 
     class Meta:
@@ -620,7 +635,10 @@ class SourceFields(Model):
     eyedee = fields.IntField(primary_key=True, source_field="sometable_id", description="Da PK")
     # A regular comment
     chars = fields.CharField(
-        max_length=50, source_field="some_chars_table", db_index=True, description="Some chars"
+        max_length=50,
+        source_field="some_chars_table",
+        db_index=True,
+        description="Some chars",
     )
     #: A docstring comment
     blip = fields.CharField(max_length=50, default="BLIP", source_field="da_blip")
@@ -742,7 +760,10 @@ class Principal(Model):
     id = fields.IntField(primary_key=True)
     name = fields.TextField()
     school: fields.OneToOneRelation[School] = fields.OneToOneField(
-        "models.School", on_delete=fields.CASCADE, related_name="principal", to_field="id"
+        "models.School",
+        on_delete=fields.CASCADE,
+        related_name="principal",
+        to_field="id",
     )
 
 
@@ -780,10 +801,16 @@ class ValidatorModel(Model):
     max_value = fields.IntField(null=True, validators=[MaxValueValidator(20.0)])
     min_value = fields.IntField(null=True, validators=[MinValueValidator(10.0)])
     max_value_decimal = fields.DecimalField(
-        max_digits=12, decimal_places=3, null=True, validators=[MaxValueValidator(Decimal("2.0"))]
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        validators=[MaxValueValidator(Decimal("2.0"))],
     )
     min_value_decimal = fields.DecimalField(
-        max_digits=12, decimal_places=3, null=True, validators=[MinValueValidator(Decimal("1.0"))]
+        max_digits=12,
+        decimal_places=3,
+        null=True,
+        validators=[MinValueValidator(Decimal("1.0"))],
     )
     comma_separated_integer_list = fields.CharField(
         max_length=100, null=True, validators=[CommaSeparatedIntegerListValidator()]
@@ -866,6 +893,11 @@ class Pair(Model):
     right: fields.ForeignKeyNullableRelation[Single] = fields.ForeignKeyField(
         "models.Single", related_name="rights", null=True, on_delete=NO_ACTION
     )
+
+
+class OldStyleModel(Model):
+    id = fields.IntField(pk=True)
+    external_id = fields.IntField(index=True)
 
 
 def camelize_var(var_name: str):

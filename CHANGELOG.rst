@@ -9,6 +9,12 @@ Changelog
 0.21
 ====
 
+0.21.1
+------
+Fixed
+^^^^^
+- Fix error on using old style `pk=True`
+
 0.21.0
 ------
 Added
