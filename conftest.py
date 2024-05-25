@@ -15,6 +15,6 @@ def initialize_tests(request):
     except ImportError:
         pass
 
-    db_url = os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
+    db_url = os.getenv("TORTOISE_TEST_DB", "sqlite://:memory:")
     initializer(["tests.testmodels"], db_url=db_url)
     request.addfinalizer(finalizer)

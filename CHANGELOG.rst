@@ -9,6 +9,12 @@ Changelog
 0.21
 ====
 
+0.21.2
+------
+Added
+^^^^^
+- Add `create_unique_index` argument to M2M field and default if it is true (#1620)
+
 0.21.1
 ------
 Fixed
