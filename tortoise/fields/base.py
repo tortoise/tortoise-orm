@@ -1,3 +1,4 @@
+import sys
 import warnings
 from enum import Enum
 from typing import (
@@ -23,11 +24,15 @@ from tortoise.validators import Validator
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
+if sys.version_info >= (3, 11):
+    from enum import StrEnum
+else:  # pragma: no cover
+
+    class StrEnum(str, Enum):
+        __str__ = str.__str__
+
+
 VALUE = TypeVar("VALUE")
-
-
-class StrEnum(str, Enum):
-    __str__ = str.__str__
 
 
 class OnDelete(StrEnum):

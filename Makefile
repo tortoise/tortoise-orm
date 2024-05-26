@@ -24,7 +24,7 @@ check: deps build
 ifneq ($(shell which black),)
 	black --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
-	ruff $(checkfiles)
+	ruff check $(checkfiles)
 	mypy $(checkfiles)
 	#pylint -d C,W,R $(checkfiles)
 	#bandit -r $(checkfiles)make
@@ -34,7 +34,7 @@ lint: deps build
 ifneq ($(shell which black),)
 	black --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
-	ruff $(checkfiles)
+	ruff check $(checkfiles)
 	mypy $(checkfiles)
 	#pylint $(checkfiles)
 	bandit -r $(checkfiles)
