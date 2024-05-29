@@ -45,7 +45,7 @@ from tortoise.fields.relational import (
     OneToOneFieldInstance,
     ReverseRelation,
 )
-from tortoise.filters import get_filters_for_field
+from tortoise.filters import FilterInfoDict, get_filters_for_field
 from tortoise.functions import Function
 from tortoise.indexes import Index
 from tortoise.manager import Manager
@@ -64,9 +64,6 @@ from tortoise.transactions import in_transaction
 
 MODEL = TypeVar("MODEL", bound="Model")
 EMPTY = object()
-
-
-# TODO: Define Filter type object. Possibly tuple?
 
 
 def get_together(meta: "Model.Meta", together: str) -> Tuple[Tuple[str, ...], ...]:
@@ -234,8 +231,8 @@ class MetaInfo:
         self.fetch_fields: Set[str] = set()
         self.fields_db_projection: Dict[str, str] = {}
         self.fields_db_projection_reverse: Dict[str, str] = {}
-        self._filters: Dict[str, Dict[str, dict]] = {}
-        self.filters: Dict[str, dict] = {}
+        self._filters: Dict[str, FilterInfoDict] = {}
+        self.filters: Dict[str, FilterInfoDict] = {}
         self.fields_map: Dict[str, Field] = {}
         self._inited: bool = False
         self.default_connection: Optional[str] = None
@@ -297,7 +294,7 @@ class MetaInfo:
             )
         return self._default_ordering
 
-    def get_filter(self, key: str) -> dict:
+    def get_filter(self, key: str) -> FilterInfoDict:
         return self.filters[key]
 
     def finalise_model(self) -> None:
@@ -473,12 +470,10 @@ class MetaInfo:
     def _generate_filters(self) -> None:
         get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
         for key, filter_info in self._filters.items():
-            overridden_operator = get_overridden_filter_func(
-                filter_func=filter_info["operator"]  # type: ignore
-            )
+            overridden_operator = get_overridden_filter_func(filter_func=filter_info["operator"])
             if overridden_operator:
                 filter_info = copy(filter_info)
-                filter_info["operator"] = overridden_operator  # type: ignore
+                filter_info["operator"] = overridden_operator
             self.filters[key] = filter_info
 
 
@@ -488,7 +483,7 @@ class ModelMeta(type):
     def __new__(mcs, name: str, bases: Tuple[Type, ...], attrs: dict):
         fields_db_projection: Dict[str, str] = {}
         fields_map: Dict[str, Field] = {}
-        filters: Dict[str, Dict[str, dict]] = {}
+        filters: Dict[str, FilterInfoDict] = {}
         fk_fields: Set[str] = set()
         m2m_fields: Set[str] = set()
         o2o_fields: Set[str] = set()
@@ -582,19 +577,16 @@ class ModelMeta(type):
                     m2m_fields.add(key)
                 else:
                     fields_db_projection[key] = value.source_field or key
+                    field, source_field = fields_map[key], fields_db_projection[key]
                     filters.update(
                         get_filters_for_field(
-                            field_name=key,
-                            field=fields_map[key],
-                            source_field=fields_db_projection[key],
+                            field_name=key, field=field, source_field=source_field
                         )
                     )
                     if value.pk:
                         filters.update(
                             get_filters_for_field(
-                                field_name="pk",
-                                field=fields_map[key],
-                                source_field=fields_db_projection[key],
+                                field_name="pk", field=field, source_field=source_field
                             )
                         )
 
@@ -740,12 +732,9 @@ class Model(metaclass=ModelMeta):
             # Fields that don't override .to_python_value() are converted without a call
             #  as we already know what we will be doing.
             for key, model_field, field in meta.db_default_fields:
-                value = kwargs[key]
-                setattr(
-                    self,
-                    model_field,
-                    None if value is None else field.field_type(value),
-                )
+                if (value := kwargs[key]) is not None:
+                    value = field.field_type(value)
+                setattr(self, model_field, value)
             # These fields need manual .to_python_value()
             for key, model_field, field in meta.db_complex_fields:
                 setattr(self, model_field, field.to_python_value(kwargs[key]))
