@@ -9,6 +9,12 @@ Changelog
 0.21
 ====
 
+0.21.3
+------
+Fixed
+^^^^^
+- Fix `bulk_update` when using source_field for pk (#1633)
+
 0.21.2
 ------
 Added

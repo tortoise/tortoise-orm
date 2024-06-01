@@ -731,6 +731,11 @@ class DefaultOrderedDesc(Model):
         ordering = ["-one"]
 
 
+class SourceFieldPk(Model):
+    id = fields.IntField(primary_key=True, source_field="counter")
+    name = fields.CharField(max_length=255)
+
+
 class DefaultOrderedInvalid(Model):
     one = fields.TextField()
     second = fields.IntField()
