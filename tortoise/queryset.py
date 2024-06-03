@@ -1073,7 +1073,7 @@ class QuerySet(AwaitableQuery[MODEL]):
                 if self._raise_does_not_exist:
                     raise DoesNotExist(self.model)
                 return None  # type: ignore
-            raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
+            raise MultipleObjectsReturned(self.model)
         return instance_list
 
 
@@ -1587,7 +1587,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
                 if self.raise_does_not_exist:
                     raise DoesNotExist(self.model)
                 return None  # type: ignore
-            raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
+            raise MultipleObjectsReturned(self.model)
         return lst_values
 
 
@@ -1719,7 +1719,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
                 if self.raise_does_not_exist:
                     raise DoesNotExist(self.model)
                 return None  # type: ignore
-            raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
+            raise MultipleObjectsReturned(self.model)
         return result
 
 
