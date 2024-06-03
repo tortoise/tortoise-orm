@@ -70,6 +70,7 @@ class DoesNotExist(OperationalError):
     def __str__(self):
         return f'Object "{self.model.__name__}" does not exist'
 
+
 class IncompleteInstanceError(OperationalError):
     """
     The IncompleteInstanceError exception is raised when a partial model is attempted to be persisted.
