@@ -1,7 +1,7 @@
-from typing import TYPE_CHECKING, Type
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from tortoise import Model
+    from tortoise import Model, Type
 
 
 class BaseORMException(Exception):
