@@ -1585,7 +1585,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
                 return lst_values[0]
             if not lst_values:
                 if self.raise_does_not_exist:
-                    raise DoesNotExist("Object does not exist")
+                    raise DoesNotExist(self.model)
                 return None  # type: ignore
             raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
         return lst_values
@@ -1717,7 +1717,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
                 return result[0]
             if not result:
                 if self.raise_does_not_exist:
-                    raise DoesNotExist("Object does not exist")
+                    raise DoesNotExist(self.model)
                 return None  # type: ignore
             raise MultipleObjectsReturned("Multiple objects returned, expected exactly one")
         return result
