@@ -1,7 +1,18 @@
-import logging
-from typing import TYPE_CHECKING
+import sys
+from typing import TYPE_CHECKING, Any, Iterable, Optional, Tuple
 
-logger = logging.getLogger("tortoise")
+from tortoise.log import logger
+
+if sys.version_info >= (3, 12):
+    from itertools import batched
+else:
+    from itertools import islice
+
+    def batched(iterable: Iterable[Any], n: int) -> Iterable[Tuple[Any]]:
+        it = iter(iterable)
+        while batch := tuple(islice(it, n)):
+            yield batch
+
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
@@ -30,3 +41,14 @@ async def generate_schema_for_client(client: "BaseDBAsyncClient", safe: bool) ->
     logger.debug("Creating schema: %s", schema)
     if schema:  # pragma: nobranch
         await generator.generate_from_string(schema)
+
+
+def chunk(instances: Iterable[Any], batch_size: Optional[int] = None) -> Iterable[Iterable[Any]]:
+    """
+    Generate iterable chunk by batch_size
+    # noqa: DAR301
+    """
+    if not batch_size:
+        yield instances
+    else:
+        yield from batched(instances, batch_size)

@@ -4,6 +4,12 @@ from tortoise.exceptions import ConfigurationError
 
 
 class TestConfigGenerator(test.SimpleTestCase):
+    _postgres_scheme_engines = {
+        "postgres": "tortoise.backends.asyncpg",
+        "asyncpg": "tortoise.backends.asyncpg",
+        "psycopg": "tortoise.backends.psycopg",
+    }
+
     def test_unknown_scheme(self):
         with self.assertRaises(ConfigurationError):
             expand_db_url("moo://baa")
@@ -93,109 +99,118 @@ class TestConfigGenerator(test.SimpleTestCase):
             expand_db_url("sqlite://")
 
     def test_postgres_basic(self):
-        res = expand_db_url("postgres://postgres:moo@127.0.0.1:54321/test")
-        self.assertDictEqual(
-            res,
-            {
-                "engine": "tortoise.backends.asyncpg",
-                "credentials": {
-                    "database": "test",
-                    "host": "127.0.0.1",
-                    "password": "moo",
-                    "port": 54321,
-                    "user": "postgres",
+        for scheme, engine in self._postgres_scheme_engines.items():
+            res = expand_db_url(f"{scheme}://postgres:moo@127.0.0.1:54321/test")
+            self.assertDictEqual(
+                res,
+                {
+                    "engine": engine,
+                    "credentials": {
+                        "database": "test",
+                        "host": "127.0.0.1",
+                        "password": "moo",
+                        "port": 54321,
+                        "user": "postgres",
+                    },
                 },
-            },
-        )
+            )
 
     def test_postgres_encoded_password(self):
-        res = expand_db_url("postgres://postgres:kx%25jj5%2Fg@127.0.0.1:54321/test")
-        self.assertDictEqual(
-            res,
-            {
-                "engine": "tortoise.backends.asyncpg",
-                "credentials": {
-                    "database": "test",
-                    "host": "127.0.0.1",
-                    "password": "kx%jj5/g",
-                    "port": 54321,
-                    "user": "postgres",
+        for scheme, engine in self._postgres_scheme_engines.items():
+            res = expand_db_url(f"{scheme}://postgres:kx%25jj5%2Fg@127.0.0.1:54321/test")
+            self.assertDictEqual(
+                res,
+                {
+                    "engine": engine,
+                    "credentials": {
+                        "database": "test",
+                        "host": "127.0.0.1",
+                        "password": "kx%jj5/g",
+                        "port": 54321,
+                        "user": "postgres",
+                    },
                 },
-            },
-        )
+            )
 
     def test_postgres_no_db(self):
-        res = expand_db_url("postgres://postgres:moo@127.0.0.1:54321")
-        self.assertDictEqual(
-            res,
-            {
-                "engine": "tortoise.backends.asyncpg",
-                "credentials": {
-                    "database": None,
-                    "host": "127.0.0.1",
-                    "password": "moo",
-                    "port": 54321,
-                    "user": "postgres",
+        for scheme, engine in self._postgres_scheme_engines.items():
+            res = expand_db_url(f"{scheme}://postgres:moo@127.0.0.1:54321")
+            self.assertDictEqual(
+                res,
+                {
+                    "engine": engine,
+                    "credentials": {
+                        "database": None,
+                        "host": "127.0.0.1",
+                        "password": "moo",
+                        "port": 54321,
+                        "user": "postgres",
+                    },
                 },
-            },
-        )
+            )
 
     def test_postgres_no_port(self):
-        res = expand_db_url("postgres://postgres@127.0.0.1/test")
-        self.assertDictEqual(
-            res,
-            {
-                "engine": "tortoise.backends.asyncpg",
-                "credentials": {
-                    "database": "test",
-                    "host": "127.0.0.1",
-                    "password": None,
-                    "port": 5432,
-                    "user": "postgres",
+        for scheme, engine in self._postgres_scheme_engines.items():
+            res = expand_db_url(f"{scheme}://postgres@127.0.0.1/test")
+            self.assertDictEqual(
+                res,
+                {
+                    "engine": engine,
+                    "credentials": {
+                        "database": "test",
+                        "host": "127.0.0.1",
+                        "password": None,
+                        "port": 5432,
+                        "user": "postgres",
+                    },
                 },
-            },
-        )
+            )
 
     def test_postgres_nonint_port(self):
-        with self.assertRaises(ConfigurationError):
-            expand_db_url("postgres://postgres:@127.0.0.1:moo/test")
+        for scheme in self._postgres_scheme_engines:
+            with self.assertRaises(ConfigurationError):
+                expand_db_url(f"{scheme}://postgres:@127.0.0.1:moo/test")
 
     def test_postgres_testing(self):
-        res = expand_db_url(db_url=r"postgres://postgres:@127.0.0.1:5432/test_\{\}", testing=True)
-        database = res["credentials"]["database"]
-        self.assertIn("test_", database)
-        self.assertNotEqual("test_{}", database)
-        self.assertDictEqual(
-            res,
-            {
-                "engine": "tortoise.backends.asyncpg",
-                "credentials": {
-                    "database": database,
-                    "host": "127.0.0.1",
-                    "password": None,
-                    "port": 5432,
-                    "user": "postgres",
+        for scheme, engine in self._postgres_scheme_engines.items():
+            res = expand_db_url(
+                db_url=(f"{scheme}://postgres@127.0.0.1:5432/" + r"test_\{\}"), testing=True
+            )
+            database = res["credentials"]["database"]
+            self.assertIn("test_", database)
+            self.assertNotEqual("test_{}", database)
+            self.assertDictEqual(
+                res,
+                {
+                    "engine": engine,
+                    "credentials": {
+                        "database": database,
+                        "host": "127.0.0.1",
+                        "password": None,
+                        "port": 5432,
+                        "user": "postgres",
+                    },
                 },
-            },
-        )
+            )
 
     def test_postgres_params(self):
-        res = expand_db_url("postgres://postgres:@127.0.0.1:5432/test?AHA=5&moo=yes")
-        self.assertDictEqual(
-            res,
-            {
-                "engine": "tortoise.backends.asyncpg",
-                "credentials": {
-                    "database": "test",
-                    "host": "127.0.0.1",
-                    "password": None,
-                    "port": 5432,
-                    "user": "postgres",
-                    "AHA": "5",
-                    "moo": "yes",
+        for scheme, engine in self._postgres_scheme_engines.items():
+            res = expand_db_url(f"{scheme}://postgres@127.0.0.1:5432/test?AHA=5&moo=yes")
+            self.assertDictEqual(
+                res,
+                {
+                    "engine": engine,
+                    "credentials": {
+                        "database": "test",
+                        "host": "127.0.0.1",
+                        "password": None,
+                        "port": 5432,
+                        "user": "postgres",
+                        "AHA": "5",
+                        "moo": "yes",
+                    },
                 },
-            },
-        )
+            )
 
     def test_mysql_basic(self):
         res = expand_db_url("mysql://root:@127.0.0.1:33060/test")
@@ -296,7 +311,7 @@ class TestConfigGenerator(test.SimpleTestCase):
     def test_mysql_params(self):
         res = expand_db_url(
             "mysql://root:@127.0.0.1:3306/test?AHA=5&moo=yes&maxsize=20&minsize=5"
-            "&connect_timeout=1.5&echo=1"
+            "&connect_timeout=1.5&echo=1&ssl=True"
         )
         self.assertEqual(
             res,
@@ -316,6 +331,7 @@ class TestConfigGenerator(test.SimpleTestCase):
                     "echo": True,
                     "charset": "utf8mb4",
                     "sql_mode": "STRICT_TRANS_TABLES",
+                    "ssl": True,
                 },
             },
         )

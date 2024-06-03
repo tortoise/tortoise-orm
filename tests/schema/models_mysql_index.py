@@ -9,6 +9,6 @@ class Index(Model):
 
     class Meta:
         indexes = [
-            FullTextIndex(fields={"full_text"}, parser_name="ngram"),
-            SpatialIndex(fields={"geometry"}),
+            FullTextIndex(fields=("full_text",), parser_name="ngram"),
+            SpatialIndex(fields=("geometry",)),
         ]

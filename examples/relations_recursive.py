@@ -8,6 +8,7 @@ Key points in this example are:
 * To use .fetch_related(…) to emulate sync behaviour
 * That insert-order gets preserved for ForeignFields, but not ManyToManyFields
 """
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
 

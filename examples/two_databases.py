@@ -8,13 +8,14 @@ use relations between two databases
 Key notes of this example is using db_route for Tortoise init
 and explicitly declaring model apps in class Meta
 """
-from tortoise import Tortoise, fields, run_async
+
+from tortoise import Tortoise, connections, fields, run_async
 from tortoise.exceptions import OperationalError
 from tortoise.models import Model
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     def __str__(self):
@@ -25,7 +26,7 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     tournament_id = fields.IntField()
     # Here we make link to events.Team, not models.Team
@@ -41,7 +42,7 @@ class Event(Model):
 
 
 class Team(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     event_team: fields.ManyToManyRelation[Event]
@@ -73,8 +74,8 @@ async def run():
         }
     )
     await Tortoise.generate_schemas()
-    client = Tortoise.get_connection("first")
-    second_client = Tortoise.get_connection("second")
+    client = connections.get("first")
+    second_client = connections.get("second")
 
     tournament = await Tournament.create(name="Tournament")
     await Event(name="Event", tournament_id=tournament.id).save()

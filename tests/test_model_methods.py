@@ -5,6 +5,7 @@ from tests.testmodels import (
     Dest_null,
     Event,
     IntFields,
+    Node,
     NoID,
     O2O_null,
     RequiredPKModel,
@@ -13,6 +14,7 @@ from tests.testmodels import (
     UUIDFkRelatedNullModel,
 )
 from tortoise.contrib import test
+from tortoise.contrib.test.condition import NotEQ
 from tortoise.exceptions import (
     ConfigurationError,
     DoesNotExist,
@@ -22,7 +24,7 @@ from tortoise.exceptions import (
     ParamsError,
     ValidationError,
 )
-from tortoise.expressions import F
+from tortoise.expressions import F, Q
 from tortoise.models import NoneAwaitable
 
 
@@ -37,6 +39,7 @@ class TestModelCreate(test.TestCase):
         mdl2 = await UUIDFkRelatedNullModel.get(id=mdl.id)
         self.assertEqual(mdl, mdl2)
 
+    @test.requireCapability(dialect=NotEQ("mssql"))
     async def test_save_generated_custom_id(self):
         cid = 12345
         mdl = await Tournament.create(id=cid, name="Test")
@@ -51,6 +54,7 @@ class TestModelCreate(test.TestCase):
         mdl2 = await UUIDFkRelatedNullModel.get(id=cid)
         self.assertEqual(mdl, mdl2)
 
+    @test.requireCapability(dialect=NotEQ("mssql"))
     async def test_save_generated_duplicate_custom_id(self):
         cid = 12345
         await Tournament.create(id=cid, name="TestOriginal")
@@ -83,7 +87,8 @@ class TestModelCreate(test.TestCase):
 
 
 class TestModelMethods(test.TestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         self.mdl = await Tournament.create(name="Test")
         self.mdl2 = Tournament(name="Test")
         self.cls = Tournament
@@ -205,6 +210,9 @@ class TestModelMethods(test.TestCase):
         ret = await self.cls.exists(name="XXX")
         self.assertFalse(ret)
 
+        ret = await self.cls.exists(Q(name="XXX") & Q(name="Test"))
+        self.assertFalse(ret)
+
     async def test_get_or_none(self):
         mdl = await self.cls.get_or_none(name="Test")
         self.assertEqual(self.mdl.id, mdl.id)
@@ -268,6 +276,15 @@ class TestModelMethods(test.TestCase):
         mdls = list(await self.cls.all())
         self.assertEqual(len(mdls), 2)
 
+    async def test_clone_from_db(self):
+        mdl2 = await self.cls.get(pk=self.mdl.pk)
+        mdl3 = mdl2.clone()
+        mdl3.pk = None
+        await mdl3.save()
+        self.assertNotEqual(mdl3.pk, mdl2.pk)
+        mdls = list(await self.cls.all())
+        self.assertEqual(len(mdls), 2)
+
     async def test_implicit_clone(self):
         self.mdl.pk = None
         await self.mdl.save()
@@ -288,9 +305,17 @@ class TestModelMethods(test.TestCase):
         with self.assertRaises(IntegrityError):
             await obj.save(force_update=True)
 
+    async def test_raw(self):
+        await Node.create(name="TestRaw")
+        ret = await Node.raw("select * from node where name='TestRaw'")
+        self.assertEqual(len(ret), 1)
+        ret = await Node.raw("select * from node where name='111'")
+        self.assertEqual(len(ret), 0)
+
 
 class TestModelMethodsNoID(TestModelMethods):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         self.mdl = await NoID.create(name="Test")
         self.mdl2 = NoID(name="Test")
         self.cls = NoID

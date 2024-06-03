@@ -6,10 +6,36 @@ from typing import Any, Dict, Iterable, Optional, Union
 from tortoise.exceptions import ConfigurationError
 
 urlparse.uses_netloc.append("postgres")
+urlparse.uses_netloc.append("asyncpg")
+urlparse.uses_netloc.append("psycopg")
 urlparse.uses_netloc.append("sqlite")
 urlparse.uses_netloc.append("mysql")
+urlparse.uses_netloc.append("oracle")
+urlparse.uses_netloc.append("mssql")
 DB_LOOKUP: Dict[str, Dict[str, Any]] = {
-    "postgres": {
+    "psycopg": {
+        "engine": "tortoise.backends.psycopg",
+        "vmap": {
+            "path": "database",
+            "hostname": "host",
+            "port": "port",
+            "username": "user",
+            "password": "password",
+        },
+        "defaults": {"port": 5432},
+        "cast": {
+            "min_size": int,
+            "max_size": int,
+            "max_queries": int,
+            "max_inactive_connection_lifetime": float,
+            "timeout": int,
+            "statement_cache_size": int,
+            "max_cached_statement_lifetime": int,
+            "max_cacheable_statement_size": int,
+            "ssl": bool,
+        },
+    },
+    "asyncpg": {
         "engine": "tortoise.backends.asyncpg",
         "vmap": {
             "path": "database",
@@ -55,9 +81,47 @@ DB_LOOKUP: Dict[str, Dict[str, Any]] = {
             "echo": bool,
             "no_delay": bool,
             "use_unicode": bool,
+            "pool_recycle": int,
+            "ssl": bool,
+        },
+    },
+    "mssql": {
+        "engine": "tortoise.backends.mssql",
+        "vmap": {
+            "path": "database",
+            "hostname": "host",
+            "port": "port",
+            "username": "user",
+            "password": "password",
+        },
+        "defaults": {"port": 1433},
+        "cast": {
+            "minsize": int,
+            "maxsize": int,
+            "echo": bool,
+            "pool_recycle": int,
+        },
+    },
+    "oracle": {
+        "engine": "tortoise.backends.oracle",
+        "vmap": {
+            "path": "database",
+            "hostname": "host",
+            "port": "port",
+            "username": "user",
+            "password": "password",
+        },
+        "defaults": {"port": 1521},
+        "cast": {
+            "minsize": int,
+            "maxsize": int,
+            "echo": bool,
+            "pool_recycle": int,
         },
     },
 }
+# Create an alias for backwards compatibility
+DB_LOOKUP["postgres"] = DB_LOOKUP["asyncpg"]
 
 
 def expand_db_url(db_url: str, testing: bool = False) -> dict:
@@ -101,13 +165,13 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
         raise ConfigurationError("Port is not an integer")
     if vmap.get("username"):
         # Pass username as None, instead of empty string,
-        # to let asyncpg retrieve username from evionment variable or OS user
+        # to let asyncpg retrieve username from environment variable or OS user
         params[vmap["username"]] = url.username or None
     if vmap.get("password"):
         # asyncpg accepts None for password, but aiomysql not
         params[vmap["password"]] = (
             None
-            if (not url.password and db_backend == "postgres")
+            if (not url.password and db_backend in {"postgres", "asyncpg", "psycopg"})
             else urlparse.unquote_plus(url.password or "")
         )
 

@@ -1,10 +1,30 @@
-from abc import ABCMeta
+from typing import Optional, Tuple
 
-from tortoise.indexes import Index
+from pypika.terms import Term, ValueWrapper
+
+from tortoise.indexes import PartialIndex
 
 
-class PostgreSQLIndex(Index, metaclass=ABCMeta):
-    INDEX_CREATE_TEMPLATE = "CREATE INDEX {index_name} ON {table_name} USING{index_type}({fields});"
+class PostgreSQLIndex(PartialIndex):
+    INDEX_CREATE_TEMPLATE = (
+        "CREATE INDEX {exists}{index_name} ON {table_name} USING{index_type}({fields}){extra};"
+    )
+
+    def __init__(
+        self,
+        *expressions: Term,
+        fields: Optional[Tuple[str, ...]] = None,
+        name: Optional[str] = None,
+        condition: Optional[dict] = None,
+    ):
+        super().__init__(*expressions, fields=fields, name=name)
+        if condition:
+            cond = " WHERE "
+            items = []
+            for k, v in condition.items():
+                items.append(f"{k} = {ValueWrapper(v)}")
+            cond += " AND ".join(items)
+            self.extra = cond
 
 
 class BloomIndex(PostgreSQLIndex):

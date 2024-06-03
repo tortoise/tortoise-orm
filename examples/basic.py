@@ -1,12 +1,13 @@
 """
 This example demonstrates most basic operations with single model
 """
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
 
 
 class Event(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     datetime = fields.DatetimeField(null=True)
 

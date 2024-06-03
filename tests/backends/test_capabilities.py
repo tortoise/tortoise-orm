@@ -1,12 +1,13 @@
-from tortoise import Tortoise
+from tortoise import connections
 from tortoise.contrib import test
 
 
 class TestCapabilities(test.TestCase):
     # pylint: disable=E1101
 
-    def setUp(self):
-        self.db = Tortoise.get_connection("models")
+    async def asyncSetUp(self) -> None:
+        await super(TestCapabilities, self).asyncSetUp()
+        self.db = connections.get("models")
         self.caps = self.db.capabilities
 
     def test_str(self):

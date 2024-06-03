@@ -286,7 +286,7 @@ def backfill_type_hints(obj, name):
     try:
         comment_args_str, comment_returns = type_comment.split(' -> ')
     except ValueError:
-        logger.warning('Unparseable type hint comment for "%s": Expected to contain ` -> `', name)
+        logger.warning('Unparsable type hint comment for "%s": Expected to contain ` -> `', name)
         return {}
 
     rv = {}

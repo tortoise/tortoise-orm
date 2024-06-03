@@ -1,6 +1,6 @@
-from typing import TYPE_CHECKING, Optional, Set, Type
+from typing import TYPE_CHECKING, Optional, Tuple, Type
 
-from pypika.terms import Term
+from pypika.terms import Term, ValueWrapper
 
 if TYPE_CHECKING:
     from tortoise import Model
@@ -16,14 +16,14 @@ class Index:
     def __init__(
         self,
         *expressions: Term,
-        fields: Optional[Set[str]] = None,
+        fields: Optional[Tuple[str, ...]] = None,
         name: Optional[str] = None,
     ):
         """
         All kinds of index parent class, default is BTreeIndex.
 
         :param expressions: The expressions of on which the index is desired.
-        :param fields: A list or tuple of the name of the fields on which the index is desired.
+        :param fields: A tuple of names of the fields on which the index is desired.
         :param name: The name of the index.
         :raises ValueError: If params conflict.
         """
@@ -40,25 +40,37 @@ class Index:
 
     def get_sql(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool):
         if self.fields:
-            return self.INDEX_CREATE_TEMPLATE.format(
-                exists="IF NOT EXISTS " if safe else "",
-                index_name=schema_generator.quote(
-                    self.name or schema_generator._generate_index_name("idx", model, self.fields)
-                ),
-                index_type=f" {self.INDEX_TYPE} ",
-                table_name=schema_generator.quote(model._meta.db_table),
-                fields=", ".join([schema_generator.quote(f) for f in self.fields]),
-                extra=self.extra,
-            )
+            fields = ", ".join(schema_generator.quote(f) for f in self.fields)
         else:
             expressions = [f"({expression.get_sql()})" for expression in self.expressions]
-            return self.INDEX_CREATE_TEMPLATE.format(
-                exists="IF NOT EXISTS " if safe else "",
-                index_name=schema_generator.quote(
-                    self.name or schema_generator._generate_index_name("idx", model, expressions)
-                ),
-                index_type=f" {self.INDEX_TYPE} ",
-                table_name=schema_generator.quote(model._meta.db_table),
-                fields=", ".join(expressions),
-                extra=self.extra,
-            )
+            fields = ", ".join(expressions)
+
+        return self.INDEX_CREATE_TEMPLATE.format(
+            exists="IF NOT EXISTS " if safe else "",
+            index_name=schema_generator.quote(self.index_name(schema_generator, model)),
+            index_type=f" {self.INDEX_TYPE} ",
+            table_name=schema_generator.quote(model._meta.db_table),
+            fields=fields,
+            extra=self.extra,
+        )
+
+    def index_name(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]"):
+        return self.name or schema_generator._generate_index_name("idx", model, self.fields)
+
+
+class PartialIndex(Index):
+    def __init__(
+        self,
+        *expressions: Term,
+        fields: Optional[Tuple[str, ...]] = None,
+        name: Optional[str] = None,
+        condition: Optional[dict] = None,
+    ):
+        super().__init__(*expressions, fields=fields, name=name)
+        if condition:
+            cond = " WHERE "
+            items = []
+            for k, v in condition.items():
+                items.append(f"{k} = {ValueWrapper(v)}")
+            cond += " AND ".join(items)
+            self.extra = cond

@@ -86,3 +86,9 @@ class ValidationError(BaseORMException):
     """
     The ValidationError is raised when validators of field validate failed.
     """
+
+
+class UnSupportedError(BaseORMException):
+    """
+    The UnSupportedError is raised when operation is not supported.
+    """

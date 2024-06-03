@@ -1,10 +1,10 @@
-import logging
 from types import ModuleType
 from typing import Dict, Iterable, Optional, Union
 
 from aiohttp import web  # pylint: disable=E0401
 
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
+from tortoise.log import logger
 
 
 def register_tortoise(
@@ -79,14 +79,14 @@ def register_tortoise(
 
     async def init_orm(app):  # pylint: disable=W0612
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
-        logging.info(f"Tortoise-ORM started, {Tortoise._connections}, {Tortoise.apps}")
+        logger.info(f"Tortoise-ORM started, {connections._get_storage()}, {Tortoise.apps}")
         if generate_schemas:
-            logging.info("Tortoise-ORM generating schema")
+            logger.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()
 
     async def close_orm(app):  # pylint: disable=W0612
-        await Tortoise.close_connections()
-        logging.info("Tortoise-ORM shutdown")
+        await connections.close_all()
+        logger.info("Tortoise-ORM shutdown")
 
     app.on_startup.append(init_orm)
     app.on_cleanup.append(close_orm)

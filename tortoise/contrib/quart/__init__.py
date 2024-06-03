@@ -5,7 +5,8 @@ from typing import Dict, Iterable, Optional, Union
 
 from quart import Quart  # pylint: disable=E0401
 
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
+from tortoise.log import logger
 
 
 def register_tortoise(
@@ -83,15 +84,15 @@ def register_tortoise(
     @app.before_serving
     async def init_orm() -> None:  # pylint: disable=W0612
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
-        logging.info("Tortoise-ORM started, %s, %s", Tortoise._connections, Tortoise.apps)
+        logger.info("Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps)
         if _generate_schemas:
-            logging.info("Tortoise-ORM generating schema")
+            logger.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()
 
     @app.after_serving
     async def close_orm() -> None:  # pylint: disable=W0612
-        await Tortoise.close_connections()
-        logging.info("Tortoise-ORM shutdown")
+        await connections.close_all()
+        logger.info("Tortoise-ORM shutdown")
 
     @app.cli.command()  # type: ignore
     def generate_schemas() -> None:  # pylint: disable=E0102
@@ -102,8 +103,8 @@ def register_tortoise(
                 config=config, config_file=config_file, db_url=db_url, modules=modules
             )
             await Tortoise.generate_schemas()
-            await Tortoise.close_connections()
+            await connections.close_all()
 
-        logging.basicConfig(level=logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
         loop = asyncio.get_event_loop()
         loop.run_until_complete(inner())

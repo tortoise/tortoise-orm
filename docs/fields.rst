@@ -16,7 +16,7 @@ Fields are defined as properties of a ``Model`` class object:
     from tortoise import fields
 
     class Tournament(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=255)
 
 
@@ -56,7 +56,7 @@ MySQL
 ^^^^^
 
 .. automodule:: tortoise.contrib.mysql.fields
-    :members: GeometryField
+    :members: GeometryField, UUIDField
 
 Postgres
 ^^^^^^^^

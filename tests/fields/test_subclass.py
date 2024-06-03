@@ -1,4 +1,9 @@
-from tests.fields.subclass_models import Contact, ContactTypeEnum, RaceParticipant, RacePlacingEnum
+from tests.fields.subclass_models import (
+    Contact,
+    ContactTypeEnum,
+    RaceParticipant,
+    RacePlacingEnum,
+)
 from tortoise.contrib import test
 
 

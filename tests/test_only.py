@@ -4,7 +4,8 @@ from tortoise.exceptions import IncompleteInstanceError
 
 
 class TestOnlyStraight(test.TestCase):
-    async def setUp(self) -> None:
+    async def asyncSetUp(self) -> None:
+        await super(TestOnlyStraight, self).asyncSetUp()
         self.model = StraightFields
         self.instance = await self.model.create(chars="Test")
 
@@ -59,6 +60,7 @@ class TestOnlyStraight(test.TestCase):
 
 
 class TestOnlySource(TestOnlyStraight):
-    async def setUp(self) -> None:
+    async def asyncSetUp(self) -> None:
+        await super().asyncSetUp()
         self.model = SourceFields  # type: ignore
         self.instance = await self.model.create(chars="Test")

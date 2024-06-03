@@ -16,9 +16,11 @@ Reference
    functions
    expressions
    transactions
+   connections
    exceptions
    signals
    migration
    validators
    logging
    router
+   cli
