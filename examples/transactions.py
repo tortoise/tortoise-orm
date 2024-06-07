@@ -9,7 +9,7 @@ from tortoise.transactions import atomic, in_transaction
 
 
 class Event(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     class Meta:

@@ -1,6 +1,7 @@
 import copy
 
-from pydantic import ConfigDict
+import pytest
+from pydantic import ConfigDict, ValidationError
 
 from tests.testmodels import (
     Address,
@@ -72,7 +73,7 @@ class TestPydantic(test.TestCase):
                             "street": {"maxLength": 128, "title": "Street", "type": "string"},
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -87,7 +88,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -103,7 +104,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -130,7 +131,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 32767,
-                                "minimum": 1,
+                                "minimum": -32768,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -157,7 +158,7 @@ class TestPydantic(test.TestCase):
                 "properties": {
                     "event_id": {
                         "maximum": 9223372036854775807,
-                        "minimum": 1,
+                        "minimum": -9223372036854775808,
                         "title": "Event Id",
                         "type": "integer",
                     },
@@ -240,7 +241,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -324,7 +325,7 @@ class TestPydantic(test.TestCase):
                             "street": {"maxLength": 128, "title": "Street", "type": "string"},
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -339,7 +340,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -355,7 +356,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -382,7 +383,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 32767,
-                                "minimum": 1,
+                                "minimum": -32768,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -422,7 +423,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -494,7 +495,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -510,7 +511,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -537,7 +538,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 32767,
-                                "minimum": 1,
+                                "minimum": -32768,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -566,7 +567,7 @@ class TestPydantic(test.TestCase):
                     "event": {"$ref": "#/$defs/Event_aajoh6"},
                     "event_id": {
                         "maximum": 9223372036854775807,
-                        "minimum": 1,
+                        "minimum": -9223372036854775808,
                         "title": "Event Id",
                         "type": "integer",
                     },
@@ -588,7 +589,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -663,7 +664,7 @@ class TestPydantic(test.TestCase):
                             "street": {"maxLength": 128, "title": "Street", "type": "string"},
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -678,7 +679,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -694,7 +695,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -719,7 +720,7 @@ class TestPydantic(test.TestCase):
                 },
                 "additionalProperties": False,
                 "properties": {
-                    "id": {"maximum": 32767, "minimum": 1, "title": "Id", "type": "integer"},
+                    "id": {"maximum": 32767, "minimum": -32768, "title": "Id", "type": "integer"},
                     "name": {"maxLength": 255, "title": "Name", "type": "string"},
                     "desc": {
                         "anyOf": [{"type": "string"}, {"type": "null"}],
@@ -756,7 +757,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -832,7 +833,7 @@ class TestPydantic(test.TestCase):
                             "street": {"maxLength": 128, "title": "Street", "type": "string"},
                             "event_id": {
                                 "maximum": 9223372036854775807,
-                                "minimum": 1,
+                                "minimum": -9223372036854775808,
                                 "title": "Event Id",
                                 "type": "integer",
                             },
@@ -847,7 +848,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -862,7 +863,7 @@ class TestPydantic(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 32767,
-                                "minimum": 1,
+                                "minimum": -32768,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -887,7 +888,12 @@ class TestPydantic(test.TestCase):
                 "additionalProperties": False,
                 "description": "Team that is a playing",
                 "properties": {
-                    "id": {"maximum": 2147483647, "minimum": 1, "title": "Id", "type": "integer"},
+                    "id": {
+                        "maximum": 2147483647,
+                        "minimum": -2147483648,
+                        "title": "Id",
+                        "type": "integer",
+                    },
                     "name": {"title": "Name", "type": "string"},
                     "alias": {
                         "anyOf": [
@@ -1312,7 +1318,7 @@ class TestPydanticCycle(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -1324,7 +1330,11 @@ class TestPydanticCycle(test.TestCase):
                             },
                             "manager_id": {
                                 "anyOf": [
-                                    {"maximum": 2147483647, "minimum": 1, "type": "integer"},
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer",
+                                    },
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -1345,7 +1355,7 @@ class TestPydanticCycle(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -1357,7 +1367,11 @@ class TestPydanticCycle(test.TestCase):
                             },
                             "manager_id": {
                                 "anyOf": [
-                                    {"maximum": 2147483647, "minimum": 1, "type": "integer"},
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer",
+                                    },
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -1378,14 +1392,18 @@ class TestPydanticCycle(test.TestCase):
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
                             "name": {"maxLength": 50, "title": "Name", "type": "string"},
                             "manager_id": {
                                 "anyOf": [
-                                    {"maximum": 2147483647, "minimum": 1, "type": "integer"},
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer",
+                                    },
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -1399,7 +1417,12 @@ class TestPydanticCycle(test.TestCase):
                 },
                 "additionalProperties": False,
                 "properties": {
-                    "id": {"maximum": 2147483647, "minimum": 1, "title": "Id", "type": "integer"},
+                    "id": {
+                        "maximum": 2147483647,
+                        "minimum": -2147483648,
+                        "title": "Id",
+                        "type": "integer",
+                    },
                     "name": {"maxLength": 50, "title": "Name", "type": "string"},
                     "talks_to": {
                         "items": {"$ref": "#/$defs/Employee_5gupxf"},
@@ -1408,7 +1431,7 @@ class TestPydanticCycle(test.TestCase):
                     },
                     "manager_id": {
                         "anyOf": [
-                            {"maximum": 2147483647, "minimum": 1, "type": "integer"},
+                            {"maximum": 2147483647, "minimum": -2147483648, "type": "integer"},
                             {"type": "null"},
                         ],
                         "nullable": True,
@@ -1559,24 +1582,99 @@ class TestPydanticUpdate(test.TestCase):
         This demonstrates an example PATCH endpoint in an API, where a client may want
         to update a single field of a model without modifying the rest.
         """
-
         self.assertEqual(
             self.UserUpdate_Pydantic.model_json_schema(),
             {
                 "additionalProperties": False,
                 "properties": {
-                    "bio": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Bio"},
+                    "bio": {
+                        "anyOf": [{"type": "string"}, {"type": "null"}],
+                        "default": None,
+                        "title": "Bio",
+                    },
                     "mail": {
                         "anyOf": [{"maxLength": 64, "type": "string"}, {"type": "null"}],
+                        "default": None,
                         "title": "Mail",
                     },
                     "username": {
                         "anyOf": [{"maxLength": 32, "type": "string"}, {"type": "null"}],
+                        "default": None,
                         "title": "Username",
                     },
                 },
-                "required": ["username", "mail", "bio"],
                 "title": "UserUpdate",
                 "type": "object",
             },
+        )
+
+
+class TestPydanticOptionalUpdate(test.TestCase):
+    def setUp(self) -> None:
+        self.UserUpdateAllOptional_Pydantic = pydantic_model_creator(
+            User,
+            name="UserUpdateAllOptional",
+            exclude_readonly=True,
+            optional=("username", "mail", "bio"),
+        )
+        self.UserUpdatePartialOptional_Pydantic = pydantic_model_creator(
+            User,
+            name="UserUpdatePartialOptional",
+            exclude_readonly=True,
+            optional=("username", "mail"),
+        )
+        self.UserUpdateWithoutOptional_Pydantic = pydantic_model_creator(
+            User,
+            name="UserUpdateWithoutOptional",
+            exclude_readonly=True,
+        )
+
+    def test_optional_update(self):
+        # All fields are optional
+        self.assertEqual(self.UserUpdateAllOptional_Pydantic().model_dump(exclude_unset=True), {})
+        self.assertEqual(
+            self.UserUpdateAllOptional_Pydantic(bio="foo").model_dump(exclude_unset=True),
+            {"bio": "foo"},
+        )
+        self.assertEqual(
+            self.UserUpdateAllOptional_Pydantic(username="name", mail="a@example.com").model_dump(
+                exclude_unset=True
+            ),
+            {"username": "name", "mail": "a@example.com"},
+        )
+        self.assertEqual(
+            self.UserUpdateAllOptional_Pydantic(username="name", mail="a@example.com").model_dump(),
+            {"username": "name", "mail": "a@example.com", "bio": None},
+        )
+        # Some fields are optional
+        with pytest.raises(ValidationError):
+            self.UserUpdatePartialOptional_Pydantic()
+        with pytest.raises(ValidationError):
+            self.UserUpdatePartialOptional_Pydantic(username="name")
+        self.assertEqual(
+            self.UserUpdatePartialOptional_Pydantic(bio="foo").model_dump(exclude_unset=True),
+            {"bio": "foo"},
+        )
+        self.assertEqual(
+            self.UserUpdatePartialOptional_Pydantic(
+                username="name", mail="a@example.com", bio=""
+            ).model_dump(exclude_unset=True),
+            {"username": "name", "mail": "a@example.com", "bio": ""},
+        )
+        self.assertEqual(
+            self.UserUpdatePartialOptional_Pydantic(mail="a@example.com", bio="").model_dump(),
+            {"username": None, "mail": "a@example.com", "bio": ""},
+        )
+        # None of the fields is optional
+        with pytest.raises(ValidationError):
+            self.UserUpdateWithoutOptional_Pydantic()
+        with pytest.raises(ValidationError):
+            self.UserUpdateWithoutOptional_Pydantic(username="name")
+        with pytest.raises(ValidationError):
+            self.UserUpdateWithoutOptional_Pydantic(username="name", email="")
+        self.assertEqual(
+            self.UserUpdateWithoutOptional_Pydantic(
+                username="name", mail="a@example.com", bio=""
+            ).model_dump(),
+            {"username": "name", "mail": "a@example.com", "bio": ""},
         )

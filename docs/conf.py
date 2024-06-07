@@ -5,6 +5,7 @@
 # This file does only contain a selection of the most common options. For a
 # full list see the documentation:
 # http://www.sphinx-doc.org/en/stable/config
+import json
 
 # -- Path setup --------------------------------------------------------------
 
@@ -12,11 +13,11 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import json
 import os
-import re
 import sys
 from datetime import datetime
+
+import importlib_metadata
 
 sys.path.insert(0, os.path.abspath("."))
 sys.path.insert(0, os.path.abspath(".."))
@@ -29,23 +30,8 @@ copyright = f"2018 - {datetime.today().year}, Andrey Bondar & Nickolas Grigoriad
 author = "Andrey Bondar & Nickolas Grigoriadis & long2ice"
 
 
-def get_version():
-    verstrline = open("../tortoise/__init__.py", "rt").read()
-    mob = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", verstrline, re.M)
-    if mob:
-        return mob.group(1)
-    else:
-        raise RuntimeError("Unable to find version string")
-
-
-def get_version_info():
-    with open("versions.json") as f:
-        versions = json.load(f)
-    return versions
-
-
 # The short X.Y version
-version = get_version()
+version = importlib_metadata.version("tortoise-orm")
 # The full version, including alpha/beta/rc tags
 release = version
 
@@ -128,10 +114,17 @@ napoleon_use_rtype = True
 html_theme = "sphinx_immaterial"
 html_show_sourcelink = True
 
+
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
+def get_version_info():
+    with open("versions.json") as f:
+        versions = json.load(f)
+    return versions
+
+
 html_theme_options = {
     "google_analytics": ["G-MJ7RHW2FRB", "auto"],
     "repo_url": "https://github.com/tortoise/tortoise-orm",
@@ -209,7 +202,9 @@ html_static_path = ["_static"]
 # default: ``['localtoc.html', 'relations.html', 'sourcelink.html',
 # 'searchbox.html']``.
 #
-html_sidebars = {"**": ["logo-text.html", "globaltoc.html", "localtoc.html", "searchbox.html"]}
+html_sidebars = {
+    "**": ["logo-text.html", "globaltoc.html", "localtoc.html", "searchbox.html"]
+}
 
 # -- Options for HTMLHelp output ---------------------------------------------
 

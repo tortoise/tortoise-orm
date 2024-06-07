@@ -6,8 +6,26 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.20
+0.21
 ====
+
+0.21.3
+------
+Fixed
+^^^^^
+- Fix `bulk_update` when using source_field for pk (#1633)
+
+0.21.2
+------
+Added
+^^^^^
+- Add `create_unique_index` argument to M2M field and default if it is true (#1620)
+
+0.21.1
+------
+Fixed
+^^^^^
+- Fix error on using old style `pk=True`
 
 0.21.0
 ------
@@ -23,6 +41,25 @@ Fixed
 ^^^^^
 - Fix `DatetimeField` use '__year' report `'int' object has no attribute 'utcoffset'`. (#1575)
 - Fix `bulk_update` when using custom fields. (#1564)
+- Fix `optional` parameter in `pydantic_model_creator` does not work for pydantic v2. (#1551)
+- Fix `get_annotations` now evaluates annotations in the default scope instead of the app namespace. (#1552)
+- Fix `get_or_create` method. (#1404)
+- Use `index_name` instead of `BaseSchemaGenerator._generate_index_name` to generate index name.
+- Use subquery for count() and exists() in `QuerySet` to match count result to `QuerySet` result. (#1607)
+
+Changed
+^^^^^^^
+- Change `utils.chunk` from function to return iterables lazily.
+- Removed lower bound of id keys in generated pydantic models. (#1602)
+- Rename Field initial arguments `pk`/`index` to `primary_key`/`db_index`. (#1621)
+- Renamed `Model.check` method to `Model._check` to avoid naming collision issues  (#1559) (#1550)
+
+Breaking Changes
+^^^^^^^^^^^^^^^^
+- `bulk_create` now does not return anything. (#1614)
+
+0.20
+====
 
 0.20.1
 ------

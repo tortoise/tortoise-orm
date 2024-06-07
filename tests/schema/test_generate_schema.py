@@ -79,14 +79,17 @@ CREATE TABLE IF NOT EXISTS "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
     "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
 );
+CREATE UNIQUE INDEX IF NOT EXISTS "uidx_sometable_s_backwar_fc8fc8" ON "sometable_self" ("backward_sts", "sts_forward");
 CREATE TABLE IF NOT EXISTS "team_team" (
     "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
 );
+CREATE UNIQUE INDEX IF NOT EXISTS "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
 CREATE TABLE IF NOT EXISTS "teamevents" (
     "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE SET NULL,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE SET NULL
 ) /* How participants relate */;
+CREATE UNIQUE INDEX IF NOT EXISTS "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");
 """.strip()
 
     async def asyncSetUp(self):
@@ -173,7 +176,7 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
 
     async def test_fk_bad_model_name(self):
         with self.assertRaisesRegex(
-            ConfigurationError, 'Foreign key accepts model name in format "app.Model"'
+            ConfigurationError, 'ForeignKeyField accepts model name in format "app.Model"'
         ):
             await self.init_for("tests.schema.models_fk_1")
 
@@ -205,7 +208,7 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
 
     async def test_m2m_bad_model_name(self):
         with self.assertRaisesRegex(
-            ConfigurationError, 'Foreign key accepts model name in format "app.Model"'
+            ConfigurationError, 'ManyToManyField accepts model name in format "app.Model"'
         ):
             await self.init_for("tests.schema.models_m2m_1")
 
@@ -250,10 +253,12 @@ CREATE TABLE "team_team" (
     "team_rel_id" VARCHAR(50) NOT NULL,
     "team_id" VARCHAR(50) NOT NULL
 );
+CREATE UNIQUE INDEX "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
 CREATE TABLE "teamevents" (
     "event_id" BIGINT NOT NULL,
     "team_id" VARCHAR(50) NOT NULL
-) /* How participants relate */;""",
+) /* How participants relate */;
+CREATE UNIQUE INDEX "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");""",
         )
 
     async def test_schema(self):
@@ -332,14 +337,17 @@ CREATE TABLE "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
     "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
 );
+CREATE UNIQUE INDEX "uidx_sometable_s_backwar_fc8fc8" ON "sometable_self" ("backward_sts", "sts_forward");
 CREATE TABLE "team_team" (
     "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
 );
+CREATE UNIQUE INDEX "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
 CREATE TABLE "teamevents" (
     "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE SET NULL,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE SET NULL
 ) /* How participants relate */;
+CREATE UNIQUE INDEX "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");
 """.strip(),
         )
 
@@ -389,7 +397,9 @@ CREATE TABLE "teamevents" (
 CREATE TABLE "team_team" (
     "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
-);""".strip(),
+);
+CREATE UNIQUE INDEX "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
+""".strip(),
         )
 
 
@@ -772,7 +782,9 @@ CREATE TABLE `team_team` (
     `team_id` VARCHAR(50) NOT NULL,
     FOREIGN KEY (`team_rel_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
     FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
-) CHARACTER SET utf8mb4;""".strip(),
+) CHARACTER SET utf8mb4;
+CREATE UNIQUE INDEX IF NOT EXISTS "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
+""".strip(),
         )
 
 
@@ -842,11 +854,13 @@ CREATE TABLE "team_team" (
     "team_rel_id" VARCHAR(50) NOT NULL,
     "team_id" VARCHAR(50) NOT NULL
 );
+CREATE UNIQUE INDEX "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
 CREATE TABLE "teamevents" (
     "event_id" BIGINT NOT NULL,
     "team_id" VARCHAR(50) NOT NULL
 );
-COMMENT ON TABLE "teamevents" IS 'How participants relate';""",
+COMMENT ON TABLE "teamevents" IS 'How participants relate';
+CREATE UNIQUE INDEX "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");""",
         )
 
     async def test_schema(self):
@@ -939,15 +953,18 @@ CREATE TABLE "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
     "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
 );
+CREATE UNIQUE INDEX "uidx_sometable_s_backwar_fc8fc8" ON "sometable_self" ("backward_sts", "sts_forward");
 CREATE TABLE "team_team" (
     "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
 );
+CREATE UNIQUE INDEX "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
 CREATE TABLE "teamevents" (
     "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE SET NULL,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE SET NULL
 );
 COMMENT ON TABLE "teamevents" IS 'How participants relate';
+CREATE UNIQUE INDEX "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");
 """.strip(),
         )
 
@@ -1041,15 +1058,18 @@ CREATE TABLE IF NOT EXISTS "sometable_self" (
     "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
     "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
 );
+CREATE UNIQUE INDEX IF NOT EXISTS "uidx_sometable_s_backwar_fc8fc8" ON "sometable_self" ("backward_sts", "sts_forward");
 CREATE TABLE IF NOT EXISTS "team_team" (
     "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
 );
+CREATE UNIQUE INDEX IF NOT EXISTS "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
 CREATE TABLE IF NOT EXISTS "teamevents" (
     "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE SET NULL,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE SET NULL
 );
 COMMENT ON TABLE "teamevents" IS 'How participants relate';
+CREATE UNIQUE INDEX IF NOT EXISTS "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");
 """.strip(),
         )
 
@@ -1151,7 +1171,9 @@ COMMENT ON TABLE "teamevents" IS 'How participants relate';
 CREATE TABLE "team_team" (
     "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
-);""".strip(),
+);
+CREATE UNIQUE INDEX "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
+""".strip(),
         )
 
 

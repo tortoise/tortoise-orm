@@ -15,6 +15,7 @@ from tests.testmodels import (
     JSONFields,
     Service,
     SmallIntFields,
+    SourceFieldPk,
     Tournament,
     UUIDFields,
 )
@@ -67,6 +68,18 @@ class TestUpdate(test.TestCase):
         self.assertEqual(rows_affected, 2)
         self.assertEqual((await UUIDFields.get(pk=objs[0].pk)).data, objs[0].data)
         self.assertEqual((await UUIDFields.get(pk=objs[1].pk)).data, objs[1].data)
+
+    async def test_bulk_renamed_pk_source_field(self):
+        objs = [
+            await SourceFieldPk.create(name="Model 1"),
+            await SourceFieldPk.create(name="Model 2"),
+        ]
+        objs[0].name = "Model 3"
+        objs[1].name = "Model 4"
+        rows_affected = await SourceFieldPk.bulk_update(objs, fields=["name"])
+        self.assertEqual(rows_affected, 2)
+        self.assertEqual((await SourceFieldPk.get(pk=objs[0].pk)).name, objs[0].name)
+        self.assertEqual((await SourceFieldPk.get(pk=objs[1].pk)).name, objs[1].name)
 
     async def test_bulk_update_json_value(self):
         objs = [

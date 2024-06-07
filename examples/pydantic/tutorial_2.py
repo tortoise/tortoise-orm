@@ -16,7 +16,7 @@ class Tournament(Model):
     This references a Tournament
     """
 
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=100)
     #: The date-time the Tournament record was created at
     created_at = fields.DatetimeField(auto_now_add=True)

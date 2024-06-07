@@ -55,6 +55,10 @@ Contributors
 * Waket Zheng ``@waketzheng``
 * Yuval Ben-Arie ``@yuvalbenarie``
 * Stephan Klein ``@privatwolke``
+* ``@WizzyGeek``
+* Ivan Pakeev ``@ipakeev``
+* Abdeldjalil Hezouat ``@Abdeldjalil-H``
+* Andrea Magistà ``@vlakius``
 
 Special Thanks
 ==============

@@ -1,3 +1,5 @@
+import sys
+import warnings
 from enum import Enum
 from typing import (
     TYPE_CHECKING,
@@ -22,11 +24,15 @@ from tortoise.validators import Validator
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
+if sys.version_info >= (3, 11):
+    from enum import StrEnum
+else:  # pragma: no cover
+
+    class StrEnum(str, Enum):
+        __str__ = str.__str__
+
+
 VALUE = TypeVar("VALUE")
-
-
-class StrEnum(str, Enum):
-    __str__ = str.__str__
 
 
 class OnDelete(StrEnum):
@@ -63,14 +69,14 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
     :param source_field: Provide a source_field name if the DB column name needs to be
         something specific instead of generated off the field name.
     :param generated: Is this field DB-generated?
-    :param pk: Is this field a Primary Key? Can only have a single such field on the Model,
+    :param primary_key: Is this field a Primary Key? Can only have a single such field on the Model,
         and if none is specified it will autogenerate a default primary key called ``id``.
     :param null: Is this field nullable?
     :param default: A default value for the field if not specified on Model creation.
         This can also be a callable for dynamic defaults in which case we will call it.
         The default value will not be part of the schema.
     :param unique: Is this field unique?
-    :param index: Should this field be indexed by itself?
+    :param db_index: Should this field be indexed by itself?
     :param description: Field description. Will also appear in ``Tortoise.describe_model()``
         and as DB comments in the generated DDL.
     :param validators: Validators for this field.
@@ -174,34 +180,61 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         self,
         source_field: Optional[str] = None,
         generated: bool = False,
-        pk: bool = False,
+        primary_key: Optional[bool] = None,
         null: bool = False,
         default: Any = None,
         unique: bool = False,
-        index: bool = False,
+        db_index: Optional[bool] = None,
         description: Optional[str] = None,
         model: "Optional[Model]" = None,
         validators: Optional[List[Union[Validator, Callable]]] = None,
         **kwargs: Any,
     ) -> None:
-        # TODO: Rename pk to primary_key, alias pk, deprecate
-        # TODO: Rename index to db_index, alias index, deprecate
-        if not self.indexable and (unique or index):
+        if (index := kwargs.pop("index", None)) is not None:
+            if db_index is None:
+                warnings.warn(
+                    "`index` is deprecated, please use `db_index` instead",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                db_index = index
+            elif db_index != index:
+                raise ConfigurationError(
+                    f"{self.__class__.__name__} can't set both db_index and index"
+                )
+        if not self.indexable and (unique or db_index):
             raise ConfigurationError(f"{self.__class__.__name__} can't be indexed")
-        if pk and null:
-            raise ConfigurationError(
-                f"{self.__class__.__name__} can't be both null=True and pk=True"
-            )
-        if pk:
-            index = True
+        if (pk := kwargs.pop("pk", None)) is not None:
+            if primary_key is None:
+                warnings.warn(
+                    "`pk` is deprecated, please use `primary_key` instead",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                primary_key = pk
+            elif primary_key != pk:
+                raise ConfigurationError(
+                    f"{self.__class__.__name__} can't set both primary_key and pk"
+                )
+        if null:
+            if pk:
+                raise ConfigurationError(
+                    f"{self.__class__.__name__} can't be both null=True and pk=True"
+                )
+            if primary_key:
+                raise ConfigurationError(
+                    f"{self.__class__.__name__} can't be both null=True and primary_key=True"
+                )
+        if primary_key:
+            db_index = True
             unique = True
         self.source_field = source_field
         self.generated = generated
-        self.pk = pk
+        self.pk = bool(primary_key)
         self.default = default
         self.null = null
         self.unique = unique
-        self.index = index
+        self.index = bool(db_index)
         self.model_field_name = ""
         self.description = description
         self.docstring: Optional[str] = None

@@ -2,7 +2,7 @@ from tortoise import Model, fields
 
 
 class Users(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     status = fields.CharField(20)
 
     def __str__(self):
@@ -10,7 +10,7 @@ class Users(Model):
 
 
 class Workers(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     status = fields.CharField(20)
 
     def __str__(self):
