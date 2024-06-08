@@ -67,7 +67,7 @@ _testall: test_sqlite test_postgres_asyncpg test_postgres_psycopg test_mysql_myi
 testall: deps _testall
 	coverage report
 
-ci: check testall
+ci: check _testall
 
 docs: deps
 	rm -fR ./build
