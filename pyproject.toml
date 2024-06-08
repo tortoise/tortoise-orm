@@ -189,3 +189,6 @@ ignore = ["E501"]
 extend-select = [
     "I",  # isort
 ]
+
+[tool.bandit]
+exclude_dirs = ["tests", 'examples/*/_tests.py', "conftest.py"]

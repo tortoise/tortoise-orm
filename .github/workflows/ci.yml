@@ -72,7 +72,9 @@ jobs:
       - name: Run ci
         run: make ci
       - name: Upload Coverage
-        run: coveralls --service=github
+        run: |
+          pip3 install --upgrade coveralls
+          coveralls --service=github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: ${{ matrix.python-version }}

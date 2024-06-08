@@ -22,9 +22,8 @@ deps:
 
 check: deps build
 ifneq ($(shell which ruff),)
-	ruff format --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
+	(ruff format --check $(checkfiles) && ruff check $(checkfiles)) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
-	ruff check $(checkfiles)
 	mypy $(checkfiles)
 	#pylint -d C,W,R $(checkfiles)
 	#bandit -r $(checkfiles)make
@@ -32,12 +31,11 @@ endif
 
 lint: deps build
 ifneq ($(shell which ruff),)
-	ruff format --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
+	(ruff format --check $(checkfiles) && ruff check $(checkfiles)) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
-	ruff check $(checkfiles)
 	mypy $(checkfiles)
 	#pylint $(checkfiles)
-	bandit -r $(checkfiles)
+	bandit -c pyproject.toml -r $(checkfiles)
 	twine check dist/*
 
 test: deps
