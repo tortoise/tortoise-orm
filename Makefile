@@ -1,6 +1,6 @@
 checkfiles = tortoise/ examples/ tests/ conftest.py
 py_warn = PYTHONDEVMODE=1
-pytest_opts = -n auto --cov=tortoise --tb=native -q
+pytest_opts = -n auto --cov=tortoise --cov-append --tb=native -q
 
 help:
 	@echo  "Tortoise ORM development makefile"
