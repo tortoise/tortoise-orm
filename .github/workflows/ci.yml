@@ -70,7 +70,11 @@ jobs:
           sudo apt-get update
           ACCEPT_EULA=Y sudo apt-get install -y msodbcsql18
       - name: Run ci
-        run: make ci
+        run: make _ci
+      - name: Test Examples
+        run: |
+          cd examples/blacksheep && PYTHONDEVMODE=1 PYTHONPATH=. pytest -n auto --cov=tortoise --tb=native -q _tests.py && cd ../..
+          cd examples/fastapi && PYTHONDEVMODE=1 PYTHONPATH=. pytest  -n auto --cov=tortoise --tb=native -q _tests.py && cd ../..
       - name: Upload Coverage
         run: coveralls --service=github
         env:
