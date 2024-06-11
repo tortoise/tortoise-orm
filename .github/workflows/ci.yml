@@ -76,7 +76,7 @@ jobs:
         env:
           PYTHONDEVMODE: 1
           PYTHONPATH: "."
-          PYTEST_ARGS: "-n auto --cov=../../tortoise --tb=native -q"
+          PYTEST_ARGS: "--tb=native -q"
       - name: Upload Coverage
         run: |
           pip3 install --upgrade coveralls
