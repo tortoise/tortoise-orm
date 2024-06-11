@@ -71,15 +71,11 @@ jobs:
         run: make ci
       - name: Test Examples
         run: |
-          cd examples/blacksheep
-          pytest $PYTEST_ARGS _tests.py
-          cd ../fastapi
-          pytest $PYTEST_ARGS _tests.py
-          cd ../..
+          PYTHONPATH=examples/blacksheep pytest $PYTEST_ARGS examples/blacksheep/_tests.py
+          PYTHONPATH=examples/fastapi pytest $PYTEST_ARGS examples/fastapi/_tests.py
         env:
           PYTHONDEVMODE: 1
-          PYTHONPATH: "."
-          PYTEST_ARGS: "-n auto --cov=../../tortoise --tb=native -q"
+          PYTEST_ARGS: "-n auto --cov=tortoise --tb=native -q"
       - name: Upload Coverage
         run: |
           pip3 install --upgrade coveralls
