@@ -65,9 +65,9 @@ test_oracle:
 	$(py_warn) TORTOISE_TEST_DB="oracle://SYSTEM:$(TORTOISE_ORACLE_PASS)@127.0.0.1:1521/test_\{\}?driver=$(TORTOISE_ORACLE_DRIVER)" pytest $(pytest_opts) --cov-append --cov-report=
 
 _testall: test_sqlite test_postgres_asyncpg test_postgres_psycopg test_mysql_myisam test_mysql test_mssql
+	coverage report
 
 testall: deps _testall
-	coverage report
 
 ci: check _testall
 
