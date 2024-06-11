@@ -1,5 +1,6 @@
+import re
 from hashlib import sha256
-from typing import TYPE_CHECKING, Any, List, Set, Type, cast
+from typing import TYPE_CHECKING, Any, List, Set, Type, Union, cast
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields import JSONField, TextField, UUIDField
@@ -19,6 +20,7 @@ class BaseSchemaGenerator:
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment};'
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{default}{comment}'
     INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
+    UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace(" INDEX", " UNIQUE INDEX")
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{index_name}" UNIQUE ({fields})'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}{comment}'
     FK_TEMPLATE = ' REFERENCES "{table}" ("{field}") ON DELETE {on_delete}{comment}'
@@ -134,12 +136,12 @@ class BaseSchemaGenerator:
         return sha256(";".join(args).encode("utf-8")).hexdigest()[:length]
 
     def _generate_index_name(
-        self, prefix: str, model: "Type[Model]", field_names: List[str]
+        self, prefix: str, model: "Union[Type[Model], str]", field_names: List[str]
     ) -> str:
         # NOTE: for compatibility, index name should not be longer than 30
         # characters (Oracle limit).
         # That's why we slice some of the strings here.
-        table_name = model._meta.db_table
+        table_name = model if isinstance(model, str) else model._meta.db_table
         index_name = "{}_{}_{}_{}".format(
             prefix,
             table_name[:11],
@@ -166,6 +168,15 @@ class BaseSchemaGenerator:
             exists="IF NOT EXISTS " if safe else "",
             index_name=self._generate_index_name("idx", model, field_names),
             table_name=model._meta.db_table,
+            fields=", ".join([self.quote(f) for f in field_names]),
+        )
+
+    def _get_unique_index_sql(self, exists: str, table_name: str, field_names: List[str]) -> str:
+        index_name = self._generate_index_name("uidx", table_name, field_names)
+        return self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
+            exists=exists,
+            index_name=index_name,
+            table_name=table_name,
             fields=", ".join([self.quote(f) for f in field_names]),
         )
 
@@ -348,36 +359,35 @@ class BaseSchemaGenerator:
             field_object = cast("ManyToManyFieldInstance", model._meta.fields_map[m2m_field])
             if field_object._generated or field_object.through in models_tables:
                 continue
+            backward_key, forward_key = field_object.backward_key, field_object.forward_key
+            backward_fk = forward_fk = ""
+            if field_object.db_constraint:
+                backward_fk = self._create_fk_string(
+                    "",
+                    backward_key,
+                    model._meta.db_table,
+                    model._meta.db_pk_column,
+                    field_object.on_delete,
+                    "",
+                )
+                forward_fk = self._create_fk_string(
+                    "",
+                    forward_key,
+                    field_object.related_model._meta.db_table,
+                    field_object.related_model._meta.db_pk_column,
+                    field_object.on_delete,
+                    "",
+                )
+            exists = "IF NOT EXISTS " if safe else ""
+            table_name = field_object.through
             m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
-                exists="IF NOT EXISTS " if safe else "",
-                table_name=field_object.through,
-                backward_fk=(
-                    self._create_fk_string(
-                        "",
-                        field_object.backward_key,
-                        model._meta.db_table,
-                        model._meta.db_pk_column,
-                        field_object.on_delete,
-                        "",
-                    )
-                    if field_object.db_constraint
-                    else ""
-                ),
-                forward_fk=(
-                    self._create_fk_string(
-                        "",
-                        field_object.forward_key,
-                        field_object.related_model._meta.db_table,
-                        field_object.related_model._meta.db_pk_column,
-                        field_object.on_delete,
-                        "",
-                    )
-                    if field_object.db_constraint
-                    else ""
-                ),
-                backward_key=field_object.backward_key,
+                exists=exists,
+                table_name=table_name,
+                backward_fk=backward_fk,
+                forward_fk=forward_fk,
+                backward_key=backward_key,
                 backward_type=model._meta.pk.get_for_dialect(self.DIALECT, "SQL_TYPE"),
-                forward_key=field_object.forward_key,
+                forward_key=forward_key,
                 forward_type=field_object.related_model._meta.pk.get_for_dialect(
                     self.DIALECT, "SQL_TYPE"
                 ),
@@ -398,6 +408,18 @@ class BaseSchemaGenerator:
                     "",
                 )  # may have better way
             m2m_create_string += self._post_table_hook()
+            if field_object.create_unique_index:
+                unique_index_create_sql = self._get_unique_index_sql(
+                    exists, table_name, [backward_key, forward_key]
+                )
+                if unique_index_create_sql.endswith(";"):
+                    m2m_create_string += "\n" + unique_index_create_sql
+                else:
+                    lines = m2m_create_string.splitlines()
+                    lines[-2] += ","
+                    indent = m.group() if (m := re.match(r"\s+", lines[-2])) else ""
+                    lines.insert(-1, indent + unique_index_create_sql)
+                    m2m_create_string = "\n".join(lines)
             m2m_tables_for_create.append(m2m_create_string)
 
         return {
@@ -414,7 +436,7 @@ class BaseSchemaGenerator:
         for app in Tortoise.apps.values():
             for model in app.values():
                 if model._meta.db == self.client:
-                    model.check()
+                    model._check()
                     models_to_create.append(model)
 
     def get_create_schema_sql(self, safe: bool = True) -> str:

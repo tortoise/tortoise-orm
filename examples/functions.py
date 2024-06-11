@@ -5,7 +5,7 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     desc = fields.TextField(null=True)
 
@@ -16,7 +16,7 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
         "models.Tournament", related_name="events"
@@ -30,7 +30,7 @@ class Event(Model):
 
 
 class Team(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     events: fields.ManyToManyRelation[Event]

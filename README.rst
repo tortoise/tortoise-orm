@@ -8,7 +8,7 @@ Tortoise ORM
    :target: https://pepy.tech/project/tortoise-orm
 .. image:: https://github.com/tortoise/tortoise-orm/workflows/gh-pages/badge.svg
    :target: https://github.com/tortoise/tortoise-orm/actions?query=workflow:gh-pages
-.. image:: https://github.com/tortoise/tortoise-orm/workflows/ci/badge.svg
+.. image:: https://github.com/tortoise/tortoise-orm/actions/workflows/ci.yml/badge.svg?branch=develop
    :target: https://github.com/tortoise/tortoise-orm/actions?query=workflow:ci
 .. image:: https://coveralls.io/repos/github/tortoise/tortoise-orm/badge.svg
    :target: https://coveralls.io/github/tortoise/tortoise-orm
@@ -101,7 +101,7 @@ You can start writing models like this:
     from tortoise import fields
 
     class Tournament(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
 
         def __str__(self):
@@ -109,7 +109,7 @@ You can start writing models like this:
 
 
     class Event(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
         tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
         participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
@@ -119,7 +119,7 @@ You can start writing models like this:
 
 
     class Team(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
 
         def __str__(self):

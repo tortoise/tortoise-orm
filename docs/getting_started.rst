@@ -84,7 +84,7 @@ You can start writing models like this:
     class Tournament(Model):
         # Defining `id` field is optional, it will be defined automatically
         # if you haven't done it yourself
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=255)
 
         # Defining ``__str__`` is also optional, but gives you pretty
@@ -94,7 +94,7 @@ You can start writing models like this:
 
 
     class Event(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=255)
         # References to other models are defined in format
         # "{app_name}.{model_name}" - where {app_name} is defined in tortoise config
@@ -106,7 +106,7 @@ You can start writing models like this:
 
 
     class Team(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=255)
 
         def __str__(self):
