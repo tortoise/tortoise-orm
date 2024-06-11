@@ -9,6 +9,24 @@ Changelog
 0.21
 ====
 
+0.21.3
+------
+Fixed
+^^^^^
+- Fix `bulk_update` when using source_field for pk (#1633)
+
+0.21.2
+------
+Added
+^^^^^
+- Add `create_unique_index` argument to M2M field and default if it is true (#1620)
+
+0.21.1
+------
+Fixed
+^^^^^
+- Fix error on using old style `pk=True`
+
 0.21.0
 ------
 Added
@@ -28,6 +46,7 @@ Fixed
 - Fix `get_annotations` now evaluates annotations in the default scope instead of the app namespace. (#1552)
 - Fix `get_or_create` method. (#1404)
 - Use `index_name` instead of `BaseSchemaGenerator._generate_index_name` to generate index name.
+- Use subquery for count() and exists() in `QuerySet` to match count result to `QuerySet` result. (#1607)
 
 Changed
 ^^^^^^^

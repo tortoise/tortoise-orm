@@ -8,7 +8,7 @@ from tortoise.exceptions import ConfigurationError
 class TestIndexAlias(test.TestCase):
     Field: Any = fields.IntField
 
-    def test_index_alias(self):
+    def test_index_alias(self) -> None:
         kwargs: dict = getattr(self, "init_kwargs", {})
         with self.assertWarnsRegex(
             DeprecationWarning, "`index` is deprecated, please use `db_index` instead"

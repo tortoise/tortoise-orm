@@ -45,7 +45,7 @@ from tortoise.fields.relational import (
     OneToOneFieldInstance,
     ReverseRelation,
 )
-from tortoise.filters import get_filters_for_field
+from tortoise.filters import FilterInfoDict, get_filters_for_field
 from tortoise.functions import Function
 from tortoise.indexes import Index
 from tortoise.manager import Manager
@@ -64,9 +64,6 @@ from tortoise.transactions import in_transaction
 
 MODEL = TypeVar("MODEL", bound="Model")
 EMPTY = object()
-
-
-# TODO: Define Filter type object. Possibly tuple?
 
 
 def get_together(meta: "Model.Meta", together: str) -> Tuple[Tuple[str, ...], ...]:
@@ -234,8 +231,8 @@ class MetaInfo:
         self.fetch_fields: Set[str] = set()
         self.fields_db_projection: Dict[str, str] = {}
         self.fields_db_projection_reverse: Dict[str, str] = {}
-        self._filters: Dict[str, Dict[str, dict]] = {}
-        self.filters: Dict[str, dict] = {}
+        self._filters: Dict[str, FilterInfoDict] = {}
+        self.filters: Dict[str, FilterInfoDict] = {}
         self.fields_map: Dict[str, Field] = {}
         self._inited: bool = False
         self.default_connection: Optional[str] = None
@@ -297,7 +294,7 @@ class MetaInfo:
             )
         return self._default_ordering
 
-    def get_filter(self, key: str) -> dict:
+    def get_filter(self, key: str) -> FilterInfoDict:
         return self.filters[key]
 
     def finalise_model(self) -> None:
@@ -323,11 +320,11 @@ class MetaInfo:
             | self.o2o_fields
         )
 
-        generated_fields = []
-        for field in self.fields_map.values():
-            if not field.generated:
-                continue
-            generated_fields.append(field.source_field or field.model_field_name)
+        generated_fields = [
+            (field.source_field or field.model_field_name)
+            for field in self.fields_map.values()
+            if field.generated
+        ]
         self.generated_db_fields = tuple(generated_fields)
 
         self._ordering_validated = True
@@ -343,29 +340,28 @@ class MetaInfo:
             fk_field_object: ForeignKeyFieldInstance = self.fields_map[key]  # type: ignore
             relation_field = fk_field_object.source_field
             to_field = fk_field_object.to_field_instance.model_field_name
+            property_kwargs = dict(
+                _key=_key,
+                relation_field=relation_field,
+                to_field=to_field,
+            )
             setattr(
                 self._model,
                 key,
                 property(
                     partial(
                         _fk_getter,
-                        _key=_key,
                         ftype=fk_field_object.related_model,
-                        relation_field=relation_field,
-                        to_field=to_field,
+                        **property_kwargs,
                     ),
                     partial(
                         _fk_setter,
-                        _key=_key,
-                        relation_field=relation_field,
-                        to_field=to_field,
+                        **property_kwargs,
                     ),
                     partial(
                         _fk_setter,
                         value=None,
-                        _key=_key,
-                        relation_field=relation_field,
-                        to_field=to_field,
+                        **property_kwargs,
                     ),
                 ),
             )
@@ -394,29 +390,28 @@ class MetaInfo:
             o2o_field_object: OneToOneFieldInstance = self.fields_map[key]  # type: ignore
             relation_field = o2o_field_object.source_field
             to_field = o2o_field_object.to_field_instance.model_field_name
+            property_kwargs = dict(
+                _key=_key,
+                relation_field=relation_field,
+                to_field=to_field,
+            )
             setattr(
                 self._model,
                 key,
                 property(
                     partial(
                         _fk_getter,
-                        _key=_key,
                         ftype=o2o_field_object.related_model,
-                        relation_field=relation_field,
-                        to_field=to_field,
+                        **property_kwargs,
                     ),
                     partial(
                         _fk_setter,
-                        _key=_key,
-                        relation_field=relation_field,
-                        to_field=to_field,
+                        **property_kwargs,
                     ),
                     partial(
                         _fk_setter,
                         value=None,
-                        _key=_key,
-                        relation_field=relation_field,
-                        to_field=to_field,
+                        **property_kwargs,
                     ),
                 ),
             )
@@ -475,12 +470,10 @@ class MetaInfo:
     def _generate_filters(self) -> None:
         get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
         for key, filter_info in self._filters.items():
-            overridden_operator = get_overridden_filter_func(
-                filter_func=filter_info["operator"]  # type: ignore
-            )
+            overridden_operator = get_overridden_filter_func(filter_func=filter_info["operator"])
             if overridden_operator:
                 filter_info = copy(filter_info)
-                filter_info["operator"] = overridden_operator  # type: ignore
+                filter_info["operator"] = overridden_operator
             self.filters[key] = filter_info
 
 
@@ -490,7 +483,7 @@ class ModelMeta(type):
     def __new__(mcs, name: str, bases: Tuple[Type, ...], attrs: dict):
         fields_db_projection: Dict[str, str] = {}
         fields_map: Dict[str, Field] = {}
-        filters: Dict[str, Dict[str, dict]] = {}
+        filters: Dict[str, FilterInfoDict] = {}
         fk_fields: Set[str] = set()
         m2m_fields: Set[str] = set()
         o2o_fields: Set[str] = set()
@@ -584,19 +577,16 @@ class ModelMeta(type):
                     m2m_fields.add(key)
                 else:
                     fields_db_projection[key] = value.source_field or key
+                    field, source_field = fields_map[key], fields_db_projection[key]
                     filters.update(
                         get_filters_for_field(
-                            field_name=key,
-                            field=fields_map[key],
-                            source_field=fields_db_projection[key],
+                            field_name=key, field=field, source_field=source_field
                         )
                     )
                     if value.pk:
                         filters.update(
                             get_filters_for_field(
-                                field_name="pk",
-                                field=fields_map[key],
-                                source_field=fields_db_projection[key],
+                                field_name="pk", field=field, source_field=source_field
                             )
                         )
 
@@ -742,12 +732,9 @@ class Model(metaclass=ModelMeta):
             # Fields that don't override .to_python_value() are converted without a call
             #  as we already know what we will be doing.
             for key, model_field, field in meta.db_default_fields:
-                value = kwargs[key]
-                setattr(
-                    self,
-                    model_field,
-                    None if value is None else field.field_type(value),
-                )
+                if (value := kwargs[key]) is not None:
+                    value = field.field_type(value)
+                setattr(self, model_field, value)
             # These fields need manual .to_python_value()
             for key, model_field, field in meta.db_complex_fields:
                 setattr(self, model_field, field.to_python_value(kwargs[key]))
@@ -862,48 +849,23 @@ class Model(metaclass=ModelMeta):
                 setattr(self, k, await v())
             self._await_when_save = {}
 
-    async def _pre_delete(
-        self,
-        using_db: Optional[BaseDBAsyncClient] = None,
-    ) -> None:
-        listeners = []
-        cls_listeners = self._listeners.get(Signals.pre_delete, {}).get(self.__class__, [])
-        for listener in cls_listeners:
-            listeners.append(
-                listener(
-                    self.__class__,
-                    self,
-                    using_db,
-                )
-            )
+    async def _wait_for_listeners(self, signal: Signals, *listener_args) -> None:
+        cls_listeners = self._listeners.get(signal, {}).get(self.__class__, [])
+        listeners = [listener(self.__class__, self, *listener_args) for listener in cls_listeners]
         await asyncio.gather(*listeners)
 
-    async def _post_delete(
-        self,
-        using_db: Optional[BaseDBAsyncClient] = None,
-    ) -> None:
-        listeners = []
-        cls_listeners = self._listeners.get(Signals.post_delete, {}).get(self.__class__, [])
-        for listener in cls_listeners:
-            listeners.append(
-                listener(
-                    self.__class__,
-                    self,
-                    using_db,
-                )
-            )
-        await asyncio.gather(*listeners)
+    async def _pre_delete(self, using_db: Optional[BaseDBAsyncClient] = None) -> None:
+        await self._wait_for_listeners(Signals.pre_delete, using_db)
+
+    async def _post_delete(self, using_db: Optional[BaseDBAsyncClient] = None) -> None:
+        await self._wait_for_listeners(Signals.post_delete, using_db)
 
     async def _pre_save(
         self,
         using_db: Optional[BaseDBAsyncClient] = None,
         update_fields: Optional[Iterable[str]] = None,
     ) -> None:
-        listeners = []
-        cls_listeners = self._listeners.get(Signals.pre_save, {}).get(self.__class__, [])
-        for listener in cls_listeners:
-            listeners.append(listener(self.__class__, self, using_db, update_fields))
-        await asyncio.gather(*listeners)
+        await self._wait_for_listeners(Signals.pre_save, using_db, update_fields)
 
     async def _post_save(
         self,
@@ -911,11 +873,7 @@ class Model(metaclass=ModelMeta):
         created: bool = False,
         update_fields: Optional[Iterable[str]] = None,
     ) -> None:
-        listeners = []
-        cls_listeners = self._listeners.get(Signals.post_save, {}).get(self.__class__, [])
-        for listener in cls_listeners:
-            listeners.append(listener(self.__class__, self, created, using_db, update_fields))
-        await asyncio.gather(*listeners)
+        await self._wait_for_listeners(Signals.post_save, created, using_db, update_fields)
 
     async def save(
         self,

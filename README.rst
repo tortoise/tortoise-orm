@@ -8,7 +8,7 @@ Tortoise ORM
    :target: https://pepy.tech/project/tortoise-orm
 .. image:: https://github.com/tortoise/tortoise-orm/workflows/gh-pages/badge.svg
    :target: https://github.com/tortoise/tortoise-orm/actions?query=workflow:gh-pages
-.. image:: https://github.com/tortoise/tortoise-orm/workflows/ci/badge.svg
+.. image:: https://github.com/tortoise/tortoise-orm/actions/workflows/ci.yml/badge.svg?branch=develop
    :target: https://github.com/tortoise/tortoise-orm/actions?query=workflow:ci
 .. image:: https://coveralls.io/repos/github/tortoise/tortoise-orm/badge.svg
    :target: https://coveralls.io/github/tortoise/tortoise-orm
