@@ -37,7 +37,7 @@ endif
 	ruff check $(checkfiles)
 	mypy $(checkfiles)
 	#pylint $(checkfiles)
-	bandit -r $(checkfiles)
+	bandit -c pyproject.toml -r $(checkfiles)
 	twine check dist/*
 
 test: deps
