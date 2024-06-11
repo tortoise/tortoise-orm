@@ -20,7 +20,7 @@ up:
 deps:
 	@poetry install -E asyncpg -E aiomysql -E accel -E psycopg -E asyncodbc
 
-_check: build
+check: deps build
 ifneq ($(shell which black),)
 	black --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
@@ -29,7 +29,6 @@ endif
 	#pylint -d C,W,R $(checkfiles)
 	#bandit -r $(checkfiles)make
 	twine check dist/*
-check: _deps
 
 lint: deps build
 ifneq ($(shell which black),)
@@ -70,8 +69,7 @@ _testall: test_sqlite test_postgres_asyncpg test_postgres_psycopg test_mysql_myi
 testall: deps _testall
 	coverage report
 
-_ci: _check _testall
-ci: deps _ci
+ci: check _testall
 
 docs: deps
 	rm -fR ./build

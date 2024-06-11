@@ -61,8 +61,6 @@ jobs:
         run: |
           pip install -U pip poetry
           poetry config virtualenvs.create false
-      - name: Install requirements
-        run: make deps
       - name: Install ODBC driver
         run: |
           sudo curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
@@ -70,11 +68,18 @@ jobs:
           sudo apt-get update
           ACCEPT_EULA=Y sudo apt-get install -y msodbcsql18
       - name: Run ci
-        run: make _ci
+        run: make ci
       - name: Test Examples
         run: |
-          cd examples/blacksheep && PYTHONDEVMODE=1 PYTHONPATH=. pytest -n auto --cov=tortoise --tb=native -q _tests.py && cd ../..
-          cd examples/fastapi && PYTHONDEVMODE=1 PYTHONPATH=. pytest  -n auto --cov=tortoise --tb=native -q _tests.py && cd ../..
+          cd examples/blacksheep
+          pytest $PYTEST_ARGS _tests.py
+          cd ../fastapi
+          pytest $PYTEST_ARGS _tests.py
+          cd ../..
+        env:
+          PYTHONDEVMODE: 1
+          PYTHONPATH: "."
+          PYTEST_ARGS: "-n auto --cov=../../tortoise --tb=native -q"
       - name: Upload Coverage
         run: coveralls --service=github
         env:
