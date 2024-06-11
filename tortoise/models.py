@@ -31,7 +31,8 @@ from tortoise.exceptions import (
     IncompleteInstanceError,
     IntegrityError,
     OperationalError,
-    ParamsError, ObjectDoesNotExistError,
+    ParamsError,
+    ObjectDoesNotExistError,
 )
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntField

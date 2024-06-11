@@ -259,9 +259,9 @@ class TestModelMethods(test.TestCase):
         # For compatibility reasons this should be an instance of KeyError
         self.assertIsInstance(the_exception, KeyError)
         self.assertIs(the_exception.model, Tournament)
-        self.assertEqual(the_exception.pk_name, 'id')
+        self.assertEqual(the_exception.pk_name, "id")
         self.assertEqual(the_exception.pk_val, 100000)
-        self.assertEqual(str(the_exception), 'Tournament has no object with id=100000')
+        self.assertEqual(str(the_exception), "Tournament has no object with id=100000")
 
     async def test_index_badtype(self):
         with self.assertRaises(ObjectDoesNotExistError) as cm:
@@ -270,9 +270,9 @@ class TestModelMethods(test.TestCase):
         # For compatibility reasons this should be an instance of KeyError
         self.assertIsInstance(the_exception, KeyError)
         self.assertIs(the_exception.model, Tournament)
-        self.assertEqual(the_exception.pk_name, 'id')
-        self.assertEqual(the_exception.pk_val, 'asdf')
-        self.assertEqual(str(the_exception), 'Tournament has no object with id=asdf')
+        self.assertEqual(the_exception.pk_name, "id")
+        self.assertEqual(the_exception.pk_val, "asdf")
+        self.assertEqual(str(the_exception), "Tournament has no object with id=asdf")
 
     async def test_clone(self):
         mdl2 = self.mdl.clone()

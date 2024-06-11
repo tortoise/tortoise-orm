@@ -70,6 +70,7 @@ class ObjectDoesNotExistError(OperationalError, KeyError):
     """
     The DoesNotExist exception is raised when an item with the passed primary key does not exist
     """
+
     def __init__(self, model: "Type[Model]", pk_name: str, pk_val: Any):
         self.model: "Type[Model]" = model
         self.pk_name: str = pk_name
