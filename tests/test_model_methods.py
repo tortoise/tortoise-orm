@@ -258,7 +258,7 @@ class TestModelMethods(test.TestCase):
         the_exception = cm.exception
         # For compatibility reasons this should be an instance of KeyError
         self.assertIsInstance(the_exception, KeyError)
-        self.assertIs(the_exception.model, Tournament)
+        self.assertIs(the_exception.model, self.cls)
         self.assertEqual(the_exception.pk_name, "id")
         self.assertEqual(the_exception.pk_val, 100000)
         self.assertEqual(str(the_exception), "Tournament has no object with id=100000")
@@ -269,7 +269,7 @@ class TestModelMethods(test.TestCase):
         the_exception = cm.exception
         # For compatibility reasons this should be an instance of KeyError
         self.assertIsInstance(the_exception, KeyError)
-        self.assertIs(the_exception.model, Tournament)
+        self.assertIs(the_exception.model, self.cls)
         self.assertEqual(the_exception.pk_name, "id")
         self.assertEqual(the_exception.pk_val, "asdf")
         self.assertEqual(str(the_exception), "Tournament has no object with id=asdf")
