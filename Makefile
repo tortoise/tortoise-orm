@@ -1,6 +1,6 @@
 checkfiles = tortoise/ examples/ tests/ conftest.py
-black_opts = -l 100 -t py37
 py_warn = PYTHONDEVMODE=1
+pytest_opts = -n auto --cov=tortoise --tb=native -q
 
 help:
 	@echo  "Tortoise ORM development makefile"
@@ -10,7 +10,6 @@ help:
 	@echo  "    up      Updates dev/test dependencies"
 	@echo  "    deps    Ensure dev/test dependencies are installed"
 	@echo  "    check	Checks that build is sane"
-	@echo  "    lint	Reports all linter violations"
 	@echo  "    test	Runs all tests"
 	@echo  "    docs 	Builds the documentation"
 	@echo  "    style   Auto-formats the code"
@@ -19,44 +18,53 @@ up:
 	@poetry update
 
 deps:
-	@poetry install -E asyncpg -E aiomysql -E docs -E asyncmy
+	@poetry install -E asyncpg -E aiomysql -E accel -E psycopg -E asyncodbc
 
 check: deps build
 ifneq ($(shell which black),)
-	black --check $(black_opts) $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
+	black --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
-	flake8 $(checkfiles)
+	ruff check $(checkfiles)
 	mypy $(checkfiles)
-	pylint -d C,W,R $(checkfiles)
-	bandit -r $(checkfiles)
+	#pylint -d C,W,R $(checkfiles)
+	#bandit -r $(checkfiles)make
 	twine check dist/*
 
 lint: deps build
 ifneq ($(shell which black),)
-	black --check $(black_opts) $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
+	black --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
-	flake8 $(checkfiles)
+	ruff check $(checkfiles)
 	mypy $(checkfiles)
-	pylint $(checkfiles)
+	#pylint $(checkfiles)
 	bandit -r $(checkfiles)
 	twine check dist/*
 
 test: deps
-	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: pytest
+	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: pytest $(pytest_opts)
 
 test_sqlite:
-	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: pytest --cov-report=
+	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: pytest --cov-report= $(pytest_opts)
 
-test_postgres:
-	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="postgres://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" pytest --cov-append --cov-report=
+test_postgres_asyncpg:
+	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="asyncpg://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" pytest $(pytest_opts) --cov-append --cov-report=
+
+test_postgres_psycopg:
+	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="psycopg://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" pytest $(pytest_opts) --cov-append --cov-report=
 
 test_mysql_myisam:
-	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}?storage_engine=MYISAM" pytest --cov-append --cov-report=
+	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}?storage_engine=MYISAM" pytest $(pytest_opts) --cov-append --cov-report=
 
 test_mysql:
-	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}" pytest --cov-append --cov-report=
+	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}" pytest $(pytest_opts) --cov-append --cov-report=
 
-_testall: test_sqlite test_postgres test_mysql_myisam test_mysql
+test_mssql:
+	$(py_warn) TORTOISE_TEST_DB="mssql://sa:$(TORTOISE_MSSQL_PASS)@127.0.0.1:1433/test_\{\}?driver=$(TORTOISE_MSSQL_DRIVER)&TrustServerCertificate=YES" pytest $(pytest_opts) --cov-append --cov-report=
+
+test_oracle:
+	$(py_warn) TORTOISE_TEST_DB="oracle://SYSTEM:$(TORTOISE_ORACLE_PASS)@127.0.0.1:1521/test_\{\}?driver=$(TORTOISE_ORACLE_DRIVER)" pytest $(pytest_opts) --cov-append --cov-report=
+
+_testall: test_sqlite test_postgres_asyncpg test_postgres_psycopg test_mysql_myisam test_mysql test_mssql
 
 testall: deps _testall
 	coverage report
@@ -69,7 +77,7 @@ docs: deps
 
 style: deps
 	isort -src $(checkfiles)
-	black $(black_opts) $(checkfiles)
+	black $(checkfiles)
 
 build: deps
 	rm -fR dist/

@@ -44,7 +44,7 @@ class TestDescribeModel(test.SimpleTestCase):
     maxDiff = None
 
     def test_describe_field_noninit_ser(self):
-        field = fields.IntField(pk=True)
+        field = fields.IntField(primary_key=True)
         self.assertEqual(
             field.describe(serializable=True),
             {
@@ -60,12 +60,12 @@ class TestDescribeModel(test.SimpleTestCase):
                 "default": None,
                 "description": None,
                 "docstring": None,
-                "constraints": {"ge": 1, "le": 2147483647},
+                "constraints": {"ge": -2147483648, "le": 2147483647},
             },
         )
 
     def test_describe_field_noninit(self):
-        field = fields.IntField(pk=True)
+        field = fields.IntField(primary_key=True)
         self.assertEqual(
             field.describe(serializable=False),
             {
@@ -81,7 +81,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "default": None,
                 "description": None,
                 "docstring": None,
-                "constraints": {"ge": 1, "le": 2147483647},
+                "constraints": {"ge": -2147483648, "le": 2147483647},
             },
         )
 
@@ -102,6 +102,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": None,
                 "docstring": None,
                 "constraints": {},
+                "db_constraint": True,
                 "raw_field": None,
             },
         )
@@ -124,6 +125,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "docstring": None,
                 "constraints": {},
                 "raw_field": None,
+                "db_constraint": True,
             },
         )
 
@@ -145,6 +147,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": "Straight auto-mapped fields",
                 "docstring": None,
                 "unique_together": [["chars", "blip"]],
+                "indexes": [],
                 "pk_field": {
                     "name": "eyedee",
                     "field_type": "IntField",
@@ -158,7 +161,7 @@ class TestDescribeModel(test.SimpleTestCase):
                     "default": None,
                     "description": "Da PK",
                     "docstring": None,
-                    "constraints": {"ge": 1, "le": 2147483647},
+                    "constraints": {"ge": -2147483648, "le": 2147483647},
                 },
                 "data_fields": [
                     {
@@ -219,7 +222,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
-                        "constraints": {"ge": 1, "le": 2147483647},
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                     {
                         "db_column": "o2o_id",
@@ -234,7 +237,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "nullable": True,
                         "python_type": "int",
                         "unique": True,
-                        "constraints": {"ge": 1, "le": 2147483647},
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [
@@ -246,11 +249,12 @@ class TestDescribeModel(test.SimpleTestCase):
                         "generated": False,
                         "nullable": True,
                         "unique": False,
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
+                        "db_constraint": True,
                         "constraints": {},
                     }
                 ],
@@ -267,6 +271,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "description": "Tree!",
                         "docstring": None,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "o2o_fields": [
@@ -279,11 +284,12 @@ class TestDescribeModel(test.SimpleTestCase):
                         "indexed": True,
                         "name": "o2o",
                         "nullable": True,
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "python_type": "models.StraightFields",
                         "raw_field": "o2o_id",
                         "unique": True,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "backward_o2o_fields": [
@@ -299,6 +305,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "python_type": "models.StraightFields",
                         "unique": False,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "m2m_fields": [
@@ -319,8 +326,9 @@ class TestDescribeModel(test.SimpleTestCase):
                         "forward_key": "straightfields_id",
                         "backward_key": "straightfields_rel_id",
                         "through": "straightfields_straightfields",
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "_generated": False,
+                        "db_constraint": True,
                     },
                     {
                         "name": "rel_from",
@@ -340,6 +348,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "backward_key": "straightfields_id",
                         "through": "straightfields_straightfields",
                         "on_delete": "CASCADE",
+                        "db_constraint": True,
                         "_generated": True,
                     },
                 ],
@@ -358,6 +367,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": "Straight auto-mapped fields",
                 "docstring": None,
                 "unique_together": [["chars", "blip"]],
+                "indexes": [],
                 "pk_field": {
                     "name": "eyedee",
                     "field_type": fields.IntField,
@@ -371,7 +381,7 @@ class TestDescribeModel(test.SimpleTestCase):
                     "default": None,
                     "description": "Da PK",
                     "docstring": None,
-                    "constraints": {"ge": 1, "le": 2147483647},
+                    "constraints": {"ge": -2147483648, "le": 2147483647},
                 },
                 "data_fields": [
                     {
@@ -432,7 +442,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
-                        "constraints": {"ge": 1, "le": 2147483647},
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                     {
                         "name": "o2o_id",
@@ -447,7 +457,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "default": None,
                         "description": "Line",
                         "docstring": None,
-                        "constraints": {"ge": 1, "le": 2147483647},
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [
@@ -458,13 +468,14 @@ class TestDescribeModel(test.SimpleTestCase):
                         "python_type": StraightFields,
                         "generated": False,
                         "nullable": True,
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "unique": False,
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "backward_fk_fields": [
@@ -480,6 +491,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "description": "Tree!",
                         "docstring": None,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "o2o_fields": [
@@ -492,11 +504,12 @@ class TestDescribeModel(test.SimpleTestCase):
                         "indexed": True,
                         "name": "o2o",
                         "nullable": True,
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "python_type": StraightFields,
                         "raw_field": "o2o_id",
                         "unique": True,
                         "constraints": {},
+                        "db_constraint": True,
                     },
                 ],
                 "backward_o2o_fields": [
@@ -512,6 +525,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "python_type": StraightFields,
                         "unique": False,
                         "constraints": {},
+                        "db_constraint": True,
                     },
                 ],
                 "m2m_fields": [
@@ -532,8 +546,9 @@ class TestDescribeModel(test.SimpleTestCase):
                         "forward_key": "straightfields_id",
                         "backward_key": "straightfields_rel_id",
                         "through": "straightfields_straightfields",
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "_generated": False,
+                        "db_constraint": True,
                     },
                     {
                         "name": "rel_from",
@@ -554,6 +569,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "through": "straightfields_straightfields",
                         "on_delete": "CASCADE",
                         "_generated": True,
+                        "db_constraint": True,
                     },
                 ],
             },
@@ -571,6 +587,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": "Source mapped fields",
                 "docstring": "A Docstring.",
                 "unique_together": [["chars", "blip"]],
+                "indexes": [],
                 "pk_field": {
                     "name": "eyedee",
                     "field_type": "IntField",
@@ -584,7 +601,7 @@ class TestDescribeModel(test.SimpleTestCase):
                     "default": None,
                     "description": "Da PK",
                     "docstring": None,
-                    "constraints": {"ge": 1, "le": 2147483647},
+                    "constraints": {"ge": -2147483648, "le": 2147483647},
                 },
                 "data_fields": [
                     {
@@ -645,7 +662,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
-                        "constraints": {"ge": 1, "le": 2147483647},
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                     {
                         "name": "o2o_id",
@@ -660,7 +677,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "default": None,
                         "description": "Line",
                         "docstring": None,
-                        "constraints": {"ge": 1, "le": 2147483647},
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [
@@ -671,13 +688,14 @@ class TestDescribeModel(test.SimpleTestCase):
                         "python_type": "models.SourceFields",
                         "generated": False,
                         "nullable": True,
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "unique": False,
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "backward_fk_fields": [
@@ -693,6 +711,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "description": "Tree!",
                         "docstring": None,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "o2o_fields": [
@@ -705,11 +724,12 @@ class TestDescribeModel(test.SimpleTestCase):
                         "indexed": True,
                         "name": "o2o",
                         "nullable": True,
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "python_type": "models.SourceFields",
                         "raw_field": "o2o_id",
                         "unique": True,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "backward_o2o_fields": [
@@ -725,6 +745,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "python_type": "models.SourceFields",
                         "unique": False,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "m2m_fields": [
@@ -745,8 +766,9 @@ class TestDescribeModel(test.SimpleTestCase):
                         "forward_key": "sts_forward",
                         "backward_key": "backward_sts",
                         "through": "sometable_self",
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "_generated": False,
+                        "db_constraint": True,
                     },
                     {
                         "name": "rel_from",
@@ -767,6 +789,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "through": "sometable_self",
                         "on_delete": "CASCADE",
                         "_generated": True,
+                        "db_constraint": True,
                     },
                 ],
             },
@@ -784,6 +807,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": "Source mapped fields",
                 "docstring": "A Docstring.",
                 "unique_together": [["chars", "blip"]],
+                "indexes": [],
                 "pk_field": {
                     "name": "eyedee",
                     "field_type": fields.IntField,
@@ -797,7 +821,7 @@ class TestDescribeModel(test.SimpleTestCase):
                     "default": None,
                     "description": "Da PK",
                     "docstring": None,
-                    "constraints": {"ge": 1, "le": 2147483647},
+                    "constraints": {"ge": -2147483648, "le": 2147483647},
                 },
                 "data_fields": [
                     {
@@ -858,7 +882,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
-                        "constraints": {"ge": 1, "le": 2147483647},
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                     {
                         "name": "o2o_id",
@@ -873,7 +897,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "default": None,
                         "description": "Line",
                         "docstring": None,
-                        "constraints": {"ge": 1, "le": 2147483647},
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [
@@ -885,12 +909,13 @@ class TestDescribeModel(test.SimpleTestCase):
                         "generated": False,
                         "nullable": True,
                         "unique": False,
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "indexed": False,
                         "default": None,
                         "description": "Tree!",
                         "docstring": None,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "backward_fk_fields": [
@@ -906,6 +931,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "description": "Tree!",
                         "docstring": None,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "o2o_fields": [
@@ -918,11 +944,12 @@ class TestDescribeModel(test.SimpleTestCase):
                         "indexed": True,
                         "name": "o2o",
                         "nullable": True,
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "python_type": SourceFields,
                         "raw_field": "o2o_id",
                         "unique": True,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "backward_o2o_fields": [
@@ -938,6 +965,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "python_type": SourceFields,
                         "unique": False,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "m2m_fields": [
@@ -958,8 +986,9 @@ class TestDescribeModel(test.SimpleTestCase):
                         "forward_key": "sts_forward",
                         "backward_key": "backward_sts",
                         "through": "sometable_self",
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "_generated": False,
+                        "db_constraint": True,
                     },
                     {
                         "name": "rel_from",
@@ -980,6 +1009,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "through": "sometable_self",
                         "on_delete": "CASCADE",
                         "_generated": True,
+                        "db_constraint": True,
                     },
                 ],
             },
@@ -998,6 +1028,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": None,
                 "docstring": None,
                 "unique_together": [],
+                "indexes": [],
                 "pk_field": {
                     "name": "id",
                     "field_type": "UUIDField",
@@ -1028,6 +1059,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "description": None,
                         "docstring": None,
                         "constraints": {},
+                        "db_constraint": True,
                     },
                 ],
                 "o2o_fields": [],
@@ -1037,6 +1069,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "_generated": True,
                         "backward_key": "uuidpkmodel_id",
                         "constraints": {},
+                        "db_constraint": True,
                         "default": None,
                         "description": None,
                         "docstring": None,
@@ -1069,6 +1102,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": None,
                 "docstring": None,
                 "unique_together": [],
+                "indexes": [],
                 "pk_field": {
                     "name": "id",
                     "field_type": fields.UUIDField,
@@ -1099,6 +1133,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "description": None,
                         "docstring": None,
                         "constraints": {},
+                        "db_constraint": True,
                     },
                 ],
                 "o2o_fields": [],
@@ -1106,6 +1141,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "m2m_fields": [
                     {
                         "name": "peers",
+                        "db_constraint": True,
                         "generated": False,
                         "nullable": False,
                         "field_type": ManyToManyFieldInstance,
@@ -1202,6 +1238,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "raw_field": "model_id",
                         "unique": False,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "m2m_fields": [],
@@ -1216,11 +1253,12 @@ class TestDescribeModel(test.SimpleTestCase):
                         "indexed": True,
                         "name": "parent",
                         "nullable": True,
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "python_type": "models.UUIDPkModel",
                         "raw_field": "parent_id",
                         "unique": True,
                         "constraints": {},
+                        "db_constraint": True,
                     }
                 ],
                 "pk_field": {
@@ -1240,6 +1278,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 },
                 "table": "uuidfkrelatednullmodel",
                 "unique_together": [],
+                "indexes": [],
             },
         )
 
@@ -1256,6 +1295,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": "This model contains many JSON blobs",
                 "docstring": "This model contains many JSON blobs",
                 "unique_together": [],
+                "indexes": [],
                 "pk_field": {
                     "name": "id",
                     "field_type": "IntField",
@@ -1269,14 +1309,19 @@ class TestDescribeModel(test.SimpleTestCase):
                     "default": None,
                     "description": None,
                     "docstring": None,
-                    "constraints": {"ge": 1, "le": 2147483647},
+                    "constraints": {"ge": -2147483648, "le": 2147483647},
                 },
                 "data_fields": [
                     {
                         "name": "data",
                         "field_type": "JSONField",
                         "db_column": "data",
-                        "db_field_types": {"": "TEXT", "postgres": "JSONB"},
+                        "db_field_types": {
+                            "": "JSON",
+                            "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
+                            "postgres": "JSONB",
+                        },
                         "python_type": "Union[dict, list]",
                         "generated": False,
                         "nullable": False,
@@ -1291,7 +1336,12 @@ class TestDescribeModel(test.SimpleTestCase):
                         "name": "data_null",
                         "field_type": "JSONField",
                         "db_column": "data_null",
-                        "db_field_types": {"": "TEXT", "postgres": "JSONB"},
+                        "db_field_types": {
+                            "": "JSON",
+                            "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
+                            "postgres": "JSONB",
+                        },
                         "python_type": "Union[dict, list]",
                         "generated": False,
                         "nullable": True,
@@ -1306,7 +1356,12 @@ class TestDescribeModel(test.SimpleTestCase):
                         "name": "data_default",
                         "field_type": "JSONField",
                         "db_column": "data_default",
-                        "db_field_types": {"": "TEXT", "postgres": "JSONB"},
+                        "db_field_types": {
+                            "": "JSON",
+                            "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
+                            "postgres": "JSONB",
+                        },
                         "python_type": "Union[dict, list]",
                         "generated": False,
                         "nullable": False,
@@ -1321,7 +1376,12 @@ class TestDescribeModel(test.SimpleTestCase):
                         "name": "data_validate",
                         "field_type": "JSONField",
                         "db_column": "data_validate",
-                        "db_field_types": {"": "TEXT", "postgres": "JSONB"},
+                        "db_field_types": {
+                            "": "JSON",
+                            "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
+                            "postgres": "JSONB",
+                        },
                         "python_type": "Union[dict, list]",
                         "generated": False,
                         "nullable": True,
@@ -1354,6 +1414,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "description": "This model contains many JSON blobs",
                 "docstring": "This model contains many JSON blobs",
                 "unique_together": [],
+                "indexes": [],
                 "pk_field": {
                     "name": "id",
                     "field_type": fields.IntField,
@@ -1367,14 +1428,19 @@ class TestDescribeModel(test.SimpleTestCase):
                     "default": None,
                     "description": None,
                     "docstring": None,
-                    "constraints": {"ge": 1, "le": 2147483647},
+                    "constraints": {"ge": -2147483648, "le": 2147483647},
                 },
                 "data_fields": [
                     {
                         "name": "data",
                         "field_type": fields.JSONField,
                         "db_column": "data",
-                        "db_field_types": {"": "TEXT", "postgres": "JSONB"},
+                        "db_field_types": {
+                            "": "JSON",
+                            "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
+                            "postgres": "JSONB",
+                        },
                         "python_type": Union[dict, list],
                         "generated": False,
                         "nullable": False,
@@ -1389,7 +1455,12 @@ class TestDescribeModel(test.SimpleTestCase):
                         "name": "data_null",
                         "field_type": fields.JSONField,
                         "db_column": "data_null",
-                        "db_field_types": {"": "TEXT", "postgres": "JSONB"},
+                        "db_field_types": {
+                            "": "JSON",
+                            "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
+                            "postgres": "JSONB",
+                        },
                         "python_type": Union[dict, list],
                         "generated": False,
                         "nullable": True,
@@ -1404,7 +1475,12 @@ class TestDescribeModel(test.SimpleTestCase):
                         "name": "data_default",
                         "field_type": fields.JSONField,
                         "db_column": "data_default",
-                        "db_field_types": {"": "TEXT", "postgres": "JSONB"},
+                        "db_field_types": {
+                            "": "JSON",
+                            "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
+                            "postgres": "JSONB",
+                        },
                         "python_type": Union[dict, list],
                         "generated": False,
                         "nullable": False,
@@ -1419,7 +1495,12 @@ class TestDescribeModel(test.SimpleTestCase):
                         "name": "data_validate",
                         "field_type": fields.JSONField,
                         "db_column": "data_validate",
-                        "db_field_types": {"": "TEXT", "postgres": "JSONB"},
+                        "db_field_types": {
+                            "": "JSON",
+                            "mssql": "NVARCHAR(MAX)",
+                            "oracle": "NCLOB",
+                            "postgres": "JSONB",
+                        },
                         "python_type": Union[dict, list],
                         "generated": False,
                         "nullable": True,

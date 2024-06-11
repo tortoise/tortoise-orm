@@ -1,5 +1,20 @@
+import sys
+import warnings
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    overload,
+)
 
 from pypika.terms import Term
 
@@ -9,11 +24,30 @@ from tortoise.validators import Validator
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
-# TODO: Replace this with an enum
-CASCADE = "CASCADE"
-RESTRICT = "RESTRICT"
-SET_NULL = "SET NULL"
-SET_DEFAULT = "SET DEFAULT"
+if sys.version_info >= (3, 11):
+    from enum import StrEnum
+else:  # pragma: no cover
+
+    class StrEnum(str, Enum):
+        __str__ = str.__str__
+
+
+VALUE = TypeVar("VALUE")
+
+
+class OnDelete(StrEnum):
+    CASCADE = "CASCADE"
+    RESTRICT = "RESTRICT"
+    SET_NULL = "SET NULL"
+    SET_DEFAULT = "SET DEFAULT"
+    NO_ACTION = "NO ACTION"
+
+
+CASCADE = OnDelete.CASCADE
+RESTRICT = OnDelete.RESTRICT
+SET_NULL = OnDelete.SET_NULL
+SET_DEFAULT = OnDelete.SET_DEFAULT
+NO_ACTION = OnDelete.NO_ACTION
 
 
 class _FieldMeta(type):
@@ -21,28 +55,28 @@ class _FieldMeta(type):
     def __new__(mcs, name: str, bases: Tuple[Type, ...], attrs: dict):
         if len(bases) > 1 and bases[0] is Field:
             # Instantiate class with only the 1st base class (should be Field)
-            cls = type.__new__(mcs, name, (bases[0],), attrs)  # type: Type[Field]
+            cls = type.__new__(mcs, name, (bases[0],), attrs)
             # All other base classes are our meta types, we store them in class attributes
             cls.field_type = bases[1] if len(bases) == 2 else Union[bases[1:]]  # type: ignore
             return cls
         return type.__new__(mcs, name, bases, attrs)
 
 
-class Field(metaclass=_FieldMeta):
+class Field(Generic[VALUE], metaclass=_FieldMeta):
     """
     Base Field type.
 
     :param source_field: Provide a source_field name if the DB column name needs to be
-        something specific instead of enerated off the field name.
+        something specific instead of generated off the field name.
     :param generated: Is this field DB-generated?
-    :param pk: Is this field a Primary Key? Can only have a single such field on the Model,
+    :param primary_key: Is this field a Primary Key? Can only have a single such field on the Model,
         and if none is specified it will autogenerate a default primary key called ``id``.
     :param null: Is this field nullable?
     :param default: A default value for the field if not specified on Model creation.
         This can also be a callable for dynamic defaults in which case we will call it.
         The default value will not be part of the schema.
     :param unique: Is this field unique?
-    :param index: Should this field be indexed by itself?
+    :param db_index: Should this field be indexed by itself?
     :param description: Field description. Will also appear in ``Tortoise.describe_model()``
         and as DB comments in the generated DDL.
     :param validators: Validators for this field.
@@ -71,7 +105,7 @@ class Field(metaclass=_FieldMeta):
 
         If the DB driver natively supports this Python type, should we skip it?
         This is for optimization purposes only, where we don't need to force type conversion
-        to and fro between Python and the DB.
+        between Python and the DB.
 
     .. attribute:: allows_generated
         :annotation: bool = False
@@ -124,42 +158,83 @@ class Field(metaclass=_FieldMeta):
     SQL_TYPE: str = None  # type: ignore
     GENERATED_SQL: str = None  # type: ignore
 
-    # This method is just to make IDE/Linters happy
-    def __new__(cls, *args: Any, **kwargs: Any) -> "Field":
-        return super().__new__(cls)
+    # These methods are just to make IDE/Linters happy:
+    if TYPE_CHECKING:
+
+        def __new__(cls, *args: Any, **kwargs: Any) -> "Field[VALUE]":
+            return super().__new__(cls)
+
+        @overload
+        def __get__(self, instance: None, owner: Type["Model"]) -> "Field[VALUE]": ...
+
+        @overload
+        def __get__(self, instance: "Model", owner: Type["Model"]) -> VALUE: ...
+
+        def __get__(
+            self, instance: Optional["Model"], owner: Type["Model"]
+        ) -> "Field[VALUE] | VALUE": ...
+
+        def __set__(self, instance: "Model", value: VALUE) -> None: ...
 
     def __init__(
         self,
         source_field: Optional[str] = None,
         generated: bool = False,
-        pk: bool = False,
+        primary_key: Optional[bool] = None,
         null: bool = False,
         default: Any = None,
         unique: bool = False,
-        index: bool = False,
+        db_index: Optional[bool] = None,
         description: Optional[str] = None,
         model: "Optional[Model]" = None,
         validators: Optional[List[Union[Validator, Callable]]] = None,
         **kwargs: Any,
     ) -> None:
-        # TODO: Rename pk to primary_key, alias pk, deprecate
-        # TODO: Rename index to db_index, alias index, deprecate
-        if not self.indexable and (unique or index):
+        if (index := kwargs.pop("index", None)) is not None:
+            if db_index is None:
+                warnings.warn(
+                    "`index` is deprecated, please use `db_index` instead",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                db_index = index
+            elif db_index != index:
+                raise ConfigurationError(
+                    f"{self.__class__.__name__} can't set both db_index and index"
+                )
+        if not self.indexable and (unique or db_index):
             raise ConfigurationError(f"{self.__class__.__name__} can't be indexed")
-        if pk and null:
-            raise ConfigurationError(
-                f"{self.__class__.__name__} can't be both null=True and pk=True"
-            )
-        if pk:
-            index = True
+        if (pk := kwargs.pop("pk", None)) is not None:
+            if primary_key is None:
+                warnings.warn(
+                    "`pk` is deprecated, please use `primary_key` instead",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
+                primary_key = pk
+            elif primary_key != pk:
+                raise ConfigurationError(
+                    f"{self.__class__.__name__} can't set both primary_key and pk"
+                )
+        if null:
+            if pk:
+                raise ConfigurationError(
+                    f"{self.__class__.__name__} can't be both null=True and pk=True"
+                )
+            if primary_key:
+                raise ConfigurationError(
+                    f"{self.__class__.__name__} can't be both null=True and primary_key=True"
+                )
+        if primary_key:
+            db_index = True
             unique = True
         self.source_field = source_field
         self.generated = generated
-        self.pk = pk
+        self.pk = bool(primary_key)
         self.default = default
         self.null = null
         self.unique = unique
-        self.index = index
+        self.index = bool(db_index)
         self.model_field_name = ""
         self.description = description
         self.docstring: Optional[str] = None
@@ -232,14 +307,19 @@ class Field(metaclass=_FieldMeta):
         return {}
 
     def _get_dialects(self) -> Dict[str, dict]:
-        return {
-            dialect[4:]: {
-                key: val
-                for key, val in getattr(self, dialect).__dict__.items()
-                if not key.startswith("_")
-            }
-            for dialect in [key for key in dir(self) if key.startswith("_db_")]
-        }
+        ret = {}
+        for dialect in [key for key in dir(self) if key.startswith("_db_")]:
+            item = {}
+            cls = getattr(self, dialect)
+            try:
+                cls = cls(self)
+            except TypeError:
+                pass
+            for key, val in cls.__dict__.items():
+                if not key.startswith("_"):
+                    item[key] = val
+            ret[dialect[4:]] = item
+        return ret
 
     def get_db_field_types(self) -> Optional[Dict[str, str]]:
         """

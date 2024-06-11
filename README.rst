@@ -2,20 +2,18 @@
 Tortoise ORM
 ============
 
-.. image:: https://badges.gitter.im/tortoise/community.png
-   :target: https://gitter.im/tortoise/community
 .. image:: https://img.shields.io/pypi/v/tortoise-orm.svg?style=flat
    :target: https://pypi.python.org/pypi/tortoise-orm
-.. image:: https://readthedocs.org/projects/tortoise-orm/badge/?version=latest
-   :target: http://tortoise-orm.readthedocs.io/en/latest/
 .. image:: https://pepy.tech/badge/tortoise-orm/month
-   :target: https://pepy.tech/project/tortoise-orm/month
-.. image:: https://github.com/tortoise/tortoise-orm/workflows/ci/badge.svg
+   :target: https://pepy.tech/project/tortoise-orm
+.. image:: https://github.com/tortoise/tortoise-orm/workflows/gh-pages/badge.svg
+   :target: https://github.com/tortoise/tortoise-orm/actions?query=workflow:gh-pages
+.. image:: https://github.com/tortoise/tortoise-orm/actions/workflows/ci.yml/badge.svg?branch=develop
    :target: https://github.com/tortoise/tortoise-orm/actions?query=workflow:ci
 .. image:: https://coveralls.io/repos/github/tortoise/tortoise-orm/badge.svg
    :target: https://coveralls.io/github/tortoise/tortoise-orm
-.. image:: https://api.codacy.com/project/badge/Grade/b5b77021ba284e4a9e0c033a4611b046
-   :target: https://app.codacy.com/app/Tortoise/tortoise-orm
+.. image:: https://app.codacy.com/project/badge/Grade/844030d0cb8240d6af92c71bfac764ff
+   :target: https://www.codacy.com/gh/tortoise/tortoise-orm/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=tortoise/tortoise-orm&amp;utm_campaign=Badge_Grade
 
 Introduction
 ============
@@ -25,13 +23,13 @@ Tortoise ORM is an easy-to-use ``asyncio`` ORM *(Object Relational Mapper)* insp
 Tortoise ORM was built with relations in mind and admiration for the excellent and popular Django ORM.
 It's engraved in its design that you are working not with just tables, you work with relational data.
 
-You can find the docs at `ReadTheDocs <http://tortoise-orm.readthedocs.io/en/latest/>`_
+You can find the docs at `Documentation <https://tortoise.github.io>`_
 
 .. note::
    Tortoise ORM is a young project and breaking changes are to be expected.
-   We keep a `Changelog <http://tortoise-orm.readthedocs.io/en/latest/CHANGELOG.html>`_ and it will have possible breakage clearly documented.
+   We keep a `Changelog <https://tortoise.github.io/CHANGELOG.html>`_ and it will have possible breakage clearly documented.
 
-Tortoise ORM is supported on CPython >= 3.7 for SQLite, MySQL and PostgreSQL.
+Tortoise ORM is supported on CPython >= 3.8 for SQLite, MySQL and PostgreSQL and Microsoft SQL Server and Oracle.
 
 Why was Tortoise ORM built?
 ---------------------------
@@ -78,17 +76,17 @@ You can also install with your db driver (`aiosqlite` is builtin):
     pip install tortoise-orm[asyncpg]
 
 
-Or for MySQL:
-
-.. code-block:: bash
-
-    pip install tortoise-orm[aiomysql]
-
-Or another asyncio MySQL driver `asyncmy <https://github.com/long2ice/asyncmy>`_:
+For `MySQL`:
 
 .. code-block:: bash
 
     pip install tortoise-orm[asyncmy]
+
+For `Microsoft SQL Server`/`Oracle` (**not fully tested**):
+
+.. code-block:: bash
+
+    pip install tortoise-orm[asyncodbc]
 
 Quick Tutorial
 --------------
@@ -101,29 +99,29 @@ You can start writing models like this:
 
     from tortoise.models import Model
     from tortoise import fields
-    
+
     class Tournament(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
-    
+
         def __str__(self):
             return self.name
 
 
     class Event(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
         tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
         participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
-    
+
         def __str__(self):
             return self.name
 
 
     class Team(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
-    
+
         def __str__(self):
             return self.name
 
@@ -152,9 +150,10 @@ Here we create a connection to an SQLite database in the local directory called 
 
 Tortoise ORM currently supports the following databases:
 
-* SQLite (requires ``aiosqlite``)
-* PostgreSQL (requires ``asyncpg``)
-* MySQL (requires ``aiomysql``)
+* `SQLite` (requires ``aiosqlite``)
+* `PostgreSQL` (requires ``asyncpg``)
+* `MySQL` (requires ``asyncmy``)
+* `Microsoft SQL Server`/`Oracle` (requires ``asyncodbc``)
 
 ``generate_schema`` generates the schema on an empty database. Tortoise generates schemas in safe mode by default which
 includes the ``IF NOT EXISTS`` clause, so you may include it in your main code.
@@ -167,7 +166,7 @@ After that you can start using your models:
     # Create instance by save
     tournament = Tournament(name='New Tournament')
     await tournament.save()
-    
+
     # Or by .create()
     await Event.create(name='Without participants', tournament=tournament)
     event = await Event.create(name='Test', tournament=tournament)
@@ -175,15 +174,15 @@ After that you can start using your models:
     for i in range(2):
         team = await Team.create(name='Team {}'.format(i + 1))
         participants.append(team)
-    
+
     # M2M Relationship management is quite straightforward
     # (also look for methods .remove(...) and .clear())
     await event.participants.add(*participants)
-    
+
     # You can query a related entity with async for
     async for team in event.participants:
         pass
-    
+
     # After making a related query you can iterate with regular for,
     # which can be extremely convenient when using it with other packages,
     # for example some kind of serializers with nested support
@@ -195,11 +194,11 @@ After that you can start using your models:
     selected_events = await Event.filter(
         participants=participants[0].id
     ).prefetch_related('participants', 'tournament')
-    
+
     # Tortoise supports variable depth of prefetching related entities
     # This will fetch all events for Team and in those events tournaments will be prefetched
     await Team.all().prefetch_related('events__tournament')
-    
+
     # You can filter and order by related models too
     await Tournament.filter(
         events__name__in=['Test', 'Prod']
@@ -215,6 +214,14 @@ Contributing
 
 Please have a look at the `Contribution Guide <docs/CONTRIBUTING.rst>`_.
 
+ThanksTo
+========
+
+Powerful Python IDE `Pycharm <https://www.jetbrains.com/pycharm/>`_
+from `Jetbrains <https://jb.gg/OpenSourceSupport>`_.
+
+.. image:: https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg
+    :target: https://jb.gg/OpenSourceSupport
 
 License
 =======

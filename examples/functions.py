@@ -1,11 +1,11 @@
 from tortoise import Tortoise, fields, run_async
+from tortoise.expressions import Q
 from tortoise.functions import Coalesce, Count, Length, Lower, Min, Sum, Trim, Upper
 from tortoise.models import Model
-from tortoise.query_utils import Q
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     desc = fields.TextField(null=True)
 
@@ -16,7 +16,7 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
         "models.Tournament", related_name="events"
@@ -30,7 +30,7 @@ class Event(Model):
 
 
 class Team(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     events: fields.ManyToManyRelation[Event]
@@ -71,7 +71,9 @@ async def run():
     print(await Event.all().annotate(tournament_test_id=Sum("tournament__id")).first())
 
     print(
-        await Tournament.annotate(clean_desciption=Coalesce("desc", "")).filter(clean_desciption="")
+        await Tournament.annotate(clean_description=Coalesce("desc", "")).filter(
+            clean_description=""
+        )
     )
 
     print(

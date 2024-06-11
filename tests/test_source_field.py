@@ -4,11 +4,12 @@ This module does a series of use tests on a non-source_field model,
 
 This is to test that behaviour doesn't change when one defined source_field parameters.
 """
+
 from tests.testmodels import NumberSourceField, SourceFields, StraightFields
 from tortoise.contrib import test
-from tortoise.expressions import F
+from tortoise.contrib.test.condition import NotEQ
+from tortoise.expressions import F, Q
 from tortoise.functions import Coalesce, Count, Length, Lower, Trim, Upper
-from tortoise.query_utils import Q
 
 
 class StraightFieldTests(test.TestCase):
@@ -219,6 +220,7 @@ class StraightFieldTests(test.TestCase):
         self.assertEqual(len(obj), 1)
         self.assertEqual(obj[0].chars, "aaa")
 
+    @test.requireCapability(dialect=NotEQ("mssql"))
     async def test_filter_by_aggregation_field_length(self):
         await self.model.create(chars="aaa")
         await self.model.create(chars="bbbbb")

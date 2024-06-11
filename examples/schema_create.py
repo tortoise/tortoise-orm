@@ -1,14 +1,15 @@
 """
 This example demonstrates SQL Schema generation for each DB type supported.
 """
-from tortoise import Tortoise, fields, run_async
+
+from tortoise import Tortoise, connections, fields, run_async
 from tortoise.models import Model
 from tortoise.utils import get_schema_sql
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
-    name = fields.CharField(max_length=255, description="Tournament name", index=True)
+    id = fields.IntField(primary_key=True)
+    name = fields.CharField(max_length=255, description="Tournament name", db_index=True)
     created = fields.DatetimeField(auto_now_add=True, description="Created datetime")
 
     events: fields.ReverseRelation["Event"]
@@ -18,7 +19,7 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.IntField(pk=True, description="Event ID")
+    id = fields.IntField(primary_key=True, description="Event ID")
     name = fields.CharField(max_length=255, unique=True)
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
         "models.Tournament", related_name="events", description="FK to tournament"
@@ -38,7 +39,7 @@ class Event(Model):
 
 
 class Team(Model):
-    name = fields.CharField(max_length=50, pk=True, description="The TEAM name (and PK)")
+    name = fields.CharField(max_length=50, primary_key=True, description="The TEAM name (and PK)")
 
     events: fields.ManyToManyRelation[Event]
 
@@ -49,19 +50,19 @@ class Team(Model):
 async def run():
     print("SQLite:\n")
     await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
-    sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+    sql = get_schema_sql(connections.get("default"), safe=False)
     print(sql)
 
     print("\n\nMySQL:\n")
     await Tortoise.init(db_url="mysql://root:@127.0.0.1:3306/", modules={"models": ["__main__"]})
-    sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+    sql = get_schema_sql(connections.get("default"), safe=False)
     print(sql)
 
     print("\n\nPostgreSQL:\n")
     await Tortoise.init(
         db_url="postgres://postgres:@127.0.0.1:5432/", modules={"models": ["__main__"]}
     )
-    sql = get_schema_sql(Tortoise.get_connection("default"), safe=False)
+    sql = get_schema_sql(connections.get("default"), safe=False)
     print(sql)
 
 

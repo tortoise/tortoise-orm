@@ -13,7 +13,7 @@ It's engraved in it's design that you are working not with just tables, you work
 
 Source & issue trackers are available at `<https://github.com/tortoise/tortoise-orm/>`_
 
-Tortoise ORM is supported on CPython >= 3.7 for SQLite, MySQL and PostgreSQL.
+Tortoise ORM is supported on CPython >= 3.8 for SQLite, MySQL and PostgreSQL.
 
 Introduction
 ============
@@ -58,7 +58,7 @@ Define your models like so:
     from tortoise import fields
 
     class Tournament(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
 
 Initialise your models and database like so:
@@ -101,10 +101,10 @@ Pluggable Database backends
 ---------------------------
 Tortoise ORM currently supports the following :ref:`databases`:
 
-* PostgreSQL >= 9.4 (using ``asyncpg``)
-* SQLite (using ``aiosqlite``)
-* MySQL/MariaDB (using ``aiomysql`` or use `asyncmy <https://github.com/long2ice/asyncmy>`_)
-
+* `PostgreSQL` >= 9.4 (using ``asyncpg``)
+* `SQLite` (using ``aiosqlite``)
+* `MySQL`/`MariaDB` (using `asyncmy <https://github.com/long2ice/asyncmy>`_)
+* `Microsoft SQL Server`/`Oracle` (using ``asyncodbc``)
 
 And more
 --------

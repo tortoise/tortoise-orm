@@ -29,6 +29,13 @@ Functions apply a transform on each instance of a Field.
 
 .. autoclass:: tortoise.functions.Upper
 
+.. autoclass:: tortoise.functions.Concat
+
+.. autoclass:: tortoise.contrib.mysql.functions.Rand
+
+.. autoclass:: tortoise.contrib.postgres.functions.Random
+
+.. autoclass:: tortoise.contrib.sqlite.functions.Random
 
 Aggregates
 ==========
@@ -58,13 +65,12 @@ Base function class
 
 Custom functions
 ================
-You can custom functions which not builtin, such as ``TruncMonth`` and ``JsonExtract`` etc.
+You can define custom functions which are not builtin, such as ``TruncMonth`` and ``JsonExtract`` etc.
 
 .. code-block:: python3
 
     from pypika import CustomFunction
-    from tortoise.expressions import F
-    from tortoise.functions import Function
+    from tortoise.expressions import F, Function
 
     class TruncMonth(Function):
         database_func = CustomFunction("DATE_FORMAT", ["name", "dt_format"])

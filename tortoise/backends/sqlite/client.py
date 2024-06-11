@@ -17,7 +17,11 @@ from tortoise.backends.base.client import (
 )
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
-from tortoise.exceptions import IntegrityError, OperationalError, TransactionManagementError
+from tortoise.exceptions import (
+    IntegrityError,
+    OperationalError,
+    TransactionManagementError,
+)
 
 FuncType = Callable[..., Any]
 F = TypeVar("F", bound=FuncType)
@@ -71,7 +75,7 @@ class SqliteClient(BaseDBAsyncClient):
                 "Created connection %s with params: filename=%s %s",
                 self._connection,
                 self.filename,
-                " ".join([f"{k}={v}" for k, v in self.pragmas.items()]),
+                " ".join(f"{k}={v}" for k, v in self.pragmas.items()),
             )
 
     async def close(self) -> None:
@@ -81,8 +85,9 @@ class SqliteClient(BaseDBAsyncClient):
                 "Closed connection %s with params: filename=%s %s",
                 self._connection,
                 self.filename,
-                " ".join([f"{k}={v}" for k, v in self.pragmas.items()]),
+                " ".join(f"{k}={v}" for k, v in self.pragmas.items()),
             )
+
             self._connection = None
 
     async def db_create(self) -> None:
@@ -100,7 +105,7 @@ class SqliteClient(BaseDBAsyncClient):
                 raise e
 
     def acquire_connection(self) -> ConnectionWrapper:
-        return ConnectionWrapper(self._connection, self._lock)
+        return ConnectionWrapper(self._lock, self)
 
     def _in_transaction(self) -> "TransactionContext":
         return TransactionContext(TransactionWrapper(self))
@@ -159,6 +164,7 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
         self.log = connection.log
         self._finalized = False
         self.fetch_inserted = connection.fetch_inserted
+        self._parent = connection
 
     def _in_transaction(self) -> "TransactionContext":
         return NestedTransactionContext(self)

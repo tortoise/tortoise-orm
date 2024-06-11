@@ -5,13 +5,14 @@ Key points in this example are use of ForeignKeyField and ManyToManyField
 to declare relations and use of .prefetch_related() and .fetch_related()
 to get this related objects
 """
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.exceptions import NoValuesFetched
 from tortoise.models import Model
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     events: fields.ReverseRelation["Event"]
@@ -21,7 +22,7 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
         "models.Tournament", related_name="events"
@@ -39,7 +40,7 @@ class Address(Model):
     street = fields.CharField(max_length=128)
 
     event: fields.OneToOneRelation[Event] = fields.OneToOneField(
-        "models.Event", on_delete=fields.CASCADE, related_name="address", pk=True
+        "models.Event", on_delete=fields.OnDelete.CASCADE, related_name="address", primary_key=True
     )
 
     def __str__(self):
@@ -47,7 +48,7 @@ class Address(Model):
 
 
 class Team(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     events: fields.ManyToManyRelation[Event]

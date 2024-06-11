@@ -2,15 +2,16 @@
 This example shows how relations between models especially unique field work.
 
 Key points in this example are use of ForeignKeyField and OneToOneField has to_field.
-For other basic parts, it is the same as relation exmaple.
+For other basic parts, it is the same as relation example.
 """
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
 from tortoise.query_utils import Prefetch
 
 
 class School(Model):
-    uuid = fields.UUIDField(pk=True)
+    uuid = fields.UUIDField(primary_key=True)
     name = fields.TextField()
     id = fields.IntField(unique=True)
 
@@ -19,7 +20,7 @@ class School(Model):
 
 
 class Student(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     school: fields.ForeignKeyRelation[School] = fields.ForeignKeyField(
         "models.School", related_name="students", to_field="id"
@@ -27,10 +28,10 @@ class Student(Model):
 
 
 class Principal(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     school: fields.OneToOneRelation[School] = fields.OneToOneField(
-        "models.School", on_delete=fields.CASCADE, related_name="principal", to_field="id"
+        "models.School", on_delete=fields.OnDelete.CASCADE, related_name="principal", to_field="id"
     )
 
 

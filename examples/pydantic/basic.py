@@ -1,13 +1,14 @@
 """
 This example demonstrates pydantic serialisation
 """
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.contrib.pydantic import pydantic_model_creator, pydantic_queryset_creator
 from tortoise.models import Model
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
 
@@ -18,7 +19,7 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
     tournament: fields.ForeignKeyNullableRelation[Tournament] = fields.ForeignKeyField(
@@ -39,7 +40,7 @@ class Address(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
 
     event: fields.OneToOneRelation[Event] = fields.OneToOneField(
-        "models.Event", on_delete=fields.CASCADE, related_name="address", pk=True
+        "models.Event", on_delete=fields.OnDelete.CASCADE, related_name="address", primary_key=True
     )
 
     class Meta:
@@ -47,7 +48,7 @@ class Address(Model):
 
 
 class Team(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
 
@@ -60,7 +61,6 @@ class Team(Model):
 async def run():
     await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
     await Tortoise.generate_schemas()
-
     Event_Pydantic = pydantic_model_creator(Event)
     Event_Pydantic_List = pydantic_queryset_creator(Event)
     Tournament_Pydantic = pydantic_model_creator(Tournament)
@@ -87,16 +87,16 @@ async def run():
     await event3.participants.add(team1, team3)
 
     p = await Event_Pydantic.from_tortoise_orm(await Event.get(name="Test"))
-    print("One Event:", p.json(indent=4))
+    print("One Event:", p.model_dump_json(indent=4))
 
     p = await Tournament_Pydantic.from_tortoise_orm(await Tournament.get(name="New Tournament"))
-    print("One Tournament:", p.json(indent=4))
+    print("One Tournament:", p.model_dump_json(indent=4))
 
     p = await Team_Pydantic.from_tortoise_orm(await Team.get(name="Onesies"))
-    print("One Team:", p.json(indent=4))
+    print("One Team:", p.model_dump_json(indent=4))
 
     pl = await Event_Pydantic_List.from_queryset(Event.filter(address__event_id__isnull=True))
-    print("All Events without addresses:", pl.json(indent=4))
+    print("All Events without addresses:", pl.model_dump_json(indent=4))
 
 
 if __name__ == "__main__":

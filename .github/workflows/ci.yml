@@ -1,54 +1,76 @@
 name: ci
-on: [ push, pull_request ]
+on:
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+    branches-ignore:
+      - main
 jobs:
   test:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:latest
+        image: postgres
         ports:
           - 5432:5432
         env:
           POSTGRES_PASSWORD: 123456
           POSTGRES_USER: postgres
         options: --health-cmd=pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      mysql:
+        image: mysql
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_ROOT_PASSWORD: 123456
+        options: --health-cmd="mysqladmin ping" --health-interval 10s --health-timeout 5s --health-retries 5
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2019-CU15-ubuntu-20.04
+        ports:
+          - 1433:1433
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: Abcd12345678
+        options: >-
+          --health-cmd "/opt/mssql-tools/bin/sqlcmd -U sa -P Abcd12345678 -Q 'select 1' -b -o /dev/null"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       TORTOISE_TEST_MODULES: tests.testmodels
-      TORTOISE_MYSQL_PASS: root
+      TORTOISE_MYSQL_PASS: 123456
       TORTOISE_POSTGRES_PASS: 123456
+      TORTOISE_MSSQL_PASS: Abcd12345678
+      TORTOISE_MSSQL_DRIVER: ODBC Driver 18 for SQL Server
     strategy:
       matrix:
-        python-version: [ 3.7, 3.8 ]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
     steps:
-      - name: Start MySQL
-        run: sudo systemctl start mysql.service
-      - uses: actions/cache@v2
+      - uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/poetry.lock') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install and configure Poetry
-        uses: snok/install-poetry@v1.1.1
-        with:
-          virtualenvs-create: false
+        run: |
+          pip install -U pip poetry
+          poetry config virtualenvs.create false
       - name: Install requirements
         run: make deps
+      - name: Install ODBC driver
+        run: |
+          sudo curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+          sudo curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list -o /etc/apt/sources.list.d/mssql-release.list
+          sudo apt-get update
+          ACCEPT_EULA=Y sudo apt-get install -y msodbcsql18
       - name: Run ci
         run: make ci
-      - name: Run green
-        env:
-          TEST_RUNNER: green
-        run: green
-      - name: Run nose2
-        env:
-          TEST_RUNNER: nose2
-        run: |
-          nose2 --plugin tortoise.contrib.test.nose2 --db-module tests.testmodels --db-url sqlite://:memory:
       - name: Upload Coverage
         run: coveralls --service=github
         env:
@@ -60,7 +82,6 @@ jobs:
     name: Finish Coveralls
     needs: test
     runs-on: ubuntu-latest
-    container: python:3-slim
     steps:
       - name: Finished
         run: |

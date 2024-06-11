@@ -4,17 +4,262 @@
 Changelog
 =========
 
-
 .. rst-class:: emphasize-children
+
+0.21
+====
+
+0.21.3
+------
+Fixed
+^^^^^
+- Fix `bulk_update` when using source_field for pk (#1633)
+
+0.21.2
+------
+Added
+^^^^^
+- Add `create_unique_index` argument to M2M field and default if it is true (#1620)
+
+0.21.1
+------
+Fixed
+^^^^^
+- Fix error on using old style `pk=True`
+
+0.21.0
+------
+Added
+^^^^^
+- Enhancement for FastAPI lifespan support (#1371)
+- Add __eq__ method to Q to more easily test dynamically-built queries (#1506)
+- Added PlainToTsQuery function for postgres (#1347)
+- Allow field's default keyword to be async function (#1498)
+- Add support for queryset slicing. (#1341)
+
+Fixed
+^^^^^
+- Fix `DatetimeField` use '__year' report `'int' object has no attribute 'utcoffset'`. (#1575)
+- Fix `bulk_update` when using custom fields. (#1564)
+- Fix `optional` parameter in `pydantic_model_creator` does not work for pydantic v2. (#1551)
+- Fix `get_annotations` now evaluates annotations in the default scope instead of the app namespace. (#1552)
+- Fix `get_or_create` method. (#1404)
+- Use `index_name` instead of `BaseSchemaGenerator._generate_index_name` to generate index name.
+- Use subquery for count() and exists() in `QuerySet` to match count result to `QuerySet` result. (#1607)
+
+Changed
+^^^^^^^
+- Change `utils.chunk` from function to return iterables lazily.
+- Removed lower bound of id keys in generated pydantic models. (#1602)
+- Rename Field initial arguments `pk`/`index` to `primary_key`/`db_index`. (#1621)
+- Renamed `Model.check` method to `Model._check` to avoid naming collision issues  (#1559) (#1550)
+
+Breaking Changes
+^^^^^^^^^^^^^^^^
+- `bulk_create` now does not return anything. (#1614)
+
+0.20
+====
+
+0.20.1
+------
+Added
+^^^^^
+- Add binary compression support for `UUIDField` in `MySQL`. (#1458)
+- Only `Model`, `Tortoise`, `BaseDBAsyncClient`, `__version__`, and `connections` are now exported from `tortoise`
+- Add parameter `validators` to `pydantic_model_creator`. (#1471)
+
+Fixed
+^^^^^
+- Fix order of fields in `ValuesListQuery` when it has more than 10 fields. (#1492)
+- Fix pydantic v2 pydantic_model_creator nullable field not optional. (#1454)
+- Fix pydantic v2.5 unittest error. (#1535)
+- Fix pydantic_model_creator `exclude_readonly` parameter not working.
+- Fix annotation propagation for non-filter queries. (#1590)
+- Fix blacksheep example unittest error. (#1534)
+
+0.20.0
+------
+Added
+^^^^^
+- Allow ForeignKeyField(on_delete=NO_ACTION) (#1393)
+- Support `pydantic` 2.0. (#1433)
+
+Fixed
+^^^^^
+- Fix foreign key constraint not generated on MSSQL Server. (#1400)
+- Fix testcase error with python3.11 (#1308)
+
+Breaking Changes
+^^^^^^^^^^^^^^^^
+- Drop support for `pydantic` 1.x.
+- Drop support for `python` 3.7.
+- Param `config_class` of `pydantic_model_creator` is renamed to `model_config`.
+- Attr `config_class` of `PydanticMeta` is renamed to `model_config`.
+
+0.19
+====
+
+0.19.3
+------
+Added
+^^^^^
+- Added config_class option to pydantic model genator that allows the developer to customize the generated pydantic model's `Config` class. (#1048)
+Fixed
+^^^^^
+- Fastapi example test not working. (#1029)
+- Fix create index sql error. (#1202)
+- Fix dependencies resolve error. (#1246)
+- Fix ignoring zero value of limit. (#1270)
+- Fix ForeignKeyField is none when fk is integer 0. (#1274)
+- Fix limit ignore zero. (#1270)
+- Fix min/max value validators for decimal fields. (#1291)
+
+0.19.2
+------
+Added
+^^^^^
+- Added `schema` attribute to Model's Meta to specify exact schema to use with the model.
+Fixed
+^^^^^
+- Mixin does not work. (#1133)
+- `using_db` wrong position in model shortcut methods. (#1150)
+- Fixed connection to `Oracle` database by adding database info to DBQ in connection string.
+- Fixed ORA-01435 error while using `Oracle` database (#1155)
+- Fixed processing of `ssl` option in MySQL connection string.
+- Fixed type hinting for `QuerySetSingle`.
+
+0.19.1
+------
+Added
+^^^^^
+- Added `Postgres`/`SQLite` partial indexes support. (#1103)
+- Added `Microsoft SQL Server`/`Oracle` support, powered by `asyncodbc <https://github.com/tortoise/asyncodbc>`_, note that which is **not fully tested**.
+- Added `optional` parameter to `pydantic_model_creator`. (#770)
+- Added `using_db` parameter to `Model` shortcut methods. (#1109)
+Fixed
+^^^^^
+- `TimeField` for `MySQL` will return `datetime.timedelta` object instead of `datetime.time` object.
+- Fix on conflict do nothing. (#1122)
+- Fix `_custom_generated_pk` attribute not set in `Model._init_from_db` method. (#633)
+
+0.19.0
+------
+Added
+^^^^^
+- Added psycopg backend support.
+- Added a new unified and robust connection management interface to access DB connections which includes support for
+  lazy connection creation and much more. For more details, check out this `PR <https://github.com/tortoise/tortoise-orm/pull/1001>`_
+- Added `TimeField`. (#1054)
+- Added `ArrayField`.
+Fixed
+^^^^^
+- Fix `bulk_create` doesn't work correctly with more than 1 update_fields. (#1046)
+- Fix `bulk_update` errors when setting null for a smallint column on postgres. (#1086)
+Deprecated
+^^^^^^^^^^
+- Existing connection management interface and related public APIs which are deprecated:
+ - `Tortoise.get_connection`
+ - `Tortoise.close_connections`
+Changed
+^^^^^^^
+- Refactored `tortoise.transactions.get_connection` method to `tortoise.transactions._get_connection`.
+ Note that this method has now been marked **private to this module and is not part of the public API**
+
+0.18.1
+------
+Added
+^^^^^
+- Add on conflict do update for bulk_create. (#1024)
+Fixed
+^^^^^
+- Fix `bulk_create` error. (#1012)
+- Fix unittest invalid.
+- Fix `bulk_update` in `postgres` with some type. (#968) (#1022)
+
+0.18.0
+------
+Added
+^^^^^
+- Add Case-When support. (#943)
+- Add `Rand`/`Random` function in contrib. (#944)
+- Add `ON CONFLICT` support in `INSERT` statements. (#428)
+Fixed
+^^^^^
+- Fix `bulk_update` error when pk is uuid. (#986)
+- Fix mutable default value. (#969)
+Changed
+^^^^^^^
+- Move `Function`, `Aggregate` from `functions.py` to `expressions.py`. (#943)
+- Move `Q` from `query_utils.py` to `expressions.py`.
+- Replace `python-rapidjson` to `orjson`.
+Removed
+^^^^^^^
+- Remove `asynctest` and use `unittest.IsolatedAsyncioTestCase`. (#416)
+- Remove `py37` support in tests.
+- Remove `green` and `nose2` test runner.
 
 0.17
 ====
+0.17.8
+------
+Added
+^^^^^
+- Add `Model.raw` method to support the raw sql query.
+- Add `QuerySet.bulk_update` method. (#924)
+- Add `QuerySet.in_bulk` method.
+- Add `MaxValueValidator` and `MinValueValidator` (#927)
+Fixed
+^^^^^
+- Fix `QuerySet` subclass being lost when `_clone` is run on the instance.
+- Fix bug in `.values` with `source_field`. (#844)
+- Fix `contrib.blacksheep` exception handlers, use builtin json response. (#914)
+- Fix Indexes defined in Meta class do not make use of `exists` parameter in their template (#928)
+Changed
+^^^^^^^
+- Allow negative values with `IntEnumField`. (#889)
+- Make `.values()` and `.values_list()` awaited return more consistent. (#899)
+
+0.17.7
+------
+- Fix `select_related` behaviour for forward relation. (#825)
+- Fix bug in nested `QuerySet` and `Manager`. (#864)
+- Add `Concat` function for MySQL/PostgreSQL. (#873)
+- Patch for use_index/force_index mutable problem when making query. (#888)
+- Lift annotation field's priority in make query. (#883)
+- Make use/force index available in select type Query. (#893)
+- Fix all logging to use Tortoise's logger instead of root logger. (#879)
+- Rename `db_client` logger to `tortoise.db_client`.
+- Add `indexes` to `Model.describe`.
+
+0.17.6
+------
+- Add `RawSQL` expression.
+- Fix columns count with annotations in `_make_query`. (#776)
+- Make functions nested. (#828)
+- Add `db_constraint` in field describe.
+
+0.17.5
+------
+- Set `field_type` of fk and o2o same to which relation field type. (#443)
+- Fix error sql for `.sql()` call more than once. (#796)
+- Fix incorrect splitting of the import route when using Router (#798)
+- Fix `filter` error after `annotate` with `F`. (#806)
+- Fix `select_related` for reverse relation. (#808)
+
+0.17.4
+------
+- Fix `update_or_create`. (#782)
+- Add `contains`, `contained_by` and `filter` to `JSONField`
+
 0.17.3
 ------
 - Fix duplicates when using custom through association class on M2M relations
 - Fix `update_or_create` and `get_or_create`. (#721)
 - Fix `refresh_from_db` without fields pass. (#734)
 - Make `update` query work with `limit` and `order_by`. (#748)
+- Add `Subquery` expression. (#756) (#9) (#337)
+- Use JSON in JSONField.
 
 0.17.2
 ------
@@ -209,7 +454,7 @@ Other changes
 ------
 * More consistent escaping of db columns, fixes using SQL reserved keywords as field names with a function.
 * Fix the aggregates using the wrong side of the join when doing a self-referential aggregation.
-* Fix ``F`` funtions wrapped forgetting about ``distinct=True``
+* Fix ``F`` functions wrapped forgetting about ``distinct=True``
 
 0.16.3
 ------
@@ -331,7 +576,7 @@ New features:
   * Relationships (FK/O2O/M2M)
   * Callables
 
-  At this stage we only suport serialisation, not deserialisation.
+  At this stage we only support serialisation, not deserialisation.
 
   For mode information, please see :ref:`contrib_pydantic`
 
@@ -456,7 +701,7 @@ Removals:
 - Changed ``TextField`` to use ``LONGTEXT`` for MySQL to allow for larger than 64KB of text.
 - De-duplicate index if specified on both ``index=true`` and as part of ``indexes``
 - Primary Keyed ``TextField`` is marked as deprecated.
-  We can't guarnatee that it will be properly indexed or unique in all cases.
+  We can't guarantee that it will be properly indexed or unique in all cases.
 - One can now disable the backwards relation for FK/O2O relations by passing ``related_name=False``
 - One can now pass a PK value to a generated field, and Tortoise ORM will use that as the PK as expected.
   This allows one to have a model that has a autonumber PK, but setting it explicitly if required.
@@ -500,7 +745,7 @@ Removals:
      )
 
 - Prefetching is done concurrently now, sending all prefetch requests at the same time instead of in sequence.
-- Enabe foreign key enforcement on SQLite for builds where it was optional.
+- Enable foreign key enforcement on SQLite for builds where it was optional.
 
 0.15.2
 ------
@@ -577,7 +822,7 @@ Enhancements:
 - Annotations can be selected inside ``Queryset.values()`` and ``Queryset.values_list()`` expressions.
 - Added support for Python 3.8
 - The Foreign Key property is now ``await``-able as long as one didn't populate it via ``.prefetch_related()``
-- One can now specify compound indexes in the ``Meta:`` class using ``indexes``. It works just like ``unique_toghether``.
+- One can now specify compound indexes in the ``Meta:`` class using ``indexes``. It works just like ``unique_together``.
 
 Bugfixes:
 ^^^^^^^^^
@@ -750,7 +995,7 @@ Docs/examples:
     If you define the ``__models__`` variable in ``yourapp.models`` (or wherever you specify to load your models from),
     ``generate_schema()`` will use that list, rather than automatically finding all models for you.
 
-- Split model consructor into from-Python and from-DB paths, leading to 15-25% speedup for large fetch operations.
+- Split model constructor into from-Python and from-DB paths, leading to 15-25% speedup for large fetch operations.
 - More efficient queryset manipulation, 5-30% speedup for small fetches.
 
 0.12.5
@@ -800,7 +1045,7 @@ Docs/examples:
   .. note::
      This is a big feature change. It should not break any existing implementations.
 
-  That primary key will be accesible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
+  That primary key will be accessible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
   That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc…
 
   We currently support single (non-composite) primary keys of any indexable field type, but only these field types are recommended:
@@ -835,7 +1080,7 @@ Docs/examples:
 0.11.13
 -------
 - Fixed connection retry to work with transactions
-- Added broader PostgreSQL connection failiure detection
+- Added broader PostgreSQL connection failure detection
 
 0.11.12
 -------
@@ -999,7 +1244,7 @@ Docs/examples:
 
 0.10.2
 ------
-- Set single_connection to True by default, as there is known issues with conection pooling
+- Set single_connection to True by default, as there is known issues with connection pooling
 - Updated documentation
 
 0.10.1

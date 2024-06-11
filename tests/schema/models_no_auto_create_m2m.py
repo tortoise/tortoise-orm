@@ -8,8 +8,8 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
-    tid = fields.SmallIntField(pk=True)
-    name = fields.CharField(max_length=100, description="Tournament name", index=True)
+    tid = fields.SmallIntField(primary_key=True)
+    name = fields.CharField(max_length=100, description="Tournament name", db_index=True)
     created = fields.DatetimeField(auto_now_add=True, description="Created */'`/* datetime")
 
     class Meta:
@@ -17,12 +17,12 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.BigIntField(pk=True, description="Event ID")
+    id = fields.BigIntField(primary_key=True, description="Event ID")
     name = fields.TextField()
-    tournament = fields.ForeignKeyField(
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
         "models.Tournament", related_name="events", description="FK to tournament"
     )
-    participants = fields.ManyToManyField(
+    participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team",
         related_name="events",
         through="teamevents",
@@ -40,8 +40,12 @@ class Event(Model):
 
 
 class TeamEvent(Model):
-    team = fields.ForeignKeyField("models.Team", related_name="teams")
-    event = fields.ForeignKeyField("models.Event", related_name="events")
+    team: fields.ForeignKeyRelation["Team"] = fields.ForeignKeyField(
+        "models.Team", related_name="teams"
+    )
+    event: fields.ForeignKeyRelation[Event] = fields.ForeignKeyField(
+        "models.Event", related_name="events"
+    )
     score = fields.IntField()
 
     class Meta:
@@ -51,10 +55,14 @@ class TeamEvent(Model):
 
 
 class Team(Model):
-    name = fields.CharField(max_length=50, pk=True, description="The TEAM name (and PK)")
+    name = fields.CharField(max_length=50, primary_key=True, description="The TEAM name (and PK)")
     key = fields.IntField()
-    manager = fields.ForeignKeyField("models.Team", related_name="team_members", null=True)
-    talks_to = fields.ManyToManyField("models.Team", related_name="gets_talked_to")
+    manager: fields.ForeignKeyNullableRelation["Team"] = fields.ForeignKeyField(
+        "models.Team", related_name="team_members", null=True
+    )
+    talks_to: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
+        "models.Team", related_name="gets_talked_to"
+    )
 
     class Meta:
         table_description = "The TEAMS!"

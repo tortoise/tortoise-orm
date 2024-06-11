@@ -14,3 +14,4 @@ Contrib
    contrib/aiohttp
    contrib/mysql
    contrib/postgres
+   contrib/blacksheep

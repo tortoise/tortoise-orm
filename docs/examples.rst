@@ -14,3 +14,4 @@ Examples
    examples/sanic
    examples/starlette
    examples/aiohttp
+   examples/blacksheep

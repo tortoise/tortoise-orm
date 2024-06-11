@@ -20,7 +20,7 @@ With that you can start describing your own models like that
 .. code-block:: python3
 
     class Tournament(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
         created = fields.DatetimeField(auto_now_add=True)
 
@@ -29,7 +29,7 @@ With that you can start describing your own models like that
 
 
     class Event(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
         tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
         participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
@@ -41,7 +41,7 @@ With that you can start describing your own models like that
 
 
     class Team(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
 
         def __str__(self):
@@ -58,7 +58,7 @@ Every model should be derived from base model. You also can derive from your own
 .. code-block:: python3
 
     class AbstractTournament(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.TextField()
         created = fields.DatetimeField(auto_now_add=True)
 
@@ -97,7 +97,7 @@ That alias field can be used as a field name when doing filtering e.g. ``.filter
     CharField
     UUIDField
 
-One must define a primary key by setting a ``pk`` parameter to ``True``. 
+One must define a primary key by setting a ``primary_key`` parameter to ``True``.
 If you don't define a primary key, we will create a primary key of type ``IntField`` with name of ``id`` for you.
 
 .. note::
@@ -107,11 +107,11 @@ Any of these are valid primary key definitions in a Model:
 
 .. code-block:: python3
 
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
 
-    checksum = fields.CharField(pk=True)
+    checksum = fields.CharField(primary_key=True)
 
-    guid = fields.UUIDField(pk=True)
+    guid = fields.UUIDField(primary_key=True)
 
 
 Inheritance
@@ -141,7 +141,7 @@ Let's have a look at some examples.
         name = fields.CharField(40, unique=True)
 
     class MyAbstractBaseModel(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
 
         class Meta:
             abstract = True
@@ -149,7 +149,7 @@ Let's have a look at some examples.
     class UserModel(TimestampMixin, MyAbstractBaseModel):
         # Overriding the id definition
         # from MyAbstractBaseModel
-        id = fields.UUIDField(pk=True)
+        id = fields.UUIDField(primary_key=True)
 
         # Adding additional fields
         first_name = fields.CharField(20, null=True)
@@ -182,6 +182,11 @@ The ``Meta`` class
 
         Set to ``True`` to indicate this is an abstract class
 
+    .. attribute:: schema
+        :annotation: = ""
+
+        Set this to configure a schema name, where table exists
+
     .. attribute:: table
         :annotation: = ""
 
@@ -203,7 +208,7 @@ The ``Meta`` class
 
             unique_together=("field_a", "field_b")
             unique_together=(("field_a", "field_b"), )
-            unique_together=(("field_a", "field_b"), ("field_c", "field_d", "field_e")
+            unique_together=(("field_a", "field_b"), ("field_c", "field_d", "field_e"))
 
     .. attribute:: indexes
         :annotation: = None
@@ -216,7 +221,7 @@ The ``Meta`` class
 
             indexes=("field_a", "field_b")
             indexes=(("field_a", "field_b"), )
-            indexes=(("field_a", "field_b"), ("field_c", "field_d", "field_e")
+            indexes=(("field_a", "field_b"), ("field_c", "field_d", "field_e"))
 
     .. attribute:: ordering
         :annotation: = None
@@ -256,6 +261,10 @@ In event model we got some more fields, that could be interesting for us.
 ``related_name``
     Is keyword argument, that defines field for related query on referenced models, so with that you could fetch all tournaments's events with like this:
 
+.. code-block:: python3
+
+    await Tournament.first().prefetch_related("events")
+
 The DB-backing field
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -288,7 +297,7 @@ or by directly accessing the DB-backing field:
     somemodel.tournament_id=the_tournament.pk
 
 
-Querying a relationship is typicall done by appending a double underscore, and then the foreign object's field. Then a normal query attr can be appended.
+Querying a relationship is typically done by appending a double underscore, and then the foreign object's field. Then a normal query attr can be appended.
 This can be chained if the next key is also a foreign object:
 
     :samp:`{FKNAME}__{FOREIGNFIELD}__gt=3`
@@ -297,9 +306,9 @@ This can be chained if the next key is also a foreign object:
 
     :samp:`{FKNAME}__{FOREIGNFK}__{VERYFOREIGNFIELD}__gt=3`
 
-There is however one major limiatation. We don't want to restrict foreign column names, or have ambiguity (e.g. a foreign object may have a field called ``isnull``)
+There is however one major limitation. We don't want to restrict foreign column names, or have ambiguity (e.g. a foreign object may have a field called ``isnull``)
 
-Then this would be entierly ambugious:
+Then this would be entirely ambiguous:
 
     :samp:`{FKNAME}__isnull`
 
@@ -404,7 +413,7 @@ all models including fields for the relations between models.
 
 
     class Tournament(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=255)
 
         events: fields.ReverseRelation["Event"]
@@ -414,7 +423,7 @@ all models including fields for the relations between models.
 
 
     class Event(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=255)
         tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
             "models.Tournament", related_name="events"
@@ -428,7 +437,7 @@ all models including fields for the relations between models.
 
 
     class Team(Model):
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=255)
 
         events: fields.ManyToManyRelation[Event]

@@ -1,0 +1,27 @@
+name: gh-pages-release
+on:
+  release:
+    types:
+      - created
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+      - name: Install and configure Poetry
+        run: |
+          pip install -U pip poetry
+          poetry config virtualenvs.create false
+      - name: Build docs
+        run: make docs
+      - name: Deploy release docs
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          personal_token: ${{ secrets.PERSONAL_TOKEN }}
+          publish_dir: build/html
+          external_repository: tortoise/tortoise.github.io
+          publish_branch: master
+          destination_dir: ${{ github.ref_name }}

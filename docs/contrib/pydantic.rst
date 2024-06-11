@@ -25,7 +25,7 @@ Here we introduce:
 * Creating a Pydantic model from a Tortoise model
 * Docstrings & doc-comments are used
 * Evaluating the generated schema
-* Simple serialisation with both ``.dict()`` and ``.json()``
+* Simple serialisation with both ``.model_dump()`` and ``.model_dump_json()``
 
 Source to example: :ref:`example_pydantic_tut1`
 
@@ -40,7 +40,7 @@ Lets start with a basic Tortoise Model:
         """
         This references a Tournament
         """
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=100)
         #: The date-time the Tournament record was created at
         created_at = fields.DatetimeField(auto_now_add=True)
@@ -92,17 +92,17 @@ To serialise an object it is simply *(in an async context)*:
     tournament = await Tournament.create(name="New Tournament")
     tourpy = await Tournament_Pydantic.from_tortoise_orm(tournament)
 
-And one could get the contents by using `regular Pydantic-object methods <https://pydantic-docs.helpmanual.io/usage/exporting_models/>`_, such as ``.dict()`` or ``.json()``
+And one could get the contents by using `regular Pydantic-object methods <https://pydantic-docs.helpmanual.io/usage/exporting_models/>`_, such as ``.model_dump()`` or ``.model_dump_json()``
 
 .. code-block:: py3
 
-    >>> print(tourpy.dict())
+    >>> print(tourpy.model_dump())
     {
         'id': 1,
         'name': 'New Tournament',
         'created_at': datetime.datetime(2020, 3, 1, 20, 28, 9, 346808)
     }
-    >>> print(tourpy.json())
+    >>> print(tourpy.model_dump_json())
     {
         "id": 1,
         "name": "New Tournament",
@@ -131,7 +131,7 @@ Source to example: :ref:`example_pydantic_tut2`
         """
         This references a Tournament
         """
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=100)
         #: The date-time the Tournament record was created at
         created_at = fields.DatetimeField(auto_now_add=True)
@@ -202,13 +202,13 @@ To serialise an object it is simply *(in an async context)*:
 
     tourpy = await Tournament_Pydantic_List.from_queryset(Tournament.all())
 
-And one could get the contents by using `regular Pydantic-object methods <https://pydantic-docs.helpmanual.io/usage/exporting_models/>`_, such as ``.dict()`` or ``.json()``
+And one could get the contents by using `regular Pydantic-object methods <https://pydantic-docs.helpmanual.io/usage/exporting_models/>`_, such as ``.model_dump()`` or ``.model_dump_json()``
 
 .. code-block:: py3
 
-    >>> print(tourpy.dict())
+    >>> print(tourpy.model_dump())
     {
-        '__root__': [
+        'root': [
             {
                 'id': 2,
                 'name': 'Another',
@@ -226,7 +226,7 @@ And one could get the contents by using `regular Pydantic-object methods <https:
             }
         ]
     }
-    >>> print(tourpy.json())
+    >>> print(tourpy.model_dump_json())
     [
         {
             "id": 2,
@@ -245,7 +245,7 @@ And one could get the contents by using `regular Pydantic-object methods <https:
         }
     ]
 
-Note how ``.dict()`` has a ``_root__`` element with the list, but the ``.json()`` has the list as root.
+Note how ``.model_dump()`` has a ``root`` element with the list, but the ``.model_dump_json()`` has the list as root.
 Also note how the results are sorted alphabetically by ``name``.
 
 
@@ -278,7 +278,7 @@ We define our models with a relationship:
         This references a Tournament
         """
 
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=100)
         #: The date-time the Tournament record was created at
         created_at = fields.DatetimeField(auto_now_add=True)
@@ -288,12 +288,12 @@ We define our models with a relationship:
         This references an Event in a Tournament
         """
 
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=100)
         created_at = fields.DatetimeField(auto_now_add=True)
 
         tournament = fields.ForeignKeyField(
-            "models.Tournament", related_name="events", description="The Tournement this happens in"
+            "models.Tournament", related_name="events", description="The Tournament this happens in"
         )
 
 Next we create our `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ using ``pydantic_model_creator``:
@@ -371,7 +371,7 @@ The JSON-Schema of ``Tournament_Pydantic`` is now:
             },
             'events': {
                 'title': 'Events',
-                'description': 'The Tournement this happens in',
+                'description': 'The Tournament this happens in',
                 'type': 'array',
                 'items': {
                     '$ref': '#/definitions/Event'
@@ -431,7 +431,7 @@ Note we can also create a model for ``Event`` the same way, and it should just w
             },
             'tournament': {
                 'title': 'Tournament',
-                'description': 'The Tournement this happens in',
+                'description': 'The Tournament this happens in',
                 'allOf': [
                     {
                         '$ref': '#/definitions/Tournament'
@@ -479,7 +479,7 @@ Lets create and serialise the objects and see what they look like *(in an async 
     # Serialise Tournament
     tourpy = await Tournament_Pydantic.from_tortoise_orm(tournament)
 
-    >>> print(tourpy.json())
+    >>> print(tourpy.model_dump_json())
     {
         "id": 1,
         "name": "New Tournament",
@@ -499,7 +499,7 @@ And serialising the event *(in an async context)*:
 
     eventpy = await Event_Pydantic.from_tortoise_orm(event)
 
-    >>> print(eventpy.json())
+    >>> print(eventpy.model_dump_json())
     {
         "id": 1,
         "name": "The Event",
@@ -533,7 +533,7 @@ Let's add some methods that calculate data, and tell the creators to use them:
         This references a Tournament
         """
 
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=100)
         created_at = fields.DatetimeField(auto_now_add=True)
 
@@ -568,12 +568,12 @@ Let's add some methods that calculate data, and tell the creators to use them:
         This references an Event in a Tournament
         """
 
-        id = fields.IntField(pk=True)
+        id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=100)
         created_at = fields.DatetimeField(auto_now_add=True)
 
         tournament = fields.ForeignKeyField(
-            "models.Tournament", related_name="events", description="The Tournement this happens in"
+            "models.Tournament", related_name="events", description="The Tournament this happens in"
         )
 
         class Meta:
@@ -625,7 +625,7 @@ The JSON-Schema of ``Tournament_Pydantic`` is now:
             },
             "events": {
                 "title": "Events",
-                "description": "The Tournement this happens in",
+                "description": "The Tournament this happens in",
                 "type": "array",
                 "items": {
                     "$ref": "#/definitions/Event"
@@ -675,7 +675,7 @@ Lets create and serialise the objects and see what they look like *(in an async 
     # Serialise Tournament
     tourpy = await Tournament_Pydantic.from_tortoise_orm(tournament)
 
-    >>> print(tourpy.json())
+    >>> print(tourpy.model_dump_json())
     {
         "id": 1,
         "name": "New Tournament",

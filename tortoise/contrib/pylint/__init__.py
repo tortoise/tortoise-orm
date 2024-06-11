@@ -1,6 +1,7 @@
 """
 Tortoise PyLint plugin
 """
+
 from typing import Any, Dict, Iterator, List
 
 from astroid import MANAGER, inference_tip, nodes
@@ -38,9 +39,8 @@ def transform_model(cls: ClassDef) -> None:
         for mcls in cls.get_children():
             if isinstance(mcls, ClassDef):
                 for attr in mcls.get_children():
-                    if isinstance(attr, Assign):
-                        if attr.targets[0].name == "app":
-                            appname = attr.value.value
+                    if isinstance(attr, Assign) and attr.targets[0].name == "app":
+                        appname = attr.value.value
 
         mname = f"{appname}.{cls.name}"
         MODELS[mname] = cls
@@ -56,12 +56,14 @@ def transform_model(cls: ClassDef) -> None:
                     pass
                 else:
                     if attrname in ["OneToOneField", "ForeignKeyField", "ManyToManyField"]:
-                        tomodel = attr.value.args[0].value
+                        tomodel = attr.value.args[0].value if attr.value.args else ""
                         relname = ""
                         if attr.value.keywords:
                             for keyword in attr.value.keywords:
                                 if keyword.arg == "related_name":
                                     relname = keyword.value.value
+                                if keyword.arg == "model_name":
+                                    tomodel = keyword.value.value
 
                         if not relname:
                             relname = cls.name.lower() + "s"

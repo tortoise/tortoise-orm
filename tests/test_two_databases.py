@@ -1,12 +1,14 @@
 from tests.testmodels import Event, EventTwo, TeamTwo, Tournament
-from tortoise import Tortoise
+from tortoise import Tortoise, connections
+from tortoise.backends.oracle import OracleClient
 from tortoise.contrib import test
 from tortoise.exceptions import OperationalError, ParamsError
 from tortoise.transactions import in_transaction
 
 
 class TestTwoDatabases(test.SimpleTestCase):
-    async def setUp(self):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
         if Tortoise._inited:
             await self._tearDownDB()
         first_db_config = test.getDBConfig(app_label="models", modules=["tests.testmodels"])
@@ -17,20 +19,26 @@ class TestTwoDatabases(test.SimpleTestCase):
         }
         await Tortoise.init(merged_config, _create_db=True)
         await Tortoise.generate_schemas()
-        self.db = Tortoise.get_connection("models")
-        self.second_db = Tortoise.get_connection("events")
+        self.db = connections.get("models")
+        self.second_db = connections.get("events")
 
-    async def tearDown(self):
+    async def asyncTearDown(self) -> None:
         await Tortoise._drop_databases()
+        await super(TestTwoDatabases, self).asyncTearDown()
 
     async def test_two_databases(self):
         tournament = await Tournament.create(name="Tournament")
         await EventTwo.create(name="Event", tournament_id=tournament.id)
 
         with self.assertRaises(OperationalError):
-            await self.db.execute_query("SELECT * FROM eventtwo")
-
-        _, results = await self.second_db.execute_query("SELECT * FROM eventtwo")
+            if isinstance(self.db, OracleClient):
+                await self.db.execute_query('SELECT * FROM "eventtwo"')
+            else:
+                await self.db.execute_query("SELECT * FROM eventtwo")
+        if isinstance(self.db, OracleClient):
+            _, results = await self.second_db.execute_query('SELECT * FROM "eventtwo"')
+        else:
+            _, results = await self.second_db.execute_query("SELECT * FROM eventtwo")
         self.assertEqual(dict(results[0]), {"id": 1, "name": "Event", "tournament_id": 1})
 
     async def test_two_databases_relation(self):
@@ -38,9 +46,15 @@ class TestTwoDatabases(test.SimpleTestCase):
         event = await EventTwo.create(name="Event", tournament_id=tournament.id)
 
         with self.assertRaises(OperationalError):
-            await self.db.execute_query("SELECT * FROM eventtwo")
+            if isinstance(self.db, OracleClient):
+                await self.db.execute_query('SELECT * FROM "eventtwo"')
+            else:
+                await self.db.execute_query("SELECT * FROM eventtwo")
 
-        _, results = await self.second_db.execute_query("SELECT * FROM eventtwo")
+        if isinstance(self.db, OracleClient):
+            _, results = await self.second_db.execute_query('SELECT * FROM "eventtwo"')
+        else:
+            _, results = await self.second_db.execute_query("SELECT * FROM eventtwo")
         self.assertEqual(dict(results[0]), {"id": 1, "name": "Event", "tournament_id": 1})
 
         teams = []

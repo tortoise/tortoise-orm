@@ -23,13 +23,13 @@ class TestBinaryFields(test.TestCase):
             binary=bytes(range(256)), binary_null=bytes(range(255, -1, -1))
         )
         values = await testmodels.BinaryFields.get(id=obj0.id).values("binary", "binary_null")
-        self.assertEqual(values[0]["binary"], bytes(range(256)))
-        self.assertEqual(values[0]["binary_null"], bytes(range(255, -1, -1)))
+        self.assertEqual(values["binary"], bytes(range(256)))
+        self.assertEqual(values["binary_null"], bytes(range(255, -1, -1)))
 
     async def test_values_list(self):
         obj0 = await testmodels.BinaryFields.create(binary=bytes(range(256)))
         values = await testmodels.BinaryFields.get(id=obj0.id).values_list("binary", flat=True)
-        self.assertEqual(values[0], bytes(range(256)))
+        self.assertEqual(values, bytes(range(256)))
 
     def test_unique_fail(self):
         with self.assertRaisesRegex(ConfigurationError, "can't be indexed"):
@@ -37,4 +37,9 @@ class TestBinaryFields(test.TestCase):
 
     def test_index_fail(self):
         with self.assertRaisesRegex(ConfigurationError, "can't be indexed"):
-            BinaryField(index=True)
+            with self.assertWarnsRegex(
+                DeprecationWarning, "`index` is deprecated, please use `db_index` instead"
+            ):
+                BinaryField(index=True)
+        with self.assertRaisesRegex(ConfigurationError, "can't be indexed"):
+            BinaryField(db_index=True)

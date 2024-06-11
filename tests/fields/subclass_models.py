@@ -14,7 +14,7 @@ class RacePlacingEnum(Enum):
 
 
 class RaceParticipant(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     first_name = fields.CharField(max_length=64)
     place = EnumField(RacePlacingEnum, default=RacePlacingEnum.DNF)
     predicted_place = EnumField(RacePlacingEnum, null=True)
@@ -27,5 +27,5 @@ class ContactTypeEnum(IntEnum):
 
 
 class Contact(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     type = IntEnumField(ContactTypeEnum, default=ContactTypeEnum.other)

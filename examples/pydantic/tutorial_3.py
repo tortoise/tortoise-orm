@@ -5,6 +5,7 @@ Here we introduce:
 * Relationships
 * Early model init
 """
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.models import Model
@@ -15,7 +16,7 @@ class Tournament(Model):
     This references a Tournament
     """
 
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=100)
     #: The date-time the Tournament record was created at
     created_at = fields.DatetimeField(auto_now_add=True)
@@ -26,12 +27,12 @@ class Event(Model):
     This references an Event in a Tournament
     """
 
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=100)
     created_at = fields.DatetimeField(auto_now_add=True)
 
-    tournament = fields.ForeignKeyField(
-        "models.Tournament", related_name="events", description="The Tournement this happens in"
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
+        "models.Tournament", related_name="events", description="The Tournament this happens in"
     )
 
 
@@ -68,13 +69,13 @@ async def run():
     tourpy = await Tournament_Pydantic.from_tortoise_orm(tournament)
 
     # As serialised JSON
-    print(tourpy.json(indent=4))
+    print(tourpy.model_dump_json(indent=4))
 
     # Serialise Event
     eventpy = await Event_Pydantic.from_tortoise_orm(event)
 
     # As serialised JSON
-    print(eventpy.json(indent=4))
+    print(eventpy.model_dump_json(indent=4))
 
 
 if __name__ == "__main__":
