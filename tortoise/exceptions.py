@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from tortoise import Model, Type
@@ -64,6 +64,19 @@ class MultipleObjectsReturned(OperationalError):
 
     def __str__(self):
         return f'Multiple objects returned for "{self.model.__name__}", expected exactly one'
+
+
+class ObjectDoesNotExistError(OperationalError, KeyError):
+    """
+    The DoesNotExist exception is raised when an item with the passed primary key does not exist
+    """
+    def __init__(self, model: "Type[Model]", pk_name: str, pk_val: Any):
+        self.model: "Type[Model]" = model
+        self.pk_name: str = pk_name
+        self.pk_val: Any = pk_val
+
+    def __str__(self):
+        return f"{self.model.__name__} has no object with {self.pk_name}={self.pk_val}"
 
 
 class DoesNotExist(OperationalError):

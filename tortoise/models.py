@@ -31,7 +31,7 @@ from tortoise.exceptions import (
     IncompleteInstanceError,
     IntegrityError,
     OperationalError,
-    ParamsError,
+    ParamsError, ObjectDoesNotExistError,
 )
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntField
@@ -783,7 +783,7 @@ class Model(metaclass=ModelMeta):
         try:
             return await cls.get(pk=key)
         except (DoesNotExist, ValueError):
-            raise KeyError(f"{cls._meta.full_name} has no object {repr(key)}")
+            raise ObjectDoesNotExistError(cls, cls._meta.pk_attr, key)
 
     def clone(self: MODEL, pk: Any = EMPTY) -> MODEL:
         """
