@@ -191,3 +191,6 @@ show_missing = true
 
 [tool.ruff.lint]
 ignore = ["E501"]
+
+[tool.bandit]
+exclude_dirs = ["tests", 'examples/*/_tests.py', "conftest.py"]
