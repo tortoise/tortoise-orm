@@ -12,6 +12,6 @@ class OracleExecutor(ODBCExecutor):
             seq = ret[0]["SEQUENCE_NAME"]
         except IndexError:
             return
-        sql = f"SELECT {seq}.CURRVAL FROM DUAL"
+        sql = f"SELECT {seq}.CURRVAL FROM DUAL"  # nosec:B608
         ret = await self.db.execute_query_dict(sql)
         await super(OracleExecutor, self)._process_insert_result(instance, ret[0]["CURRVAL"])
