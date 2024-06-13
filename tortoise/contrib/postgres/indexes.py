@@ -1,8 +1,10 @@
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Type
 
 from pypika.terms import Term, ValueWrapper
 
+from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.indexes import PartialIndex
+from tortoise.models import Model
 
 
 class PostgreSQLIndex(PartialIndex):
@@ -49,3 +51,26 @@ class HashIndex(PostgreSQLIndex):
 
 class SpGistIndex(PostgreSQLIndex):
     INDEX_TYPE = "SPGIST"
+
+
+class PostgresUniqueIndex(PostgreSQLIndex):
+    INDEX_CREATE_TEMPLATE = PostgreSQLIndex.INDEX_CREATE_TEMPLATE.replace(
+        "CREATE", "CREATE UNIQUE"
+    ).replace("USING", "")
+
+    def __init__(
+        self,
+        *expressions: Term,
+        fields: Optional[Tuple[str]] = None,
+        name: Optional[str] = None,
+        condition: Optional[dict] = None,
+        nulls_not_distinct: bool = False,
+    ):
+        super().__init__(*expressions, fields=fields, name=name, condition=condition)
+        if nulls_not_distinct:
+            self.extra = " nulls not distinct".upper() + self.extra
+
+    def get_sql(self, schema_generator: BaseSchemaGenerator, model: Type[Model], safe: bool):
+        if self.INDEX_TYPE:
+            self.INDEX_TYPE = f"USING {self.INDEX_TYPE}"
+        return super().get_sql(schema_generator, model, safe)
