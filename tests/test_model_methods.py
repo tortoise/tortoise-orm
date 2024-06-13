@@ -185,12 +185,6 @@ class TestModelMethods(test.TestCase):
             # Missing query: check conflict with kwargs and defaults before create
             await self.cls.update_or_create(id=mdl.id, defaults=mdl_dict)
         desc = str(uuid4())
-        # Hint query: use defauts to update without checking conflict
-        mdl2, created = await self.cls.update_or_create(
-            id=oldid, desc=desc, defaults=dict(mdl_dict, desc="new desc")
-        )
-        self.assertFalse(created)
-        self.assertNotEqual(dict(mdl), dict(mdl2))
         # If there is no conflict with defaults and kwargs, it will be success to update or create
         defaults = dict(mdl_dict, desc=desc)
         kwargs = {"id": defaults["id"], "name": defaults["name"]}
@@ -198,6 +192,12 @@ class TestModelMethods(test.TestCase):
         self.assertFalse(created)
         self.assertEqual(defaults["desc"], mdl.desc)
         self.assertNotEqual(self.mdl.desc, mdl.desc)
+        # Hint query: use defauts to update without checking conflict
+        mdl2, created = await self.cls.update_or_create(
+            id=oldid, desc=desc, defaults=dict(mdl_dict, desc="new desc")
+        )
+        self.assertFalse(created)
+        self.assertNotEqual(dict(mdl), dict(mdl2))
         # Missing query: success to create if no conflict
         not_exist_name = str(uuid4())
         no_conflict_defaults = {"name": not_exist_name, "desc": desc}
