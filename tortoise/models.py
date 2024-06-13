@@ -1045,17 +1045,16 @@ class Model(metaclass=ModelMeta):
         for key in defaults.keys() & kwargs.keys():
             if (default_value := defaults[key]) != (query_value := kwargs[key]):
                 raise ParamsError(f"Conflict value with {key=}: {default_value=} vs {query_value=}")
-        else:
-            merged_defaults = {**kwargs, **defaults}
+        merged_defaults = {**kwargs, **defaults}
+        try:
+            async with in_transaction(connection_name=db.connection_name) as connection:
+                return await cls.create(using_db=connection, **merged_defaults), True
+        except IntegrityError as exc:
             try:
-                async with in_transaction(connection_name=db.connection_name) as connection:
-                    return await cls.create(using_db=connection, **merged_defaults), True
-            except IntegrityError as exc:
-                try:
-                    return await cls.filter(**kwargs).using_db(db).get(), False
-                except DoesNotExist:
-                    pass
-                raise exc
+                return await cls.filter(**kwargs).using_db(db).get(), False
+            except DoesNotExist:
+                pass
+            raise exc
 
     @classmethod
     def select_for_update(
