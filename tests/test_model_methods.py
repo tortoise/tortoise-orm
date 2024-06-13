@@ -22,6 +22,7 @@ from tortoise.exceptions import (
     MultipleObjectsReturned,
     OperationalError,
     ParamsError,
+    ObjectDoesNotExistError,
     ValidationError,
 )
 from tortoise.expressions import F, Q
@@ -174,28 +175,36 @@ class TestModelMethods(test.TestCase):
         self.assertNotEqual(self.mdl, mdl)
         mdl2 = await self.cls.get(name="Test2")
         self.assertEqual(mdl, mdl2)
+
+    async def test_update_or_create_with_conflict_arguments(self):
+        mdl = await self.cls.get(name=self.mdl.name)
         mdl_dict = dict(mdl)
         oldid = mdl.id
         mdl.id = 135
         with self.assertRaisesRegex(ParamsError, "Conflict value with key='id':"):
             # Missing query: check conflict with kwargs and defaults before create
             await self.cls.update_or_create(id=mdl.id, defaults=mdl_dict)
-        # Hint query: use defauts to update without checking conflict
-        mdl, created = await self.cls.update_or_create(id=oldid, defaults=dict(mdl_dict, id=mdl.id))
-        self.assertFalse(created)
-        self.assertNotEqual(self.mdl, mdl)
+        desc = str(uuid4())
         # If there is no conflict with defaults and kwargs, it will be success to update or create
-        defaults = dict(mdl_dict, desc=str(uuid4()))
+        defaults = dict(mdl_dict, desc=desc)
         kwargs = {"id": defaults["id"], "name": defaults["name"]}
         mdl, created = await self.cls.update_or_create(defaults, **kwargs)
         self.assertFalse(created)
         self.assertEqual(defaults["desc"], mdl.desc)
         self.assertNotEqual(self.mdl.desc, mdl.desc)
-        not_exist_id = 136
-        defaults["id"] = kwargs["id"] = not_exist_id
+        # Hint query: use defauts to update without checking conflict
+        mdl2, created = await self.cls.update_or_create(
+            id=oldid, desc=desc, defaults=dict(mdl_dict, desc="new desc")
+        )
+        self.assertFalse(created)
+        self.assertNotEqual(dict(mdl), dict(mdl2))
+        # Missing query: success to create if no conflict
+        not_exist_name = str(uuid4())
+        defaults["name"] = kwargs["name"] = not_exist_name
+        defaults.pop("id"), kwargs.pop("id")  # avoid custom pk value
         mdl, created = await self.cls.update_or_create(defaults, **kwargs)
         self.assertTrue(created)
-        self.assertEqual(not_exist_id, mdl.id)
+        self.assertEqual(not_exist_name, mdl.name)
 
     async def test_first(self):
         mdl = await self.cls.first()
@@ -274,12 +283,26 @@ class TestModelMethods(test.TestCase):
         self.assertEqual(obj, self.mdl)
 
     async def test_index_badval(self):
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ObjectDoesNotExistError) as cm:
             await self.cls[100000]
+        the_exception = cm.exception
+        # For compatibility reasons this should be an instance of KeyError
+        self.assertIsInstance(the_exception, KeyError)
+        self.assertIs(the_exception.model, self.cls)
+        self.assertEqual(the_exception.pk_name, "id")
+        self.assertEqual(the_exception.pk_val, 100000)
+        self.assertEqual(str(the_exception), f"{self.cls.__name__} has no object with id=100000")
 
     async def test_index_badtype(self):
-        with self.assertRaises(KeyError):
+        with self.assertRaises(ObjectDoesNotExistError) as cm:
             await self.cls["asdf"]
+        the_exception = cm.exception
+        # For compatibility reasons this should be an instance of KeyError
+        self.assertIsInstance(the_exception, KeyError)
+        self.assertIs(the_exception.model, self.cls)
+        self.assertEqual(the_exception.pk_name, "id")
+        self.assertEqual(the_exception.pk_val, "asdf")
+        self.assertEqual(str(the_exception), f"{self.cls.__name__} has no object with id=asdf")
 
     async def test_clone(self):
         mdl2 = self.mdl.clone()
