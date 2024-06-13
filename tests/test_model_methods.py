@@ -176,7 +176,7 @@ class TestModelMethods(test.TestCase):
         mdl2 = await self.cls.get(name="Test2")
         self.assertEqual(mdl, mdl2)
 
-    async def test_update_or_create_with_conflict_arguments(self):
+    async def test_update_or_create_with_defaults(self):
         mdl = await self.cls.get(name=self.mdl.name)
         mdl_dict = dict(mdl)
         oldid = mdl.id
@@ -185,6 +185,12 @@ class TestModelMethods(test.TestCase):
             # Missing query: check conflict with kwargs and defaults before create
             await self.cls.update_or_create(id=mdl.id, defaults=mdl_dict)
         desc = str(uuid4())
+        # Hint query: use defauts to update without checking conflict
+        mdl2, created = await self.cls.update_or_create(
+            id=oldid, desc=desc, defaults=dict(mdl_dict, desc="new desc")
+        )
+        self.assertFalse(created)
+        self.assertNotEqual(dict(mdl), dict(mdl2))
         # If there is no conflict with defaults and kwargs, it will be success to update or create
         defaults = dict(mdl_dict, desc=desc)
         kwargs = {"id": defaults["id"], "name": defaults["name"]}
@@ -192,17 +198,11 @@ class TestModelMethods(test.TestCase):
         self.assertFalse(created)
         self.assertEqual(defaults["desc"], mdl.desc)
         self.assertNotEqual(self.mdl.desc, mdl.desc)
-        # Hint query: use defauts to update without checking conflict
-        mdl2, created = await self.cls.update_or_create(
-            id=oldid, desc=desc, defaults=dict(mdl_dict, desc="new desc")
-        )
-        self.assertFalse(created)
-        self.assertNotEqual(dict(mdl), dict(mdl2))
         # Missing query: success to create if no conflict
         not_exist_name = str(uuid4())
-        defaults["name"] = kwargs["name"] = not_exist_name
-        defaults.pop("id"), kwargs.pop("id")  # avoid custom pk value
-        mdl, created = await self.cls.update_or_create(defaults, **kwargs)
+        no_conflict_defaults = {"name": not_exist_name, "desc": desc}
+        no_conflict_kwargs = {"name": not_exist_name}
+        mdl, created = await self.cls.update_or_create(no_conflict_defaults, **no_conflict_kwargs)
         self.assertTrue(created)
         self.assertEqual(not_exist_name, mdl.name)
 
