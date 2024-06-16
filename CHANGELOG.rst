@@ -9,6 +9,12 @@ Changelog
 0.21
 ====
 
+0.21.4
+------
+Fixed
+^^^^^
+- Fix `update_or_create` errors when field value changed. (#1584)
+
 0.21.3
 ------
 Fixed
