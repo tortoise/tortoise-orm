@@ -30,9 +30,9 @@ from tortoise.exceptions import (
     DoesNotExist,
     IncompleteInstanceError,
     IntegrityError,
+    ObjectDoesNotExistError,
     OperationalError,
     ParamsError,
-    ObjectDoesNotExistError,
 )
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntField
@@ -1064,7 +1064,7 @@ class Model(metaclass=ModelMeta):
         Returns a queryset that will lock rows until the end of the transaction,
         generating a SELECT ... FOR UPDATE SQL statement on supported databases.
         """
-        return cls._db_queryset(using_db, True).select_for_update(nowait, skip_locked, of)
+        return cls._db_queryset(using_db, for_write=True).select_for_update(nowait, skip_locked, of)
 
     @classmethod
     async def update_or_create(
@@ -1145,7 +1145,7 @@ class Model(metaclass=ModelMeta):
         :param batch_size: How many objects are created in a single query
         :param using_db: Specific DB connection to use instead of default bound
         """
-        return cls._db_queryset(using_db).bulk_update(objects, fields, batch_size)
+        return cls._db_queryset(using_db, for_write=True).bulk_update(objects, fields, batch_size)
 
     @classmethod
     async def in_bulk(
@@ -1201,7 +1201,7 @@ class Model(metaclass=ModelMeta):
         :param batch_size: How many objects are created in a single query
         :param using_db: Specific DB connection to use instead of default bound
         """
-        return cls._db_queryset(using_db).bulk_create(
+        return cls._db_queryset(using_db, for_write=True).bulk_create(
             objects, batch_size, ignore_conflicts, update_fields, on_conflict
         )
 
