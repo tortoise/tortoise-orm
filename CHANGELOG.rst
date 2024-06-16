@@ -20,6 +20,7 @@ Fixed
 ^^^^^
 - Fix `update_or_create` errors when field value changed. (#1584)
 - Fix bandit check error (#1643)
+- Fix `update_or_create` errors when field value changed. (#1584)
 
 Changed
 ^^^^^^^
