@@ -217,8 +217,8 @@ class ConnectionWrapper:
             self.connection = self.client._connection
 
     async def __aenter__(self):
-        await self.ensure_connection()
         await self.lock.acquire()
+        await self.ensure_connection()
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
