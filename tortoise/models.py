@@ -30,9 +30,9 @@ from tortoise.exceptions import (
     DoesNotExist,
     IncompleteInstanceError,
     IntegrityError,
+    ObjectDoesNotExistError,
     OperationalError,
     ParamsError,
-    ObjectDoesNotExistError,
 )
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntField
@@ -1057,6 +1057,13 @@ class Model(metaclass=ModelMeta):
             raise exc
 
     @classmethod
+    def _db_queryset(
+        cls, using_db: Optional[BaseDBAsyncClient] = None, for_write: bool = False
+    ) -> QuerySet[Self]:
+        db = using_db or cls._choose_db(for_write)
+        return cls._meta.manager.get_queryset().using_db(db)
+
+    @classmethod
     def select_for_update(
         cls,
         nowait: bool = False,
@@ -1070,10 +1077,7 @@ class Model(metaclass=ModelMeta):
         Returns a queryset that will lock rows until the end of the transaction,
         generating a SELECT ... FOR UPDATE SQL statement on supported databases.
         """
-        db = using_db or cls._choose_db(True)
-        return (
-            cls._meta.manager.get_queryset().using_db(db).select_for_update(nowait, skip_locked, of)
-        )
+        return cls._db_queryset(using_db, for_write=True).select_for_update(nowait, skip_locked, of)
 
     @classmethod
     async def update_or_create(
@@ -1154,10 +1158,7 @@ class Model(metaclass=ModelMeta):
         :param batch_size: How many objects are created in a single query
         :param using_db: Specific DB connection to use instead of default bound
         """
-        db = using_db or cls._choose_db(True)
-        return (
-            cls._meta.manager.get_queryset().using_db(db).bulk_update(objects, fields, batch_size)
-        )
+        return cls._db_queryset(using_db, for_write=True).bulk_update(objects, fields, batch_size)
 
     @classmethod
     async def in_bulk(
@@ -1174,8 +1175,7 @@ class Model(metaclass=ModelMeta):
         :param field_name: Must be a unique field
         :param using_db: Specific DB connection to use instead of default bound
         """
-        db = using_db or cls._choose_db()
-        return await cls._meta.manager.get_queryset().using_db(db).in_bulk(id_list, field_name)
+        return await cls._db_queryset(using_db).in_bulk(id_list, field_name)
 
     @classmethod
     def bulk_create(
@@ -1214,11 +1214,8 @@ class Model(metaclass=ModelMeta):
         :param batch_size: How many objects are created in a single query
         :param using_db: Specific DB connection to use instead of default bound
         """
-        db = using_db or cls._choose_db(True)
-        return (
-            cls._meta.manager.get_queryset()
-            .using_db(db)
-            .bulk_create(objects, batch_size, ignore_conflicts, update_fields, on_conflict)
+        return cls._db_queryset(using_db, for_write=True).bulk_create(
+            objects, batch_size, ignore_conflicts, update_fields, on_conflict
         )
 
     @classmethod
@@ -1226,8 +1223,7 @@ class Model(metaclass=ModelMeta):
         """
         Generates a QuerySet that returns the first record.
         """
-        db = using_db or cls._choose_db()
-        return cls._meta.manager.get_queryset().using_db(db).first()
+        return cls._db_queryset(using_db).first()
 
     @classmethod
     def filter(cls, *args: Q, **kwargs: Any) -> QuerySet[Self]:
@@ -1263,8 +1259,7 @@ class Model(metaclass=ModelMeta):
         """
         Returns the complete QuerySet.
         """
-        db = using_db or cls._choose_db()
-        return cls._meta.manager.get_queryset().using_db(db)
+        return cls._db_queryset(using_db)
 
     @classmethod
     def get(
@@ -1284,8 +1279,7 @@ class Model(metaclass=ModelMeta):
         :raises MultipleObjectsReturned: If provided search returned more than one object.
         :raises DoesNotExist: If object can not be found.
         """
-        db = using_db or cls._choose_db()
-        return cls._meta.manager.get_queryset().using_db(db).get(*args, **kwargs)
+        return cls._db_queryset(using_db).get(*args, **kwargs)
 
     @classmethod
     def raw(cls, sql: str, using_db: Optional[BaseDBAsyncClient] = None) -> "RawSQLQuery":
@@ -1299,8 +1293,7 @@ class Model(metaclass=ModelMeta):
         :param using_db: The specific DB connection to use
         :param sql: The raw sql.
         """
-        db = using_db or cls._choose_db()
-        return cls._meta.manager.get_queryset().using_db(db).raw(sql)
+        return cls._db_queryset(using_db).raw(sql)
 
     @classmethod
     def exists(
@@ -1317,8 +1310,7 @@ class Model(metaclass=ModelMeta):
         :param args: Q functions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
         """
-        db = using_db or cls._choose_db()
-        return cls._meta.manager.get_queryset().using_db(db).filter(*args, **kwargs).exists()
+        return cls._db_queryset(using_db).filter(*args, **kwargs).exists()
 
     @classmethod
     def get_or_none(
@@ -1335,8 +1327,7 @@ class Model(metaclass=ModelMeta):
         :param args: Q functions containing constraints. Will be AND'ed.
         :param kwargs: Simple filter constraints.
         """
-        db = using_db or cls._choose_db()
-        return cls._meta.manager.get_queryset().using_db(db).get_or_none(*args, **kwargs)
+        return cls._db_queryset(using_db).get_or_none(*args, **kwargs)
 
     @classmethod
     async def fetch_for_list(

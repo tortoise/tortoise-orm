@@ -20,9 +20,9 @@ from tortoise.exceptions import (
     DoesNotExist,
     IntegrityError,
     MultipleObjectsReturned,
+    ObjectDoesNotExistError,
     OperationalError,
     ParamsError,
-    ObjectDoesNotExistError,
     ValidationError,
 )
 from tortoise.expressions import F, Q

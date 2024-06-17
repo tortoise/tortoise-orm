@@ -17,8 +17,8 @@ from tortoise.exceptions import (
     FieldError,
     IntegrityError,
     MultipleObjectsReturned,
-    ParamsError,
     NotExistOrMultiple,
+    ParamsError,
 )
 from tortoise.expressions import F, RawSQL, Subquery
 
