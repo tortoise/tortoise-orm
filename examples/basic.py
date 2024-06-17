@@ -2,7 +2,8 @@
 This example demonstrates most basic operations with single model
 """
 
-from tortoise import Tortoise, fields, run_async
+from tortoise import fields, run_async
+from tortoise.contrib.test import init_memory_sqlite
 from tortoise.models import Model
 
 
@@ -18,10 +19,8 @@ class Event(Model):
         return self.name
 
 
-async def run():
-    await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
-    await Tortoise.generate_schemas()
-
+@init_memory_sqlite
+async def run() -> None:
     event = await Event.create(name="Test")
     await Event.filter(id=event.id).update(name="Updated name")
 

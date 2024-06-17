@@ -1,16 +1,23 @@
 import asyncio
 import inspect
 import os as _os
+import sys
 import unittest
 from asyncio.events import AbstractEventLoop
 from functools import wraps
 from types import ModuleType
-from typing import Any, Iterable, List, Optional, Union
+from typing import Any, Callable, Coroutine, Iterable, List, Optional, TypeVar, Union
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 
 from tortoise import Model, Tortoise, connections
 from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise.exceptions import DBConnectionError, OperationalError
+
+if sys.version_info >= (3, 10):
+    from typing import ParamSpec
+else:
+    from typing_extensions import ParamSpec
+
 
 __all__ = (
     "SimpleTestCase",
@@ -27,6 +34,7 @@ __all__ = (
     "skip",
     "skipIf",
     "skipUnless",
+    "init_memory_sqlite",
 )
 _TORTOISE_TEST_DB = "sqlite://:memory:"
 # pylint: disable=W0201
@@ -407,3 +415,42 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
         return test_item
 
     return decorator
+
+
+T = TypeVar("T")
+P = ParamSpec("P")
+
+
+def init_memory_sqlite(
+    func: Callable[P, Coroutine[None, None, T]]
+) -> Callable[P, Coroutine[None, None, T]]:
+    """
+    For single file style to run code with memory sqlite
+
+    Usage:
+
+    .. code-block:: python3
+
+        from tortoise import fields, models, run_async
+        from tortoise.contrib.test import init_memory_sqlite
+
+        class MyModel(models.Model):
+            id = fields.IntField(primary_key=True)
+            name = fields.TextField()
+
+        @init_memory_sqlite
+        async def run():
+            obj = await MyModel.create(name='')
+            assert obj.id == 1
+
+        if __name__ == '__main__'
+            run_async(run)
+    """
+
+    @wraps(func)
+    async def wrapper(*args, **kw) -> T:
+        await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
+        await Tortoise.generate_schemas()
+        return await func(*args, **kw)
+
+    return wrapper
