@@ -346,7 +346,7 @@ class TestCase(TruncationTestCase):
             await super()._tearDownDB()
 
 
-def requireCapability(connection_name: str = "models", **conditions: Any):
+def requireCapability(connection_name: str = "models", **conditions: Any) -> Callable:
     """
     Skip a test if the required capabilities are not matched.
 
@@ -401,9 +401,9 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
 
         # Assume a class is decorated
         funcs = {
-            var: getattr(test_item, var)
+            var: f
             for var in dir(test_item)
-            if var.startswith("test_") and callable(getattr(test_item, var))
+            if var.startswith("test_") and callable(f := getattr(test_item, var))
         }
         for name, func in funcs.items():
             setattr(
