@@ -59,9 +59,7 @@ class TestDatetimeFields(TestEmpty):
             datetime=datetime(2019, 9, 1, 6, 0, 8, tzinfo=get_default_timezone())
         )
         obj = await self.model.get(id=obj0.id)
-        self.assertEqual(
-            obj.datetime, datetime(2019, 9, 1, 6, 0, 8, tzinfo=get_default_timezone())
-        )
+        self.assertEqual(obj.datetime, datetime(2019, 9, 1, 6, 0, 8, tzinfo=get_default_timezone()))
         self.assertEqual(obj.datetime_null, None)
 
     async def test_cast(self):
@@ -98,12 +96,8 @@ class TestDatetimeFields(TestEmpty):
         now = timezone.now()
         obj = await self.model.create(datetime=now)
         self.assertEqual(await self.model.filter(datetime=obj.datetime).count(), 1)
-        self.assertEqual(
-            await self.model.filter(datetime_auto=obj.datetime_auto).count(), 1
-        )
-        self.assertEqual(
-            await self.model.filter(datetime_add=obj.datetime_add).count(), 1
-        )
+        self.assertEqual(await self.model.filter(datetime_auto=obj.datetime_auto).count(), 1)
+        self.assertEqual(await self.model.filter(datetime_add=obj.datetime_add).count(), 1)
 
     async def test_default_timezone(self):
         now = timezone.now()
@@ -319,9 +313,7 @@ class TestTimeDeltaFields(TestEmpty):
     model = testmodels.TimeDeltaFields
 
     async def test_create(self):
-        obj0 = await self.model.create(
-            timedelta=timedelta(days=35, seconds=8, microseconds=1)
-        )
+        obj0 = await self.model.create(timedelta=timedelta(days=35, seconds=8, microseconds=1))
         obj = await self.model.get(id=obj0.id)
         self.assertEqual(obj.timedelta, timedelta(days=35, seconds=8, microseconds=1))
         self.assertEqual(obj.timedelta_null, None)
@@ -330,18 +322,12 @@ class TestTimeDeltaFields(TestEmpty):
         self.assertEqual(obj, obj2)
 
     async def test_values(self):
-        obj0 = await self.model.create(
-            timedelta=timedelta(days=35, seconds=8, microseconds=1)
-        )
+        obj0 = await self.model.create(timedelta=timedelta(days=35, seconds=8, microseconds=1))
         values = await self.model.get(id=obj0.id).values("timedelta")
-        self.assertEqual(
-            values["timedelta"], timedelta(days=35, seconds=8, microseconds=1)
-        )
+        self.assertEqual(values["timedelta"], timedelta(days=35, seconds=8, microseconds=1))
 
     async def test_values_list(self):
-        obj0 = await self.model.create(
-            timedelta=timedelta(days=35, seconds=8, microseconds=1)
-        )
+        obj0 = await self.model.create(timedelta=timedelta(days=35, seconds=8, microseconds=1))
         values = await self.model.get(id=obj0.id).values_list("timedelta", flat=True)
         self.assertEqual(values, timedelta(days=35, seconds=8, microseconds=1))
 
