@@ -4,13 +4,13 @@ from tortoise import Model
 from tortoise.backends.odbc.executor import ODBCExecutor
 
 if TYPE_CHECKING:
-    from .client import OracleClient
+    from .client import OracleClient  # pylint: disable=W0611
 
 
 class OracleExecutor(ODBCExecutor):
     async def _process_insert_result(self, instance: Model, results: int) -> None:
         sql = "SELECT SEQUENCE_NAME FROM ALL_TAB_IDENTITY_COLS where TABLE_NAME = ? and OWNER = ?"
-        db: "OracleClient" = cast("OracleClient", self.db)
+        db = cast("OracleClient", self.db)
         ret = await db.execute_query_dict(sql, values=[instance._meta.db_table, db.database])
         try:
             seq = ret[0]["SEQUENCE_NAME"]
