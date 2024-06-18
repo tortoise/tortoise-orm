@@ -419,11 +419,10 @@ def requireCapability(connection_name: str = "models", **conditions: Any) -> Cal
 
 T = TypeVar("T")
 P = ParamSpec("P")
+AsyncFunc = Callable[P, Coroutine[None, None, T]]
 
 
-def init_memory_sqlite(
-    func: Callable[P, Coroutine[None, None, T]]
-) -> Callable[P, Coroutine[None, None, T]]:
+def init_memory_sqlite(func: AsyncFunc) -> AsyncFunc:
     """
     For single file style to run code with memory sqlite
 
