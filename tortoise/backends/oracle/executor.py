@@ -11,10 +11,7 @@ class OracleExecutor(ODBCExecutor):
     async def _process_insert_result(self, instance: Model, results: int) -> None:
         sql = "SELECT SEQUENCE_NAME FROM ALL_TAB_IDENTITY_COLS where TABLE_NAME = ? and OWNER = ?"
         db = cast("OracleClient", self.db)
-        ret = await db.execute_query_dict(
-            sql,
-            values=[instance._meta.db_table, db.database],
-        )
+        ret = await db.execute_query_dict(sql, values=[instance._meta.db_table, db.database])
         try:
             seq = ret[0]["SEQUENCE_NAME"]
         except IndexError:
