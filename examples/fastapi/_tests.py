@@ -4,6 +4,7 @@ import datetime
 from typing import AsyncGenerator
 
 import pytest
+import pytz
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
 from main import app, app_east
@@ -35,10 +36,6 @@ async def test_create_user(client: AsyncClient) -> None:  # nosec
     user_obj = await Users.get(id=user_id)
     assert user_obj.id == user_id
 
-    # UTC timezone.
-    created_at = user_obj.created_at
-    assert created_at.hour - datetime.datetime.now().hour == -8
-
 
 @pytest.fixture(scope="module")
 async def client_east() -> AsyncGenerator[AsyncClient, None]:
@@ -62,4 +59,13 @@ async def test_create_user_east(client_east: AsyncClient) -> None:  # nosec
 
     # Verify that the time zone is East 8.
     created_at = user_obj.created_at
-    assert created_at.hour - datetime.datetime.now().hour == 0
+
+    # Asia/Shanghai timezone
+    asia_tz = pytz.timezone("Asia/Shanghai")
+    asia_now = datetime.datetime.now(pytz.utc).astimezone(asia_tz)
+    assert created_at.hour - asia_now.hour == 0
+
+    # UTC timezone
+    utc_tz = pytz.timezone("UTC")
+    utc_now = datetime.datetime.now(pytz.utc).astimezone(utc_tz)
+    assert created_at.hour - utc_now.hour == 8
