@@ -1,3 +1,5 @@
+from typing import Type
+
 from tests.testmodels import (
     Event,
     IntFields,
@@ -15,6 +17,7 @@ from tortoise.exceptions import (
     FieldError,
     IntegrityError,
     MultipleObjectsReturned,
+    NotExistOrMultiple,
     ParamsError,
 )
 from tortoise.expressions import F, RawSQL, Subquery
@@ -673,3 +676,16 @@ class TestQueryset(test.TestCase):
         t1 = await Tournament.create(name="1")
         ret = await Tournament.filter(pk=t1.pk).annotate(id=RawSQL("id + 1")).values("id")
         self.assertEqual(ret, [{"id": t1.pk + 1}])
+
+
+class TestNotExist(test.TestCase):
+    exp_cls: Type[NotExistOrMultiple] = DoesNotExist
+
+    @test.requireCapability(dialect="sqlite")
+    def test_does_not_exist(self):
+        assert str(self.exp_cls("old format")) == "old format"
+        assert str(self.exp_cls(Tournament)) == self.exp_cls.TEMPLATE.format(Tournament.__name__)
+
+
+class TestMultiple(TestNotExist):
+    exp_cls = MultipleObjectsReturned

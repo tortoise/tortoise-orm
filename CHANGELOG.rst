@@ -9,25 +9,42 @@ Changelog
 0.21
 ====
 
-0.21.3
+0.21.4 (unreleased)
+------
+Added
+^^^^^
+- Add ObjectDoesNotExistError to show better 404 message. (#759)
+- DoesNotExist and MultipleObjectsReturned support 'Type[Model]' argument. (#742)(#1650)
+
+Fixed
+^^^^^
+- Fix `update_or_create` errors when field value changed. (#1584)
+- Fix bandit check error (#1643)
+- Fix potential race condition in ConnectionWrapper (#1656)
+
+Changed
+^^^^^^^
+- Remove obsolete loop._selector from contrib/test. (#659)(#1636)
+
+`0.21.3 <../0.21.3>`_ - 2024-06-01
 ------
 Fixed
 ^^^^^
 - Fix `bulk_update` when using source_field for pk (#1633)
 
-0.21.2
+`0.21.2 <../0.21.2>`_ - 2024-05-25
 ------
 Added
 ^^^^^
 - Add `create_unique_index` argument to M2M field and default if it is true (#1620)
 
-0.21.1
+`0.21.1 <../0.21.1>`_ - 2024-05-24
 ------
 Fixed
 ^^^^^
 - Fix error on using old style `pk=True`
 
-0.21.0
+`0.21.0 <../0.21.0>`_ - 2024-05-23
 ------
 Added
 ^^^^^
