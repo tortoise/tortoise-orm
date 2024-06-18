@@ -96,6 +96,8 @@ class RegisterTortoise(AbstractAsyncContextManager):
         modules: Optional[Dict[str, Iterable[Union[str, ModuleType]]]] = None,
         generate_schemas: bool = False,
         add_exception_handlers: bool = False,
+        use_tz: bool = False,
+        timezone: str = "UTC",
     ) -> None:
         self.app = app
         self.config = config
@@ -103,24 +105,44 @@ class RegisterTortoise(AbstractAsyncContextManager):
         self.db_url = db_url
         self.modules = modules
         self.generate_schemas = generate_schemas
+        self.use_tz = use_tz
+        self.timezone = timezone
+
         if add_exception_handlers:
 
             @app.exception_handler(DoesNotExist)
-            async def doesnotexist_exception_handler(request: "Request", exc: DoesNotExist):
+            async def doesnotexist_exception_handler(
+                request: "Request", exc: DoesNotExist
+            ):
                 return JSONResponse(status_code=404, content={"detail": str(exc)})
 
             @app.exception_handler(IntegrityError)
-            async def integrityerror_exception_handler(request: "Request", exc: IntegrityError):
+            async def integrityerror_exception_handler(
+                request: "Request", exc: IntegrityError
+            ):
                 return JSONResponse(
                     status_code=422,
-                    content={"detail": [{"loc": [], "msg": str(exc), "type": "IntegrityError"}]},
+                    content={
+                        "detail": [
+                            {"loc": [], "msg": str(exc), "type": "IntegrityError"}
+                        ]
+                    },
                 )
 
     async def init_orm(self) -> None:  # pylint: disable=W0612
         config, config_file = self.config, self.config_file
         db_url, modules = self.db_url, self.modules
-        await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
-        logger.info("Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps)
+        await Tortoise.init(
+            config=config,
+            config_file=config_file,
+            db_url=db_url,
+            modules=modules,
+            use_tz=self.use_tz,
+            timezone=self.timezone,
+        )
+        logger.info(
+            "Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps
+        )
         if self.generate_schemas:
             logger.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()
