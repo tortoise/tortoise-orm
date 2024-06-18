@@ -4,7 +4,7 @@ from tortoise import Model
 from tortoise.backends.odbc.executor import ODBCExecutor
 
 if TYPE_CHECKING:
-    from .client import OracleClient
+    from .client import OracleClient  # noqa
 
 
 class OracleExecutor(ODBCExecutor):
