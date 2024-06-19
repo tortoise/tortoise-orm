@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import sys
 import warnings
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from types import ModuleType
-from typing import TYPE_CHECKING, Dict, Iterable, Optional, Union
+from typing import TYPE_CHECKING, Dict, Generator, Iterable, Optional, Union
 
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel  # pylint: disable=E0611
@@ -15,6 +16,11 @@ from tortoise.log import logger
 
 if TYPE_CHECKING:
     from fastapi import FastAPI, Request
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
 
 
 class HTTPNotFoundError(BaseModel):
@@ -80,6 +86,10 @@ class RegisterTortoise(AbstractAsyncContextManager):
     add_exception_handlers:
         True to add some automatic exception handlers for ``DoesNotExist`` & ``IntegrityError``.
         This is not recommended for production systems as it may leak data.
+    use_tz:
+        A boolean that specifies if datetime will be timezone-aware by default or not.
+    timezone:
+        Timezone to use, default is UTC.
 
     Raises
     ------
@@ -111,38 +121,26 @@ class RegisterTortoise(AbstractAsyncContextManager):
         if add_exception_handlers:
 
             @app.exception_handler(DoesNotExist)
-            async def doesnotexist_exception_handler(
-                request: "Request", exc: DoesNotExist
-            ):
+            async def doesnotexist_exception_handler(request: "Request", exc: DoesNotExist):
                 return JSONResponse(status_code=404, content={"detail": str(exc)})
 
             @app.exception_handler(IntegrityError)
-            async def integrityerror_exception_handler(
-                request: "Request", exc: IntegrityError
-            ):
+            async def integrityerror_exception_handler(request: "Request", exc: IntegrityError):
                 return JSONResponse(
                     status_code=422,
-                    content={
-                        "detail": [
-                            {"loc": [], "msg": str(exc), "type": "IntegrityError"}
-                        ]
-                    },
+                    content={"detail": [{"loc": [], "msg": str(exc), "type": "IntegrityError"}]},
                 )
 
     async def init_orm(self) -> None:  # pylint: disable=W0612
-        config, config_file = self.config, self.config_file
-        db_url, modules = self.db_url, self.modules
         await Tortoise.init(
-            config=config,
-            config_file=config_file,
-            db_url=db_url,
-            modules=modules,
+            config=self.config,
+            config_file=self.config_file,
+            db_url=self.db_url,
+            modules=self.modules,
             use_tz=self.use_tz,
             timezone=self.timezone,
         )
-        logger.info(
-            "Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps
-        )
+        logger.info("Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps)
         if self.generate_schemas:
             logger.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()
@@ -152,15 +150,22 @@ class RegisterTortoise(AbstractAsyncContextManager):
         await connections.close_all()
         logger.info("Tortoise-ORM shutdown")
 
-    def __call__(self, *args, **kwargs) -> "RegisterTortoise":
+    def __call__(self, *args, **kwargs) -> Self:
         return self
 
-    async def __aenter__(self) -> "RegisterTortoise":
+    async def __aenter__(self) -> Self:
         await self.init_orm()
         return self
 
-    async def __aexit__(self, *args, **kw):
+    async def __aexit__(self, *args, **kw) -> None:
         await self.close_orm()
+
+    def __await__(self) -> Generator[None, None, Self]:
+        async def _self() -> Self:
+            await self.init_orm()
+            return self
+
+        return _self().__await__()
 
 
 def register_tortoise(
