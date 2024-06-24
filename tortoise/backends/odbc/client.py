@@ -1,7 +1,7 @@
 import asyncio
 from abc import ABC
 from functools import wraps
-from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, Coroutine, List, Optional, Tuple, TypeVar, Union
 
 import asyncodbc
 import pyodbc
@@ -22,13 +22,13 @@ from tortoise.exceptions import (
     TransactionManagementError,
 )
 
-FuncType = Callable[..., Any]
-F = TypeVar("F", bound=FuncType)
+T = TypeVar("T")
+FuncType = Callable[..., Coroutine[None, None, T]]
 
 
-def translate_exceptions(func: F) -> F:
+def translate_exceptions(func: FuncType) -> FuncType:
     @wraps(func)
-    async def translate_exceptions_(self, *args):
+    async def translate_exceptions_(self, *args) -> T:
         try:
             return await func(self, *args)
         except (
@@ -43,7 +43,7 @@ def translate_exceptions(func: F) -> F:
         except (pyodbc.IntegrityError, pyodbc.Error) as exc:
             raise IntegrityError(exc)
 
-    return translate_exceptions_  # type: ignore
+    return translate_exceptions_
 
 
 class ODBCClient(BaseDBAsyncClient, ABC):

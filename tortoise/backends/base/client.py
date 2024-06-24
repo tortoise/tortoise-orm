@@ -216,7 +216,7 @@ class ConnectionWrapper:
             await self.client.create_connection(with_db=True)
             self.connection = self.client._connection
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Any:
         await self.lock.acquire()
         await self.ensure_connection()
         return self.connection
@@ -231,16 +231,16 @@ class TransactionContext:
     def __init__(self, connection: Any) -> None:
         self.connection = connection
         self.connection_name = connection.connection_name
-        self.lock = getattr(connection, "_trxlock", None)
+        self.lock: Optional[asyncio.Lock] = getattr(connection, "_trxlock", None)
 
     async def ensure_connection(self) -> None:
         if not self.connection._connection:
             await self.connection._parent.create_connection(with_db=True)
             self.connection._connection = self.connection._parent._connection
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Any:
         await self.ensure_connection()
-        await self.lock.acquire()  # type:ignore
+        await self.lock.acquire()  # type:ignore[union-attr]
         self.token = connections.set(self.connection_name, self.connection)
         await self.connection.start()
         return self.connection
@@ -254,7 +254,7 @@ class TransactionContext:
             else:
                 await self.connection.commit()
         connections.reset(self.token)
-        self.lock.release()  # type:ignore
+        self.lock.release()  # type:ignore[union-attr]
 
 
 class TransactionContextPooled(TransactionContext):
@@ -264,7 +264,7 @@ class TransactionContextPooled(TransactionContext):
         if not self.connection._parent._pool:
             await self.connection._parent.create_connection(with_db=True)
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Any:
         await self.ensure_connection()
         self.token = connections.set(self.connection_name, self.connection)
         self.connection._connection = await self.connection._parent._pool.acquire()
@@ -285,7 +285,7 @@ class TransactionContextPooled(TransactionContext):
 
 
 class NestedTransactionContext(TransactionContext):
-    async def __aenter__(self):
+    async def __aenter__(self) -> Any:
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -297,12 +297,12 @@ class NestedTransactionContext(TransactionContext):
 
 
 class NestedTransactionPooledContext(TransactionContext):
-    async def __aenter__(self):
-        await self.lock.acquire()  # type:ignore
+    async def __aenter__(self) -> Any:
+        await self.lock.acquire()  # type:ignore[union-attr]
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self.lock.release()  # type:ignore
+        self.lock.release()  # type:ignore[union-attr]
         if not self.connection._finalized:
             if exc_type:
                 # Can't rollback a transaction that already failed.
@@ -322,7 +322,7 @@ class PoolConnectionWrapper:
             await self.client.create_connection(with_db=True)
             self.pool = self.client._pool
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Any:
         await self.ensure_connection()
         # get first available connection
         self.connection = await self.pool.acquire()

@@ -35,9 +35,11 @@ class TestPrefetching(test.TestCase):
             tournament = await Tournament.create(name="tournament")
             await Event.create(name="First", tournament=tournament)
             await Event.create(name="Second", tournament=tournament)
-            await Tournament.all().prefetch_related(
-                Prefetch("events1", queryset=Event.filter(name="First"))
-            ).first()
+            await (
+                Tournament.all()
+                .prefetch_related(Prefetch("events1", queryset=Event.filter(name="First")))
+                .first()
+            )
 
     async def test_prefetch_m2m(self):
         tournament = await Tournament.create(name="tournament")
