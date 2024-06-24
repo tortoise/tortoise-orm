@@ -2,9 +2,10 @@ import asyncio
 import inspect
 import os as _os
 import sys
+import typing
 import unittest
 from asyncio.events import AbstractEventLoop
-from functools import wraps
+from functools import partial, wraps
 from types import ModuleType
 from typing import Any, Callable, Coroutine, Iterable, List, Optional, TypeVar, Union
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
@@ -420,11 +421,25 @@ def requireCapability(connection_name: str = "models", **conditions: Any) -> Cal
 T = TypeVar("T")
 P = ParamSpec("P")
 AsyncFunc = Callable[P, Coroutine[None, None, T]]
+AsyncFuncDeco = Callable[..., AsyncFunc]
+ModulesConfigType = Union[str, List[str]]
 
 
-def init_memory_sqlite(func: AsyncFunc) -> AsyncFunc:
+@typing.overload
+def init_memory_sqlite(models: Union[ModulesConfigType, None] = None) -> AsyncFuncDeco: ...
+
+
+@typing.overload
+def init_memory_sqlite(models: AsyncFunc) -> AsyncFunc: ...
+
+
+def init_memory_sqlite(
+    models: Union[ModulesConfigType, AsyncFunc, None] = None
+) -> Union[AsyncFunc, AsyncFuncDeco]:
     """
     For single file style to run code with memory sqlite
+
+    :param models: list_of_modules that should be discovered for models, default to ['__main__'].
 
     Usage:
 
@@ -444,12 +459,31 @@ def init_memory_sqlite(func: AsyncFunc) -> AsyncFunc:
 
         if __name__ == '__main__'
             run_async(run)
+
+
+    Custom models example:
+
+    .. code-block:: python3
+
+        @init_memory_sqlite(models=['app.models', 'aerich.models'])
+        async def run():
+            ...
     """
 
-    @wraps(func)
-    async def wrapper(*args, **kw) -> T:
-        await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
-        await Tortoise.generate_schemas()
-        return await func(*args, **kw)
+    def wrapper(func: AsyncFunc, ms: List[str]):
+        @wraps(func)
+        async def runner(*args, **kwargs) -> T:
+            await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ms})
+            await Tortoise.generate_schemas()
+            return await func(*args, **kwargs)
 
-    return wrapper
+        return runner
+
+    default_models = ["__main__"]
+    if inspect.iscoroutinefunction(models):
+        return wrapper(models, default_models)
+    if models is None:
+        models = default_models
+    elif isinstance(models, str):
+        models = [models]
+    return partial(wrapper, ms=models)

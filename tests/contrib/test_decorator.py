@@ -32,3 +32,43 @@ class TestDecorator(test.TestCase):
             db_url="sqlite://:memory:", modules={"models": ["__main__"]}
         )
         mocked_generate.assert_awaited_once()
+
+    @test.requireCapability(dialect="sqlite")
+    @patch("tortoise.Tortoise.init")
+    @patch("tortoise.Tortoise.generate_schemas")
+    async def test_init_memory_sqlite_with_models(
+        self,
+        mocked_generate: AsyncMock,
+        mocked_init: AsyncMock,
+    ) -> None:
+        @init_memory_sqlite(["app.models"])
+        async def run():
+            return "foo"
+
+        res = await run()
+        self.assertEqual(res, "foo")
+        mocked_init.assert_awaited_once()
+        mocked_init.assert_called_once_with(
+            db_url="sqlite://:memory:", modules={"models": ["app.models"]}
+        )
+        mocked_generate.assert_awaited_once()
+
+    @test.requireCapability(dialect="sqlite")
+    @patch("tortoise.Tortoise.init")
+    @patch("tortoise.Tortoise.generate_schemas")
+    async def test_init_memory_sqlite_model_str(
+        self,
+        mocked_generate: AsyncMock,
+        mocked_init: AsyncMock,
+    ) -> None:
+        @init_memory_sqlite("app.models")
+        async def run():
+            return "foo"
+
+        res = await run()
+        self.assertEqual(res, "foo")
+        mocked_init.assert_awaited_once()
+        mocked_init.assert_called_once_with(
+            db_url="sqlite://:memory:", modules={"models": ["app.models"]}
+        )
+        mocked_generate.assert_awaited_once()
