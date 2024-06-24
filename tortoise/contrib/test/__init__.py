@@ -1,16 +1,24 @@
 import asyncio
 import inspect
 import os as _os
+import sys
+import typing
 import unittest
 from asyncio.events import AbstractEventLoop
-from functools import wraps
+from functools import partial, wraps
 from types import ModuleType
-from typing import Any, Iterable, List, Optional, Union
+from typing import Any, Callable, Coroutine, Iterable, List, Optional, TypeVar, Union
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 
 from tortoise import Model, Tortoise, connections
 from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise.exceptions import DBConnectionError, OperationalError
+
+if sys.version_info >= (3, 10):
+    from typing import ParamSpec
+else:
+    from typing_extensions import ParamSpec
+
 
 __all__ = (
     "SimpleTestCase",
@@ -27,6 +35,7 @@ __all__ = (
     "skip",
     "skipIf",
     "skipUnless",
+    "init_memory_sqlite",
 )
 _TORTOISE_TEST_DB = "sqlite://:memory:"
 # pylint: disable=W0201
@@ -338,7 +347,7 @@ class TestCase(TruncationTestCase):
             await super()._tearDownDB()
 
 
-def requireCapability(connection_name: str = "models", **conditions: Any):
+def requireCapability(connection_name: str = "models", **conditions: Any) -> Callable:
     """
     Skip a test if the required capabilities are not matched.
 
@@ -393,9 +402,9 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
 
         # Assume a class is decorated
         funcs = {
-            var: getattr(test_item, var)
+            var: f
             for var in dir(test_item)
-            if var.startswith("test_") and callable(getattr(test_item, var))
+            if var.startswith("test_") and callable(f := getattr(test_item, var))
         }
         for name, func in funcs.items():
             setattr(
@@ -407,3 +416,74 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
         return test_item
 
     return decorator
+
+
+T = TypeVar("T")
+P = ParamSpec("P")
+AsyncFunc = Callable[P, Coroutine[None, None, T]]
+AsyncFuncDeco = Callable[..., AsyncFunc]
+ModulesConfigType = Union[str, List[str]]
+
+
+@typing.overload
+def init_memory_sqlite(models: Union[ModulesConfigType, None] = None) -> AsyncFuncDeco: ...
+
+
+@typing.overload
+def init_memory_sqlite(models: AsyncFunc) -> AsyncFunc: ...
+
+
+def init_memory_sqlite(
+    models: Union[ModulesConfigType, AsyncFunc, None] = None
+) -> Union[AsyncFunc, AsyncFuncDeco]:
+    """
+    For single file style to run code with memory sqlite
+
+    :param models: list_of_modules that should be discovered for models, default to ['__main__'].
+
+    Usage:
+
+    .. code-block:: python3
+
+        from tortoise import fields, models, run_async
+        from tortoise.contrib.test import init_memory_sqlite
+
+        class MyModel(models.Model):
+            id = fields.IntField(primary_key=True)
+            name = fields.TextField()
+
+        @init_memory_sqlite
+        async def run():
+            obj = await MyModel.create(name='')
+            assert obj.id == 1
+
+        if __name__ == '__main__'
+            run_async(run)
+
+
+    Custom models example:
+
+    .. code-block:: python3
+
+        @init_memory_sqlite(models=['app.models', 'aerich.models'])
+        async def run():
+            ...
+    """
+
+    def wrapper(func: AsyncFunc, ms: List[str]):
+        @wraps(func)
+        async def runner(*args, **kwargs) -> T:
+            await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ms})
+            await Tortoise.generate_schemas()
+            return await func(*args, **kwargs)
+
+        return runner
+
+    default_models = ["__main__"]
+    if inspect.iscoroutinefunction(models):
+        return wrapper(models, default_models)
+    if models is None:
+        models = default_models
+    elif isinstance(models, str):
+        models = [models]
+    return partial(wrapper, ms=models)

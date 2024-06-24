@@ -7,7 +7,7 @@ from tortoise.contrib.fastapi import RegisterTortoise
 
 
 class TestRegisterTortoise(test.TestCase):
-    @test.requireCapability(dialect="sqlite")  # type:ignore[misc]
+    @test.requireCapability(dialect="sqlite")
     @patch("tortoise.Tortoise.init")
     @patch("tortoise.connections.close_all")
     async def test_await(
