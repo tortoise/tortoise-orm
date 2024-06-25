@@ -10,7 +10,11 @@ from routers import router as users_router
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # app startup
-    async with register_orm(app):
+    async with register_orm(
+        app,
+        use_tz=False,
+        timezone="Asia/Shanghai",
+    ):
         # db connected
         yield
         # app teardown

@@ -21,6 +21,7 @@ else:
 
 
 __all__ = (
+    "MEMORY_SQLITE",
     "SimpleTestCase",
     "TestCase",
     "TruncationTestCase",
@@ -423,6 +424,7 @@ P = ParamSpec("P")
 AsyncFunc = Callable[P, Coroutine[None, None, T]]
 AsyncFuncDeco = Callable[..., AsyncFunc]
 ModulesConfigType = Union[str, List[str]]
+MEMORY_SQLITE = "sqlite://:memory:"
 
 
 @typing.overload
@@ -473,7 +475,7 @@ def init_memory_sqlite(
     def wrapper(func: AsyncFunc, ms: List[str]):
         @wraps(func)
         async def runner(*args, **kwargs) -> T:
-            await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ms})
+            await Tortoise.init(db_url=MEMORY_SQLITE, modules={"models": ms})
             await Tortoise.generate_schemas()
             return await func(*args, **kwargs)
 
