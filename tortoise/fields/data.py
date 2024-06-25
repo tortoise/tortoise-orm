@@ -486,6 +486,7 @@ class TimeDeltaField(Field[datetime.timedelta]):
     A field for storing time differences.
     """
 
+    field_type = datetime.timedelta
     SQL_TYPE = "BIGINT"
 
     class _db_oracle:
