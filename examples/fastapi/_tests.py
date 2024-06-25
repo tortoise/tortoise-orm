@@ -3,14 +3,13 @@
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 from typing import AsyncGenerator, Tuple
 
 import pytest
 import pytz
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
-from models import Users
-from schemas import User_Pydantic
 
 from tortoise.contrib.test import MEMORY_SQLITE
 from tortoise.fields.data import JSON_LOADS
@@ -19,7 +18,14 @@ os.environ["DB_URL"] = MEMORY_SQLITE
 try:
     from main import app
     from main_custom_timezone import app as app_east
+    from models import Users
+    from schemas import User_Pydantic
 except ImportError:
+    if (cwd := Path.cwd()) == (parent := Path(__file__).parent):
+        dirpath = "."
+    else:
+        dirpath = str(parent.relative_to(cwd))
+    print(f"You may need to explicitly declare python path:\n\nexport PYTHONPATH={dirpath}\n")
     raise
 
 ClientManagerType = AsyncGenerator[AsyncClient, None]
