@@ -475,15 +475,16 @@ class BaseExecutor:
                 query = query.having(having_criterion)
 
         _, raw_results = await self.db.execute_query(query.get_sql())
-        # TODO: we should only resolve the PK's once
-        relations = [
-            (
-                self.model._meta.pk.to_python_value(e["_backward_relation_key"]),
-                field_object.related_model._meta.pk.to_python_value(e[related_pk_field]),
+        relations: List[Tuple[Any, Any]] = []
+        related_object_list: List["Model"] = []
+        model_pk, related_pk = self.model._meta.pk, field_object.related_model._meta.pk
+        for e in raw_results:
+            pk_values: Tuple[Any, Any] = (
+                model_pk.to_python_value(e["_backward_relation_key"]),
+                related_pk.to_python_value(e[related_pk_field]),
             )
-            for e in raw_results
-        ]
-        related_object_list = [related_query.model._init_from_db(**e) for e in raw_results]
+            relations.append(pk_values)
+            related_object_list.append(related_query.model._init_from_db(**e))
         await self.__class__(
             model=related_query.model, db=self.db, prefetch_map=related_query._prefetch_map
         )._execute_prefetch_queries(related_object_list)
