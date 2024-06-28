@@ -37,7 +37,7 @@ from tortoise.utils import chunk
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
-    from tortoise.models import Model
+    from tortoise.models import MetaInfo, Model
     from tortoise.query_utils import Prefetch
     from tortoise.queryset import QuerySet
 
@@ -508,16 +508,20 @@ class BaseExecutor:
         related_query: Tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
         # TODO: This will only work if instance_list is all of same type
-        # TODO: If that's the case, then we can optimize the key resolver
         to_attr, related_query = related_query
         related_objects_for_fetch: Dict[str, list] = {}
         relation_key_field = f"{field}_id"
+        meta_to_field: Dict["MetaInfo", str] = {}
         for instance in instance_list:
-            if getattr(instance, relation_key_field) is not None:
-                key = cast(RelationalField, instance._meta.fields_map[field]).to_field
-                if key not in related_objects_for_fetch:
-                    related_objects_for_fetch[key] = []
-                related_objects_for_fetch[key].append(getattr(instance, relation_key_field))
+            if (value := getattr(instance, relation_key_field)) is not None:
+                if (meta := instance._meta) in meta_to_field:
+                    key = meta_to_field[meta]
+                else:
+                    related_field = cast(RelationalField, meta.fields_map[field])
+                    meta_to_field[meta] = key = related_field.to_field
+                    if key not in related_objects_for_fetch:
+                        related_objects_for_fetch[key] = []
+                related_objects_for_fetch[key].append(value)
             else:
                 setattr(instance, field, None)
 
