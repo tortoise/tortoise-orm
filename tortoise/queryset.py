@@ -1888,13 +1888,9 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
                 self.insert_query_all = self.insert_query_all.as_(alias).on_conflict(
                     *self.on_conflict
                 )
-                self.insert_query = self.insert_query.as_(alias).on_conflict(
-                    *self.on_conflict
-                )
+                self.insert_query = self.insert_query.as_(alias).on_conflict(*self.on_conflict)
                 for update_field in self.update_fields:
-                    self.insert_query_all = self.insert_query_all.do_update(
-                        update_field
-                    )
+                    self.insert_query_all = self.insert_query_all.do_update(update_field)
                     self.insert_query = self.insert_query.do_update(update_field)
         else:
             self.insert_query_all = self.executor.insert_query_all
