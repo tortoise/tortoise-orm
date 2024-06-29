@@ -37,7 +37,7 @@ from tortoise.utils import chunk
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
-    from tortoise.models import MetaInfo, Model
+    from tortoise.models import Model
     from tortoise.query_utils import Prefetch
     from tortoise.queryset import QuerySet
 
@@ -507,18 +507,17 @@ class BaseExecutor:
         field: str,
         related_query: Tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
-        # TODO: This will only work if instance_list is all of same type
-        to_attr, related_query = related_query
+        to_attr, related_queryset = related_query
         related_objects_for_fetch: Dict[str, list] = {}
         relation_key_field = f"{field}_id"
-        meta_to_field: Dict["MetaInfo", str] = {}
+        model_to_field: Dict["Type[Model]", str] = {}
         for instance in instance_list:
             if (value := getattr(instance, relation_key_field)) is not None:
-                if (meta := instance._meta) in meta_to_field:
-                    key = meta_to_field[meta]
+                if (model_cls := instance.__class__) in model_to_field:
+                    key = model_to_field[model_cls]
                 else:
-                    related_field = cast(RelationalField, meta.fields_map[field])
-                    meta_to_field[meta] = key = related_field.to_field
+                    related_field = cast(RelationalField, instance._meta.fields_map[field])
+                    model_to_field[model_cls] = key = related_field.to_field
                     if key not in related_objects_for_fetch:
                         related_objects_for_fetch[key] = []
                 related_objects_for_fetch[key].append(value)
@@ -526,10 +525,15 @@ class BaseExecutor:
                 setattr(instance, field, None)
 
         if related_objects_for_fetch:
-            related_object_list = await related_query.filter(
+            related_object_list = await related_queryset.filter(
                 **{f"{k}__in": v for k, v in related_objects_for_fetch.items()}
             )
-            related_object_map = {getattr(obj, key): obj for obj in related_object_list}
+            if len(model_to_field) > 1:
+                related_object_map = {
+                    getattr(obj, model_to_field[obj.__class__]): obj for obj in related_object_list
+                }
+            else:
+                related_object_map = {getattr(obj, key): obj for obj in related_object_list}
             for instance in instance_list:
                 obj = related_object_map.get(getattr(instance, relation_key_field))
                 setattr(instance, field, obj)
