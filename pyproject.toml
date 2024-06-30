@@ -182,6 +182,12 @@ per-file-ignores = [
 ]
 docstring_style = "sphinx"
 
+[tool.pytest.ini_options]
+filterwarnings = [
+    'ignore:`pk` is deprecated:DeprecationWarning',
+    'ignore:`index` is deprecated:DeprecationWarning',
+]
+
 [tool.coverage.run]
 branch = true
 source = ["tortoise"]
