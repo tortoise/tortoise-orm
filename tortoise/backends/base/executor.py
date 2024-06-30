@@ -201,7 +201,7 @@ class BaseExecutor:
         self, columns: Sequence[str], has_generated: bool = True, ignore_conflicts: bool = False
     ) -> QueryBuilder:
         # Insert should implement returning new id to saved object
-        # Each db has it's own methods for it, so each implementation should
+        # Each db has its own methods for it, so each implementation should
         # go to descendant executors
         query = (
             self.db.query_class.into(self.model._meta.basetable)
