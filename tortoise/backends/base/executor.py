@@ -136,9 +136,7 @@ class BaseExecutor:
                 row_items = list(dict(row).items())
                 instance: "Model" = self.model._init_from_db(**dict(row_items[:current_idx]))
                 instances: Dict[Any, Any] = {path: instance}
-                for model, index, model_name, parent_model, full_path in self.select_related_idx[
-                    1:
-                ]:
+                for model, index, *__, full_path in self.select_related_idx[1:]:
                     (*path, attr) = full_path
                     related_items = row_items[current_idx : current_idx + index]
                     if not any((v for _, v in related_items)):
