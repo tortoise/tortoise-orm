@@ -520,14 +520,20 @@ class BaseExecutor:
                     model_to_field[model_cls] = key = related_field.to_field
                     if key not in related_objects_for_fetch:
                         related_objects_for_fetch[key] = []
-                related_objects_for_fetch[key].append(value)
+                if value not in (values := related_objects_for_fetch[key]):
+                    values.append(value)
             else:
                 setattr(instance, field, None)
 
         if related_objects_for_fetch:
-            related_object_list = await related_queryset.filter(
-                **{f"{k}__in": v for k, v in related_objects_for_fetch.items()}
-            )
+            conditions: Dict[str, Any] = {}
+            for k, v in related_objects_for_fetch.items():
+                if len(v) == 1:
+                    v = v[0]
+                else:
+                    k += "__in"
+                conditions[k] = v
+            related_object_list = await related_queryset.filter(**conditions)
             if len(model_to_field) > 1:
                 related_object_map = {
                     getattr(obj, model_to_field[obj.__class__]): obj for obj in related_object_list
