@@ -1514,6 +1514,8 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         self.use_indexes = use_indexes
 
     def _make_query(self) -> None:
+        self._joined_tables = []
+
         self.query = copy(self.model._meta.basequery)
         for positional_number, field in self.fields.items():
             self.add_field_to_select_query(field, positional_number)
@@ -1642,6 +1644,8 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         self.use_indexes = use_indexes
 
     def _make_query(self) -> None:
+        self._joined_tables = []
+
         self.query = copy(self.model._meta.basequery)
         for return_as, field in self.fields_for_select.items():
             self.add_field_to_select_query(field, return_as)

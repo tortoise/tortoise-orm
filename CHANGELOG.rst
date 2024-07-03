@@ -25,6 +25,7 @@ Fixed
 - Fix bandit check error (#1643)
 - Fix potential race condition in ConnectionWrapper (#1656)
 - Fix py312 warning for datetime.utcnow (#1661)
+- Fix reusing values and value_list queries (#780)
 
 Changed
 ^^^^^^^
