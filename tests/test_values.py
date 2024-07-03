@@ -51,9 +51,7 @@ class TestValues(test.TestCase):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Test", tournament_id=tournament.id)
 
-        query = Tournament.filter(name="New Tournament").values_list(
-            "name", "events__name"
-        )
+        query = Tournament.filter(name="New Tournament").values_list("name", "events__name")
         tournament2 = await query
         self.assertEqual(tournament2[0], ("New Tournament", "Test"))
 
