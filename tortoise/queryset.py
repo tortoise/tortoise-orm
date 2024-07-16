@@ -556,6 +556,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         If no arguments are passed it will default to a tuple containing all fields
         in order of declaration.
         """
+        fields_for_select_list = fields_ or [
+            field for field in self.model._meta.fields_map if field in self.model._meta.db_fields
+        ] + list(self._annotations.keys())
         return ValuesListQuery(
             db=self._db,
             model=self.model,
@@ -563,13 +566,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             single=self._single,
             raise_does_not_exist=self._raise_does_not_exist,
             flat=flat,
-            fields_for_select_list=fields_  # type: ignore
-            or [
-                field
-                for field in self.model._meta.fields_map.keys()
-                if field in self.model._meta.db_fields
-            ]
-            + list(self._annotations.keys()),
+            fields_for_select_list=fields_for_select_list,
             distinct=self._distinct,
             limit=self._limit,
             offset=self._offset,
@@ -1480,7 +1477,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         q_objects: List[Q],
         single: bool,
         raise_does_not_exist: bool,
-        fields_for_select_list: List[str],
+        fields_for_select_list: Union[Tuple[str, ...], List[str]],
         limit: Optional[int],
         offset: Optional[int],
         distinct: bool,
@@ -1875,10 +1872,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
 
     def _make_query(self) -> None:
         self.executor = self._db.executor_class(model=self.model, db=self._db)
-        if not self.ignore_conflicts and not self.update_fields:
-            self.insert_query_all = self.executor.insert_query_all
-            self.insert_query = self.executor.insert_query
-        else:
+        if self.ignore_conflicts or self.update_fields:
             regular_columns, columns = self.executor._prepare_insert_columns()
             self.insert_query = self.executor._prepare_insert_statement(
                 columns, ignore_conflicts=self.ignore_conflicts
@@ -1895,17 +1889,16 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
                 )
             if self.update_fields:
                 alias = f"new_{self.model._meta.db_table}"
-                self.insert_query_all = self.insert_query_all.as_(alias).on_conflict(  # type:ignore
+                self.insert_query_all = self.insert_query_all.as_(alias).on_conflict(
                     *self.on_conflict
                 )
-                self.insert_query = self.insert_query.as_(alias).on_conflict(  # type:ignore
-                    *self.on_conflict
-                )
+                self.insert_query = self.insert_query.as_(alias).on_conflict(*self.on_conflict)
                 for update_field in self.update_fields:
-                    self.insert_query_all = self.insert_query_all.do_update(  # type:ignore
-                        update_field
-                    )
-                    self.insert_query = self.insert_query.do_update(update_field)  # type:ignore
+                    self.insert_query_all = self.insert_query_all.do_update(update_field)
+                    self.insert_query = self.insert_query.do_update(update_field)
+        else:
+            self.insert_query_all = self.executor.insert_query_all
+            self.insert_query = self.executor.insert_query
 
     async def _execute(self) -> None:
         for instance_chunk in chunk(self.objects, self.batch_size):

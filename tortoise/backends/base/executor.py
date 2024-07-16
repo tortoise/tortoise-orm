@@ -133,36 +133,16 @@ class BaseExecutor:
         for row in raw_results:
             if self.select_related_idx:
                 _, current_idx, _, _, path = self.select_related_idx[0]
-                dict_row = dict(row)
-                keys = list(dict_row.keys())
-                values = list(dict_row.values())
-                instance: "Model" = self.model._init_from_db(
-                    **dict(zip(keys[:current_idx], values[:current_idx]))
-                )
+                row_items = list(dict(row).items())
+                instance: "Model" = self.model._init_from_db(**dict(row_items[:current_idx]))
                 instances: Dict[Any, Any] = {path: instance}
-                for (
-                    model,
-                    index,
-                    model_name,
-                    parent_model,
-                    full_path,
-                ) in self.select_related_idx[1:]:
+                for model, index, *__, full_path in self.select_related_idx[1:]:
                     (*path, attr) = full_path
-                    related_values = values[current_idx : current_idx + index]  # noqa
-                    if not any(related_values):
+                    related_items = row_items[current_idx : current_idx + index]
+                    if not any((v for _, v in related_items)):
                         obj = None
                     else:
-                        obj = model._init_from_db(
-                            **dict(
-                                zip(
-                                    (
-                                        x.split(".")[1]
-                                        for x in keys[current_idx : current_idx + index]
-                                    ),
-                                    related_values,
-                                )
-                            )
-                        )
+                        obj = model._init_from_db(**{k.split(".")[1]: v for k, v in related_items})
                     target = instances.get(tuple(path))
                     if target is not None:
                         setattr(target, f"_{attr}", obj)
