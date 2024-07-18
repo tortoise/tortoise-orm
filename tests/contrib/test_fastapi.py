@@ -29,6 +29,7 @@ class TestRegisterTortoise(test.TestCase):
             modules={"models": ["__main__"]},
             use_tz=False,
             timezone="UTC",
+            _create_db=False,
         )
         await orm.close_orm()
         mocked_close.assert_awaited_once()
