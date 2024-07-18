@@ -9,6 +9,12 @@ Changelog
 0.21
 ====
 
+0.21.5 <../0.21.5>`_ - 2024-07-18
+------
+Added
+^^^^^
+- Propagate `_create_db` parameter to RegisterTortoise. (#1676)
+
 0.21.4 <../0.21.4>`_ - 2024-07-03
 ------
 Added
