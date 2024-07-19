@@ -14,7 +14,7 @@ from tortoise.contrib.fastapi import RegisterTortoise
 @asynccontextmanager
 async def lifespan_test(app: FastAPI) -> AsyncGenerator[None, None]:
     config = generate_config(
-        os.getenv("TORTOISE_TEST_DB", ""),
+        os.getenv("TORTOISE_TEST_DB", "sqlite://:memory:"),
         app_modules={"models": ["models"]},
         testing=True,
         connection_label="models",
