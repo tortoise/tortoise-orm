@@ -124,7 +124,7 @@ class MySQLClient(BaseDBAsyncClient):
                                 self.capabilities.__dict__["supports_transactions"] = False
                         hours = timezone.now().utcoffset().seconds / 3600  # type: ignore
                         tz = "{:+d}:{:02d}".format(int(hours), int((hours % 1) * 60))
-                        await cursor.execute(f"SET SESSION time_zone='{tz}';")
+                        await cursor.execute(f"SET time_zone='{tz}';")
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
         except errors.OperationalError:
             raise DBConnectionError(f"Can't connect to MySQL server: {self._template}")
