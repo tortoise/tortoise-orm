@@ -6,7 +6,6 @@ import ssl
 
 from tortoise import Tortoise
 from tortoise.contrib import test
-from tortoise.contrib.test.condition import NotIn
 
 
 class TestMySQL(test.SimpleTestCase):
@@ -26,6 +25,15 @@ class TestMySQL(test.SimpleTestCase):
         self.db_config["connections"]["models"]["credentials"]["charset"] = "terrible"
         with self.assertRaisesRegex(ConnectionError, "Unknown charset"):
             await Tortoise.init(self.db_config, _create_db=True)
+
+    async def test_ssl_true(self):
+        self.db_config["connections"]["models"]["credentials"]["ssl"] = True
+        try:
+            await Tortoise.init(self.db_config, _create_db=True)
+        except (ConnectionError, ssl.SSLError):
+            pass
+        else:
+            self.assertFalse(True, "Expected ConnectionError or SSLError")
 
     async def test_ssl_custom(self):
         # Expect connectionerror or pass

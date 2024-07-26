@@ -406,7 +406,7 @@ CREATE UNIQUE INDEX "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id
 class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
         try:
-            with patch("asyncmy.create_pool", new=MagicMock()):
+            with patch("aiomysql.create_pool", new=MagicMock()):
                 await Tortoise.init(
                     {
                         "connections": {
@@ -428,7 +428,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
                 )
                 self.sqls = get_schema_sql(connections.get("default"), safe).split("; ")
         except ImportError:
-            raise test.SkipTest("asyncmy not installed")
+            raise test.SkipTest("aiomysql not installed")
 
     async def test_noid(self):
         await self.init_for("tests.testmodels")
