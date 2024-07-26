@@ -167,8 +167,6 @@ MySQL optional parameters are pass-though parameters to the driver, see `here <h
     Duration to wait for connection before throwing error.
 ``echo`` (defaults to ``False``):
     Set to `True`` to echo SQL queries (debug only)
-``no_delay`` (defaults to ``None``):
-    Set to ``True`` to set TCP NO_DELAY to disable Nagle's algorithm on the socket.
 ``charset`` (defaults to ``utf8mb4``):
     Sets the character set in use
 ``ssl`` (defaults to ``False``):
