@@ -6,6 +6,7 @@ import ssl
 
 from tortoise import Tortoise
 from tortoise.contrib import test
+from tortoise.contrib.test.condition import NotIn
 
 
 class TestMySQL(test.SimpleTestCase):
@@ -26,6 +27,8 @@ class TestMySQL(test.SimpleTestCase):
         with self.assertRaisesRegex(ConnectionError, "Unknown charset"):
             await Tortoise.init(self.db_config, _create_db=True)
 
+    # asyncmy does not support ssl
+    @test.requireCapability(dialect=NotIn("mssql"))
     async def test_ssl_true(self):
         self.db_config["connections"]["models"]["credentials"]["ssl"] = True
         try:
