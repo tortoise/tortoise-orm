@@ -27,6 +27,17 @@ class TestValues(test.TestCase):
         tournament2 = await Tournament.filter(name="New Tournament").values("name", "events__name")
         self.assertEqual(tournament2[0], {"name": "New Tournament", "events__name": "Test"})
 
+    async def test_values_related_rfk_reuse_query(self):
+        tournament = await Tournament.create(name="New Tournament")
+        await Event.create(name="Test", tournament_id=tournament.id)
+
+        query = Tournament.filter(name="New Tournament").values("name", "events__name")
+        tournament2 = await query
+        self.assertEqual(tournament2[0], {"name": "New Tournament", "events__name": "Test"})
+
+        tournament2 = await query
+        self.assertEqual(tournament2[0], {"name": "New Tournament", "events__name": "Test"})
+
     async def test_values_list_related_rfk(self):
         tournament = await Tournament.create(name="New Tournament")
         await Event.create(name="Test", tournament_id=tournament.id)
@@ -34,6 +45,17 @@ class TestValues(test.TestCase):
         tournament2 = await Tournament.filter(name="New Tournament").values_list(
             "name", "events__name"
         )
+        self.assertEqual(tournament2[0], ("New Tournament", "Test"))
+
+    async def test_values_list_related_rfk_reuse_query(self):
+        tournament = await Tournament.create(name="New Tournament")
+        await Event.create(name="Test", tournament_id=tournament.id)
+
+        query = Tournament.filter(name="New Tournament").values_list("name", "events__name")
+        tournament2 = await query
+        self.assertEqual(tournament2[0], ("New Tournament", "Test"))
+
+        tournament2 = await query
         self.assertEqual(tournament2[0], ("New Tournament", "Test"))
 
     async def test_values_related_m2m(self):

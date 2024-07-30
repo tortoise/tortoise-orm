@@ -265,7 +265,7 @@ class BaseSchemaGenerator:
                     nullable=nullable,
                     unique=unique,
                     is_primary_key=field_object.pk,
-                    comment="",
+                    comment=comment if not reference.db_constraint else "",
                     default=default,
                 ) + (
                     self._create_fk_string(

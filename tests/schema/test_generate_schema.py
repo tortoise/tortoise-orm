@@ -245,7 +245,7 @@ CREATE TABLE "event" (
     "prize" VARCHAR(40),
     "token" VARCHAR(100) NOT NULL UNIQUE /* Unique token */,
     "key" VARCHAR(100) NOT NULL,
-    "tournament_id" SMALLINT NOT NULL,
+    "tournament_id" SMALLINT NOT NULL  /* FK to tournament */,
     CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
     CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
 ) /* This table contains a list of all the events */;
@@ -406,7 +406,7 @@ CREATE UNIQUE INDEX "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id
 class TestGenerateSchemaMySQL(TestGenerateSchema):
     async def init_for(self, module: str, safe=False) -> None:
         try:
-            with patch("asyncmy.create_pool", new=MagicMock()):
+            with patch("aiomysql.create_pool", new=MagicMock()):
                 await Tortoise.init(
                     {
                         "connections": {
@@ -428,7 +428,7 @@ class TestGenerateSchemaMySQL(TestGenerateSchema):
                 )
                 self.sqls = get_schema_sql(connections.get("default"), safe).split("; ")
         except ImportError:
-            raise test.SkipTest("asyncmy not installed")
+            raise test.SkipTest("aiomysql not installed")
 
     async def test_noid(self):
         await self.init_for("tests.testmodels")
@@ -492,17 +492,19 @@ CREATE TABLE `event` (
     `prize` DECIMAL(10,2),
     `token` VARCHAR(100) NOT NULL UNIQUE COMMENT 'Unique token',
     `key` VARCHAR(100) NOT NULL,
-    `tournament_id` SMALLINT NOT NULL,
+    `tournament_id` SMALLINT NOT NULL  COMMENT 'FK to tournament',
     UNIQUE KEY `uid_event_name_c6f89f` (`name`, `prize`),
     UNIQUE KEY `uid_event_tournam_a5b730` (`tournament_id`, `key`)
 ) CHARACTER SET utf8mb4 COMMENT='This table contains a list of all the events';
 CREATE TABLE `team_team` (
     `team_rel_id` VARCHAR(50) NOT NULL,
-    `team_id` VARCHAR(50) NOT NULL
+    `team_id` VARCHAR(50) NOT NULL,
+    UNIQUE KEY `uidx_team_team_team_re_d994df` (`team_rel_id`, `team_id`)
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `teamevents` (
     `event_id` BIGINT NOT NULL,
-    `team_id` VARCHAR(50) NOT NULL
+    `team_id` VARCHAR(50) NOT NULL,
+    UNIQUE KEY `uidx_teamevents_event_i_664dbc` (`event_id`, `team_id`)
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';""",
         )
 
@@ -588,19 +590,22 @@ CREATE TABLE `sometable_self` (
     `backward_sts` INT NOT NULL,
     `sts_forward` INT NOT NULL,
     FOREIGN KEY (`backward_sts`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`sts_forward`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
+    FOREIGN KEY (`sts_forward`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
+    UNIQUE KEY `uidx_sometable_s_backwar_fc8fc8` (`backward_sts`, `sts_forward`)
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `team_team` (
     `team_rel_id` VARCHAR(50) NOT NULL,
     `team_id` VARCHAR(50) NOT NULL,
     FOREIGN KEY (`team_rel_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
-    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
+    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
+    UNIQUE KEY `uidx_team_team_team_re_d994df` (`team_rel_id`, `team_id`)
 ) CHARACTER SET utf8mb4;
 CREATE TABLE `teamevents` (
     `event_id` BIGINT NOT NULL,
     `team_id` VARCHAR(50) NOT NULL,
     FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE SET NULL,
-    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL
+    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL,
+    UNIQUE KEY `uidx_teamevents_event_i_664dbc` (`event_id`, `team_id`)
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
 """.strip(),
         )
@@ -691,19 +696,22 @@ CREATE TABLE IF NOT EXISTS `sometable_self` (
     `backward_sts` INT NOT NULL,
     `sts_forward` INT NOT NULL,
     FOREIGN KEY (`backward_sts`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
-    FOREIGN KEY (`sts_forward`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE
+    FOREIGN KEY (`sts_forward`) REFERENCES `sometable` (`sometable_id`) ON DELETE CASCADE,
+    UNIQUE KEY `uidx_sometable_s_backwar_fc8fc8` (`backward_sts`, `sts_forward`)
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `team_team` (
     `team_rel_id` VARCHAR(50) NOT NULL,
     `team_id` VARCHAR(50) NOT NULL,
     FOREIGN KEY (`team_rel_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
-    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
+    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
+    UNIQUE KEY `uidx_team_team_team_re_d994df` (`team_rel_id`, `team_id`)
 ) CHARACTER SET utf8mb4;
 CREATE TABLE IF NOT EXISTS `teamevents` (
     `event_id` BIGINT NOT NULL,
     `team_id` VARCHAR(50) NOT NULL,
     FOREIGN KEY (`event_id`) REFERENCES `event` (`id`) ON DELETE SET NULL,
-    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL
+    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL,
+    UNIQUE KEY `uidx_teamevents_event_i_664dbc` (`event_id`, `team_id`)
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
 """.strip(),
         )
@@ -781,9 +789,9 @@ CREATE TABLE `team_team` (
     `team_rel_id` VARCHAR(50) NOT NULL,
     `team_id` VARCHAR(50) NOT NULL,
     FOREIGN KEY (`team_rel_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
-    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE
+    FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
+    UNIQUE KEY `uidx_team_team_team_re_d994df` (`team_rel_id`, `team_id`)
 ) CHARACTER SET utf8mb4;
-CREATE UNIQUE INDEX IF NOT EXISTS "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
 """.strip(),
         )
 

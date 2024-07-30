@@ -455,18 +455,15 @@ class MetaInfo:
             model_field = self.fields_db_projection_reverse[key]
             field = self.fields_map[model_field]
 
+            is_native_field_type = field.field_type in self.db.executor_class.DB_NATIVE
             default_converter = field.__class__.to_python_value is Field.to_python_value
-            if (
-                field.skip_to_python_if_native
-                and field.field_type in self.db.executor_class.DB_NATIVE
-            ):
+
+            if is_native_field_type and (default_converter or field.skip_to_python_if_native):
                 self.db_native_fields.append((key, model_field, field))
-            elif not default_converter:
-                self.db_complex_fields.append((key, model_field, field))
-            elif field.field_type in self.db.executor_class.DB_NATIVE:
-                self.db_native_fields.append((key, model_field, field))
-            else:
+            elif default_converter:
                 self.db_default_fields.append((key, model_field, field))
+            else:
+                self.db_complex_fields.append((key, model_field, field))
 
     def _generate_filters(self) -> None:
         get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
@@ -722,7 +719,7 @@ class Model(metaclass=ModelMeta):
         self._await_when_save = {}
 
         meta = self._meta
-
+        inited_keys: Set[str] = set()
         try:
             # This is like so for performance reasons.
             #  We want to avoid conditionals and calling .to_python_value()
@@ -730,20 +727,36 @@ class Model(metaclass=ModelMeta):
             #  by the DB driver
             for key, model_field, field in meta.db_native_fields:
                 setattr(self, model_field, kwargs[key])
+                inited_keys.add(key)
             # Fields that don't override .to_python_value() are converted without a call
             #  as we already know what we will be doing.
             for key, model_field, field in meta.db_default_fields:
                 if (value := kwargs[key]) is not None:
                     value = field.field_type(value)
                 setattr(self, model_field, value)
+                inited_keys.add(key)
             # These fields need manual .to_python_value()
             for key, model_field, field in meta.db_complex_fields:
                 setattr(self, model_field, field.to_python_value(kwargs[key]))
+                inited_keys.add(key)
         except KeyError:
             self._partial = True
-            # TODO: Apply similar perf optimisation as above for partial
+            native_fields: List[Field] = [f for *_, f in meta.db_native_fields]
+            default_fields = complex_fields = None
             for key, value in kwargs.items():
-                setattr(self, key, meta.fields_map[key].to_python_value(value))
+                if key in inited_keys or key not in meta.fields_map:
+                    continue
+                if (field := meta.fields_map[key]) not in native_fields:
+                    if default_fields is None:
+                        default_fields = [f for *_, f in meta.db_default_fields]
+                    if field in default_fields:
+                        if value is not None:
+                            value = field.field_type(value)
+                    else:
+                        if complex_fields is None:
+                            complex_fields = [f for *_, f in meta.db_complex_fields]
+                        value = field.to_python_value(value)
+                setattr(self, key, value)
 
         return self
 

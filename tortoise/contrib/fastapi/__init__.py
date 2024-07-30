@@ -108,6 +108,7 @@ class RegisterTortoise(AbstractAsyncContextManager):
         add_exception_handlers: bool = False,
         use_tz: bool = False,
         timezone: str = "UTC",
+        _create_db: bool = False,
     ) -> None:
         self.app = app
         self.config = config
@@ -117,6 +118,7 @@ class RegisterTortoise(AbstractAsyncContextManager):
         self.generate_schemas = generate_schemas
         self.use_tz = use_tz
         self.timezone = timezone
+        self._create_db = _create_db
 
         if add_exception_handlers:
 
@@ -139,6 +141,7 @@ class RegisterTortoise(AbstractAsyncContextManager):
             modules=self.modules,
             use_tz=self.use_tz,
             timezone=self.timezone,
+            _create_db=self._create_db,
         )
         logger.info("Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps)
         if self.generate_schemas:
