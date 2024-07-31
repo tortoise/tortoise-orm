@@ -171,7 +171,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
     def _in_transaction(self) -> "TransactionContext":
         return NestedTransactionPooledContext(self)
 
-    def acquire_connection(self) -> "ConnectionWrapper":
+    def acquire_connection(self) -> ConnectionWrapper[asyncpg.Connection]:
         return ConnectionWrapper(self._lock, self)
 
     @translate_exceptions
