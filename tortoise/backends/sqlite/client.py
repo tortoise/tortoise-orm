@@ -2,7 +2,17 @@ import asyncio
 import os
 import sqlite3
 from functools import wraps
-from typing import Any, Callable, List, Optional, Sequence, Tuple, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Coroutine,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    TypeVar,
+    cast,
+)
 
 import aiosqlite
 from pypika import SQLLiteQuery
@@ -23,13 +33,13 @@ from tortoise.exceptions import (
     TransactionManagementError,
 )
 
-FuncType = Callable[..., Any]
-F = TypeVar("F", bound=FuncType)
+T = TypeVar("T")
+FuncType = Callable[..., Coroutine[None, None, T]]
 
 
-def translate_exceptions(func: F) -> F:
+def translate_exceptions(func: FuncType) -> FuncType:
     @wraps(func)
-    async def translate_exceptions_(self, query, *args):
+    async def translate_exceptions_(self, query, *args) -> T:
         try:
             return await func(self, query, *args)
         except sqlite3.OperationalError as exc:
@@ -37,7 +47,7 @@ def translate_exceptions(func: F) -> F:
         except sqlite3.IntegrityError as exc:
             raise IntegrityError(exc)
 
-    return translate_exceptions_  # type: ignore
+    return translate_exceptions_
 
 
 class SqliteClient(BaseDBAsyncClient):
@@ -158,7 +168,7 @@ class SqliteClient(BaseDBAsyncClient):
 class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
     def __init__(self, connection: SqliteClient) -> None:
         self.connection_name = connection.connection_name
-        self._connection: aiosqlite.Connection = connection._connection  # type: ignore
+        self._connection: aiosqlite.Connection = cast(aiosqlite.Connection, connection._connection)
         self._lock = asyncio.Lock()
         self._trxlock = connection._lock
         self.log = connection.log

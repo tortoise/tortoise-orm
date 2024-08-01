@@ -1,6 +1,6 @@
 import datetime
 import functools
-from typing import Any, SupportsInt, Union
+from typing import TYPE_CHECKING, Any, SupportsInt, Union
 
 import pyodbc
 import pytz
@@ -27,6 +27,9 @@ from tortoise.backends.odbc.client import (
 )
 from tortoise.backends.oracle.executor import OracleExecutor
 from tortoise.backends.oracle.schema_generator import OracleSchemaGenerator
+
+if TYPE_CHECKING:  # pragma: nocoverage
+    import asyncodbc  # pylint: disable=W0611
 
 
 class OracleClient(ODBCClient):
@@ -99,8 +102,8 @@ class OraclePoolConnectionWrapper(PoolConnectionWrapper):
         except ValueError:
             return parse_datetime(value.decode()[:-32]).astimezone(tz=pytz.utc)
 
-    async def __aenter__(self):
-        connection = await super(OraclePoolConnectionWrapper, self).__aenter__()  # type: ignore
+    async def __aenter__(self) -> "asyncodbc.Connection":
+        connection = await super().__aenter__()
         if getattr(self.client, "database", False) and not hasattr(connection, "current_schema"):
             await connection.execute(f'ALTER SESSION SET CURRENT_SCHEMA = "{self.client.user}"')
             await connection.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD'")

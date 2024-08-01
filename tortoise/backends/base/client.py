@@ -1,5 +1,18 @@
+from __future__ import annotations
+
 import asyncio
-from typing import Any, List, Optional, Sequence, Tuple, Type, Union
+from typing import (
+    Any,
+    Generic,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+)
 
 from pypika import Query
 
@@ -8,6 +21,8 @@ from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.connection import connections
 from tortoise.exceptions import TransactionManagementError
 from tortoise.log import db_client_logger
+
+T_conn = TypeVar("T_conn")  # Instance of client connection, such as: asyncpg.Connection()
 
 
 class Capabilities:
@@ -202,21 +217,21 @@ class BaseDBAsyncClient:
         raise NotImplementedError()  # pragma: nocoverage
 
 
-class ConnectionWrapper:
+class ConnectionWrapper(Generic[T_conn]):
     __slots__ = ("connection", "lock", "client")
 
     def __init__(self, lock: asyncio.Lock, client: Any) -> None:
         """Wraps the connections with a lock to facilitate safe concurrent access."""
         self.lock: asyncio.Lock = lock
         self.client = client
-        self.connection: Any = client._connection
+        self.connection: T_conn = client._connection
 
     async def ensure_connection(self) -> None:
         if not self.connection:
             await self.client.create_connection(with_db=True)
             self.connection = self.client._connection
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> T_conn:
         await self.lock.acquire()
         await self.ensure_connection()
         return self.connection
@@ -225,7 +240,7 @@ class ConnectionWrapper:
         self.lock.release()
 
 
-class TransactionContext:
+class TransactionContext(Generic[T_conn]):
     __slots__ = ("connection", "connection_name", "token", "lock")
 
     def __init__(self, connection: Any) -> None:
@@ -238,7 +253,7 @@ class TransactionContext:
             await self.connection._parent.create_connection(with_db=True)
             self.connection._connection = self.connection._parent._connection
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> T_conn:
         await self.ensure_connection()
         await self.lock.acquire()  # type:ignore
         self.token = connections.set(self.connection_name, self.connection)
@@ -264,7 +279,7 @@ class TransactionContextPooled(TransactionContext):
         if not self.connection._parent._pool:
             await self.connection._parent.create_connection(with_db=True)
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> T_conn:
         await self.ensure_connection()
         self.token = connections.set(self.connection_name, self.connection)
         self.connection._connection = await self.connection._parent._pool.acquire()
@@ -285,7 +300,7 @@ class TransactionContextPooled(TransactionContext):
 
 
 class NestedTransactionContext(TransactionContext):
-    async def __aenter__(self):
+    async def __aenter__(self) -> T_conn:
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -297,7 +312,7 @@ class NestedTransactionContext(TransactionContext):
 
 
 class NestedTransactionPooledContext(TransactionContext):
-    async def __aenter__(self):
+    async def __aenter__(self) -> T_conn:
         await self.lock.acquire()  # type:ignore
         return self.connection
 
@@ -310,23 +325,23 @@ class NestedTransactionPooledContext(TransactionContext):
                     await self.connection.rollback()
 
 
-class PoolConnectionWrapper:
+class PoolConnectionWrapper(Generic[T_conn]):
     def __init__(self, client: Any) -> None:
         """Class to manage acquiring from and releasing connections to a pool."""
         self.pool = client._pool
         self.client = client
-        self.connection = None
+        self.connection: Optional[T_conn] = None
 
     async def ensure_connection(self) -> None:
         if not self.pool:
             await self.client.create_connection(with_db=True)
             self.pool = self.client._pool
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> T_conn:
         await self.ensure_connection()
         # get first available connection
         self.connection = await self.pool.acquire()
-        return self.connection
+        return cast(T_conn, self.connection)
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         # release the connection back to the pool

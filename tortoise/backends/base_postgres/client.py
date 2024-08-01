@@ -3,6 +3,7 @@ from functools import wraps
 from typing import (
     Any,
     Callable,
+    Coroutine,
     List,
     Optional,
     SupportsInt,
@@ -24,16 +25,16 @@ from tortoise.backends.base.client import (
 from tortoise.backends.base_postgres.executor import BasePostgresExecutor
 from tortoise.backends.base_postgres.schema_generator import BasePostgresSchemaGenerator
 
-FuncType = Callable[..., Any]
-F = TypeVar("F", bound=FuncType)
+T = TypeVar("T")
+FuncType = Callable[..., Coroutine[None, None, T]]
 
 
-def translate_exceptions(func: F) -> F:
+def translate_exceptions(func: FuncType) -> FuncType:
     @wraps(func)
-    async def _translate_exceptions(self, *args, **kwargs):
+    async def _translate_exceptions(self, *args, **kwargs) -> T:
         return await self._translate_exceptions(func, *args, **kwargs)
 
-    return _translate_exceptions  # type: ignore
+    return _translate_exceptions
 
 
 class BasePostgresPool:
