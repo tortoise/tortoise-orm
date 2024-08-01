@@ -28,8 +28,8 @@ from tortoise.backends.odbc.client import (
 from tortoise.backends.oracle.executor import OracleExecutor
 from tortoise.backends.oracle.schema_generator import OracleSchemaGenerator
 
-if TYPE_CHECKING:
-    import asyncodbc
+if TYPE_CHECKING:  # pragma: nocoverage
+    import asyncodbc  # pylint: disable=W0611
 
 
 class OracleClient(ODBCClient):
