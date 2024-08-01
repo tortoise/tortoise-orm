@@ -49,7 +49,7 @@ class UUIDField(UUIDFieldBase):
         # If not, raise an error
         # This is to prevent UUIDv1 or any other version from being stored in the database
         if self._binary_compression:
-            if value is not isinstance(value, UUID):
+            if not isinstance(value, UUID):
                 raise ValueError("UUIDField only accepts UUID values")
             return value.bytes
         return value and str(value)
