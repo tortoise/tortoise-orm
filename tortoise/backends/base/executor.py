@@ -181,7 +181,7 @@ class BaseExecutor:
         self, columns: Sequence[str], has_generated: bool = True, ignore_conflicts: bool = False
     ) -> QueryBuilder:
         # Insert should implement returning new id to saved object
-        # Each db has it's own methods for it, so each implementation should
+        # Each db has its own methods for it, so each implementation should
         # go to descendant executors
         query = (
             self.db.query_class.into(self.model._meta.basetable)
@@ -455,15 +455,16 @@ class BaseExecutor:
                 query = query.having(having_criterion)
 
         _, raw_results = await self.db.execute_query(query.get_sql())
-        # TODO: we should only resolve the PK's once
-        relations = [
-            (
-                self.model._meta.pk.to_python_value(e["_backward_relation_key"]),
-                field_object.related_model._meta.pk.to_python_value(e[related_pk_field]),
+        relations: List[Tuple[Any, Any]] = []
+        related_object_list: List["Model"] = []
+        model_pk, related_pk = self.model._meta.pk, field_object.related_model._meta.pk
+        for e in raw_results:
+            pk_values: Tuple[Any, Any] = (
+                model_pk.to_python_value(e["_backward_relation_key"]),
+                related_pk.to_python_value(e[related_pk_field]),
             )
-            for e in raw_results
-        ]
-        related_object_list = [related_query.model._init_from_db(**e) for e in raw_results]
+            relations.append(pk_values)
+            related_object_list.append(related_query.model._init_from_db(**e))
         await self.__class__(
             model=related_query.model, db=self.db, prefetch_map=related_query._prefetch_map
         )._execute_prefetch_queries(related_object_list)
@@ -486,25 +487,39 @@ class BaseExecutor:
         field: str,
         related_query: Tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
-        # TODO: This will only work if instance_list is all of same type
-        # TODO: If that's the case, then we can optimize the key resolver
-        to_attr, related_query = related_query
+        to_attr, related_queryset = related_query
         related_objects_for_fetch: Dict[str, list] = {}
         relation_key_field = f"{field}_id"
+        model_to_field: Dict["Type[Model]", str] = {}
         for instance in instance_list:
-            if getattr(instance, relation_key_field) is not None:
-                key = cast(RelationalField, instance._meta.fields_map[field]).to_field
-                if key not in related_objects_for_fetch:
-                    related_objects_for_fetch[key] = []
-                related_objects_for_fetch[key].append(getattr(instance, relation_key_field))
+            if (value := getattr(instance, relation_key_field)) is not None:
+                if (model_cls := instance.__class__) in model_to_field:
+                    key = model_to_field[model_cls]
+                else:
+                    related_field = cast(RelationalField, instance._meta.fields_map[field])
+                    model_to_field[model_cls] = key = related_field.to_field
+                    if key not in related_objects_for_fetch:
+                        related_objects_for_fetch[key] = []
+                if value not in (values := related_objects_for_fetch[key]):
+                    values.append(value)
             else:
                 setattr(instance, field, None)
 
         if related_objects_for_fetch:
-            related_object_list = await related_query.filter(
-                **{f"{k}__in": v for k, v in related_objects_for_fetch.items()}
-            )
-            related_object_map = {getattr(obj, key): obj for obj in related_object_list}
+            conditions: Dict[str, Any] = {}
+            for k, v in related_objects_for_fetch.items():
+                if len(v) == 1:
+                    v = v[0]
+                else:
+                    k += "__in"
+                conditions[k] = v
+            related_object_list = await related_queryset.filter(**conditions)
+            if len(model_to_field) > 1:
+                related_object_map = {
+                    getattr(obj, model_to_field[obj.__class__]): obj for obj in related_object_list
+                }
+            else:
+                related_object_map = {getattr(obj, key): obj for obj in related_object_list}
             for instance in instance_list:
                 obj = related_object_map.get(getattr(instance, relation_key_field))
                 setattr(instance, field, obj)
