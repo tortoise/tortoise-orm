@@ -1800,7 +1800,7 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
         )
         executor = self._db.executor_class(model=self.model, db=self._db)
         pk_attr = self.model._meta.pk_attr
-        source_pk_attr = self.model._meta.fields_map["id"].source_field or pk_attr
+        source_pk_attr = self.model._meta.fields_map[pk_attr].source_field or pk_attr
         pk = Field(source_pk_attr)
         for objects_item in chunk(self.objects, self.batch_size):
             query = copy(self.query)
