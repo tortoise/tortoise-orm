@@ -57,6 +57,19 @@ class TestUpdate(test.TestCase):
         self.assertEqual((await DatetimeFields.get(pk=objs[0].pk)).datetime, t0)
         self.assertEqual((await DatetimeFields.get(pk=objs[1].pk)).datetime, t1)
 
+    async def test_bulk_update_pk_non_id(self):
+        tournament = await Tournament.create(name="")
+        events = [
+            await Event.create(name="1", tournament=tournament),
+            await Event.create(name="2", tournament=tournament),
+        ]
+        events[0].name = "3"
+        events[1].name = "4"
+        rows_affected = await Event.bulk_update(events, fields=["name"])
+        self.assertEqual(rows_affected, 2)
+        self.assertEqual((await Event.get(pk=events[0].pk)).name, events[0].name)
+        self.assertEqual((await Event.get(pk=events[1].pk)).name, events[1].name)
+
     async def test_bulk_update_pk_uuid(self):
         objs = [
             await UUIDFields.create(data=uuid.uuid4()),
