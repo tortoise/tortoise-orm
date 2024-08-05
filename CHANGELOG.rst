@@ -9,6 +9,12 @@ Changelog
 0.21
 ====
 
+0.21.6
+------
+Fixed
+^^^^^
+- Fix bug in `pydantic_model_creator` when a foreign key is not included in `include` param. (#1430)
+
 0.21.5 <../0.21.5>`_ - 2024-07-18
 ------
 Added

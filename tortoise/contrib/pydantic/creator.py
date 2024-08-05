@@ -265,7 +265,7 @@ def pydantic_model_creator(
                 # Remove raw fields
                 raw_field = fd.get("raw_field", None)
                 if raw_field is not None and exclude_raw_fields and raw_field != pk_raw_field:
-                    del field_map[raw_field]
+                    field_map.pop(raw_field, None)
                 field_map[n] = fd
 
     # Update field definitions from description
