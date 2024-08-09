@@ -35,7 +35,12 @@ class MSSQLClient(ODBCClient):
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self.dsn = f"DRIVER={driver};SERVER={host},{port};UID={user};PWD={password};"
+        if "\\" in host:
+            # Named instances (host\instance) do not need a port
+            server = host
+        else:
+            server = f"{host},{port}"
+        self.dsn = f"DRIVER={driver};SERVER={server};UID={user};PWD={password};"
 
     def _in_transaction(self) -> "TransactionContext":
         return TransactionContextPooled(TransactionWrapper(self))
