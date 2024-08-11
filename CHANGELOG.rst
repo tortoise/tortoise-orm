@@ -14,6 +14,7 @@ Changelog
 Fixed
 ^^^^^
 - Fix bug in `pydantic_model_creator` when a foreign key is not included in `include` param. (#1430)
+- Fix bug in `contrib.sanic.register_tortoise` causing a deadlock when using asyncpg and > 1 workers (#1696)
 
 0.21.5 <../0.21.5>`_ - 2024-07-18
 ------
