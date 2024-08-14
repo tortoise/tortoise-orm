@@ -1,5 +1,5 @@
 from types import ModuleType
-from typing import Coroutine, Dict, Iterable, Optional, Union
+from typing import Dict, Iterable, Optional, Union
 
 from sanic import Sanic  # pylint: disable=E0401
 
