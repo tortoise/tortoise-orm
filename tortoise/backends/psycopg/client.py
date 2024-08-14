@@ -85,7 +85,9 @@ class PsycopgClient(postgres_client.BasePostgresClient):
             )
 
     async def create_pool(self, **kwargs) -> AsyncConnectionPool:
-        return AsyncConnectionPool(**kwargs)
+        pool = AsyncConnectionPool(open=False, **kwargs)
+        await pool.open()
+        return pool
 
     async def db_delete(self) -> None:
         try:
