@@ -15,6 +15,11 @@ Fixed
 ^^^^^
 - Fix bug in `pydantic_model_creator` when a foreign key is not included in `include` param. (#1430)
 - Fix bug in `contrib.sanic.register_tortoise` causing a deadlock when using asyncpg and > 1 workers (#1696)
+- Open psycopg pool with `.open()` to remove deprecated warning (#1697)
+- Fix bug in `bulk_update` when pk field is not `id` (#1698)
+- Fix mysql uuid compression bug (#1687)
+- Fix comment for fk fields without constraint for mysql (#1679)
+- Removed no_delay option for postgres, as it wasn't doing anything (#1677)
 
 0.21.5 <../0.21.5>`_ - 2024-07-18
 ------
