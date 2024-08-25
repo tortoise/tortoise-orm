@@ -563,17 +563,20 @@ class JSONField(Field[Union[dict, list]], dict, list):  # type: ignore
         self.decoder = decoder
 
     def to_db_value(
-        self, value: Optional[Union[dict, list, str]], instance: "Union[Type[Model], Model]"
+        self, value: Optional[Union[dict, list, str, bytes]], instance: "Union[Type[Model], Model]"
     ) -> Optional[str]:
         self.validate(value)
-
-        if isinstance(value, (str, bytes)):
-            try:
-                self.decoder(value)
-            except Exception:
-                raise FieldError(f"Value {value} is invalid json value.")
-            return value
-        return None if value is None else self.encoder(value)
+        if value is not None:
+            if isinstance(value, (str, bytes)):
+                try:
+                    self.decoder(value)
+                except Exception:
+                    raise FieldError(f"Value {value!r} is invalid json value.")
+                if isinstance(value, bytes):
+                    value = value.decode()
+            else:
+                value = self.encoder(value)
+        return value
 
     def to_python_value(
         self, value: Optional[Union[str, bytes, dict, list]]
