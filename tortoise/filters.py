@@ -242,6 +242,20 @@ def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> Dict[str
             "table": Table(field.through),
             "value_encoder": target_table_pk.to_db_value,
         },
+        f"{field_name}__isnull": {
+            "field": field.forward_key,
+            "backward_key": field.backward_key,
+            "operator": is_null,
+            "table": Table(field.through),
+            "value_encoder": target_table_pk.to_db_value,
+        },
+        f"{field_name}__not_isnull": {
+            "field": field.forward_key,
+            "backward_key": field.backward_key,
+            "operator": not_null,
+            "table": Table(field.through),
+            "value_encoder": target_table_pk.to_db_value,
+        },
         f"{field_name}__in": {
             "field": field.forward_key,
             "backward_key": field.backward_key,
