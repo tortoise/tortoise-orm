@@ -8,6 +8,9 @@ Changelog
 
 0.21
 ====
+0.21.7
+------
+- Fix bug when using annotate and count at the same time but the annotation does not match anything, leading to an IndexError
 
 0.21.6
 ------
