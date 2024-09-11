@@ -6,15 +6,14 @@ from typing import Any, Dict, Iterator, List
 
 from astroid import MANAGER, inference_tip, nodes
 from astroid.exceptions import AstroidError
-from astroid.node_classes import AnnAssign, Assign
-from astroid.nodes import ClassDef
+from astroid.nodes import AnnAssign, Assign, ClassDef
 from pylint.lint import PyLinter
 
 MODELS: Dict[str, ClassDef] = {}
 FUTURE_RELATIONS: Dict[str, list] = {}
 
 
-def register(linter: PyLinter) -> None:
+def register(linter: PyLinter) -> None:  # pylint: disable=unused-argument
     """
     Reset state every time this is called, since we now get new AST to transform.
     """
@@ -107,7 +106,9 @@ def transform_model(cls: ClassDef) -> None:
         MANAGER.ast_from_module_name("tortoise.models").lookup("MetaInfo")[1][0].instantiate_class()
     ]
     if "id" not in cls.locals:
-        cls.locals["id"] = [nodes.ClassDef("id", None)]
+        cls.locals["id"] = [
+            nodes.ClassDef("id", None, None, None, end_lineno=None, end_col_offset=None)
+        ]
 
 
 def is_model_field(cls: ClassDef) -> bool:
