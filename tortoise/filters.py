@@ -130,6 +130,11 @@ def search(field: Term, value: str):
     pass
 
 
+def posix_regex(field: Term, value: str):
+    # Will be overridden in each executor
+    pass
+
+
 def starts_with(field: Term, value: str) -> Criterion:
     return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"{escape_like(value)}%"))
 
