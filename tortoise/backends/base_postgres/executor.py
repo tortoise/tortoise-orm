@@ -13,8 +13,8 @@ from tortoise.contrib.postgres.json_functions import (
     postgres_json_filter,
 )
 from tortoise.contrib.postgres.search import SearchCriterion
-from tortoise.filters import json_contained_by, json_contains, json_filter, search
-from tortoise.contrib.postgres.regex import posix_regex
+from tortoise.filters import json_contained_by, json_contains, json_filter, search, posix_regex
+from tortoise.contrib.postgres.regex import postgres_posix_regex
 
 
 def postgres_search(field: Term, value: Term):
@@ -29,7 +29,7 @@ class BasePostgresExecutor(BaseExecutor):
         json_contains: postgres_json_contains,
         json_contained_by: postgres_json_contained_by,
         json_filter: postgres_json_filter,
-        posix_regex: posix_regex,
+        posix_regex: postgres_posix_regex,
     }
 
     def parameter(self, pos: int) -> Parameter:
