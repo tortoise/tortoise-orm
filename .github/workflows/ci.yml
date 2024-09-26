@@ -33,7 +33,7 @@ jobs:
           ACCEPT_EULA: Y
           SA_PASSWORD: Abcd12345678
         options: >-
-          --health-cmd "/opt/mssql-tools/bin/sqlcmd -U sa -P Abcd12345678 -Q 'select 1' -b -o /dev/null"
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Abcd12345678 -Q "SELECT 1" -b -o /dev/null"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
