@@ -26,14 +26,14 @@ jobs:
           MYSQL_ROOT_PASSWORD: 123456
         options: --health-cmd="mysqladmin ping" --health-interval 10s --health-timeout 5s --health-retries 5
       mssql:
-        image: mcr.microsoft.com/mssql/server:2019-CU15-ubuntu-20.04
+        image: mcr.microsoft.com/mssql/server:2022-CU15-ubuntu-22.04
         ports:
           - 1433:1433
         env:
           ACCEPT_EULA: Y
           SA_PASSWORD: Abcd12345678
         options: >-
-          --health-cmd "/opt/mssql-tools/bin/sqlcmd -U sa -P Abcd12345678 -Q 'select 1' -b -o /dev/null"
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Abcd12345678 -Q 'SELECT 1' -b -o /dev/null"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
