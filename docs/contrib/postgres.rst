@@ -21,7 +21,9 @@ Fields
 
 Postgres specific fields.
 
+.. autoclass:: tortoise.contrib.postgres.fields.ArrayField
 .. autoclass:: tortoise.contrib.postgres.fields.TSVectorField
+
 
 Functions
 =========
