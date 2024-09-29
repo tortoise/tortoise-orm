@@ -132,7 +132,9 @@ def search(field: Term, value: str):
 
 def posix_regex(field: Term, value: str):
     # Will be overridden in each executor
-    raise NotImplementedError("The postgres_posix_regex filter operator is not supported by your database backend")
+    raise NotImplementedError(
+        "The postgres_posix_regex filter operator is not supported by your database backend"
+    )
 
 
 def starts_with(field: Term, value: str) -> Criterion:

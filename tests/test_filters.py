@@ -219,7 +219,6 @@ class TestBooleanFieldFilters(test.TestCase):
         )
 
 
-
 class TestDecimalFieldFilters(test.TestCase):
     async def asyncSetUp(self):
         await super().asyncSetUp()

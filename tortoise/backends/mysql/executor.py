@@ -1,6 +1,6 @@
 from pypika import Parameter, functions
 from pypika.enums import SqlTypes
-from pypika.terms import Criterion, BasicCriterion
+from pypika.terms import BasicCriterion, Criterion
 from pypika.utils import format_quotes
 
 from tortoise import Model
@@ -25,9 +25,9 @@ from tortoise.filters import (
     json_contained_by,
     json_contains,
     json_filter,
+    posix_regex,
     search,
     starts_with,
-    posix_regex,
 )
 
 
@@ -95,12 +95,9 @@ def mysql_insensitive_ends_with(field: Term, value: str) -> Criterion:
 def mysql_search(field: Term, value: str):
     return SearchCriterion(field, expr=StrWrapper(value))
 
+
 def mysql_posix_regex(field: Term, value: str):
-    return BasicCriterion(
-        " REGEXP ",
-        field,
-        StrWrapper(value)
-    )
+    return BasicCriterion(" REGEXP ", field, StrWrapper(value))
 
 
 class MySQLExecutor(BaseExecutor):
