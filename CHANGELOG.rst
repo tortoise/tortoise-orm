@@ -20,6 +20,7 @@ Fixed
 - Fix mysql uuid compression bug (#1687)
 - Fix comment for fk fields without constraint for mysql (#1679)
 - Removed no_delay option for postgres, as it wasn't doing anything (#1677)
+- Fix bug in `tortoise.models.Model` When a QuerySet uses the only function and then uses the print function to print the returned result, an AttributeError is generated. (#1723)
 
 0.21.5 <../0.21.5>`_ - 2024-07-18
 ------
