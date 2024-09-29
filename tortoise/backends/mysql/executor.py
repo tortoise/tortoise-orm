@@ -1,6 +1,6 @@
 from pypika import Parameter, functions
 from pypika.enums import SqlTypes
-from pypika.terms import Criterion
+from pypika.terms import BasicCriterion, Criterion
 from pypika.utils import format_quotes
 
 from tortoise import Model
@@ -25,6 +25,7 @@ from tortoise.filters import (
     json_contained_by,
     json_contains,
     json_filter,
+    posix_regex,
     search,
     starts_with,
 )
@@ -95,6 +96,10 @@ def mysql_search(field: Term, value: str):
     return SearchCriterion(field, expr=StrWrapper(value))
 
 
+def mysql_posix_regex(field: Term, value: str):
+    return BasicCriterion(" REGEXP ", field, StrWrapper(value))
+
+
 class MySQLExecutor(BaseExecutor):
     FILTER_FUNC_OVERRIDE = {
         contains: mysql_contains,
@@ -108,6 +113,7 @@ class MySQLExecutor(BaseExecutor):
         json_contains: mysql_json_contains,
         json_contained_by: mysql_json_contained_by,
         json_filter: mysql_json_filter,
+        posix_regex: mysql_posix_regex,
     }
     EXPLAIN_PREFIX = "EXPLAIN FORMAT=JSON"
 

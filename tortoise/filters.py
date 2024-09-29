@@ -130,6 +130,13 @@ def search(field: Term, value: str):
     pass
 
 
+def posix_regex(field: Term, value: str):
+    # Will be overridden in each executor
+    raise NotImplementedError(
+        "The postgres_posix_regex filter operator is not supported by your database backend"
+    )
+
+
 def starts_with(field: Term, value: str) -> Criterion:
     return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"{escape_like(value)}%"))
 
@@ -471,6 +478,12 @@ def get_filters_for_field(
             "field": actual_field_name,
             "source_field": source_field,
             "operator": insensitive_ends_with,
+            "value_encoder": string_encoder,
+        },
+        f"{field_name}__posix_regex": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": posix_regex,
             "value_encoder": string_encoder,
         },
         f"{field_name}__year": {
