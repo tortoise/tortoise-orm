@@ -781,7 +781,7 @@ class Model(metaclass=ModelMeta):
         return type(other) is type(self) and self.pk == other.pk  # type: ignore
 
     def _get_pk_val(self) -> Any:
-        return getattr(self, self._meta.pk_attr)
+        return getattr(self, self._meta.pk_attr, None)
 
     def _set_pk_val(self, value: Any) -> None:
         setattr(self, self._meta.pk_attr, value)
