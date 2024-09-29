@@ -1,9 +1,10 @@
-from pypika.enums import Comparator
+import enum
+
 from pypika.terms import BasicCriterion, Term
 
 
-class PostgresRegexMatching(Comparator):
-    posix_regex = " ~ "
+class PostgresRegexMatching(enum.Enum):
+    posix_regex = "~"
 
 
 def postgres_posix_regex(field: Term, value: str):
