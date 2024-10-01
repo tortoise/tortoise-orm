@@ -13,13 +13,13 @@ files = [
 
 [[package]]
 name = "aiohappyeyeballs"
-version = "2.4.2"
+version = "2.4.3"
 description = "Happy Eyeballs for asyncio"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "aiohappyeyeballs-2.4.2-py3-none-any.whl", hash = "sha256:8522691d9a154ba1145b157d6d5c15e5c692527ce6a53c5e5f9876977f6dab2f"},
-    {file = "aiohappyeyeballs-2.4.2.tar.gz", hash = "sha256:4ca893e6c5c1f5bf3888b04cb5a3bee24995398efef6e0b9f747b5e89d84fd74"},
+    {file = "aiohappyeyeballs-2.4.3-py3-none-any.whl", hash = "sha256:8a7a83727b2756f394ab2895ea0765a0a8c475e3c71e98d43d76f22b4b435572"},
+    {file = "aiohappyeyeballs-2.4.3.tar.gz", hash = "sha256:75cf88a15106a5002a8eb1dab212525c00d1f4c0fa96e551c9fbe6f09a621586"},
 ]
 
 [[package]]
@@ -2495,16 +2495,14 @@ files = [
 
 [[package]]
 name = "pypika-tortoise"
-version = "0.1.6"
+version = "0.2.0"
 description = "Forked from pypika and streamline just for tortoise-orm"
 optional = false
-python-versions = "^3.7"
-files = []
-develop = true
-
-[package.source]
-type = "directory"
-url = "../pypika-tortoise"
+python-versions = "<4.0,>=3.7"
+files = [
+    {file = "pypika_tortoise-0.2.0-py3-none-any.whl", hash = "sha256:9b5410555bd35c61d325355f4fbbe41671415a13bf3bc08693e4770bf3000601"},
+    {file = "pypika_tortoise-0.2.0.tar.gz", hash = "sha256:0f0040229f99c0052efa1f74aefe0f8a66db77472222001a980ecbad1c1c502d"},
+]
 
 [[package]]
 name = "pytest"
@@ -3683,4 +3681,4 @@ psycopg = ["psycopg"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "6b511c621e3098c65cf9ae0130df80aabbf4dbe519cc663097ba51446ce150ec"
+content-hash = "107c0f6f9dd6a728a8a8cddaa5d2fad8c8461341b37f8793bc6ec4d61282f6f8"
