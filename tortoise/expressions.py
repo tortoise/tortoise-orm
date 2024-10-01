@@ -14,7 +14,7 @@ from typing import (
 
 from pypika import Case as PypikaCase
 from pypika import Field as PypikaField
-from pypika import QmarkParameter, Table
+from pypika import Table
 from pypika.functions import DistinctOptionFunction
 from pypika.terms import ArithmeticExpression, Criterion
 from pypika.terms import Function as PypikaFunction
