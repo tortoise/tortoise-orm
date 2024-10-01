@@ -14,11 +14,11 @@ from typing import (
 
 from pypika import Case as PypikaCase
 from pypika import Field as PypikaField
-from pypika import Table
+from pypika import QmarkParameter, Table
 from pypika.functions import DistinctOptionFunction
 from pypika.terms import ArithmeticExpression, Criterion
 from pypika.terms import Function as PypikaFunction
-from pypika.terms import Term
+from pypika.terms import ParameterValueWrapper, Term
 from pypika.utils import format_alias_sql
 
 from tortoise.exceptions import ConfigurationError, FieldError, OperationalError
@@ -155,7 +155,7 @@ class Q(Expression):
         #: Contains the sub-Q's that this Q is made up of
         self.children: Tuple[Q, ...] = args
         #: Contains the filters applied to this Q
-        self.filters: Dict[str, FilterInfoDict] = kwargs
+        self.filters: Dict[str, Any] = kwargs
         if join_type not in {self.AND, self.OR}:
             raise OperationalError("join_type must be AND or OR")
         #: Specifies if this Q does an AND or OR on its children
@@ -276,7 +276,7 @@ class Q(Expression):
                 )
             op = param["operator"]
             # this is an ugly hack
-            if op == operator.eq:
+            if op == operator.eq and not isinstance(encoded_value, Term):
                 encoded_value = model._meta.db.query_class._builder()._wrapper_cls(encoded_value)
             criterion = op(table[param["source_field"]], encoded_value)
         return criterion, join

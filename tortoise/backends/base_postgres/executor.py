@@ -3,7 +3,7 @@ from typing import Optional, Sequence
 
 from pypika import Parameter
 from pypika.dialects import PostgreSQLQueryBuilder
-from pypika.terms import Term
+from pypika.terms import ListParameter, Term
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
@@ -38,8 +38,11 @@ class BasePostgresExecutor(BaseExecutor):
         posix_regex: postgres_posix_regex,
     }
 
-    def parameter(self, pos: int) -> Parameter:
+    def insert_parameter(self, pos: int) -> Parameter:
         return Parameter("$%d" % (pos + 1,))
+
+    def parameter(self) -> ListParameter:
+        return ListParameter(lambda idx: "$%d" % (idx + 1,))
 
     def _prepare_insert_statement(
         self, columns: Sequence[str], has_generated: bool = True, ignore_conflicts: bool = False
@@ -47,7 +50,7 @@ class BasePostgresExecutor(BaseExecutor):
         query = (
             self.db.query_class.into(self.model._meta.basetable)
             .columns(*columns)
-            .insert(*[self.parameter(i) for i in range(len(columns))])
+            .insert(*[self.insert_parameter(i) for i in range(len(columns))])
         )
         if has_generated:
             generated_fields = self.model._meta.generated_db_fields

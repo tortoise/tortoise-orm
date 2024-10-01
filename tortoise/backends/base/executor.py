@@ -19,9 +19,9 @@ from typing import (
     cast,
 )
 
-from pypika import JoinType, Parameter, Query, Table
+from pypika import JoinType, Parameter, QmarkParameter, Query, Table
 from pypika.queries import QueryBuilder
-from pypika.terms import ArithmeticExpression, Function
+from pypika.terms import ArithmeticExpression, Function, ListParameter
 
 from tortoise.exceptions import OperationalError
 from tortoise.expressions import F, RawSQL
@@ -95,7 +95,7 @@ class BaseExecutor:
             table = self.model._meta.basetable
             self.delete_query = str(
                 self.model._meta.basequery.where(
-                    table[self.model._meta.db_pk_column] == self.parameter(0)
+                    table[self.model._meta.db_pk_column] == self.insert_parameter(0)
                 ).delete()
             )
             self.update_cache: Dict[str, str] = {}
@@ -122,13 +122,17 @@ class BaseExecutor:
             ) = EXECUTOR_CACHE[key]
 
     async def execute_explain(self, query: Query) -> Any:
-        sql = " ".join((self.EXPLAIN_PREFIX, query.get_sql()))
-        return (await self.db.execute_query(sql))[1]
+        param = self.parameter()
+        sql = " ".join((self.EXPLAIN_PREFIX, query.get_sql(parameter=param)))
+        return (await self.db.execute_query(sql, param.get_parameters()))[1]
 
     async def execute_select(
         self, query: Union[Query, RawSQL], custom_fields: Optional[list] = None
     ) -> list:
-        _, raw_results = await self.db.execute_query(query.get_sql())
+        param = self.parameter()
+        _, raw_results = await self.db.execute_query(
+            query.get_sql(parameter=param), param.get_parameters()
+        )
         instance_list = []
         for row in raw_results:
             if self.select_related_idx:
@@ -186,7 +190,7 @@ class BaseExecutor:
         query = (
             self.db.query_class.into(self.model._meta.basetable)
             .columns(*columns)
-            .insert(*[self.parameter(i) for i in range(len(columns))])
+            .insert(*[self.insert_parameter(i) for i in range(len(columns))])
         )
         if ignore_conflicts:
             query = query.on_conflict().do_nothing()
@@ -195,7 +199,10 @@ class BaseExecutor:
     async def _process_insert_result(self, instance: "Model", results: Any) -> None:
         raise NotImplementedError()  # pragma: nocoverage
 
-    def parameter(self, pos: int) -> Parameter:
+    def insert_parameter(self, pos: int) -> Parameter:
+        raise NotImplementedError()  # pragma: nocoverage
+
+    def parameter(self) -> ListParameter:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, instance: "Model") -> None:
@@ -264,7 +271,7 @@ class BaseExecutor:
             field_object = self.model._meta.fields_map[field]
             if not field_object.pk:
                 if field not in arithmetic_or_function.keys():
-                    query = query.set(db_column, self.parameter(count))
+                    query = query.set(db_column, self.insert_parameter(count))
                     count += 1
                 else:
                     value = F.resolver_arithmetic_expression(
@@ -272,7 +279,7 @@ class BaseExecutor:
                     )[0]
                     query = query.set(db_column, value)
 
-        query = query.where(table[self.model._meta.db_pk_column] == self.parameter(count))
+        query = query.where(table[self.model._meta.db_pk_column] == self.insert_parameter(count))
 
         sql = query.get_sql()
         if not arithmetic_or_function:
@@ -454,7 +461,10 @@ class BaseExecutor:
             if having_criterion:
                 query = query.having(having_criterion)
 
-        _, raw_results = await self.db.execute_query(query.get_sql())
+        param = self.parameter()
+        _, raw_results = await self.db.execute_query(
+            query.get_sql(parameter=param), param.get_parameters()
+        )
         relations: List[Tuple[Any, Any]] = []
         related_object_list: List["Model"] = []
         model_pk, related_pk = self.model._meta.pk, field_object.related_model._meta.pk

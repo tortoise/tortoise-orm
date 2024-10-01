@@ -1,6 +1,6 @@
 from pypika import Parameter, functions
 from pypika.enums import SqlTypes
-from pypika.terms import BasicCriterion, Criterion
+from pypika.terms import BasicCriterion, Criterion, ListParameter
 from pypika.utils import format_quotes
 
 from tortoise import Model
@@ -117,8 +117,11 @@ class MySQLExecutor(BaseExecutor):
     }
     EXPLAIN_PREFIX = "EXPLAIN FORMAT=JSON"
 
-    def parameter(self, pos: int) -> Parameter:
+    def insert_parameter(self, pos: int) -> Parameter:
         return Parameter("%s")
+
+    def parameter(self) -> ListParameter:
+        return ListParameter("%s")
 
     async def _process_insert_result(self, instance: Model, results: int) -> None:
         pk_field_object = self.model._meta.pk
