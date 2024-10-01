@@ -18,7 +18,7 @@ from pypika import QmarkParameter, Table
 from pypika.functions import DistinctOptionFunction
 from pypika.terms import ArithmeticExpression, Criterion
 from pypika.terms import Function as PypikaFunction
-from pypika.terms import ParameterValueWrapper, Term
+from pypika.terms import Term
 from pypika.utils import format_alias_sql
 
 from tortoise.exceptions import ConfigurationError, FieldError, OperationalError
@@ -71,7 +71,7 @@ class F(PypikaField):  # type: ignore
                 left_field_object,
             ) = cls.resolver_arithmetic_expression(model, left)
             if left_field_object:
-                if field_object and type(field_object) != type(left_field_object):
+                if field_object and type(field_object) is type(left_field_object):
                     raise FieldError(
                         "Cannot use arithmetic expression between different field type"
                     )
@@ -82,7 +82,7 @@ class F(PypikaField):  # type: ignore
                 right_field_object,
             ) = cls.resolver_arithmetic_expression(model, right)
             if right_field_object:
-                if field_object and type(field_object) != type(right_field_object):
+                if field_object and type(field_object) is type(right_field_object):
                     raise FieldError(
                         "Cannot use arithmetic expression between different field type"
                     )

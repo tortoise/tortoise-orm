@@ -19,7 +19,7 @@ from typing import (
     cast,
 )
 
-from pypika import JoinType, Parameter, QmarkParameter, Query, Table
+from pypika import JoinType, Parameter, Query, Table
 from pypika.queries import QueryBuilder
 from pypika.terms import ArithmeticExpression, Function, ListParameter
 
