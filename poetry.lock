@@ -2389,13 +2389,13 @@ files = [
 
 [[package]]
 name = "pypika-tortoise"
-version = "0.2.0"
+version = "0.2.1"
 description = "Forked from pypika and streamline just for tortoise-orm"
 optional = false
 python-versions = "<4.0,>=3.7"
 files = [
-    {file = "pypika_tortoise-0.2.0-py3-none-any.whl", hash = "sha256:9b5410555bd35c61d325355f4fbbe41671415a13bf3bc08693e4770bf3000601"},
-    {file = "pypika_tortoise-0.2.0.tar.gz", hash = "sha256:0f0040229f99c0052efa1f74aefe0f8a66db77472222001a980ecbad1c1c502d"},
+    {file = "pypika_tortoise-0.2.1-py3-none-any.whl", hash = "sha256:e91a1c5a78c6753ead1a9ba1aa169a1f1282c5035170e5462f0073564bc18886"},
+    {file = "pypika_tortoise-0.2.1.tar.gz", hash = "sha256:979bbb9d60fe9f6e4129a25c44ee008aab4a4e97b296350be9983dcaa2766354"},
 ]
 
 [[package]]
@@ -3520,4 +3520,4 @@ psycopg = ["psycopg"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "107c0f6f9dd6a728a8a8cddaa5d2fad8c8461341b37f8793bc6ec4d61282f6f8"
+content-hash = "f01b81a875f197498bf1b993baaa0428d9b4b4dec085e6b24da5fd1f6ccd8b50"
