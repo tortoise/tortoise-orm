@@ -59,6 +59,7 @@ Contributors
 * Ivan Pakeev ``@ipakeev``
 * Abdeldjalil Hezouat ``@Abdeldjalil-H``
 * Andrea Magistà ``@vlakius``
+* Daniel Szucs ``@Quasar6X``
 
 Special Thanks
 ==============
