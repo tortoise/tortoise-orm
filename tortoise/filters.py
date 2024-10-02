@@ -89,24 +89,24 @@ def json_encoder(value: Any, instance: "Model", field: Field) -> Dict:
 
 def is_in(field: Term, value: Any) -> Criterion:
     if value:
-        return field.isin(value)
+        return field.isin(field.wrap_constant(value))
     # SQL has no False, so we return 1=0
     return BasicCriterion(Equality.eq, ValueWrapper(1), ValueWrapper(0))
 
 
 def not_in(field: Term, value: Any) -> Criterion:
     if value:
-        return field.notin(value) | field.isnull()
+        return field.notin(field.wrap_constant(value)) | field.isnull()
     # SQL has no True, so we return 1=1
     return BasicCriterion(Equality.eq, ValueWrapper(1), ValueWrapper(1))
 
 
 def between_and(field: Term, value: Tuple[Any, Any]) -> Criterion:
-    return field.between(value[0], value[1])
+    return field.between(field.wrap_constant(value[0]), field.wrap_constant(value[1]))
 
 
 def not_equal(field: Term, value: Any) -> Criterion:
-    return field.ne(value) | field.isnull()
+    return field.ne(field.wrap_constant(value)) | field.isnull()
 
 
 def is_null(field: Term, value: Any) -> Criterion:
@@ -146,61 +146,61 @@ def ends_with(field: Term, value: str) -> Criterion:
 
 
 def insensitive_exact(field: Term, value: str) -> Criterion:
-    return Upper(Cast(field, SqlTypes.VARCHAR)).eq(Upper(str(value)))
+    return Upper(Cast(field, SqlTypes.VARCHAR)).eq(Upper(field.wrap_constant(value)))
 
 
 def insensitive_contains(field: Term, value: str) -> Criterion:
     return Like(
-        Upper(Cast(field, SqlTypes.VARCHAR)), field.wrap_constant(Upper(f"%{escape_like(value)}%"))
+        Upper(Cast(field, SqlTypes.VARCHAR)), Upper(field.wrap_constant(f"%{escape_like(value)}%"))
     )
 
 
 def insensitive_starts_with(field: Term, value: str) -> Criterion:
     return Like(
-        Upper(Cast(field, SqlTypes.VARCHAR)), field.wrap_constant(Upper(f"{escape_like(value)}%"))
+        Upper(Cast(field, SqlTypes.VARCHAR)), Upper(field.wrap_constant(f"{escape_like(value)}%"))
     )
 
 
 def insensitive_ends_with(field: Term, value: str) -> Criterion:
     return Like(
-        Upper(Cast(field, SqlTypes.VARCHAR)), field.wrap_constant(Upper(f"%{escape_like(value)}"))
+        Upper(Cast(field, SqlTypes.VARCHAR)), Upper(field.wrap_constant(f"%{escape_like(value)}"))
     )
 
 
 def extract_year_equal(field: Term, value: int) -> Criterion:
-    return Extract(DatePart.year, field).eq(value)
+    return Extract(DatePart.year, field).eq(field.wrap_constant(value))
 
 
 def extract_quarter_equal(field: Term, value: int) -> Criterion:
-    return Extract(DatePart.quarter, field).eq(value)
+    return Extract(DatePart.quarter, field).eq(field.wrap_constant(value))
 
 
 def extract_month_equal(field: Term, value: int) -> Criterion:
-    return Extract(DatePart.month, field).eq(value)
+    return Extract(DatePart.month, field).eq(field.wrap_constant(value))
 
 
 def extract_week_equal(field: Term, value: int) -> Criterion:
-    return Extract(DatePart.week, field).eq(value)
+    return Extract(DatePart.week, field).eq(field.wrap_constant(value))
 
 
 def extract_day_equal(field: Term, value: int) -> Criterion:
-    return Extract(DatePart.day, field).eq(value)
+    return Extract(DatePart.day, field).eq(field.wrap_constant(value))
 
 
 def extract_hour_equal(field: Term, value: int) -> Criterion:
-    return Extract(DatePart.hour, field).eq(value)
+    return Extract(DatePart.hour, field).eq(field.wrap_constant(value))
 
 
 def extract_minute_equal(field: Term, value: int) -> Criterion:
-    return Extract(DatePart.minute, field).eq(value)
+    return Extract(DatePart.minute, field).eq(field.wrap_constant(value))
 
 
 def extract_second_equal(field: Term, value: int) -> Criterion:
-    return Extract(DatePart.second, field).eq(value)
+    return Extract(DatePart.second, field).eq(field.wrap_constant(value))
 
 
 def extract_microsecond_equal(field: Term, value: int) -> Criterion:
-    return Extract(DatePart.microsecond, field).eq(value)
+    return Extract(DatePart.microsecond, field).eq(field.wrap_constant(value))
 
 
 def json_contains(field: Term, value: str) -> Criterion:
