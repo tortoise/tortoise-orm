@@ -1,0 +1,24 @@
+name: pypi
+on:
+  release:
+    types:
+      - created
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v1
+        with:
+          python-version: '3.x'
+      - name: Install and configure Poetry
+        run: |
+          pip install -U pip poetry
+          poetry config virtualenvs.create false
+      - name: Build dists
+        run: make build
+      - name: Pypi Publish
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          user: __token__
+          password: ${{ secrets.pypi_password }}

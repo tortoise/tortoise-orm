@@ -1,0 +1,18 @@
+name: ci
+on: [ push, pull_request ]
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+      - name: Install and configure Poetry
+        run: |
+          pip install -U pip poetry
+          poetry config virtualenvs.create false
+      - name: Install deps
+        run: make deps
+      - name: Run CI
+        run: make ci
