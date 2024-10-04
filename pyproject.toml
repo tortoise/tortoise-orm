@@ -187,6 +187,7 @@ filterwarnings = [
     'ignore:`pk` is deprecated:DeprecationWarning',
     'ignore:`index` is deprecated:DeprecationWarning',
 ]
+addopts = "--ignore=vendor"
 
 [tool.coverage.run]
 branch = true
