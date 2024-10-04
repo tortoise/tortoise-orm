@@ -89,20 +89,20 @@ def json_encoder(value: Any, instance: "Model", field: Field) -> Dict:
 
 def is_in(field: Term, value: Any) -> Criterion:
     if value:
-        return field.isin(field.wrap_constant(value))
+        return field.isin(value)
     # SQL has no False, so we return 1=0
     return BasicCriterion(Equality.eq, ValueWrapper(1), ValueWrapper(0))
 
 
 def not_in(field: Term, value: Any) -> Criterion:
     if value:
-        return field.notin(field.wrap_constant(value)) | field.isnull()
+        return field.notin(value) | field.isnull()
     # SQL has no True, so we return 1=1
     return BasicCriterion(Equality.eq, ValueWrapper(1), ValueWrapper(1))
 
 
 def between_and(field: Term, value: Tuple[Any, Any]) -> Criterion:
-    return field.between(field.wrap_constant(value[0]), field.wrap_constant(value[1]))
+    return field.between(value[0], value[1])
 
 
 def not_equal(field: Term, value: Any) -> Criterion:
