@@ -1149,7 +1149,7 @@ class UpdateQuery(AwaitableQuery):
             if isinstance(value, Term):
                 self.query = self.query.set(db_field, value)
             else:
-                self.query = self.query.set(db_field, executor.parameter(count))
+                self.query = self.query.set(db_field, executor.insert_parameter(count))
                 self.values.append(value)
                 count += 1
 

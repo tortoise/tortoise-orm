@@ -71,7 +71,7 @@ class F(PypikaField):  # type: ignore
                 left_field_object,
             ) = cls.resolver_arithmetic_expression(model, left)
             if left_field_object:
-                if field_object and type(field_object) != type(left_field_object):
+                if field_object and type(field_object) is not type(left_field_object):
                     raise FieldError(
                         "Cannot use arithmetic expression between different field type"
                     )
@@ -82,7 +82,7 @@ class F(PypikaField):  # type: ignore
                 right_field_object,
             ) = cls.resolver_arithmetic_expression(model, right)
             if right_field_object:
-                if field_object and type(field_object) != type(right_field_object):
+                if field_object and type(field_object) is not type(right_field_object):
                     raise FieldError(
                         "Cannot use arithmetic expression between different field type"
                     )
@@ -155,7 +155,7 @@ class Q(Expression):
         #: Contains the sub-Q's that this Q is made up of
         self.children: Tuple[Q, ...] = args
         #: Contains the filters applied to this Q
-        self.filters: Dict[str, FilterInfoDict] = kwargs
+        self.filters: Dict[str, Any] = kwargs
         if join_type not in {self.AND, self.OR}:
             raise OperationalError("join_type must be AND or OR")
         #: Specifies if this Q does an AND or OR on its children
@@ -276,7 +276,7 @@ class Q(Expression):
                 )
             op = param["operator"]
             # this is an ugly hack
-            if op == operator.eq:
+            if op == operator.eq and not isinstance(encoded_value, Term):
                 encoded_value = model._meta.db.query_class._builder()._wrapper_cls(encoded_value)
             criterion = op(table[param["source_field"]], encoded_value)
         return criterion, join

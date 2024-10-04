@@ -835,7 +835,7 @@ class Model(metaclass=ModelMeta):
 
         :raises ConfigurationError: When attempting to update a remote instance
             (e.g. a reverse ForeignKey or ManyToMany relation)
-        :raises ValueError: When a passed parameter is not type compatible
+        :raises ValueError: When a passed insert_parameter is not type compatible
         """
         self._set_kwargs(data)
         return self

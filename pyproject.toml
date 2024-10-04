@@ -36,7 +36,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-pypika-tortoise = "^0.1.6"
+pypika-tortoise = { path = "vendor/pypika-tortoise", develop = true}
 iso8601 = "^1.0.2"
 aiosqlite = ">=0.16.0, <0.18.0"
 pytz = "*"
@@ -187,6 +187,7 @@ filterwarnings = [
     'ignore:`pk` is deprecated:DeprecationWarning',
     'ignore:`index` is deprecated:DeprecationWarning',
 ]
+addopts = "--ignore=vendor"
 
 [tool.coverage.run]
 branch = true
