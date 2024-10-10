@@ -1335,6 +1335,8 @@ class CountQuery(AwaitableQuery):
 
     async def _execute(self) -> int:
         _, result = await self._db.execute_query(str(self.query))
+        if not result:
+            return 0
         count = list(dict(result[0]).values())[0] - self.offset
         if self.limit and count > self.limit:
             return self.limit

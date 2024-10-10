@@ -236,3 +236,10 @@ class TestAggregation(test.TestCase):
 
         res = await query.count()
         assert res == 2
+
+    async def test_count_without_matching(self) -> None:
+        await Tournament.create(name="Test")
+
+        query = Tournament.annotate(events_count=Count("events")).filter(events_count__gt=0).count()
+        result = await query
+        assert result == 0
