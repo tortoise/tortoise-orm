@@ -141,7 +141,7 @@ class PsycopgClient(postgres_client.BasePostgresClient):
                 else:
                     rows = []
 
-                return rowcount, rows
+                return rowcount, typing.cast(typing.List[dict], rows)
 
     async def execute_query_dict(
         self, query: str, values: typing.Optional[list] = None

@@ -257,7 +257,7 @@ def register_tortoise(
         # Leave on_event here to compare with old versions
         # So people can upgrade tortoise-orm in running project without changing any code
 
-        @app.on_event("startup")  # type: ignore[unreachable]
+        @app.on_event("startup")
         async def init_orm() -> None:  # pylint: disable=W0612
             await orm.init_orm()
 
