@@ -1,5 +1,6 @@
 # mypy: no-disallow-untyped-decorators
 # pylint: disable=E0611,E0401
+import multiprocessing
 import os
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
@@ -131,6 +132,7 @@ def query_without_app(pk: int) -> int:
 
 
 def test_query_without_app():
-    with ProcessPoolExecutor(max_workers=1, max_tasks_per_child=1) as executor:
+    multiprocessing.set_start_method("spawn")
+    with ProcessPoolExecutor(max_workers=1) as executor:
         future = executor.submit(query_without_app, 0)
         assert future.result() >= 0
