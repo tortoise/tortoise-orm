@@ -1,11 +1,13 @@
 # mypy: no-disallow-untyped-decorators
 # pylint: disable=E0611,E0401
+import multiprocessing
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 from typing import AsyncGenerator, Tuple
 
+import anyio
 import pytest
 import pytz
 from asgi_lifespan import LifespanManager
@@ -16,6 +18,7 @@ from tortoise.fields.data import JSON_LOADS
 
 os.environ["DB_URL"] = MEMORY_SQLITE
 try:
+    from config import register_orm
     from main import app
     from main_custom_timezone import app as app_east
     from models import Users
@@ -117,3 +120,19 @@ class TestUserEast(UserTester):
         created_at = user_obj.created_at
         assert (created_at.hour - time.hour) in [self.delta_hours, self.delta_hours - 24]
         assert item.model_dump()["created_at"].hour == created_at.hour
+
+
+def query_without_app(pk: int) -> bool:
+    async def runner() -> bool:
+        async with register_orm():
+            users = await Users.filter(id__gt=pk)
+            return isinstance(users, list)
+
+    return anyio.run(runner)
+
+
+def test_query_without_app():
+    with multiprocessing.Pool(1) as p:
+        results = p.map(query_without_app, [0])
+    p.join()
+    assert results == [True]
