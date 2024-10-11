@@ -1,7 +1,7 @@
 # mypy: no-disallow-untyped-decorators
 # pylint: disable=E0611,E0401
-import multiprocessing
 import os
+from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -122,17 +122,15 @@ class TestUserEast(UserTester):
         assert item.model_dump()["created_at"].hour == created_at.hour
 
 
-def query_without_app(pk: int) -> bool:
+def query_without_app(pk: int) -> int:
     async def runner() -> bool:
         async with register_orm():
-            users = await Users.filter(id__gt=pk)
-            return isinstance(users, list)
+            return await Users.filter(id__gt=pk).count()
 
     return anyio.run(runner)
 
 
 def test_query_without_app():
-    with multiprocessing.Pool(1) as p:
-        results = p.map(query_without_app, [0])
-    p.join()
-    assert results == [True]
+    with ProcessPoolExecutor(max_workers=1, max_tasks_per_child=1) as executor:
+        future = executor.submit(query_without_app, 0)
+        assert future.result() >= 0
