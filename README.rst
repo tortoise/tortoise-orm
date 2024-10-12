@@ -73,20 +73,20 @@ You can also install with your db driver (`aiosqlite` is builtin):
 
 .. code-block:: bash
 
-    pip install tortoise-orm[asyncpg]
+    pip install "tortoise-orm[asyncpg]"
 
 
 For `MySQL`:
 
 .. code-block:: bash
 
-    pip install tortoise-orm[asyncmy]
+    pip install "tortoise-orm[asyncmy]"
 
 For `Microsoft SQL Server`/`Oracle` (**not fully tested**):
 
 .. code-block:: bash
 
-    pip install tortoise-orm[asyncodbc]
+    pip install "tortoise-orm[asyncodbc]"
 
 Quick Tutorial
 --------------
