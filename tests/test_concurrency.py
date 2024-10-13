@@ -3,7 +3,7 @@ import sys
 
 from tests.testmodels import Tournament, UniqueName
 from tortoise.contrib import test
-from tortoise.contrib.test.condition import NotEQ, NotIn
+from tortoise.contrib.test.condition import NotIn
 from tortoise.transactions import in_transaction
 
 
