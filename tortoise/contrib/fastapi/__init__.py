@@ -99,7 +99,7 @@ class RegisterTortoise(AbstractAsyncContextManager):
 
     def __init__(
         self,
-        app: FastAPI,
+        app: Optional[FastAPI] = None,
         config: Optional[dict] = None,
         config_file: Optional[str] = None,
         db_url: Optional[str] = None,
@@ -120,7 +120,7 @@ class RegisterTortoise(AbstractAsyncContextManager):
         self.timezone = timezone
         self._create_db = _create_db
 
-        if add_exception_handlers:
+        if add_exception_handlers and app is not None:
 
             @app.exception_handler(DoesNotExist)
             async def doesnotexist_exception_handler(request: "Request", exc: DoesNotExist):
