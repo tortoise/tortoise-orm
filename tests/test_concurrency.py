@@ -3,7 +3,7 @@ import sys
 
 from tests.testmodels import Tournament, UniqueName
 from tortoise.contrib import test
-from tortoise.contrib.test.condition import NotEQ
+from tortoise.contrib.test.condition import NotEQ, NotIn
 from tortoise.transactions import in_transaction
 
 
@@ -31,7 +31,7 @@ class TestConcurrencyIsolated(test.IsolatedTestCase):
             self.assertEqual(una[0], unas[0][0])
 
     @test.skipIf(sys.version_info < (3, 7), "aiocontextvars backport not handling this well")
-    @test.requireCapability(dialect=NotEQ("mssql"))
+    @test.requireCapability(dialect=NotIn("mssql", "oracle"))
     async def test_concurrent_get_or_create(self):
         unas = await asyncio.gather(*[UniqueName.get_or_create(name="d") for _ in range(10)])
         una_created = [una[1] for una in unas if una[1] is True]
