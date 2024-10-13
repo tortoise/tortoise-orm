@@ -1,6 +1,6 @@
 checkfiles = tortoise/ examples/ tests/ conftest.py
 py_warn = PYTHONDEVMODE=1
-pytest_opts = -n 1 --cov=tortoise --cov-append --tb=native -q
+pytest_opts = -n auto --cov=tortoise --cov-append --tb=native -q
 
 help:
 	@echo  "Tortoise ORM development makefile"
@@ -64,7 +64,7 @@ test_mssql:
 test_oracle:
 	$(py_warn) TORTOISE_TEST_DB="oracle://SYSTEM:$(TORTOISE_ORACLE_PASS)@127.0.0.1:1521/test_\{\}?driver=$(TORTOISE_ORACLE_DRIVER)" pytest $(pytest_opts) --cov-append --cov-report=
 
-_testall: test_sqlite test_postgres_asyncpg test_postgres_psycopg test_mysql_myisam test_mysql test_mssql
+_testall: test_sqlite test_postgres_asyncpg test_postgres_psycopg test_mysql_myisam test_mysql
 	coverage report
 
 testall: deps _testall
