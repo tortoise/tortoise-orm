@@ -7,7 +7,17 @@ import unittest
 from asyncio.events import AbstractEventLoop
 from functools import partial, wraps
 from types import ModuleType
-from typing import Any, Callable, Coroutine, Iterable, List, Optional, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Coroutine,
+    Iterable,
+    List,
+    Optional,
+    TypeVar,
+    Union,
+    cast,
+)
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 
 from tortoise import Model, Tortoise, connections
@@ -488,4 +498,6 @@ def init_memory_sqlite(
         models = default_models
     elif isinstance(models, str):
         models = [models]
+    else:
+        models = cast(list, models)
     return partial(wrapper, ms=models)

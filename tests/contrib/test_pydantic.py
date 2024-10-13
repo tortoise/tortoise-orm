@@ -164,11 +164,7 @@ class TestPydantic(test.TestCase):
                     },
                     "name": {"description": "The name", "title": "Name", "type": "string"},
                     "tournament": {
-                        "allOf": [
-                            {
-                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf"
-                            }
-                        ],
+                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf",
                         "description": "What tournaments is a happenin'",
                     },
                     "reporter": {
@@ -247,11 +243,7 @@ class TestPydantic(test.TestCase):
                             },
                             "name": {"description": "The name", "title": "Name", "type": "string"},
                             "tournament": {
-                                "allOf": [
-                                    {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf"
-                                    }
-                                ],
+                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf",
                                 "description": "What tournaments is a happenin'",
                             },
                             "reporter": {
@@ -429,11 +421,7 @@ class TestPydantic(test.TestCase):
                             },
                             "name": {"description": "The name", "title": "Name", "type": "string"},
                             "tournament": {
-                                "allOf": [
-                                    {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf"
-                                    }
-                                ],
+                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf",
                                 "description": "What tournaments is a happenin'",
                             },
                             "reporter": {
@@ -763,11 +751,7 @@ class TestPydantic(test.TestCase):
                             },
                             "name": {"description": "The name", "title": "Name", "type": "string"},
                             "tournament": {
-                                "allOf": [
-                                    {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf"
-                                    }
-                                ],
+                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf",
                                 "description": "What tournaments is a happenin'",
                             },
                             "reporter": {

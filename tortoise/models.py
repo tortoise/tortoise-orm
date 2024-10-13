@@ -15,8 +15,10 @@ from typing import (
     Set,
     Tuple,
     Type,
+    TypedDict,
     TypeVar,
     Union,
+    cast,
 )
 
 from pypika import Order, Query, Table
@@ -85,6 +87,12 @@ def prepare_default_ordering(meta: "Model.Meta") -> Tuple[Tuple[str, Order], ...
     )
 
     return parsed_ordering
+
+
+class FkSetterKwargs(TypedDict):
+    _key: str
+    relation_field: str
+    to_field: str
 
 
 def _fk_setter(
@@ -339,9 +347,9 @@ class MetaInfo:
         for key in self.fk_fields:
             _key = f"_{key}"
             fk_field_object: ForeignKeyFieldInstance = self.fields_map[key]  # type: ignore
-            relation_field = fk_field_object.source_field
+            relation_field = cast(str, fk_field_object.source_field)
             to_field = fk_field_object.to_field_instance.model_field_name
-            property_kwargs = dict(
+            property_kwargs: FkSetterKwargs = dict(
                 _key=_key,
                 relation_field=relation_field,
                 to_field=to_field,
@@ -388,8 +396,8 @@ class MetaInfo:
         # Create lazy one to one fields on model.
         for key in self.o2o_fields:
             _key = f"_{key}"
-            o2o_field_object: OneToOneFieldInstance = self.fields_map[key]  # type: ignore
-            relation_field = o2o_field_object.source_field
+            o2o_field_object = cast(OneToOneFieldInstance, self.fields_map[key])
+            relation_field = cast(str, o2o_field_object.source_field)
             to_field = o2o_field_object.to_field_instance.model_field_name
             property_kwargs = dict(
                 _key=_key,
@@ -440,10 +448,11 @@ class MetaInfo:
         # Create lazy M2M fields on model.
         for key in self.m2m_fields:
             _key = f"_{key}"
+            field_object = cast(ManyToManyFieldInstance, self.fields_map[key])
             setattr(
                 self._model,
                 key,
-                property(partial(_m2m_getter, _key=_key, field_object=self.fields_map[key])),
+                property(partial(_m2m_getter, _key=_key, field_object=field_object)),
             )
 
     def _generate_db_fields(self) -> None:
