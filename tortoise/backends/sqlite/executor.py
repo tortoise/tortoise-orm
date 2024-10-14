@@ -7,6 +7,10 @@ import pytz
 
 from tortoise import Model, fields, timezone
 from tortoise.backends.base.executor import BaseExecutor
+from tortoise.contrib.sqlite.regex import (
+    insensitive_posix_sqlite_regexp,
+    posix_sqlite_regexp,
+)
 from tortoise.fields import (
     BigIntField,
     BooleanField,
@@ -16,6 +20,7 @@ from tortoise.fields import (
     SmallIntField,
     TimeField,
 )
+from tortoise.filters import insensitive_posix_regex, posix_regex
 
 
 def to_db_bool(
@@ -91,6 +96,10 @@ class SqliteExecutor(BaseExecutor):
     }
     EXPLAIN_PREFIX = "EXPLAIN QUERY PLAN"
     DB_NATIVE = {bytes, str, int, float}
+    FILTER_FUNC_OVERRIDE = {
+        posix_regex: posix_sqlite_regexp,
+        insensitive_posix_regex: insensitive_posix_sqlite_regexp,
+    }
 
     async def _process_insert_result(self, instance: Model, results: int) -> None:
         pk_field_object = self.model._meta.pk
