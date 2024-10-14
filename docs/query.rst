@@ -278,8 +278,9 @@ In PostgreSQL and MYSQL, you can use the ``contains``, ``contained_by`` and ``fi
     obj5 = await JSONModel.filter(data__filter={"owner__name__isnull": True}).first()
     obj6 = await JSONModel.filter(data__filter={"owner__last__not_isnull": False}).first()
 
-In PostgreSQL and MySQL, you can use ``postgres_posix_regex`` to make comparisons using POSIX regular expressions:
-On PostgreSQL, this uses the ``~`` operator, on MySQL it uses the ``REGEXP`` operator.
+In PostgreSQL, MySQL and SQLite, you can use ``posix_regex`` to make comparisons using POSIX regular expressions:
+On PostgreSQL, this uses the ``~`` operator, on MySQL and SQLite it uses the ``REGEXP`` operator.
+PostgreSQL and SQLite also support ``iposix_regex``, which makes case insensivity comparisons.
 
 .. code-block:: python3
     class DemoModel:
@@ -287,6 +288,7 @@ On PostgreSQL, this uses the ``~`` operator, on MySQL it uses the ``REGEXP`` ope
 
     await DemoModel.create(demo_text="Hello World")
     obj = await DemoModel.filter(demo_text__posix_regex="^Hello World$").first()
+    obj = await DemoModel.filter(demo_text__iposix_regex="^hello world$").first()
 
 
 Complex prefetch
