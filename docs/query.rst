@@ -271,8 +271,9 @@ The ``filter`` option allows you to filter the JSON object by its keys and value
     obj5 = await JSONModel.filter(data__filter={"owner__name__isnull": True}).first()
     obj6 = await JSONModel.filter(data__filter={"owner__last__not_isnull": False}).first()
 
-In PostgreSQL and MySQL, you can use ``postgres_posix_regex`` to make comparisons using POSIX regular expressions:
-In PostgreSQL, this is done with the ``~`` operator, while in MySQL the ``REGEXP`` operator is used.
+In PostgreSQL and MySQL and SQLite, you can use ``posix_regex`` to make comparisons using POSIX regular expressions:
+On PostgreSQL, this uses the ``~`` operator, on MySQL and SQLite it uses the ``REGEXP`` operator.
+PostgreSQL and SQLite also support ``iposix_regex``, which makes case insensive comparisons.
 
 
 .. code-block:: python3
@@ -281,6 +282,7 @@ In PostgreSQL, this is done with the ``~`` operator, while in MySQL the ``REGEXP
 
     await DemoModel.create(demo_text="Hello World")
     obj = await DemoModel.filter(demo_text__posix_regex="^Hello World$").first()
+    obj = await DemoModel.filter(demo_text__iposix_regex="^hello world$").first()
 
 
 In PostgreSQL, ``filter`` supports additional lookup types:
