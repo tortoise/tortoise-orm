@@ -8,7 +8,7 @@ on:
       - main
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     services:
       postgres:
         image: postgres
@@ -88,7 +88,7 @@ jobs:
   coveralls:
     name: Finish Coveralls
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Finished
         run: |
