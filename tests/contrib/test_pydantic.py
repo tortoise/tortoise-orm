@@ -8,6 +8,7 @@ from tests.testmodels import (
     CamelCaseAliasPerson,
     Employee,
     Event,
+    IntFields,
     JSONFields,
     Reporter,
     Team,
@@ -231,7 +232,7 @@ class TestPydantic(test.TestCase):
             self.Event_Pydantic_List.model_json_schema(),
             {
                 "$defs": {
-                    "Event_ct5gv4": {
+                    "Event_bliobj": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -398,7 +399,7 @@ class TestPydantic(test.TestCase):
                     },
                 },
                 "description": "Events on the calendar",
-                "items": {"$ref": "#/$defs/Event_ct5gv4"},
+                "items": {"$ref": "#/$defs/Event_bliobj"},
                 "title": "Event_list",
                 "type": "array",
             },
@@ -409,7 +410,7 @@ class TestPydantic(test.TestCase):
             self.Address_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_aajoh6": {
+                    "Event_jim4na": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -552,7 +553,7 @@ class TestPydantic(test.TestCase):
                 "properties": {
                     "city": {"maxLength": 64, "title": "City", "type": "string"},
                     "street": {"maxLength": 128, "title": "Street", "type": "string"},
-                    "event": {"$ref": "#/$defs/Event_aajoh6"},
+                    "event": {"$ref": "#/$defs/Event_jim4na"},
                     "event_id": {
                         "maximum": 9223372036854775807,
                         "minimum": -9223372036854775808,
@@ -571,7 +572,7 @@ class TestPydantic(test.TestCase):
             self.Tournament_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_h4reuz": {
+                    "Event_ml4ytz": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -723,7 +724,7 @@ class TestPydantic(test.TestCase):
                     },
                     "events": {
                         "description": "What tournaments is a happenin'",
-                        "items": {"$ref": "#/$defs/Event_h4reuz"},
+                        "items": {"$ref": "#/$defs/Event_ml4ytz"},
                         "title": "Events",
                         "type": "array",
                     },
@@ -739,7 +740,7 @@ class TestPydantic(test.TestCase):
             self.Team_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_mfn2l6": {
+                    "Event_vrm2bi": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -888,7 +889,7 @@ class TestPydantic(test.TestCase):
                         "title": "Alias",
                     },
                     "events": {
-                        "items": {"$ref": "#/$defs/Event_mfn2l6"},
+                        "items": {"$ref": "#/$defs/Event_vrm2bi"},
                         "title": "Events",
                         "type": "array",
                     },
@@ -1268,10 +1269,28 @@ class TestPydantic(test.TestCase):
             PydanticModel.model_config["from_attributes"],
         )
 
-    def test_exclude_read_only(self):
+    def test_exclude_readonly(self):
         ModelPydantic = pydantic_model_creator(Event, exclude_readonly=True)
 
         self.assertNotIn("modified", ModelPydantic.model_json_schema()["properties"])
+
+    def test_exclude_readonly_multiple_leaf_models_without_name(self):
+        ModelPydantic = pydantic_model_creator(IntFields)
+        ModelPydantic_ExcludeReadonly = pydantic_model_creator(IntFields, exclude_readonly=True)
+
+        assert ModelPydantic is not ModelPydantic_ExcludeReadonly
+        self.assertIn("id", ModelPydantic.model_json_schema()["properties"])
+        self.assertNotIn("id", ModelPydantic_ExcludeReadonly.model_json_schema()["properties"])
+
+    def test_exclude_readonly_multiple_complex_models_without_name(self):
+        ModelPydantic = pydantic_model_creator(Event)
+        ModelPydantic_ExcludeReadonly = pydantic_model_creator(Event, exclude_readonly=True)
+
+        assert ModelPydantic is not ModelPydantic_ExcludeReadonly
+        self.assertIn("event_id", ModelPydantic.model_json_schema()["properties"])
+        self.assertNotIn(
+            "event_id", ModelPydantic_ExcludeReadonly.model_json_schema()["properties"]
+        )
 
 
 class TestPydanticCycle(test.TestCase):
@@ -1297,7 +1316,7 @@ class TestPydanticCycle(test.TestCase):
             self.Employee_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Employee_4fgkwn": {
+                    "Employee_ibbaiu": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -1334,7 +1353,7 @@ class TestPydanticCycle(test.TestCase):
                         "title": "Employee",
                         "type": "object",
                     },
-                    "Employee_5gupxf": {
+                    "Employee_obdn4z": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -1409,7 +1428,7 @@ class TestPydanticCycle(test.TestCase):
                     },
                     "name": {"maxLength": 50, "title": "Name", "type": "string"},
                     "talks_to": {
-                        "items": {"$ref": "#/$defs/Employee_5gupxf"},
+                        "items": {"$ref": "#/$defs/Employee_obdn4z"},
                         "title": "Talks To",
                         "type": "array",
                     },
@@ -1422,7 +1441,7 @@ class TestPydanticCycle(test.TestCase):
                         "title": "Manager Id",
                     },
                     "team_members": {
-                        "items": {"$ref": "#/$defs/Employee_4fgkwn"},
+                        "items": {"$ref": "#/$defs/Employee_ibbaiu"},
                         "title": "Team Members",
                         "type": "array",
                     },

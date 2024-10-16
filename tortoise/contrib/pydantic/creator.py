@@ -183,10 +183,9 @@ def pydantic_model_creator(
             and computed == ()
             and sort_alphabetically is None
             and allow_cycles is None
+            and not exclude_readonly
         )
-        hashval = (
-            f"{fqname};{exclude};{include};{computed};{_stack}:{sort_alphabetically}:{allow_cycles}"
-        )
+        hashval = f"{fqname};{exclude};{include};{computed};{_stack}:{sort_alphabetically}:{allow_cycles}:{exclude_readonly}"
         postfix = (
             ":" + b32encode(sha3_224(hashval.encode("utf-8")).digest()).decode("utf-8").lower()[:6]
             if not is_default
@@ -433,9 +432,9 @@ def pydantic_model_creator(
                 properties[fname] = (ftype, Field(**fconfig))
 
     # Here we endure that the name is unique, but complete objects are still labeled verbatim
-    if not has_submodel:
+    if not has_submodel and _stack:
         _name = name or f"{fqname}.leaf"
-    elif has_submodel:
+    else:
         _name = name or get_name()
 
     # Here we de-dup to ensure that a uniquely named object is a unique object
