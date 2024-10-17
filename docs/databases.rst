@@ -8,7 +8,7 @@ Tortoise currently supports the following databases:
 
 * SQLite (using ``aiosqlite``）
 * PostgreSQL >= 9.4 (using ``asyncpg`` or ``psycopg``)
-* MySQL/MariaDB (using ``asyncmy``)
+* MySQL/MariaDB (using ``asyncmy`` or ``aiomysql``)
 * Microsoft SQL Server (using ``asyncodbc``)
 
 To use, please ensure that corresponding asyncio driver is installed.
