@@ -1274,24 +1274,6 @@ class TestPydantic(test.TestCase):
 
         self.assertNotIn("modified", ModelPydantic.model_json_schema()["properties"])
 
-    def test_exclude_readonly_multiple_leaf_models_without_name(self):
-        ModelPydantic = pydantic_model_creator(IntFields)
-        ModelPydantic_ExcludeReadonly = pydantic_model_creator(IntFields, exclude_readonly=True)
-
-        assert ModelPydantic is not ModelPydantic_ExcludeReadonly
-        self.assertIn("id", ModelPydantic.model_json_schema()["properties"])
-        self.assertNotIn("id", ModelPydantic_ExcludeReadonly.model_json_schema()["properties"])
-
-    def test_exclude_readonly_multiple_complex_models_without_name(self):
-        ModelPydantic = pydantic_model_creator(Event)
-        ModelPydantic_ExcludeReadonly = pydantic_model_creator(Event, exclude_readonly=True)
-
-        assert ModelPydantic is not ModelPydantic_ExcludeReadonly
-        self.assertIn("event_id", ModelPydantic.model_json_schema()["properties"])
-        self.assertNotIn(
-            "event_id", ModelPydantic_ExcludeReadonly.model_json_schema()["properties"]
-        )
-
 
 class TestPydanticCycle(test.TestCase):
     async def asyncSetUp(self) -> None:
@@ -1681,3 +1663,79 @@ class TestPydanticOptionalUpdate(test.TestCase):
             ).model_dump(),
             {"username": "name", "mail": "a@example.com", "bio": ""},
         )
+
+
+class TestPydanticMutlipleModelUses(test.TestCase):
+    def setUp(self) -> None:
+        self.NoRelationsModel = IntFields
+        self.ModelWithRelations = Event
+
+    def test_no_relations_model_reused(self):
+        Pydantic1 = pydantic_model_creator(self.NoRelationsModel)
+        Pydantic2 = pydantic_model_creator(self.NoRelationsModel)
+
+        self.assertIs(Pydantic1, Pydantic2)
+
+    def test_no_relations_model_one_exclude(self):
+        Pydantic1 = pydantic_model_creator(self.NoRelationsModel)
+        Pydantic2 = pydantic_model_creator(self.NoRelationsModel, exclude=("id",))
+
+        self.assertIsNot(Pydantic1, Pydantic2)
+        self.assertIn("id", Pydantic1.model_json_schema()["required"])
+        self.assertNotIn("id", Pydantic2.model_json_schema()["required"])
+
+    def test_no_relations_model_both_exclude(self):
+        Pydantic1 = pydantic_model_creator(self.NoRelationsModel, exclude=("id",))
+        Pydantic2 = pydantic_model_creator(self.NoRelationsModel, exclude=("id",))
+
+        self.assertIs(Pydantic1, Pydantic2)
+        self.assertNotIn("id", Pydantic1.model_json_schema()["required"])
+        self.assertNotIn("id", Pydantic2.model_json_schema()["required"])
+
+    def test_no_relations_model_exclude_diff(self):
+        Pydantic1 = pydantic_model_creator(self.NoRelationsModel, exclude=("id",))
+        Pydantic2 = pydantic_model_creator(self.NoRelationsModel, exclude=("name",))
+
+        self.assertIsNot(Pydantic1, Pydantic2)
+
+    def test_no_relations_model_exclude_readonly(self):
+        Pydantic1 = pydantic_model_creator(self.NoRelationsModel)
+        Pydantic2 = pydantic_model_creator(self.NoRelationsModel, exclude_readonly=True)
+
+        self.assertIsNot(Pydantic1, Pydantic2)
+        self.assertIn("id", Pydantic1.model_json_schema()["properties"])
+        self.assertNotIn("id", Pydantic2.model_json_schema()["properties"])
+
+    def test_model_with_relations_reused(self):
+        Pydantic1 = pydantic_model_creator(self.ModelWithRelations)
+        Pydantic2 = pydantic_model_creator(self.ModelWithRelations)
+
+        self.assertIs(Pydantic1, Pydantic2)
+
+    def test_model_with_relations_exclude(self):
+        Pydantic1 = pydantic_model_creator(self.ModelWithRelations)
+        Pydantic2 = pydantic_model_creator(self.ModelWithRelations, exclude=("event_id",))
+
+        self.assertIsNot(Pydantic1, Pydantic2)
+        self.assertIn("event_id", Pydantic1.model_json_schema()["properties"])
+        self.assertNotIn("event_id", Pydantic2.model_json_schema()["properties"])
+
+    def test_model_with_relations_exclude_readonly(self):
+        Pydantic1 = pydantic_model_creator(self.ModelWithRelations)
+        Pydantic2 = pydantic_model_creator(self.ModelWithRelations, exclude_readonly=True)
+
+        self.assertIsNot(Pydantic1, Pydantic2)
+        self.assertIn("event_id", Pydantic1.model_json_schema()["properties"])
+        self.assertNotIn("event_id", Pydantic2.model_json_schema()["properties"])
+
+    def test_named_no_relations_model(self):
+        Pydantic1 = pydantic_model_creator(self.NoRelationsModel, name="Foo")
+        Pydantic2 = pydantic_model_creator(self.NoRelationsModel, name="Foo")
+
+        self.assertIs(Pydantic1, Pydantic2)
+
+    def test_named_model_with_relations(self):
+        Pydantic1 = pydantic_model_creator(self.ModelWithRelations, name="Foo")
+        Pydantic2 = pydantic_model_creator(self.ModelWithRelations, name="Foo")
+
+        self.assertIs(Pydantic1, Pydantic2)
