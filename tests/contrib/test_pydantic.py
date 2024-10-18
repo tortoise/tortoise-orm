@@ -8,6 +8,7 @@ from tests.testmodels import (
     CamelCaseAliasPerson,
     Employee,
     Event,
+    IntFields,
     JSONFields,
     Reporter,
     Team,
@@ -231,7 +232,7 @@ class TestPydantic(test.TestCase):
             self.Event_Pydantic_List.model_json_schema(),
             {
                 "$defs": {
-                    "Event_ct5gv4": {
+                    "Event_bliobj": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -398,7 +399,7 @@ class TestPydantic(test.TestCase):
                     },
                 },
                 "description": "Events on the calendar",
-                "items": {"$ref": "#/$defs/Event_ct5gv4"},
+                "items": {"$ref": "#/$defs/Event_bliobj"},
                 "title": "Event_list",
                 "type": "array",
             },
@@ -409,7 +410,7 @@ class TestPydantic(test.TestCase):
             self.Address_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_aajoh6": {
+                    "Event_jim4na": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -552,7 +553,7 @@ class TestPydantic(test.TestCase):
                 "properties": {
                     "city": {"maxLength": 64, "title": "City", "type": "string"},
                     "street": {"maxLength": 128, "title": "Street", "type": "string"},
-                    "event": {"$ref": "#/$defs/Event_aajoh6"},
+                    "event": {"$ref": "#/$defs/Event_jim4na"},
                     "event_id": {
                         "maximum": 9223372036854775807,
                         "minimum": -9223372036854775808,
@@ -571,7 +572,7 @@ class TestPydantic(test.TestCase):
             self.Tournament_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_h4reuz": {
+                    "Event_ml4ytz": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -723,7 +724,7 @@ class TestPydantic(test.TestCase):
                     },
                     "events": {
                         "description": "What tournaments is a happenin'",
-                        "items": {"$ref": "#/$defs/Event_h4reuz"},
+                        "items": {"$ref": "#/$defs/Event_ml4ytz"},
                         "title": "Events",
                         "type": "array",
                     },
@@ -739,7 +740,7 @@ class TestPydantic(test.TestCase):
             self.Team_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_mfn2l6": {
+                    "Event_vrm2bi": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -888,7 +889,7 @@ class TestPydantic(test.TestCase):
                         "title": "Alias",
                     },
                     "events": {
-                        "items": {"$ref": "#/$defs/Event_mfn2l6"},
+                        "items": {"$ref": "#/$defs/Event_vrm2bi"},
                         "title": "Events",
                         "type": "array",
                     },
@@ -1268,7 +1269,7 @@ class TestPydantic(test.TestCase):
             PydanticModel.model_config["from_attributes"],
         )
 
-    def test_exclude_read_only(self):
+    def test_exclude_readonly(self):
         ModelPydantic = pydantic_model_creator(Event, exclude_readonly=True)
 
         self.assertNotIn("modified", ModelPydantic.model_json_schema()["properties"])
@@ -1297,7 +1298,7 @@ class TestPydanticCycle(test.TestCase):
             self.Employee_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Employee_4fgkwn": {
+                    "Employee_ibbaiu": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -1334,7 +1335,7 @@ class TestPydanticCycle(test.TestCase):
                         "title": "Employee",
                         "type": "object",
                     },
-                    "Employee_5gupxf": {
+                    "Employee_obdn4z": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -1409,7 +1410,7 @@ class TestPydanticCycle(test.TestCase):
                     },
                     "name": {"maxLength": 50, "title": "Name", "type": "string"},
                     "talks_to": {
-                        "items": {"$ref": "#/$defs/Employee_5gupxf"},
+                        "items": {"$ref": "#/$defs/Employee_obdn4z"},
                         "title": "Talks To",
                         "type": "array",
                     },
@@ -1422,7 +1423,7 @@ class TestPydanticCycle(test.TestCase):
                         "title": "Manager Id",
                     },
                     "team_members": {
-                        "items": {"$ref": "#/$defs/Employee_4fgkwn"},
+                        "items": {"$ref": "#/$defs/Employee_ibbaiu"},
                         "title": "Team Members",
                         "type": "array",
                     },
@@ -1662,3 +1663,79 @@ class TestPydanticOptionalUpdate(test.TestCase):
             ).model_dump(),
             {"username": "name", "mail": "a@example.com", "bio": ""},
         )
+
+
+class TestPydanticMutlipleModelUses(test.TestCase):
+    def setUp(self) -> None:
+        self.NoRelationsModel = IntFields
+        self.ModelWithRelations = Event
+
+    def test_no_relations_model_reused(self):
+        Pydantic1 = pydantic_model_creator(self.NoRelationsModel)
+        Pydantic2 = pydantic_model_creator(self.NoRelationsModel)
+
+        self.assertIs(Pydantic1, Pydantic2)
+
+    def test_no_relations_model_one_exclude(self):
+        Pydantic1 = pydantic_model_creator(self.NoRelationsModel)
+        Pydantic2 = pydantic_model_creator(self.NoRelationsModel, exclude=("id",))
+
+        self.assertIsNot(Pydantic1, Pydantic2)
+        self.assertIn("id", Pydantic1.model_json_schema()["required"])
+        self.assertNotIn("id", Pydantic2.model_json_schema()["required"])
+
+    def test_no_relations_model_both_exclude(self):
+        Pydantic1 = pydantic_model_creator(self.NoRelationsModel, exclude=("id",))
+        Pydantic2 = pydantic_model_creator(self.NoRelationsModel, exclude=("id",))
+
+        self.assertIs(Pydantic1, Pydantic2)
+        self.assertNotIn("id", Pydantic1.model_json_schema()["required"])
+        self.assertNotIn("id", Pydantic2.model_json_schema()["required"])
+
+    def test_no_relations_model_exclude_diff(self):
+        Pydantic1 = pydantic_model_creator(self.NoRelationsModel, exclude=("id",))
+        Pydantic2 = pydantic_model_creator(self.NoRelationsModel, exclude=("name",))
+
+        self.assertIsNot(Pydantic1, Pydantic2)
+
+    def test_no_relations_model_exclude_readonly(self):
+        Pydantic1 = pydantic_model_creator(self.NoRelationsModel)
+        Pydantic2 = pydantic_model_creator(self.NoRelationsModel, exclude_readonly=True)
+
+        self.assertIsNot(Pydantic1, Pydantic2)
+        self.assertIn("id", Pydantic1.model_json_schema()["properties"])
+        self.assertNotIn("id", Pydantic2.model_json_schema()["properties"])
+
+    def test_model_with_relations_reused(self):
+        Pydantic1 = pydantic_model_creator(self.ModelWithRelations)
+        Pydantic2 = pydantic_model_creator(self.ModelWithRelations)
+
+        self.assertIs(Pydantic1, Pydantic2)
+
+    def test_model_with_relations_exclude(self):
+        Pydantic1 = pydantic_model_creator(self.ModelWithRelations)
+        Pydantic2 = pydantic_model_creator(self.ModelWithRelations, exclude=("event_id",))
+
+        self.assertIsNot(Pydantic1, Pydantic2)
+        self.assertIn("event_id", Pydantic1.model_json_schema()["properties"])
+        self.assertNotIn("event_id", Pydantic2.model_json_schema()["properties"])
+
+    def test_model_with_relations_exclude_readonly(self):
+        Pydantic1 = pydantic_model_creator(self.ModelWithRelations)
+        Pydantic2 = pydantic_model_creator(self.ModelWithRelations, exclude_readonly=True)
+
+        self.assertIsNot(Pydantic1, Pydantic2)
+        self.assertIn("event_id", Pydantic1.model_json_schema()["properties"])
+        self.assertNotIn("event_id", Pydantic2.model_json_schema()["properties"])
+
+    def test_named_no_relations_model(self):
+        Pydantic1 = pydantic_model_creator(self.NoRelationsModel, name="Foo")
+        Pydantic2 = pydantic_model_creator(self.NoRelationsModel, name="Foo")
+
+        self.assertIs(Pydantic1, Pydantic2)
+
+    def test_named_model_with_relations(self):
+        Pydantic1 = pydantic_model_creator(self.ModelWithRelations, name="Foo")
+        Pydantic2 = pydantic_model_creator(self.ModelWithRelations, name="Foo")
+
+        self.assertIs(Pydantic1, Pydantic2)
