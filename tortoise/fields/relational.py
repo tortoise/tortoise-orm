@@ -1,3 +1,4 @@
+import dataclasses
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -18,7 +19,7 @@ from pypika import Table
 from typing_extensions import Literal
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
-from tortoise.fields.base import CASCADE, SET_NULL, Field, OnDelete
+from tortoise.fields.base import CASCADE, SET_NULL, Field, OnDelete, FieldDescription, FieldDescriptionBase
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
@@ -48,7 +49,7 @@ class ReverseRelation(Generic[MODEL]):
 
     def __init__(
         self,
-        remote_model: Type[MODEL],
+        remote_model: "Type[MODEL]",
         relation_field: str,
         instance: "Model",
         from_field: str,
@@ -240,6 +241,11 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         await db.execute_query(str(query))
 
 
+@dataclasses.dataclass
+class RelationalFieldDescription(FieldDescriptionBase):
+    db_constraint: bool = False
+
+
 class RelationalField(Field[MODEL]):
     has_db_field = False
 
@@ -276,11 +282,22 @@ class RelationalField(Field[MODEL]):
         del desc["db_column"]
         return desc
 
+    def describe_by_dataclass(self):
+        return RelationalFieldDescription(
+            **self.describe(False)
+        )
+
     @classmethod
     def validate_model_name(cls, model_name: str) -> None:
         if len(model_name.split(".")) != 2:
             field_type = cls.__name__.replace("Instance", "")
             raise ConfigurationError(f'{field_type} accepts model name in format "app.Model"')
+
+
+@dataclasses.dataclass
+class ForeignKeyFieldInstanceDescription(RelationalFieldDescription):
+    raw_field: str = ""
+    on_delete: str = ""
 
 
 class ForeignKeyFieldInstance(RelationalField[MODEL]):
@@ -308,6 +325,9 @@ class ForeignKeyFieldInstance(RelationalField[MODEL]):
         desc["raw_field"] = self.source_field
         desc["on_delete"] = str(self.on_delete)
         return desc
+
+    def describe_by_dataclass(self):
+        return ForeignKeyFieldInstanceDescription(**self.describe(False))
 
 
 class BackwardFKRelation(RelationalField[MODEL]):
@@ -340,6 +360,17 @@ class OneToOneFieldInstance(ForeignKeyFieldInstance[MODEL]):
 
 class BackwardOneToOneRelation(BackwardFKRelation[MODEL]):
     pass
+
+
+@dataclasses.dataclass
+class ManyToManyFieldInstanceDescription(RelationalFieldDescription):
+    model_name: str = ""
+    related_name: str = ""
+    forward_key: str = ""
+    backward_key: str = ""
+    through: str = ""
+    on_delete: str = ""
+    _generated: bool = False
 
 
 class ManyToManyFieldInstance(RelationalField[MODEL]):
@@ -380,6 +411,9 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         desc["on_delete"] = str(self.on_delete)
         desc["_generated"] = self._generated
         return desc
+
+    def describe_by_dataclass(self):
+        return ManyToManyFieldInstanceDescription(**self.describe(False))
 
 
 @overload
