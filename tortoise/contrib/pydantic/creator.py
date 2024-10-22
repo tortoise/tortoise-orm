@@ -224,6 +224,7 @@ def _pydantic_recursion_protector(
         _stack=stack,
         allow_cycles=allow_cycles,
         sort_alphabetically=sort_alphabetically,
+        _as_submodel=True,
     ).create_pydantic_model()
 
 
@@ -370,7 +371,8 @@ class PydanticModelCreator:
             model_config: Optional[ConfigDict] = None,
             validators: Optional[Dict[str, Any]] = None,
             module: str = __name__,
-            _stack: tuple = ()
+            _stack: tuple = (),
+            _as_submodel: bool = False
     ):
         self._cls: "Type[Model]" = cls
         self._stack: tuple[tuple["Type[Model]", str, int]] = tuple()  # ((Type[Model], field_name, max_recursion),)
@@ -396,9 +398,10 @@ class PydanticModelCreator:
         self._name: str
         self._title: str
         self._name, self._title = self.get_name(name)
+        print(self._name, self._title)
         self.given_name = name
 
-        self._has_submodel = False
+        self._as_submodel = _as_submodel
 
         self._annotations = get_annotations(cls)
 
@@ -487,8 +490,8 @@ class PydanticModelCreator:
 
         print(f"FieldMap: {self._field_map._field_map}")
         print(f"Properties: {self._properties}")
-        if not self._has_submodel:
-            self._name = self.given_name or f"{self._fqname}.leaf"
+        if self._as_submodel:
+            self._name = f"{self._name}:leaf"
 
         if self._name in _MODEL_INDEX:
             print("not new generated")
@@ -523,17 +526,18 @@ class PydanticModelCreator:
         }
         field_property: PropertyT = None
         is_to_one_relation: bool = False
+        comment = ""
         if isinstance(field_description, FieldDescriptionBase):
             field_property, is_to_one_relation = self.process_normal_field_description(field_name, field_description, json_schema_extra, fconfig)
         elif isinstance(field_description, ComputedFieldDescription):
             field_property, is_to_one_relation = self.process_computed_field_description(field_description), False
+            comment = _cleandoc(field_description.function)
 
         if field_property:
             self._properties[field_name] = field_property
         if field_name in self._properties and not isinstance(self._properties[field_name], tuple):
             fconfig["title"] = field_name.replace("_", " ").title()
-            # description = "" or _br_it(field_description.docstring or field_description.description or "")
-            description = None
+            description = comment or _br_it(field_description.docstring or field_description.description or "")
             if description:
                 fconfig["description"] = description
             ftype = self._properties[field_name]
@@ -665,8 +669,6 @@ class PydanticModelCreator:
         # If the result is None it has been excluded and we need to exclude the field
         if pmodel is None:
             self.meta.exclude += (field_name,)
-        else:
-            self._has_submodel = True
 
         return pmodel
 
