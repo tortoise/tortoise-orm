@@ -393,7 +393,6 @@ class PydanticModelCreator:
         self.meta = finalize_meta(
             meta_from_class, exclude, include, computed, allow_cycles, sort_alphabetically, model_config
         )
-        print(f"Meta: {self.meta}")
 
         self._exclude_read_only: bool = exclude_readonly
 
@@ -401,7 +400,6 @@ class PydanticModelCreator:
         self._name: str
         self._title: str
         self._name, self._title = self.get_name(name)
-        print(self._name, self._title)
         self.given_name = name
 
         self._as_submodel = _as_submodel
@@ -484,23 +482,16 @@ class PydanticModelCreator:
             self._field_map.sort_definition_order(self._cls, self.meta.computed)
 
     def create_pydantic_model(self):
-        print(f"ModelDescription: {self._model_description}")
-        print(f"FieldMap: {self._field_map._field_map}")
         for field_name, field_description in self._field_map.items():
             self.process_field(field_name, field_description)
 
-        print(f"FieldMap: {self._field_map._field_map}")
-        print(f"Properties: {self._properties}")
         if self._as_submodel and self._stack:
             self._name = f"{self._name}:leaf"
 
         if self._name in _MODEL_INDEX:
-            print("not new generated")
             return _MODEL_INDEX[self._name]
 
         self._properties["model_config"] = self._pconfig
-        print(f"Properties: {self._properties}")
-        print(f"FieldMap: {self._field_map._field_map}")
         model = create_model(
             self._name,
             __base__=PydanticModel,
@@ -564,7 +555,6 @@ class PydanticModelCreator:
             json_schema_extra: Dict[str, Any],
             fconfig: Dict[str, Any],
     ) -> tuple[Optional[PropertyT], bool]:
-        print(field_description)
         if (
             field_description.field_type is relational.ForeignKeyFieldInstance
             or field_description.field_type is relational.OneToOneFieldInstance
@@ -583,7 +573,6 @@ class PydanticModelCreator:
             field_description: FieldDescriptionBase,
             json_schema_extra: Dict[str, Any],
     ) -> Optional[PropertyT]:
-        print(field_description)
         model: Optional[Type[PydanticModel]] = self.get_submodel(field_description.python_type, field_name)
         if model:
             if field_description.nullable:
@@ -619,10 +608,8 @@ class PydanticModelCreator:
             del field_description.constraints["readOnly"]
         fconfig.update(field_description.constraints)
         ptype = field_description.python_type
-        print(f"ptype: {ptype}")
         if field_description.nullable:
             json_schema_extra["nullable"] = True
-        print(field_description)
         if field_name in self._optional or field_description.default is not None or field_description.nullable:
             ptype = Optional[ptype]
         if not (self._exclude_read_only and json_schema_extra.get("readOnly") is True):
@@ -634,7 +621,6 @@ class PydanticModelCreator:
     ):
         func = field_description.function
         annotation = get_annotations(self._cls, func).get("return", None)
-        print(f"anno: {annotation}")
         comment = _cleandoc(func)
         if annotation is not None:
             c_f = computed_field(return_type=annotation, description=comment)
