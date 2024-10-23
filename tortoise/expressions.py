@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import operator
 from typing import (
     TYPE_CHECKING,
@@ -36,6 +37,14 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.fields.base import Field
     from tortoise.models import Model
     from tortoise.queryset import AwaitableQuery
+
+
+@dataclass(frozen=True)
+class ResolveContext:
+    model: "Type[Model]"
+    table: Table
+    annotations: Dict[str, Any]
+    custom_filters: Dict[str, FilterInfoDict]
 
 
 class F(PypikaField):  # type: ignore
@@ -119,7 +128,7 @@ class Expression:
     Parent class for expressions
     """
 
-    def resolve(self, model: "Type[Model]", table: Table) -> Any:
+    def resolve(self, resolve_context: ResolveContext) -> Any:
         raise NotImplementedError()
 
 
@@ -138,8 +147,6 @@ class Q(Expression):
         "filters",
         "join_type",
         "_is_negated",
-        "_annotations",
-        "_custom_filters",
     )
 
     AND = "AND"
@@ -161,8 +168,6 @@ class Q(Expression):
         #: Specifies if this Q does an AND or OR on its children
         self.join_type = join_type
         self._is_negated = False
-        self._annotations: Dict[str, Any] = {}
-        self._custom_filters: Dict[str, FilterInfoDict] = {}
 
     def __and__(self, other: "Q") -> "Q":
         """
@@ -208,33 +213,39 @@ class Q(Expression):
         self._is_negated = not self._is_negated
 
     def _resolve_nested_filter(
-        self, model: "Type[Model]", key: str, value: Any, table: Table
+        self, resolve_context: ResolveContext, key: str, value: Any, table: Table
     ) -> QueryModifier:
         related_field_name, __, forwarded_fields = key.partition("__")
-        related_field = cast(RelationalField, model._meta.fields_map[related_field_name])
+        related_field = cast(
+            RelationalField, resolve_context.model._meta.fields_map[related_field_name]
+        )
         required_joins = _get_joins_for_related_field(table, related_field, related_field_name)
         q = Q(**{forwarded_fields: value})
-        q._annotations = self._annotations
-        q._custom_filters = self._custom_filters
         modifier = q.resolve(
-            model=related_field.related_model,
-            table=required_joins[-1][0],
+            ResolveContext(
+                model=related_field.related_model,
+                table=required_joins[-1][0],
+                annotations=resolve_context.annotations,
+                custom_filters=resolve_context.custom_filters,
+            )
         )
         return QueryModifier(joins=required_joins) & modifier
 
     def _resolve_custom_kwarg(
-        self, model: "Type[Model]", key: str, value: Any, table: Table
+        self, resolve_context: ResolveContext, key: str, value: Any, table: Table
     ) -> QueryModifier:
-        having_info = self._custom_filters[key]
-        annotation = self._annotations[having_info["field"]]
+        having_info = resolve_context.custom_filters[key]
+        annotation = resolve_context.annotations[having_info["field"]]
         if isinstance(annotation, Term):
             annotation_info = {"field": annotation}
         else:
-            annotation_info = annotation.resolve(model, table)
+            annotation_info = annotation.resolve(resolve_context)
 
         operator = having_info["operator"]
-        overridden_operator = model._meta.db.executor_class.get_overridden_filter_func(
-            filter_func=operator
+        overridden_operator = (
+            resolve_context.model._meta.db.executor_class.get_overridden_filter_func(
+                filter_func=operator
+            )
         )
         if overridden_operator:
             operator = overridden_operator
@@ -282,53 +293,65 @@ class Q(Expression):
         return criterion, join
 
     def _resolve_regular_kwarg(
-        self, model: "Type[Model]", key: str, value: Any, table: Table
+        self, resolve_context: ResolveContext, key: str, value: Any, table: Table
     ) -> QueryModifier:
-        if key not in model._meta.filters and key.split("__")[0] in model._meta.fetch_fields:
-            modifier = self._resolve_nested_filter(model, key, value, table)
+        if (
+            key not in resolve_context.model._meta.filters
+            and key.split("__")[0] in resolve_context.model._meta.fetch_fields
+        ):
+            modifier = self._resolve_nested_filter(resolve_context, key, value, table)
         else:
-            criterion, join = self._process_filter_kwarg(model, key, value, table)
+            criterion, join = self._process_filter_kwarg(resolve_context.model, key, value, table)
             joins = [join] if join else []
             modifier = QueryModifier(where_criterion=criterion, joins=joins)
         return modifier
 
     def _get_actual_filter_params(
-        self, model: "Type[Model]", key: str, value: Table
+        self, resolve_context: ResolveContext, key: str, value: Table
     ) -> Tuple[str, Any]:
         filter_key = key
-        if key in model._meta.fk_fields or key in model._meta.o2o_fields:
-            field_object = model._meta.fields_map[key]
+        if (
+            key in resolve_context.model._meta.fk_fields
+            or key in resolve_context.model._meta.o2o_fields
+        ):
+            field_object = resolve_context.model._meta.fields_map[key]
             if hasattr(value, "pk"):
                 filter_value = value.pk
             else:
                 filter_value = value
             filter_key = cast(str, field_object.source_field)
-        elif key in model._meta.m2m_fields:
+        elif key in resolve_context.model._meta.m2m_fields:
             if hasattr(value, "pk"):
                 filter_value = value.pk
             else:
                 filter_value = value
         elif (
-            key.split("__")[0] in model._meta.fetch_fields
-            or key in self._custom_filters
-            or key in model._meta.filters
+            key.split("__")[0] in resolve_context.model._meta.fetch_fields
+            or key in resolve_context.custom_filters
+            or key in resolve_context.model._meta.filters
         ):
             filter_value = value
         else:
             allowed = sorted(
-                model._meta.fields | model._meta.fetch_fields | set(self._custom_filters)
+                resolve_context.model._meta.fields
+                | resolve_context.model._meta.fetch_fields
+                | set(resolve_context.custom_filters)
             )
             raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
         return filter_key, filter_value
 
-    def _resolve_kwargs(self, model: "Type[Model]", table: Table) -> QueryModifier:
+    def _resolve_kwargs(self, resolve_context: ResolveContext) -> QueryModifier:
         modifier = QueryModifier()
         for raw_key, raw_value in self.filters.items():
-            key, value = self._get_actual_filter_params(model, raw_key, raw_value)
-            if key in self._custom_filters:
-                filter_modifier = self._resolve_custom_kwarg(model, key, value, table)
+            key, value = self._get_actual_filter_params(resolve_context, raw_key, raw_value)
+            if key in resolve_context.custom_filters:
+                filter_modifier = self._resolve_custom_kwarg(
+                    resolve_context, key, value, resolve_context.table
+                )
             else:
-                filter_modifier = self._resolve_regular_kwarg(model, key, value, table)
+                filter_modifier = self._resolve_regular_kwarg(
+                    resolve_context, key, value, resolve_context.table
+                )
 
             if self.join_type == self.AND:
                 modifier &= filter_modifier
@@ -338,12 +361,10 @@ class Q(Expression):
             modifier = ~modifier
         return modifier
 
-    def _resolve_children(self, model: "Type[Model]", table: Table) -> QueryModifier:
+    def _resolve_children(self, resolve_context: ResolveContext) -> QueryModifier:
         modifier = QueryModifier()
         for node in self.children:
-            node._annotations = self._annotations
-            node._custom_filters = self._custom_filters
-            node_modifier = node.resolve(model, table)
+            node_modifier = node.resolve(resolve_context)
             if self.join_type == self.AND:
                 modifier &= node_modifier
             else:
@@ -355,8 +376,7 @@ class Q(Expression):
 
     def resolve(
         self,
-        model: "Type[Model]",
-        table: Table,
+        resolve_context: ResolveContext,
     ) -> QueryModifier:
         """
         Resolves the logical Q chain into the parts of a SQL statement.
@@ -366,8 +386,8 @@ class Q(Expression):
             (to allow self referential joins)
         """
         if self.filters:
-            return self._resolve_kwargs(model, table)
-        return self._resolve_children(model, table)
+            return self._resolve_kwargs(resolve_context)
+        return self._resolve_children(resolve_context)
 
 
 class Function(Expression):
@@ -406,22 +426,28 @@ class Function(Expression):
     ):
         return self.database_func(field, *default_values)
 
-    def _resolve_field_for_model(self, model: "Type[Model]", table: Table, field: str) -> dict:
+    def _resolve_field_for_model(self, resolve_context: ResolveContext, field: str) -> dict:
         joins = []
         fields = field.split("__")
+        model = resolve_context.model
+        table = resolve_context.table
 
         for iter_field in fields[:-1]:
-            if iter_field not in model._meta.fetch_fields:
+            if iter_field not in resolve_context.model._meta.fetch_fields:
                 raise ConfigurationError(f"{field} not resolvable")
 
-            related_field = cast(RelationalField, model._meta.fields_map[iter_field])
-            joins.append((table, iter_field, related_field))
+            related_field = cast(
+                RelationalField, resolve_context.model._meta.fields_map[iter_field]
+            )
+            joins.append((resolve_context.table, iter_field, related_field))
 
             model = related_field.related_model
             related_table: Table = related_field.related_model._meta.basetable
             if isinstance(related_field, ForeignKeyFieldInstance):
                 # Only FK's can be to same table, so we only auto-alias FK join tables
-                related_table = related_table.as_(f"{table.get_table_name()}__{iter_field}")
+                related_table = related_table.as_(
+                    f"{resolve_context.table.get_table_name()}__{iter_field}"
+                )
             table = related_table
 
         last_field = fields[-1]
@@ -453,14 +479,14 @@ class Function(Expression):
 
         return {"joins": joins, "field": field}
 
-    def _resolve_default_values(self, model: "Type[Model]", table: Table) -> Iterator[Any]:
+    def _resolve_default_values(self, resolve_context: ResolveContext) -> Iterator[Any]:
         for default_value in self.default_values:
             if isinstance(default_value, Function):
-                yield default_value.resolve(model, table)["field"]
+                yield default_value.resolve(resolve_context)["field"]
             else:
                 yield default_value
 
-    def resolve(self, model: "Type[Model]", table: Table) -> dict:
+    def resolve(self, resolve_context: ResolveContext) -> dict:
         """
         Used to resolve the Function statement for SQL generation.
 
@@ -470,18 +496,18 @@ class Function(Expression):
         :return: Dict with keys ``"joins"`` and ``"fields"``
         """
 
-        default_values = self._resolve_default_values(model, table)
+        default_values = self._resolve_default_values(resolve_context)
 
         if isinstance(self.field, str):
-            function = self._resolve_field_for_model(model, table, self.field)
+            function = self._resolve_field_for_model(resolve_context, self.field)
             function["field"] = self._get_function_field(function["field"], *default_values)
             return function
         elif isinstance(self.field, Function):
-            function = self.field.resolve(model, table)
+            function = self.field.resolve(resolve_context)
             function["field"] = self._get_function_field(function["field"], *default_values)
             return function
 
-        field, field_object = F.resolver_arithmetic_expression(model, self.field)
+        field, field_object = F.resolver_arithmetic_expression(resolve_context.model, self.field)
         if self.populate_field_object:
             self.field_object = field_object
         return {"joins": [], "field": self._get_function_field(field, *default_values)}
@@ -516,11 +542,11 @@ class Aggregate(Function):
             return self.database_func(field, *default_values).distinct()
         return self.database_func(field, *default_values)
 
-    def _resolve_field_for_model(self, model: "Type[Model]", table: Table, field: str) -> dict:
-        ret = super()._resolve_field_for_model(model, table, field)
+    def _resolve_field_for_model(self, resolve_context: ResolveContext, field: str) -> dict:
+        ret = super()._resolve_field_for_model(resolve_context, field)
         if self.filter:
             modifier = QueryModifier()
-            modifier &= self.filter.resolve(model, model._meta.basetable)
+            modifier &= self.filter.resolve(resolve_context)
             where_criterion, joins, having_criterion = modifier.get_query_modifiers()
             ret["field"] = PypikaCase().when(where_criterion, ret["field"]).else_(None)
 
@@ -566,17 +592,17 @@ class When(Expression):
                 q_objects.append(Q(**{key: value}))
         return q_objects
 
-    def resolve(self, model: "Type[Model]", table: Table) -> tuple:
+    def resolve(self, resolve_context: ResolveContext) -> tuple:
         q_objects = self._resolve_q_objects()
 
         modifier = QueryModifier()
         for node in q_objects:
-            modifier &= node.resolve(model, model._meta.basetable)
+            modifier &= node.resolve(resolve_context)
 
         if isinstance(self.then, Function):
-            then = self.then.resolve(model, table)["field"]
+            then = self.then.resolve(resolve_context)["field"]
         elif isinstance(self.then, Term):
-            then = F.resolver_arithmetic_expression(model, self.then)[0]
+            then = F.resolver_arithmetic_expression(resolve_context.model, self.then)[0]
         else:
             then = Term.wrap_constant(self.then)
 
@@ -597,18 +623,20 @@ class Case(Expression):
         self.args = args
         self.default = default
 
-    def resolve(self, model: "Type[Model]", table: Table) -> dict:
+    def resolve(self, resolve_context: ResolveContext) -> dict:
         case = PypikaCase()
         for arg in self.args:
             if not isinstance(arg, When):
                 raise TypeError("expected When objects as args")
-            criterion, term = arg.resolve(model, table)
+            criterion, term = arg.resolve(resolve_context)
             case = case.when(criterion, term)
 
         if isinstance(self.default, Function):
-            case = case.else_(self.default.resolve(model, table)["field"])
+            case = case.else_(self.default.resolve(resolve_context)["field"])
         elif isinstance(self.default, Term):
-            case = case.else_(F.resolver_arithmetic_expression(model, self.default)[0])
+            case = case.else_(
+                F.resolver_arithmetic_expression(resolve_context.model, self.default)[0]
+            )
         else:
             case = case.else_(Term.wrap_constant(self.default))
 
