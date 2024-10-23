@@ -1,5 +1,6 @@
 import types
 from copy import copy
+from functools import partial
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1422,7 +1423,7 @@ class FieldSelectQuery(AwaitableQuery):
             annotation = self.annotations[field]
             field_object = getattr(annotation, "field_object", None)
             if field_object:
-                return field_object.to_python_value
+                return partial(field_object.to_python_value, validate=False)
             return lambda x: x
 
         if field in model._meta.fields_map:

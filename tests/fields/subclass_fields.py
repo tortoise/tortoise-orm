@@ -30,8 +30,9 @@ class EnumField(CharField):
 
         return value.value
 
-    def to_python_value(self, value):
-        self.validate(value)
+    def to_python_value(self, value, validate: bool = True):
+        if validate:
+            self.validate(value)
 
         if value is None or isinstance(value, self.enum_type):
             return value
@@ -66,8 +67,9 @@ class IntEnumField(IntField):
 
         return value.value
 
-    def to_python_value(self, value: Any) -> Any:
-        self.validate(value)
+    def to_python_value(self, value: Any, validate: bool = True) -> Any:
+        if validate:
+            self.validate(value)
 
         if value is None or isinstance(value, self.enum_type):
             return value

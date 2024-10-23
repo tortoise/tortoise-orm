@@ -95,7 +95,7 @@ to store and query Enum types.
         def to_db_value(self, value: Enum, instance) -> str:
             return value.value
 
-        def to_python_value(self, value: str) -> Enum:
+        def to_python_value(self, value: str, validate: bool = True) -> Enum:
             try:
                 return self._enum_type(value)
             except Exception:

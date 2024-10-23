@@ -261,7 +261,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         self.validate(value)
         return value
 
-    def to_python_value(self, value: Any) -> Any:
+    def to_python_value(self, value: Any, validate=True) -> Any:
         """
         Converts from the DB type to the Python type.
 
@@ -269,7 +269,8 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         """
         if value is not None and not isinstance(value, self.field_type):
             value = self.field_type(value)  # pylint: disable=E1102
-        self.validate(value)
+        if validate:
+            self.validate(value)
         return value
 
     def validate(self, value: Any):

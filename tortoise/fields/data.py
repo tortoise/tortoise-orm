@@ -283,10 +283,11 @@ class DecimalField(Field[Decimal], Decimal):
         self.decimal_places = decimal_places
         self.quant = Decimal("1" if decimal_places == 0 else f"1.{('0' * decimal_places)}")
 
-    def to_python_value(self, value: Any) -> Optional[Decimal]:
+    def to_python_value(self, value: Any, validate: bool = True) -> Optional[Decimal]:
         if value is not None:
             value = Decimal(value).quantize(self.quant).normalize()
-        self.validate(value)
+        if validate:
+            self.validate(value)
         return value
 
     @property
@@ -343,7 +344,7 @@ class DatetimeField(Field[datetime.datetime], datetime.datetime):
         self.auto_now = auto_now
         self.auto_now_add = auto_now | auto_now_add
 
-    def to_python_value(self, value: Any) -> Optional[datetime.datetime]:
+    def to_python_value(self, value: Any, validate: bool = True) -> Optional[datetime.datetime]:
         if value is not None:
             if isinstance(value, datetime.datetime):
                 value = value
@@ -355,7 +356,8 @@ class DatetimeField(Field[datetime.datetime], datetime.datetime):
                 value = timezone.make_aware(value, get_timezone())
             else:
                 value = localtime(value)
-        self.validate(value)
+        if validate:
+            self.validate(value)
         return value
 
     def to_db_value(
@@ -403,10 +405,11 @@ class DateField(Field[datetime.date], datetime.date):
     skip_to_python_if_native = True
     SQL_TYPE = "DATE"
 
-    def to_python_value(self, value: Any) -> Optional[datetime.date]:
+    def to_python_value(self, value: Any, validate: bool = True) -> Optional[datetime.date]:
         if value is not None and not isinstance(value, datetime.date):
             value = parse_datetime(value).date()
-        self.validate(value)
+        if validate:
+            self.validate(value)
         return value
 
     def to_db_value(
@@ -436,7 +439,9 @@ class TimeField(Field[datetime.time], datetime.time):
         self.auto_now = auto_now
         self.auto_now_add = auto_now | auto_now_add
 
-    def to_python_value(self, value: Any) -> Optional[Union[datetime.time, datetime.timedelta]]:
+    def to_python_value(
+        self, value: Any, validate: bool = True
+    ) -> Optional[Union[datetime.time, datetime.timedelta]]:
         if value is not None:
             if isinstance(value, str):
                 value = datetime.time.fromisoformat(value)
@@ -444,7 +449,8 @@ class TimeField(Field[datetime.time], datetime.time):
                 return value
             if timezone.is_naive(value):
                 value = value.replace(tzinfo=get_default_timezone())
-        self.validate(value)
+        if validate:
+            self.validate(value)
         return value
 
     def to_db_value(
@@ -492,8 +498,9 @@ class TimeDeltaField(Field[datetime.timedelta]):
     class _db_oracle:
         SQL_TYPE = "NUMBER(19)"
 
-    def to_python_value(self, value: Any) -> Optional[datetime.timedelta]:
-        self.validate(value)
+    def to_python_value(self, value: Any, validate: bool = True) -> Optional[datetime.timedelta]:
+        if validate:
+            self.validate(value)
 
         if value is None or isinstance(value, datetime.timedelta):
             return value
@@ -579,7 +586,7 @@ class JSONField(Field[Union[dict, list]], dict, list):  # type: ignore
         return value
 
     def to_python_value(
-        self, value: Optional[Union[str, bytes, dict, list]]
+        self, value: Optional[Union[str, bytes, dict, list]], validate: bool = True
     ) -> Optional[Union[dict, list]]:
         if isinstance(value, (str, bytes)):
             try:
@@ -589,7 +596,8 @@ class JSONField(Field[Union[dict, list]], dict, list):  # type: ignore
                     f"Value {value if isinstance(value, str) else value.decode()} is invalid json value."
                 )
 
-        self.validate(value)
+        if validate:
+            self.validate(value)
         return value
 
 
@@ -615,7 +623,7 @@ class UUIDField(Field[UUID], UUID):
     def to_db_value(self, value: Any, instance: "Union[Type[Model], Model]") -> Optional[str]:
         return value and str(value)
 
-    def to_python_value(self, value: Any) -> Optional[UUID]:
+    def to_python_value(self, value: Any, validate: bool = True) -> Optional[UUID]:
         if value is None or isinstance(value, UUID):
             return value
         return UUID(value)
@@ -669,9 +677,12 @@ class IntEnumFieldInstance(SmallIntField):
         super().__init__(description=description, **kwargs)
         self.enum_type = enum_type
 
-    def to_python_value(self, value: Union[int, None]) -> Union[IntEnum, None]:
+    def to_python_value(
+        self, value: Union[int, None], validate: bool = True
+    ) -> Union[IntEnum, None]:
         value = self.enum_type(value) if value is not None else None
-        self.validate(value)
+        if validate:
+            self.validate(value)
         return value
 
     def to_db_value(
@@ -735,8 +746,9 @@ class CharEnumFieldInstance(CharField):
         super().__init__(description=description, max_length=max_length, **kwargs)
         self.enum_type = enum_type
 
-    def to_python_value(self, value: Union[str, None]) -> Union[Enum, None]:
-        self.validate(value)
+    def to_python_value(self, value: Union[str, None], validate: bool = True) -> Union[Enum, None]:
+        if validate:
+            self.validate(value)
 
         return self.enum_type(value) if value is not None else None
 

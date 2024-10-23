@@ -54,7 +54,7 @@ class UUIDField(UUIDFieldBase):
             return value.bytes
         return value and str(value)
 
-    def to_python_value(self, value: Any) -> Optional[UUID]:
+    def to_python_value(self, value: Any, validate=True) -> Optional[UUID]:
         if value is None or isinstance(value, UUID):
             return value
         elif self._binary_compression and isinstance(value, bytes):
