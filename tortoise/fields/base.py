@@ -266,6 +266,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         Converts from the DB type to the Python type.
 
         :param value: Value from DB
+        :param validate: Should validation be performed
         """
         if value is not None and not isinstance(value, self.field_type):
             value = self.field_type(value)  # pylint: disable=E1102

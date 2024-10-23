@@ -185,7 +185,7 @@ class TestAggregation(test.TestCase):
             .count()
         )
 
-        assert ret == 2
+        self.assertEqual(ret, 2)
 
     async def test_exist_after_aggregate(self):
         author = await Author.create(name="1")
@@ -200,7 +200,7 @@ class TestAggregation(test.TestCase):
             .exists()
         )
 
-        assert ret is True
+        self.assertTrue(ret)
 
         ret = (
             await Author.all()
@@ -208,7 +208,7 @@ class TestAggregation(test.TestCase):
             .filter(average_rating__gte=4)
             .exists()
         )
-        assert ret is False
+        self.assertFalse(ret)
 
     async def test_count_after_aggregate_m2m(self):
         tournament = await Tournament.create(name="1")
@@ -233,17 +233,17 @@ class TestAggregation(test.TestCase):
             .prefetch_related("participants")
         )
         result = await query
-        assert len(result) == 2
+        self.assertEqual(len(result), 2)
 
         res = await query.count()
-        assert res == 2
+        self.assertEqual(res, 2)
 
     async def test_count_without_matching(self) -> None:
         await Tournament.create(name="Test")
 
         query = Tournament.annotate(events_count=Count("events")).filter(events_count__gt=0).count()
         result = await query
-        assert result == 0
+        self.assertEqual(result, 0)
 
     async def test_int_sum_on_models_with_validators(self) -> None:
         await ValidatorModel.create(max_value=2)
@@ -251,7 +251,7 @@ class TestAggregation(test.TestCase):
 
         query = ValidatorModel.annotate(sum=Sum("max_value")).values("sum")
         result = await query
-        assert result == [{"sum": 4}]
+        self.assertEqual(result, [{"sum": 4}])
 
     async def test_int_sum_math_on_models_with_validators(self) -> None:
         await ValidatorModel.create(max_value=4)
@@ -259,14 +259,14 @@ class TestAggregation(test.TestCase):
 
         query = ValidatorModel.annotate(sum=Sum(F("max_value") * F("max_value"))).values("sum")
         result = await query
-        assert result == [{"sum": 32}]
+        self.assertEqual(result, [{"sum": 32}])
 
     async def test_decimal_sum_on_models_with_validators(self) -> None:
         await ValidatorModel.create(min_value_decimal=2.0)
 
         query = ValidatorModel.annotate(sum=Sum("min_value_decimal")).values("sum")
         result = await query
-        assert result == [{"sum": Decimal("2.0")}]
+        self.assertEqual(result, [{"sum": Decimal("2.0")}])
 
     async def test_decimal_sum_with_math_on_models_with_validators(self) -> None:
         await ValidatorModel.create(min_value_decimal=2.0)
@@ -275,4 +275,4 @@ class TestAggregation(test.TestCase):
             sum=Sum(F("min_value_decimal") - F("min_value_decimal") * F("min_value_decimal"))
         ).values("sum")
         result = await query
-        assert result == [{"sum": Decimal("-2.0")}]
+        self.assertEqual(result, [{"sum": Decimal("-2.0")}])
