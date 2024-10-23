@@ -384,10 +384,7 @@ class PydanticModelCreator:
                 and sort_alphabetically is None
                 and allow_cycles is None
                 and meta_override is None
-<<<<<<< HEAD
                 and not exclude_readonly
-=======
->>>>>>> f6239840c1044a910dcef5a3322bc93c8f37c660
         )
 
         meta_from_class = cls.my_pydantic_meta \
@@ -396,21 +393,13 @@ class PydanticModelCreator:
         self.meta = finalize_meta(
             meta_from_class, exclude, include, computed, allow_cycles, sort_alphabetically, model_config
         )
-<<<<<<< HEAD
 
         self._exclude_read_only: bool = exclude_readonly
-=======
-        print(f"Meta: {self.meta}")
->>>>>>> f6239840c1044a910dcef5a3322bc93c8f37c660
 
         self._fqname = cls.__module__ + "." + cls.__qualname__
         self._name: str
         self._title: str
         self._name, self._title = self.get_name(name)
-<<<<<<< HEAD
-=======
-        print(self._name, self._title)
->>>>>>> f6239840c1044a910dcef5a3322bc93c8f37c660
         self.given_name = name
 
         self._as_submodel = _as_submodel
@@ -423,11 +412,6 @@ class PydanticModelCreator:
 
         self._model_description: ModelDescription = cls.describe_by_dataclass()
 
-<<<<<<< HEAD
-=======
-        self._exclude_read_only: bool = exclude_readonly
-
->>>>>>> f6239840c1044a910dcef5a3322bc93c8f37c660
         self._field_map: FieldMap = self.initialize_field_map()
         self.construct_field_map()
 
@@ -452,11 +436,7 @@ class PydanticModelCreator:
             return name, name
         hashval = (
             f"{self._fqname};{self.meta.exclude};{self.meta.include};{self.meta.computed};"
-<<<<<<< HEAD
             f"{self._stack}:{self.meta.sort_alphabetically}:{self.meta.allow_cycles}:{self._exclude_read_only}"
-=======
-            f"{self._stack}:{self.meta.sort_alphabetically}:{self.meta.allow_cycles}"
->>>>>>> f6239840c1044a910dcef5a3322bc93c8f37c660
         )
         postfix = (
             ":" + b32encode(sha3_224(hashval.encode("utf-8")).digest()).decode("utf-8").lower()[:6]
@@ -502,7 +482,6 @@ class PydanticModelCreator:
             self._field_map.sort_definition_order(self._cls, self.meta.computed)
 
     def create_pydantic_model(self):
-<<<<<<< HEAD
         for field_name, field_description in self._field_map.items():
             self.process_field(field_name, field_description)
 
@@ -513,25 +492,6 @@ class PydanticModelCreator:
             return _MODEL_INDEX[self._name]
 
         self._properties["model_config"] = self._pconfig
-=======
-        print(f"ModelDescription: {self._model_description}")
-        print(f"FieldMap: {self._field_map._field_map}")
-        for field_name, field_description in self._field_map.items():
-            self.process_field(field_name, field_description)
-
-        print(f"FieldMap: {self._field_map._field_map}")
-        print(f"Properties: {self._properties}")
-        if self._as_submodel:
-            self._name = f"{self._name}:leaf"
-
-        if self._name in _MODEL_INDEX:
-            print("not new generated")
-            return _MODEL_INDEX[self._name]
-
-        self._properties["model_config"] = self._pconfig
-        print(f"Properties: {self._properties}")
-        print(f"FieldMap: {self._field_map._field_map}")
->>>>>>> f6239840c1044a910dcef5a3322bc93c8f37c660
         model = create_model(
             self._name,
             __base__=PydanticModel,
@@ -595,10 +555,6 @@ class PydanticModelCreator:
             json_schema_extra: Dict[str, Any],
             fconfig: Dict[str, Any],
     ) -> tuple[Optional[PropertyT], bool]:
-<<<<<<< HEAD
-=======
-        print(field_description)
->>>>>>> f6239840c1044a910dcef5a3322bc93c8f37c660
         if (
             field_description.field_type is relational.ForeignKeyFieldInstance
             or field_description.field_type is relational.OneToOneFieldInstance
@@ -617,10 +573,6 @@ class PydanticModelCreator:
             field_description: FieldDescriptionBase,
             json_schema_extra: Dict[str, Any],
     ) -> Optional[PropertyT]:
-<<<<<<< HEAD
-=======
-        print(field_description)
->>>>>>> f6239840c1044a910dcef5a3322bc93c8f37c660
         model: Optional[Type[PydanticModel]] = self.get_submodel(field_description.python_type, field_name)
         if model:
             if field_description.nullable:
@@ -656,15 +608,8 @@ class PydanticModelCreator:
             del field_description.constraints["readOnly"]
         fconfig.update(field_description.constraints)
         ptype = field_description.python_type
-<<<<<<< HEAD
         if field_description.nullable:
             json_schema_extra["nullable"] = True
-=======
-        print(f"ptype: {ptype}")
-        if field_description.nullable:
-            json_schema_extra["nullable"] = True
-        print(field_description)
->>>>>>> f6239840c1044a910dcef5a3322bc93c8f37c660
         if field_name in self._optional or field_description.default is not None or field_description.nullable:
             ptype = Optional[ptype]
         if not (self._exclude_read_only and json_schema_extra.get("readOnly") is True):
@@ -676,10 +621,6 @@ class PydanticModelCreator:
     ):
         func = field_description.function
         annotation = get_annotations(self._cls, func).get("return", None)
-<<<<<<< HEAD
-=======
-        print(f"anno: {annotation}")
->>>>>>> f6239840c1044a910dcef5a3322bc93c8f37c660
         comment = _cleandoc(func)
         if annotation is not None:
             c_f = computed_field(return_type=annotation, description=comment)
