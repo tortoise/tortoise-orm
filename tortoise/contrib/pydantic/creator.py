@@ -384,6 +384,7 @@ class PydanticModelCreator:
                 and sort_alphabetically is None
                 and allow_cycles is None
                 and meta_override is None
+                and not exclude_readonly
         )
 
         meta_from_class = cls.my_pydantic_meta \
@@ -393,6 +394,8 @@ class PydanticModelCreator:
             meta_from_class, exclude, include, computed, allow_cycles, sort_alphabetically, model_config
         )
         print(f"Meta: {self.meta}")
+
+        self._exclude_read_only: bool = exclude_readonly
 
         self._fqname = cls.__module__ + "." + cls.__qualname__
         self._name: str
@@ -410,8 +413,6 @@ class PydanticModelCreator:
         self._properties: Dict[str, Any] = dict()
 
         self._model_description: ModelDescription = cls.describe_by_dataclass()
-
-        self._exclude_read_only: bool = exclude_readonly
 
         self._field_map: FieldMap = self.initialize_field_map()
         self.construct_field_map()
@@ -437,7 +438,7 @@ class PydanticModelCreator:
             return name, name
         hashval = (
             f"{self._fqname};{self.meta.exclude};{self.meta.include};{self.meta.computed};"
-            f"{self._stack}:{self.meta.sort_alphabetically}:{self.meta.allow_cycles}"
+            f"{self._stack}:{self.meta.sort_alphabetically}:{self.meta.allow_cycles}:{self._exclude_read_only}"
         )
         postfix = (
             ":" + b32encode(sha3_224(hashval.encode("utf-8")).digest()).decode("utf-8").lower()[:6]
@@ -490,7 +491,7 @@ class PydanticModelCreator:
 
         print(f"FieldMap: {self._field_map._field_map}")
         print(f"Properties: {self._properties}")
-        if self._as_submodel:
+        if self._as_submodel and self._stack:
             self._name = f"{self._name}:leaf"
 
         if self._name in _MODEL_INDEX:
