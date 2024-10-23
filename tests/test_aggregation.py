@@ -1,8 +1,9 @@
-from tests.testmodels import Author, Book, Event, MinRelation, Team, Tournament
+from decimal import Decimal
+from tests.testmodels import Author, Book, Event, MinRelation, Team, Tournament, ValidatorModel
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import In
 from tortoise.exceptions import ConfigurationError
-from tortoise.expressions import Q
+from tortoise.expressions import F, Q
 from tortoise.functions import Avg, Coalesce, Concat, Count, Lower, Max, Min, Sum, Trim
 
 
@@ -243,3 +244,35 @@ class TestAggregation(test.TestCase):
         query = Tournament.annotate(events_count=Count("events")).filter(events_count__gt=0).count()
         result = await query
         assert result == 0
+
+    async def test_int_sum_on_models_with_validators(self) -> None:
+        await ValidatorModel.create(max_value=2)
+        await ValidatorModel.create(max_value=2)
+
+        query = ValidatorModel.annotate(sum=Sum("max_value")).values("sum")
+        result = await query
+        assert result == [{"sum": 4}]
+
+    async def test_int_sum_math_on_models_with_validators(self) -> None:
+        await ValidatorModel.create(max_value=4)
+        await ValidatorModel.create(max_value=4)
+
+        query = ValidatorModel.annotate(sum=Sum(F("max_value") * F("max_value"))).values("sum")
+        result = await query
+        assert result == [{"sum": 32}]
+
+    async def test_decimal_sum_on_models_with_validators(self) -> None:
+        await ValidatorModel.create(min_value_decimal=2.0)
+
+        query = ValidatorModel.annotate(sum=Sum("min_value_decimal")).values("sum")
+        result = await query
+        assert result == [{"sum": Decimal("2.0")}]
+
+    async def test_decimal_sum_with_math_on_models_with_validators(self) -> None:
+        await ValidatorModel.create(min_value_decimal=2.0)
+
+        query = ValidatorModel.annotate(
+            sum=Sum(F("min_value_decimal") - F("min_value_decimal") * F("min_value_decimal"))
+        ).values("sum")
+        result = await query
+        assert result == [{"sum": Decimal("-2.0")}]
