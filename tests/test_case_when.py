@@ -1,8 +1,9 @@
 from tests.testmodels import IntFields
 from tortoise import connections
 from tortoise.contrib import test
+from tortoise.exceptions import FieldError
 from tortoise.expressions import Case, F, Q, When
-from tortoise.functions import Coalesce
+from tortoise.functions import Coalesce, Count
 
 
 class TestCaseWhen(test.TestCase):
@@ -131,3 +132,60 @@ class TestCaseWhen(test.TestCase):
         else:
             expected_sql = "SELECT \"intnum\" \"intnum\" FROM \"intfields\" WHERE CASE WHEN \"intnum\">=8 THEN 'big' WHEN \"intnum\"<=2 THEN 'small' ELSE 'middle' END IN ('big','small')"
         self.assertEqual(sql, expected_sql)
+
+    async def test_annotation_in_when_annotation(self):
+        sql = (
+            IntFields.all()
+            .annotate(intnum_plus_1=F("intnum") + 1)
+            .annotate(bigger_than_10=Case(When(Q(intnum_plus_1__gte=10), then=True), default=False))
+            .values("id", "intnum", "intnum_plus_1", "bigger_than_10")
+            .sql()
+        )
+
+        dialect = self.db.schema_generator.DIALECT
+        if dialect == "mysql":
+            expected_sql = "SELECT `id` `id`,`intnum` `intnum`,`intnum`+1 `intnum_plus_1`,CASE WHEN `intnum`+1>=10 THEN true ELSE false END `bigger_than_10` FROM `intfields`"
+        else:
+            expected_sql = 'SELECT "id" "id","intnum" "intnum","intnum"+1 "intnum_plus_1",CASE WHEN "intnum"+1>=10 THEN true ELSE false END "bigger_than_10" FROM "intfields"'
+        self.assertEqual(sql, expected_sql)
+
+    async def test_func_annotation_in_when_annotation(self):
+        sql = (
+            IntFields.all()
+            .annotate(intnum_col=Coalesce("intnum", 0))
+            .annotate(is_zero=Case(When(Q(intnum_col=0), then=True), default=False))
+            .values("id", "intnum_col", "is_zero")
+            .sql()
+        )
+
+        dialect = self.db.schema_generator.DIALECT
+        if dialect == "mysql":
+            expected_sql = "SELECT `id` `id`,COALESCE(`intnum`,0) `intnum_col`,CASE WHEN COALESCE(`intnum`,0)=0 THEN true ELSE false END `is_zero` FROM `intfields`"
+        else:
+            expected_sql = 'SELECT "id" "id",COALESCE("intnum",0) "intnum_col",CASE WHEN COALESCE("intnum",0)=0 THEN true ELSE false END "is_zero" FROM "intfields"'
+        self.assertEqual(sql, expected_sql)
+
+    async def test_case_when_in_group_by(self):
+        sql = (
+            IntFields.all()
+            .annotate(is_zero=Case(When(Q(intnum=0), then=True), default=False))
+            .annotate(count=Count("id"))
+            .group_by("is_zero")
+            .values("is_zero", "count")
+            .sql()
+        )
+
+        dialect = self.db.schema_generator.DIALECT
+        if dialect == "mysql":
+            expected_sql = "SELECT CASE WHEN `intnum`=0 THEN true ELSE false END `is_zero`,COUNT(`id`) `count` FROM `intfields` GROUP BY `is_zero`"
+        elif dialect == "mssql":
+            expected_sql = 'SELECT CASE WHEN "intnum"=0 THEN true ELSE false END "is_zero",COUNT("id") "count" FROM "intfields" GROUP BY CASE WHEN "intnum"=0 THEN true ELSE false END'
+        else:
+            expected_sql = 'SELECT CASE WHEN "intnum"=0 THEN true ELSE false END "is_zero",COUNT("id") "count" FROM "intfields" GROUP BY "is_zero"'
+        self.assertEqual(sql, expected_sql)
+
+    async def test_unknown_field_in_when_annotation(self):
+        with self.assertRaisesRegex(FieldError, "Unknown filter param 'unknown'.+"):
+            IntFields.all().annotate(intnum_col=Coalesce("intnum", 0)).annotate(
+                is_zero=Case(When(Q(unknown=0), then="1"), default="2")
+            ).sql()

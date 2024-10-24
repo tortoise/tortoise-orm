@@ -1,9 +1,10 @@
+import operator
 from unittest import TestCase as _TestCase
 
 from tests.testmodels import CharFields, IntFields
 from tortoise.contrib.test import TestCase
 from tortoise.exceptions import OperationalError
-from tortoise.expressions import Q, ResolveContext
+from tortoise.expressions import F, Q, ResolveContext
 
 
 class TestQ(_TestCase):
@@ -231,3 +232,21 @@ class TestQCall(TestCase):
         q = Q() | Q(id__gt=5)
         r = q.resolve(self.char_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"id">5')
+
+    def test_annotations_resolved(self):
+        q = Q(id__gt=5) | Q(annotated__lt=5)
+        r = q.resolve(
+            ResolveContext(
+                model=IntFields,
+                table=IntFields._meta.basequery,
+                annotations={"annotated": F("annotated")},
+                custom_filters={
+                    "annotated__lt": {
+                        "field": "annotated",
+                        "source_field": "annotated",
+                        "operator": operator.lt,
+                    }
+                },
+            )
+        )
+        self.assertEqual(r.where_criterion.get_sql(), '"id">5 OR "annotated"<5')
