@@ -38,7 +38,7 @@ from tortoise.exceptions import (
     OperationalError,
     ParamsError,
 )
-from tortoise.fields.base import Field, FieldDescription
+from tortoise.fields.base import Field, FieldDescription, FieldDescriptionBase
 from tortoise.fields.data import IntField
 from tortoise.fields.relational import (
     BackwardFKRelation,
@@ -650,18 +650,18 @@ class ModelDescription:
     name: str
     table: str
     abstract: bool
-    description: str
-    pk_field: FieldDescription
+    description: Optional[str]
+    pk_field: FieldDescriptionBase
     app: Optional[str] = None
     docstring: Optional[str] = None
-    unique_together: tuple[tuple[str, ...], ...] = dataclasses.field(default_factory=list)
-    indexes: tuple[tuple[str, ...], ...] = dataclasses.field(default_factory=list)
-    data_fields: list[FieldDescription] = dataclasses.field(default_factory=list)
-    fk_fields: list[FieldDescription] = dataclasses.field(default_factory=list)
-    backward_fk_fields: list[FieldDescription] = dataclasses.field(default_factory=list)
-    o2o_fields: list[FieldDescription] = dataclasses.field(default_factory=list)
-    backward_o2o_fields: list[FieldDescription] = dataclasses.field(default_factory=list)
-    m2m_fields: list[FieldDescription] = dataclasses.field(default_factory=list)
+    unique_together: tuple[tuple[str, ...], ...] = dataclasses.field(default_factory=tuple)
+    indexes: tuple[tuple[str, ...], ...] = dataclasses.field(default_factory=tuple)
+    data_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
+    fk_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
+    backward_fk_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
+    o2o_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
+    backward_o2o_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
+    m2m_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
 
 
 class Model(metaclass=ModelMeta):
@@ -1513,7 +1513,7 @@ class Model(metaclass=ModelMeta):
         }
 
     @classmethod
-    def describe_by_dataclass(cls):
+    def describe_by_dataclass(cls) -> ModelDescription:
         return ModelDescription(
             name=cls._meta.full_name,
             app=cls._meta.app,
@@ -1521,8 +1521,8 @@ class Model(metaclass=ModelMeta):
             abstract=cls._meta.abstract,
             description=cls._meta.table_description or None,
             docstring=inspect.cleandoc(cls.__doc__ or "") or None,
-            unique_together=cls._meta.unique_together or [],
-            indexes=cls._meta.indexes or [],
+            unique_together=cls._meta.unique_together or (),
+            indexes=cls._meta.indexes or (),
             pk_field=cls._meta.fields_map[cls._meta.pk_attr].describe_by_dataclass(),
             data_fields=[
                 field.describe_by_dataclass()

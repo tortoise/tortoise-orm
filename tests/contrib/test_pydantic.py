@@ -1,4 +1,5 @@
 import copy
+import json
 
 import pytest
 from pydantic import ConfigDict, ValidationError
@@ -67,7 +68,7 @@ class TestPydantic(test.TestCase):
             self.Event_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf": {
+                    "Address_diegkp_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -83,7 +84,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf": {
+                    "Reporter_flpkb7_leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -99,7 +100,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf": {
+                    "Team_uqjfiz_leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -127,7 +128,7 @@ class TestPydantic(test.TestCase):
                         "title": "Team",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf": {
+                    "Tournament_lloz5q_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -165,13 +166,13 @@ class TestPydantic(test.TestCase):
                     },
                     "name": {"description": "The name", "title": "Name", "type": "string"},
                     "tournament": {
-                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf",
+                        "$ref": "#/$defs/Tournament_lloz5q_leaf",
                         "description": "What tournaments is a happenin'",
                     },
                     "reporter": {
                         "anyOf": [
                             {
-                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf"
+                                "$ref": "#/$defs/Reporter_flpkb7_leaf"
                             },
                             {"type": "null"},
                         ],
@@ -180,7 +181,7 @@ class TestPydantic(test.TestCase):
                     },
                     "participants": {
                         "items": {
-                            "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf"
+                            "$ref": "#/$defs/Team_uqjfiz_leaf"
                         },
                         "title": "Participants",
                         "type": "array",
@@ -203,7 +204,7 @@ class TestPydantic(test.TestCase):
                     "address": {
                         "anyOf": [
                             {
-                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf"
+                                "$ref": "#/$defs/Address_diegkp_leaf"
                             },
                             {"type": "null"},
                         ],
@@ -232,7 +233,7 @@ class TestPydantic(test.TestCase):
             self.Event_Pydantic_List.model_json_schema(),
             {
                 "$defs": {
-                    "Event_bliobj": {
+                    "Event_vh77nq": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -244,13 +245,13 @@ class TestPydantic(test.TestCase):
                             },
                             "name": {"description": "The name", "title": "Name", "type": "string"},
                             "tournament": {
-                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf",
+                                "$ref": "#/$defs/Tournament_lloz5q_leaf",
                                 "description": "What tournaments is a happenin'",
                             },
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf"
+                                        "$ref": "#/$defs/Reporter_flpkb7_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -259,7 +260,7 @@ class TestPydantic(test.TestCase):
                             },
                             "participants": {
                                 "items": {
-                                    "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf"
+                                    "$ref": "#/$defs/Team_uqjfiz_leaf"
                                 },
                                 "title": "Participants",
                                 "type": "array",
@@ -289,7 +290,7 @@ class TestPydantic(test.TestCase):
                             "address": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf"
+                                        "$ref": "#/$defs/Address_diegkp_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -311,7 +312,7 @@ class TestPydantic(test.TestCase):
                         "title": "Event",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf": {
+                    "Address_diegkp_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -327,7 +328,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf": {
+                    "Reporter_flpkb7_leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -343,7 +344,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf": {
+                    "Team_uqjfiz_leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -371,7 +372,7 @@ class TestPydantic(test.TestCase):
                         "title": "Team",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf": {
+                    "Tournament_lloz5q_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -399,18 +400,19 @@ class TestPydantic(test.TestCase):
                     },
                 },
                 "description": "Events on the calendar",
-                "items": {"$ref": "#/$defs/Event_bliobj"},
+                "items": {"$ref": "#/$defs/Event_vh77nq"},
                 "title": "Event_list",
                 "type": "array",
             },
         )
 
     def test_address_schema(self):
+        # print(json.dumps(self.Address_Pydantic.model_json_schema(), indent=2))
         self.assertEqual(
             self.Address_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_jim4na": {
+                    "Event_az5m74_leaf": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -422,13 +424,13 @@ class TestPydantic(test.TestCase):
                             },
                             "name": {"description": "The name", "title": "Name", "type": "string"},
                             "tournament": {
-                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf",
+                                "$ref": "#/$defs/Tournament_lloz5q_leaf",
                                 "description": "What tournaments is a happenin'",
                             },
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf"
+                                        "$ref": "#/$defs/Reporter_flpkb7_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -437,7 +439,7 @@ class TestPydantic(test.TestCase):
                             },
                             "participants": {
                                 "items": {
-                                    "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf"
+                                    "$ref": "#/$defs/Team_uqjfiz_leaf"
                                 },
                                 "title": "Participants",
                                 "type": "array",
@@ -478,7 +480,7 @@ class TestPydantic(test.TestCase):
                         "title": "Event",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf": {
+                    "Reporter_flpkb7_leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -494,7 +496,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf": {
+                    "Team_uqjfiz_leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -522,7 +524,7 @@ class TestPydantic(test.TestCase):
                         "title": "Team",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf": {
+                    "Tournament_lloz5q_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -553,7 +555,7 @@ class TestPydantic(test.TestCase):
                 "properties": {
                     "city": {"maxLength": 64, "title": "City", "type": "string"},
                     "street": {"maxLength": 128, "title": "Street", "type": "string"},
-                    "event": {"$ref": "#/$defs/Event_jim4na"},
+                    "event": {"$ref": "#/$defs/Event_az5m74_leaf"},
                     "event_id": {
                         "maximum": 9223372036854775807,
                         "minimum": -9223372036854775808,
@@ -572,7 +574,7 @@ class TestPydantic(test.TestCase):
             self.Tournament_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_ml4ytz": {
+                    "Event_atwjj7_leaf": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -586,7 +588,7 @@ class TestPydantic(test.TestCase):
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf"
+                                        "$ref": "#/$defs/Reporter_flpkb7_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -595,7 +597,7 @@ class TestPydantic(test.TestCase):
                             },
                             "participants": {
                                 "items": {
-                                    "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf"
+                                    "$ref": "#/$defs/Team_uqjfiz_leaf"
                                 },
                                 "title": "Participants",
                                 "type": "array",
@@ -625,7 +627,7 @@ class TestPydantic(test.TestCase):
                             "address": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf"
+                                        "$ref": "#/$defs/Address_diegkp_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -646,7 +648,7 @@ class TestPydantic(test.TestCase):
                         "title": "Event",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf": {
+                    "Address_diegkp_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -662,7 +664,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf": {
+                    "Reporter_flpkb7_leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -678,7 +680,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf": {
+                    "Team_uqjfiz_leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -724,7 +726,7 @@ class TestPydantic(test.TestCase):
                     },
                     "events": {
                         "description": "What tournaments is a happenin'",
-                        "items": {"$ref": "#/$defs/Event_ml4ytz"},
+                        "items": {"$ref": "#/$defs/Event_atwjj7_leaf"},
                         "title": "Events",
                         "type": "array",
                     },
@@ -740,7 +742,7 @@ class TestPydantic(test.TestCase):
             self.Team_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_vrm2bi": {
+                    "Event_37gjqu_leaf": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -752,13 +754,13 @@ class TestPydantic(test.TestCase):
                             },
                             "name": {"description": "The name", "title": "Name", "type": "string"},
                             "tournament": {
-                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf",
+                                "$ref": "#/$defs/Tournament_lloz5q_leaf",
                                 "description": "What tournaments is a happenin'",
                             },
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf"
+                                        "$ref": "#/$defs/Reporter_flpkb7_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -790,7 +792,7 @@ class TestPydantic(test.TestCase):
                             "address": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf"
+                                        "$ref": "#/$defs/Address_diegkp_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -811,7 +813,7 @@ class TestPydantic(test.TestCase):
                         "title": "Event",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf": {
+                    "Address_diegkp_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -827,7 +829,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf": {
+                    "Reporter_flpkb7_leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -843,7 +845,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf": {
+                    "Tournament_lloz5q_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -889,7 +891,7 @@ class TestPydantic(test.TestCase):
                         "title": "Alias",
                     },
                     "events": {
-                        "items": {"$ref": "#/$defs/Event_vrm2bi"},
+                        "items": {"$ref": "#/$defs/Event_37gjqu_leaf"},
                         "title": "Events",
                         "type": "array",
                     },
@@ -1298,7 +1300,7 @@ class TestPydanticCycle(test.TestCase):
             self.Employee_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Employee_ibbaiu": {
+                    "Employee_dkvdqq_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -1309,7 +1311,7 @@ class TestPydanticCycle(test.TestCase):
                             },
                             "name": {"maxLength": 50, "title": "Name", "type": "string"},
                             "talks_to": {
-                                "items": {"$ref": "#/$defs/leaf"},
+                                "items": {"$ref": "#/$defs/Employee_pb36jg_leaf"},
                                 "title": "Talks To",
                                 "type": "array",
                             },
@@ -1326,7 +1328,7 @@ class TestPydanticCycle(test.TestCase):
                                 "title": "Manager Id",
                             },
                             "team_members": {
-                                "items": {"$ref": "#/$defs/leaf"},
+                                "items": {"$ref": "#/$defs/Employee_pb36jg_leaf"},
                                 "title": "Team Members",
                                 "type": "array",
                             },
@@ -1335,44 +1337,7 @@ class TestPydanticCycle(test.TestCase):
                         "title": "Employee",
                         "type": "object",
                     },
-                    "Employee_obdn4z": {
-                        "additionalProperties": False,
-                        "properties": {
-                            "id": {
-                                "maximum": 2147483647,
-                                "minimum": -2147483648,
-                                "title": "Id",
-                                "type": "integer",
-                            },
-                            "name": {"maxLength": 50, "title": "Name", "type": "string"},
-                            "talks_to": {
-                                "items": {"$ref": "#/$defs/leaf"},
-                                "title": "Talks To",
-                                "type": "array",
-                            },
-                            "manager_id": {
-                                "anyOf": [
-                                    {
-                                        "maximum": 2147483647,
-                                        "minimum": -2147483648,
-                                        "type": "integer",
-                                    },
-                                    {"type": "null"},
-                                ],
-                                "nullable": True,
-                                "title": "Manager Id",
-                            },
-                            "team_members": {
-                                "items": {"$ref": "#/$defs/leaf"},
-                                "title": "Team Members",
-                                "type": "array",
-                            },
-                        },
-                        "required": ["id", "name", "talks_to", "manager_id", "team_members"],
-                        "title": "Employee",
-                        "type": "object",
-                    },
-                    "leaf": {
+                    "Employee_pb36jg_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -1410,7 +1375,7 @@ class TestPydanticCycle(test.TestCase):
                     },
                     "name": {"maxLength": 50, "title": "Name", "type": "string"},
                     "talks_to": {
-                        "items": {"$ref": "#/$defs/Employee_obdn4z"},
+                        "items": {"$ref": "#/$defs/Employee_dkvdqq_leaf"},
                         "title": "Talks To",
                         "type": "array",
                     },
@@ -1423,7 +1388,7 @@ class TestPydanticCycle(test.TestCase):
                         "title": "Manager Id",
                     },
                     "team_members": {
-                        "items": {"$ref": "#/$defs/Employee_ibbaiu"},
+                        "items": {"$ref": "#/$defs/Employee_dkvdqq_leaf"},
                         "title": "Team Members",
                         "type": "array",
                     },
@@ -1436,7 +1401,7 @@ class TestPydanticCycle(test.TestCase):
 
     async def test_serialisation(self):
         empp = await self.Employee_Pydantic.from_tortoise_orm(await Employee.get(name="Root"))
-        # print(empp.json(indent=4))
+        # print(empp.model_dump_json(indent=4))
         empdict = empp.model_dump()
 
         self.assertEqual(

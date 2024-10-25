@@ -464,7 +464,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
 
         return desc
 
-    def describe_by_dataclass(self):
+    def describe_by_dataclass(self) -> FieldDescriptionBase:
         field_type = getattr(self, "related_model", self.field_type)
         return FieldDescription(
             name=self.model_field_name,
