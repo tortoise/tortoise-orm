@@ -38,7 +38,7 @@ from tortoise.exceptions import (
     OperationalError,
     ParamsError,
 )
-from tortoise.fields.base import Field, FieldDescription, FieldDescriptionBase
+from tortoise.fields.base import Field, FieldDescriptionBase
 from tortoise.fields.data import IntField
 from tortoise.fields.relational import (
     BackwardFKRelation,

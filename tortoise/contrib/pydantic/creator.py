@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Callab
 
 from pydantic import ConfigDict, Field, computed_field, create_model
 from pydantic._internal._decorators import PydanticDescriptorProxy
-from pydantic.fields import PropertyT
 
 from tortoise.contrib.pydantic.base import PydanticListModel, PydanticModel
 from tortoise.contrib.pydantic.utils import get_annotations

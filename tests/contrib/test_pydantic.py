@@ -1,5 +1,4 @@
 import copy
-import json
 
 import pytest
 from pydantic import ConfigDict, ValidationError

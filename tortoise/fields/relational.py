@@ -19,7 +19,7 @@ from pypika import Table
 from typing_extensions import Literal
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
-from tortoise.fields.base import CASCADE, SET_NULL, Field, OnDelete, FieldDescription, FieldDescriptionBase
+from tortoise.fields.base import CASCADE, SET_NULL, Field, OnDelete, FieldDescriptionBase
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
