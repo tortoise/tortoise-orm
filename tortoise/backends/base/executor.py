@@ -24,7 +24,7 @@ from pypika.queries import QueryBuilder
 from pypika.terms import ArithmeticExpression, Function
 
 from tortoise.exceptions import OperationalError
-from tortoise.expressions import F, RawSQL
+from tortoise.expressions import F, RawSQL, ResolveContext
 from tortoise.fields.base import Field
 from tortoise.fields.relational import (
     BackwardFKRelation,
@@ -435,11 +435,13 @@ class BaseExecutor:
             joined_tables: List[Table] = []
             modifier = QueryModifier()
             for node in related_query._q_objects:
-                node._annotations = related_query._annotations
-                node._custom_filters = related_query._custom_filters
                 modifier &= node.resolve(
-                    model=related_query.model,
-                    table=related_query_table,
+                    ResolveContext(
+                        model=related_query.model,
+                        table=related_query_table,
+                        annotations=related_query._annotations,
+                        custom_filters=related_query._custom_filters,
+                    )
                 )
 
             where_criterion, joins, having_criterion = modifier.get_query_modifiers()

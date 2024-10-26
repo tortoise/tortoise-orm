@@ -10,7 +10,7 @@ from tests.testmodels import (
 )
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotEQ
-from tortoise.expressions import F, Q
+from tortoise.expressions import F, Q, Case, When
 from tortoise.functions import Coalesce, Count, Length, Lower, Max, Trim, Upper
 
 
@@ -419,3 +419,18 @@ class TestFiltering(test.TestCase):
         await Event.create(name="Test", tournament_id=tournament.id)
         event_tournaments = await Event.all().values_list("tournament__name")
         self.assertEqual(event_tournaments[0][0], tournament.name)
+
+    async def test_annotation_in_case_when(self):
+        await Tournament.create(name="Tournament")
+        await Tournament.create(name="NEW Tournament")
+        tournaments = (
+            await Tournament.annotate(name_lower=Lower("name"))
+            .annotate(
+                is_tournament=Case(When(Q(name_lower="tournament"), then="yes"), default="no")
+            )
+            .filter(is_tournament="yes")
+        )
+        self.assertEqual(len(tournaments), 1)
+        self.assertEqual(tournaments[0].name, "Tournament")
+        self.assertEqual(tournaments[0].name_lower, "tournament")
+        self.assertEqual(tournaments[0].is_tournament, "yes")

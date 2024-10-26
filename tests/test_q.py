@@ -1,9 +1,10 @@
+import operator
 from unittest import TestCase as _TestCase
 
 from tests.testmodels import CharFields, IntFields
 from tortoise.contrib.test import TestCase
 from tortoise.exceptions import OperationalError
-from tortoise.expressions import Q
+from tortoise.expressions import F, Q, ResolveContext
 
 
 class TestQ(_TestCase):
@@ -115,59 +116,68 @@ class TestQ(_TestCase):
 
 
 class TestQCall(TestCase):
+    def setUp(self) -> None:
+        super().setUp()
+        self.int_fields_context = ResolveContext(
+            model=IntFields, table=IntFields._meta.basequery, annotations={}, custom_filters={}
+        )
+        self.char_fields_context = ResolveContext(
+            model=CharFields, table=CharFields._meta.basequery, annotations={}, custom_filters={}
+        )
+
     def test_q_basic(self):
         q = Q(id=8)
-        r = q.resolve(IntFields, IntFields._meta.basequery)
+        r = q.resolve(self.int_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"id"=8')
 
     def test_q_basic_and(self):
         q = Q(join_type="AND", id=8)
-        r = q.resolve(IntFields, IntFields._meta.basequery)
+        r = q.resolve(self.int_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"id"=8')
 
     def test_q_basic_or(self):
         q = Q(join_type="OR", id=8)
-        r = q.resolve(IntFields, IntFields._meta.basequery)
+        r = q.resolve(self.int_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"id"=8')
 
     def test_q_multiple_and(self):
         q = Q(join_type="AND", id__gt=8, id__lt=10)
-        r = q.resolve(IntFields, IntFields._meta.basequery)
+        r = q.resolve(self.int_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"id">8 AND "id"<10')
 
     def test_q_multiple_or(self):
         q = Q(join_type="OR", id__gt=8, id__lt=10)
-        r = q.resolve(IntFields, IntFields._meta.basequery)
+        r = q.resolve(self.int_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"id">8 OR "id"<10')
 
     def test_q_multiple_and2(self):
         q = Q(join_type="AND", id=8, intnum=80)
-        r = q.resolve(IntFields, IntFields._meta.basequery)
+        r = q.resolve(self.int_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"id"=8 AND "intnum"=80')
 
     def test_q_multiple_or2(self):
         q = Q(join_type="OR", id=8, intnum=80)
-        r = q.resolve(IntFields, IntFields._meta.basequery)
+        r = q.resolve(self.int_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"id"=8 OR "intnum"=80')
 
     def test_q_complex_int(self):
         q = Q(Q(intnum=80), Q(id__lt=5, id__gt=50, join_type="OR"), join_type="AND")
-        r = q.resolve(IntFields, IntFields._meta.basequery)
+        r = q.resolve(self.int_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"intnum"=80 AND ("id"<5 OR "id">50)')
 
     def test_q_complex_int2(self):
         q = Q(Q(intnum="80"), Q(Q(id__lt="5"), Q(id__gt="50"), join_type="OR"), join_type="AND")
-        r = q.resolve(IntFields, IntFields._meta.basequery)
+        r = q.resolve(self.int_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"intnum"=80 AND ("id"<5 OR "id">50)')
 
     def test_q_complex_int3(self):
         q = Q(Q(id__lt=5, id__gt=50, join_type="OR"), join_type="AND", intnum=80)
-        r = q.resolve(IntFields, IntFields._meta.basequery)
+        r = q.resolve(self.int_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"intnum"=80 AND ("id"<5 OR "id">50)')
 
     def test_q_complex_char(self):
         q = Q(Q(char_null=80), ~Q(char__lt=5, char__gt=50, join_type="OR"), join_type="AND")
-        r = q.resolve(CharFields, CharFields._meta.basequery)
+        r = q.resolve(self.char_fields_context)
         self.assertEqual(
             r.where_criterion.get_sql(),
             "\"char_null\"='80' AND NOT (\"char\"<'5' OR \"char\">'50')",
@@ -179,7 +189,7 @@ class TestQCall(TestCase):
             ~Q(Q(char__lt="5"), Q(char__gt="50"), join_type="OR"),
             join_type="AND",
         )
-        r = q.resolve(CharFields, CharFields._meta.basequery)
+        r = q.resolve(self.char_fields_context)
         self.assertEqual(
             r.where_criterion.get_sql(),
             "\"char_null\"='80' AND NOT (\"char\"<'5' OR \"char\">'50')",
@@ -187,7 +197,7 @@ class TestQCall(TestCase):
 
     def test_q_complex_char3(self):
         q = Q(~Q(char__lt=5, char__gt=50, join_type="OR"), join_type="AND", char_null=80)
-        r = q.resolve(CharFields, CharFields._meta.basequery)
+        r = q.resolve(self.char_fields_context)
         self.assertEqual(
             r.where_criterion.get_sql(),
             "\"char_null\"='80' AND NOT (\"char\"<'5' OR \"char\">'50')",
@@ -195,30 +205,48 @@ class TestQCall(TestCase):
 
     def test_q_with_blank_and(self):
         q = Q(Q(id__gt=5), Q(), join_type=Q.AND)
-        r = q.resolve(CharFields, CharFields._meta.basequery)
+        r = q.resolve(self.char_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"id">5')
 
     def test_q_with_blank_or(self):
         q = Q(Q(id__gt=5), Q(), join_type=Q.OR)
-        r = q.resolve(CharFields, CharFields._meta.basequery)
+        r = q.resolve(self.char_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"id">5')
 
     def test_q_with_blank_and2(self):
         q = Q(id__gt=5) & Q()
-        r = q.resolve(CharFields, CharFields._meta.basequery)
+        r = q.resolve(self.char_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"id">5')
 
     def test_q_with_blank_or2(self):
         q = Q(id__gt=5) | Q()
-        r = q.resolve(CharFields, CharFields._meta.basequery)
+        r = q.resolve(self.char_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"id">5')
 
     def test_q_with_blank_and3(self):
         q = Q() & Q(id__gt=5)
-        r = q.resolve(CharFields, CharFields._meta.basequery)
+        r = q.resolve(self.char_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"id">5')
 
     def test_q_with_blank_or3(self):
         q = Q() | Q(id__gt=5)
-        r = q.resolve(CharFields, CharFields._meta.basequery)
+        r = q.resolve(self.char_fields_context)
         self.assertEqual(r.where_criterion.get_sql(), '"id">5')
+
+    def test_annotations_resolved(self):
+        q = Q(id__gt=5) | Q(annotated__lt=5)
+        r = q.resolve(
+            ResolveContext(
+                model=IntFields,
+                table=IntFields._meta.basequery,
+                annotations={"annotated": F("annotated")},
+                custom_filters={
+                    "annotated__lt": {
+                        "field": "annotated",
+                        "source_field": "annotated",
+                        "operator": operator.lt,
+                    }
+                },
+            )
+        )
+        self.assertEqual(r.where_criterion.get_sql(), '"id">5 OR "annotated"<5')
