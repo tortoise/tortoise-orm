@@ -10,7 +10,7 @@ from tests.testmodels import (
 )
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotEQ
-from tortoise.expressions import F, Q, Case, When
+from tortoise.expressions import Case, F, Q, When
 from tortoise.functions import Coalesce, Count, Length, Lower, Max, Trim, Upper
 
 

@@ -11,6 +11,7 @@ from tortoise.fields import BooleanField
 def to_db_bool(
     self: BooleanField, value: Optional[Union[bool, int]], instance: Union[Type[Model], Model]
 ) -> Optional[int]:
+    self.validate(value)
     if value is None:
         return None
     return int(bool(value))

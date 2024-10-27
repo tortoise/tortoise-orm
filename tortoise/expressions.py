@@ -1,5 +1,5 @@
-from dataclasses import dataclass
 import operator
+from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
