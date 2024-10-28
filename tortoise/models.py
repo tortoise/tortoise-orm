@@ -1,5 +1,4 @@
 import asyncio
-import dataclasses
 import inspect
 import re
 from copy import copy, deepcopy
@@ -38,7 +37,7 @@ from tortoise.exceptions import (
     OperationalError,
     ParamsError,
 )
-from tortoise.fields.base import Field, FieldDescriptionBase
+from tortoise.fields.base import Field
 from tortoise.fields.data import IntField
 from tortoise.fields.relational import (
     BackwardFKRelation,
@@ -643,25 +642,6 @@ class ModelMeta(type):
 
     def __getitem__(cls: Type[MODEL], key: Any) -> QuerySetSingle[MODEL]:  # type: ignore
         return cls._getbypk(key)  # type: ignore
-
-
-@dataclasses.dataclass
-class ModelDescription:
-    name: str
-    table: str
-    abstract: bool
-    description: Optional[str]
-    pk_field: FieldDescriptionBase
-    app: Optional[str] = None
-    docstring: Optional[str] = None
-    unique_together: tuple[tuple[str, ...], ...] = dataclasses.field(default_factory=tuple)
-    indexes: tuple[tuple[str, ...], ...] = dataclasses.field(default_factory=tuple)
-    data_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
-    fk_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
-    backward_fk_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
-    o2o_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
-    backward_o2o_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
-    m2m_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
 
 
 class Model(metaclass=ModelMeta):
@@ -1511,50 +1491,6 @@ class Model(metaclass=ModelMeta):
                 if name in cls._meta.m2m_fields
             ],
         }
-
-    @classmethod
-    def describe_by_dataclass(cls) -> ModelDescription:
-        return ModelDescription(
-            name=cls._meta.full_name,
-            app=cls._meta.app,
-            table=cls._meta.db_table,
-            abstract=cls._meta.abstract,
-            description=cls._meta.table_description or None,
-            docstring=inspect.cleandoc(cls.__doc__ or "") or None,
-            unique_together=cls._meta.unique_together or (),
-            indexes=cls._meta.indexes or (),
-            pk_field=cls._meta.fields_map[cls._meta.pk_attr].describe_by_dataclass(),
-            data_fields=[
-                field.describe_by_dataclass()
-                for name, field in cls._meta.fields_map.items()
-                if name != cls._meta.pk_attr and name in (cls._meta.fields - cls._meta.fetch_fields)
-            ],
-            fk_fields=[
-                field.describe_by_dataclass()
-                for name, field in cls._meta.fields_map.items()
-                if name in cls._meta.fk_fields
-            ],
-            backward_fk_fields=[
-                field.describe_by_dataclass()
-                for name, field in cls._meta.fields_map.items()
-                if name in cls._meta.backward_fk_fields
-            ],
-            o2o_fields=[
-                field.describe_by_dataclass()
-                for name, field in cls._meta.fields_map.items()
-                if name in cls._meta.o2o_fields
-            ],
-            backward_o2o_fields=[
-                field.describe_by_dataclass()
-                for name, field in cls._meta.fields_map.items()
-                if name in cls._meta.backward_o2o_fields
-            ],
-            m2m_fields=[
-                field.describe_by_dataclass()
-                for name, field in cls._meta.fields_map.items()
-                if name in cls._meta.m2m_fields
-            ],
-        )
 
     def __await__(self: MODEL) -> Generator[Any, None, MODEL]:
         async def _self() -> MODEL:

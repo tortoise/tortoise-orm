@@ -1,4 +1,3 @@
-import dataclasses
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -19,7 +18,7 @@ from pypika import Table
 from typing_extensions import Literal
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
-from tortoise.fields.base import CASCADE, SET_NULL, Field, OnDelete, FieldDescriptionBase
+from tortoise.fields.base import CASCADE, SET_NULL, Field, OnDelete
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
@@ -241,12 +240,6 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         await db.execute_query(str(query))
 
 
-@dataclasses.dataclass
-class RelationalFieldDescription(FieldDescriptionBase):
-    db_constraint: bool = False
-    python_type: Optional["Type[Model]"] = None
-
-
 class RelationalField(Field[MODEL]):
     has_db_field = False
 
@@ -283,34 +276,11 @@ class RelationalField(Field[MODEL]):
         del desc["db_column"]
         return desc
 
-    def describe_by_dataclass(self):
-        return RelationalFieldDescription(
-            name=self.model_field_name,
-            field_type=self.__class__,
-            python_type=self.related_model,
-            generated=self.generated,
-            nullable=self.null,
-            unique=self.unique,
-            indexed=self.index or self.unique,
-            default=self.default,
-            description=self.description,
-            docstring=self.docstring,
-            constraints=self.constraints,
-            db_field_types=self.get_db_field_types() if self.has_db_field else None,
-            db_constraint=self.db_constraint
-        )
-
     @classmethod
     def validate_model_name(cls, model_name: str) -> None:
         if len(model_name.split(".")) != 2:
             field_type = cls.__name__.replace("Instance", "")
             raise ConfigurationError(f'{field_type} accepts model name in format "app.Model"')
-
-
-@dataclasses.dataclass
-class ForeignKeyFieldInstanceDescription(RelationalFieldDescription):
-    raw_field: str | None = ""
-    on_delete: str = ""
 
 
 class ForeignKeyFieldInstance(RelationalField[MODEL]):
@@ -339,31 +309,6 @@ class ForeignKeyFieldInstance(RelationalField[MODEL]):
         desc["on_delete"] = str(self.on_delete)
         return desc
 
-    def describe_by_dataclass(self):
-        field_type = getattr(self, "related_model", self.field_type)
-        return ForeignKeyFieldInstanceDescription(
-            name=self.model_field_name,
-            field_type=self.__class__,
-            python_type=field_type,
-            generated=self.generated,
-            nullable=self.null,
-            unique=self.unique,
-            indexed=self.index or self.unique,
-            default=self.default,
-            description=self.description,
-            docstring=self.docstring,
-            constraints=self.constraints,
-            db_field_types=self.get_db_field_types() if self.has_db_field else None,
-            db_constraint=self.db_constraint,
-            raw_field=self.source_field,
-            on_delete=str(self.on_delete),
-        )
-
-
-@dataclasses.dataclass
-class BackwardFKRelationDescription(ForeignKeyFieldInstanceDescription):
-    ...
-
 
 class BackwardFKRelation(RelationalField[MODEL]):
     def __init__(
@@ -380,28 +325,6 @@ class BackwardFKRelation(RelationalField[MODEL]):
         self.relation_source_field: str = relation_source_field
         self.description: Optional[str] = description
 
-    def describe_by_dataclass(self):
-        return BackwardFKRelationDescription(
-            name=self.model_field_name,
-            field_type=self.__class__,
-            python_type=self.related_model,
-            generated=self.generated,
-            nullable=self.null,
-            unique=self.unique,
-            indexed=self.index or self.unique,
-            default=self.default,
-            description=self.description,
-            docstring=self.docstring,
-            constraints=self.constraints,
-            db_field_types=self.get_db_field_types() if self.has_db_field else None,
-            db_constraint=self.db_constraint
-        )
-
-
-@dataclasses.dataclass
-class OneToOneFieldInstanceDescription(ForeignKeyFieldInstanceDescription):
-    ...
-
 
 class OneToOneFieldInstance(ForeignKeyFieldInstance[MODEL]):
     def __init__(
@@ -414,62 +337,9 @@ class OneToOneFieldInstance(ForeignKeyFieldInstance[MODEL]):
         self.validate_model_name(model_name)
         super().__init__(model_name, related_name, on_delete, unique=True, **kwargs)
 
-    def describe_by_dataclass(self):
-        field_type = getattr(self, "related_model", self.field_type)
-        return OneToOneFieldInstanceDescription(
-            name=self.model_field_name,
-            field_type=self.__class__,
-            python_type=field_type,
-            generated=self.generated,
-            nullable=self.null,
-            unique=self.unique,
-            indexed=self.index or self.unique,
-            default=self.default,
-            description=self.description,
-            docstring=self.docstring,
-            constraints=self.constraints,
-            db_field_types=self.get_db_field_types() if self.has_db_field else None,
-            db_constraint=self.db_constraint,
-            raw_field=self.source_field,
-            on_delete=str(self.on_delete),
-        )
-
-
-@dataclasses.dataclass
-class BackwardOneToOneRelationDescription(ForeignKeyFieldInstanceDescription):
-    ...
-
 
 class BackwardOneToOneRelation(BackwardFKRelation[MODEL]):
-    def describe_by_dataclass(self):
-        field_type = getattr(self, "related_model", self.field_type)
-        return BackwardOneToOneRelationDescription(
-            name=self.model_field_name,
-            field_type=self.__class__,
-            python_type=field_type,
-            generated=self.generated,
-            nullable=self.null,
-            unique=self.unique,
-            indexed=self.index or self.unique,
-            default=self.default,
-            description=self.description,
-            docstring=self.docstring,
-            constraints=self.constraints,
-            db_field_types=self.get_db_field_types() if self.has_db_field else None,
-            db_constraint=self.db_constraint,
-            raw_field=self.source_field,
-        )
-
-
-@dataclasses.dataclass
-class ManyToManyFieldInstanceDescription(RelationalFieldDescription):
-    model_name: str = ""
-    related_name: str = ""
-    forward_key: str = ""
-    backward_key: str = ""
-    through: str = ""
-    on_delete: str = ""
-    _generated: bool = False
+    pass
 
 
 class ManyToManyFieldInstance(RelationalField[MODEL]):
@@ -510,30 +380,6 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         desc["on_delete"] = str(self.on_delete)
         desc["_generated"] = self._generated
         return desc
-
-    def describe_by_dataclass(self):
-        return ManyToManyFieldInstanceDescription(
-            name=self.model_field_name,
-            field_type=self.__class__,
-            python_type=self.related_model,
-            generated=self.generated,
-            nullable=self.null,
-            unique=self.unique,
-            indexed=self.index or self.unique,
-            default=self.default,
-            description=self.description,
-            docstring=self.docstring,
-            constraints=self.constraints,
-            db_field_types=self.get_db_field_types() if self.has_db_field else None,
-            db_constraint=self.db_constraint,
-            model_name=self.model_name,
-            related_name=self.related_name,
-            forward_key=self.forward_key,
-            backward_key=self.backward_key,
-            through=self.through,
-            on_delete=str(self.on_delete),
-            _generated=self._generated,
-        )
 
 
 @overload

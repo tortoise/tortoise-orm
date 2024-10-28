@@ -12,12 +12,12 @@ from pydantic._internal._decorators import PydanticDescriptorProxy
 from tortoise.contrib.pydantic.base import PydanticListModel, PydanticModel
 from tortoise.contrib.pydantic.utils import get_annotations
 from tortoise.fields import IntField, JSONField, TextField
-from tortoise.fields.base import FieldDescriptionBase
-from tortoise.fields.relational import ForeignKeyFieldInstanceDescription, OneToOneFieldInstanceDescription, \
-    BackwardOneToOneRelationDescription, BackwardFKRelationDescription, ManyToManyFieldInstanceDescription
+from tortoise.contrib.pydantic.dataclasses import FieldDescriptionBase, ForeignKeyFieldInstanceDescription, \
+    OneToOneFieldInstanceDescription, BackwardOneToOneRelationDescription, BackwardFKRelationDescription, \
+    ManyToManyFieldInstanceDescription, describe_model_by_dataclass, ModelDescription
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.models import Model, ModelDescription
+    from tortoise.models import Model
 
 _MODEL_INDEX: Dict[str, Type[PydanticModel]] = {}
 
@@ -458,7 +458,7 @@ class PydanticModelCreator:
 
         self._properties: Dict[str, Any] = dict()
 
-        self._model_description: ModelDescription = cls.describe_by_dataclass()
+        self._model_description: ModelDescription = describe_model_by_dataclass(cls)
 
         self._field_map: FieldMap = self.initialize_field_map()
         self.construct_field_map()

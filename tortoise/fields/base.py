@@ -1,4 +1,3 @@
-import dataclasses
 import sys
 import warnings
 from enum import Enum
@@ -61,27 +60,6 @@ class _FieldMeta(type):
             cls.field_type = bases[1] if len(bases) == 2 else Union[bases[1:]]  # type: ignore
             return cls
         return type.__new__(mcs, name, bases, attrs)
-
-
-@dataclasses.dataclass
-class FieldDescriptionBase:
-    name: str
-    field_type: Type["Field"]
-    generated: bool
-    nullable: bool
-    unique: bool
-    indexed: bool
-    constraints: dict
-    python_type: Optional[type] = None
-    default: Optional[Any] = None
-    description: Optional[str] = None
-    docstring: Optional[str] = None
-    db_field_types: Optional[dict[str, str]] = None
-
-
-@dataclasses.dataclass
-class FieldDescription(FieldDescriptionBase):
-    db_column: str = ""
 
 
 class Field(Generic[VALUE], metaclass=_FieldMeta):
@@ -463,21 +441,3 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             desc["db_field_types"] = self.get_db_field_types()
 
         return desc
-
-    def describe_by_dataclass(self) -> FieldDescriptionBase:
-        field_type = getattr(self, "related_model", self.field_type)
-        return FieldDescription(
-            name=self.model_field_name,
-            field_type=self.__class__,
-            db_column=self.source_field or self.model_field_name,
-            python_type=field_type,
-            generated=self.generated,
-            nullable=self.null,
-            unique=self.unique,
-            indexed=self.index or self.unique,
-            default=self.default,
-            description=self.description,
-            docstring=self.docstring,
-            constraints=self.constraints,
-            db_field_types=self.get_db_field_types() if self.has_db_field else None
-        )
