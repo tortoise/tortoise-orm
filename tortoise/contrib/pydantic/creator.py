@@ -1,7 +1,7 @@
 import dataclasses
 import inspect
 from base64 import b32encode
-from collections.abc import MutableMapping
+from typing import MutableMapping
 from dataclasses import dataclass, field
 from hashlib import sha3_224
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Callable, Union, TypeVar
@@ -221,7 +221,7 @@ def _cleandoc(obj: Any) -> str:
 def _pydantic_recursion_protector(
         cls: "Type[Model]",
         *,
-        stack: tuple,
+        stack: Tuple,
         exclude: Tuple[str, ...] = (),
         include: Tuple[str, ...] = (),
         computed: Tuple[str, ...] = (),
@@ -275,14 +275,14 @@ class ComputedFieldDescription:
 FieldDescriptionT = TypeVar('FieldDescriptionT', bound=FieldDescriptionBase)
 
 
-class FieldMap(MutableMapping[str, Union[FieldDescriptionBase | ComputedFieldDescription]]):
+class FieldMap(MutableMapping[str, Union[FieldDescriptionBase, ComputedFieldDescription]]):
     def __init__(self, meta: MyPydanticMeta, pk_field_description: Optional[FieldDescriptionBase] = None):
-        self._field_map: dict[str, Union[FieldDescriptionBase | ComputedFieldDescription]] = {}
+        self._field_map: Dict[str, Union[FieldDescriptionBase, ComputedFieldDescription]] = {}
         self.pk_raw_field = pk_field_description.name if pk_field_description is not None else ""
         if pk_field_description:
             self.pk_raw_field = pk_field_description.name
             self.field_map_update([pk_field_description], meta)
-        self.computed_fields: dict[str, ComputedFieldDescription] = {}
+        self.computed_fields: Dict[str, ComputedFieldDescription] = {}
 
     def __delitem__(self, __key):
         self._field_map.__delitem__(__key)
@@ -302,12 +302,12 @@ class FieldMap(MutableMapping[str, Union[FieldDescriptionBase | ComputedFieldDes
     def sort_alphabetically(self) -> None:
         self._field_map = {k: self._field_map[k] for k in sorted(self._field_map)}
 
-    def sort_definition_order(self, cls: "Type[Model]", computed: tuple[str, ...]) -> None:
+    def sort_definition_order(self, cls: "Type[Model]", computed: Tuple[str, ...]) -> None:
         self._field_map = {
             k: self._field_map[k] for k in tuple(cls._meta.fields_map.keys()) + computed if k in self._field_map
         }
 
-    def field_map_update(self, field_descriptions: list[FieldDescriptionT], meta: MyPydanticMeta) -> None:
+    def field_map_update(self, field_descriptions: List[FieldDescriptionT], meta: MyPydanticMeta) -> None:
         for field_description in field_descriptions:
             name = field_description.name
             # Include or exclude field
@@ -320,7 +320,7 @@ class FieldMap(MutableMapping[str, Union[FieldDescriptionBase | ComputedFieldDes
                     self.pop(raw_field, None)
             self[name] = field_description
 
-    def computed_field_map_update(self, computed: tuple[str, ...], cls: "Type[Model]"):
+    def computed_field_map_update(self, computed: Tuple[str, ...], cls: "Type[Model]"):
         self._field_map.update(
             {
                 k: ComputedFieldDescription(
@@ -412,7 +412,7 @@ class PydanticModelCreator:
             _as_submodel: bool = False
     ) -> None:
         self._cls: "Type[Model]" = cls
-        self._stack: tuple[tuple["Type[Model]", str, int], ...] = tuple[tuple["Type[Model]", str, int], ...]()  # ((Type[Model], field_name, max_recursion),)
+        self._stack: Tuple[Tuple["Type[Model]", str, int], ...] = tuple()  # ((Type[Model], field_name, max_recursion),)
         self._is_default: bool = (
                 exclude is None
                 and include is None
@@ -470,7 +470,7 @@ class PydanticModelCreator:
 
         self._stack = _stack
 
-    def get_name(self) -> tuple[str, str]:
+    def get_name(self) -> Tuple[str, str]:
         # If arguments are specified (different from the defaults), we append a hash to the
         # class name, to make it unique
         # We don't check by stack, as cycles get explicitly renamed.
@@ -601,7 +601,7 @@ class PydanticModelCreator:
             field_description: FieldDescriptionBase,
             json_schema_extra: Dict[str, Any],
             fconfig: Dict[str, Any],
-    ) -> tuple[Optional[Any], bool]:
+    ) -> Tuple[Optional[Any], bool]:
         if isinstance(field_description, (BackwardFKRelationDescription, ManyToManyFieldInstanceDescription)):
             return self.process_many_field_relation(field_name, field_description), False
         elif isinstance(
@@ -620,7 +620,7 @@ class PydanticModelCreator:
     def process_single_field_relation(
             self,
             field_name: str,
-            field_description: ForeignKeyFieldInstanceDescription | OneToOneFieldInstanceDescription | BackwardOneToOneRelationDescription,
+            field_description: Union[ForeignKeyFieldInstanceDescription, OneToOneFieldInstanceDescription, BackwardOneToOneRelationDescription],
             json_schema_extra: Dict[str, Any],
     ) -> Optional[Type[PydanticModel]]:
         model: Optional[Type[PydanticModel]] = self.get_submodel(field_description.python_type, field_name)
@@ -636,7 +636,7 @@ class PydanticModelCreator:
     def process_many_field_relation(
             self,
             field_name: str,
-            field_description: BackwardFKRelationDescription | ManyToManyFieldInstanceDescription,
+            field_description: Union[BackwardFKRelationDescription, ManyToManyFieldInstanceDescription],
     ) -> Optional[Type[List[Type[PydanticModel]]]]:
         model = self.get_submodel(field_description.python_type, field_name)
         if model:

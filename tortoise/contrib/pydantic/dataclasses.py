@@ -1,6 +1,6 @@
 import dataclasses
 import inspect
-from typing import Type, Optional, Any, TYPE_CHECKING
+from typing import Type, Optional, Any, TYPE_CHECKING, Dict, Tuple, List
 
 from tortoise.fields import Field
 from tortoise.fields.relational import RelationalField, ForeignKeyFieldInstance, ManyToManyFieldInstance, \
@@ -18,12 +18,12 @@ class FieldDescriptionBase:
     nullable: bool
     unique: bool
     indexed: bool
-    constraints: dict
+    constraints: Dict
     python_type: Optional[type] = None
     default: Optional[Any] = None
     description: Optional[str] = None
     docstring: Optional[str] = None
-    db_field_types: Optional[dict[str, str]] = None
+    db_field_types: Optional[Dict[str, str]] = None
 
 
 @dataclasses.dataclass
@@ -78,14 +78,14 @@ class ModelDescription:
     pk_field: FieldDescriptionBase
     app: Optional[str] = None
     docstring: Optional[str] = None
-    unique_together: tuple[tuple[str, ...], ...] = dataclasses.field(default_factory=tuple)
-    indexes: tuple[tuple[str, ...], ...] = dataclasses.field(default_factory=tuple)
-    data_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
-    fk_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
-    backward_fk_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
-    o2o_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
-    backward_o2o_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
-    m2m_fields: list[FieldDescriptionBase] = dataclasses.field(default_factory=list)
+    unique_together: Tuple[Tuple[str, ...], ...] = dataclasses.field(default_factory=tuple)
+    indexes: Tuple[Tuple[str, ...], ...] = dataclasses.field(default_factory=tuple)
+    data_fields: List[FieldDescriptionBase] = dataclasses.field(default_factory=list)
+    fk_fields: List[FieldDescriptionBase] = dataclasses.field(default_factory=list)
+    backward_fk_fields: List[FieldDescriptionBase] = dataclasses.field(default_factory=list)
+    o2o_fields: List[FieldDescriptionBase] = dataclasses.field(default_factory=list)
+    backward_o2o_fields: List[FieldDescriptionBase] = dataclasses.field(default_factory=list)
+    m2m_fields: List[FieldDescriptionBase] = dataclasses.field(default_factory=list)
 
 
 def describe_model_by_dataclass(cls: Type[MODEL]) -> ModelDescription:
