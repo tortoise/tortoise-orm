@@ -1481,6 +1481,211 @@ class TestPydanticCycle(test.TestCase):
         )
 
 
+class TestPydanticComputed(test.TestCase):
+    async def asyncSetUp(self) -> None:
+        await super(TestPydanticComputed, self).asyncSetUp()
+        self.Employee_Pydantic = pydantic_model_creator(Employee)
+        self.employee = await Employee.create(name="Some Employee")
+        self.maxDiff = None
+
+    async def test_computed_field(self):
+        employee_pyd = await self.Employee_Pydantic.from_tortoise_orm(await Employee.get(name="Some Employee"))
+        employee_serialised = employee_pyd.model_dump()
+        self.assertEqual(employee_serialised.get("name_length"), self.employee.name_length())
+
+    async def test_computed_field_schema(self):
+        self.assertEqual(
+            self.Employee_Pydantic.model_json_schema(mode="serialization"),
+            {
+                "$defs": {
+                    "Employee_dkvdqq_leaf": {
+                        "additionalProperties": False,
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": -2147483648,
+                                "title": "Id",
+                                "type": "integer"
+                            },
+                            "name": {
+                                "maxLength": 50,
+                                "title": "Name",
+                                "type": "string"
+                            },
+                            "talks_to": {
+                                "items": {
+                                    "$ref": "#/$defs/Employee_pb36jg_leaf"
+                                },
+                                "title": "Talks To",
+                                "type": "array"
+                            },
+                            "manager_id": {
+                                "anyOf": [
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ],
+                                "nullable": True,
+                                "title": "Manager Id"
+                            },
+                            "team_members": {
+                                "items": {
+                                    "$ref": "#/$defs/Employee_pb36jg_leaf"
+                                },
+                                "title": "Team Members",
+                                "type": "array"
+                            },
+                            "name_length": {
+                                "description": "",
+                                "readOnly": True,
+                                "title": "Name Length",
+                                "type": "integer"
+                            },
+                            "team_size": {
+                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "readOnly": True,
+                                "title": "Team Size",
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "talks_to",
+                            "manager_id",
+                            "team_members",
+                            "name_length",
+                            "team_size"
+                        ],
+                        "title": "Employee",
+                        "type": "object"
+                    },
+                    "Employee_pb36jg_leaf": {
+                        "additionalProperties": False,
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": -2147483648,
+                                "title": "Id",
+                                "type": "integer"
+                            },
+                            "name": {
+                                "maxLength": 50,
+                                "title": "Name",
+                                "type": "string"
+                            },
+                            "manager_id": {
+                                "anyOf": [
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ],
+                                "nullable": True,
+                                "title": "Manager Id"
+                            },
+                            "name_length": {
+                                "description": "",
+                                "readOnly": True,
+                                "title": "Name Length",
+                                "type": "integer"
+                            },
+                            "team_size": {
+                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "readOnly": True,
+                                "title": "Team Size",
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "manager_id",
+                            "name_length",
+                            "team_size"
+                        ],
+                        "title": "Employee",
+                        "type": "object"
+                    }
+                },
+                "additionalProperties": False,
+                "properties": {
+                    "id": {
+                        "maximum": 2147483647,
+                        "minimum": -2147483648,
+                        "title": "Id",
+                        "type": "integer"
+                    },
+                    "name": {
+                        "maxLength": 50,
+                        "title": "Name",
+                        "type": "string"
+                    },
+                    "talks_to": {
+                        "items": {
+                            "$ref": "#/$defs/Employee_dkvdqq_leaf"
+                        },
+                        "title": "Talks To",
+                        "type": "array"
+                    },
+                    "manager_id": {
+                        "anyOf": [
+                            {
+                                "maximum": 2147483647,
+                                "minimum": -2147483648,
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "nullable": True,
+                        "title": "Manager Id"
+                    },
+                    "team_members": {
+                        "items": {
+                            "$ref": "#/$defs/Employee_dkvdqq_leaf"
+                        },
+                        "title": "Team Members",
+                        "type": "array"
+                    },
+                    "name_length": {
+                        "description": "",
+                        "readOnly": True,
+                        "title": "Name Length",
+                        "type": "integer"
+                    },
+                    "team_size": {
+                        "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                        "readOnly": True,
+                        "title": "Team Size",
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "talks_to",
+                    "manager_id",
+                    "team_members",
+                    "name_length",
+                    "team_size"
+                ],
+                "title": "Employee",
+                "type": "object"
+            }
+        )
+
+
 class TestPydanticUpdate(test.TestCase):
     def setUp(self) -> None:
         self.UserCreate_Pydantic = pydantic_model_creator(

@@ -27,7 +27,6 @@ from typing_extensions import Self
 
 from tortoise import connections
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.contrib.pydantic.creator import MyPydanticMeta
 from tortoise.exceptions import (
     ConfigurationError,
     DoesNotExist,
@@ -648,7 +647,6 @@ class Model(metaclass=ModelMeta):
     """
     Base class for all Tortoise ORM Models.
     """
-    my_pydantic_meta: MyPydanticMeta = MyPydanticMeta()
 
     # I don' like this here, but it makes auto completion and static analysis much happier
     _meta = MetaInfo(None)  # type: ignore

@@ -1,7 +1,14 @@
 import dataclasses
 import inspect
+import sys
 from base64 import b32encode
 from typing import MutableMapping
+
+if sys.version_info >= (3, 11):
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 from dataclasses import dataclass, field
 from hashlib import sha3_224
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Callable, Union, TypeVar
@@ -23,7 +30,7 @@ _MODEL_INDEX: Dict[str, Type[PydanticModel]] = {}
 
 
 @dataclass
-class MyPydanticMeta:
+class PydanticMetaData:
     #: If not empty, only fields this property contains will be in the pydantic model
     include: Tuple[str, ...] = ()
 
@@ -55,11 +62,11 @@ class MyPydanticMeta:
     model_config: Optional[ConfigDict] = None
 
     @classmethod
-    def from_pydantic_meta(cls, pydantic_meta: "PydanticMeta"):
+    def from_pydantic_meta(cls, old_pydantic_meta: Any):
         default_meta = cls()
 
         def get_param_from_pydantic_meta(attr: str, default: Any) -> Any:
-            return getattr(pydantic_meta, attr, default)
+            return getattr(old_pydantic_meta, attr, default)
         include = tuple(get_param_from_pydantic_meta("include", default_meta.include))
         exclude = tuple(get_param_from_pydantic_meta("exclude", default_meta.exclude))
         computed = tuple(get_param_from_pydantic_meta("computed", default_meta.computed))
@@ -75,7 +82,7 @@ class MyPydanticMeta:
             get_param_from_pydantic_meta("sort_alphabetically", default_meta.sort_alphabetically)
         )
         model_config = get_param_from_pydantic_meta("model_config", default_meta.model_config)
-        return MyPydanticMeta(
+        return PydanticMetaData(
             include=include,
             exclude=exclude,
             computed=computed,
@@ -87,127 +94,78 @@ class MyPydanticMeta:
             model_config=model_config
         )
 
+    def construct_pydantic_meta(
+            self,
+            meta_override: Type
+    ) -> Self:
+        def get_param_from_meta_override(attr: str) -> Any:
+            return getattr(meta_override, attr, getattr(self, attr))
 
-def construct_pydantic_meta(
-        meta_default: MyPydanticMeta,
-        meta_override: Type
-) -> MyPydanticMeta:
-    def get_param_from_meta_override(attr: str) -> Any:
-        return getattr(meta_override, attr, getattr(meta_default, attr))
+        default_include: Tuple[str, ...] = tuple(get_param_from_meta_override("include"))
+        default_exclude: Tuple[str, ...] = tuple(get_param_from_meta_override("exclude"))
+        default_computed: Tuple[str, ...] = tuple(get_param_from_meta_override("computed"))
+        default_config: Optional[ConfigDict] = self.model_config
 
-    default_include: Tuple[str, ...] = tuple(get_param_from_meta_override("include"))
-    default_exclude: Tuple[str, ...] = tuple(get_param_from_meta_override("exclude"))
-    default_computed: Tuple[str, ...] = tuple(get_param_from_meta_override("computed"))
-    default_config: Optional[ConfigDict] = meta_default.model_config
+        backward_relations: bool = bool(get_param_from_meta_override("backward_relations"))
 
-    backward_relations: bool = bool(get_param_from_meta_override("backward_relations"))
+        max_recursion: int = int(get_param_from_meta_override("max_recursion"))
+        exclude_raw_fields: bool = bool(get_param_from_meta_override("exclude_raw_fields"))
+        sort_alphabetically: bool = bool(get_param_from_meta_override("sort_alphabetically"))
+        allow_cycles: bool = bool(get_param_from_meta_override("allow_cycles"))
 
-    max_recursion: int = int(get_param_from_meta_override("max_recursion"))
-    exclude_raw_fields: bool = bool(get_param_from_meta_override("exclude_raw_fields"))
-    sort_alphabetically: bool = bool(get_param_from_meta_override("sort_alphabetically"))
-    allow_cycles: bool = bool(get_param_from_meta_override("allow_cycles"))
+        return PydanticMetaData(
+            include=default_include,
+            exclude=default_exclude,
+            computed=default_computed,
+            model_config=default_config,
+            backward_relations=backward_relations,
+            max_recursion=max_recursion,
+            exclude_raw_fields=exclude_raw_fields,
+            sort_alphabetically=sort_alphabetically,
+            allow_cycles=allow_cycles
+        )
 
-    return MyPydanticMeta(
-        include=default_include,
-        exclude=default_exclude,
-        computed=default_computed,
-        model_config=default_config,
-        backward_relations=backward_relations,
-        max_recursion=max_recursion,
-        exclude_raw_fields=exclude_raw_fields,
-        sort_alphabetically=sort_alphabetically,
-        allow_cycles=allow_cycles
-    )
+    def finalize_meta(
+            self,
+            exclude: Tuple[str, ...] = (),
+            include: Tuple[str, ...] = (),
+            computed: Tuple[str, ...] = (),
+            allow_cycles: Optional[bool] = None,
+            sort_alphabetically: Optional[bool] = None,
+            model_config: Optional[ConfigDict] = None,
+    ) -> Self:
+        _sort_fields: bool = (
+            self.sort_alphabetically
+            if sort_alphabetically is None
+            else sort_alphabetically
+        )
+        _allow_cycles: bool = (
+            self.allow_cycles
+            if allow_cycles is None
+            else allow_cycles
+        )
 
+        include = tuple(include) + self.include
+        exclude = tuple(exclude) + self.exclude
+        computed = tuple(computed) + self.computed
 
-def finalize_meta(
-        pydantic_meta: MyPydanticMeta,
-        exclude: Tuple[str, ...] = (),
-        include: Tuple[str, ...] = (),
-        computed: Tuple[str, ...] = (),
-        allow_cycles: Optional[bool] = None,
-        sort_alphabetically: Optional[bool] = None,
-        model_config: Optional[ConfigDict] = None,
-) -> MyPydanticMeta:
-    _sort_fields: bool = (
-        pydantic_meta.sort_alphabetically
-        if sort_alphabetically is None
-        else sort_alphabetically
-    )
-    _allow_cycles: bool = (
-        pydantic_meta.allow_cycles
-        if allow_cycles is None
-        else allow_cycles
-    )
+        _model_config = ConfigDict()
+        if self.model_config:
+            _model_config.update(self.model_config)
+        if model_config:
+            _model_config.update(model_config)
 
-    include = tuple(include) + pydantic_meta.include
-    exclude = tuple(exclude) + pydantic_meta.exclude
-    computed = tuple(computed) + pydantic_meta.computed
-
-    _model_config = ConfigDict()
-    if pydantic_meta.model_config:
-        _model_config.update(pydantic_meta.model_config)
-    if model_config:
-        _model_config.update(model_config)
-
-    return MyPydanticMeta(
-        include=include,
-        exclude=exclude,
-        computed=computed,
-        backward_relations=pydantic_meta.backward_relations,
-        max_recursion=pydantic_meta.max_recursion,
-        exclude_raw_fields=pydantic_meta.exclude_raw_fields,
-        sort_alphabetically=_sort_fields,
-        allow_cycles=_allow_cycles,
-        model_config=_model_config
-    )
-
-
-class PydanticMeta:
-    """
-    The ``PydanticMeta`` class is used to configure metadata for generating the pydantic Model.
-
-    Usage:
-
-    .. code-block:: python3
-
-        class Foo(Model):
-            ...
-
-            class PydanticMeta:
-                exclude = ("foo", "baa")
-                computed = ("count_peanuts", )
-    """
-
-    #: If not empty, only fields this property contains will be in the pydantic model
-    include: Tuple[str, ...] = ()
-
-    #: Fields listed in this property will be excluded from pydantic model
-    exclude: Tuple[str, ...] = ("Meta",)
-
-    #: Computed fields can be listed here to use in pydantic model
-    computed: Tuple[str, ...] = ()
-
-    #: Use backward relations without annotations - not recommended, it can be huge data
-    #: without control
-    backward_relations: bool = True
-
-    #: Maximum recursion level allowed
-    max_recursion: int = 3
-
-    #: Allow cycles in recursion - This can result in HUGE data - Be careful!
-    #: Please use this with ``exclude``/``include`` and sane ``max_recursion``
-    allow_cycles: bool = False
-
-    #: If we should exclude raw fields (the ones have _id suffixes) of relations
-    exclude_raw_fields: bool = True
-
-    #: Sort fields alphabetically.
-    #: If not set (or ``False``) then leave fields in declaration order
-    sort_alphabetically: bool = False
-
-    #: Allows user to specify custom config for generated model
-    model_config: Optional[ConfigDict] = None
+        return PydanticMetaData(
+            include=include,
+            exclude=exclude,
+            computed=computed,
+            backward_relations=self.backward_relations,
+            max_recursion=self.max_recursion,
+            exclude_raw_fields=self.exclude_raw_fields,
+            sort_alphabetically=_sort_fields,
+            allow_cycles=_allow_cycles,
+            model_config=_model_config
+        )
 
 
 def _br_it(val: str) -> str:
@@ -276,7 +234,7 @@ FieldDescriptionT = TypeVar('FieldDescriptionT', bound=FieldDescriptionBase)
 
 
 class FieldMap(MutableMapping[str, Union[FieldDescriptionBase, ComputedFieldDescription]]):
-    def __init__(self, meta: MyPydanticMeta, pk_field_description: Optional[FieldDescriptionBase] = None):
+    def __init__(self, meta: PydanticMetaData, pk_field_description: Optional[FieldDescriptionBase] = None):
         self._field_map: Dict[str, Union[FieldDescriptionBase, ComputedFieldDescription]] = {}
         self.pk_raw_field = pk_field_description.name if pk_field_description is not None else ""
         if pk_field_description:
@@ -290,7 +248,7 @@ class FieldMap(MutableMapping[str, Union[FieldDescriptionBase, ComputedFieldDesc
     def __getitem__(self, __key):
         return self._field_map.__getitem__(__key)
 
-    def __len__(self):
+    def __len__(self):  # pragma: no-coverage
         return self._field_map.__len__()
 
     def __iter__(self):
@@ -307,7 +265,7 @@ class FieldMap(MutableMapping[str, Union[FieldDescriptionBase, ComputedFieldDesc
             k: self._field_map[k] for k in tuple(cls._meta.fields_map.keys()) + computed if k in self._field_map
         }
 
-    def field_map_update(self, field_descriptions: List[FieldDescriptionT], meta: MyPydanticMeta) -> None:
+    def field_map_update(self, field_descriptions: List[FieldDescriptionT], meta: PydanticMetaData) -> None:
         for field_description in field_descriptions:
             name = field_description.name
             # Include or exclude field
@@ -432,15 +390,14 @@ class PydanticModelCreator:
         if optional is None:
             optional = ()
 
-        old_meta = getattr(cls, "PydanticMeta", None)
-        if old_meta:
-            meta_from_class = MyPydanticMeta.from_pydantic_meta(old_meta)
-        else:
-            meta_from_class = cls.my_pydantic_meta
+        if meta := getattr(cls, "PydanticMeta", None):
+            meta_from_class = PydanticMetaData.from_pydantic_meta(meta)
+        else:  # default
+            meta_from_class = PydanticMetaData()
         if meta_override:
-            meta_from_class = construct_pydantic_meta(meta_from_class, meta_override)
-        self.meta = finalize_meta(
-            meta_from_class, exclude, include, computed, allow_cycles, sort_alphabetically, model_config
+            meta_from_class = meta_from_class.construct_pydantic_meta(meta_override)
+        self.meta = meta_from_class.finalize_meta(
+            exclude, include, computed, allow_cycles, sort_alphabetically, model_config
         )
 
         self._exclude_read_only: bool = exclude_readonly
@@ -565,7 +522,9 @@ class PydanticModelCreator:
         is_to_one_relation: bool = False
         comment = ""
         if isinstance(field_description, FieldDescriptionBase):
-            field_property, is_to_one_relation = self.process_normal_field_description(field_name, field_description, json_schema_extra, fconfig)
+            field_property, is_to_one_relation = self.process_normal_field_description(
+                field_name, field_description, json_schema_extra, fconfig
+            )
         elif isinstance(field_description, ComputedFieldDescription):
             field_property, is_to_one_relation = self.process_computed_field_description(field_description), False
             comment = _cleandoc(field_description.function)
@@ -581,7 +540,10 @@ class PydanticModelCreator:
                 fconfig["description"] = description
             ftype = self._properties[field_name]
             if not isinstance(ftype, PydanticDescriptorProxy) and isinstance(field_description, FieldDescriptionBase):
-                if field_name in self._optional or (field_description.default is not None and not callable(field_description.default)):
+                if (
+                        field_name in self._optional
+                        or (field_description.default is not None and not callable(field_description.default))
+                ):
                     self._properties[field_name] = (ftype, Field(default=field_description.default, **fconfig))
                 else:
                     if (
@@ -620,7 +582,11 @@ class PydanticModelCreator:
     def process_single_field_relation(
             self,
             field_name: str,
-            field_description: Union[ForeignKeyFieldInstanceDescription, OneToOneFieldInstanceDescription, BackwardOneToOneRelationDescription],
+            field_description: Union[
+                ForeignKeyFieldInstanceDescription,
+                OneToOneFieldInstanceDescription,
+                BackwardOneToOneRelationDescription
+            ],
             json_schema_extra: Dict[str, Any],
     ) -> Optional[Type[PydanticModel]]:
         model: Optional[Type[PydanticModel]] = self.get_submodel(field_description.python_type, field_name)
@@ -717,10 +683,10 @@ def pydantic_model_creator(
         cls: "Type[Model]",
         *,
         name=None,
-        exclude: Tuple[str, ...] = (),
-        include: Tuple[str, ...] = (),
-        computed: Tuple[str, ...] = (),
-        optional: Tuple[str, ...] = (),
+        exclude: Optional[Tuple[str, ...]] = None,
+        include: Optional[Tuple[str, ...]] = None,
+        computed: Optional[Tuple[str, ...]] = None,
+        optional: Optional[Tuple[str, ...]] = None,
         allow_cycles: Optional[bool] = None,
         sort_alphabetically: Optional[bool] = None,
         _stack: tuple = (),
