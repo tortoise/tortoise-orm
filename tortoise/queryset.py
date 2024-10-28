@@ -95,6 +95,7 @@ class AwaitableQuery(Generic[MODEL]):
         "capabilities",
         "_annotations",
         "_custom_filters",
+        "_q_objects",
     )
 
     def __init__(self, model: Type[MODEL]) -> None:
@@ -105,6 +106,7 @@ class AwaitableQuery(Generic[MODEL]):
         self.capabilities: Capabilities = model._meta.db.capabilities
         self._annotations: Dict[str, Expression] = {}
         self._custom_filters: Dict[str, FilterInfoDict] = {}
+        self._q_objects: List[Q] = []
 
     def _choose_db(self, for_write: bool = False) -> BaseDBAsyncClient:
         """
@@ -120,13 +122,7 @@ class AwaitableQuery(Generic[MODEL]):
             db = router.db_for_read(self.model)
         return db or self.model._meta.db
 
-    def resolve_filters(
-        self,
-        model: "Type[Model]",
-        q_objects: List[Q],
-        annotations: Dict[str, Any],
-        custom_filters: Dict[str, FilterInfoDict],
-    ) -> None:
+    def resolve_filters(self) -> None:
         """
         Builds the common filters for a QuerySet.
 
@@ -135,16 +131,16 @@ class AwaitableQuery(Generic[MODEL]):
         :param annotations: Extra annotations to add.
         :param custom_filters: Pre-resolved filters to be passed through.
         """
-        has_aggregate = self._resolve_annotate(annotations, custom_filters)
+        has_aggregate = self._resolve_annotate(self._annotations, self._custom_filters)
 
         modifier = QueryModifier()
-        for node in q_objects:
+        for node in self._q_objects:
             modifier &= node.resolve(
                 ResolveContext(
-                    model=model,
-                    table=model._meta.basetable,
-                    annotations=annotations,
-                    custom_filters=custom_filters,
+                    model=self.model,
+                    table=self.model._meta.basetable,
+                    annotations=self._annotations,
+                    custom_filters=self._custom_filters,
                 )
             )
 
@@ -313,7 +309,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_fields_for_select",
         "_filter_kwargs",
         "_orderings",
-        "_q_objects",
         "_distinct",
         "_having",
         "_group_bys",
@@ -338,7 +333,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._offset: Optional[int] = None
         self._filter_kwargs: Dict[str, Any] = {}
         self._orderings: List[Tuple[str, Any]] = []
-        self._q_objects: List[Q] = []
         self._distinct: bool = False
         self._having: Dict[str, Any] = {}
         self._fields_for_select: Tuple[str, ...] = ()
@@ -1031,12 +1025,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self.resolve_ordering(
             self.model, self.model._meta.basetable, self._orderings, self._annotations
         )
-        self.resolve_filters(
-            model=self.model,
-            q_objects=self._q_objects,
-            annotations=self._annotations,
-            custom_filters=self._custom_filters,
-        )
+        self.resolve_filters()
         if self._limit is not None:
             self.query._limit = self._limit
         if self._offset:
@@ -1098,11 +1087,8 @@ class QuerySet(AwaitableQuery[MODEL]):
 class UpdateQuery(AwaitableQuery):
     __slots__ = (
         "update_kwargs",
-        "q_objects",
-        "annotations",
-        "custom_filters",
-        "orderings",
-        "limit",
+        "_orderings",
+        "_limit",
         "values",
     )
 
@@ -1119,27 +1105,22 @@ class UpdateQuery(AwaitableQuery):
     ) -> None:
         super().__init__(model)
         self.update_kwargs = update_kwargs
-        self.q_objects = q_objects
-        self.annotations = annotations
-        self.custom_filters = custom_filters
+        self._q_objects = q_objects
+        self._annotations = annotations
+        self._custom_filters = custom_filters
         self._db = db
-        self.limit = limit
-        self.orderings = orderings
+        self._limit = limit
+        self._orderings = orderings
         self.values: List[Any] = []
 
     def _make_query(self) -> None:
         table = self.model._meta.basetable
         self.query = self._db.query_class.update(table)
-        if self.capabilities.support_update_limit_order_by and self.limit:
-            self.query._limit = self.limit
-            self.resolve_ordering(self.model, table, self.orderings, self.annotations)
+        if self.capabilities.support_update_limit_order_by and self._limit:
+            self.query._limit = self._limit
+            self.resolve_ordering(self.model, table, self._orderings, self._annotations)
 
-        self.resolve_filters(
-            model=self.model,
-            q_objects=self.q_objects,
-            annotations=self.annotations,
-            custom_filters=self.custom_filters,
-        )
+        self.resolve_filters()
         # Need to get executor to get correct column_map
         executor = self._db.executor_class(model=self.model, db=self._db)
         count = 0
@@ -1168,8 +1149,8 @@ class UpdateQuery(AwaitableQuery):
                         ResolveContext(
                             model=self.model,
                             table=table,
-                            annotations=self.annotations,
-                            custom_filters=self.custom_filters,
+                            annotations=self._annotations,
+                            custom_filters=self._custom_filters,
                         )
                     )["field"]
                 else:
@@ -1193,11 +1174,10 @@ class UpdateQuery(AwaitableQuery):
 
 class DeleteQuery(AwaitableQuery):
     __slots__ = (
-        "q_objects",
-        "annotations",
-        "custom_filters",
-        "orderings",
-        "limit",
+        "_annotations",
+        "_custom_filters",
+        "_orderings",
+        "_limit",
     )
 
     def __init__(
@@ -1211,29 +1191,24 @@ class DeleteQuery(AwaitableQuery):
         orderings: List[Tuple[str, str]],
     ) -> None:
         super().__init__(model)
-        self.q_objects = q_objects
-        self.annotations = annotations
-        self.custom_filters = custom_filters
+        self._q_objects = q_objects
+        self._annotations = annotations
+        self._custom_filters = custom_filters
         self._db = db
-        self.limit = limit
-        self.orderings = orderings
+        self._limit = limit
+        self._orderings = orderings
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
-        if self.capabilities.support_update_limit_order_by and self.limit:
-            self.query._limit = self.limit
+        if self.capabilities.support_update_limit_order_by and self._limit:
+            self.query._limit = self._limit
             self.resolve_ordering(
                 model=self.model,
                 table=self.model._meta.basetable,
-                orderings=self.orderings,
-                annotations=self.annotations,
+                orderings=self._orderings,
+                annotations=self._annotations,
             )
-        self.resolve_filters(
-            model=self.model,
-            q_objects=self.q_objects,
-            annotations=self.annotations,
-            custom_filters=self.custom_filters,
-        )
+        self.resolve_filters()
         self.query._delete_from = True
 
     def __await__(self) -> Generator[Any, None, int]:
@@ -1248,11 +1223,8 @@ class DeleteQuery(AwaitableQuery):
 
 class ExistsQuery(AwaitableQuery):
     __slots__ = (
-        "q_objects",
-        "annotations",
-        "custom_filters",
-        "force_indexes",
-        "use_indexes",
+        "_force_indexes",
+        "_use_indexes",
     )
 
     def __init__(
@@ -1266,30 +1238,25 @@ class ExistsQuery(AwaitableQuery):
         use_indexes: Set[str],
     ) -> None:
         super().__init__(model)
-        self.q_objects = q_objects
-        self.annotations = annotations
-        self.custom_filters = custom_filters
+        self._q_objects = q_objects
         self._db = db
-        self.force_indexes = force_indexes
-        self.use_indexes = use_indexes
+        self._annotations = annotations
+        self._custom_filters = custom_filters
+        self._force_indexes = force_indexes
+        self._use_indexes = use_indexes
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
-        self.resolve_filters(
-            model=self.model,
-            q_objects=self.q_objects,
-            annotations=self.annotations,
-            custom_filters=self.custom_filters,
-        )
+        self.resolve_filters()
         self.query._limit = 1
         self.query._select_other(ValueWrapper(1))
 
-        if self.force_indexes:
+        if self._force_indexes:
             self.query._force_indexes = []
-            self.query = self.query.force_index(*self.force_indexes)
-        if self.use_indexes:
+            self.query = self.query.force_index(*self._force_indexes)
+        if self._use_indexes:
             self.query._use_indexes = []
-            self.query = self.query.use_index(*self.use_indexes)
+            self.query = self.query.use_index(*self._use_indexes)
 
     def __await__(self) -> Generator[Any, None, bool]:
         if self._db is None:
@@ -1304,13 +1271,10 @@ class ExistsQuery(AwaitableQuery):
 
 class CountQuery(AwaitableQuery):
     __slots__ = (
-        "q_objects",
-        "annotations",
-        "custom_filters",
-        "limit",
-        "offset",
-        "force_indexes",
-        "use_indexes",
+        "_limit",
+        "_offset",
+        "_force_indexes",
+        "_use_indexes",
     )
 
     def __init__(
@@ -1326,34 +1290,32 @@ class CountQuery(AwaitableQuery):
         use_indexes: Set[str],
     ) -> None:
         super().__init__(model)
-        self.q_objects = q_objects
-        self.annotations = annotations
-        self.custom_filters = custom_filters
-        self.limit = limit
-        self.offset = offset or 0
+        self._q_objects = q_objects
+        self._annotations = annotations
+        self._custom_filters = custom_filters
+        self._limit = limit
+        self._offset = offset or 0
         self._db = db
-        self.force_indexes = force_indexes
-        self.use_indexes = use_indexes
+        self._force_indexes = force_indexes
+        self._use_indexes = use_indexes
 
     def _make_query(self) -> None:
         self.query = copy(self.model._meta.basequery)
-        self.resolve_filters(
-            model=self.model,
-            q_objects=self.q_objects,
-            annotations=self.annotations,
-            custom_filters=self.custom_filters,
-        )
+        self.resolve_filters()
         count_term = Count("*")
         if self.query._groupbys:
             count_term = count_term.over()
+
+        # remove annotations
+        self.query._selects = []
         self.query._select_other(count_term)
 
-        if self.force_indexes:
+        if self._force_indexes:
             self.query._force_indexes = []
-            self.query = self.query.force_index(*self.force_indexes)
-        if self.use_indexes:
+            self.query = self.query.force_index(*self._force_indexes)
+        if self._use_indexes:
             self.query._use_indexes = []
-            self.query = self.query.use_index(*self.use_indexes)
+            self.query = self.query.use_index(*self._use_indexes)
 
     def __await__(self) -> Generator[Any, None, int]:
         if self._db is None:
@@ -1365,9 +1327,9 @@ class CountQuery(AwaitableQuery):
         _, result = await self._db.execute_query(str(self.query))
         if not result:
             return 0
-        count = list(dict(result[0]).values())[0] - self.offset
-        if self.limit and count > self.limit:
-            return self.limit
+        count = list(dict(result[0]).values())[0] - self._offset
+        if self._limit and count > self._limit:
+            return self._limit
         return count
 
 
@@ -1376,7 +1338,7 @@ class FieldSelectQuery(AwaitableQuery):
 
     def __init__(self, model: Type[MODEL], annotations: Dict[str, Any]) -> None:
         super().__init__(model)
-        self.annotations = annotations
+        self._annotations = annotations
 
     def _join_table_with_forwarded_fields(
         self, model: Type[MODEL], table: Table, field: str, forwarded_fields: str
@@ -1410,8 +1372,8 @@ class FieldSelectQuery(AwaitableQuery):
     def add_field_to_select_query(self, field: str, return_as: str) -> None:
         table = self.model._meta.basetable
 
-        if field in self.annotations:
-            self._annotations[return_as] = self.annotations[field]
+        if field in self._annotations:
+            self._annotations[return_as] = self._annotations[field]
             return
 
         if field in self.model._meta.fields_db_projection:
@@ -1446,8 +1408,8 @@ class FieldSelectQuery(AwaitableQuery):
         if field in (x[1] for x in model._meta.db_native_fields):
             return lambda x: x
 
-        if field in self.annotations:
-            annotation = self.annotations[field]
+        if field in self._annotations:
+            annotation = self._annotations[field]
             field_object = getattr(annotation, "field_object", None)
             if field_object:
                 return field_object.to_python_value
@@ -1483,21 +1445,18 @@ class FieldSelectQuery(AwaitableQuery):
 
 class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
     __slots__ = (
-        "flat",
         "fields",
-        "limit",
-        "offset",
-        "distinct",
-        "orderings",
-        "annotations",
-        "custom_filters",
-        "q_objects",
-        "single",
-        "raise_does_not_exist",
+        "_limit",
+        "_offset",
+        "_distinct",
+        "_orderings",
+        "_single",
+        "_raise_does_not_exist",
         "fields_for_select_list",
-        "group_bys",
-        "force_indexes",
-        "use_indexes",
+        "flat",
+        "_group_bys",
+        "_force_indexes",
+        "_use_indexes",
     )
 
     def __init__(
@@ -1525,20 +1484,20 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
 
         fields_for_select = {str(i): field for i, field in enumerate(fields_for_select_list)}
         self.fields = fields_for_select
-        self.limit = limit
-        self.offset = offset
-        self.distinct = distinct
-        self.orderings = orderings
-        self.custom_filters = custom_filters
-        self.q_objects = q_objects
-        self.single = single
-        self.raise_does_not_exist = raise_does_not_exist
+        self._limit = limit
+        self._offset = offset
+        self._distinct = distinct
+        self._orderings = orderings
+        self._custom_filters = custom_filters
+        self._q_objects = q_objects
+        self._single = single
+        self._raise_does_not_exist = raise_does_not_exist
         self.fields_for_select_list = fields_for_select_list
         self.flat = flat
         self._db = db
-        self.group_bys = group_bys
-        self.force_indexes = force_indexes
-        self.use_indexes = use_indexes
+        self._group_bys = group_bys
+        self._force_indexes = force_indexes
+        self._use_indexes = use_indexes
 
     def _make_query(self) -> None:
         self._joined_tables = []
@@ -1550,30 +1509,25 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         self.resolve_ordering(
             model=self.model,
             table=self.model._meta.basetable,
-            orderings=self.orderings,
-            annotations=self.annotations,
+            orderings=self._orderings,
+            annotations=self._annotations,
         )
-        self.resolve_filters(
-            model=self.model,
-            q_objects=self.q_objects,
-            annotations=self.annotations,
-            custom_filters=self.custom_filters,
-        )
-        if self.limit:
-            self.query._limit = self.limit
-        if self.offset:
-            self.query._offset = self.offset
-        if self.distinct:
+        self.resolve_filters()
+        if self._limit:
+            self.query._limit = self._limit
+        if self._offset:
+            self.query._offset = self._offset
+        if self._distinct:
             self.query._distinct = True
-        if self.group_bys:
-            self.query._groupbys = self._resolve_group_bys(*self.group_bys)
+        if self._group_bys:
+            self.query._groupbys = self._resolve_group_bys(*self._group_bys)
 
-        if self.force_indexes:
+        if self._force_indexes:
             self.query._force_indexes = []
-            self.query = self.query.force_index(*self.force_indexes)
-        if self.use_indexes:
+            self.query = self.query.force_index(*self._force_indexes)
+        if self._use_indexes:
             self.query._use_indexes = []
-            self.query = self.query.use_index(*self.use_indexes)
+            self.query = self.query.use_index(*self._use_indexes)
 
     @overload
     def __await__(
@@ -1609,11 +1563,11 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
             listmap = lambda entry: tuple(func(entry[column]) for column, func in columns)  # noqa
             lst_values = list(map(listmap, result))
 
-        if self.single:
+        if self._single:
             if len(lst_values) == 1:
                 return lst_values[0]
             if not lst_values:
-                if self.raise_does_not_exist:
+                if self._raise_does_not_exist:
                     raise DoesNotExist(self.model)
                 return None  # type: ignore
             raise MultipleObjectsReturned(self.model)
@@ -1623,18 +1577,15 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
 class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
     __slots__ = (
         "fields_for_select",
-        "limit",
-        "offset",
-        "distinct",
-        "orderings",
-        "annotations",
-        "custom_filters",
-        "q_objects",
-        "single",
-        "raise_does_not_exist",
-        "group_bys",
-        "force_indexes",
-        "use_indexes",
+        "_limit",
+        "_offset",
+        "_distinct",
+        "_orderings",
+        "_single",
+        "_raise_does_not_exist",
+        "_group_bys",
+        "_force_indexes",
+        "_use_indexes",
     )
 
     def __init__(
@@ -1657,18 +1608,18 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
     ) -> None:
         super().__init__(model, annotations)
         self.fields_for_select = fields_for_select
-        self.limit = limit
-        self.offset = offset
-        self.distinct = distinct
-        self.orderings = orderings
-        self.custom_filters = custom_filters
-        self.q_objects = q_objects
-        self.single = single
-        self.raise_does_not_exist = raise_does_not_exist
+        self._limit = limit
+        self._offset = offset
+        self._distinct = distinct
+        self._orderings = orderings
+        self._custom_filters = custom_filters
+        self._q_objects = q_objects
+        self._single = single
+        self._raise_does_not_exist = raise_does_not_exist
         self._db = db
-        self.group_bys = group_bys
-        self.force_indexes = force_indexes
-        self.use_indexes = use_indexes
+        self._group_bys = group_bys
+        self._force_indexes = force_indexes
+        self._use_indexes = use_indexes
 
     def _make_query(self) -> None:
         self._joined_tables = []
@@ -1680,30 +1631,31 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
         self.resolve_ordering(
             model=self.model,
             table=self.model._meta.basetable,
-            orderings=self.orderings,
-            annotations=self.annotations,
+            orderings=self._orderings,
+            annotations=self._annotations,
         )
-        self.resolve_filters(
-            model=self.model,
-            q_objects=self.q_objects,
-            annotations=self.annotations,
-            custom_filters=self.custom_filters,
-        )
-        if self.limit:
-            self.query._limit = self.limit
-        if self.offset:
-            self.query._offset = self.offset
-        if self.distinct:
-            self.query._distinct = True
-        if self.group_bys:
-            self.query._groupbys = self._resolve_group_bys(*self.group_bys)
+        self.resolve_filters()
 
-        if self.force_indexes:
+        # remove annotations that are not in fields_for_select
+        self.query._selects = [
+            select for select in self.query._selects if select.alias in self.fields_for_select
+        ]
+
+        if self._limit:
+            self.query._limit = self._limit
+        if self._offset:
+            self.query._offset = self._offset
+        if self._distinct:
+            self.query._distinct = True
+        if self._group_bys:
+            self.query._groupbys = self._resolve_group_bys(*self._group_bys)
+
+        if self._force_indexes:
             self.query._force_indexes = []
-            self.query = self.query.force_index(*self.force_indexes)
-        if self.use_indexes:
+            self.query = self.query.force_index(*self._force_indexes)
+        if self._use_indexes:
             self.query._use_indexes = []
-            self.query = self.query.use_index(*self.use_indexes)
+            self.query = self.query.use_index(*self._use_indexes)
 
     @overload
     def __await__(
@@ -1743,11 +1695,11 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
                 for col, func in columns:
                     row[col] = func(row[col])
 
-        if self.single:
+        if self._single:
             if len(result) == 1:
                 return result[0]
             if not result:
-                if self.raise_does_not_exist:
+                if self._raise_does_not_exist:
                     raise DoesNotExist(self.model)
                 return None  # type: ignore
             raise MultipleObjectsReturned(self.model)
@@ -1813,21 +1765,16 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
     def _make_query(self) -> None:
         table = self.model._meta.basetable
         self.query = self._db.query_class.update(table)
-        if self.capabilities.support_update_limit_order_by and self.limit:
-            self.query._limit = self.limit
+        if self.capabilities.support_update_limit_order_by and self._limit:
+            self.query._limit = self._limit
             self.resolve_ordering(
                 model=self.model,
                 table=table,
-                orderings=self.orderings,
-                annotations=self.annotations,
+                orderings=self._orderings,
+                annotations=self._annotations,
             )
 
-        self.resolve_filters(
-            model=self.model,
-            q_objects=self.q_objects,
-            annotations=self.annotations,
-            custom_filters=self.custom_filters,
-        )
+        self.resolve_filters()
         executor = self._db.executor_class(model=self.model, db=self._db)
         pk_attr = self.model._meta.pk_attr
         source_pk_attr = self.model._meta.fields_map[pk_attr].source_field or pk_attr
