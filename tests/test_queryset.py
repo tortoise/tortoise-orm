@@ -759,6 +759,7 @@ class TestQueryReuse(test.TestCase):
         tournaments = await base_query.order_by("-name")
         self.assertEqual(tournaments, [b, a])
 
+    @test.requireCapability(dialect=NotEQ("mssql"))
     async def test_values_with_annotations(self):
         await Tournament.create(name="Championship")
         await Tournament.create(name="Super Bowl")
