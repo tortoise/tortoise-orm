@@ -696,6 +696,37 @@ def pydantic_model_creator(
         validators: Optional[Dict[str, Any]] = None,
         module: str = __name__,
 ) -> Type[PydanticModel]:
+    """
+    Function to build `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ off Tortoise Model.
+
+    :param cls: The Tortoise Model
+    :param name: Specify a custom name explicitly, instead of a generated name.
+    :param exclude: Extra fields to exclude from the provided model.
+    :param include: Extra fields to include from the provided model.
+    :param computed: Extra computed fields to include from the provided model.
+    :param optional: Extra optional fields for the provided model.
+    :param allow_cycles: Do we allow any cycles in the generated model?
+        This is only useful for recursive/self-referential models.
+
+        A value of ``False`` (the default) will prevent any and all backtracking.
+    :param sort_alphabetically: Sort the parameters alphabetically instead of Field-definition order.
+
+        The default order would be:
+
+            * Field definition order +
+            * order of reverse relations (as discovered) +
+            * order of computed functions (as provided).
+    :param exclude_readonly: Build a subset model that excludes any readonly fields
+    :param meta_override: A PydanticMeta class to override model's values.
+    :param model_config: A custom config to use as pydantic config.
+    :param validators: A dictionary of methods that validate fields.
+    :param module: The name of the module that the model belongs to.
+
+        Note: Created pydantic model uses config_class parameter and PydanticMeta's
+            config_class as its Config class's bases(Only if provided!), but it
+            ignores ``fields`` config. pydantic_model_creator will generate fields by
+            include/exclude/computed parameters automatically.
+    """
     pmc = PydanticModelCreator(
         cls=cls,
         name=name,
