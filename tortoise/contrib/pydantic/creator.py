@@ -417,8 +417,8 @@ class PydanticModelCreator:
 
         self._model_description: ModelDescription = describe_model_by_dataclass(cls)
 
-        self._field_map: FieldMap = self.initialize_field_map()
-        self.construct_field_map()
+        self._field_map: FieldMap = self._initialize_field_map()
+        self._construct_field_map()
 
         self._optional = optional
 
@@ -445,7 +445,7 @@ class PydanticModelCreator:
         )
         return self._fqname + postfix, self._cls.__name__
 
-    def initialize_pconfig(self) -> ConfigDict:
+    def _initialize_pconfig(self) -> ConfigDict:
         pconfig: ConfigDict = PydanticModel.model_config.copy()
         if self.meta.model_config:
             pconfig.update(self.meta.model_config)
@@ -455,12 +455,12 @@ class PydanticModelCreator:
             pconfig["extra"] = 'forbid'
         return pconfig
 
-    def initialize_field_map(self) -> FieldMap:
+    def _initialize_field_map(self) -> FieldMap:
         return FieldMap(self.meta) \
             if self._exclude_read_only \
             else FieldMap(self.meta, pk_field_description=self._model_description.pk_field)
 
-    def construct_field_map(self) -> None:
+    def _construct_field_map(self) -> None:
         self._field_map.field_map_update(field_descriptions=self._model_description.data_fields, meta=self.meta)
         if not self._exclude_read_only:
             for field_descriptions in (
@@ -483,7 +483,7 @@ class PydanticModelCreator:
 
     def create_pydantic_model(self) -> Type[PydanticModel]:
         for field_name, field_description in self._field_map.items():
-            self.process_field(field_name, field_description)
+            self._process_field(field_name, field_description)
 
         self._name, self._title = self.get_name()
         if self._as_submodel and self._stack:
@@ -492,7 +492,7 @@ class PydanticModelCreator:
         if self._name in _MODEL_INDEX:
             return _MODEL_INDEX[self._name]
 
-        self._pconfig = self.initialize_pconfig()
+        self._pconfig = self._initialize_pconfig()
         self._properties["model_config"] = self._pconfig
         model = create_model(
             self._name,
@@ -509,7 +509,7 @@ class PydanticModelCreator:
         _MODEL_INDEX[self._name] = model
         return model
 
-    def process_field(
+    def _process_field(
             self,
             field_name: str,
             field_description: Union[FieldDescriptionBase, ComputedFieldDescription],
@@ -522,11 +522,11 @@ class PydanticModelCreator:
         is_to_one_relation: bool = False
         comment = ""
         if isinstance(field_description, FieldDescriptionBase):
-            field_property, is_to_one_relation = self.process_normal_field_description(
+            field_property, is_to_one_relation = self._process_normal_field_description(
                 field_name, field_description, json_schema_extra, fconfig
             )
         elif isinstance(field_description, ComputedFieldDescription):
-            field_property, is_to_one_relation = self.process_computed_field_description(field_description), False
+            field_property, is_to_one_relation = self._process_computed_field_description(field_description), False
             comment = _cleandoc(field_description.function)
 
         if field_property:
@@ -557,7 +557,7 @@ class PydanticModelCreator:
                         fconfig["default_factory"] = lambda: None
                     self._properties[field_name] = (ftype, Field(**fconfig))
 
-    def process_normal_field_description(
+    def _process_normal_field_description(
             self,
             field_name: str,
             field_description: FieldDescriptionBase,
@@ -565,7 +565,7 @@ class PydanticModelCreator:
             fconfig: Dict[str, Any],
     ) -> Tuple[Optional[Any], bool]:
         if isinstance(field_description, (BackwardFKRelationDescription, ManyToManyFieldInstanceDescription)):
-            return self.process_many_field_relation(field_name, field_description), False
+            return self._process_many_field_relation(field_name, field_description), False
         elif isinstance(
                 field_description,
                 (
@@ -574,12 +574,12 @@ class PydanticModelCreator:
                         BackwardOneToOneRelationDescription
                 )
         ):
-            return self.process_single_field_relation(field_name, field_description, json_schema_extra), True
+            return self._process_single_field_relation(field_name, field_description, json_schema_extra), True
         elif field_description.field_type is JSONField:
-            return self.process_json_field_description(), False
-        return self.process_data_field_description(field_name, field_description, json_schema_extra, fconfig), False
+            return self._process_json_field_description(), False
+        return self._process_data_field_description(field_name, field_description, json_schema_extra, fconfig), False
 
-    def process_single_field_relation(
+    def _process_single_field_relation(
             self,
             field_name: str,
             field_description: Union[
@@ -589,7 +589,7 @@ class PydanticModelCreator:
             ],
             json_schema_extra: Dict[str, Any],
     ) -> Optional[Type[PydanticModel]]:
-        model: Optional[Type[PydanticModel]] = self.get_submodel(field_description.python_type, field_name)
+        model: Optional[Type[PydanticModel]] = self._get_submodel(field_description.python_type, field_name)
         if model:
             if field_description.nullable:
                 json_schema_extra["nullable"] = True
@@ -599,20 +599,20 @@ class PydanticModelCreator:
             return model
         return None
 
-    def process_many_field_relation(
+    def _process_many_field_relation(
             self,
             field_name: str,
             field_description: Union[BackwardFKRelationDescription, ManyToManyFieldInstanceDescription],
     ) -> Optional[Type[List[Type[PydanticModel]]]]:
-        model = self.get_submodel(field_description.python_type, field_name)
+        model = self._get_submodel(field_description.python_type, field_name)
         if model:
             return List[model]  # type: ignore
         return None
 
-    def process_json_field_description(self) -> Any:
+    def _process_json_field_description(self) -> Any:
         return Any
 
-    def process_data_field_description(
+    def _process_data_field_description(
             self,
             field_name: str,
             field_description: FieldDescriptionBase,
@@ -633,7 +633,7 @@ class PydanticModelCreator:
             return annotation or ptype
         return None
 
-    def process_computed_field_description(
+    def _process_computed_field_description(
             self,
             field_description: ComputedFieldDescription,
     ) -> Optional[Any]:
@@ -646,7 +646,7 @@ class PydanticModelCreator:
             return ret
         return None
 
-    def get_submodel(self, _model: Optional["Type[Model]"], field_name: str) -> Optional[Type[PydanticModel]]:
+    def _get_submodel(self, _model: Optional["Type[Model]"], field_name: str) -> Optional[Type[PydanticModel]]:
         """Get Pydantic model for the submodel"""
 
         if _model:
