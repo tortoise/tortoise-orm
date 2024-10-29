@@ -406,7 +406,6 @@ class TestPydantic(test.TestCase):
         )
 
     def test_address_schema(self):
-        # print(json.dumps(self.Address_Pydantic.model_json_schema(), indent=2))
         self.assertEqual(
             self.Address_Pydantic.model_json_schema(),
             {
@@ -903,7 +902,6 @@ class TestPydantic(test.TestCase):
 
     async def test_eventlist(self):
         eventlp = await self.Event_Pydantic_List.from_queryset(Event.all())
-        # print(eventlp.json(indent=4))
         eventldict = eventlp.model_dump()
 
         # Remove timestamps
@@ -962,7 +960,6 @@ class TestPydantic(test.TestCase):
 
     async def test_event(self):
         eventp = await self.Event_Pydantic.from_tortoise_orm(await Event.get(name="Test"))
-        # print(eventp.json(indent=4))
         eventdict = eventp.model_dump()
 
         # Remove timestamps
@@ -994,7 +991,6 @@ class TestPydantic(test.TestCase):
 
     async def test_address(self):
         addressp = await self.Address_Pydantic.from_tortoise_orm(await Address.get(street="Ocean"))
-        # print(addressp.json(indent=4))
         addressdict = addressp.model_dump()
 
         # Remove timestamps
@@ -1030,7 +1026,6 @@ class TestPydantic(test.TestCase):
         tournamentp = await self.Tournament_Pydantic.from_tortoise_orm(
             await Tournament.all().first()
         )
-        # print(tournamentp.json(indent=4))
         tournamentdict = tournamentp.model_dump()
 
         # Remove timestamps
@@ -1082,7 +1077,6 @@ class TestPydantic(test.TestCase):
 
     async def test_team(self):
         teamp = await self.Team_Pydantic.from_tortoise_orm(await Team.get(id=self.team1.id))
-        # print(teamp.json(indent=4))
         teamdict = teamp.model_dump()
 
         # Remove timestamps
@@ -1400,7 +1394,6 @@ class TestPydanticCycle(test.TestCase):
 
     async def test_serialisation(self):
         empp = await self.Employee_Pydantic.from_tortoise_orm(await Employee.get(name="Root"))
-        # print(empp.model_dump_json(indent=4))
         empdict = empp.model_dump()
 
         self.assertEqual(
