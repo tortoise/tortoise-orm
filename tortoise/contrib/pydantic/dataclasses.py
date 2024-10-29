@@ -1,6 +1,5 @@
 import dataclasses
-import inspect
-from typing import Type, Optional, Any, TYPE_CHECKING, Dict, Tuple, List
+from typing import Type, Optional, Any, TYPE_CHECKING, Dict, List
 
 from tortoise.fields import Field
 from tortoise.fields.relational import RelationalField, ForeignKeyFieldInstance, ManyToManyFieldInstance, \

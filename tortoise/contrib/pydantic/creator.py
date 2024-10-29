@@ -82,7 +82,7 @@ class PydanticMetaData:
             get_param_from_pydantic_meta("sort_alphabetically", default_meta.sort_alphabetically)
         )
         model_config = get_param_from_pydantic_meta("model_config", default_meta.model_config)
-        return PydanticMetaData(
+        pmd = cls(
             include=include,
             exclude=exclude,
             computed=computed,
@@ -93,11 +93,12 @@ class PydanticMetaData:
             sort_alphabetically=sort_alphabetically,
             model_config=model_config
         )
+        return pmd
 
     def construct_pydantic_meta(
             self,
             meta_override: Type
-    ) -> Self:
+    ) -> "PydanticMetaData":
         def get_param_from_meta_override(attr: str) -> Any:
             return getattr(meta_override, attr, getattr(self, attr))
 
@@ -113,7 +114,7 @@ class PydanticMetaData:
         sort_alphabetically: bool = bool(get_param_from_meta_override("sort_alphabetically"))
         allow_cycles: bool = bool(get_param_from_meta_override("allow_cycles"))
 
-        return PydanticMetaData(
+        pmd = PydanticMetaData(
             include=default_include,
             exclude=default_exclude,
             computed=default_computed,
@@ -124,6 +125,7 @@ class PydanticMetaData:
             sort_alphabetically=sort_alphabetically,
             allow_cycles=allow_cycles
         )
+        return pmd
 
     def finalize_meta(
             self,
@@ -133,7 +135,7 @@ class PydanticMetaData:
             allow_cycles: Optional[bool] = None,
             sort_alphabetically: Optional[bool] = None,
             model_config: Optional[ConfigDict] = None,
-    ) -> Self:
+    ) -> "PydanticMetaData":
         _sort_fields: bool = (
             self.sort_alphabetically
             if sort_alphabetically is None
