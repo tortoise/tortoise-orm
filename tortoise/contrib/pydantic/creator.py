@@ -689,7 +689,6 @@ def pydantic_model_creator(
         optional: Optional[Tuple[str, ...]] = None,
         allow_cycles: Optional[bool] = None,
         sort_alphabetically: Optional[bool] = None,
-        _stack: tuple = (),
         exclude_readonly: bool = False,
         meta_override: Optional[Type] = None,
         model_config: Optional[ConfigDict] = None,
