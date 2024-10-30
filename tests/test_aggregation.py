@@ -247,6 +247,17 @@ class TestAggregation(test.TestCase):
         res = await query.count()
         assert res == 2
 
+    async def test_where_and_having(self):
+        author = await Author.create(name="1")
+        await Book.create(name="First!", author=author, rating=4)
+        await Book.create(name="Second!", author=author, rating=3)
+        await Book.create(name="Third!", author=author, rating=3)
+
+        query = Book.exclude(name="First!").annotate(avg_rating=Avg("rating")).values("avg_rating")
+        result = await query
+        assert len(result) == 1
+        assert result[0]["avg_rating"] == 3
+
     async def test_count_without_matching(self) -> None:
         await Tournament.create(name="Test")
 
