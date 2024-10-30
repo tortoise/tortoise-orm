@@ -62,7 +62,7 @@ class PydanticMetaData:
     model_config: Optional[ConfigDict] = None
 
     @classmethod
-    def from_pydantic_meta(cls, old_pydantic_meta: Any):
+    def from_pydantic_meta(cls, old_pydantic_meta: Any) -> Self:
         default_meta = cls()
 
         def get_param_from_pydantic_meta(attr: str, default: Any) -> Any:
