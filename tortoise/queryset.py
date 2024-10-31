@@ -450,6 +450,38 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._orderings = new_ordering
         return queryset
 
+    def latest(self, field_name: str = "id") -> "QuerySetSingle[Optional[MODEL]]":
+        """
+        Returns the most recent object by ordering descending on the specified field.
+
+        :params field_name: The field name to order by.
+        """
+        queryset = self._clone()
+        if not (
+            field_name.split("__")[0] in self.model._meta.fields or field_name in self._annotations
+        ):
+            raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
+        queryset._orderings = [(field_name, Order.desc)]
+        queryset._limit = 1
+        queryset._single = True
+        return queryset  # type: ignore
+
+    def earliest(self, field_name: str = "id") -> "QuerySetSingle[Optional[MODEL]]":
+        """
+        Returns the earliest object by ordering ascending on the specified field.
+
+        :params field_name: The field name to order by.
+        """
+        queryset = self._clone()
+        if not (
+            field_name.split("__")[0] in self.model._meta.fields or field_name in self._annotations
+        ):
+            raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
+        queryset._orderings = [(field_name, Order.asc)]
+        queryset._limit = 1
+        queryset._single = True
+        return queryset  # type: ignore
+
     def limit(self, limit: int) -> "QuerySet[MODEL]":
         """
         Limits QuerySet to given length.
