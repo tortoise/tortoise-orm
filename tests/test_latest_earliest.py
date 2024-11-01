@@ -1,26 +1,5 @@
-from typing import Type
-
-from tests.testmodels import (
-    Event,
-    IntFields,
-    MinRelation,
-    Node,
-    Reporter,
-    Team,
-    Tournament,
-)
-from tortoise import connections
+from tests.testmodels import Event, Tournament
 from tortoise.contrib import test
-from tortoise.contrib.test.condition import NotEQ
-from tortoise.exceptions import (
-    DoesNotExist,
-    FieldError,
-    IntegrityError,
-    MultipleObjectsReturned,
-    NotExistOrMultiple,
-    ParamsError,
-)
-from tortoise.expressions import F, RawSQL, Subquery
 
 
 class TestLatestEarliest(test.TestCase):
