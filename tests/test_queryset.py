@@ -273,7 +273,6 @@ class TestQueryset(test.TestCase):
 
     async def test_latest(self):
         self.assertEqual((await IntFields.all().latest("intnum")).intnum, 97)
-        self.assertEqual((await IntFields.all().order_by("intnum").latest()).intnum, 97)
         self.assertEqual(
             (await IntFields.all().order_by("-intnum").first()).intnum,
             (await IntFields.all().latest("intnum")).intnum,
@@ -297,9 +296,14 @@ class TestQueryset(test.TestCase):
             None,
         )
 
+        with self.assertRaises(FieldError):
+            await IntFields.all().latest()
+
+        with self.assertRaises(FieldError):
+            await IntFields.all().latest("some_unkown_field")
+
     async def test_earliest(self):
         self.assertEqual((await IntFields.all().earliest("intnum")).intnum, 10)
-        self.assertEqual((await IntFields.all().order_by("intnum").earliest()).intnum, 10)
         self.assertEqual(
             (await IntFields.all().order_by("intnum").first()).intnum,
             (await IntFields.all().earliest("intnum")).intnum,
@@ -324,6 +328,12 @@ class TestQueryset(test.TestCase):
             await IntFields.all().filter(intnum__gte=400).earliest("intnum").values_list(),
             None,
         )
+
+        with self.assertRaises(FieldError):
+            await IntFields.all().earliest()
+
+        with self.assertRaises(FieldError):
+            await IntFields.all().earliest("some_unkown_field")
 
     async def test_get_or_none(self):
         self.assertEqual((await IntFields.all().get_or_none(intnum=40)).intnum, 40)
