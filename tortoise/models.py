@@ -1258,7 +1258,7 @@ class Model(metaclass=ModelMeta):
         return cls._meta.manager.get_queryset().filter(*args, **kwargs)
 
     @classmethod
-    def latest(cls, *orderings: str) -> QuerySet[Self]:
+    def latest(cls, *orderings: str) -> QuerySetSingle[Optional[Self]]:
         """
         Generates a QuerySet with the filter applied that returns the last record.
 
@@ -1267,7 +1267,7 @@ class Model(metaclass=ModelMeta):
         return cls._meta.manager.get_queryset().latest(*orderings)
 
     @classmethod
-    def earliest(cls, *orderings: str) -> QuerySet[Self]:
+    def earliest(cls, *orderings: str) -> QuerySetSingle[Optional[Self]]:
         """
         Generates a QuerySet with the filter applied that returns the first record.
 
