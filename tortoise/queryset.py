@@ -169,13 +169,16 @@ class AwaitableQuery(Generic[MODEL]):
         return joins[-1][0]
 
     @staticmethod
-    def _resolve_ordering_string(ordering: str) -> Tuple[str, Order]:
+    def _resolve_ordering_string(ordering: str, reverse: bool = False) -> Tuple[str, Order]:
         order_type = Order.asc
         if ordering[0] == "-":
             field_name = ordering[1:]
             order_type = Order.desc
         else:
             field_name = ordering
+
+        if reverse:
+            order_type = Order.desc if order_type == Order.asc else Order.asc
 
         return field_name, order_type
 
@@ -443,6 +446,60 @@ class QuerySet(AwaitableQuery[MODEL]):
             new_ordering.append((field_name, order_type))
         queryset._orderings = new_ordering
         return queryset
+
+    def latest(self, *orderings: str) -> "QuerySetSingle[Optional[MODEL]]":
+        """
+        Returns the most recent object by ordering descending on the providers fields.
+
+        :params orderings: Fields to order by.
+
+        :raises FieldError: If unknown or no fields has been provided.
+        """
+        if not orderings:
+            raise FieldError("No fields passed")
+
+        new_ordering = []
+        for ordering in orderings:
+            field_name, order_type = self._resolve_ordering_string(ordering, reverse=True)
+
+            if not (
+                field_name.split("__")[0] in self.model._meta.fields
+                or field_name in self._annotations
+            ):
+                raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
+            new_ordering.append((field_name, order_type))
+        queryset = self._clone()
+        queryset._orderings = new_ordering
+        queryset._limit = 1
+        queryset._single = True
+        return queryset  # type: ignore
+
+    def earliest(self, *orderings: str) -> "QuerySetSingle[Optional[MODEL]]":
+        """
+        Returns the earliest object by ordering ascending on the specified field.
+
+        :params orderings: Fields to order by.
+
+        :raises FieldError: If unknown or no fields has been provided.
+        """
+        if not orderings:
+            raise FieldError("No fields passed")
+
+        new_ordering = []
+        for ordering in orderings:
+            field_name, order_type = self._resolve_ordering_string(ordering)
+
+            if not (
+                field_name.split("__")[0] in self.model._meta.fields
+                or field_name in self._annotations
+            ):
+                raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
+            new_ordering.append((field_name, order_type))
+        queryset = self._clone()
+        queryset._orderings = new_ordering
+        queryset._limit = 1
+        queryset._single = True
+        return queryset  # type: ignore
 
     def limit(self, limit: int) -> "QuerySet[MODEL]":
         """

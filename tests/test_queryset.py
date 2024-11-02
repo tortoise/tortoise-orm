@@ -272,6 +272,70 @@ class TestQueryset(test.TestCase):
             None,
         )
 
+    async def test_latest(self):
+        self.assertEqual((await IntFields.all().latest("intnum")).intnum, 97)
+        self.assertEqual(
+            (await IntFields.all().order_by("-intnum").first()).intnum,
+            (await IntFields.all().latest("intnum")).intnum,
+        )
+        self.assertEqual((await IntFields.all().filter(intnum__gte=40).latest("intnum")).intnum, 97)
+        self.assertEqual(
+            (await IntFields.all().filter(intnum__gte=40).latest("intnum").values())["intnum"],
+            97,
+        )
+        self.assertEqual(
+            (await IntFields.all().filter(intnum__gte=40).latest("intnum").values_list())[1],
+            97,
+        )
+
+        self.assertEqual(await IntFields.all().filter(intnum__gte=400).latest("intnum"), None)
+        self.assertEqual(
+            await IntFields.all().filter(intnum__gte=400).latest("intnum").values(), None
+        )
+        self.assertEqual(
+            await IntFields.all().filter(intnum__gte=400).latest("intnum").values_list(),
+            None,
+        )
+
+        with self.assertRaises(FieldError):
+            await IntFields.all().latest()
+
+        with self.assertRaises(FieldError):
+            await IntFields.all().latest("some_unkown_field")
+
+    async def test_earliest(self):
+        self.assertEqual((await IntFields.all().earliest("intnum")).intnum, 10)
+        self.assertEqual(
+            (await IntFields.all().order_by("intnum").first()).intnum,
+            (await IntFields.all().earliest("intnum")).intnum,
+        )
+        self.assertEqual(
+            (await IntFields.all().filter(intnum__gte=40).earliest("intnum")).intnum, 40
+        )
+        self.assertEqual(
+            (await IntFields.all().filter(intnum__gte=40).earliest("intnum").values())["intnum"],
+            40,
+        )
+        self.assertEqual(
+            (await IntFields.all().filter(intnum__gte=40).earliest("intnum").values_list())[1],
+            40,
+        )
+
+        self.assertEqual(await IntFields.all().filter(intnum__gte=400).earliest("intnum"), None)
+        self.assertEqual(
+            await IntFields.all().filter(intnum__gte=400).earliest("intnum").values(), None
+        )
+        self.assertEqual(
+            await IntFields.all().filter(intnum__gte=400).earliest("intnum").values_list(),
+            None,
+        )
+
+        with self.assertRaises(FieldError):
+            await IntFields.all().earliest()
+
+        with self.assertRaises(FieldError):
+            await IntFields.all().earliest("some_unkown_field")
+
     async def test_get_or_none(self):
         self.assertEqual((await IntFields.all().get_or_none(intnum=40)).intnum, 40)
         self.assertEqual((await IntFields.all().get_or_none(intnum=40).values())["intnum"], 40)

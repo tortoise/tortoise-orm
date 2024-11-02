@@ -1258,6 +1258,24 @@ class Model(metaclass=ModelMeta):
         return cls._meta.manager.get_queryset().filter(*args, **kwargs)
 
     @classmethod
+    def latest(cls, *orderings: str) -> QuerySetSingle[Optional[Self]]:
+        """
+        Generates a QuerySet with the filter applied that returns the last record.
+
+        :params orderings: Fields to order by.
+        """
+        return cls._meta.manager.get_queryset().latest(*orderings)
+
+    @classmethod
+    def earliest(cls, *orderings: str) -> QuerySetSingle[Optional[Self]]:
+        """
+        Generates a QuerySet with the filter applied that returns the first record.
+
+        :params orderings: Fields to order by.
+        """
+        return cls._meta.manager.get_queryset().earliest(*orderings)
+
+    @classmethod
     def exclude(cls, *args: Q, **kwargs: Any) -> QuerySet[Self]:
         """
         Generates a QuerySet with the exclude applied.
