@@ -60,6 +60,7 @@ Contributors
 * Abdeldjalil Hezouat ``@Abdeldjalil-H``
 * Andrea Magistà ``@vlakius``
 * Daniel Szucs ``@Quasar6X``
+* Rui Catarino ``@ruitcatarino``
 
 Special Thanks
 ==============
