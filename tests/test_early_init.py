@@ -167,7 +167,7 @@ class TestBasic(test.TestCase):
             Event_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Tournament_pf77nd_leaf": {
+                    "Tournament_z7k3ew_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -211,7 +211,7 @@ class TestBasic(test.TestCase):
                         "type": "string",
                     },
                     "tournament": {
-                        "anyOf": [{"$ref": "#/$defs/Tournament_pf77nd_leaf"}, {"type": "null"}],
+                        "anyOf": [{"$ref": "#/$defs/Tournament_z7k3ew_leaf"}, {"type": "null"}],
                         "nullable": True,
                         "title": "Tournament",
                     },

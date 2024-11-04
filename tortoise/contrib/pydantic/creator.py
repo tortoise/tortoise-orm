@@ -1,15 +1,8 @@
 import dataclasses
 import inspect
-import sys
 from base64 import b32encode
 from typing import MutableMapping
 
-if sys.version_info >= (3, 11):
-    from typing import Self
-else:
-    from typing_extensions import Self
-
-from dataclasses import dataclass, field
 from hashlib import sha3_224
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Callable, Union, TypeVar
 
@@ -21,153 +14,22 @@ from tortoise.contrib.pydantic.utils import get_annotations
 from tortoise.fields import IntField, JSONField, TextField
 from tortoise.contrib.pydantic.dataclasses import FieldDescriptionBase, ForeignKeyFieldInstanceDescription, \
     OneToOneFieldInstanceDescription, BackwardOneToOneRelationDescription, BackwardFKRelationDescription, \
-    ManyToManyFieldInstanceDescription, describe_model_by_dataclass, ModelDescription
+    ManyToManyFieldInstanceDescription, ModelDescription, PydanticMetaData
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 _MODEL_INDEX: Dict[str, Type[PydanticModel]] = {}
-
-
-@dataclass
-class PydanticMetaData:
-    #: If not empty, only fields this property contains will be in the pydantic model
-    include: Tuple[str, ...] = ()
-
-    #: Fields listed in this property will be excluded from pydantic model
-    exclude: Tuple[str, ...] = field(default_factory=lambda: ("Meta",))
-
-    #: Computed fields can be listed here to use in pydantic model
-    computed: Tuple[str, ...] = field(default_factory=tuple)
-
-    #: Use backward relations without annotations - not recommended, it can be huge data
-    #: without control
-    backward_relations: bool = True
-
-    #: Maximum recursion level allowed
-    max_recursion: int = 3
-
-    #: Allow cycles in recursion - This can result in HUGE data - Be careful!
-    #: Please use this with ``exclude``/``include`` and sane ``max_recursion``
-    allow_cycles: bool = False
-
-    #: If we should exclude raw fields (the ones have _id suffixes) of relations
-    exclude_raw_fields: bool = True
-
-    #: Sort fields alphabetically.
-    #: If not set (or ``False``) then leave fields in declaration order
-    sort_alphabetically: bool = False
-
-    #: Allows user to specify custom config for generated model
-    model_config: Optional[ConfigDict] = None
-
-    @classmethod
-    def from_pydantic_meta(cls, old_pydantic_meta: Any) -> Self:
-        default_meta = cls()
-
-        def get_param_from_pydantic_meta(attr: str, default: Any) -> Any:
-            return getattr(old_pydantic_meta, attr, default)
-        include = tuple(get_param_from_pydantic_meta("include", default_meta.include))
-        exclude = tuple(get_param_from_pydantic_meta("exclude", default_meta.exclude))
-        computed = tuple(get_param_from_pydantic_meta("computed", default_meta.computed))
-        backward_relations = bool(
-            get_param_from_pydantic_meta("backward_relations_raw", default_meta.backward_relations)
-        )
-        max_recursion = int(get_param_from_pydantic_meta("max_recursion", default_meta.max_recursion))
-        allow_cycles = bool(get_param_from_pydantic_meta("allow_cycles", default_meta.allow_cycles))
-        exclude_raw_fields = bool(
-            get_param_from_pydantic_meta("exclude_raw_fields", default_meta.exclude_raw_fields)
-        )
-        sort_alphabetically = bool(
-            get_param_from_pydantic_meta("sort_alphabetically", default_meta.sort_alphabetically)
-        )
-        model_config = get_param_from_pydantic_meta("model_config", default_meta.model_config)
-        pmd = cls(
-            include=include,
-            exclude=exclude,
-            computed=computed,
-            backward_relations=backward_relations,
-            max_recursion=max_recursion,
-            allow_cycles=allow_cycles,
-            exclude_raw_fields=exclude_raw_fields,
-            sort_alphabetically=sort_alphabetically,
-            model_config=model_config
-        )
-        return pmd
-
-    def construct_pydantic_meta(
-            self,
-            meta_override: Type
-    ) -> "PydanticMetaData":
-        def get_param_from_meta_override(attr: str) -> Any:
-            return getattr(meta_override, attr, getattr(self, attr))
-
-        default_include: Tuple[str, ...] = tuple(get_param_from_meta_override("include"))
-        default_exclude: Tuple[str, ...] = tuple(get_param_from_meta_override("exclude"))
-        default_computed: Tuple[str, ...] = tuple(get_param_from_meta_override("computed"))
-        default_config: Optional[ConfigDict] = self.model_config
-
-        backward_relations: bool = bool(get_param_from_meta_override("backward_relations"))
-
-        max_recursion: int = int(get_param_from_meta_override("max_recursion"))
-        exclude_raw_fields: bool = bool(get_param_from_meta_override("exclude_raw_fields"))
-        sort_alphabetically: bool = bool(get_param_from_meta_override("sort_alphabetically"))
-        allow_cycles: bool = bool(get_param_from_meta_override("allow_cycles"))
-
-        pmd = PydanticMetaData(
-            include=default_include,
-            exclude=default_exclude,
-            computed=default_computed,
-            model_config=default_config,
-            backward_relations=backward_relations,
-            max_recursion=max_recursion,
-            exclude_raw_fields=exclude_raw_fields,
-            sort_alphabetically=sort_alphabetically,
-            allow_cycles=allow_cycles
-        )
-        return pmd
-
-    def finalize_meta(
-            self,
-            exclude: Tuple[str, ...] = (),
-            include: Tuple[str, ...] = (),
-            computed: Tuple[str, ...] = (),
-            allow_cycles: Optional[bool] = None,
-            sort_alphabetically: Optional[bool] = None,
-            model_config: Optional[ConfigDict] = None,
-    ) -> "PydanticMetaData":
-        _sort_fields: bool = (
-            self.sort_alphabetically
-            if sort_alphabetically is None
-            else sort_alphabetically
-        )
-        _allow_cycles: bool = (
-            self.allow_cycles
-            if allow_cycles is None
-            else allow_cycles
-        )
-
-        include = tuple(include) + self.include
-        exclude = tuple(exclude) + self.exclude
-        computed = tuple(computed) + self.computed
-
-        _model_config = ConfigDict()
-        if self.model_config:
-            _model_config.update(self.model_config)
-        if model_config:
-            _model_config.update(model_config)
-
-        return PydanticMetaData(
-            include=include,
-            exclude=exclude,
-            computed=computed,
-            backward_relations=self.backward_relations,
-            max_recursion=self.max_recursion,
-            exclude_raw_fields=self.exclude_raw_fields,
-            sort_alphabetically=_sort_fields,
-            allow_cycles=_allow_cycles,
-            model_config=_model_config
-        )
+"""
+The index works as follows:
+1. the hash is calculated from the following:
+    - the fully qualified name of the model
+    - the names of the contained fields
+    - the names of all relational fields and the corresponding names of the pydantic model.
+      This is because if the model is not yet fully initialized, the relational fields are not yet present.
+2. the hash does not take into account the resulting name of the model; this must be checked separately.
+3. the hash can only be calculated after a complete analysis of the given model.
+"""
 
 
 def _br_it(val: str) -> str:
@@ -372,7 +234,7 @@ class PydanticModelCreator:
             _as_submodel: bool = False
     ) -> None:
         self._cls: "Type[Model]" = cls
-        self._stack: Tuple[Tuple["Type[Model]", str, int], ...] = tuple()  # ((Type[Model], field_name, max_recursion),)
+        self._stack: Tuple[Tuple["Type[Model]", str, int], ...] = _stack  # ((Type[Model], field_name, max_recursion),)
         self._is_default: bool = (
                 exclude is None
                 and include is None
@@ -408,6 +270,7 @@ class PydanticModelCreator:
         self._name: str
         self._title: str
         self.given_name = name
+        self.__hash: str = ""
 
         self._as_submodel = _as_submodel
 
@@ -416,8 +279,9 @@ class PydanticModelCreator:
         self._pconfig: ConfigDict
 
         self._properties: Dict[str, Any] = dict()
+        self._relational_fields_index: List[Tuple[str, str]] = list()
 
-        self._model_description: ModelDescription = describe_model_by_dataclass(cls)
+        self._model_description: ModelDescription = ModelDescription.from_model(cls)
 
         self._field_map: FieldMap = self._initialize_field_map()
         self._construct_field_map()
@@ -429,6 +293,16 @@ class PydanticModelCreator:
 
         self._stack = _stack
 
+    @property
+    def _hash(self):
+        if self.__hash == "":
+            hashval = (
+                f"{self._fqname};{self._properties.keys()};{self._relational_fields_index};"
+                f"{self.meta.allow_cycles}"
+            )
+            self.__hash = b32encode(sha3_224(hashval.encode("utf-8")).digest()).decode("utf-8").lower()[:6]
+        return self.__hash
+
     def get_name(self) -> Tuple[str, str]:
         # If arguments are specified (different from the defaults), we append a hash to the
         # class name, to make it unique
@@ -436,16 +310,17 @@ class PydanticModelCreator:
         # When called later, include is explicitly set, so fence passes.
         if self.given_name is not None:
             return self.given_name, self.given_name
-        hashval = (
-            f"{self._fqname};{self.meta.exclude};{self.meta.include};{self.meta.computed};"
-            f"{self.meta.sort_alphabetically}:{self.meta.allow_cycles}:{self._exclude_read_only}"
-        )
-        postfix = (
-            ":" + b32encode(sha3_224(hashval.encode("utf-8")).digest()).decode("utf-8").lower()[:6]
+        name = (
+            f"{self._fqname}:{self._hash}"
             if not self._is_default
-            else ""
+            else self._fqname
         )
-        return self._fqname + postfix, self._cls.__name__
+        name = (
+            f"{name}:leaf"
+            if self._as_submodel
+            else name
+        )
+        return name, self._cls.__name__
 
     def _initialize_pconfig(self) -> ConfigDict:
         pconfig: ConfigDict = PydanticModel.model_config.copy()
@@ -488,11 +363,13 @@ class PydanticModelCreator:
             self._process_field(field_name, field_description)
 
         self._name, self._title = self.get_name()
-        if self._as_submodel and self._stack:
-            self._name = f"{self._name}:leaf"
 
-        if self._name in _MODEL_INDEX:
-            return _MODEL_INDEX[self._name]
+        if self._hash in _MODEL_INDEX:
+            # there is a model exactly the same, but the name could be different
+            hashed_model = _MODEL_INDEX[self._hash]
+            if hashed_model.__name__ == self._name:
+                # also the same name
+                return _MODEL_INDEX[self._hash]
 
         self._pconfig = self._initialize_pconfig()
         self._properties["model_config"] = self._pconfig
@@ -508,7 +385,7 @@ class PydanticModelCreator:
         # Store the base class
         model.model_config["orig_model"] = self._cls  # type: ignore
         # Store model reference so we can de-dup it later on if needed.
-        _MODEL_INDEX[self._name] = model
+        _MODEL_INDEX[self._hash] = model
         return model
 
     def _process_field(
@@ -578,7 +455,7 @@ class PydanticModelCreator:
         ):
             return self._process_single_field_relation(field_name, field_description, json_schema_extra), True
         elif field_description.field_type is JSONField:
-            return self._process_json_field_description(), False
+            return Any, False
         return self._process_data_field_description(field_name, field_description, json_schema_extra, fconfig), False
 
     def _process_single_field_relation(
@@ -593,6 +470,7 @@ class PydanticModelCreator:
     ) -> Optional[Type[PydanticModel]]:
         model: Optional[Type[PydanticModel]] = self._get_submodel(field_description.python_type, field_name)
         if model:
+            self._relational_fields_index.append((field_name, model.__name__))
             if field_description.nullable:
                 json_schema_extra["nullable"] = True
             if field_description.nullable or field_description.default is not None:
@@ -608,11 +486,9 @@ class PydanticModelCreator:
     ) -> Optional[Type[List[Type[PydanticModel]]]]:
         model = self._get_submodel(field_description.python_type, field_name)
         if model:
+            self._relational_fields_index.append((field_name, model.__name__))
             return List[model]  # type: ignore
         return None
-
-    def _process_json_field_description(self) -> Any:
-        return Any
 
     def _process_data_field_description(
             self,
