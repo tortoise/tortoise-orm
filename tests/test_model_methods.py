@@ -210,6 +210,10 @@ class TestModelMethods(test.TestCase):
         mdl = await self.cls.first()
         self.assertEqual(self.mdl.id, mdl.id)
 
+    async def test_last(self):
+        mdl = await self.cls.last()
+        self.assertEqual(self.mdl.id, mdl.id)
+
     async def test_latest(self):
         mdl = await self.cls.latest("name")
         self.assertEqual(self.mdl.id, mdl.id)

@@ -1248,6 +1248,13 @@ class Model(metaclass=ModelMeta):
         return cls._db_queryset(using_db).first()
 
     @classmethod
+    def last(cls, using_db: Optional[BaseDBAsyncClient] = None) -> QuerySetSingle[Optional[Self]]:
+        """
+        Generates a QuerySet that returns the last record.
+        """
+        return cls._db_queryset(using_db).last()
+
+    @classmethod
     def filter(cls, *args: Q, **kwargs: Any) -> QuerySet[Self]:
         """
         Generates a QuerySet with the filter applied.

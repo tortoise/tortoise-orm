@@ -272,6 +272,35 @@ class TestQueryset(test.TestCase):
             None,
         )
 
+    async def test_last(self):
+        self.assertEqual(
+            (await IntFields.all().order_by("intnum").filter(intnum__gte=40).last()).intnum, 97
+        )
+        self.assertEqual(
+            (await IntFields.all().order_by("intnum").filter(intnum__gte=40).last().values())[
+                "intnum"
+            ],
+            97,
+        )
+        self.assertEqual(
+            (await IntFields.all().order_by("intnum").filter(intnum__gte=40).last().values_list())[
+                1
+            ],
+            97,
+        )
+
+        self.assertEqual(
+            await IntFields.all().order_by("intnum").filter(intnum__gte=400).last(), None
+        )
+        self.assertEqual(
+            await IntFields.all().order_by("intnum").filter(intnum__gte=400).last().values(), None
+        )
+        self.assertEqual(
+            await IntFields.all().order_by("intnum").filter(intnum__gte=400).last().values_list(),
+            None,
+        )
+        self.assertEqual((await IntFields.all().filter(intnum__gte=40).last()).intnum, 97)
+
     async def test_latest(self):
         self.assertEqual((await IntFields.all().latest("intnum")).intnum, 97)
         self.assertEqual(

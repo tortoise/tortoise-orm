@@ -789,6 +789,29 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._single = True
         return queryset  # type: ignore
 
+    def last(self) -> QuerySetSingle[Optional[MODEL]]:
+        """
+        Limit queryset to one object and return the last object instead of list.
+        """
+        queryset = self._clone()
+
+        if queryset._orderings:
+            new_ordering = [
+                (field, Order.desc if order_type == Order.asc else Order.asc)
+                for field, order_type in queryset._orderings
+            ]
+        elif pk := self.model._meta.pk:
+            new_ordering = [(pk.model_field_name, Order.desc)]
+        else:
+            raise FieldError(
+                f"QuerySet has no ordering and model {self.model.__name__} has no pk defined"
+            )
+
+        queryset._orderings = new_ordering
+        queryset._limit = 1
+        queryset._single = True
+        return queryset  # type: ignore
+
     def get(self, *args: Q, **kwargs: Any) -> QuerySetSingle[MODEL]:
         """
         Fetch exactly one object matching the parameters.
