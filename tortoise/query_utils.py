@@ -20,7 +20,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 TableCriterionTuple = Tuple[Table, Criterion]
 
 
-def _get_joins_for_related_field(
+def get_joins_for_related_field(
     table: Table, related_field: RelationalField, related_field_name: str
 ) -> List[TableCriterionTuple]:
     required_joins = []
@@ -142,12 +142,6 @@ class QueryModifier:
         elif self.where_criterion:
             where_criterion = self.where_criterion.negate()
         return self.__class__(where_criterion, self.joins, having_criterion)
-
-    def get_query_modifiers(self) -> Tuple[Criterion, List[TableCriterionTuple], Criterion]:
-        """
-        Returns a tuple of the query criterion.
-        """
-        return self.where_criterion, self.joins, self.having_criterion
 
 
 class Prefetch:

@@ -444,17 +444,16 @@ class BaseExecutor:
                     )
                 )
 
-            where_criterion, joins, having_criterion = modifier.get_query_modifiers()
-            for join in joins:
+            for join in modifier.joins:
                 if join[0] not in joined_tables:
                     query = query.join(join[0], how=JoinType.left_outer).on(join[1])
                     joined_tables.append(join[0])
 
-            if where_criterion:
-                query = query.where(where_criterion)
+            if modifier.where_criterion:
+                query = query.where(modifier.where_criterion)
 
-            if having_criterion:
-                query = query.having(having_criterion)
+            if modifier.having_criterion:
+                query = query.having(modifier.having_criterion)
 
         _, raw_results = await self.db.execute_query(query.get_sql())
         relations: List[Tuple[Any, Any]] = []
