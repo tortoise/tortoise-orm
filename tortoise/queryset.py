@@ -1242,6 +1242,7 @@ class UpdateQuery(AwaitableQuery):
                     value = executor.column_map[key](value, None)
             if isinstance(value, Term):
                 self.query = self.query.set(db_field, value)
+            # TODO: resolve expressions
             else:
                 self.query = self.query.set(db_field, executor.parameter(count))
                 self.values.append(value)

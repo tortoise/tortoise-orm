@@ -1,3 +1,4 @@
+from enum import Enum, auto
 import operator
 from dataclasses import dataclass, field as dataclass_field
 from typing import (
@@ -58,7 +59,116 @@ class ResolveResult:
     output_field: Optional[Field] = None
 
 
-class F(PypikaField):  # type: ignore
+class Expression:
+    """
+    Parent class for expressions
+    """
+
+    def resolve(self, resolve_context: ResolveContext) -> Any:
+        raise NotImplementedError()
+
+
+class Value(Expression):
+    def __init__(self, value: Any):
+        self.value = value
+
+    def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
+        return ResolveResult(term=self.value)  # ValueWrapper ?
+
+
+class PypikaTerm(Expression):
+    def __init__(self, term: Term):
+        self.term = term
+
+    def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
+        return ResolveResult(term=self.term)
+
+
+class Connector(Enum):
+    add = auto()
+    sub = auto()
+    mul = auto()
+    div = auto()
+    pow = auto()
+    mod = auto()
+
+
+class CombinedExpression(Expression):
+    def __init__(self, left: Expression, connector: Connector, right: Any):
+        self.left = left
+        self.connector = connector
+        self.right: Expression
+        if isinstance(right, Expression):
+            self.right = right
+        else:
+            self.right = Value(right)
+
+    def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
+        left = self.left.resolve(resolve_context)
+        right = self.right.resolve(resolve_context)
+
+        if left.output_field and right.output_field:
+            if type(left.output_field) is not type(right.output_field):
+                raise FieldError("Cannot use arithmetic expression between different field type")
+
+        operator_func = getattr(operator, self.connector.name)
+        return ResolveResult(
+            term=operator_func(left.term, right.term),
+            output_field=right.output_field or left.output_field,
+        )
+
+
+class F(Expression):
+    def __init__(self, name: str):
+        self.name = name
+
+    def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
+        term = PypikaField(self.name)
+        try:
+            term.name = resolve_context.model._meta.fields_db_projection[self.name]
+
+            output_field = resolve_context.model._meta.fields_map.get(self.name, None)
+            if output_field:
+                func = output_field.get_for_dialect(
+                    resolve_context.model._meta.db.capabilities.dialect, "function_cast"
+                )
+                if func:
+                    term = func(output_field, term)
+        except KeyError:
+            raise FieldError(
+                f"There is no non-virtual field {self.name} on Model {resolve_context.model.__name__}"
+            )
+        return ResolveResult(term=term, output_field=output_field)
+
+    def _combine(self, other: Any, connector: Connector, reversed: bool) -> CombinedExpression:
+        if not isinstance(other, Expression):
+            other = Value(other)
+
+        if reversed:
+            return CombinedExpression(other, connector, self)
+        return CombinedExpression(self, connector, other)
+
+    def __neg__(self):
+        return self._combine(-1, Connector.mul, False)
+
+    def __add__(self, other):
+        return self._combine(other, Connector.add, False)
+
+    def __sub__(self, other):
+        return self._combine(other, Connector.sub, False)
+
+    def __mul__(self, other):
+        return self._combine(other, Connector.mul, False)
+
+    def __truediv__(self, other):
+        return self._combine(other, Connector.div, False)
+
+    def __mod__(self, other):
+        return self._combine(other, Connector.mod, False)
+
+    def __pow__(self, other):
+        return self._combine(other, Connector.pow, False)
+
     @classmethod
     def resolver_arithmetic_expression(
         cls,
@@ -132,15 +242,6 @@ class RawSQL(Term):  # type: ignore
         if with_alias:
             return format_alias_sql(sql=self.sql, alias=self.alias, **kwargs)
         return self.sql
-
-
-class Expression:
-    """
-    Parent class for expressions
-    """
-
-    def resolve(self, resolve_context: ResolveContext) -> Any:
-        raise NotImplementedError()
 
 
 class Q:
@@ -325,11 +426,11 @@ class Q:
             key in resolve_context.model._meta.fk_fields
             or key in resolve_context.model._meta.o2o_fields
         ):
-            field_object = resolve_context.model._meta.fields_map[key]
             if hasattr(value, "pk"):
                 filter_value = value.pk
             else:
                 filter_value = value
+            field_object = resolve_context.model._meta.fields_map[key]
             filter_key = cast(str, field_object.source_field)
         elif key in resolve_context.model._meta.m2m_fields:
             if hasattr(value, "pk"):
@@ -349,6 +450,11 @@ class Q:
                 | set(resolve_context.custom_filters)
             )
             raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
+
+        # TODO: extend joins?
+        if isinstance(filter_value, Expression):
+            filter_value = filter_value.resolve(resolve_context).term
+
         return filter_key, filter_value
 
     def _resolve_kwargs(self, resolve_context: ResolveContext) -> QueryModifier:
@@ -426,7 +532,7 @@ class Function(Expression):
     populate_field_object = False
 
     def __init__(
-        self, field: Union[str, F, ArithmeticExpression, "Function"], *default_values: Any
+        self, field: Union[str, F, CombinedExpression, "Function"], *default_values: Any
     ) -> None:
         self.field = field
         self.field_object: "Optional[Field]" = None
@@ -512,23 +618,28 @@ class Function(Expression):
 
         default_values = self._resolve_default_values(resolve_context)
 
+        res = None
         if isinstance(self.field, str):
-            function = self._resolve_field_for_model(resolve_context, self.field)
-            function.term = self._get_function_field(function.term, *default_values)
-            return function
-        elif isinstance(self.field, Function):
-            function = self.field.resolve(resolve_context)
-            function.term = self._get_function_field(function.term, *default_values)
-            return function
+            function_arg = self._resolve_field_for_model(resolve_context, self.field)
+            term = self._get_function_field(function_arg.term, *default_values)
+            res = ResolveResult(
+                term=term,
+                joins=function_arg.joins,
+                output_field=function_arg.output_field,  # type: ignore
+            )
+        else:
+            function_arg = self.field.resolve(resolve_context)
+            term = self._get_function_field(function_arg.term, *default_values)
+            res = ResolveResult(
+                term=term,
+                joins=function_arg.joins,
+                output_field=function_arg.output_field,  # type: ignore
+            )
 
-        field, field_object = F.resolver_arithmetic_expression(resolve_context.model, self.field)
-        if self.populate_field_object:
-            self.field_object = field_object
+        if self.populate_field_object and res.output_field:  # type: ignore
+            self.field_object = res.output_field  # type: ignore
 
-        return ResolveResult(
-            term=self._get_function_field(field, *default_values),
-            joins=[],
-        )
+        return res
 
 
 class Aggregate(Function):
@@ -544,7 +655,7 @@ class Aggregate(Function):
 
     def __init__(
         self,
-        field: Union[str, F, ArithmeticExpression],
+        field: Union[str, F, CombinedExpression],
         *default_values: Any,
         distinct: bool = False,
         _filter: Optional[Q] = None,
@@ -626,7 +737,7 @@ class When(Expression):
         for node in q_objects:
             modifier &= node.resolve(resolve_context)
 
-        if isinstance(self.then, Function):
+        if isinstance(self.then, Expression):
             then = self.then.resolve(resolve_context).term
         elif isinstance(self.then, Term):
             then = F.resolver_arithmetic_expression(resolve_context.model, self.then)[0]
@@ -661,7 +772,7 @@ class Case(Expression):
             when_term = cast(_WhenThen, when.term)
             case = case.when(when_term.when, when_term.then)
 
-        if isinstance(self.default, Function):
+        if isinstance(self.default, Expression):
             case = case.else_(self.default.resolve(resolve_context).term)
         elif isinstance(self.default, Term):
             case = case.else_(

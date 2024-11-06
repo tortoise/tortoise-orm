@@ -444,8 +444,13 @@ class TestFiltering(test.TestCase):
     async def test_f_annotation_custom_filter(self):
         await IntFields.create(intnum=1)
 
-        events = await IntFields.annotate(intnum_plus_1=F("intnum") + 1).filter(intnum_plus_1__gt=1)
+        base_query = IntFields.annotate(intnum_plus_1=F("intnum") + 1)
+
+        events = await base_query.filter(intnum_plus_1__gt=1)
         self.assertEqual(len(events), 1)
 
-        events = await IntFields.annotate(intnum_plus_1=F("intnum") + 1).filter(intnum_plus_1__lt=3)
+        events = await base_query.filter(intnum_plus_1__lt=3)
+        self.assertEqual(len(events), 1)
+
+        events = await base_query.filter(Q(intnum_plus_1__gt=1) & Q(intnum_plus_1__lt=3))
         self.assertEqual(len(events), 1)
