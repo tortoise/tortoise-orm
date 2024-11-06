@@ -14,6 +14,8 @@ Tortoise ORM
    :target: https://coveralls.io/github/tortoise/tortoise-orm
 .. image:: https://app.codacy.com/project/badge/Grade/844030d0cb8240d6af92c71bfac764ff
    :target: https://www.codacy.com/gh/tortoise/tortoise-orm/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=tortoise/tortoise-orm&amp;utm_campaign=Badge_Grade
+.. image:: https://img.shields.io/badge/Gurubase-Ask%20Tortoise%20ORM%20Guru-006BFF
+   :target: https://gurubase.io/g/tortoise-orm
 
 Introduction
 ============
