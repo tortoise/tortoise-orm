@@ -20,7 +20,7 @@ up:
 deps:
 	@poetry install -E asyncpg -E aiomysql -E accel -E psycopg -E asyncodbc
 
-check: deps build
+_check:
 ifneq ($(shell which black),)
 	black --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 endif
@@ -29,6 +29,7 @@ endif
 	#pylint -d C,W,R $(checkfiles)
 	#bandit -r $(checkfiles)make
 	twine check dist/*
+check: deps build _check
 
 lint: deps build
 ifneq ($(shell which black),)
@@ -75,9 +76,10 @@ docs: deps
 	rm -fR ./build
 	sphinx-build -M html docs build
 
-style: deps
+_style:
 	isort -src $(checkfiles)
 	black $(checkfiles)
+style: _style deps
 
 build: deps
 	rm -fR dist/
