@@ -454,3 +454,60 @@ class TestFiltering(test.TestCase):
 
         events = await base_query.filter(Q(intnum_plus_1__gt=1) & Q(intnum_plus_1__lt=3))
         self.assertEqual(len(events), 1)
+
+    async def test_f_annotation_join(self):
+        tournament_a = await Tournament.create(name="A")
+        tournament_b = await Tournament.create(name="B")
+        await Tournament.create(name="C")
+        event_a = await Event.create(name="A", tournament=tournament_a)
+        await Event.create(name="B", tournament=tournament_b)
+
+        events = (
+            await Event.all()
+            .annotate(tournament_name=F("tournament__name"))
+            .filter(tournament_name="A")
+        )
+        self.assertEqual(events, [event_a])
+
+    async def test_f_annotation_custom_filter_requiring_join(self):
+        tournament_a = await Tournament.create(name="A")
+        tournament_b = await Tournament.create(name="B")
+        await Tournament.create(name="C")
+        await Event.create(name="A", tournament=tournament_a)
+        event_b = await Event.create(name="B", tournament=tournament_b)
+
+        events = (
+            await Event.all()
+            .annotate(tournament_name=F("tournament__name"))
+            .filter(tournament_name__gt="A")
+        )
+        self.assertEqual(events, [event_b])
+
+    async def test_f_annotation_custom_filter_requiring_nested_joins(self):
+        tournament = Tournament(name="Tournament")
+        await tournament.save()
+
+        second_tournament = Tournament(name="Tournament 2")
+        await second_tournament.save()
+
+        event_first = Event(name="1", tournament=tournament)
+        await event_first.save()
+        event_second = Event(name="2", tournament=second_tournament)
+        await event_second.save()
+        event_third = Event(name="3", tournament=tournament)
+        await event_third.save()
+        event_forth = Event(name="4", tournament=second_tournament)
+        await event_forth.save()
+
+        team_first = Team(name="First")
+        await team_first.save()
+        team_second = Team(name="Second")
+        await team_second.save()
+
+        await team_first.events.add(event_first)
+        await event_second.participants.add(team_second)
+
+        res = await Tournament.annotate(pname=F("events__participants__name")).filter(
+            pname__startswith="Fir"
+        )
+        self.assertEqual(res, [tournament])

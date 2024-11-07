@@ -24,11 +24,9 @@ from pypika.terms import Function as PypikaFunction
 from pypika.terms import Term
 from pypika.utils import format_alias_sql
 
-from tortoise.exceptions import ConfigurationError, FieldError, OperationalError
+from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.base import Field
 from tortoise.fields.relational import (
-    BackwardFKRelation,
-    ForeignKeyFieldInstance,
     RelationalField,
 )
 from tortoise.filters import FilterInfoDict
@@ -36,6 +34,7 @@ from tortoise.query_utils import (
     QueryModifier,
     TableCriterionTuple,
     get_joins_for_related_field,
+    resolve_nested_field,
 )
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -47,7 +46,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 @dataclass(frozen=True)
 class ResolveContext:
-    model: "Type[Model]"
+    model: Type["Model"]
     table: Table
     annotations: Dict[str, Any]
     custom_filters: Dict[str, FilterInfoDict]
@@ -121,21 +120,28 @@ class F(Expression):
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
         term = PypikaField(self.name)
-        try:
-            term.name = resolve_context.model._meta.fields_db_projection[self.name]
-
-            output_field = resolve_context.model._meta.fields_map.get(self.name, None)
-            if output_field:
-                func = output_field.get_for_dialect(
-                    resolve_context.model._meta.db.capabilities.dialect, "function_cast"
-                )
-                if func:
-                    term = func(output_field, term)
-        except KeyError:
-            raise FieldError(
-                f"There is no non-virtual field {self.name} on Model {resolve_context.model.__name__}"
+        joins: List[TableCriterionTuple] = []
+        output_field = None
+        if self.name.split("__")[0] in resolve_context.model._meta.fetch_fields:
+            term, joins, output_field = resolve_nested_field(
+                resolve_context.model, resolve_context.table, self.name
             )
-        return ResolveResult(term=term, output_field=output_field)
+        else:
+            try:
+                term.name = resolve_context.model._meta.fields_db_projection[self.name]
+
+                output_field = resolve_context.model._meta.fields_map.get(self.name, None)
+                if output_field:
+                    func = output_field.get_for_dialect(
+                        resolve_context.model._meta.db.capabilities.dialect, "function_cast"
+                    )
+                    if func:
+                        term = func(output_field, term)
+            except KeyError:
+                raise FieldError(
+                    f"There is no non-virtual field {self.name} on Model {resolve_context.model.__name__}"
+                )
+        return ResolveResult(term=term, output_field=output_field, joins=joins)
 
     def _combine(self, other: Any, connector: Connector, reversed: bool) -> CombinedExpression:
         if not isinstance(other, Expression):
@@ -484,66 +490,16 @@ class Function(Expression):
         self.field_object: "Optional[Field]" = None
         self.default_values = default_values
 
-    def _get_function_field(
-        self, field: Union[ArithmeticExpression, PypikaField, str], *default_values
-    ):
+    def _get_function_field(self, field: Union[Term, str], *default_values):
         return self.database_func(field, *default_values)
 
-    def _resolve_field_for_model(
-        self, resolve_context: ResolveContext, field: str
-    ) -> ResolveResult:
-        joins = []
-        fields = field.split("__")
-        model = resolve_context.model
-        table = resolve_context.table
-
-        for iter_field in fields[:-1]:
-            if iter_field not in resolve_context.model._meta.fetch_fields:
-                raise ConfigurationError(f"{field} not resolvable")
-
-            related_field = cast(
-                RelationalField, resolve_context.model._meta.fields_map[iter_field]
-            )
-            joins.extend(get_joins_for_related_field(table, related_field, iter_field))
-
-            model = related_field.related_model
-            related_table: Table = related_field.related_model._meta.basetable
-            if isinstance(related_field, ForeignKeyFieldInstance):
-                # Only FK's can be to same table, so we only auto-alias FK join tables
-                related_table = related_table.as_(
-                    f"{resolve_context.table.get_table_name()}__{iter_field}"
-                )
-            table = related_table
-
-        last_field = fields[-1]
-        if last_field in model._meta.fetch_fields:
-            related_field = cast(RelationalField, model._meta.fields_map[last_field])
-            related_field_meta = related_field.related_model._meta
-
-            joins.extend(get_joins_for_related_field(table, related_field, last_field))
-            related_table = related_field_meta.basetable
-
-            if isinstance(related_field, BackwardFKRelation):
-                if table == related_table:
-                    related_table = related_table.as_(f"{table.get_table_name()}__{last_field}")
-
-            field = related_table[related_field_meta.db_pk_column]
-        else:
-            field_object = model._meta.fields_map[last_field]
-            if field_object.source_field:
-                field = table[field_object.source_field]
-            else:
-                field = table[last_field]
-            if self.populate_field_object:
-                self.field_object = model._meta.fields_map.get(last_field, None)
-                if self.field_object:  # pragma: nobranch
-                    func = self.field_object.get_for_dialect(
-                        model._meta.db.capabilities.dialect, "function_cast"
-                    )
-                    if func:
-                        field = func(self.field_object, field)
-
-        return ResolveResult(term=field, joins=joins)
+    def _resolve_nested_field(self, resolve_context: ResolveContext, field: str) -> ResolveResult:
+        term, joins, output_field = resolve_nested_field(
+            resolve_context.model, resolve_context.table, field, self.populate_field_object
+        )
+        if self.populate_field_object:
+            self.field_object = output_field
+        return ResolveResult(term=term, joins=joins, output_field=output_field)
 
     def _resolve_default_values(self, resolve_context: ResolveContext) -> Iterator[Any]:
         for default_value in self.default_values:
@@ -566,7 +522,7 @@ class Function(Expression):
 
         res = None
         if isinstance(self.field, str):
-            function_arg = self._resolve_field_for_model(resolve_context, self.field)
+            function_arg = self._resolve_nested_field(resolve_context, self.field)
             term = self._get_function_field(function_arg.term, *default_values)
             res = ResolveResult(
                 term=term,
@@ -617,10 +573,8 @@ class Aggregate(Function):
             return self.database_func(field, *default_values).distinct()
         return self.database_func(field, *default_values)
 
-    def _resolve_field_for_model(
-        self, resolve_context: ResolveContext, field: str
-    ) -> ResolveResult:
-        ret = super()._resolve_field_for_model(resolve_context, field)
+    def _resolve_nested_field(self, resolve_context: ResolveContext, field: str) -> ResolveResult:
+        ret = super()._resolve_nested_field(resolve_context, field)
         if self.filter:
             modifier = QueryModifier()
             modifier &= self.filter.resolve(resolve_context)
