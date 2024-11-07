@@ -123,10 +123,19 @@ class F(Expression):
         joins: List[TableCriterionTuple] = []
         output_field = None
         if self.name.split("__")[0] in resolve_context.model._meta.fetch_fields:
+            # field in the format of "related_field__field" or "related_field__another_rel_field__field"
             term, joins, output_field = resolve_nested_field(
                 resolve_context.model, resolve_context.table, self.name
             )
+        elif self.name in resolve_context.annotations:
+            # reference to another annotation, e.g. M.annotate(f1=...).annotate(f2=F("f1")).values('field')
+            annotation = resolve_context.annotations[self.name]
+            if isinstance(annotation, Term):
+                term = annotation
+            else:
+                term = annotation.resolve(resolve_context).term
         else:
+            # a regular model field, e.g. F("id")
             try:
                 term.name = resolve_context.model._meta.fields_db_projection[self.name]
 
