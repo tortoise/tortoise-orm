@@ -35,7 +35,7 @@ from tortoise.exceptions import (
     MultipleObjectsReturned,
     ParamsError,
 )
-from tortoise.expressions import Expression, F, Q, RawSQL, ResolveContext, ResolveResult
+from tortoise.expressions import Expression, Q, RawSQL, ResolveContext, ResolveResult
 from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
     OneToOneFieldInstance,
@@ -46,8 +46,8 @@ from tortoise.functions import Function
 from tortoise.query_utils import (
     Prefetch,
     QueryModifier,
-    get_joins_for_related_field,
     TableCriterionTuple,
+    get_joins_for_related_field,
 )
 from tortoise.router import router
 from tortoise.utils import chunk
@@ -1227,9 +1227,8 @@ class UpdateQuery(AwaitableQuery):
                     db_field = self.model._meta.fields_db_projection[key]
                 except KeyError:
                     raise FieldError(f"Field {key} is virtual and can not be updated")
-                if isinstance(value, Term):
-                    value = F.resolver_arithmetic_expression(self.model, value)[0]
-                elif isinstance(value, Expression):
+
+                if isinstance(value, Expression):
                     value = value.resolve(
                         ResolveContext(
                             model=self.model,

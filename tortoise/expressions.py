@@ -1,6 +1,7 @@
-from enum import Enum, auto
 import operator
-from dataclasses import dataclass, field as dataclass_field
+from dataclasses import dataclass
+from dataclasses import field as dataclass_field
+from enum import Enum, auto
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -23,8 +24,8 @@ from pypika.terms import Function as PypikaFunction
 from pypika.terms import Term
 from pypika.utils import format_alias_sql
 
-from tortoise.fields.base import Field
 from tortoise.exceptions import ConfigurationError, FieldError, OperationalError
+from tortoise.fields.base import Field
 from tortoise.fields.relational import (
     BackwardFKRelation,
     ForeignKeyFieldInstance,
@@ -64,24 +65,20 @@ class Expression:
     Parent class for expressions
     """
 
-    def resolve(self, resolve_context: ResolveContext) -> Any:
+    def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
         raise NotImplementedError()
 
 
 class Value(Expression):
+    """
+    Wrapper for a value that should be used as a term in a query.
+    """
+
     def __init__(self, value: Any):
         self.value = value
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
-        return ResolveResult(term=self.value)  # ValueWrapper ?
-
-
-class PypikaTerm(Expression):
-    def __init__(self, term: Term):
-        self.term = term
-
-    def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
-        return ResolveResult(term=self.term)
+        return ResolveResult(term=self.value)
 
 
 class Connector(Enum):
@@ -107,14 +104,14 @@ class CombinedExpression(Expression):
         left = self.left.resolve(resolve_context)
         right = self.right.resolve(resolve_context)
 
-        if left.output_field and right.output_field:
-            if type(left.output_field) is not type(right.output_field):
+        if left.output_field and right.output_field:  # type: ignore
+            if type(left.output_field) is not type(right.output_field):  # type: ignore
                 raise FieldError("Cannot use arithmetic expression between different field type")
 
         operator_func = getattr(operator, self.connector.name)
         return ResolveResult(
             term=operator_func(left.term, right.term),
-            output_field=right.output_field or left.output_field,
+            output_field=right.output_field or left.output_field,  # type: ignore
         )
 
 
@@ -168,56 +165,6 @@ class F(Expression):
 
     def __pow__(self, other):
         return self._combine(other, Connector.pow, False)
-
-    @classmethod
-    def resolver_arithmetic_expression(
-        cls,
-        model: "Type[Model]",
-        arithmetic_expression_or_field: Term,
-    ) -> Tuple[Term, Optional[PypikaField]]:
-        field_object = None
-        if isinstance(arithmetic_expression_or_field, PypikaField):
-            name = arithmetic_expression_or_field.name
-            try:
-                arithmetic_expression_or_field.name = model._meta.fields_db_projection[name]
-
-                field_object = model._meta.fields_map.get(name, None)
-                if field_object:
-                    func = field_object.get_for_dialect(
-                        model._meta.db.capabilities.dialect, "function_cast"
-                    )
-                    if func:
-                        arithmetic_expression_or_field = func(
-                            field_object, arithmetic_expression_or_field
-                        )
-            except KeyError:
-                raise FieldError(f"There is no non-virtual field {name} on Model {model.__name__}")
-        elif isinstance(arithmetic_expression_or_field, ArithmeticExpression):
-            left = arithmetic_expression_or_field.left
-            right = arithmetic_expression_or_field.right
-            (
-                arithmetic_expression_or_field.left,
-                left_field_object,
-            ) = cls.resolver_arithmetic_expression(model, left)
-            if left_field_object:
-                if field_object and type(field_object) is not type(left_field_object):
-                    raise FieldError(
-                        "Cannot use arithmetic expression between different field type"
-                    )
-                field_object = left_field_object
-
-            (
-                arithmetic_expression_or_field.right,
-                right_field_object,
-            ) = cls.resolver_arithmetic_expression(model, right)
-            if right_field_object:
-                if field_object and type(field_object) is not type(right_field_object):
-                    raise FieldError(
-                        "Cannot use arithmetic expression between different field type"
-                    )
-                field_object = right_field_object
-
-        return arithmetic_expression_or_field, field_object
 
 
 class Subquery(Term):  # type: ignore
@@ -738,8 +685,6 @@ class When(Expression):
 
         if isinstance(self.then, Expression):
             then = self.then.resolve(resolve_context).term
-        elif isinstance(self.then, Term):
-            then = F.resolver_arithmetic_expression(resolve_context.model, self.then)[0]
         else:
             then = Term.wrap_constant(self.then)
             if not isinstance(then, Term):
@@ -773,10 +718,6 @@ class Case(Expression):
 
         if isinstance(self.default, Expression):
             case = case.else_(self.default.resolve(resolve_context).term)
-        elif isinstance(self.default, Term):
-            case = case.else_(
-                F.resolver_arithmetic_expression(resolve_context.model, self.default)[0]
-            )
         else:
             case = case.else_(Term.wrap_constant(self.default))
 
