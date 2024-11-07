@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import pytz
-from pypika.terms import Function
+from pypika.terms import Function as PupikaFunction
 
 from tests.testmodels import (
     Currency,
@@ -22,6 +22,7 @@ from tests.testmodels import (
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import In, NotEQ
 from tortoise.expressions import F
+from tortoise.functions import Function
 
 
 class TestUpdate(test.TestCase):
@@ -155,8 +156,11 @@ class TestUpdate(test.TestCase):
     @test.requireCapability(dialect=In("mysql", "sqlite"))
     async def test_update_with_custom_function(self):
         class JsonSet(Function):
-            def __init__(self, field: F, expression: str, value: Any):
-                super().__init__("JSON_SET", field, expression, value)
+            class PypikaJsonSet(PupikaFunction):
+                def __init__(self, field: F, expression: str, value: Any):
+                    super().__init__("JSON_SET", field, expression, value)
+
+            database_func = PypikaJsonSet
 
         json = await JSONFields.create(data={})
         self.assertEqual(json.data_default, {"a": 1})

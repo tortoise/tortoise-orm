@@ -1229,7 +1229,7 @@ class UpdateQuery(AwaitableQuery):
                     raise FieldError(f"Field {key} is virtual and can not be updated")
                 if isinstance(value, Term):
                     value = F.resolver_arithmetic_expression(self.model, value)[0]
-                elif isinstance(value, Function):
+                elif isinstance(value, Expression):
                     value = value.resolve(
                         ResolveContext(
                             model=self.model,

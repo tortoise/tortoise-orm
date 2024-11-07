@@ -21,10 +21,9 @@ from typing import (
 
 from pypika import JoinType, Parameter, Query, Table
 from pypika.queries import QueryBuilder
-from pypika.terms import ArithmeticExpression, Function
 
 from tortoise.exceptions import OperationalError
-from tortoise.expressions import F, RawSQL, ResolveContext
+from tortoise.expressions import Expression, RawSQL, ResolveContext
 from tortoise.fields.base import Field
 from tortoise.fields.relational import (
     BackwardFKRelation,
@@ -246,16 +245,16 @@ class BaseExecutor:
     def get_update_sql(
         self,
         update_fields: Optional[Iterable[str]],
-        arithmetic_or_function: Optional[Dict[str, Union[ArithmeticExpression, Function]]],
+        expressions: Optional[Dict[str, Expression]],
     ) -> str:
         """
         Generates the SQL for updating a model depending on provided update_fields.
         Result is cached for performance.
         """
         key = ",".join(update_fields) if update_fields else ""
-        if not arithmetic_or_function and key in self.update_cache:
+        if not expressions and key in self.update_cache:
             return self.update_cache[key]
-        arithmetic_or_function = arithmetic_or_function or {}
+        expressions = expressions or {}
         table = self.model._meta.basetable
         query = self.db.query_class.update(table)
         count = 0
@@ -263,19 +262,28 @@ class BaseExecutor:
             db_column = self.model._meta.fields_db_projection[field]
             field_object = self.model._meta.fields_map[field]
             if not field_object.pk:
-                if field not in arithmetic_or_function.keys():
+                if field not in expressions.keys():
                     query = query.set(db_column, self.parameter(count))
                     count += 1
                 else:
-                    value = F.resolver_arithmetic_expression(
-                        self.model, arithmetic_or_function.get(field)
-                    )[0]
+                    value = (
+                        expressions[field]
+                        .resolve(
+                            ResolveContext(
+                                model=self.model,
+                                table=table,
+                                annotations={},
+                                custom_filters={},
+                            )
+                        )
+                        .term
+                    )
                     query = query.set(db_column, value)
 
         query = query.where(table[self.model._meta.db_pk_column] == self.parameter(count))
 
         sql = query.get_sql()
-        if not arithmetic_or_function:
+        if not expressions:
             self.update_cache[key] = sql
         return sql
 
@@ -283,20 +291,18 @@ class BaseExecutor:
         self, instance: "Union[Type[Model], Model]", update_fields: Optional[Iterable[str]]
     ) -> int:
         values = []
-        arithmetic_or_function = {}
+        expressions = {}
         for field in update_fields or self.model._meta.fields_db_projection.keys():
             if not self.model._meta.fields_map[field].pk:
                 instance_field = getattr(instance, field)
-                if isinstance(instance_field, (ArithmeticExpression, Function)):
-                    arithmetic_or_function[field] = instance_field
+                if isinstance(instance_field, Expression):
+                    expressions[field] = instance_field
                 else:
                     value = self.column_map[field](instance_field, instance)
                     values.append(value)
         values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
         return (
-            await self.db.execute_query(
-                self.get_update_sql(update_fields, arithmetic_or_function), values
-            )
+            await self.db.execute_query(self.get_update_sql(update_fields, expressions), values)
         )[0]
 
     async def execute_delete(self, instance: "Union[Type[Model], Model]") -> int:

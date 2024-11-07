@@ -176,7 +176,6 @@ class F(Expression):
         arithmetic_expression_or_field: Term,
     ) -> Tuple[Term, Optional[PypikaField]]:
         field_object = None
-
         if isinstance(arithmetic_expression_or_field, PypikaField):
             name = arithmetic_expression_or_field.name
             try:
