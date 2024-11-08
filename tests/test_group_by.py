@@ -234,15 +234,15 @@ class TestGroupBy(test.TestCase):
         )
 
     async def test_group_by_requiring_nested_joins(self):
-        tournament_first = await Tournament.create(name="Tournament 1")
-        tournament_second = await Tournament.create(name="Tournament 2")
+        tournament_first = await Tournament.create(name="Tournament 1", desc="d1")
+        tournament_second = await Tournament.create(name="Tournament 2", desc="d2")
 
         event_first = await Event.create(name="1", tournament=tournament_first)
         event_second = await Event.create(name="2", tournament=tournament_first)
         event_third = await Event.create(name="3", tournament=tournament_second)
 
         team_first = await Team.create(name="First", alias=2)
-        team_second = await Team.create(name="Second", alias=3)
+        team_second = await Team.create(name="Second", alias=4)
         team_third = await Team.create(name="Third", alias=5)
 
         await team_first.events.add(event_first)
@@ -251,10 +251,8 @@ class TestGroupBy(test.TestCase):
 
         res = (
             await Tournament.annotate(avg=Avg("events__participants__alias"))
-            .group_by("id")
-            .order_by("name")
-            .values("name", "avg")
+            .group_by("desc")
+            .order_by("desc")
+            .values("desc", "avg")
         )
-        self.assertEqual(
-            res, [{"avg": 2, "name": "Tournament 1"}, {"avg": 5, "name": "Tournament 2"}]
-        )
+        self.assertEqual(res, [{"avg": 3, "desc": "d1"}, {"avg": 5, "desc": "d2"}])

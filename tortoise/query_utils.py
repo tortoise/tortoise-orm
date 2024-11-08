@@ -79,11 +79,12 @@ def get_joins_for_related_field(
 
 
 def resolve_nested_field(
-    model: Type["Model"], table: Table, field: str, populate_field_object: bool = False
+    model: Type["Model"], table: Table, field: str
 ) -> Tuple[Term, List[TableCriterionTuple], Optional[Field]]:
     """
-    Resolves a nested field string like events__participants__name into a ResolveResult
-    that contains the term and joins required to get the field.
+    Resolves a nested field string like events__participants__name and
+    returns the pypika term, required joins and the Field that can be used for
+    converting the value.
     """
     term = field_object = None
     joins = []
@@ -123,14 +124,12 @@ def resolve_nested_field(
         else:
             term = table[last_field]
 
-        if populate_field_object:
-            field_object = model._meta.fields_map.get(last_field, None)
-            if field_object:  # pragma: nobranch
-                func = field_object.get_for_dialect(
-                    model._meta.db.capabilities.dialect, "function_cast"
-                )
-                if func:
-                    term = func(field_object, term)
+        if field_object:  # pragma: nobranch
+            func = field_object.get_for_dialect(
+                model._meta.db.capabilities.dialect, "function_cast"
+            )
+            if func:
+                term = func(field_object, term)
 
     return term, joins, field_object
 

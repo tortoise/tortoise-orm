@@ -26,9 +26,7 @@ from pypika.utils import format_alias_sql
 
 from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.base import Field
-from tortoise.fields.relational import (
-    RelationalField,
-)
+from tortoise.fields.relational import RelationalField
 from tortoise.filters import FilterInfoDict
 from tortoise.query_utils import (
     QueryModifier,
@@ -115,6 +113,14 @@ class CombinedExpression(Expression):
 
 
 class F(Expression):
+    """
+    An F() object represents a model field's value, its transformed value, or an annotated column.
+    It enables referencing and performing database operations on model field values directly in
+    the database, without needing to load them into Python memory.
+
+    :param name: The name of the field to reference.
+    """
+
     def __init__(self, name: str):
         self.name = name
 
@@ -152,11 +158,11 @@ class F(Expression):
                 )
         return ResolveResult(term=term, output_field=output_field, joins=joins)
 
-    def _combine(self, other: Any, connector: Connector, reversed: bool) -> CombinedExpression:
+    def _combine(self, other: Any, connector: Connector, right_hand: bool) -> CombinedExpression:
         if not isinstance(other, Expression):
             other = Value(other)
 
-        if reversed:
+        if right_hand:
             return CombinedExpression(other, connector, self)
         return CombinedExpression(self, connector, other)
 
@@ -180,6 +186,24 @@ class F(Expression):
 
     def __pow__(self, other):
         return self._combine(other, Connector.pow, False)
+
+    def __radd__(self, other):
+        return self._combine(other, Connector.add, True)
+
+    def __rsub__(self, other):
+        return self._combine(other, Connector.sub, True)
+
+    def __rmul__(self, other):
+        return self._combine(other, Connector.mul, True)
+
+    def __rtruediv__(self, other):
+        return self._combine(other, Connector.div, True)
+
+    def __rmod__(self, other):
+        return self._combine(other, Connector.mod, True)
+
+    def __rpow__(self, other):
+        return self._combine(other, Connector.pow, True)
 
 
 class Subquery(Term):  # type: ignore
@@ -412,7 +436,6 @@ class Q:
             )
             raise FieldError(f"Unknown filter param '{key}'. Allowed base values are {allowed}")
 
-        # TODO: extend joins?
         if isinstance(filter_value, Expression):
             filter_value = filter_value.resolve(resolve_context).term
 
@@ -504,7 +527,7 @@ class Function(Expression):
 
     def _resolve_nested_field(self, resolve_context: ResolveContext, field: str) -> ResolveResult:
         term, joins, output_field = resolve_nested_field(
-            resolve_context.model, resolve_context.table, field, self.populate_field_object
+            resolve_context.model, resolve_context.table, field
         )
         if self.populate_field_object:
             self.field_object = output_field
@@ -613,7 +636,7 @@ class When(Expression):
     def __init__(
         self,
         *args: Q,
-        then: Union[str, F, ArithmeticExpression, Function],
+        then: Union[str, F, CombinedExpression, Function],
         negate: bool = False,
         **kwargs: Any,
     ) -> None:
@@ -622,7 +645,7 @@ class When(Expression):
         self.negate = negate
         self.kwargs = kwargs
 
-    def _resolve_objects(self) -> List[Q]:
+    def _resolve_q_objects(self) -> List[Q]:
         q_objects = []
         for arg in self.args:
             if not isinstance(arg, Q):
@@ -640,7 +663,7 @@ class When(Expression):
         return q_objects
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
-        q_objects = self._resolve_objects()
+        q_objects = self._resolve_q_objects()
 
         modifier = QueryModifier()
         for node in q_objects:
@@ -650,8 +673,6 @@ class When(Expression):
             then = self.then.resolve(resolve_context).term
         else:
             then = Term.wrap_constant(self.then)
-            if not isinstance(then, Term):
-                raise TypeError("expected Term object as then")
 
         return ResolveResult(term=_WhenThen(modifier.where_criterion, then))
 
@@ -665,7 +686,7 @@ class Case(Expression):
     """
 
     def __init__(
-        self, *args: When, default: Union[str, F, ArithmeticExpression, Function] = None
+        self, *args: When, default: Union[str, F, CombinedExpression, Function, None] = None
     ) -> None:
         self.args = args
         self.default = default

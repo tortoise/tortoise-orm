@@ -257,6 +257,28 @@ class StraightFieldTests(test.TestCase):
         obj = await self.model.filter(chars="bbb").values("fk__chars")
         self.assertEqual(obj, [{"fk__chars": "aaa"}])
 
+    async def test_filter_with_field_f(self):
+        obj = await self.model.create(chars="a")
+        ret_obj = await self.model.filter(eyedee=F("eyedee")).first()
+        self.assertEqual(obj, ret_obj)
+
+        ret_obj = await self.model.filter(eyedee__lt=F("eyedee") + 1).first()
+        self.assertEqual(obj, ret_obj)
+
+    async def test_filter_with_field_f_annotation(self):
+        obj = await self.model.create(chars="a")
+        ret_obj = (
+            await self.model.annotate(eyedee_a=F("eyedee")).filter(eyedee=F("eyedee_a")).first()
+        )
+        self.assertEqual(obj, ret_obj)
+
+        ret_obj = (
+            await self.model.annotate(eyedee_a=F("eyedee") + 1)
+            .filter(eyedee__lt=F("eyedee_a"))
+            .first()
+        )
+        self.assertEqual(obj, ret_obj)
+
 
 class SourceFieldTests(StraightFieldTests):
     def setUp(self) -> None:

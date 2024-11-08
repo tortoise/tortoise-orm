@@ -42,7 +42,6 @@ from tortoise.fields.relational import (
     RelationalField,
 )
 from tortoise.filters import FilterInfoDict
-from tortoise.functions import Function
 from tortoise.query_utils import (
     Prefetch,
     QueryModifier,
@@ -78,7 +77,9 @@ class QuerySetSingle(Protocol[T_co]):
 
     def select_related(self, *args: str) -> "QuerySetSingle[T_co]": ...  # pragma: nocoverage
 
-    def annotate(self, **kwargs: Function) -> "QuerySetSingle[T_co]": ...  # pragma: nocoverage
+    def annotate(
+        self, **kwargs: Union[Expression, Term]
+    ) -> "QuerySetSingle[T_co]": ...  # pragma: nocoverage
 
     def only(self, *fields_for_select: str) -> "QuerySetSingle[T_co]": ...  # pragma: nocoverage
 
@@ -1241,7 +1242,6 @@ class UpdateQuery(AwaitableQuery):
                     value = executor.column_map[key](value, None)
             if isinstance(value, Term):
                 self.query = self.query.set(db_field, value)
-            # TODO: resolve expressions
             else:
                 self.query = self.query.set(db_field, executor.parameter(count))
                 self.values.append(value)

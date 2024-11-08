@@ -298,13 +298,10 @@ class TestAggregation(test.TestCase):
         self.assertEqual(result, [{"sum": Decimal("-2.0")}])
 
     async def test_function_requiring_nested_joins(self):
-        tournament = Tournament(name="Tournament")
-        await tournament.save()
+        tournament = await Tournament.create(name="Tournament")
 
-        event_first = Event(name="1", tournament=tournament)
-        await event_first.save()
-        event_second = Event(name="2", tournament=tournament)
-        await event_second.save()
+        event_first = await Event.create(name="1", tournament=tournament)
+        event_second = await Event.create(name="2", tournament=tournament)
 
         team_first = await Team.create(name="First", alias=2)
         team_second = await Team.create(name="Second", alias=10)

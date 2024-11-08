@@ -436,24 +436,27 @@ class TestFiltering(test.TestCase):
         self.assertEqual(tournaments[0].is_tournament, "yes")
 
     async def test_f_annotation_filter(self):
-        await IntFields.create(intnum=1)
+        event = await IntFields.create(intnum=1)
 
-        events = await IntFields.annotate(intnum_plus_1=F("intnum") + 1).filter(intnum_plus_1=2)
-        self.assertEqual(len(events), 1)
+        ret_events = await IntFields.annotate(intnum_plus_1=F("intnum") + 1).filter(intnum_plus_1=2)
+        self.assertEqual(ret_events, [event])
 
     async def test_f_annotation_custom_filter(self):
-        await IntFields.create(intnum=1)
+        event = await IntFields.create(intnum=1)
 
         base_query = IntFields.annotate(intnum_plus_1=F("intnum") + 1)
 
-        events = await base_query.filter(intnum_plus_1__gt=1)
-        self.assertEqual(len(events), 1)
+        ret_events = await base_query.filter(intnum_plus_1__gt=1)
+        self.assertEqual(ret_events, [event])
 
-        events = await base_query.filter(intnum_plus_1__lt=3)
-        self.assertEqual(len(events), 1)
+        ret_events = await base_query.filter(intnum_plus_1__lt=3)
+        self.assertEqual(ret_events, [event])
 
-        events = await base_query.filter(Q(intnum_plus_1__gt=1) & Q(intnum_plus_1__lt=3))
-        self.assertEqual(len(events), 1)
+        ret_events = await base_query.filter(Q(intnum_plus_1__gt=1) & Q(intnum_plus_1__lt=3))
+        self.assertEqual(ret_events, [event])
+
+        ret_events = await base_query.filter(intnum_plus_1__isnull=True)
+        self.assertEqual(ret_events, [])
 
     async def test_f_annotation_join(self):
         tournament_a = await Tournament.create(name="A")
@@ -484,25 +487,17 @@ class TestFiltering(test.TestCase):
         self.assertEqual(events, [event_b])
 
     async def test_f_annotation_custom_filter_requiring_nested_joins(self):
-        tournament = Tournament(name="Tournament")
-        await tournament.save()
+        tournament = await Tournament.create(name="Tournament")
 
-        second_tournament = Tournament(name="Tournament 2")
-        await second_tournament.save()
+        second_tournament = await Tournament.create(name="Tournament 2")
 
-        event_first = Event(name="1", tournament=tournament)
-        await event_first.save()
-        event_second = Event(name="2", tournament=second_tournament)
-        await event_second.save()
-        event_third = Event(name="3", tournament=tournament)
-        await event_third.save()
-        event_forth = Event(name="4", tournament=second_tournament)
-        await event_forth.save()
+        event_first = await Event.create(name="1", tournament=tournament)
+        event_second = await Event.create(name="2", tournament=second_tournament)
+        await Event.create(name="3", tournament=tournament)
+        await Event.create(name="4", tournament=second_tournament)
 
-        team_first = Team(name="First")
-        await team_first.save()
-        team_second = Team(name="Second")
-        await team_second.save()
+        team_first = await Team.create(name="First")
+        team_second = await Team.create(name="Second")
 
         await team_first.events.add(event_first)
         await event_second.participants.add(team_second)
