@@ -1,7 +1,6 @@
 import dataclasses
 import sys
-from copy import copy
-from typing import Type, Optional, Any, TYPE_CHECKING, Dict, List, Tuple
+from typing import Type, Optional, Any, TYPE_CHECKING, Dict, List, Tuple, Callable
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -11,150 +10,63 @@ else:
 from pydantic import ConfigDict
 
 from tortoise.fields import Field
-from tortoise.fields.relational import RelationalField, ForeignKeyFieldInstance, ManyToManyFieldInstance, \
-    BackwardOneToOneRelation, BackwardFKRelation, OneToOneFieldInstance, MODEL
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 
 @dataclasses.dataclass
-class FieldDescriptionBase:
-    name: str
-    field_type: Type[Field]
-    nullable: bool
-    constraints: Dict
-    python_type: Optional[type] = None
-    default: Optional[Any] = None
-    description: Optional[str] = None
-    docstring: Optional[str] = None
-
-    @classmethod
-    def _from_field(cls, field: Field):
-        field_type = getattr(field, "related_model", field.field_type)
-        return cls(
-            name=field.model_field_name,
-            field_type=field.__class__,
-            python_type=field_type,
-            nullable=field.null,
-            default=field.default,
-            description=field.description,
-            docstring=field.docstring,
-            constraints=copy(field.constraints),
-        )
-
-    @classmethod
-    def from_field(cls, field: Field):
-        return cls._from_field(field)
-
-
-@dataclasses.dataclass
-class FieldDescription(FieldDescriptionBase):
-    ...
-
-
-@dataclasses.dataclass
-class RelationalFieldDescription(FieldDescriptionBase):
-    python_type: Optional[Type["Model"]] = None
-
-
-@dataclasses.dataclass
-class ForeignKeyFieldInstanceDescription(RelationalFieldDescription):
-    raw_field: Optional[str] = ""
-
-    @classmethod
-    def from_field(cls, field: Field):
-        fd = cls._from_field(field)
-        fd.raw_field = field.source_field
-        return fd
-
-
-@dataclasses.dataclass
-class BackwardFKRelationDescription(ForeignKeyFieldInstanceDescription):
-    ...
-
-
-@dataclasses.dataclass
-class OneToOneFieldInstanceDescription(ForeignKeyFieldInstanceDescription):
-    ...
-
-
-@dataclasses.dataclass
-class BackwardOneToOneRelationDescription(ForeignKeyFieldInstanceDescription):
-    ...
-
-
-@dataclasses.dataclass
-class ManyToManyFieldInstanceDescription(RelationalFieldDescription):
-    ...
-
-
-@dataclasses.dataclass
 class ModelDescription:
-    pk_field: FieldDescriptionBase
-    data_fields: List[FieldDescriptionBase] = dataclasses.field(default_factory=list)
-    fk_fields: List[FieldDescriptionBase] = dataclasses.field(default_factory=list)
-    backward_fk_fields: List[FieldDescriptionBase] = dataclasses.field(default_factory=list)
-    o2o_fields: List[FieldDescriptionBase] = dataclasses.field(default_factory=list)
-    backward_o2o_fields: List[FieldDescriptionBase] = dataclasses.field(default_factory=list)
-    m2m_fields: List[FieldDescriptionBase] = dataclasses.field(default_factory=list)
+    pk_field: Field
+    data_fields: List[Field] = dataclasses.field(default_factory=list)
+    fk_fields: List[Field] = dataclasses.field(default_factory=list)
+    backward_fk_fields: List[Field] = dataclasses.field(default_factory=list)
+    o2o_fields: List[Field] = dataclasses.field(default_factory=list)
+    backward_o2o_fields: List[Field] = dataclasses.field(default_factory=list)
+    m2m_fields: List[Field] = dataclasses.field(default_factory=list)
 
     @classmethod
-    def from_model(cls, model: Type[MODEL]) -> Self:
+    def from_model(cls, model: Type["Model"]) -> Self:
         return cls(
-            pk_field=describe_field_by_dataclass(model._meta.fields_map[model._meta.pk_attr]),
+            pk_field=model._meta.fields_map[model._meta.pk_attr],
             data_fields=[
-                describe_field_by_dataclass(field)
+                field
                 for name, field in model._meta.fields_map.items()
                 if name != model._meta.pk_attr and name in (model._meta.fields - model._meta.fetch_fields)
             ],
             fk_fields=[
-                describe_field_by_dataclass(field)
+                field
                 for name, field in model._meta.fields_map.items()
                 if name in model._meta.fk_fields
             ],
             backward_fk_fields=[
-                describe_field_by_dataclass(field)
+                field
                 for name, field in model._meta.fields_map.items()
                 if name in model._meta.backward_fk_fields
             ],
             o2o_fields=[
-                describe_field_by_dataclass(field)
+                field
                 for name, field in model._meta.fields_map.items()
                 if name in model._meta.o2o_fields
             ],
             backward_o2o_fields=[
-                describe_field_by_dataclass(field)
+                field
                 for name, field in model._meta.fields_map.items()
                 if name in model._meta.backward_o2o_fields
             ],
             m2m_fields=[
-                describe_field_by_dataclass(field)
+                field
                 for name, field in model._meta.fields_map.items()
                 if name in model._meta.m2m_fields
             ],
         )
 
 
-def describe_field_by_dataclass(field: Field) -> FieldDescriptionBase:
-    if isinstance(field, RelationalField):
-        if isinstance(field, ForeignKeyFieldInstance):
-            # ForeignKeyFieldInstance -> RelationalField
-            if isinstance(field, OneToOneFieldInstance):
-                # OneToOneFieldInstance -> ForeignKeyFieldInstance -> RelationalField
-                return OneToOneFieldInstanceDescription.from_field(field)
-            return ForeignKeyFieldInstanceDescription.from_field(field)
-        if isinstance(field, BackwardFKRelation):
-            # BackwardFKRelation -> RelationalField
-            if isinstance(field, BackwardOneToOneRelation):
-                # BackwardOneToOneRelation -> BackwardFKRelation -> RelationalField
-                return BackwardOneToOneRelationDescription.from_field(field)
-            return BackwardFKRelationDescription.from_field(field)
-        if isinstance(field, ManyToManyFieldInstance):
-            # ManyToManyFieldInstance -> RelationalField
-            return ManyToManyFieldInstanceDescription.from_field(field)
-        return RelationalFieldDescription.from_field(field)
-    return FieldDescription.from_field(field)
+@dataclasses.dataclass
+class ComputedFieldDescription:
+    field_type: Any
+    function: Callable[[], Any]
+    description: Optional[str]
 
 
 @dataclasses.dataclass

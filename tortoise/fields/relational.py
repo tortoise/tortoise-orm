@@ -48,7 +48,7 @@ class ReverseRelation(Generic[MODEL]):
 
     def __init__(
         self,
-        remote_model: "Type[MODEL]",
+        remote_model: Type[MODEL],
         relation_field: str,
         instance: "Model",
         from_field: str,

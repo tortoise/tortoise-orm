@@ -1,20 +1,20 @@
-import dataclasses
 import inspect
 from base64 import b32encode
+from copy import copy
 from typing import MutableMapping
 
 from hashlib import sha3_224
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Callable, Union, TypeVar
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
-from pydantic import ConfigDict, Field, computed_field, create_model
-from pydantic._internal._decorators import PydanticDescriptorProxy
+from pydantic import ConfigDict, computed_field, create_model
+from pydantic import Field as PydanticField
 
+from tortoise import ForeignKeyFieldInstance, BackwardFKRelation, ManyToManyFieldInstance, OneToOneFieldInstance, \
+    BackwardOneToOneRelation
 from tortoise.contrib.pydantic.base import PydanticListModel, PydanticModel
 from tortoise.contrib.pydantic.utils import get_annotations
-from tortoise.fields import IntField, JSONField, TextField
-from tortoise.contrib.pydantic.dataclasses import FieldDescriptionBase, ForeignKeyFieldInstanceDescription, \
-    OneToOneFieldInstanceDescription, BackwardOneToOneRelationDescription, BackwardFKRelationDescription, \
-    ManyToManyFieldInstanceDescription, ModelDescription, PydanticMetaData
+from tortoise.fields import JSONField, Field, IntField, TextField
+from tortoise.contrib.pydantic.dataclasses import ModelDescription, PydanticMetaData, ComputedFieldDescription
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -87,23 +87,16 @@ def _pydantic_recursion_protector(
     return pmc.create_pydantic_model()
 
 
-@dataclasses.dataclass
-class ComputedFieldDescription:
-    field_type: Any
-    function: Callable[[], Any]
-    description: Optional[str]
+# FieldDescriptionT = TypeVar('FieldDescriptionT', bound=FieldDescriptionBase)
 
 
-FieldDescriptionT = TypeVar('FieldDescriptionT', bound=FieldDescriptionBase)
-
-
-class FieldMap(MutableMapping[str, Union[FieldDescriptionBase, ComputedFieldDescription]]):
-    def __init__(self, meta: PydanticMetaData, pk_field_description: Optional[FieldDescriptionBase] = None):
-        self._field_map: Dict[str, Union[FieldDescriptionBase, ComputedFieldDescription]] = {}
-        self.pk_raw_field = pk_field_description.name if pk_field_description is not None else ""
-        if pk_field_description:
-            self.pk_raw_field = pk_field_description.name
-            self.field_map_update([pk_field_description], meta)
+class FieldMap(MutableMapping[str, Union[Field, ComputedFieldDescription]]):
+    def __init__(self, meta: PydanticMetaData, pk_field: Optional[Field] = None):
+        self._field_map: Dict[str, Union[Field, ComputedFieldDescription]] = {}
+        self.pk_raw_field = pk_field.model_field_name if pk_field is not None else ""
+        if pk_field:
+            self.pk_raw_field = pk_field.model_field_name
+            self.field_map_update([pk_field], meta)
         self.computed_fields: Dict[str, ComputedFieldDescription] = {}
 
     def __delitem__(self, __key):
@@ -129,18 +122,18 @@ class FieldMap(MutableMapping[str, Union[FieldDescriptionBase, ComputedFieldDesc
             k: self._field_map[k] for k in tuple(cls._meta.fields_map.keys()) + computed if k in self._field_map
         }
 
-    def field_map_update(self, field_descriptions: List[FieldDescriptionT], meta: PydanticMetaData) -> None:
-        for field_description in field_descriptions:
-            name = field_description.name
+    def field_map_update(self, fields: List[Field], meta: PydanticMetaData) -> None:
+        for field in fields:
+            name = field.model_field_name
             # Include or exclude field
             if (meta.include and name not in meta.include) or name in meta.exclude:
                 continue
             # Remove raw fields
-            if isinstance(field_description, ForeignKeyFieldInstanceDescription):
-                raw_field = field_description.raw_field
+            if isinstance(field, ForeignKeyFieldInstance):
+                raw_field = field.source_field
                 if raw_field is not None and meta.exclude_raw_fields and raw_field != self.pk_raw_field:
                     self.pop(raw_field, None)
-            self[name] = field_description
+            self[name] = field
 
     def computed_field_map_update(self, computed: Tuple[str, ...], cls: "Type[Model]"):
         self._field_map.update(
@@ -335,23 +328,23 @@ class PydanticModelCreator:
     def _initialize_field_map(self) -> FieldMap:
         return FieldMap(self.meta) \
             if self._exclude_read_only \
-            else FieldMap(self.meta, pk_field_description=self._model_description.pk_field)
+            else FieldMap(self.meta, pk_field=self._model_description.pk_field)
 
     def _construct_field_map(self) -> None:
-        self._field_map.field_map_update(field_descriptions=self._model_description.data_fields, meta=self.meta)
+        self._field_map.field_map_update(fields=self._model_description.data_fields, meta=self.meta)
         if not self._exclude_read_only:
-            for field_descriptions in (
+            for fields in (
                     self._model_description.fk_fields,
                     self._model_description.o2o_fields,
                     self._model_description.m2m_fields
             ):
-                self._field_map.field_map_update(field_descriptions, self.meta)
+                self._field_map.field_map_update(fields, self.meta)
             if self.meta.backward_relations:
-                for field_descriptions in (
+                for fields in (
                         self._model_description.backward_fk_fields,
                         self._model_description.backward_o2o_fields
                 ):
-                    self._field_map.field_map_update(field_descriptions, self.meta)
+                    self._field_map.field_map_update(fields, self.meta)
             self._field_map.computed_field_map_update(self.meta.computed, self._cls)
         if self.meta.sort_alphabetically:
             self._field_map.sort_alphabetically()
@@ -359,8 +352,8 @@ class PydanticModelCreator:
             self._field_map.sort_definition_order(self._cls, self.meta.computed)
 
     def create_pydantic_model(self) -> Type[PydanticModel]:
-        for field_name, field_description in self._field_map.items():
-            self._process_field(field_name, field_description)
+        for field_name, field in self._field_map.items():
+            self._process_field(field_name, field)
 
         self._name, self._title = self.get_name()
 
@@ -391,7 +384,7 @@ class PydanticModelCreator:
     def _process_field(
             self,
             field_name: str,
-            field_description: Union[FieldDescriptionBase, ComputedFieldDescription],
+            field: Union[Field, ComputedFieldDescription],
     ) -> None:
         json_schema_extra: Dict[str, Any] = {}
         fconfig: Dict[str, Any] = {
@@ -399,81 +392,81 @@ class PydanticModelCreator:
         }
         field_property: Optional[Any] = None
         is_to_one_relation: bool = False
-        comment = ""
-        if isinstance(field_description, FieldDescriptionBase):
-            field_property, is_to_one_relation = self._process_normal_field_description(
-                field_name, field_description, json_schema_extra, fconfig
+        if isinstance(field, Field):
+            field_property, is_to_one_relation = self._process_normal_field(
+                field_name, field, json_schema_extra, fconfig
             )
-        elif isinstance(field_description, ComputedFieldDescription):
-            field_property, is_to_one_relation = self._process_computed_field_description(field_description), False
-            comment = _cleandoc(field_description.function)
-
-        if field_property:
-            self._properties[field_name] = field_property
-        if field_name in self._properties and not isinstance(self._properties[field_name], tuple):
-            fconfig["title"] = field_name.replace("_", " ").title()
-            description = comment or _br_it(field_description.docstring or field_description.description or "") \
-                if isinstance(field_description, FieldDescriptionBase) \
-                else (comment or _br_it(field_description.description or ""))
-            if description:
-                fconfig["description"] = description
-            ftype = self._properties[field_name]
-            if not isinstance(ftype, PydanticDescriptorProxy) and isinstance(field_description, FieldDescriptionBase):
+            if field_property:
+                fconfig["title"] = field_name.replace("_", " ").title()
+                description = _br_it(field.docstring or field.description or "")
+                if description:
+                    fconfig["description"] = description
                 if (
                         field_name in self._optional
-                        or (field_description.default is not None and not callable(field_description.default))
+                        or (field.default is not None and not callable(field.default))
                 ):
-                    self._properties[field_name] = (ftype, Field(default=field_description.default, **fconfig))
+                    self._properties[field_name] = (field_property, PydanticField(default=field.default, **fconfig))
                 else:
                     if (
                             (
                                     json_schema_extra.get("nullable")
                                     and not is_to_one_relation
-                                    and field_description.field_type not in (IntField, TextField)
+                                    and field.__class__ not in (IntField, TextField)
                             )
                             or (self._exclude_read_only and json_schema_extra.get("readOnly"))
                     ):
-                        fconfig["default_factory"] = lambda: None
-                    self._properties[field_name] = (ftype, Field(**fconfig))
+                        # see: https://docs.pydantic.dev/latest/migration/#required-optional-and-nullable-fields
+                        fconfig["default"] = None
+                    self._properties[field_name] = (field_property, PydanticField(**fconfig))
+        elif isinstance(field, ComputedFieldDescription):
+            field_property, is_to_one_relation = self._process_computed_field(field), False
+            if field_property:
+                comment = _cleandoc(field.function)
+                fconfig["title"] = field_name.replace("_", " ").title()
+                description = comment or _br_it(field.description or "")
+                if description:
+                    fconfig["description"] = description
+                self._properties[field_name] = field_property
 
-    def _process_normal_field_description(
+    def _process_normal_field(
             self,
             field_name: str,
-            field_description: FieldDescriptionBase,
+            field: Field,
             json_schema_extra: Dict[str, Any],
             fconfig: Dict[str, Any],
     ) -> Tuple[Optional[Any], bool]:
-        if isinstance(field_description, (BackwardFKRelationDescription, ManyToManyFieldInstanceDescription)):
-            return self._process_many_field_relation(field_name, field_description), False
-        elif isinstance(
-                field_description,
+        if isinstance(
+                field,
                 (
-                        ForeignKeyFieldInstanceDescription,
-                        OneToOneFieldInstanceDescription,
-                        BackwardOneToOneRelationDescription
+                        ForeignKeyFieldInstance,
+                        OneToOneFieldInstance,
+                        BackwardOneToOneRelation
                 )
         ):
-            return self._process_single_field_relation(field_name, field_description, json_schema_extra), True
-        elif field_description.field_type is JSONField:
+            return self._process_single_field_relation(field_name, field, json_schema_extra), True
+        elif isinstance(field, (BackwardFKRelation, ManyToManyFieldInstance)):
+            return self._process_many_field_relation(field_name, field), False
+        elif field.field_type is JSONField:
             return Any, False
-        return self._process_data_field_description(field_name, field_description, json_schema_extra, fconfig), False
+        return self._process_data_field(field_name, field, json_schema_extra, fconfig), False
 
     def _process_single_field_relation(
             self,
             field_name: str,
-            field_description: Union[
-                ForeignKeyFieldInstanceDescription,
-                OneToOneFieldInstanceDescription,
-                BackwardOneToOneRelationDescription
+            field: Union[
+                ForeignKeyFieldInstance,
+                OneToOneFieldInstance,
+                BackwardOneToOneRelation
             ],
             json_schema_extra: Dict[str, Any],
     ) -> Optional[Type[PydanticModel]]:
-        model: Optional[Type[PydanticModel]] = self._get_submodel(field_description.python_type, field_name)
+        python_type = getattr(field, "related_model", field.field_type)
+        model: Optional[Type[PydanticModel]] = self._get_submodel(python_type, field_name)
         if model:
             self._relational_fields_index.append((field_name, model.__name__))
-            if field_description.nullable:
+            if field.null:
                 json_schema_extra["nullable"] = True
-            if field_description.nullable or field_description.default is not None:
+            if field.null or field.default is not None:
                 model = Optional[model]  # type: ignore
 
             return model
@@ -482,40 +475,43 @@ class PydanticModelCreator:
     def _process_many_field_relation(
             self,
             field_name: str,
-            field_description: Union[BackwardFKRelationDescription, ManyToManyFieldInstanceDescription],
+            field: Union[BackwardFKRelation, ManyToManyFieldInstance],
     ) -> Optional[Type[List[Type[PydanticModel]]]]:
-        model = self._get_submodel(field_description.python_type, field_name)
+        python_type = field.related_model
+        model = self._get_submodel(python_type, field_name)
         if model:
             self._relational_fields_index.append((field_name, model.__name__))
             return List[model]  # type: ignore
         return None
 
-    def _process_data_field_description(
+    def _process_data_field(
             self,
             field_name: str,
-            field_description: FieldDescriptionBase,
+            field: Field,
             json_schema_extra: Dict[str, Any],
             fconfig: Dict[str, Any],
     ) -> Optional[Any]:
         annotation = self._annotations.get(field_name, None)
-        if "readOnly" in field_description.constraints:
-            json_schema_extra["readOnly"] = field_description.constraints["readOnly"]
-            del field_description.constraints["readOnly"]
-        fconfig.update(field_description.constraints)
-        ptype = field_description.python_type
-        if field_description.nullable:
+        constraints = copy(field.constraints)
+        if "readOnly" in constraints:
+            json_schema_extra["readOnly"] = constraints["readOnly"]
+            del constraints["readOnly"]
+        fconfig.update(constraints)
+        python_type = getattr(field, "related_model", field.field_type)
+        ptype = python_type
+        if field.null:
             json_schema_extra["nullable"] = True
-        if field_name in self._optional or field_description.default is not None or field_description.nullable:
-            ptype = Optional[ptype]  # type: ignore
+        if field_name in self._optional or field.default is not None or field.null:
+            ptype = Optional[ptype]
         if not (self._exclude_read_only and json_schema_extra.get("readOnly") is True):
             return annotation or ptype
         return None
 
-    def _process_computed_field_description(
+    def _process_computed_field(
             self,
-            field_description: ComputedFieldDescription,
+            field: ComputedFieldDescription,
     ) -> Optional[Any]:
-        func = field_description.function
+        func = field.function
         annotation = get_annotations(self._cls, func).get("return", None)
         comment = _cleandoc(func)
         if annotation is not None:
