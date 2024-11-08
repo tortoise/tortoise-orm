@@ -13,7 +13,7 @@ from tortoise import ForeignKeyFieldInstance, BackwardFKRelation, ManyToManyFiel
     BackwardOneToOneRelation
 from tortoise.contrib.pydantic.base import PydanticListModel, PydanticModel
 from tortoise.contrib.pydantic.utils import get_annotations
-from tortoise.fields import JSONField, Field, IntField, TextField
+from tortoise.fields import JSONField, Field
 from tortoise.contrib.pydantic.dataclasses import ModelDescription, PydanticMetaData, ComputedFieldDescription
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -411,7 +411,6 @@ class PydanticModelCreator:
                             (
                                     json_schema_extra.get("nullable")
                                     and not is_to_one_relation
-                                    and field.__class__ not in (IntField, TextField)
                             )
                             or (self._exclude_read_only and json_schema_extra.get("readOnly"))
                     ):
