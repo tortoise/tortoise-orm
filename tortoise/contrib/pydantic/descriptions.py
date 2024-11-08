@@ -1,6 +1,6 @@
 import dataclasses
 import sys
-from typing import Type, Optional, Any, TYPE_CHECKING, Dict, List, Tuple, Callable
+from typing import Type, Optional, Any, TYPE_CHECKING, List, Tuple, Callable
 
 if sys.version_info >= (3, 11):
     from typing import Self

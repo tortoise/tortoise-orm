@@ -87,9 +87,6 @@ def _pydantic_recursion_protector(
     return pmc.create_pydantic_model()
 
 
-# FieldDescriptionT = TypeVar('FieldDescriptionT', bound=FieldDescriptionBase)
-
-
 class FieldMap(MutableMapping[str, Union[Field, ComputedFieldDescription]]):
     def __init__(self, meta: PydanticMetaData, pk_field: Optional[Field] = None):
         self._field_map: Dict[str, Union[Field, ComputedFieldDescription]] = {}
