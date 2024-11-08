@@ -14,7 +14,7 @@ from tortoise import ForeignKeyFieldInstance, BackwardFKRelation, ManyToManyFiel
 from tortoise.contrib.pydantic.base import PydanticListModel, PydanticModel
 from tortoise.contrib.pydantic.utils import get_annotations
 from tortoise.fields import JSONField, Field
-from tortoise.contrib.pydantic.dataclasses import ModelDescription, PydanticMetaData, ComputedFieldDescription
+from tortoise.contrib.pydantic.descriptions import ModelDescription, PydanticMetaData, ComputedFieldDescription
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
