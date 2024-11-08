@@ -290,7 +290,7 @@ class PydanticModelCreator:
     def _hash(self):
         if self.__hash == "":
             hashval = (
-                f"{self._fqname};{self._properties.keys()};{self._relational_fields_index};"
+                f"{self._fqname};{self._properties.keys()};{self._relational_fields_index};{self._optional};"
                 f"{self.meta.allow_cycles}"
             )
             self.__hash = b32encode(sha3_224(hashval.encode("utf-8")).digest()).decode("utf-8").lower()[:6]

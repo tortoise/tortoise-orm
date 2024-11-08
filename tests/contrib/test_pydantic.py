@@ -67,7 +67,7 @@ class TestPydantic(test.TestCase):
             self.Event_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Address_4smkxs_leaf": {
+                    "Address_coqnj7_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -83,7 +83,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "Reporter_4tvqui_leaf": {
+                    "Reporter_fgnv33_leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -99,7 +99,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "Team_bnxjyv_leaf": {
+                    "Team_ip4pg6_leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -128,7 +128,7 @@ class TestPydantic(test.TestCase):
                         "title": "Team",
                         "type": "object",
                     },
-                    "Tournament_djsht2_leaf": {
+                    "Tournament_5y7e7j_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -167,13 +167,13 @@ class TestPydantic(test.TestCase):
                     },
                     "name": {"description": "The name", "title": "Name", "type": "string"},
                     "tournament": {
-                        "$ref": "#/$defs/Tournament_djsht2_leaf",
+                        "$ref": "#/$defs/Tournament_5y7e7j_leaf",
                         "description": "What tournaments is a happenin'",
                     },
                     "reporter": {
                         "anyOf": [
                             {
-                                "$ref": "#/$defs/Reporter_4tvqui_leaf"
+                                "$ref": "#/$defs/Reporter_fgnv33_leaf"
                             },
                             {"type": "null"},
                         ],
@@ -182,7 +182,7 @@ class TestPydantic(test.TestCase):
                     },
                     "participants": {
                         "items": {
-                            "$ref": "#/$defs/Team_bnxjyv_leaf"
+                            "$ref": "#/$defs/Team_ip4pg6_leaf"
                         },
                         "title": "Participants",
                         "type": "array",
@@ -206,7 +206,7 @@ class TestPydantic(test.TestCase):
                     "address": {
                         "anyOf": [
                             {
-                                "$ref": "#/$defs/Address_4smkxs_leaf"
+                                "$ref": "#/$defs/Address_coqnj7_leaf"
                             },
                             {"type": "null"},
                         ],
@@ -234,7 +234,7 @@ class TestPydantic(test.TestCase):
             self.Event_Pydantic_List.model_json_schema(),
             {
                 "$defs": {
-                    "Event_c5pgat": {
+                    "Event_padfez": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -246,13 +246,13 @@ class TestPydantic(test.TestCase):
                             },
                             "name": {"description": "The name", "title": "Name", "type": "string"},
                             "tournament": {
-                                "$ref": "#/$defs/Tournament_djsht2_leaf",
+                                "$ref": "#/$defs/Tournament_5y7e7j_leaf",
                                 "description": "What tournaments is a happenin'",
                             },
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/Reporter_4tvqui_leaf"
+                                        "$ref": "#/$defs/Reporter_fgnv33_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -261,7 +261,7 @@ class TestPydantic(test.TestCase):
                             },
                             "participants": {
                                 "items": {
-                                    "$ref": "#/$defs/Team_bnxjyv_leaf"
+                                    "$ref": "#/$defs/Team_ip4pg6_leaf"
                                 },
                                 "title": "Participants",
                                 "type": "array",
@@ -292,7 +292,7 @@ class TestPydantic(test.TestCase):
                             "address": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/Address_4smkxs_leaf"
+                                        "$ref": "#/$defs/Address_coqnj7_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -313,7 +313,7 @@ class TestPydantic(test.TestCase):
                         "title": "Event",
                         "type": "object",
                     },
-                    "Address_4smkxs_leaf": {
+                    "Address_coqnj7_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -329,7 +329,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "Reporter_4tvqui_leaf": {
+                    "Reporter_fgnv33_leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -345,7 +345,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "Team_bnxjyv_leaf": {
+                    "Team_ip4pg6_leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -374,7 +374,7 @@ class TestPydantic(test.TestCase):
                         "title": "Team",
                         "type": "object",
                     },
-                    "Tournament_djsht2_leaf": {
+                    "Tournament_5y7e7j_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -403,7 +403,7 @@ class TestPydantic(test.TestCase):
                     },
                 },
                 "description": "Events on the calendar",
-                "items": {"$ref": "#/$defs/Event_c5pgat"},
+                "items": {"$ref": "#/$defs/Event_padfez"},
                 "title": "Event_list",
                 "type": "array",
             },
@@ -414,7 +414,7 @@ class TestPydantic(test.TestCase):
             self.Address_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_jz7ivr_leaf": {
+                    "Event_zvunzw_leaf": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -426,13 +426,13 @@ class TestPydantic(test.TestCase):
                             },
                             "name": {"description": "The name", "title": "Name", "type": "string"},
                             "tournament": {
-                                "$ref": "#/$defs/Tournament_djsht2_leaf",
+                                "$ref": "#/$defs/Tournament_5y7e7j_leaf",
                                 "description": "What tournaments is a happenin'",
                             },
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/Reporter_4tvqui_leaf"
+                                        "$ref": "#/$defs/Reporter_fgnv33_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -441,7 +441,7 @@ class TestPydantic(test.TestCase):
                             },
                             "participants": {
                                 "items": {
-                                    "$ref": "#/$defs/Team_bnxjyv_leaf"
+                                    "$ref": "#/$defs/Team_ip4pg6_leaf"
                                 },
                                 "title": "Participants",
                                 "type": "array",
@@ -482,7 +482,7 @@ class TestPydantic(test.TestCase):
                         "title": "Event",
                         "type": "object",
                     },
-                    "Reporter_4tvqui_leaf": {
+                    "Reporter_fgnv33_leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -498,7 +498,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "Team_bnxjyv_leaf": {
+                    "Team_ip4pg6_leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -527,7 +527,7 @@ class TestPydantic(test.TestCase):
                         "title": "Team",
                         "type": "object",
                     },
-                    "Tournament_djsht2_leaf": {
+                    "Tournament_5y7e7j_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -559,7 +559,7 @@ class TestPydantic(test.TestCase):
                 "properties": {
                     "city": {"maxLength": 64, "title": "City", "type": "string"},
                     "street": {"maxLength": 128, "title": "Street", "type": "string"},
-                    "event": {"$ref": "#/$defs/Event_jz7ivr_leaf"},
+                    "event": {"$ref": "#/$defs/Event_zvunzw_leaf"},
                     "event_id": {
                         "maximum": 9223372036854775807,
                         "minimum": -9223372036854775808,
@@ -578,7 +578,7 @@ class TestPydantic(test.TestCase):
             self.Tournament_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_yu5egy_leaf": {
+                    "Event_jgrv4c_leaf": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -592,7 +592,7 @@ class TestPydantic(test.TestCase):
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/Reporter_4tvqui_leaf"
+                                        "$ref": "#/$defs/Reporter_fgnv33_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -601,7 +601,7 @@ class TestPydantic(test.TestCase):
                             },
                             "participants": {
                                 "items": {
-                                    "$ref": "#/$defs/Team_bnxjyv_leaf"
+                                    "$ref": "#/$defs/Team_ip4pg6_leaf"
                                 },
                                 "title": "Participants",
                                 "type": "array",
@@ -632,7 +632,7 @@ class TestPydantic(test.TestCase):
                             "address": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/Address_4smkxs_leaf"
+                                        "$ref": "#/$defs/Address_coqnj7_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -652,7 +652,7 @@ class TestPydantic(test.TestCase):
                         "title": "Event",
                         "type": "object",
                     },
-                    "Address_4smkxs_leaf": {
+                    "Address_coqnj7_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -668,7 +668,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "Reporter_4tvqui_leaf": {
+                    "Reporter_fgnv33_leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -684,7 +684,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "Team_bnxjyv_leaf": {
+                    "Team_ip4pg6_leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -732,7 +732,7 @@ class TestPydantic(test.TestCase):
                     },
                     "events": {
                         "description": "What tournaments is a happenin'",
-                        "items": {"$ref": "#/$defs/Event_yu5egy_leaf"},
+                        "items": {"$ref": "#/$defs/Event_jgrv4c_leaf"},
                         "title": "Events",
                         "type": "array",
                     },
@@ -748,7 +748,7 @@ class TestPydantic(test.TestCase):
             self.Team_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_7fv6fv_leaf": {
+                    "Event_n2kadx_leaf": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -760,13 +760,13 @@ class TestPydantic(test.TestCase):
                             },
                             "name": {"description": "The name", "title": "Name", "type": "string"},
                             "tournament": {
-                                "$ref": "#/$defs/Tournament_djsht2_leaf",
+                                "$ref": "#/$defs/Tournament_5y7e7j_leaf",
                                 "description": "What tournaments is a happenin'",
                             },
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/Reporter_4tvqui_leaf"
+                                        "$ref": "#/$defs/Reporter_fgnv33_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -799,7 +799,7 @@ class TestPydantic(test.TestCase):
                             "address": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/Address_4smkxs_leaf"
+                                        "$ref": "#/$defs/Address_coqnj7_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -819,7 +819,7 @@ class TestPydantic(test.TestCase):
                         "title": "Event",
                         "type": "object",
                     },
-                    "Address_4smkxs_leaf": {
+                    "Address_coqnj7_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -835,7 +835,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "Reporter_4tvqui_leaf": {
+                    "Reporter_fgnv33_leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -851,7 +851,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "Tournament_djsht2_leaf": {
+                    "Tournament_5y7e7j_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -899,7 +899,7 @@ class TestPydantic(test.TestCase):
                         "title": "Alias",
                     },
                     "events": {
-                        "items": {"$ref": "#/$defs/Event_7fv6fv_leaf"},
+                        "items": {"$ref": "#/$defs/Event_n2kadx_leaf"},
                         "title": "Events",
                         "type": "array",
                     },
@@ -1303,7 +1303,7 @@ class TestPydanticCycle(test.TestCase):
             self.Employee_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Employee_lqnwvu_leaf": {
+                    "Employee_6tkbjb_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -1314,7 +1314,7 @@ class TestPydanticCycle(test.TestCase):
                             },
                             "name": {"maxLength": 50, "title": "Name", "type": "string"},
                             "talks_to": {
-                                "items": {"$ref": "#/$defs/Employee_okqh4k_leaf"},
+                                "items": {"$ref": "#/$defs/Employee_fj2ly4_leaf"},
                                 "title": "Talks To",
                                 "type": "array",
                             },
@@ -1332,7 +1332,7 @@ class TestPydanticCycle(test.TestCase):
                                 "title": "Manager Id",
                             },
                             "team_members": {
-                                "items": {"$ref": "#/$defs/Employee_okqh4k_leaf"},
+                                "items": {"$ref": "#/$defs/Employee_fj2ly4_leaf"},
                                 "title": "Team Members",
                                 "type": "array",
                             },
@@ -1341,7 +1341,7 @@ class TestPydanticCycle(test.TestCase):
                         "title": "Employee",
                         "type": "object",
                     },
-                    "Employee_okqh4k_leaf": {
+                    "Employee_fj2ly4_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -1380,7 +1380,7 @@ class TestPydanticCycle(test.TestCase):
                     },
                     "name": {"maxLength": 50, "title": "Name", "type": "string"},
                     "talks_to": {
-                        "items": {"$ref": "#/$defs/Employee_lqnwvu_leaf"},
+                        "items": {"$ref": "#/$defs/Employee_6tkbjb_leaf"},
                         "title": "Talks To",
                         "type": "array",
                     },
@@ -1394,7 +1394,7 @@ class TestPydanticCycle(test.TestCase):
                         "title": "Manager Id",
                     },
                     "team_members": {
-                        "items": {"$ref": "#/$defs/Employee_lqnwvu_leaf"},
+                        "items": {"$ref": "#/$defs/Employee_6tkbjb_leaf"},
                         "title": "Team Members",
                         "type": "array",
                     },
@@ -1504,7 +1504,7 @@ class TestPydanticComputed(test.TestCase):
             self.Employee_Pydantic.model_json_schema(mode="serialization"),
             {
                 "$defs": {
-                    "Employee_okqh4k_leaf": {
+                    "Employee_fj2ly4_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -1555,7 +1555,7 @@ class TestPydanticComputed(test.TestCase):
                         "title": "Employee",
                         "type": "object"
                     },
-                    "Employee_lqnwvu_leaf": {
+                    "Employee_6tkbjb_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -1571,7 +1571,7 @@ class TestPydanticComputed(test.TestCase):
                             },
                             "talks_to": {
                                 "items": {
-                                    "$ref": "#/$defs/Employee_okqh4k_leaf"
+                                    "$ref": "#/$defs/Employee_fj2ly4_leaf"
                                 },
                                 "title": "Talks To",
                                 "type": "array"
@@ -1593,7 +1593,7 @@ class TestPydanticComputed(test.TestCase):
                             },
                             "team_members": {
                                 "items": {
-                                    "$ref": "#/$defs/Employee_okqh4k_leaf"
+                                    "$ref": "#/$defs/Employee_fj2ly4_leaf"
                                 },
                                 "title": "Team Members",
                                 "type": "array"
@@ -1638,7 +1638,7 @@ class TestPydanticComputed(test.TestCase):
                     },
                     "talks_to": {
                         "items": {
-                            "$ref": "#/$defs/Employee_lqnwvu_leaf"
+                            "$ref": "#/$defs/Employee_6tkbjb_leaf"
                         },
                         "title": "Talks To",
                         "type": "array"
@@ -1660,7 +1660,7 @@ class TestPydanticComputed(test.TestCase):
                     },
                     "team_members": {
                         "items": {
-                            "$ref": "#/$defs/Employee_lqnwvu_leaf"
+                            "$ref": "#/$defs/Employee_6tkbjb_leaf"
                         },
                         "title": "Team Members",
                         "type": "array"
