@@ -82,7 +82,7 @@ httpx = "*"
 aiohttp = "*"
 # BlackSheep support
 blacksheep = "^2.0.7"
-pytest-asyncio = "^0.23.6"
+pytest-asyncio = "^0.24.0"
 # mypy
 types-PyYAML = "*"
 types-pytz = "*"
@@ -182,6 +182,7 @@ per-file-ignores = [
 docstring_style = "sphinx"
 
 [tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "session"
 filterwarnings = [
     'ignore:`pk` is deprecated:DeprecationWarning',
     'ignore:`index` is deprecated:DeprecationWarning',
