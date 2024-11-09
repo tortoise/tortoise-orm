@@ -447,14 +447,13 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._orderings = new_ordering
         return queryset
 
-    def _fetch_single(
-        self, queryset=None, ordering: Optional[List[tuple]] = None, limit=1
+    def _single_queryset(
+        self, queryset=None, ordering: Optional[List[tuple]] = None
     ) -> QuerySetSingle[Optional[MODEL]]:
         if queryset is None:
             queryset = self._clone()
         if ordering is not None:
             queryset._orderings = ordering
-        queryset._limit = limit
         queryset._single = True
         return queryset
 
@@ -485,7 +484,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         :raises FieldError: If unknown or no fields has been provided.
         """
         new_ordering = self._parse_ordering_pairs(orderings, reverse=True)
-        return self._fetch_single(ordering=new_ordering)
+        return self._single_queryset(ordering=new_ordering)
 
     def earliest(self, *orderings: str) -> QuerySetSingle[Optional[MODEL]]:
         """
@@ -496,7 +495,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         :raises FieldError: If unknown or no fields has been provided.
         """
         new_ordering = self._parse_ordering_pairs(orderings)
-        return self._fetch_single(ordering=new_ordering)
+        return self._single_queryset(ordering=new_ordering)
 
     def limit(self, limit: int) -> "QuerySet[MODEL]":
         """
@@ -781,7 +780,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         Limit queryset to one object and return one object instead of list.
         """
-        return self._fetch_single()
+        return self._single_queryset()
 
     def last(self) -> QuerySetSingle[Optional[MODEL]]:
         """
@@ -800,7 +799,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             raise FieldError(
                 f"QuerySet has no ordering and model {self.model.__name__} has no pk defined"
             )
-        return self._fetch_single(queryset, new_ordering)
+        return self._single_queryset(queryset, new_ordering)
 
     def get(self, *args: Q, **kwargs: Any) -> QuerySetSingle[MODEL]:
         """
@@ -897,7 +896,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         Fetch exactly one object matching the parameters.
         """
         queryset = self.filter(*args, **kwargs)
-        return self._fetch_single(queryset, limit=2)
+        queryset._limit = 2
+        queryset._single = True
+        return queryset  # type: ignore
 
     def only(self, *fields_for_select: str) -> "QuerySet[MODEL]":
         """
