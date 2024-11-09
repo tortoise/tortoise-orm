@@ -8,7 +8,7 @@ from pydantic._internal._decorators import PydanticDescriptorProxy
 
 from tortoise.contrib.pydantic.base import PydanticListModel, PydanticModel
 from tortoise.contrib.pydantic.utils import get_annotations
-from tortoise.fields import IntField, JSONField, TextField, relational
+from tortoise.fields import IntField, TextField, relational
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -391,9 +391,6 @@ def pydantic_model_creator(
                     func
                 )
 
-        # Json fields
-        elif field_type is JSONField:
-            properties[fname] = Any
         # Any other tortoise fields
         else:
             annotation = annotations.get(fname, None)
