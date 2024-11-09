@@ -53,8 +53,8 @@ def atomic(connection_name: Optional[str] = None) -> Callable[[F], F]:
     def wrapper(func: F) -> F:
         @wraps(func)
         async def wrapped(*args, **kwargs):
-            async with in_transaction(connection_name):
-                return await func(*args, **kwargs)
+            async with in_transaction(connection_name) as client:
+                return await func(client, *args, **kwargs)
 
         return cast(F, wrapped)
 
