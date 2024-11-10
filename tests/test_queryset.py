@@ -1,6 +1,8 @@
 from typing import Type
 
 from tests.testmodels import (
+    Author,
+    Book,
     Event,
     IntFields,
     MinRelation,
@@ -21,6 +23,7 @@ from tortoise.exceptions import (
     ParamsError,
 )
 from tortoise.expressions import F, RawSQL, Subquery
+from tortoise.functions import Avg
 
 # TODO: Test the many exceptions in QuerySet
 # TODO: .filter(intnum_null=None) does not work as expected
@@ -802,6 +805,19 @@ class TestQueryset(test.TestCase):
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0].ten, 10)
         self.assertEqual(events[0].ten_plus_1, 11)
+
+    async def test_joins_in_arithmetic_expressions(self):
+        author = await Author.create(name="1")
+        await Book.create(name="1", author=author, rating=1)
+        await Book.create(name="2", author=author, rating=5)
+
+        ret = await Author.annotate(rating=Avg(F("books__rating") + 1))
+        self.assertEqual(len(ret), 1)
+        self.assertEqual(ret[0].rating, 4.0)
+
+        ret = await Author.annotate(rating=Avg(F("books__rating") * 2 - F("books__rating")))
+        self.assertEqual(len(ret), 1)
+        self.assertEqual(ret[0].rating, 3.0)
 
 
 class TestNotExist(test.TestCase):
