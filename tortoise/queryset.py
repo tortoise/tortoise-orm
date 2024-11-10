@@ -455,6 +455,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         if ordering is not None:
             queryset._orderings = ordering
         queryset._single = True
+        queryset._limit = 1
         return queryset
 
     def _parse_ordering_pairs(
