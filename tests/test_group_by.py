@@ -1,4 +1,4 @@
-from tests.testmodels import Author, Book
+from tests.testmodels import Author, Book, Event, Team, Tournament
 from tortoise.contrib import test
 from tortoise.functions import Avg, Count, Sum, Upper
 
@@ -232,3 +232,27 @@ class TestGroupBy(test.TestCase):
             [{"upper_name": "AUTHOR1", "count": 10}, {"upper_name": "AUTHOR2", "count": 5}],
             sorted_key="upper_name",
         )
+
+    async def test_group_by_requiring_nested_joins(self):
+        tournament_first = await Tournament.create(name="Tournament 1", desc="d1")
+        tournament_second = await Tournament.create(name="Tournament 2", desc="d2")
+
+        event_first = await Event.create(name="1", tournament=tournament_first)
+        event_second = await Event.create(name="2", tournament=tournament_first)
+        event_third = await Event.create(name="3", tournament=tournament_second)
+
+        team_first = await Team.create(name="First", alias=2)
+        team_second = await Team.create(name="Second", alias=4)
+        team_third = await Team.create(name="Third", alias=5)
+
+        await team_first.events.add(event_first)
+        await team_second.events.add(event_second)
+        await team_third.events.add(event_third)
+
+        res = (
+            await Tournament.annotate(avg=Avg("events__participants__alias"))
+            .group_by("desc")
+            .order_by("desc")
+            .values("desc", "avg")
+        )
+        self.assertEqual(res, [{"avg": 3, "desc": "d1"}, {"avg": 5, "desc": "d2"}])

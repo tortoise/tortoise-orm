@@ -1,7 +1,5 @@
 # mypy: no-disallow-untyped-decorators
 # pylint: disable=E0611,E0401
-import asyncio
-
 import pytest
 import pytest_asyncio
 from blacksheep import JSONContent
@@ -10,19 +8,12 @@ from models import Users
 from server import app
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def client(api):
     return TestClient(api)
 
 
-@pytest.fixture(scope="session")
-def event_loop(request):
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def api():
     await app.start()
     yield app

@@ -36,6 +36,7 @@ from tortoise.exceptions import (
     OperationalError,
     ParamsError,
 )
+from tortoise.expressions import Expression
 from tortoise.fields.base import Field
 from tortoise.fields.data import IntField
 from tortoise.fields.relational import (
@@ -49,7 +50,6 @@ from tortoise.fields.relational import (
     ReverseRelation,
 )
 from tortoise.filters import FilterInfoDict, get_filters_for_field
-from tortoise.functions import Function
 from tortoise.indexes import Index
 from tortoise.manager import Manager
 from tortoise.queryset import (
@@ -1293,7 +1293,7 @@ class Model(metaclass=ModelMeta):
         return cls._meta.manager.get_queryset().exclude(*args, **kwargs)
 
     @classmethod
-    def annotate(cls, **kwargs: Union[Function, Term]) -> QuerySet[Self]:
+    def annotate(cls, **kwargs: Union[Expression, Term]) -> QuerySet[Self]:
         """
         Annotates the result set with extra Functions/Aggregations/Expressions.
 
