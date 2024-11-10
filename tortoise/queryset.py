@@ -35,15 +35,19 @@ from tortoise.exceptions import (
     MultipleObjectsReturned,
     ParamsError,
 )
-from tortoise.expressions import Expression, F, Q, RawSQL, ResolveContext
+from tortoise.expressions import Expression, Q, RawSQL, ResolveContext, ResolveResult
 from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
     OneToOneFieldInstance,
     RelationalField,
 )
 from tortoise.filters import FilterInfoDict
-from tortoise.functions import Function
-from tortoise.query_utils import Prefetch, QueryModifier, _get_joins_for_related_field
+from tortoise.query_utils import (
+    Prefetch,
+    QueryModifier,
+    TableCriterionTuple,
+    get_joins_for_related_field,
+)
 from tortoise.router import router
 from tortoise.utils import chunk
 
@@ -73,7 +77,9 @@ class QuerySetSingle(Protocol[T_co]):
 
     def select_related(self, *args: str) -> "QuerySetSingle[T_co]": ...  # pragma: nocoverage
 
-    def annotate(self, **kwargs: Function) -> "QuerySetSingle[T_co]": ...  # pragma: nocoverage
+    def annotate(
+        self, **kwargs: Union[Expression, Term]
+    ) -> "QuerySetSingle[T_co]": ...  # pragma: nocoverage
 
     def only(self, *fields_for_select: str) -> "QuerySetSingle[T_co]": ...  # pragma: nocoverage
 
@@ -131,7 +137,7 @@ class AwaitableQuery(Generic[MODEL]):
         :param annotations: Extra annotations to add.
         :param custom_filters: Pre-resolved filters to be passed through.
         """
-        has_aggregate = self._resolve_annotate(self._annotations, self._custom_filters)
+        has_aggregate = self._resolve_annotate()
 
         modifier = QueryModifier()
         for node in self._q_objects:
@@ -144,16 +150,15 @@ class AwaitableQuery(Generic[MODEL]):
                 )
             )
 
-        where_criterion, joins, having_criterion = modifier.get_query_modifiers()
-        for join in joins:
+        for join in modifier.joins:
             if join[0] not in self._joined_tables:
                 self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
                 self._joined_tables.append(join[0])
 
-        self.query._wheres = where_criterion
-        self.query._havings = having_criterion
+        self.query._havings = modifier.having_criterion
+        self.query._wheres = modifier.where_criterion
 
-        if has_aggregate and (self._joined_tables or having_criterion or self.query._orderbys):
+        if has_aggregate and (self._joined_tables or self.query._havings or self.query._orderbys):
             self.query = self.query.groupby(
                 *[self.model._meta.basetable[field] for field in self.model._meta.db_fields]
             )
@@ -161,12 +166,17 @@ class AwaitableQuery(Generic[MODEL]):
     def _join_table_by_field(
         self, table: Table, related_field_name: str, related_field: RelationalField
     ) -> Table:
-        joins = _get_joins_for_related_field(table, related_field, related_field_name)
+        joins = get_joins_for_related_field(table, related_field, related_field_name)
         for join in joins:
-            if join[0] not in self._joined_tables:
-                self.query = self.query.join(join[0], how=JoinType.left_outer).on(join[1])
-                self._joined_tables.append(join[0])
+            self._join_table(join)
         return joins[-1][0]
+
+    def _join_table(self, table_criterio_tuple: TableCriterionTuple):
+        if table_criterio_tuple[0] not in self._joined_tables:
+            self.query = self.query.join(table_criterio_tuple[0], how=JoinType.left_outer).on(
+                table_criterio_tuple[1]
+            )
+            self._joined_tables.append(table_criterio_tuple[0])
 
     @staticmethod
     def _resolve_ordering_string(ordering: str, reverse: bool = False) -> Tuple[str, Order]:
@@ -234,7 +244,7 @@ class AwaitableQuery(Generic[MODEL]):
                             custom_filters={},
                         )
                     )
-                    self.query = self.query.orderby(annotation_info["field"], order=ordering[1])
+                    self.query = self.query.orderby(annotation_info.term, order=ordering[1])
             else:
                 field_object = model._meta.fields_map.get(field_name)
 
@@ -251,35 +261,31 @@ class AwaitableQuery(Generic[MODEL]):
 
                 self.query = self.query.orderby(field, order=ordering[1])
 
-    def _resolve_annotate(
-        self, extra_annotations: Dict[str, Any], extra_custom_filters: Dict[str, FilterInfoDict]
-    ) -> bool:
-        if not self._annotations and not extra_annotations:
+    def _resolve_annotate(self) -> bool:
+        if not self._annotations:
             return False
 
-        all_annotations = {**self._annotations, **extra_annotations}
-        all_custom_filters = {**self._custom_filters, **extra_custom_filters}
-        annotation_info = {}
-        for key, annotation in all_annotations.items():
+        annotation_info: Dict[str, ResolveResult] = {}
+        for key, annotation in self._annotations.items():
             if isinstance(annotation, Term):
-                annotation_info[key] = {"joins": [], "field": annotation}
+                annotation_info[key] = ResolveResult(term=annotation)
             else:
                 annotation_info[key] = annotation.resolve(
                     ResolveContext(
                         model=self.model,
                         table=self.model._meta.basetable,
-                        annotations=all_annotations,
-                        custom_filters=all_custom_filters,
+                        annotations=self._annotations,
+                        custom_filters=self._custom_filters,
                     )
                 )
 
         for key, info in annotation_info.items():
-            for join in info["joins"]:
-                self._join_table_by_field(*join)
+            for join in info.joins:
+                self._join_table(join)
             if key in self._annotations:
-                self.query._select_other(info["field"].as_(key))
+                self.query._select_other(info.term.as_(key))
 
-        return any(info["field"].is_aggregate for info in annotation_info.values())
+        return any(info.term.is_aggregate for info in annotation_info.values())
 
     def sql(self, **kwargs) -> str:
         """Return the actual SQL."""
@@ -1222,9 +1228,8 @@ class UpdateQuery(AwaitableQuery):
                     db_field = self.model._meta.fields_db_projection[key]
                 except KeyError:
                     raise FieldError(f"Field {key} is virtual and can not be updated")
-                if isinstance(value, Term):
-                    value = F.resolver_arithmetic_expression(self.model, value)[0]
-                elif isinstance(value, Function):
+
+                if isinstance(value, Expression):
                     value = value.resolve(
                         ResolveContext(
                             model=self.model,
@@ -1232,7 +1237,7 @@ class UpdateQuery(AwaitableQuery):
                             annotations=self._annotations,
                             custom_filters=self._custom_filters,
                         )
-                    )["field"]
+                    ).term
                 else:
                     value = executor.column_map[key](value, None)
             if isinstance(value, Term):

@@ -1,7 +1,10 @@
+from pypika import CustomFunction
+
 from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test
-from tortoise.contrib.test.condition import NotEQ
+from tortoise.contrib.test.condition import In, NotEQ
 from tortoise.exceptions import FieldError
+from tortoise.expressions import Function
 from tortoise.functions import Length, Trim
 
 
@@ -199,4 +202,15 @@ class TestValues(test.TestCase):
             tournaments,
             [{"name": "  x", "name_trim": "x"}, {"name": " y ", "name_trim": "y"}],
             sorted_key="name",
+        )
+
+    @test.requireCapability(dialect=In("sqlite"))
+    async def test_values_with_custom_function(self):
+        class TruncMonth(Function):
+            database_func = CustomFunction("DATE_FORMAT", ["name", "dt_format"])
+
+        sql = Tournament.all().annotate(date=TruncMonth("created", "%Y-%m-%d")).values("date").sql()
+        self.assertEqual(
+            sql,
+            'SELECT DATE_FORMAT("created",\'%Y-%m-%d\') "date" FROM "tournament"',
         )

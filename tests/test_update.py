@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import pytz
-from pypika.terms import Function
+from pypika.terms import Function as PupikaFunction
 
 from tests.testmodels import (
     Currency,
@@ -21,7 +21,8 @@ from tests.testmodels import (
 )
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import In, NotEQ
-from tortoise.expressions import F
+from tortoise.expressions import Case, F, Q, When
+from tortoise.functions import Function, Upper
 
 
 class TestUpdate(test.TestCase):
@@ -155,8 +156,11 @@ class TestUpdate(test.TestCase):
     @test.requireCapability(dialect=In("mysql", "sqlite"))
     async def test_update_with_custom_function(self):
         class JsonSet(Function):
-            def __init__(self, field: F, expression: str, value: Any):
-                super().__init__("JSON_SET", field, expression, value)
+            class PypikaJsonSet(PupikaFunction):
+                def __init__(self, field: F, expression: str, value: Any):
+                    super().__init__("JSON_SET", field, expression, value)
+
+            database_func = PypikaJsonSet
 
         json = await JSONFields.create(data={})
         self.assertEqual(json.data_default, {"a": 1})
@@ -201,3 +205,44 @@ class TestUpdate(test.TestCase):
         await Tournament.filter(name="1").limit(1).order_by("-id").update(name="2")
         self.assertIs((await Tournament.get(pk=t2.pk)).name, "2")
         self.assertEqual(await Tournament.filter(name="1").count(), 1)
+
+    # tortoise-pypika does not translate ** to POWER in MSSQL
+    @test.requireCapability(dialect=NotEQ("mssql"))
+    async def test_update_with_case_when_and_f(self):
+        event1 = await IntFields.create(intnum=1)
+        event2 = await IntFields.create(intnum=2)
+        event3 = await IntFields.create(intnum=3)
+        await (
+            IntFields.all()
+            .annotate(
+                intnum_updated=Case(
+                    When(
+                        Q(intnum=1),
+                        then=F("intnum") + 1,
+                    ),
+                    When(
+                        Q(intnum=2),
+                        then=F("intnum") * 2,
+                    ),
+                    default=F("intnum") ** 3,
+                )
+            )
+            .update(intnum=F("intnum_updated"))
+        )
+
+        for e in [event1, event2, event3]:
+            await e.refresh_from_db()
+        self.assertEqual(event1.intnum, 2)
+        self.assertEqual(event2.intnum, 4)
+        self.assertEqual(event3.intnum, 27)
+
+    async def test_update_with_function_annotation(self):
+        tournament = await Tournament.create(name="aaa")
+        await (
+            Tournament.filter(pk=tournament.pk)
+            .annotate(
+                upped_name=Upper(F("name")),
+            )
+            .update(name=F("upped_name"))
+        )
+        self.assertEqual((await Tournament.get(pk=tournament.pk)).name, "AAA")
