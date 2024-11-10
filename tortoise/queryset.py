@@ -464,9 +464,18 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._limit = 1
         return queryset
 
-    def _parse_ordering_pairs(
+    def _parse_orderings(
         self, orderings: Tuple[str, ...], reverse=False
     ) -> List[Tuple[str, Order]]:
+        """
+        Convert ordering from strings to standard items for queryset.
+
+        :param orderings: What columns/order to order by
+        :param reverse:  Whether reverse order
+        :return: standard ordering for QuerySet.
+
+        :raises FieldError: If a field provided does not exist in model.
+        """
         if not orderings:
             raise FieldError("No fields passed")
 
@@ -490,7 +499,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         :raises FieldError: If unknown or no fields has been provided.
         """
-        new_ordering = self._parse_ordering_pairs(orderings, reverse=True)
+        new_ordering = self._parse_orderings(orderings, reverse=True)
         return self._single_queryset(ordering=new_ordering)
 
     def earliest(self, *orderings: str) -> QuerySetSingle[Optional[MODEL]]:
@@ -501,7 +510,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         :raises FieldError: If unknown or no fields has been provided.
         """
-        new_ordering = self._parse_ordering_pairs(orderings)
+        new_ordering = self._parse_orderings(orderings)
         return self._single_queryset(ordering=new_ordering)
 
     def limit(self, limit: int) -> "QuerySet[MODEL]":
