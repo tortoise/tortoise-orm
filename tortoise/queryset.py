@@ -426,44 +426,6 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         return self._filter_or_exclude(negate=True, *args, **kwargs)
 
-    def order_by(self, *orderings: str) -> "QuerySet[MODEL]":
-        """
-        Accept args to filter by in format like this:
-
-        .. code-block:: python3
-
-            .order_by('name', '-tournament__name')
-
-        Supports ordering by related models too.
-        A '-' before the name will result in descending sort order, default is ascending.
-
-        :raises FieldError: If unknown field has been provided.
-        """
-        queryset = self._clone()
-        new_ordering = []
-        for ordering in orderings:
-            field_name, order_type = self._resolve_ordering_string(ordering)
-
-            if not (
-                field_name.split("__")[0] in self.model._meta.fields
-                or field_name in self._annotations
-            ):
-                raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
-            new_ordering.append((field_name, order_type))
-        queryset._orderings = new_ordering
-        return queryset
-
-    def _single_queryset(
-        self, queryset=None, ordering: Optional[List[tuple]] = None
-    ) -> QuerySetSingle[Optional[MODEL]]:
-        if queryset is None:
-            queryset = self._clone()
-        if ordering is not None:
-            queryset._orderings = ordering
-        queryset._single = True
-        queryset._limit = 1
-        return queryset
-
     def _parse_orderings(
         self, orderings: Tuple[str, ...], reverse=False
     ) -> List[Tuple[str, Order]]:
@@ -490,6 +452,32 @@ class QuerySet(AwaitableQuery[MODEL]):
                 raise FieldError(f"Unknown field {field_name} for model {self.model.__name__}")
             new_ordering.append((field_name, order_type))
         return new_ordering
+
+    def order_by(self, *orderings: str) -> "QuerySet[MODEL]":
+        """
+        Accept args to filter by in format like this:
+
+        .. code-block:: python3
+
+            .order_by('name', '-tournament__name')
+
+        Supports ordering by related models too.
+        A '-' before the name will result in descending sort order, default is ascending.
+
+        :raises FieldError: If unknown field has been provided.
+        """
+        queryset = self._clone()
+        queryset._orderings = self._parse_orderings(orderings) if orderings else []
+        return queryset
+
+    def _single_queryset(self, queryset=None, ordering=None) -> QuerySetSingle[Optional[MODEL]]:
+        if queryset is None:
+            queryset = self._clone()
+        if ordering is not None:
+            queryset._orderings = ordering
+        queryset._single = True
+        queryset._limit = 1
+        return queryset
 
     def latest(self, *orderings: str) -> QuerySetSingle[Optional[MODEL]]:
         """
