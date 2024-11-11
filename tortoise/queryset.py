@@ -470,14 +470,10 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._orderings = self._parse_orderings(orderings) if orderings else []
         return queryset
 
-    def _single_queryset(self, queryset=None, ordering=None) -> QuerySetSingle[Optional[MODEL]]:
-        if queryset is None:
-            queryset = self._clone()
-        if ordering is not None:
-            queryset._orderings = ordering
-        queryset._single = True
-        queryset._limit = 1
-        return queryset
+    def _as_single(self) -> QuerySetSingle[Optional[MODEL]]:
+        self._single = True
+        self._limit = 1
+        return cast(QuerySetSingle[Optional[MODEL]], self)
 
     def latest(self, *orderings: str) -> QuerySetSingle[Optional[MODEL]]:
         """
@@ -487,8 +483,9 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         :raises FieldError: If unknown or no fields has been provided.
         """
-        new_ordering = self._parse_orderings(orderings, reverse=True)
-        return self._single_queryset(ordering=new_ordering)
+        queryset = self._clone()
+        queryset._orderings = self._parse_orderings(orderings, reverse=True)
+        return queryset._as_single()
 
     def earliest(self, *orderings: str) -> QuerySetSingle[Optional[MODEL]]:
         """
@@ -498,8 +495,9 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         :raises FieldError: If unknown or no fields has been provided.
         """
-        new_ordering = self._parse_orderings(orderings)
-        return self._single_queryset(ordering=new_ordering)
+        queryset = self._clone()
+        queryset._orderings = self._parse_orderings(orderings)
+        return queryset._as_single()
 
     def limit(self, limit: int) -> "QuerySet[MODEL]":
         """
@@ -784,7 +782,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         Limit queryset to one object and return one object instead of list.
         """
-        return self._single_queryset()
+        queryset = self._clone()
+        return queryset._as_single()
 
     def last(self) -> QuerySetSingle[Optional[MODEL]]:
         """
@@ -803,7 +802,8 @@ class QuerySet(AwaitableQuery[MODEL]):
             raise FieldError(
                 f"QuerySet has no ordering and model {self.model.__name__} has no pk defined"
             )
-        return self._single_queryset(queryset, new_ordering)
+        queryset._orderings = new_ordering
+        return queryset._as_single()
 
     def get(self, *args: Q, **kwargs: Any) -> QuerySetSingle[MODEL]:
         """
