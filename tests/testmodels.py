@@ -308,9 +308,7 @@ class JSONFields(Model):
     data = fields.JSONField()  # type: ignore # Test cases where generics are not provided
     data_null = fields.JSONField[Union[dict, list]](null=True)
     data_default = fields.JSONField[dict](default={"a": 1})
-    data_validate = fields.JSONField[Union[dict, list]](
-        null=True, validators=[lambda v: JSONFields.dict_or_list(v)]
-    )
+    data_validate = fields.JSONField[Union[dict, list]](null=True, validators=[dict_or_list])
     # Test cases where generics are provided and the type is a pydantic base model
     data_pydantic = fields.JSONField[TestSchemaForJSONField](
         default=json_pydantic_default, field_type=TestSchemaForJSONField
