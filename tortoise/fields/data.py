@@ -525,6 +525,8 @@ class JSONField(Field[T], dict, list):  # type: ignore
 
     This field can store dictionaries or lists of any JSON-compliant structure.
 
+    You can use generics to make static checking more friendly. Example: ``JSONField[dict[str, str]]``
+
     You can specify your own custom JSON encoder/decoder, leaving at the default should work well.
     If you have ``orjson`` installed, we default to using that,
     else the default ``json`` module will be used.
@@ -533,6 +535,11 @@ class JSONField(Field[T], dict, list):  # type: ignore
         The custom JSON encoder.
     ``decoder``:
         The custom JSON decoder.
+
+    If you want to use Pydantic model as the field type for generating a better OpenAPI documentation, you can use ``field_type`` to specify the type of the field.
+
+    ``field_type``:
+        The Pydantic model class.
 
     """
 
