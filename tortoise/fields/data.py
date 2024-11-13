@@ -46,7 +46,7 @@ __all__ = (
     "UUIDField",
 )
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 # Doing this we can replace json dumps/loads with different implementations
 JsonDumpsFunc = Callable[[Any], str]
@@ -519,7 +519,7 @@ class FloatField(Field[float], float):
         SQL_TYPE = "DOUBLE"
 
 
-class JSONField(Field[T]):
+class JSONField(Field[T], dict, list):  # type: ignore
     """
     JSON field.
 
@@ -577,13 +577,14 @@ class JSONField(Field[T]):
         return value
 
     def to_python_value(
-        self, value: Optional[Union[str, bytes, dict, list]]
-    ) -> Optional[Union[dict, list]]:
+        self, value: Optional[Union[T, str, bytes, dict, list]]
+    ) -> Optional[Union[T, dict, list]]:
         if isinstance(value, (str, bytes)):
             try:
                 data = self.decoder(value)
                 try:
                     from pydantic._internal._model_construction import ModelMetaclass
+
                     if isinstance(self.field_type, ModelMetaclass):
                         return self.field_type(**data)
                 except ImportError:
