@@ -1206,6 +1206,7 @@ class TestPydantic(test.TestCase):
                 "data_null": None,
                 "data_default": {"a": 1},
                 "data_validate": None,
+                "data_pydantic": None,
             },
         )
         ret1 = creator.model_validate(json_field_1_get).model_dump()
@@ -1217,6 +1218,7 @@ class TestPydantic(test.TestCase):
                 "data_null": None,
                 "data_default": {"a": 1},
                 "data_validate": None,
+                "data_pydantic": None,
             },
         )
 

@@ -12,7 +12,7 @@ from enum import Enum, IntEnum
 from typing import List, Union
 
 import pytz
-from pydantic import ConfigDict
+from pydantic import BaseModel, ConfigDict
 
 from tortoise import fields
 from tortoise.exceptions import ValidationError
@@ -32,6 +32,11 @@ from tortoise.validators import (
 
 def generate_token():
     return binascii.hexlify(os.urandom(16)).decode("ascii")
+
+
+class TestSchemaForJSONField(BaseModel):
+    foo: int
+    bar: str
 
 
 class Author(Model):
@@ -297,10 +302,16 @@ class JSONFields(Model):
             raise ValidationError("Value must be a dict or list.")
 
     id = fields.IntField(primary_key=True)
-    data = fields.JSONField()
-    data_null = fields.JSONField(null=True)
-    data_default = fields.JSONField(default={"a": 1})
-    data_validate = fields.JSONField(null=True, validators=[lambda v: JSONFields.dict_or_list(v)])
+    data = fields.JSONField()  # type: ignore # Test cases where generics are not provided
+    data_null = fields.JSONField[Union[dict, list]](null=True)
+    data_default = fields.JSONField[dict](default={"a": 1})
+    data_validate = fields.JSONField[Union[dict, list]](
+        null=True, validators=[lambda v: JSONFields.dict_or_list(v)]
+    )
+    # Test cases where generics are provided and the type is a pydantic base model
+    data_pydantic = fields.JSONField[TestSchemaForJSONField](
+        null=True, field_type=TestSchemaForJSONField
+    )
 
 
 class UUIDFields(Model):
