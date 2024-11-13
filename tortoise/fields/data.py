@@ -584,7 +584,7 @@ class JSONField(Field[T], dict, list):  # type: ignore
                     from pydantic import BaseModel
 
                     if isinstance(value, BaseModel):
-                        value = value.dict()
+                        value = value.model_dump()
                 except ImportError:
                     pass
 
