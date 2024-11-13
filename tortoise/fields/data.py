@@ -573,6 +573,14 @@ class JSONField(Field[T], dict, list):  # type: ignore
                 if isinstance(value, bytes):
                     value = value.decode()
             else:
+                try:
+                    from pydantic import BaseModel
+
+                    if isinstance(value, BaseModel):
+                        value = value.dict()
+                except ImportError:
+                    pass
+
                 value = self.encoder(value)
         return value
 
@@ -585,7 +593,7 @@ class JSONField(Field[T], dict, list):  # type: ignore
                 try:
                     from pydantic._internal._model_construction import ModelMetaclass
 
-                    if isinstance(self.field_type, ModelMetaclass):
+                    if isinstance(self.field_type, ModelMetaclass) and not isinstance(data, list):
                         return self.field_type(**data)
                 except ImportError:
                     pass
