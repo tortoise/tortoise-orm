@@ -129,14 +129,7 @@ class AwaitableQuery(Generic[MODEL]):
         return db or self.model._meta.db
 
     def resolve_filters(self) -> None:
-        """
-        Builds the common filters for a QuerySet.
-
-        :param model: The Model this queryset is based on.
-        :param q_objects: The Q expressions to apply.
-        :param annotations: Extra annotations to add.
-        :param custom_filters: Pre-resolved filters to be passed through.
-        """
+        """Builds the common filters for a QuerySet."""
         has_aggregate = self._resolve_annotate()
 
         modifier = QueryModifier()
@@ -435,12 +428,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         :param orderings: What columns/order to order by
         :param reverse:  Whether reverse order
         :return: standard ordering for QuerySet.
-
-        :raises FieldError: If a field provided does not exist in model.
         """
-        if not orderings:
-            raise FieldError("No fields passed")
-
         new_ordering = []
         for ordering in orderings:
             field_name, order_type = self._resolve_ordering_string(ordering, reverse=reverse)
@@ -467,7 +455,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         :raises FieldError: If unknown field has been provided.
         """
         queryset = self._clone()
-        queryset._orderings = self._parse_orderings(orderings) if orderings else []
+        queryset._orderings = self._parse_orderings(orderings)
         return queryset
 
     def _as_single(self) -> QuerySetSingle[Optional[MODEL]]:
@@ -483,6 +471,8 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         :raises FieldError: If unknown or no fields has been provided.
         """
+        if not orderings:
+            raise FieldError("No fields passed")
         queryset = self._clone()
         queryset._orderings = self._parse_orderings(orderings, reverse=True)
         return queryset._as_single()
@@ -495,6 +485,8 @@ class QuerySet(AwaitableQuery[MODEL]):
 
         :raises FieldError: If unknown or no fields has been provided.
         """
+        if not orderings:
+            raise FieldError("No fields passed")
         queryset = self._clone()
         queryset._orderings = self._parse_orderings(orderings)
         return queryset._as_single()
