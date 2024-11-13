@@ -39,6 +39,9 @@ class TestSchemaForJSONField(BaseModel):
     bar: str
 
 
+json_pydantic_default = TestSchemaForJSONField(**{"foo": 1, "bar": "baz"})
+
+
 class Author(Model):
     name = fields.CharField(max_length=255)
 
@@ -310,7 +313,7 @@ class JSONFields(Model):
     )
     # Test cases where generics are provided and the type is a pydantic base model
     data_pydantic = fields.JSONField[TestSchemaForJSONField](
-        null=True, field_type=TestSchemaForJSONField
+        default=json_pydantic_default, field_type=TestSchemaForJSONField
     )
 
 

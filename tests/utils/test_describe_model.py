@@ -15,6 +15,7 @@ from tests.testmodels import (
     UUIDFkRelatedNullModel,
     UUIDM2MRelatedModel,
     UUIDPkModel,
+    json_pydantic_default,
 )
 from tortoise import Tortoise, fields
 from tortoise.contrib import test
@@ -1405,10 +1406,10 @@ class TestDescribeModel(test.SimpleTestCase):
                         },
                         "python_type": "tests.testmodels.TestSchemaForJSONField",
                         "generated": False,
-                        "nullable": True,
+                        "nullable": False,
                         "unique": False,
                         "indexed": False,
-                        "default": None,
+                        "default": "foo=1 bar='baz'",
                         "description": None,
                         "docstring": None,
                         "constraints": {},
@@ -1544,10 +1545,10 @@ class TestDescribeModel(test.SimpleTestCase):
                         },
                         "python_type": TestSchemaForJSONField,
                         "generated": False,
-                        "nullable": True,
+                        "nullable": False,
                         "unique": False,
                         "indexed": False,
-                        "default": None,
+                        "default": json_pydantic_default,
                         "description": None,
                         "docstring": None,
                         "constraints": {},
