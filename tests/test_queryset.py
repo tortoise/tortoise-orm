@@ -863,3 +863,30 @@ class TestQueryReuse(test.TestCase):
 
         tournaments = await base_query.values_list("name_length")
         self.assertListSortEqual(tournaments, [(10,), (12,)])
+
+    async def test_f_annotation_referenced_in_annotation(self):
+        await IntFields.create(intnum=1)
+
+        events = await IntFields.annotate(intnum_plus_1=F("intnum") + 1).annotate(
+            intnum_plus_2=F("intnum_plus_1") + 1
+        )
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].intnum_plus_1, 2)
+        self.assertEqual(events[0].intnum_plus_2, 3)
+
+        # in a single annotate call
+        events = await IntFields.annotate(
+            intnum_plus_1=F("intnum") + 1, intnum_plus_2=F("intnum_plus_1") + 1
+        )
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].intnum_plus_1, 2)
+        self.assertEqual(events[0].intnum_plus_2, 3)
+
+    async def test_rawsql_annotation_referenced_in_annotation(self):
+        await IntFields.create(intnum=1)
+
+        events = await IntFields.annotate(ten=RawSQL("20 / 2")).annotate(ten_plus_1=F("ten") + 1)
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].ten, 10)
+        self.assertEqual(events[0].ten_plus_1, 11)

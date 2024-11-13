@@ -239,7 +239,7 @@ class TestQCall(TestCase):
             ResolveContext(
                 model=IntFields,
                 table=IntFields._meta.basequery,
-                annotations={"annotated": F("annotated")},
+                annotations={"annotated": F("intnum")},
                 custom_filters={
                     "annotated__lt": {
                         "field": "annotated",
@@ -249,4 +249,4 @@ class TestQCall(TestCase):
                 },
             )
         )
-        self.assertEqual(r.where_criterion.get_sql(), '"id">5 OR "annotated"<5')
+        self.assertEqual(r.where_criterion.get_sql(), '"id">5 OR "intnum"<5')

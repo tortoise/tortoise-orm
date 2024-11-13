@@ -1,26 +1,29 @@
 from __future__ import annotations
 
 from copy import copy
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple, Type, cast
 
 from pypika import Table
-from pypika.terms import Criterion
+from pypika.terms import Criterion, Term
 
-from tortoise.exceptions import OperationalError
+from tortoise.exceptions import ConfigurationError, OperationalError
+from tortoise.fields.base import Field
 from tortoise.fields.relational import (
     BackwardFKRelation,
+    ForeignKeyFieldInstance,
     ManyToManyFieldInstance,
     RelationalField,
 )
 
 if TYPE_CHECKING:  # pragma: nocoverage
+    from tortoise.models import Model
     from tortoise.queryset import QuerySet
 
 
 TableCriterionTuple = Tuple[Table, Criterion]
 
 
-def _get_joins_for_related_field(
+def get_joins_for_related_field(
     table: Table, related_field: RelationalField, related_field_name: str
 ) -> List[TableCriterionTuple]:
     required_joins = []
@@ -73,6 +76,62 @@ def _get_joins_for_related_field(
             )
         )
     return required_joins
+
+
+def resolve_nested_field(
+    model: Type["Model"], table: Table, field: str
+) -> Tuple[Term, List[TableCriterionTuple], Optional[Field]]:
+    """
+    Resolves a nested field string like events__participants__name and
+    returns the pypika term, required joins and the Field that can be used for
+    converting the value.
+    """
+    term = field_object = None
+    joins = []
+    fields = field.split("__")
+
+    for iter_field in fields[:-1]:
+        if iter_field not in model._meta.fetch_fields:
+            raise ConfigurationError(f"{field} not resolvable")
+
+        related_field = cast(RelationalField, model._meta.fields_map[iter_field])
+        joins.extend(get_joins_for_related_field(table, related_field, iter_field))
+
+        model = related_field.related_model
+        related_table: Table = related_field.related_model._meta.basetable
+        if isinstance(related_field, ForeignKeyFieldInstance):
+            # Only FK's can be to same table, so we only auto-alias FK join tables
+            related_table = related_table.as_(f"{table.get_table_name()}__{iter_field}")
+        table = related_table
+
+    last_field = fields[-1]
+    if last_field in model._meta.fetch_fields:
+        related_field = cast(RelationalField, model._meta.fields_map[last_field])
+        related_field_meta = related_field.related_model._meta
+
+        joins.extend(get_joins_for_related_field(table, related_field, last_field))
+        related_table = related_field_meta.basetable
+
+        if isinstance(related_field, BackwardFKRelation):
+            if table == related_table:
+                related_table = related_table.as_(f"{table.get_table_name()}__{last_field}")
+
+        term = related_table[related_field_meta.db_pk_column]
+    else:
+        field_object = model._meta.fields_map[last_field]
+        if field_object.source_field:
+            term = table[field_object.source_field]
+        else:
+            term = table[last_field]
+
+        if field_object:  # pragma: nobranch
+            func = field_object.get_for_dialect(
+                model._meta.db.capabilities.dialect, "function_cast"
+            )
+            if func:
+                term = func(field_object, term)
+
+    return term, joins, field_object
 
 
 class EmptyCriterion(Criterion):  # type:ignore[misc]
@@ -142,12 +201,6 @@ class QueryModifier:
         elif self.where_criterion:
             where_criterion = self.where_criterion.negate()
         return self.__class__(where_criterion, self.joins, having_criterion)
-
-    def get_query_modifiers(self) -> Tuple[Criterion, List[TableCriterionTuple], Criterion]:
-        """
-        Returns a tuple of the query criterion.
-        """
-        return self.where_criterion, self.joins, self.having_criterion
 
 
 class Prefetch:
