@@ -8,6 +8,18 @@ Changelog
 
 0.21
 ====
+0.21.8
+------
+Fixed
+^^^^^
+- TODO
+
+Added
+^^^^^
+- JSONField adds optional generic support, and supports OpenAPI document generation by specifying `field_type` as a pydantic BaseModel (#1763)
+
+
+
 0.21.7
 ------
 Fixed

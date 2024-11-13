@@ -61,6 +61,7 @@ Contributors
 * Andrea Magistà ``@vlakius``
 * Daniel Szucs ``@Quasar6X``
 * Rui Catarino ``@ruitcatarino``
+* Lance Moe ``@lancemoe``
 
 Special Thanks
 ==============
