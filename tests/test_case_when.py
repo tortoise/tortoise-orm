@@ -11,16 +11,18 @@ class TestCaseWhen(test.TestCase):
         await super().asyncSetUp()
         self.intfields = [await IntFields.create(intnum=val) for val in range(10)]
         self.db = connections.get("models")
+        self.dialect = self.db.schema_generator.DIALECT
 
     async def test_single_when(self):
         category = Case(When(intnum__gte=8, then="big"), default="default")
         sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
 
-        dialect = self.db.schema_generator.DIALECT
-        if dialect == "mysql":
-            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=8 THEN 'big' ELSE 'default' END `category` FROM `intfields`"
+        if self.dialect == "mysql":
+            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=%s THEN %s ELSE %s END `category` FROM `intfields`"
+        elif self.dialect == "postgres":
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=$1 THEN $2 ELSE $3 END "category" FROM "intfields"'
         else:
-            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=8 THEN \'big\' ELSE \'default\' END "category" FROM "intfields"'
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=? THEN ? ELSE ? END "category" FROM "intfields"'
         self.assertEqual(sql, expected_sql)
 
     async def test_multi_when(self):
@@ -29,33 +31,36 @@ class TestCaseWhen(test.TestCase):
         )
         sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
 
-        dialect = self.db.schema_generator.DIALECT
-        if dialect == "mysql":
-            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=8 THEN 'big' WHEN `intnum`<=2 THEN 'small' ELSE 'default' END `category` FROM `intfields`"
+        if self.dialect == "mysql":
+            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=%s THEN %s WHEN `intnum`<=%s THEN %s ELSE %s END `category` FROM `intfields`"
+        elif self.dialect == "postgres":
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=$1 THEN $2 WHEN "intnum"<=$3 THEN $4 ELSE $5 END "category" FROM "intfields"'
         else:
-            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=8 THEN \'big\' WHEN "intnum"<=2 THEN \'small\' ELSE \'default\' END "category" FROM "intfields"'
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=? THEN ? WHEN "intnum"<=? THEN ? ELSE ? END "category" FROM "intfields"'
         self.assertEqual(sql, expected_sql)
 
     async def test_q_object_when(self):
         category = Case(When(Q(intnum__gt=2, intnum__lt=8), then="middle"), default="default")
         sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
 
-        dialect = self.db.schema_generator.DIALECT
-        if dialect == "mysql":
-            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>2 AND `intnum`<8 THEN 'middle' ELSE 'default' END `category` FROM `intfields`"
+        if self.dialect == "mysql":
+            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>%s AND `intnum`<%s THEN %s ELSE %s END `category` FROM `intfields`"
+        elif self.dialect == "postgres":
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">$1 AND "intnum"<$2 THEN $3 ELSE $4 END "category" FROM "intfields"'
         else:
-            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">2 AND "intnum"<8 THEN \'middle\' ELSE \'default\' END "category" FROM "intfields"'
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">? AND "intnum"<? THEN ? ELSE ? END "category" FROM "intfields"'
         self.assertEqual(sql, expected_sql)
 
     async def test_F_then(self):
         category = Case(When(intnum__gte=8, then=F("intnum_null")), default="default")
         sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
 
-        dialect = self.db.schema_generator.DIALECT
-        if dialect == "mysql":
-            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=8 THEN `intnum_null` ELSE 'default' END `category` FROM `intfields`"
+        if self.dialect == "mysql":
+            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=%s THEN `intnum_null` ELSE %s END `category` FROM `intfields`"
+        elif self.dialect == "postgres":
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=$1 THEN "intnum_null" ELSE $2 END "category" FROM "intfields"'
         else:
-            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=8 THEN "intnum_null" ELSE \'default\' END "category" FROM "intfields"'
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=? THEN "intnum_null" ELSE ? END "category" FROM "intfields"'
         self.assertEqual(sql, expected_sql)
 
     async def test_AE_then(self):
@@ -63,33 +68,36 @@ class TestCaseWhen(test.TestCase):
         category = Case(When(intnum__gte=8, then=F("intnum") + 1), default="default")
         sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
 
-        dialect = self.db.schema_generator.DIALECT
-        if dialect == "mysql":
-            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=8 THEN `intnum`+1 ELSE 'default' END `category` FROM `intfields`"
+        if self.dialect == "mysql":
+            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=%s THEN `intnum`+%s ELSE %s END `category` FROM `intfields`"
+        elif self.dialect == "postgres":
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=$1 THEN "intnum"+$2 ELSE $3 END "category" FROM "intfields"'
         else:
-            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=8 THEN "intnum"+1 ELSE \'default\' END "category" FROM "intfields"'
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=? THEN "intnum"+? ELSE ? END "category" FROM "intfields"'
         self.assertEqual(sql, expected_sql)
 
     async def test_func_then(self):
         category = Case(When(intnum__gte=8, then=Coalesce("intnum_null", 10)), default="default")
         sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
 
-        dialect = self.db.schema_generator.DIALECT
-        if dialect == "mysql":
-            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=8 THEN COALESCE(`intnum_null`,10) ELSE 'default' END `category` FROM `intfields`"
+        if self.dialect == "mysql":
+            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=%s THEN COALESCE(`intnum_null`,%s) ELSE %s END `category` FROM `intfields`"
+        elif self.dialect == "postgres":
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=$1 THEN COALESCE("intnum_null",$2) ELSE $3 END "category" FROM "intfields"'
         else:
-            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=8 THEN COALESCE("intnum_null",10) ELSE \'default\' END "category" FROM "intfields"'
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=? THEN COALESCE("intnum_null",?) ELSE ? END "category" FROM "intfields"'
         self.assertEqual(sql, expected_sql)
 
     async def test_F_default(self):
         category = Case(When(intnum__gte=8, then="big"), default=F("intnum_null"))
         sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
 
-        dialect = self.db.schema_generator.DIALECT
-        if dialect == "mysql":
-            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=8 THEN 'big' ELSE `intnum_null` END `category` FROM `intfields`"
+        if self.dialect == "mysql":
+            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=%s THEN %s ELSE `intnum_null` END `category` FROM `intfields`"
+        elif self.dialect == "postgres":
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=$1 THEN $2 ELSE "intnum_null" END "category" FROM "intfields"'
         else:
-            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=8 THEN \'big\' ELSE "intnum_null" END "category" FROM "intfields"'
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=? THEN ? ELSE "intnum_null" END "category" FROM "intfields"'
         self.assertEqual(sql, expected_sql)
 
     async def test_AE_default(self):
@@ -97,22 +105,24 @@ class TestCaseWhen(test.TestCase):
         category = Case(When(intnum__gte=8, then=8), default=F("intnum") + 1)
         sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
 
-        dialect = self.db.schema_generator.DIALECT
-        if dialect == "mysql":
-            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=8 THEN 8 ELSE `intnum`+1 END `category` FROM `intfields`"
+        if self.dialect == "mysql":
+            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=%s THEN %s ELSE `intnum`+%s END `category` FROM `intfields`"
+        elif self.dialect == "postgres":
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=$1 THEN $2 ELSE "intnum"+$3 END "category" FROM "intfields"'
         else:
-            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=8 THEN 8 ELSE "intnum"+1 END "category" FROM "intfields"'
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=? THEN ? ELSE "intnum"+? END "category" FROM "intfields"'
         self.assertEqual(sql, expected_sql)
 
     async def test_func_default(self):
         category = Case(When(intnum__gte=8, then=8), default=Coalesce("intnum_null", 10))
         sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
 
-        dialect = self.db.schema_generator.DIALECT
-        if dialect == "mysql":
-            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=8 THEN 8 ELSE COALESCE(`intnum_null`,10) END `category` FROM `intfields`"
+        if self.dialect == "mysql":
+            expected_sql = "SELECT `intnum` `intnum`,CASE WHEN `intnum`>=%s THEN %s ELSE COALESCE(`intnum_null`,%s) END `category` FROM `intfields`"
+        elif self.dialect == "postgres":
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=$1 THEN $2 ELSE COALESCE("intnum_null",$3) END "category" FROM "intfields"'
         else:
-            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=8 THEN 8 ELSE COALESCE("intnum_null",10) END "category" FROM "intfields"'
+            expected_sql = 'SELECT "intnum" "intnum",CASE WHEN "intnum">=? THEN ? ELSE COALESCE("intnum_null",?) END "category" FROM "intfields"'
         self.assertEqual(sql, expected_sql)
 
     async def test_case_when_in_where(self):
@@ -126,11 +136,12 @@ class TestCaseWhen(test.TestCase):
             .values("intnum")
             .sql()
         )
-        dialect = self.db.schema_generator.DIALECT
-        if dialect == "mysql":
-            expected_sql = "SELECT `intnum` `intnum` FROM `intfields` WHERE CASE WHEN `intnum`>=8 THEN 'big' WHEN `intnum`<=2 THEN 'small' ELSE 'middle' END IN ('big','small')"
+        if self.dialect == "mysql":
+            expected_sql = "SELECT `intnum` `intnum` FROM `intfields` WHERE CASE WHEN `intnum`>=%s THEN %s WHEN `intnum`<=%s THEN %s ELSE %s END IN (%s,%s)"
+        elif self.dialect == "postgres":
+            expected_sql = 'SELECT "intnum" "intnum" FROM "intfields" WHERE CASE WHEN "intnum">=$1 THEN $2 WHEN "intnum"<=$3 THEN $4 ELSE $5 END IN ($6,$7)'
         else:
-            expected_sql = "SELECT \"intnum\" \"intnum\" FROM \"intfields\" WHERE CASE WHEN \"intnum\">=8 THEN 'big' WHEN \"intnum\"<=2 THEN 'small' ELSE 'middle' END IN ('big','small')"
+            expected_sql = 'SELECT "intnum" "intnum" FROM "intfields" WHERE CASE WHEN "intnum">=? THEN ? WHEN "intnum"<=? THEN ? ELSE ? END IN (?,?)'
         self.assertEqual(sql, expected_sql)
 
     async def test_annotation_in_when_annotation(self):
@@ -142,11 +153,12 @@ class TestCaseWhen(test.TestCase):
             .sql()
         )
 
-        dialect = self.db.schema_generator.DIALECT
-        if dialect == "mysql":
-            expected_sql = "SELECT `id` `id`,`intnum` `intnum`,`intnum`+1 `intnum_plus_1`,CASE WHEN `intnum`+1>=10 THEN true ELSE false END `bigger_than_10` FROM `intfields`"
+        if self.dialect == "mysql":
+            expected_sql = "SELECT `id` `id`,`intnum` `intnum`,`intnum`+%s `intnum_plus_1`,CASE WHEN `intnum`+%s>=%s THEN %s ELSE %s END `bigger_than_10` FROM `intfields`"
+        elif self.dialect == "postgres":
+            expected_sql = 'SELECT "id" "id","intnum" "intnum","intnum"+$1 "intnum_plus_1",CASE WHEN "intnum"+$2>=$3 THEN $4 ELSE $5 END "bigger_than_10" FROM "intfields"'
         else:
-            expected_sql = 'SELECT "id" "id","intnum" "intnum","intnum"+1 "intnum_plus_1",CASE WHEN "intnum"+1>=10 THEN true ELSE false END "bigger_than_10" FROM "intfields"'
+            expected_sql = 'SELECT "id" "id","intnum" "intnum","intnum"+? "intnum_plus_1",CASE WHEN "intnum"+?>=? THEN ? ELSE ? END "bigger_than_10" FROM "intfields"'
         self.assertEqual(sql, expected_sql)
 
     async def test_func_annotation_in_when_annotation(self):
@@ -158,11 +170,12 @@ class TestCaseWhen(test.TestCase):
             .sql()
         )
 
-        dialect = self.db.schema_generator.DIALECT
-        if dialect == "mysql":
-            expected_sql = "SELECT `id` `id`,COALESCE(`intnum`,0) `intnum_col`,CASE WHEN COALESCE(`intnum`,0)=0 THEN true ELSE false END `is_zero` FROM `intfields`"
+        if self.dialect == "mysql":
+            expected_sql = "SELECT `id` `id`,COALESCE(`intnum`,%s) `intnum_col`,CASE WHEN COALESCE(`intnum`,%s)=%s THEN %s ELSE %s END `is_zero` FROM `intfields`"
+        elif self.dialect == "postgres":
+            expected_sql = 'SELECT "id" "id",COALESCE("intnum",$1) "intnum_col",CASE WHEN COALESCE("intnum",$2)=$3 THEN $4 ELSE $5 END "is_zero" FROM "intfields"'
         else:
-            expected_sql = 'SELECT "id" "id",COALESCE("intnum",0) "intnum_col",CASE WHEN COALESCE("intnum",0)=0 THEN true ELSE false END "is_zero" FROM "intfields"'
+            expected_sql = 'SELECT "id" "id",COALESCE("intnum",?) "intnum_col",CASE WHEN COALESCE("intnum",?)=? THEN ? ELSE ? END "is_zero" FROM "intfields"'
         self.assertEqual(sql, expected_sql)
 
     async def test_case_when_in_group_by(self):
@@ -175,13 +188,14 @@ class TestCaseWhen(test.TestCase):
             .sql()
         )
 
-        dialect = self.db.schema_generator.DIALECT
-        if dialect == "mysql":
-            expected_sql = "SELECT CASE WHEN `intnum`=0 THEN true ELSE false END `is_zero`,COUNT(`id`) `count` FROM `intfields` GROUP BY `is_zero`"
-        elif dialect == "mssql":
-            expected_sql = 'SELECT CASE WHEN "intnum"=0 THEN true ELSE false END "is_zero",COUNT("id") "count" FROM "intfields" GROUP BY CASE WHEN "intnum"=0 THEN true ELSE false END'
+        if self.dialect == "mysql":
+            expected_sql = "SELECT CASE WHEN `intnum`=%s THEN %s ELSE %s END `is_zero`,COUNT(`id`) `count` FROM `intfields` GROUP BY `is_zero`"
+        elif self.dialect == "postgres":
+            expected_sql = 'SELECT CASE WHEN "intnum"=$1 THEN $2 ELSE $3 END "is_zero",COUNT("id") "count" FROM "intfields" GROUP BY "is_zero"'
+        elif self.dialect == "mssql":
+            expected_sql = 'SELECT CASE WHEN "intnum"=? THEN ? ELSE ? END "is_zero",COUNT("id") "count" FROM "intfields" GROUP BY CASE WHEN "intnum"=? THEN ? ELSE ? END'
         else:
-            expected_sql = 'SELECT CASE WHEN "intnum"=0 THEN true ELSE false END "is_zero",COUNT("id") "count" FROM "intfields" GROUP BY "is_zero"'
+            expected_sql = 'SELECT CASE WHEN "intnum"=? THEN ? ELSE ? END "is_zero",COUNT("id") "count" FROM "intfields" GROUP BY "is_zero"'
         self.assertEqual(sql, expected_sql)
 
     async def test_unknown_field_in_when_annotation(self):

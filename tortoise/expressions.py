@@ -386,9 +386,6 @@ class Q:
                     else model._meta.db.executor_class._field_to_db(field_object, value, model)
                 )
             op = param["operator"]
-            # this is an ugly hack
-            if op == operator.eq:
-                encoded_value = model._meta.db.query_class._builder()._wrapper_cls(encoded_value)
             criterion = op(table[param["source_field"]], encoded_value)
         return criterion, join
 

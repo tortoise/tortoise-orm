@@ -1,6 +1,7 @@
 from tests.testmodels import CharFields
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotEQ
+from tortoise.functions import Upper
 
 DODGY_STRINGS = [
     "a/",
@@ -9,6 +10,11 @@ DODGY_STRINGS = [
     "a\\x39",
     "a'",
     '"',
+    '""',
+    "'",
+    "''",
+    "\\_",
+    "\\\\_",
     "‘a",
     "a’",
     "‘a’",
@@ -134,3 +140,12 @@ class TestFuzz(test.TestCase):
             )
             self.assertEqual(obj1.pk, obj5.pk)
             self.assertEqual(char, obj5.char)
+
+            # Filter by a function
+            obj6 = (
+                await CharFields.annotate(upper_char=Upper("char"))
+                .filter(id=obj1.pk, upper_char=Upper("char"))
+                .first()
+            )
+            self.assertEqual(obj1.pk, obj6.pk)
+            self.assertEqual(char, obj6.char)

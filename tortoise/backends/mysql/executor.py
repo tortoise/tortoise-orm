@@ -43,7 +43,7 @@ class StrWrapper(ValueWrapper):
 
 
 def escape_like(val: str) -> str:
-    return val.replace("\\", "\\\\\\\\").replace("%", "\\%").replace("_", "\\_")
+    return val.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 def mysql_contains(field: Term, value: str) -> Criterion:

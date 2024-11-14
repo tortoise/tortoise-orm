@@ -65,7 +65,7 @@ class TestQueryset(test.TestCase):
         sql = IntFields.all().only("id").limit(0).sql()
         self.assertEqual(
             sql,
-            'SELECT "id" "id" FROM "intfields" LIMIT 0',
+            'SELECT "id" "id" FROM "intfields" LIMIT ?',
         )
 
     async def test_offset_count(self):
@@ -587,13 +587,13 @@ class TestQueryset(test.TestCase):
         sql = IntFields.filter(pk=1).only("id").force_index("index_name").sql()
         self.assertEqual(
             sql,
-            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_again = IntFields.filter(pk=1).only("id").force_index("index_name").sql()
         self.assertEqual(
             sql_again,
-            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s",
         )
 
     @test.requireCapability(support_index_hint=True)
@@ -601,7 +601,7 @@ class TestQueryset(test.TestCase):
         sql_ValuesQuery = IntFields.filter(pk=1).force_index("index_name").values("id").sql()
         self.assertEqual(
             sql_ValuesQuery,
-            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_ValuesListQuery = (
@@ -609,19 +609,19 @@ class TestQueryset(test.TestCase):
         )
         self.assertEqual(
             sql_ValuesListQuery,
-            "SELECT `id` `0` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `0` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_CountQuery = IntFields.filter(pk=1).force_index("index_name").count().sql()
         self.assertEqual(
             sql_CountQuery,
-            "SELECT COUNT('*') FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT COUNT('*') FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_ExistsQuery = IntFields.filter(pk=1).force_index("index_name").exists().sql()
         self.assertEqual(
             sql_ExistsQuery,
-            "SELECT 1 FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1 LIMIT 1",
+            "SELECT %s FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s LIMIT %s",
         )
 
     @test.requireCapability(support_index_hint=True)
@@ -629,13 +629,13 @@ class TestQueryset(test.TestCase):
         sql = IntFields.filter(pk=1).only("id").use_index("index_name").sql()
         self.assertEqual(
             sql,
-            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_again = IntFields.filter(pk=1).only("id").use_index("index_name").sql()
         self.assertEqual(
             sql_again,
-            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s",
         )
 
     @test.requireCapability(support_index_hint=True)
@@ -643,25 +643,25 @@ class TestQueryset(test.TestCase):
         sql_ValuesQuery = IntFields.filter(pk=1).use_index("index_name").values("id").sql()
         self.assertEqual(
             sql_ValuesQuery,
-            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_ValuesListQuery = IntFields.filter(pk=1).use_index("index_name").values_list("id").sql()
         self.assertEqual(
             sql_ValuesListQuery,
-            "SELECT `id` `0` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `0` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_CountQuery = IntFields.filter(pk=1).use_index("index_name").count().sql()
         self.assertEqual(
             sql_CountQuery,
-            "SELECT COUNT('*') FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT COUNT('*') FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_ExistsQuery = IntFields.filter(pk=1).use_index("index_name").exists().sql()
         self.assertEqual(
             sql_ExistsQuery,
-            "SELECT 1 FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1 LIMIT 1",
+            "SELECT %s FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s LIMIT %s",
         )
 
     @test.requireCapability(support_for_update=True)
@@ -675,36 +675,36 @@ class TestQueryset(test.TestCase):
         if dialect == "postgres":
             self.assertEqual(
                 sql1,
-                'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE',
+                'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE',
             )
             self.assertEqual(
                 sql2,
-                'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE NOWAIT',
+                'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE NOWAIT',
             )
             self.assertEqual(
                 sql3,
-                'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE SKIP LOCKED',
+                'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE SKIP LOCKED',
             )
             self.assertEqual(
                 sql4,
-                'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE OF "intfields"',
+                'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE OF "intfields"',
             )
         elif dialect == "mysql":
             self.assertEqual(
                 sql1,
-                "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE",
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=%s FOR UPDATE",
             )
             self.assertEqual(
                 sql2,
-                "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE NOWAIT",
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=%s FOR UPDATE NOWAIT",
             )
             self.assertEqual(
                 sql3,
-                "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE SKIP LOCKED",
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=%s FOR UPDATE SKIP LOCKED",
             )
             self.assertEqual(
                 sql4,
-                "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE OF `intfields`",
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=%s FOR UPDATE OF `intfields`",
             )
 
     async def test_select_related(self):

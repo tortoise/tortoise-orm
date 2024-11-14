@@ -212,5 +212,5 @@ class TestValues(test.TestCase):
         sql = Tournament.all().annotate(date=TruncMonth("created", "%Y-%m-%d")).values("date").sql()
         self.assertEqual(
             sql,
-            'SELECT DATE_FORMAT("created",\'%Y-%m-%d\') "date" FROM "tournament"',
+            'SELECT DATE_FORMAT("created",?) "date" FROM "tournament"',
         )
