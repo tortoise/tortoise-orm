@@ -108,6 +108,7 @@ class CombinedExpression(Expression):
         operator_func = getattr(operator, self.connector.name)
         return ResolveResult(
             term=operator_func(left.term, right.term),
+            joins=list(set(left.joins + right.joins)),  # dedup joins
             output_field=right.output_field or left.output_field,  # type: ignore
         )
 
