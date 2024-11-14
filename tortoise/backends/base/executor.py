@@ -197,7 +197,7 @@ class BaseExecutor:
         raise NotImplementedError()  # pragma: nocoverage
 
     def parameter(self, pos: int) -> Parameter:
-        raise NotImplementedError()  # pragma: nocoverage
+        return Parameter(idx=pos + 1)
 
     async def execute_insert(self, instance: "Model") -> None:
         if not instance._custom_generated_pk:
@@ -259,14 +259,14 @@ class BaseExecutor:
         expressions = expressions or {}
         table = self.model._meta.basetable
         query = self.db.query_class.update(table)
-        count = 0
+        parameter_idx = 0
         for field in update_fields or self.model._meta.fields_db_projection.keys():
             db_column = self.model._meta.fields_db_projection[field]
             field_object = self.model._meta.fields_map[field]
             if not field_object.pk:
                 if field not in expressions.keys():
-                    query = query.set(db_column, self.parameter(count))
-                    count += 1
+                    query = query.set(db_column, self.parameter(parameter_idx))
+                    parameter_idx += 1
                 else:
                     value = (
                         expressions[field]
@@ -282,7 +282,7 @@ class BaseExecutor:
                     )
                     query = query.set(db_column, value)
 
-        query = query.where(table[self.model._meta.db_pk_column] == self.parameter(count))
+        query = query.where(table[self.model._meta.db_pk_column] == self.parameter(parameter_idx))
 
         sql = query.get_sql()
         if not expressions:

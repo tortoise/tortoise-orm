@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pypika import Parameter
-
 from tortoise import Model
 from tortoise.backends.base_postgres.executor import BasePostgresExecutor
 
@@ -23,6 +21,3 @@ class PsycopgExecutor(BasePostgresExecutor):
 
                 for key, val in zip(generated_fields, results):
                     setattr(instance, db_projection[key], val)
-
-    def parameter(self, pos: int) -> Parameter:
-        return Parameter("%s")

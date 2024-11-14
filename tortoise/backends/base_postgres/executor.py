@@ -1,7 +1,6 @@
 import uuid
 from typing import Optional, Sequence, cast
 
-from pypika import Parameter
 from pypika.dialects import PostgreSQLQueryBuilder
 from pypika.terms import Term
 
@@ -37,9 +36,6 @@ class BasePostgresExecutor(BaseExecutor):
         json_filter: postgres_json_filter,
         posix_regex: postgres_posix_regex,
     }
-
-    def parameter(self, pos: int) -> Parameter:
-        return Parameter("$%d" % (pos + 1,))
 
     def _prepare_insert_statement(
         self, columns: Sequence[str], has_generated: bool = True, ignore_conflicts: bool = False

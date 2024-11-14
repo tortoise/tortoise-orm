@@ -1193,7 +1193,7 @@ class UpdateQuery(AwaitableQuery):
         self.resolve_filters()
         # Need to get executor to get correct column_map
         executor = self._db.executor_class(model=self.model, db=self._db)
-        count = 0
+        parameter_idx = 0
         for key, value in self.update_kwargs.items():
             field_object = self.model._meta.fields_map.get(key)
             if not field_object:
@@ -1227,9 +1227,9 @@ class UpdateQuery(AwaitableQuery):
             if isinstance(value, Term):
                 self.query = self.query.set(db_field, value)
             else:
-                self.query = self.query.set(db_field, executor.parameter(count))
+                self.query = self.query.set(db_field, executor.parameter(parameter_idx))
                 self.values.append(value)
-                count += 1
+                parameter_idx += 1
 
     def __await__(self) -> Generator[Any, None, int]:
         if self._db is None:
