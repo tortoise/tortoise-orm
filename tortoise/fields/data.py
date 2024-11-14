@@ -568,28 +568,32 @@ class JSONField(Field[T], dict, list):  # type: ignore
             self.field_type = field_type
 
     def to_db_value(
-        self, value: Optional[Union[dict, list, str, bytes]], instance: "Union[Type[Model], Model]"
+        self,
+        value: Optional[Union[T, dict, list, str, bytes]],
+        instance: "Union[Type[Model], Model]",
     ) -> Optional[str]:
         self.validate(value)
-        if value is not None:
-            if isinstance(value, (str, bytes)):
-                try:
-                    self.decoder(value)
-                except Exception:
-                    raise FieldError(f"Value {value!r} is invalid json value.")
-                if isinstance(value, bytes):
-                    value = value.decode()
-            else:
-                try:
-                    from pydantic import BaseModel
+        if value is None:
+            return None
 
-                    if isinstance(value, BaseModel):
-                        value = value.model_dump()
-                except ImportError:
-                    pass
+        if isinstance(value, (str, bytes)):
+            try:
+                self.decoder(value)
+            except Exception:
+                raise FieldError(f"Value {value!r} is invalid json value.")
+            if isinstance(value, bytes):
+                return value.decode()
+            return value
 
-                value = self.encoder(value)
-        return value
+        try:
+            from pydantic import BaseModel
+
+            if isinstance(value, BaseModel):
+                value = value.model_dump()
+        except ImportError:
+            pass
+
+        return self.encoder(value)
 
     def to_python_value(
         self, value: Optional[Union[T, str, bytes, dict, list]]
@@ -597,6 +601,7 @@ class JSONField(Field[T], dict, list):  # type: ignore
         if isinstance(value, (str, bytes)):
             try:
                 data = self.decoder(value)
+
                 try:
                     from pydantic._internal._model_construction import ModelMetaclass
 
@@ -604,6 +609,7 @@ class JSONField(Field[T], dict, list):  # type: ignore
                         return self.field_type(**data)
                 except ImportError:
                     pass
+
                 return data
             except Exception:
                 raise FieldError(

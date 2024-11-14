@@ -39,7 +39,7 @@ class TestSchemaForJSONField(BaseModel):
     bar: str
 
 
-json_pydantic_default = TestSchemaForJSONField(**{"foo": 1, "bar": "baz"})
+json_pydantic_default = TestSchemaForJSONField(foo=1, bar="baz")
 
 
 class Author(Model):
