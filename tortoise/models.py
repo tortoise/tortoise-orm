@@ -636,6 +636,10 @@ class ModelMeta(type):
                 value._model = new_class
         meta._model = new_class  # type: ignore
         meta.manager._model = new_class
+
+        table_name_generator = getattr(meta_class, "table_name_generator", None)
+        if callable(table_name_generator) and not meta.db_table:
+            meta.db_table = table_name_generator(new_class)
         meta.finalise_fields()
         return new_class
 
