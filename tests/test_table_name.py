@@ -1,9 +1,11 @@
+from typing import Type
+
 from tests.testmodels import Tournament
 from tortoise import Model
 from tortoise.contrib import test
 
 
-def table_name_generator(model_cls: Model):
+def generate_table_name(model_cls: Type[Model]):
     return f"test_{model_cls.__name__.lower()}"
 
 
@@ -13,7 +15,7 @@ class TestTableNameGenerator(test.TestCase):
 
         class TestModel(Tournament):
             class Meta:
-                table_name_generator = table_name_generator
+                table_name_generator = generate_table_name
 
         self.assertEqual(TestModel._meta.db_table, "test_testmodel")
 
@@ -23,7 +25,7 @@ class TestTableNameGenerator(test.TestCase):
         class ExplicitTableModel(Tournament):
             class Meta:
                 table = "explicit_table"
-                table_name_generator = table_name_generator
+                table_name_generator = generate_table_name
 
         self.assertEqual(ExplicitTableModel._meta.db_table, "explicit_table")
 
