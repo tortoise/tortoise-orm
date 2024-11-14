@@ -172,7 +172,7 @@ class BaseSchemaGenerator:
         )
 
     def _get_unique_index_sql(self, exists: str, table_name: str, field_names: List[str]) -> str:
-        index_name = self._generate_index_name("uidx", table_name, field_names)
+        index_name = self._generate_index_name("uid", table_name, field_names)
         return self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
             exists=exists,
             index_name=index_name,

@@ -18,7 +18,7 @@ Fixed
 - improve jsonfield type hint (#1700)
 - Fix bug in tortoise.models.Model When a QuerySet uses the only function and then uses the print function to print the returned result, an AttributeError is generated (#1724)
 - Update the pylint plugin to latest astroid version (#1708)
-
+- Fix bug in schema_generator When modify a unique field (#1768)
 Added
 ^^^^^
 - Add POSIX Regex support for PostgreSQL and MySQL (#1714)

@@ -12,9 +12,9 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "mysql"
     TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({fields}){extra}{comment};"
     INDEX_CREATE_TEMPLATE = "KEY `{index_name}` ({fields})"
-    UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE KEY `{index_name}` ({fields})"
-    UNIQUE_INDEX_CREATE_TEMPLATE = UNIQUE_CONSTRAINT_CREATE_TEMPLATE
-    FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{primary}{comment}{default}"
+    UNIQUE_INDEX_CREATE_TEMPLATE = 'CREATE UNIQUE INDEX {exists}`{index_name}` ON `{table_name}` ({fields});'
+    UNIQUE_CONSTRAINT_CREATE_TEMPLATE = UNIQUE_INDEX_CREATE_TEMPLATE
+    FIELD_TEMPLATE = "`{name}` {type} {nullable} {primary}{comment}{default}"
     GENERATED_PK_TEMPLATE = "`{field_name}` {generated_sql}{comment}"
     FK_TEMPLATE = (
         "{constraint}FOREIGN KEY (`{db_column}`)"
@@ -101,3 +101,14 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         self._field_indexes.clear()
         self._foreign_keys.clear()
         return extra
+
+    def _get_table_sql(self, model: "Type[Model]", safe: bool = True) -> dict:
+        sql_info = super()._get_table_sql(model, safe)
+        table_creation_string = sql_info.get("table_creation_string", "")
+        for field_name, field in model._meta.fields_map.items():
+            if field.unique and not field.pk:
+                unique_index_sql = self._get_unique_index_sql(exists="", table_name=model._meta.db_table,
+                                                              field_names=[field_name])
+                table_creation_string += ("\n" + unique_index_sql)
+        sql_info["table_creation_string"] = table_creation_string
+        return sql_info
