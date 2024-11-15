@@ -53,6 +53,46 @@ class TestSQL(test.TestCase):
             expected = 'SELECT "id",CONCAT("id",?) "id_plus_one" FROM "charpkmodel"'
         self.assertEqual(sql, expected)
 
+    def test_values(self):
+        sql = IntFields.filter(intnum=1).values("intnum").sql()
+        if self.dialect == "mysql":
+            expected = "SELECT `intnum` `intnum` FROM `intfields` WHERE `intnum`=%s"
+        elif self.dialect == "postgres":
+            expected = 'SELECT "intnum" "intnum" FROM "intfields" WHERE "intnum"=$1'
+        else:
+            expected = 'SELECT "intnum" "intnum" FROM "intfields" WHERE "intnum"=?'
+        self.assertEqual(sql, expected)
+
+    def test_values_list(self):
+        sql = IntFields.filter(intnum=1).values_list("intnum").sql()
+        if self.dialect == "mysql":
+            expected = "SELECT `intnum` `0` FROM `intfields` WHERE `intnum`=%s"
+        elif self.dialect == "postgres":
+            expected = 'SELECT "intnum" "0" FROM "intfields" WHERE "intnum"=$1'
+        else:
+            expected = 'SELECT "intnum" "0" FROM "intfields" WHERE "intnum"=?'
+        self.assertEqual(sql, expected)
+
+    def test_exists(self):
+        sql = IntFields.filter(intnum=1).exists().sql()
+        if self.dialect == "mysql":
+            expected = "SELECT %s FROM `intfields` WHERE `intnum`=%s LIMIT %s"
+        elif self.dialect == "postgres":
+            expected = 'SELECT $1 FROM "intfields" WHERE "intnum"=$2 LIMIT $3'
+        else:
+            expected = 'SELECT ? FROM "intfields" WHERE "intnum"=? LIMIT ?'
+        self.assertEqual(sql, expected)
+
+    def test_count(self):
+        sql = IntFields.all().filter(intnum=1).count().sql()
+        if self.dialect == "mysql":
+            expected = "SELECT COUNT(*) FROM `intfields` WHERE `intnum`=%s"
+        elif self.dialect == "postgres":
+            expected = 'SELECT COUNT(*) FROM "intfields" WHERE "intnum"=$1'
+        else:
+            expected = 'SELECT COUNT(*) FROM "intfields" WHERE "intnum"=?'
+        self.assertEqual(sql, expected)
+
     @test.skip("Update queries are not parameterized yet")
     def test_update(self):
         sql = IntFields.filter(intnum=2).update(intnum=1).sql()

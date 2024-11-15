@@ -384,7 +384,7 @@ class Q:
                 encoded_value = (
                     param["value_encoder"](value, model, field_object)
                     if param.get("value_encoder")
-                    else model._meta.db.executor_class._field_to_db(field_object, value, model)
+                    else field_object.to_db_value(value, model)
                 )
             op = param["operator"]
             criterion = op(table[param["source_field"]], encoded_value)

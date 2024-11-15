@@ -615,7 +615,7 @@ class TestQueryset(test.TestCase):
         sql_CountQuery = IntFields.filter(pk=1).force_index("index_name").count().sql()
         self.assertEqual(
             sql_CountQuery,
-            "SELECT COUNT('*') FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s",
+            "SELECT COUNT(*) FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_ExistsQuery = IntFields.filter(pk=1).force_index("index_name").exists().sql()
@@ -655,7 +655,7 @@ class TestQueryset(test.TestCase):
         sql_CountQuery = IntFields.filter(pk=1).use_index("index_name").count().sql()
         self.assertEqual(
             sql_CountQuery,
-            "SELECT COUNT('*') FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s",
+            "SELECT COUNT(*) FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_ExistsQuery = IntFields.filter(pk=1).use_index("index_name").exists().sql()

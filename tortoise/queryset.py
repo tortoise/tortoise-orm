@@ -24,7 +24,7 @@ from pypika import JoinType, Order, Table
 from pypika.analytics import Count
 from pypika.functions import Cast
 from pypika.queries import QueryBuilder
-from pypika.terms import Case, Field, Term, ValueWrapper, Parameterizer
+from pypika.terms import Case, Field, Parameterizer, Star, Term, ValueWrapper
 from typing_extensions import Literal, Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
@@ -1123,7 +1123,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
 
-        parameterizer = Parameterizer()
+        parameterizer = pypika_kwargs.pop("parameterizer", Parameterizer())
         return (
             self.query.get_sql(parameterizer=parameterizer, **pypika_kwargs),
             parameterizer.values,
@@ -1335,7 +1335,8 @@ class ExistsQuery(AwaitableQuery):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
 
-        return self.query.get_sql(), []
+        parameterizer = pypika_kwargs.pop("parameterizer", Parameterizer())
+        return self.query.get_sql(parameterizer=parameterizer), parameterizer.values
 
     def __await__(self) -> Generator[Any, None, bool]:
         if self._db is None:
@@ -1344,7 +1345,7 @@ class ExistsQuery(AwaitableQuery):
         return self._execute(sql, values).__await__()
 
     async def _execute(self, sql: str, values: List[Any]) -> bool:
-        result, _ = await self._db.execute_query(str(self.query))
+        result, _ = await self._db.execute_query(sql, values)
         return bool(result)
 
 
@@ -1381,7 +1382,7 @@ class CountQuery(AwaitableQuery):
     def _make_query(self, **pypika_kwargs) -> Tuple[str, List[Any]]:
         self.query = copy(self.model._meta.basequery)
         self.resolve_filters()
-        count_term = Count("*")
+        count_term = Count(Star())
         if self.query._groupbys:
             count_term = count_term.over()
 
@@ -1395,7 +1396,11 @@ class CountQuery(AwaitableQuery):
         if self._use_indexes:
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
-        return self.query.get_sql(**pypika_kwargs), []
+        parameterizer = pypika_kwargs.pop("parameterizer", Parameterizer())
+        return (
+            self.query.get_sql(parameterizer=parameterizer, **pypika_kwargs),
+            parameterizer.values,
+        )
 
     def __await__(self) -> Generator[Any, None, int]:
         if self._db is None:
@@ -1404,7 +1409,7 @@ class CountQuery(AwaitableQuery):
         return self._execute(sql, values).__await__()
 
     async def _execute(self, sql: str, values: List[Any]) -> int:
-        _, result = await self._db.execute_query(str(self.query))
+        _, result = await self._db.execute_query(sql, values)
         if not result:
             return 0
         count = list(dict(result[0]).values())[0] - self._offset
@@ -1611,7 +1616,11 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
 
-        return self.query.get_sql(**pypika_kwargs), []
+        parameterizer = Parameterizer()
+        return (
+            self.query.get_sql(parameterizer=parameterizer, **pypika_kwargs),
+            parameterizer.values,
+        )
 
     @overload
     def __await__(
@@ -1741,7 +1750,11 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
 
-        return self.query.get_sql(**pypika_kwargs), []
+        parameterizer = pypika_kwargs.pop("parameterizer", Parameterizer())
+        return (
+            self.query.get_sql(parameterizer=parameterizer, **pypika_kwargs),
+            parameterizer.values,
+        )
 
     @overload
     def __await__(
@@ -1907,7 +1920,7 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
     def sql(self) -> str:
         self._choose_db_if_not_chosen()
         queries = self._make_queries()
-        return ";".join([str(sql) for sql, _ in queries])
+        return ";".join([sql for sql, _ in queries])
 
 
 class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):

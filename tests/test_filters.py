@@ -268,6 +268,14 @@ class TestDecimalFieldFilters(test.TestCase):
             [Decimal("1.2345")],
         )
 
+    async def test_in(self):
+        self.assertEqual(
+            await DecimalFields.filter(
+                decimal__in=[Decimal("1.2345"), Decimal("1000")]
+            ).values_list("decimal", flat=True),
+            [Decimal("1.2345")],
+        )
+
 
 class TestCharFkFieldFilters(test.TestCase):
     async def asyncSetUp(self):

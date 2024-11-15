@@ -170,14 +170,6 @@ class BaseExecutor:
         result_columns = [self.model._meta.fields_db_projection[c] for c in regular_columns]
         return regular_columns, result_columns
 
-    @classmethod
-    def _field_to_db(
-        cls, field_object: Field, attr: Any, instance: "Union[Type[Model], Model]"
-    ) -> Any:
-        if field_object.__class__ in cls.TO_DB_OVERRIDE:
-            return cls.TO_DB_OVERRIDE[field_object.__class__](field_object, attr, instance)
-        return field_object.to_db_value(attr, instance)
-
     def _prepare_insert_statement(
         self, columns: Sequence[str], has_generated: bool = True, ignore_conflicts: bool = False
     ) -> QueryBuilder:
@@ -330,10 +322,8 @@ class BaseExecutor:
             if relation_field not in related_objects_for_fetch:
                 related_objects_for_fetch[relation_field] = []
             related_objects_for_fetch[relation_field].append(
-                self._field_to_db(
-                    instance._meta.fields_map[related_field_name],
-                    getattr(instance, related_field_name),
-                    instance,
+                instance._meta.fields_map[related_field_name].to_db_value(
+                    getattr(instance, related_field_name), instance
                 )
             )
 
@@ -375,10 +365,8 @@ class BaseExecutor:
             if relation_field not in related_objects_for_fetch:
                 related_objects_for_fetch[relation_field] = []
             related_objects_for_fetch[relation_field].append(
-                self._field_to_db(
-                    instance._meta.fields_map[related_field_name],
-                    getattr(instance, related_field_name),
-                    instance,
+                instance._meta.fields_map[related_field_name].to_db_value(
+                    getattr(instance, related_field_name), instance
                 )
             )
 
@@ -410,8 +398,7 @@ class BaseExecutor:
     ) -> "Iterable[Model]":
         to_attr, related_query = related_query
         instance_id_set: set = {
-            self._field_to_db(instance._meta.pk, instance.pk, instance)
-            for instance in instance_list
+            instance._meta.pk.to_db_value(instance.pk, instance) for instance in instance_list
         }
 
         field_object: ManyToManyFieldInstance = self.model._meta.fields_map[field]  # type: ignore

@@ -89,14 +89,14 @@ def is_in(field: Term, value: Any) -> Criterion:
     if value:
         return field.isin(value)
     # SQL has no False, so we return 1=0
-    return BasicCriterion(Equality.eq, ValueWrapper(1), ValueWrapper(0))
+    return BasicCriterion(Equality.eq, ValueWrapper("1"), ValueWrapper("0"))
 
 
 def not_in(field: Term, value: Any) -> Criterion:
     if value:
         return field.notin(value) | field.isnull()
     # SQL has no True, so we return 1=1
-    return BasicCriterion(Equality.eq, ValueWrapper(1), ValueWrapper(1))
+    return BasicCriterion(Equality.eq, ValueWrapper("1"), ValueWrapper("1"))
 
 
 def between_and(field: Term, value: Tuple[Any, Any]) -> Criterion:
