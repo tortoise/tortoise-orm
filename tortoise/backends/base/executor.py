@@ -19,7 +19,7 @@ from typing import (
     cast,
 )
 
-from pypika import JoinType, Parameter, Query, Table
+from pypika import JoinType, Parameter, Table
 from pypika.queries import QueryBuilder
 
 from tortoise.exceptions import OperationalError
@@ -119,8 +119,8 @@ class BaseExecutor:
                 self.update_cache,
             ) = EXECUTOR_CACHE[key]
 
-    async def execute_explain(self, query: Query) -> Any:
-        sql = " ".join((self.EXPLAIN_PREFIX, query.get_sql()))  # type:ignore[attr-defined]
+    async def execute_explain(self, sql: str) -> Any:
+        sql = " ".join((self.EXPLAIN_PREFIX, sql))
         return (await self.db.execute_query(sql))[1]
 
     async def execute_select(

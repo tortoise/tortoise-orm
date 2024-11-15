@@ -215,10 +215,11 @@ class Subquery(Term):
         self.query = query
 
     def get_sql(self, **kwargs: Any) -> str:
-        return self.query.as_query().get_sql(**kwargs)
+        return self.query._make_query(**kwargs)[0]
 
-    def as_(self, alias: str) -> "Selectable":  # type:ignore[override]
-        return self.query.as_query().as_(alias)
+    def as_(self, alias: str) -> "Selectable":
+        self.query._make_query()
+        return self.query.query.as_(alias)
 
 
 class RawSQL(Term):
