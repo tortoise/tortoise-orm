@@ -197,7 +197,8 @@ The ``Meta`` class
 
         Set this to a callable that will generate the table name for the model.
         The callable should accept the model class as its argument and return a string.
-        If both ``table`` and ``table_name_generator`` are specified, ``table`` takes precedence.
+        Cannot be used together with ``table`` attribute - attempting to set both will raise 
+        a `ConfigurationError`.
 
         .. code-block:: python3
 
