@@ -1,7 +1,4 @@
-from tests.testmodels import (
-    Event,
-    Tournament,
-)
+from tests.testmodels import Event, Tournament
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotEQ
 from tortoise.expressions import F

@@ -7,7 +7,7 @@ from pypika.terms import Function as PypikaFunction
 from pypika.terms import Term
 
 
-class Comp(Comparator):  # type: ignore
+class Comp(Comparator):
     search = " "
 
 
@@ -18,13 +18,13 @@ class Mode(Enum):
     WITH_QUERY_EXPRESSION = "WITH QUERY EXPANSION"
 
 
-class Match(PypikaFunction):  # type: ignore
-    def __init__(self, *columns: Term):
+class Match(PypikaFunction):
+    def __init__(self, *columns: Term) -> None:
         super(Match, self).__init__("MATCH", *columns)
 
 
-class Against(PypikaFunction):  # type: ignore
-    def __init__(self, expr: Term, mode: Optional[Mode] = None):
+class Against(PypikaFunction):
+    def __init__(self, expr: Term, mode: Optional[Mode] = None) -> None:
         super(Against, self).__init__("AGAINST", expr)
         self.mode = mode
 
@@ -34,10 +34,10 @@ class Against(PypikaFunction):  # type: ignore
         return self.mode.value
 
 
-class SearchCriterion(BasicCriterion):  # type: ignore
+class SearchCriterion(BasicCriterion):
     """
     Only support for CharField, TextField with full search indexes.
     """
 
-    def __init__(self, *columns: Term, expr: Term, mode: Optional[Mode] = None):
+    def __init__(self, *columns: Term, expr: Term, mode: Optional[Mode] = None) -> None:
         super().__init__(Comp.search, Match(*columns), Against(expr, mode))

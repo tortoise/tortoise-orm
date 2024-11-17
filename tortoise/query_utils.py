@@ -26,7 +26,7 @@ TableCriterionTuple = Tuple[Table, Criterion]
 def get_joins_for_related_field(
     table: Table, related_field: RelationalField, related_field_name: str
 ) -> List[TableCriterionTuple]:
-    required_joins = []
+    required_joins: List[TableCriterionTuple] = []
 
     related_table: Table = related_field.related_model._meta.basetable
     if isinstance(related_field, ManyToManyFieldInstance):
@@ -86,7 +86,7 @@ def resolve_nested_field(
     returns the pypika term, required joins and the Field that can be used for
     converting the value.
     """
-    term = field_object = None
+    field_object = None
     joins = []
     fields = field.split("__")
 
@@ -134,11 +134,11 @@ def resolve_nested_field(
     return term, joins, field_object
 
 
-class EmptyCriterion(Criterion):  # type:ignore[misc]
-    def __or__(self, other: Criterion) -> Criterion:
+class EmptyCriterion(Criterion):
+    def __or__(self, other: Criterion) -> Criterion:  # type:ignore[override]
         return other
 
-    def __and__(self, other: Criterion) -> Criterion:
+    def __and__(self, other: Criterion) -> Criterion:  # type:ignore[override]
         return other
 
     def __bool__(self) -> bool:

@@ -6,12 +6,12 @@ from pypika.terms import BasicCriterion, Function, Term
 from tortoise.contrib.postgres.functions import ToTsQuery, ToTsVector
 
 
-class Comp(Comparator):  # type: ignore
+class Comp(Comparator):
     search = " @@ "
 
 
-class SearchCriterion(BasicCriterion):  # type: ignore
-    def __init__(self, field: Term, expr: Union[Term, Function]):
+class SearchCriterion(BasicCriterion):
+    def __init__(self, field: Term, expr: Union[Term, Function]) -> None:
         if isinstance(expr, Function):
             _expr = expr
         else:

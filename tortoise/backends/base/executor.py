@@ -92,10 +92,9 @@ class BaseExecutor:
                     self.column_map[column] = field_object.to_db_value
 
             table = self.model._meta.basetable
+            basequery = cast(QueryBuilder, self.model._meta.basequery)
             self.delete_query = str(
-                self.model._meta.basequery.where(
-                    table[self.model._meta.db_pk_column] == self.parameter(0)
-                ).delete()
+                basequery.where(table[self.model._meta.db_pk_column] == self.parameter(0)).delete()
             )
             self.update_cache: Dict[str, str] = {}
 
@@ -121,13 +120,13 @@ class BaseExecutor:
             ) = EXECUTOR_CACHE[key]
 
     async def execute_explain(self, query: Query) -> Any:
-        sql = " ".join((self.EXPLAIN_PREFIX, query.get_sql()))
+        sql = " ".join((self.EXPLAIN_PREFIX, query.get_sql()))  # type:ignore[attr-defined]
         return (await self.db.execute_query(sql))[1]
 
     async def execute_select(
         self, query: Union[Query, RawSQL], custom_fields: Optional[list] = None
     ) -> list:
-        _, raw_results = await self.db.execute_query(query.get_sql())
+        _, raw_results = await self.db.execute_query(query.get_sql())  # type:ignore[union-attr]
         instance_list = []
         for row in raw_results:
             if self.select_related_idx:
@@ -543,7 +542,9 @@ class BaseExecutor:
                 relation_field = self.model._meta.fields_map[field_name]
                 related_model: "Type[Model]" = relation_field.related_model  # type: ignore
                 related_query = related_model.all().using_db(self.db)
-                related_query.query = copy(related_query.model._meta.basequery)
+                related_query.query = copy(
+                    related_query.model._meta.basequery
+                )  # type:ignore[assignment]
             if forwarded_prefetches:
                 related_query = related_query.prefetch_related(*forwarded_prefetches)
             self._prefetch_queries.setdefault(field_name, []).append((to_attr, related_query))

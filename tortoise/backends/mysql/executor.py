@@ -31,12 +31,12 @@ from tortoise.filters import (
 )
 
 
-class StrWrapper(ValueWrapper):  # type: ignore
+class StrWrapper(ValueWrapper):
     """
     Naive str wrapper that doesn't use the monkey-patched pypika ValueWrapper for MySQL
     """
 
-    def get_value_sql(self, **kwargs):
+    def get_value_sql(self, **kwargs) -> str:
         quote_char = kwargs.get("secondary_quote_char") or ""
         value = self.value.replace(quote_char, quote_char * 2)
         return format_quotes(value, quote_char)
@@ -92,12 +92,12 @@ def mysql_insensitive_ends_with(field: Term, value: str) -> Criterion:
     )
 
 
-def mysql_search(field: Term, value: str):
+def mysql_search(field: Term, value: str) -> SearchCriterion:
     return SearchCriterion(field, expr=StrWrapper(value))
 
 
-def mysql_posix_regex(field: Term, value: str):
-    return BasicCriterion(" REGEXP ", field, StrWrapper(value))
+def mysql_posix_regex(field: Term, value: str) -> BasicCriterion:
+    return BasicCriterion(" REGEXP ", field, StrWrapper(value))  # type:ignore[arg-type]
 
 
 class MySQLExecutor(BaseExecutor):

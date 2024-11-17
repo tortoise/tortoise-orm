@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional, Sequence
+from typing import Optional, Sequence, cast
 
 from pypika import Parameter
 from pypika.dialects import PostgreSQLQueryBuilder
@@ -23,7 +23,7 @@ from tortoise.filters import (
 )
 
 
-def postgres_search(field: Term, value: Term):
+def postgres_search(field: Term, value: Term) -> SearchCriterion:
     return SearchCriterion(field, expr=value)
 
 
@@ -44,15 +44,10 @@ class BasePostgresExecutor(BaseExecutor):
     def _prepare_insert_statement(
         self, columns: Sequence[str], has_generated: bool = True, ignore_conflicts: bool = False
     ) -> PostgreSQLQueryBuilder:
-        query = (
-            self.db.query_class.into(self.model._meta.basetable)
-            .columns(*columns)
-            .insert(*[self.parameter(i) for i in range(len(columns))])
-        )
-        if has_generated:
-            generated_fields = self.model._meta.generated_db_fields
-            if generated_fields:
-                query = query.returning(*generated_fields)
+        builder = cast(PostgreSQLQueryBuilder, self.db.query_class.into(self.model._meta.basetable))
+        query = builder.columns(*columns).insert(*[self.parameter(i) for i in range(len(columns))])
+        if has_generated and (generated_fields := self.model._meta.generated_db_fields):
+            query = query.returning(*generated_fields)
         if ignore_conflicts:
             query = query.on_conflict().do_nothing()
         return query

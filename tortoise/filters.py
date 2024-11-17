@@ -12,7 +12,7 @@ from typing import (
 )
 
 from pypika import Table
-from pypika.enums import DatePart, SqlTypes
+from pypika.enums import DatePart, Matching, SqlTypes
 from pypika.functions import Cast, Extract, Upper
 from pypika.terms import BasicCriterion, Criterion, Equality, Term, ValueWrapper
 from typing_extensions import NotRequired
@@ -27,21 +27,16 @@ if TYPE_CHECKING:  # pragma: nocoverage
 ##############################################################################
 
 
-class Like(BasicCriterion):  # type: ignore
+class Like(BasicCriterion):
     def __init__(self, left, right, alias=None, escape=" ESCAPE '\\'") -> None:
         """
         A Like that supports an ESCAPE clause
         """
-        super().__init__(" LIKE ", left, right, alias=alias)
+        super().__init__(Matching.like, left, right, alias=alias)
         self.escape = escape
 
-    def get_sql(self, quote_char='"', with_alias=False, **kwargs):
-        sql = "{left}{comparator}{right}{escape}".format(
-            comparator=self.comparator,
-            left=self.left.get_sql(quote_char=quote_char, **kwargs),
-            right=self.right.get_sql(quote_char=quote_char, **kwargs),
-            escape=self.escape,
-        )
+    def get_sql(self, quote_char='"', with_alias=False, **kwargs) -> str:
+        sql = super().get_sql(quote_char=quote_char, with_alias=False, **kwargs) + str(self.escape)
         if with_alias and self.alias:  # pragma: nocoverage
             return '{sql} "{alias}"'.format(sql=sql, alias=self.alias)
         return sql
@@ -203,17 +198,17 @@ def extract_microsecond_equal(field: Term, value: int) -> Criterion:
     return Extract(DatePart.microsecond, field).eq(value)
 
 
-def json_contains(field: Term, value: str) -> Criterion:
+def json_contains(field: Term, value: str) -> Criterion:  # type:ignore[empty-body]
     # will be override in each executor
     pass
 
 
-def json_contained_by(field: Term, value: str) -> Criterion:
+def json_contained_by(field: Term, value: str) -> Criterion:  # type:ignore[empty-body]
     # will be override in each executor
     pass
 
 
-def json_filter(field: Term, value: Dict) -> Criterion:
+def json_filter(field: Term, value: Dict) -> Criterion:  # type:ignore[empty-body]
     # will be override in each executor
     pass
 
