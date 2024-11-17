@@ -1,6 +1,6 @@
 import dataclasses
 import sys
-from typing import Type, Optional, Any, TYPE_CHECKING, List, Tuple, Callable
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, Type
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -32,7 +32,8 @@ class ModelDescription:
             data_fields=[
                 field
                 for name, field in model._meta.fields_map.items()
-                if name != model._meta.pk_attr and name in (model._meta.fields - model._meta.fetch_fields)
+                if name != model._meta.pk_attr
+                and name in (model._meta.fields - model._meta.fetch_fields)
             ],
             fk_fields=[
                 field
@@ -107,13 +108,16 @@ class PydanticMetaData:
 
         def get_param_from_pydantic_meta(attr: str, default: Any) -> Any:
             return getattr(old_pydantic_meta, attr, default)
+
         include = tuple(get_param_from_pydantic_meta("include", default_meta.include))
         exclude = tuple(get_param_from_pydantic_meta("exclude", default_meta.exclude))
         computed = tuple(get_param_from_pydantic_meta("computed", default_meta.computed))
         backward_relations = bool(
             get_param_from_pydantic_meta("backward_relations_raw", default_meta.backward_relations)
         )
-        max_recursion = int(get_param_from_pydantic_meta("max_recursion", default_meta.max_recursion))
+        max_recursion = int(
+            get_param_from_pydantic_meta("max_recursion", default_meta.max_recursion)
+        )
         allow_cycles = bool(get_param_from_pydantic_meta("allow_cycles", default_meta.allow_cycles))
         exclude_raw_fields = bool(
             get_param_from_pydantic_meta("exclude_raw_fields", default_meta.exclude_raw_fields)
@@ -131,14 +135,11 @@ class PydanticMetaData:
             allow_cycles=allow_cycles,
             exclude_raw_fields=exclude_raw_fields,
             sort_alphabetically=sort_alphabetically,
-            model_config=model_config
+            model_config=model_config,
         )
         return pmd
 
-    def construct_pydantic_meta(
-            self,
-            meta_override: Type
-    ) -> "PydanticMetaData":
+    def construct_pydantic_meta(self, meta_override: Type) -> "PydanticMetaData":
         def get_param_from_meta_override(attr: str) -> Any:
             return getattr(meta_override, attr, getattr(self, attr))
 
@@ -163,29 +164,23 @@ class PydanticMetaData:
             max_recursion=max_recursion,
             exclude_raw_fields=exclude_raw_fields,
             sort_alphabetically=sort_alphabetically,
-            allow_cycles=allow_cycles
+            allow_cycles=allow_cycles,
         )
         return pmd
 
     def finalize_meta(
-            self,
-            exclude: Tuple[str, ...] = (),
-            include: Tuple[str, ...] = (),
-            computed: Tuple[str, ...] = (),
-            allow_cycles: Optional[bool] = None,
-            sort_alphabetically: Optional[bool] = None,
-            model_config: Optional[ConfigDict] = None,
+        self,
+        exclude: Tuple[str, ...] = (),
+        include: Tuple[str, ...] = (),
+        computed: Tuple[str, ...] = (),
+        allow_cycles: Optional[bool] = None,
+        sort_alphabetically: Optional[bool] = None,
+        model_config: Optional[ConfigDict] = None,
     ) -> "PydanticMetaData":
         _sort_fields: bool = (
-            self.sort_alphabetically
-            if sort_alphabetically is None
-            else sort_alphabetically
+            self.sort_alphabetically if sort_alphabetically is None else sort_alphabetically
         )
-        _allow_cycles: bool = (
-            self.allow_cycles
-            if allow_cycles is None
-            else allow_cycles
-        )
+        _allow_cycles: bool = self.allow_cycles if allow_cycles is None else allow_cycles
 
         include = tuple(include) + self.include
         exclude = tuple(exclude) + self.exclude
@@ -206,5 +201,5 @@ class PydanticMetaData:
             exclude_raw_fields=self.exclude_raw_fields,
             sort_alphabetically=_sort_fields,
             allow_cycles=_allow_cycles,
-            model_config=_model_config
+            model_config=_model_config,
         )
