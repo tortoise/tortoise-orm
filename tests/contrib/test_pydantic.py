@@ -67,7 +67,7 @@ class TestPydantic(test.TestCase):
             self.Event_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf": {
+                    "Address_coqnj7_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -83,7 +83,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf": {
+                    "Reporter_fgnv33_leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -99,7 +99,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf": {
+                    "Team_ip4pg6_leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -119,15 +119,16 @@ class TestPydantic(test.TestCase):
                                     },
                                     {"type": "null"},
                                 ],
+                                "default": None,
                                 "nullable": True,
                                 "title": "Alias",
                             },
                         },
-                        "required": ["id", "name", "alias"],
+                        "required": ["id", "name"],
                         "title": "Team",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf": {
+                    "Tournament_5y7e7j_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -139,6 +140,7 @@ class TestPydantic(test.TestCase):
                             "name": {"maxLength": 255, "title": "Name", "type": "string"},
                             "desc": {
                                 "anyOf": [{"type": "string"}, {"type": "null"}],
+                                "default": None,
                                 "nullable": True,
                                 "title": "Desc",
                             },
@@ -149,7 +151,7 @@ class TestPydantic(test.TestCase):
                                 "type": "string",
                             },
                         },
-                        "required": ["id", "name", "desc", "created"],
+                        "required": ["id", "name", "created"],
                         "title": "Tournament",
                         "type": "object",
                     },
@@ -165,13 +167,13 @@ class TestPydantic(test.TestCase):
                     },
                     "name": {"description": "The name", "title": "Name", "type": "string"},
                     "tournament": {
-                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf",
+                        "$ref": "#/$defs/Tournament_5y7e7j_leaf",
                         "description": "What tournaments is a happenin'",
                     },
                     "reporter": {
                         "anyOf": [
                             {
-                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf"
+                                "$ref": "#/$defs/Reporter_fgnv33_leaf"
                             },
                             {"type": "null"},
                         ],
@@ -180,7 +182,7 @@ class TestPydantic(test.TestCase):
                     },
                     "participants": {
                         "items": {
-                            "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf"
+                            "$ref": "#/$defs/Team_ip4pg6_leaf"
                         },
                         "title": "Participants",
                         "type": "array",
@@ -197,13 +199,14 @@ class TestPydantic(test.TestCase):
                             {"maximum": 2147483647, "minimum": -2147483648, "type": "integer"},
                             {"type": "null"},
                         ],
+                        "default": None,
                         "nullable": True,
                         "title": "Alias",
                     },
                     "address": {
                         "anyOf": [
                             {
-                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf"
+                                "$ref": "#/$defs/Address_coqnj7_leaf"
                             },
                             {"type": "null"},
                         ],
@@ -219,7 +222,6 @@ class TestPydantic(test.TestCase):
                     "participants",
                     "modified",
                     "token",
-                    "alias",
                     "address",
                 ],
                 "title": "Event",
@@ -232,7 +234,7 @@ class TestPydantic(test.TestCase):
             self.Event_Pydantic_List.model_json_schema(),
             {
                 "$defs": {
-                    "Event_bliobj": {
+                    "Event_padfez": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -244,13 +246,13 @@ class TestPydantic(test.TestCase):
                             },
                             "name": {"description": "The name", "title": "Name", "type": "string"},
                             "tournament": {
-                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf",
+                                "$ref": "#/$defs/Tournament_5y7e7j_leaf",
                                 "description": "What tournaments is a happenin'",
                             },
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf"
+                                        "$ref": "#/$defs/Reporter_fgnv33_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -259,7 +261,7 @@ class TestPydantic(test.TestCase):
                             },
                             "participants": {
                                 "items": {
-                                    "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf"
+                                    "$ref": "#/$defs/Team_ip4pg6_leaf"
                                 },
                                 "title": "Participants",
                                 "type": "array",
@@ -283,13 +285,14 @@ class TestPydantic(test.TestCase):
                                     },
                                     {"type": "null"},
                                 ],
+                                "default": None,
                                 "nullable": True,
                                 "title": "Alias",
                             },
                             "address": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf"
+                                        "$ref": "#/$defs/Address_coqnj7_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -305,13 +308,12 @@ class TestPydantic(test.TestCase):
                             "participants",
                             "modified",
                             "token",
-                            "alias",
                             "address",
                         ],
                         "title": "Event",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf": {
+                    "Address_coqnj7_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -327,7 +329,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf": {
+                    "Reporter_fgnv33_leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -343,7 +345,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf": {
+                    "Team_ip4pg6_leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -363,15 +365,16 @@ class TestPydantic(test.TestCase):
                                     },
                                     {"type": "null"},
                                 ],
+                                "default": None,
                                 "nullable": True,
                                 "title": "Alias",
                             },
                         },
-                        "required": ["id", "name", "alias"],
+                        "required": ["id", "name"],
                         "title": "Team",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf": {
+                    "Tournament_5y7e7j_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -383,6 +386,7 @@ class TestPydantic(test.TestCase):
                             "name": {"maxLength": 255, "title": "Name", "type": "string"},
                             "desc": {
                                 "anyOf": [{"type": "string"}, {"type": "null"}],
+                                "default": None,
                                 "nullable": True,
                                 "title": "Desc",
                             },
@@ -393,13 +397,13 @@ class TestPydantic(test.TestCase):
                                 "type": "string",
                             },
                         },
-                        "required": ["id", "name", "desc", "created"],
+                        "required": ["id", "name", "created"],
                         "title": "Tournament",
                         "type": "object",
                     },
                 },
                 "description": "Events on the calendar",
-                "items": {"$ref": "#/$defs/Event_bliobj"},
+                "items": {"$ref": "#/$defs/Event_padfez"},
                 "title": "Event_list",
                 "type": "array",
             },
@@ -410,7 +414,7 @@ class TestPydantic(test.TestCase):
             self.Address_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_jim4na": {
+                    "Event_zvunzw_leaf": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -422,13 +426,13 @@ class TestPydantic(test.TestCase):
                             },
                             "name": {"description": "The name", "title": "Name", "type": "string"},
                             "tournament": {
-                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf",
+                                "$ref": "#/$defs/Tournament_5y7e7j_leaf",
                                 "description": "What tournaments is a happenin'",
                             },
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf"
+                                        "$ref": "#/$defs/Reporter_fgnv33_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -437,7 +441,7 @@ class TestPydantic(test.TestCase):
                             },
                             "participants": {
                                 "items": {
-                                    "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf"
+                                    "$ref": "#/$defs/Team_ip4pg6_leaf"
                                 },
                                 "title": "Participants",
                                 "type": "array",
@@ -461,6 +465,7 @@ class TestPydantic(test.TestCase):
                                     },
                                     {"type": "null"},
                                 ],
+                                "default": None,
                                 "nullable": True,
                                 "title": "Alias",
                             },
@@ -473,12 +478,11 @@ class TestPydantic(test.TestCase):
                             "participants",
                             "modified",
                             "token",
-                            "alias",
                         ],
                         "title": "Event",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf": {
+                    "Reporter_fgnv33_leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -494,7 +498,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf": {
+                    "Team_ip4pg6_leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -514,15 +518,16 @@ class TestPydantic(test.TestCase):
                                     },
                                     {"type": "null"},
                                 ],
+                                "default": None,
                                 "nullable": True,
                                 "title": "Alias",
                             },
                         },
-                        "required": ["id", "name", "alias"],
+                        "required": ["id", "name"],
                         "title": "Team",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf": {
+                    "Tournament_5y7e7j_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -534,6 +539,7 @@ class TestPydantic(test.TestCase):
                             "name": {"maxLength": 255, "title": "Name", "type": "string"},
                             "desc": {
                                 "anyOf": [{"type": "string"}, {"type": "null"}],
+                                "default": None,
                                 "nullable": True,
                                 "title": "Desc",
                             },
@@ -544,7 +550,7 @@ class TestPydantic(test.TestCase):
                                 "type": "string",
                             },
                         },
-                        "required": ["id", "name", "desc", "created"],
+                        "required": ["id", "name", "created"],
                         "title": "Tournament",
                         "type": "object",
                     },
@@ -553,7 +559,7 @@ class TestPydantic(test.TestCase):
                 "properties": {
                     "city": {"maxLength": 64, "title": "City", "type": "string"},
                     "street": {"maxLength": 128, "title": "Street", "type": "string"},
-                    "event": {"$ref": "#/$defs/Event_jim4na"},
+                    "event": {"$ref": "#/$defs/Event_zvunzw_leaf"},
                     "event_id": {
                         "maximum": 9223372036854775807,
                         "minimum": -9223372036854775808,
@@ -572,7 +578,7 @@ class TestPydantic(test.TestCase):
             self.Tournament_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_ml4ytz": {
+                    "Event_jgrv4c_leaf": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -586,7 +592,7 @@ class TestPydantic(test.TestCase):
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf"
+                                        "$ref": "#/$defs/Reporter_fgnv33_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -595,7 +601,7 @@ class TestPydantic(test.TestCase):
                             },
                             "participants": {
                                 "items": {
-                                    "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf"
+                                    "$ref": "#/$defs/Team_ip4pg6_leaf"
                                 },
                                 "title": "Participants",
                                 "type": "array",
@@ -619,13 +625,14 @@ class TestPydantic(test.TestCase):
                                     },
                                     {"type": "null"},
                                 ],
+                                "default": None,
                                 "nullable": True,
                                 "title": "Alias",
                             },
                             "address": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf"
+                                        "$ref": "#/$defs/Address_coqnj7_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -640,13 +647,12 @@ class TestPydantic(test.TestCase):
                             "participants",
                             "modified",
                             "token",
-                            "alias",
                             "address",
                         ],
                         "title": "Event",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf": {
+                    "Address_coqnj7_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -662,7 +668,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf": {
+                    "Reporter_fgnv33_leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -678,7 +684,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Team__leaf": {
+                    "Team_ip4pg6_leaf": {
                         "additionalProperties": False,
                         "description": "Team that is a playing",
                         "properties": {
@@ -698,11 +704,12 @@ class TestPydantic(test.TestCase):
                                     },
                                     {"type": "null"},
                                 ],
+                                "default": None,
                                 "nullable": True,
                                 "title": "Alias",
                             },
                         },
-                        "required": ["id", "name", "alias"],
+                        "required": ["id", "name"],
                         "title": "Team",
                         "type": "object",
                     },
@@ -713,6 +720,7 @@ class TestPydantic(test.TestCase):
                     "name": {"maxLength": 255, "title": "Name", "type": "string"},
                     "desc": {
                         "anyOf": [{"type": "string"}, {"type": "null"}],
+                        "default": None,
                         "nullable": True,
                         "title": "Desc",
                     },
@@ -724,12 +732,12 @@ class TestPydantic(test.TestCase):
                     },
                     "events": {
                         "description": "What tournaments is a happenin'",
-                        "items": {"$ref": "#/$defs/Event_ml4ytz"},
+                        "items": {"$ref": "#/$defs/Event_jgrv4c_leaf"},
                         "title": "Events",
                         "type": "array",
                     },
                 },
-                "required": ["id", "name", "desc", "created", "events"],
+                "required": ["id", "name", "created", "events"],
                 "title": "Tournament",
                 "type": "object",
             },
@@ -740,7 +748,7 @@ class TestPydantic(test.TestCase):
             self.Team_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_vrm2bi": {
+                    "Event_n2kadx_leaf": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -752,13 +760,13 @@ class TestPydantic(test.TestCase):
                             },
                             "name": {"description": "The name", "title": "Name", "type": "string"},
                             "tournament": {
-                                "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf",
+                                "$ref": "#/$defs/Tournament_5y7e7j_leaf",
                                 "description": "What tournaments is a happenin'",
                             },
                             "reporter": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf"
+                                        "$ref": "#/$defs/Reporter_fgnv33_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -784,13 +792,14 @@ class TestPydantic(test.TestCase):
                                     },
                                     {"type": "null"},
                                 ],
+                                "default": None,
                                 "nullable": True,
                                 "title": "Alias",
                             },
                             "address": {
                                 "anyOf": [
                                     {
-                                        "$ref": "#/$defs/tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf"
+                                        "$ref": "#/$defs/Address_coqnj7_leaf"
                                     },
                                     {"type": "null"},
                                 ],
@@ -805,13 +814,12 @@ class TestPydantic(test.TestCase):
                             "reporter",
                             "modified",
                             "token",
-                            "alias",
                             "address",
                         ],
                         "title": "Event",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Address__leaf": {
+                    "Address_coqnj7_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
@@ -827,7 +835,7 @@ class TestPydantic(test.TestCase):
                         "title": "Address",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Reporter__leaf": {
+                    "Reporter_fgnv33_leaf": {
                         "additionalProperties": False,
                         "description": "Whom is assigned as the reporter",
                         "properties": {
@@ -843,7 +851,7 @@ class TestPydantic(test.TestCase):
                         "title": "Reporter",
                         "type": "object",
                     },
-                    "tortoise__contrib__pydantic__creator__tests__testmodels__Tournament__leaf": {
+                    "Tournament_5y7e7j_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -855,6 +863,7 @@ class TestPydantic(test.TestCase):
                             "name": {"maxLength": 255, "title": "Name", "type": "string"},
                             "desc": {
                                 "anyOf": [{"type": "string"}, {"type": "null"}],
+                                "default": None,
                                 "nullable": True,
                                 "title": "Desc",
                             },
@@ -865,7 +874,7 @@ class TestPydantic(test.TestCase):
                                 "type": "string",
                             },
                         },
-                        "required": ["id", "name", "desc", "created"],
+                        "required": ["id", "name", "created"],
                         "title": "Tournament",
                         "type": "object",
                     },
@@ -885,16 +894,17 @@ class TestPydantic(test.TestCase):
                             {"maximum": 2147483647, "minimum": -2147483648, "type": "integer"},
                             {"type": "null"},
                         ],
+                        "default": None,
                         "nullable": True,
                         "title": "Alias",
                     },
                     "events": {
-                        "items": {"$ref": "#/$defs/Event_vrm2bi"},
+                        "items": {"$ref": "#/$defs/Event_n2kadx_leaf"},
                         "title": "Events",
                         "type": "array",
                     },
                 },
-                "required": ["id", "name", "alias", "events"],
+                "required": ["id", "name", "events"],
                 "title": "Team",
                 "type": "object",
             },
@@ -902,7 +912,6 @@ class TestPydantic(test.TestCase):
 
     async def test_eventlist(self):
         eventlp = await self.Event_Pydantic_List.from_queryset(Event.all())
-        # print(eventlp.json(indent=4))
         eventldict = eventlp.model_dump()
 
         # Remove timestamps
@@ -961,7 +970,6 @@ class TestPydantic(test.TestCase):
 
     async def test_event(self):
         eventp = await self.Event_Pydantic.from_tortoise_orm(await Event.get(name="Test"))
-        # print(eventp.json(indent=4))
         eventdict = eventp.model_dump()
 
         # Remove timestamps
@@ -993,7 +1001,6 @@ class TestPydantic(test.TestCase):
 
     async def test_address(self):
         addressp = await self.Address_Pydantic.from_tortoise_orm(await Address.get(street="Ocean"))
-        # print(addressp.json(indent=4))
         addressdict = addressp.model_dump()
 
         # Remove timestamps
@@ -1029,7 +1036,6 @@ class TestPydantic(test.TestCase):
         tournamentp = await self.Tournament_Pydantic.from_tortoise_orm(
             await Tournament.all().first()
         )
-        # print(tournamentp.json(indent=4))
         tournamentdict = tournamentp.model_dump()
 
         # Remove timestamps
@@ -1081,7 +1087,6 @@ class TestPydantic(test.TestCase):
 
     async def test_team(self):
         teamp = await self.Team_Pydantic.from_tortoise_orm(await Team.get(id=self.team1.id))
-        # print(teamp.json(indent=4))
         teamdict = teamp.model_dump()
 
         # Remove timestamps
@@ -1298,7 +1303,7 @@ class TestPydanticCycle(test.TestCase):
             self.Employee_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Employee_ibbaiu": {
+                    "Employee_6tkbjb_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -1309,7 +1314,7 @@ class TestPydanticCycle(test.TestCase):
                             },
                             "name": {"maxLength": 50, "title": "Name", "type": "string"},
                             "talks_to": {
-                                "items": {"$ref": "#/$defs/leaf"},
+                                "items": {"$ref": "#/$defs/Employee_fj2ly4_leaf"},
                                 "title": "Talks To",
                                 "type": "array",
                             },
@@ -1322,57 +1327,21 @@ class TestPydanticCycle(test.TestCase):
                                     },
                                     {"type": "null"},
                                 ],
+                                "default": None,
                                 "nullable": True,
                                 "title": "Manager Id",
                             },
                             "team_members": {
-                                "items": {"$ref": "#/$defs/leaf"},
+                                "items": {"$ref": "#/$defs/Employee_fj2ly4_leaf"},
                                 "title": "Team Members",
                                 "type": "array",
                             },
                         },
-                        "required": ["id", "name", "talks_to", "manager_id", "team_members"],
+                        "required": ["id", "name", "talks_to", "team_members"],
                         "title": "Employee",
                         "type": "object",
                     },
-                    "Employee_obdn4z": {
-                        "additionalProperties": False,
-                        "properties": {
-                            "id": {
-                                "maximum": 2147483647,
-                                "minimum": -2147483648,
-                                "title": "Id",
-                                "type": "integer",
-                            },
-                            "name": {"maxLength": 50, "title": "Name", "type": "string"},
-                            "talks_to": {
-                                "items": {"$ref": "#/$defs/leaf"},
-                                "title": "Talks To",
-                                "type": "array",
-                            },
-                            "manager_id": {
-                                "anyOf": [
-                                    {
-                                        "maximum": 2147483647,
-                                        "minimum": -2147483648,
-                                        "type": "integer",
-                                    },
-                                    {"type": "null"},
-                                ],
-                                "nullable": True,
-                                "title": "Manager Id",
-                            },
-                            "team_members": {
-                                "items": {"$ref": "#/$defs/leaf"},
-                                "title": "Team Members",
-                                "type": "array",
-                            },
-                        },
-                        "required": ["id", "name", "talks_to", "manager_id", "team_members"],
-                        "title": "Employee",
-                        "type": "object",
-                    },
-                    "leaf": {
+                    "Employee_fj2ly4_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
@@ -1391,11 +1360,12 @@ class TestPydanticCycle(test.TestCase):
                                     },
                                     {"type": "null"},
                                 ],
+                                "default": None,
                                 "nullable": True,
                                 "title": "Manager Id",
                             },
                         },
-                        "required": ["id", "name", "manager_id"],
+                        "required": ["id", "name"],
                         "title": "Employee",
                         "type": "object",
                     },
@@ -1410,7 +1380,7 @@ class TestPydanticCycle(test.TestCase):
                     },
                     "name": {"maxLength": 50, "title": "Name", "type": "string"},
                     "talks_to": {
-                        "items": {"$ref": "#/$defs/Employee_obdn4z"},
+                        "items": {"$ref": "#/$defs/Employee_6tkbjb_leaf"},
                         "title": "Talks To",
                         "type": "array",
                     },
@@ -1419,16 +1389,17 @@ class TestPydanticCycle(test.TestCase):
                             {"maximum": 2147483647, "minimum": -2147483648, "type": "integer"},
                             {"type": "null"},
                         ],
+                        "default": None,
                         "nullable": True,
                         "title": "Manager Id",
                     },
                     "team_members": {
-                        "items": {"$ref": "#/$defs/Employee_ibbaiu"},
+                        "items": {"$ref": "#/$defs/Employee_6tkbjb_leaf"},
                         "title": "Team Members",
                         "type": "array",
                     },
                 },
-                "required": ["id", "name", "talks_to", "manager_id", "team_members"],
+                "required": ["id", "name", "talks_to", "team_members"],
                 "title": "Employee",
                 "type": "object",
             },
@@ -1436,7 +1407,6 @@ class TestPydanticCycle(test.TestCase):
 
     async def test_serialisation(self):
         empp = await self.Employee_Pydantic.from_tortoise_orm(await Employee.get(name="Root"))
-        # print(empp.json(indent=4))
         empdict = empp.model_dump()
 
         self.assertEqual(
@@ -1514,6 +1484,211 @@ class TestPydanticCycle(test.TestCase):
                 "name_length": 4,
                 "team_size": 2,
             },
+        )
+
+
+class TestPydanticComputed(test.TestCase):
+    async def asyncSetUp(self) -> None:
+        await super(TestPydanticComputed, self).asyncSetUp()
+        self.Employee_Pydantic = pydantic_model_creator(Employee)
+        self.employee = await Employee.create(name="Some Employee")
+        self.maxDiff = None
+
+    async def test_computed_field(self):
+        employee_pyd = await self.Employee_Pydantic.from_tortoise_orm(await Employee.get(name="Some Employee"))
+        employee_serialised = employee_pyd.model_dump()
+        self.assertEqual(employee_serialised.get("name_length"), self.employee.name_length())
+
+    async def test_computed_field_schema(self):
+        self.assertEqual(
+            self.Employee_Pydantic.model_json_schema(mode="serialization"),
+            {
+                "$defs": {
+                    "Employee_fj2ly4_leaf": {
+                        "additionalProperties": False,
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": -2147483648,
+                                "title": "Id",
+                                "type": "integer"
+                            },
+                            "name": {
+                                "maxLength": 50,
+                                "title": "Name",
+                                "type": "string"
+                            },
+                            "manager_id": {
+                                "anyOf": [
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ],
+                                "default": None,
+                                "nullable": True,
+                                "title": "Manager Id"
+                            },
+                            "name_length": {
+                                "description": "",
+                                "readOnly": True,
+                                "title": "Name Length",
+                                "type": "integer"
+                            },
+                            "team_size": {
+                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "readOnly": True,
+                                "title": "Team Size",
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "name_length",
+                            "team_size"
+                        ],
+                        "title": "Employee",
+                        "type": "object"
+                    },
+                    "Employee_6tkbjb_leaf": {
+                        "additionalProperties": False,
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": -2147483648,
+                                "title": "Id",
+                                "type": "integer"
+                            },
+                            "name": {
+                                "maxLength": 50,
+                                "title": "Name",
+                                "type": "string"
+                            },
+                            "talks_to": {
+                                "items": {
+                                    "$ref": "#/$defs/Employee_fj2ly4_leaf"
+                                },
+                                "title": "Talks To",
+                                "type": "array"
+                            },
+                            "manager_id": {
+                                "anyOf": [
+                                    {
+                                        "maximum": 2147483647,
+                                        "minimum": -2147483648,
+                                        "type": "integer"
+                                    },
+                                    {
+                                        "type": "null"
+                                    }
+                                ],
+                                "default": None,
+                                "nullable": True,
+                                "title": "Manager Id"
+                            },
+                            "team_members": {
+                                "items": {
+                                    "$ref": "#/$defs/Employee_fj2ly4_leaf"
+                                },
+                                "title": "Team Members",
+                                "type": "array"
+                            },
+                            "name_length": {
+                                "description": "",
+                                "readOnly": True,
+                                "title": "Name Length",
+                                "type": "integer"
+                            },
+                            "team_size": {
+                                "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                                "readOnly": True,
+                                "title": "Team Size",
+                                "type": "integer"
+                            }
+                        },
+                        "required": [
+                            "id",
+                            "name",
+                            "talks_to",
+                            "team_members",
+                            "name_length",
+                            "team_size"
+                        ],
+                        "title": "Employee",
+                        "type": "object"
+                    }
+                },
+                "additionalProperties": False,
+                "properties": {
+                    "id": {
+                        "maximum": 2147483647,
+                        "minimum": -2147483648,
+                        "title": "Id",
+                        "type": "integer"
+                    },
+                    "name": {
+                        "maxLength": 50,
+                        "title": "Name",
+                        "type": "string"
+                    },
+                    "talks_to": {
+                        "items": {
+                            "$ref": "#/$defs/Employee_6tkbjb_leaf"
+                        },
+                        "title": "Talks To",
+                        "type": "array"
+                    },
+                    "manager_id": {
+                        "anyOf": [
+                            {
+                                "maximum": 2147483647,
+                                "minimum": -2147483648,
+                                "type": "integer"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": None,
+                        "nullable": True,
+                        "title": "Manager Id"
+                    },
+                    "team_members": {
+                        "items": {
+                            "$ref": "#/$defs/Employee_6tkbjb_leaf"
+                        },
+                        "title": "Team Members",
+                        "type": "array"
+                    },
+                    "name_length": {
+                        "description": "",
+                        "readOnly": True,
+                        "title": "Name Length",
+                        "type": "integer"
+                    },
+                    "team_size": {
+                        "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
+                        "readOnly": True,
+                        "title": "Team Size",
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "talks_to",
+                    "team_members",
+                    "name_length",
+                    "team_size"
+                ],
+                "title": "Employee",
+                "type": "object"
+            }
         )
 
 
