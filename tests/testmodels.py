@@ -37,6 +37,7 @@ def generate_token():
 class TestSchemaForJSONField(BaseModel):
     foo: int
     bar: str
+    __test__ = False
 
 
 json_pydantic_default = TestSchemaForJSONField(foo=1, bar="baz")
