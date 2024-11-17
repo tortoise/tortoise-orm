@@ -20,6 +20,7 @@ from typing import (
 )
 
 from pypika import JoinType, Parameter, Table
+from pypika.terms import Parameterizer
 from pypika.queries import QueryBuilder
 
 from tortoise.exceptions import OperationalError
@@ -190,6 +191,10 @@ class BaseExecutor:
 
     def parameter(self, pos: int) -> Parameter:
         return Parameter(idx=pos + 1)
+
+    @classmethod
+    def parameterizer(cls) -> Parameterizer:
+        return Parameterizer()
 
     async def execute_insert(self, instance: "Model") -> None:
         if not instance._custom_generated_pk:

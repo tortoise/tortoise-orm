@@ -12,6 +12,7 @@ from tests.testmodels import (
     Tree,
 )
 from tortoise import connections
+from tortoise.backends.psycopg.client import PsycopgClient
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotEQ
 from tortoise.exceptions import (
@@ -673,22 +674,40 @@ class TestQueryset(test.TestCase):
 
         dialect = self.db.schema_generator.DIALECT
         if dialect == "postgres":
-            self.assertEqual(
-                sql1,
-                'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE',
-            )
-            self.assertEqual(
-                sql2,
-                'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE NOWAIT',
-            )
-            self.assertEqual(
-                sql3,
-                'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE SKIP LOCKED',
-            )
-            self.assertEqual(
-                sql4,
-                'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE OF "intfields"',
-            )
+            if isinstance(self.db, PsycopgClient):
+                self.assertEqual(
+                    sql1,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=%s FOR UPDATE',
+                )
+                self.assertEqual(
+                    sql2,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=%s FOR UPDATE NOWAIT',
+                )
+                self.assertEqual(
+                    sql3,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=%s FOR UPDATE SKIP LOCKED',
+                )
+                self.assertEqual(
+                    sql4,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=%s FOR UPDATE OF "intfields"',
+                )
+            else:
+                self.assertEqual(
+                    sql1,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE',
+                )
+                self.assertEqual(
+                    sql2,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE NOWAIT',
+                )
+                self.assertEqual(
+                    sql3,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE SKIP LOCKED',
+                )
+                self.assertEqual(
+                    sql4,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE OF "intfields"',
+                )
         elif dialect == "mysql":
             self.assertEqual(
                 sql1,

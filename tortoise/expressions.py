@@ -215,9 +215,11 @@ class Subquery(Term):
         self.query = query
 
     def get_sql(self, **kwargs: Any) -> str:
+        self.query._choose_db_if_not_chosen()
         return self.query._make_query(**kwargs)[0]
 
     def as_(self, alias: str) -> "Selectable":
+        self.query._choose_db_if_not_chosen()
         self.query._make_query()
         return self.query.query.as_(alias)
 

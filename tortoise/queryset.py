@@ -24,7 +24,7 @@ from pypika import JoinType, Order, Table
 from pypika.analytics import Count
 from pypika.functions import Cast
 from pypika.queries import QueryBuilder
-from pypika.terms import Case, Field, Parameterizer, Star, Term, ValueWrapper
+from pypika.terms import Case, Field, Star, Term, ValueWrapper
 from typing_extensions import Literal, Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
@@ -1123,7 +1123,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
 
-        parameterizer = pypika_kwargs.pop("parameterizer", Parameterizer())
+        parameterizer = pypika_kwargs.pop("parameterizer", self._db.executor_class.parameterizer())
         return (
             self.query.get_sql(parameterizer=parameterizer, **pypika_kwargs),
             parameterizer.values,
@@ -1335,7 +1335,7 @@ class ExistsQuery(AwaitableQuery):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
 
-        parameterizer = pypika_kwargs.pop("parameterizer", Parameterizer())
+        parameterizer = pypika_kwargs.pop("parameterizer", self._db.executor_class.parameterizer())
         return self.query.get_sql(parameterizer=parameterizer), parameterizer.values
 
     def __await__(self) -> Generator[Any, None, bool]:
@@ -1396,7 +1396,7 @@ class CountQuery(AwaitableQuery):
         if self._use_indexes:
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
-        parameterizer = pypika_kwargs.pop("parameterizer", Parameterizer())
+        parameterizer = pypika_kwargs.pop("parameterizer", self._db.executor_class.parameterizer())
         return (
             self.query.get_sql(parameterizer=parameterizer, **pypika_kwargs),
             parameterizer.values,
@@ -1616,7 +1616,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
 
-        parameterizer = Parameterizer()
+        parameterizer = pypika_kwargs.pop("parameterizer", self._db.executor_class.parameterizer())
         return (
             self.query.get_sql(parameterizer=parameterizer, **pypika_kwargs),
             parameterizer.values,
@@ -1750,7 +1750,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
 
-        parameterizer = pypika_kwargs.pop("parameterizer", Parameterizer())
+        parameterizer = pypika_kwargs.pop("parameterizer", self._db.executor_class.parameterizer())
         return (
             self.query.get_sql(parameterizer=parameterizer, **pypika_kwargs),
             parameterizer.values,

@@ -1,5 +1,6 @@
 from tests.testmodels import CharPkModel, IntFields
 from tortoise import connections
+from tortoise.backends.psycopg.client import PsycopgClient
 from tortoise.contrib import test
 from tortoise.expressions import F
 from tortoise.functions import Concat
@@ -10,13 +11,17 @@ class TestSQL(test.TestCase):
         await super().asyncSetUp()
         self.db = connections.get("models")
         self.dialect = self.db.schema_generator.DIALECT
+        self.is_psycopg = isinstance(self.db, PsycopgClient)
 
     def test_filter(self):
         sql = CharPkModel.all().filter(id="123").sql()
         if self.dialect == "mysql":
             expected = "SELECT `id` FROM `charpkmodel` WHERE `id`=%s"
         elif self.dialect == "postgres":
-            expected = 'SELECT "id" FROM "charpkmodel" WHERE "id"=$1'
+            if self.is_psycopg:
+                expected = 'SELECT "id" FROM "charpkmodel" WHERE "id"=%s'
+            else:
+                expected = 'SELECT "id" FROM "charpkmodel" WHERE "id"=$1'
         else:
             expected = 'SELECT "id" FROM "charpkmodel" WHERE "id"=?'
 
@@ -27,7 +32,10 @@ class TestSQL(test.TestCase):
         if self.dialect == "mysql":
             expected = "SELECT `id` FROM `charpkmodel` WHERE `id`=%s LIMIT %s OFFSET %s"
         elif self.dialect == "postgres":
-            expected = 'SELECT "id" FROM "charpkmodel" WHERE "id"=$1 LIMIT $2 OFFSET $3'
+            if self.is_psycopg:
+                expected = 'SELECT "id" FROM "charpkmodel" WHERE "id"=%s LIMIT %s OFFSET %s'
+            else:
+                expected = 'SELECT "id" FROM "charpkmodel" WHERE "id"=$1 LIMIT $2 OFFSET $3'
         elif self.dialect == "mssql":
             expected = 'SELECT "id" FROM "charpkmodel" WHERE "id"=? ORDER BY (SELECT 0) OFFSET ? ROWS FETCH NEXT ? ROWS ONLY'
         else:
@@ -48,7 +56,10 @@ class TestSQL(test.TestCase):
         if self.dialect == "mysql":
             expected = "SELECT `id`,CONCAT(`id`,%s) `id_plus_one` FROM `charpkmodel`"
         elif self.dialect == "postgres":
-            expected = 'SELECT "id",CONCAT("id",$1) "id_plus_one" FROM "charpkmodel"'
+            if self.is_psycopg:
+                expected = 'SELECT "id",CONCAT("id",%s) "id_plus_one" FROM "charpkmodel"'
+            else:
+                expected = 'SELECT "id",CONCAT("id",$1) "id_plus_one" FROM "charpkmodel"'
         else:
             expected = 'SELECT "id",CONCAT("id",?) "id_plus_one" FROM "charpkmodel"'
         self.assertEqual(sql, expected)
@@ -58,7 +69,10 @@ class TestSQL(test.TestCase):
         if self.dialect == "mysql":
             expected = "SELECT `intnum` `intnum` FROM `intfields` WHERE `intnum`=%s"
         elif self.dialect == "postgres":
-            expected = 'SELECT "intnum" "intnum" FROM "intfields" WHERE "intnum"=$1'
+            if self.is_psycopg:
+                expected = 'SELECT "intnum" "intnum" FROM "intfields" WHERE "intnum"=%s'
+            else:
+                expected = 'SELECT "intnum" "intnum" FROM "intfields" WHERE "intnum"=$1'
         else:
             expected = 'SELECT "intnum" "intnum" FROM "intfields" WHERE "intnum"=?'
         self.assertEqual(sql, expected)
@@ -68,7 +82,10 @@ class TestSQL(test.TestCase):
         if self.dialect == "mysql":
             expected = "SELECT `intnum` `0` FROM `intfields` WHERE `intnum`=%s"
         elif self.dialect == "postgres":
-            expected = 'SELECT "intnum" "0" FROM "intfields" WHERE "intnum"=$1'
+            if self.is_psycopg:
+                expected = 'SELECT "intnum" "0" FROM "intfields" WHERE "intnum"=%s'
+            else:
+                expected = 'SELECT "intnum" "0" FROM "intfields" WHERE "intnum"=$1'
         else:
             expected = 'SELECT "intnum" "0" FROM "intfields" WHERE "intnum"=?'
         self.assertEqual(sql, expected)
@@ -78,7 +95,10 @@ class TestSQL(test.TestCase):
         if self.dialect == "mysql":
             expected = "SELECT %s FROM `intfields` WHERE `intnum`=%s LIMIT %s"
         elif self.dialect == "postgres":
-            expected = 'SELECT $1 FROM "intfields" WHERE "intnum"=$2 LIMIT $3'
+            if self.is_psycopg:
+                expected = 'SELECT %s FROM "intfields" WHERE "intnum"=%s LIMIT %s'
+            else:
+                expected = 'SELECT $1 FROM "intfields" WHERE "intnum"=$2 LIMIT $3'
         else:
             expected = 'SELECT ? FROM "intfields" WHERE "intnum"=? LIMIT ?'
         self.assertEqual(sql, expected)
@@ -88,7 +108,10 @@ class TestSQL(test.TestCase):
         if self.dialect == "mysql":
             expected = "SELECT COUNT(*) FROM `intfields` WHERE `intnum`=%s"
         elif self.dialect == "postgres":
-            expected = 'SELECT COUNT(*) FROM "intfields" WHERE "intnum"=$1'
+            if self.is_psycopg:
+                expected = 'SELECT COUNT(*) FROM "intfields" WHERE "intnum"=%s'
+            else:
+                expected = 'SELECT COUNT(*) FROM "intfields" WHERE "intnum"=$1'
         else:
             expected = 'SELECT COUNT(*) FROM "intfields" WHERE "intnum"=?'
         self.assertEqual(sql, expected)
@@ -99,7 +122,10 @@ class TestSQL(test.TestCase):
         if self.dialect == "mysql":
             expected = "UPDATE `intfields` SET `intnum`=%s WHERE `intnum`=%s"
         elif self.dialect == "postgres":
-            expected = 'UPDATE "intfields" SET "intnum"=$1 WHERE "intnum"=$2'
+            if self.is_psycopg:
+                expected = 'UPDATE "intfields" SET "intnum"=%s WHERE "intnum"=%s'
+            else:
+                expected = 'UPDATE "intfields" SET "intnum"=$1 WHERE "intnum"=$2'
         else:
             expected = 'UPDATE "intfields" SET "intnum"=? WHERE "intnum"=?'
         self.assertEqual(sql, expected)
