@@ -156,7 +156,7 @@ def pydantic_queryset_creator(
         sort_alphabetically: Optional[bool] = None,
 ) -> Type[PydanticListModel]:
     """
-    Function to build a `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ list off Tortoise Model.
+    Function to build a `Pydantic Model <https://docs.pydantic.dev/latest/concepts/models/>`__ list off Tortoise Model.
 
     :param cls: The Tortoise Model to put in a list.
     :param name: Specify a custom name explicitly, instead of a generated name.
@@ -572,7 +572,7 @@ def pydantic_model_creator(
         module: str = __name__,
 ) -> Type[PydanticModel]:
     """
-    Function to build `Pydantic Model <https://pydantic-docs.helpmanual.io/usage/models/>`__ off Tortoise Model.
+    Function to build `Pydantic Model <https://docs.pydantic.dev/latest/concepts/models/>`__ off Tortoise Model.
 
     :param cls: The Tortoise Model
     :param name: Specify a custom name explicitly, instead of a generated name.

@@ -123,7 +123,7 @@ class PydanticListModel(RootModel):
     Pydantic BaseModel for List of Tortoise Models
 
     This provides an extra method above the usual Pydantic
-    `model properties <https://pydantic-docs.helpmanual.io/usage/models/#model-properties>`__
+    `model properties <https://docs.pydantic.dev/latest/concepts/models/#model-methods-and-properties>`__
     """
 
     @classmethod
