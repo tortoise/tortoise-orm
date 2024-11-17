@@ -194,7 +194,7 @@ def pydantic_queryset_creator(
     model = create_model(
         lname,
         __base__=PydanticListModel,
-        root=(List[submodel], Field(default_factory=list)),  # type: ignore
+        root=(List[submodel], PydanticField(default_factory=list)),  # type: ignore
     )
     # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)
@@ -251,7 +251,12 @@ class PydanticModelCreator:
         if meta_override:
             meta_from_class = meta_from_class.construct_pydantic_meta(meta_override)
         self.meta = meta_from_class.finalize_meta(
-            exclude, include, computed, allow_cycles, sort_alphabetically, model_config
+            exclude=exclude,
+            include=include,
+            computed=computed,
+            allow_cycles=allow_cycles,
+            sort_alphabetically=sort_alphabetically,
+            model_config=model_config,
         )
 
         self._exclude_read_only: bool = exclude_readonly
@@ -323,9 +328,11 @@ class PydanticModelCreator:
         return pconfig
 
     def _initialize_field_map(self) -> FieldMap:
-        return FieldMap(self.meta) \
-            if self._exclude_read_only \
+        return (
+            FieldMap(self.meta)
+            if self._exclude_read_only
             else FieldMap(self.meta, pk_field=self._model_description.pk_field)
+        )
 
     def _construct_field_map(self) -> None:
         self._field_map.field_map_update(fields=self._model_description.data_fields, meta=self.meta)
@@ -524,17 +531,16 @@ class PydanticModelCreator:
 
             # Get pydantic schema for the submodel
             prefix_len = len(field_name) + 1
+
+            def get_fields_to_carry_on(field_tuple: Tuple[str, ...]) -> Tuple[str, ...]:
+                return tuple(
+                    str(v[prefix_len:]) for v in field_tuple if v.startswith(field_name + ".")
+                )
             pmodel = _pydantic_recursion_protector(
                 _model,
-                exclude=tuple(
-                    str(v[prefix_len:]) for v in self.meta.exclude if v.startswith(field_name + ".")
-                ),
-                include=tuple(
-                    str(v[prefix_len:]) for v in self.meta.include if v.startswith(field_name + ".")
-                ),
-                computed=tuple(
-                    str(v[prefix_len:]) for v in self.meta.computed if v.startswith(field_name + ".")
-                ),
+                exclude=get_fields_to_carry_on(self.meta.exclude),
+                include=get_fields_to_carry_on(self.meta.include),
+                computed=get_fields_to_carry_on(self.meta.computed),
                 stack=new_stack,
                 allow_cycles=self.meta.allow_cycles,
                 sort_alphabetically=self.meta.sort_alphabetically,
