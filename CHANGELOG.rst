@@ -24,6 +24,9 @@ Added
 - Add POSIX Regex support for PostgreSQL and MySQL (#1714)
 - support app=None for tortoise.contrib.fastapi.RegisterTortoise (#1733)
 
+Changed
+^^^^^^^
+- Change old pydantic docs link to new one (#1775).
 
 0.21.6
 ------
