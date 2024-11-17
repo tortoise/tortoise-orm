@@ -295,24 +295,24 @@ class FloatFields(Model):
     floatnum_null = fields.FloatField(null=True)
 
 
+def raise_if_not_dict_or_list(value: Union[dict, list]):
+    if not isinstance(value, (dict, list)):
+        raise ValidationError("Value must be a dict or list.")
+
+
 class JSONFields(Model):
     """
     This model contains many JSON blobs
     """
-
-    @staticmethod
-    def dict_or_list(value: Union[dict, list]):
-        if not isinstance(value, (dict, list)):
-            raise ValidationError("Value must be a dict or list.")
 
     id = fields.IntField(primary_key=True)
     data = fields.JSONField()  # type: ignore # Test cases where generics are not provided
     data_null = fields.JSONField[Union[dict, list]](null=True)
     data_default = fields.JSONField[dict](default={"a": 1})
 
-    # From Python 3.10 onwards, staticmethod become callable, in previous versions we need to use lambda
+    # From Python 3.10 onwards, validator can be defined with staticmethod
     data_validate = fields.JSONField[Union[dict, list]](
-        null=True, validators=[lambda v: JSONFields.dict_or_list(v)]
+        null=True, validators=[raise_if_not_dict_or_list]
     )
 
     # Test cases where generics are provided and the type is a pydantic base model
