@@ -1,6 +1,8 @@
 import abc
+from asyncio.events import AbstractEventLoop
 from functools import wraps
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Coroutine,
@@ -25,6 +27,10 @@ from tortoise.backends.base.client import (
 from tortoise.backends.base_postgres.executor import BasePostgresExecutor
 from tortoise.backends.base_postgres.schema_generator import BasePostgresSchemaGenerator
 
+if TYPE_CHECKING:
+    from asyncpg.connection import Connection
+    from psycopg import AsyncConnection
+
 T = TypeVar("T")
 FuncType = Callable[..., Coroutine[None, None, T]]
 
@@ -47,8 +53,8 @@ class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
     executor_class: Type[BasePostgresExecutor] = BasePostgresExecutor
     schema_generator: Type[BasePostgresSchemaGenerator] = BasePostgresSchemaGenerator
     capabilities = Capabilities("postgres", support_update_limit_order_by=False)
-    connection_class = None
-    loop = None
+    connection_class: "Optional[Union[AsyncConnection, Connection]]" = None
+    loop: Optional[AbstractEventLoop] = None
     _pool: Optional[Any] = None
     _connection: Optional[Any] = None
 

@@ -36,6 +36,17 @@ class TestOrderBy(test.TestCase):
         tournaments = await Tournament.all().order_by("events__name")
         self.assertEqual([t.name for t in tournaments], ["2", "1"])
 
+    async def test_order_by_ambigious_field_name(self):
+        tournament_first = await Tournament.create(name="Tournament 1", desc="d1")
+        tournament_second = await Tournament.create(name="Tournament 2", desc="d2")
+
+        event_third = await Event.create(name="3", tournament=tournament_second)
+        event_second = await Event.create(name="2", tournament=tournament_first)
+        event_first = await Event.create(name="1", tournament=tournament_first)
+
+        res = await Event.all().order_by("tournament__name", "name")
+        self.assertEqual(res, [event_first, event_second, event_third])
+
     async def test_order_by_related_reversed(self):
         tournament_first = await Tournament.create(name="1")
         tournament_second = await Tournament.create(name="2")

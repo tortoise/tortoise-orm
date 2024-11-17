@@ -279,6 +279,21 @@ class StraightFieldTests(test.TestCase):
         )
         self.assertEqual(obj, ret_obj)
 
+    async def test_group_by(self):
+        await self.model.create(chars="aaa", blip="a")
+        await self.model.create(chars="aaa", blip="b")
+        await self.model.create(chars="bbb")
+
+        objs = (
+            await self.model.annotate(chars_count=Count("chars"))
+            .group_by("chars")
+            .order_by("chars")
+            .values("chars", "chars_count")
+        )
+        self.assertEqual(
+            objs, [{"chars": "aaa", "chars_count": 2}, {"chars": "bbb", "chars_count": 1}]
+        )
+
 
 class SourceFieldTests(StraightFieldTests):
     def setUp(self) -> None:
