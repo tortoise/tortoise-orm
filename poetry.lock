@@ -2666,7 +2666,7 @@ develop = false
 type = "git"
 url = "https://github.com/waketzheng/pypika-tortoise.git"
 reference = "fix-enums-not-quoted"
-resolved_reference = "4bda8cea76028f9b26fe4e28d4ad743574de25a8"
+resolved_reference = "fa416608801e35673ca74d5a1b8a0a4bc10c75e0"
 
 [[package]]
 name = "pytest"
