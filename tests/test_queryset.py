@@ -622,7 +622,7 @@ class TestQueryset(test.TestCase):
         sql_ExistsQuery = IntFields.filter(pk=1).force_index("index_name").exists().sql()
         self.assertEqual(
             sql_ExistsQuery,
-            "SELECT %s FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s LIMIT %s",
+            "SELECT 1 FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s LIMIT %s",
         )
 
     @test.requireCapability(support_index_hint=True)
@@ -662,7 +662,7 @@ class TestQueryset(test.TestCase):
         sql_ExistsQuery = IntFields.filter(pk=1).use_index("index_name").exists().sql()
         self.assertEqual(
             sql_ExistsQuery,
-            "SELECT %s FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s LIMIT %s",
+            "SELECT 1 FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s LIMIT %s",
         )
 
     @test.requireCapability(support_for_update=True)

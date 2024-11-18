@@ -2666,7 +2666,7 @@ develop = false
 type = "git"
 url = "https://github.com/henadzit/pypika-tortoise.git"
 reference = "parameterization-changes"
-resolved_reference = "36a49ec465eedc7c17c6b3621360c3d700614146"
+resolved_reference = "e4db01e6ab73045c0cf45ed71eeadba30395905e"
 
 [[package]]
 name = "pytest"

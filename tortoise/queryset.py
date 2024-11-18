@@ -1326,7 +1326,7 @@ class ExistsQuery(AwaitableQuery):
         self.query = copy(self.model._meta.basequery)
         self.resolve_filters()
         self.query._limit = self.query._wrapper_cls(1)
-        self.query._select_other(ValueWrapper(1))
+        self.query._select_other(ValueWrapper(1, allow_parametrize=False))
 
         if self._force_indexes:
             self.query._force_indexes = []

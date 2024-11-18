@@ -57,9 +57,13 @@ class TestSQL(test.TestCase):
             expected = "SELECT `id`,CONCAT(`id`,%s) `id_plus_one` FROM `charpkmodel`"
         elif self.dialect == "postgres":
             if self.is_psycopg:
-                expected = 'SELECT "id",CONCAT("id",%s) "id_plus_one" FROM "charpkmodel"'
+                expected = (
+                    'SELECT "id",CONCAT("id"::text,%s::text) "id_plus_one" FROM "charpkmodel"'
+                )
             else:
-                expected = 'SELECT "id",CONCAT("id",$1) "id_plus_one" FROM "charpkmodel"'
+                expected = (
+                    'SELECT "id",CONCAT("id"::text,$1::text) "id_plus_one" FROM "charpkmodel"'
+                )
         else:
             expected = 'SELECT "id",CONCAT("id",?) "id_plus_one" FROM "charpkmodel"'
         self.assertEqual(sql, expected)
@@ -93,14 +97,16 @@ class TestSQL(test.TestCase):
     def test_exists(self):
         sql = IntFields.filter(intnum=1).exists().sql()
         if self.dialect == "mysql":
-            expected = "SELECT %s FROM `intfields` WHERE `intnum`=%s LIMIT %s"
+            expected = "SELECT 1 FROM `intfields` WHERE `intnum`=%s LIMIT %s"
         elif self.dialect == "postgres":
             if self.is_psycopg:
-                expected = 'SELECT %s FROM "intfields" WHERE "intnum"=%s LIMIT %s'
+                expected = 'SELECT 1 FROM "intfields" WHERE "intnum"=%s LIMIT %s'
             else:
-                expected = 'SELECT $1 FROM "intfields" WHERE "intnum"=$2 LIMIT $3'
+                expected = 'SELECT 1 FROM "intfields" WHERE "intnum"=$1 LIMIT $2'
+        elif self.dialect == "mssql":
+            expected = 'SELECT 1 FROM "intfields" WHERE "intnum"=? ORDER BY (SELECT 0) OFFSET 0 ROWS FETCH NEXT ? ROWS ONLY'
         else:
-            expected = 'SELECT ? FROM "intfields" WHERE "intnum"=? LIMIT ?'
+            expected = 'SELECT 1 FROM "intfields" WHERE "intnum"=? LIMIT ?'
         self.assertEqual(sql, expected)
 
     def test_count(self):
