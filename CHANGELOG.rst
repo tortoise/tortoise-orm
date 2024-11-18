@@ -12,7 +12,7 @@ Changelog
 ------
 Fixed
 ^^^^^
-- Primary key field should not be nullable
+- Primary key field should not be nullable (#1778)
 
 Added
 ^^^^^
