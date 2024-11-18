@@ -14,6 +14,7 @@ from tests.testmodels import (
     Team,
     Tournament,
     User,
+    json_pydantic_default,
 )
 from tortoise.contrib import test
 from tortoise.contrib.pydantic import (
@@ -172,18 +173,14 @@ class TestPydantic(test.TestCase):
                     },
                     "reporter": {
                         "anyOf": [
-                            {
-                                "$ref": "#/$defs/Reporter_fgnv33_leaf"
-                            },
+                            {"$ref": "#/$defs/Reporter_fgnv33_leaf"},
                             {"type": "null"},
                         ],
                         "nullable": True,
                         "title": "Reporter",
                     },
                     "participants": {
-                        "items": {
-                            "$ref": "#/$defs/Team_ip4pg6_leaf"
-                        },
+                        "items": {"$ref": "#/$defs/Team_ip4pg6_leaf"},
                         "title": "Participants",
                         "type": "array",
                     },
@@ -205,9 +202,7 @@ class TestPydantic(test.TestCase):
                     },
                     "address": {
                         "anyOf": [
-                            {
-                                "$ref": "#/$defs/Address_coqnj7_leaf"
-                            },
+                            {"$ref": "#/$defs/Address_coqnj7_leaf"},
                             {"type": "null"},
                         ],
                         "nullable": True,
@@ -251,18 +246,14 @@ class TestPydantic(test.TestCase):
                             },
                             "reporter": {
                                 "anyOf": [
-                                    {
-                                        "$ref": "#/$defs/Reporter_fgnv33_leaf"
-                                    },
+                                    {"$ref": "#/$defs/Reporter_fgnv33_leaf"},
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
                                 "title": "Reporter",
                             },
                             "participants": {
-                                "items": {
-                                    "$ref": "#/$defs/Team_ip4pg6_leaf"
-                                },
+                                "items": {"$ref": "#/$defs/Team_ip4pg6_leaf"},
                                 "title": "Participants",
                                 "type": "array",
                             },
@@ -291,9 +282,7 @@ class TestPydantic(test.TestCase):
                             },
                             "address": {
                                 "anyOf": [
-                                    {
-                                        "$ref": "#/$defs/Address_coqnj7_leaf"
-                                    },
+                                    {"$ref": "#/$defs/Address_coqnj7_leaf"},
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -431,18 +420,14 @@ class TestPydantic(test.TestCase):
                             },
                             "reporter": {
                                 "anyOf": [
-                                    {
-                                        "$ref": "#/$defs/Reporter_fgnv33_leaf"
-                                    },
+                                    {"$ref": "#/$defs/Reporter_fgnv33_leaf"},
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
                                 "title": "Reporter",
                             },
                             "participants": {
-                                "items": {
-                                    "$ref": "#/$defs/Team_ip4pg6_leaf"
-                                },
+                                "items": {"$ref": "#/$defs/Team_ip4pg6_leaf"},
                                 "title": "Participants",
                                 "type": "array",
                             },
@@ -591,18 +576,14 @@ class TestPydantic(test.TestCase):
                             "name": {"description": "The name", "title": "Name", "type": "string"},
                             "reporter": {
                                 "anyOf": [
-                                    {
-                                        "$ref": "#/$defs/Reporter_fgnv33_leaf"
-                                    },
+                                    {"$ref": "#/$defs/Reporter_fgnv33_leaf"},
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
                                 "title": "Reporter",
                             },
                             "participants": {
-                                "items": {
-                                    "$ref": "#/$defs/Team_ip4pg6_leaf"
-                                },
+                                "items": {"$ref": "#/$defs/Team_ip4pg6_leaf"},
                                 "title": "Participants",
                                 "type": "array",
                             },
@@ -631,9 +612,7 @@ class TestPydantic(test.TestCase):
                             },
                             "address": {
                                 "anyOf": [
-                                    {
-                                        "$ref": "#/$defs/Address_coqnj7_leaf"
-                                    },
+                                    {"$ref": "#/$defs/Address_coqnj7_leaf"},
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -765,9 +744,7 @@ class TestPydantic(test.TestCase):
                             },
                             "reporter": {
                                 "anyOf": [
-                                    {
-                                        "$ref": "#/$defs/Reporter_fgnv33_leaf"
-                                    },
+                                    {"$ref": "#/$defs/Reporter_fgnv33_leaf"},
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -798,9 +775,7 @@ class TestPydantic(test.TestCase):
                             },
                             "address": {
                                 "anyOf": [
-                                    {
-                                        "$ref": "#/$defs/Address_coqnj7_leaf"
-                                    },
+                                    {"$ref": "#/$defs/Address_coqnj7_leaf"},
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -1211,6 +1186,7 @@ class TestPydantic(test.TestCase):
                 "data_null": None,
                 "data_default": {"a": 1},
                 "data_validate": None,
+                "data_pydantic": json_pydantic_default.model_dump(),
             },
         )
         ret1 = creator.model_validate(json_field_1_get).model_dump()
@@ -1222,6 +1198,7 @@ class TestPydantic(test.TestCase):
                 "data_null": None,
                 "data_default": {"a": 1},
                 "data_validate": None,
+                "data_pydantic": json_pydantic_default.model_dump(),
             },
         )
 
@@ -1495,7 +1472,9 @@ class TestPydanticComputed(test.TestCase):
         self.maxDiff = None
 
     async def test_computed_field(self):
-        employee_pyd = await self.Employee_Pydantic.from_tortoise_orm(await Employee.get(name="Some Employee"))
+        employee_pyd = await self.Employee_Pydantic.from_tortoise_orm(
+            await Employee.get(name="Some Employee")
+        )
         employee_serialised = employee_pyd.model_dump()
         self.assertEqual(employee_serialised.get("name_length"), self.employee.name_length())
 
@@ -1511,49 +1490,38 @@ class TestPydanticComputed(test.TestCase):
                                 "maximum": 2147483647,
                                 "minimum": -2147483648,
                                 "title": "Id",
-                                "type": "integer"
+                                "type": "integer",
                             },
-                            "name": {
-                                "maxLength": 50,
-                                "title": "Name",
-                                "type": "string"
-                            },
+                            "name": {"maxLength": 50, "title": "Name", "type": "string"},
                             "manager_id": {
                                 "anyOf": [
                                     {
                                         "maximum": 2147483647,
                                         "minimum": -2147483648,
-                                        "type": "integer"
+                                        "type": "integer",
                                     },
-                                    {
-                                        "type": "null"
-                                    }
+                                    {"type": "null"},
                                 ],
                                 "default": None,
                                 "nullable": True,
-                                "title": "Manager Id"
+                                "title": "Manager Id",
                             },
                             "name_length": {
                                 "description": "",
                                 "readOnly": True,
                                 "title": "Name Length",
-                                "type": "integer"
+                                "type": "integer",
                             },
                             "team_size": {
                                 "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
                                 "readOnly": True,
                                 "title": "Team Size",
-                                "type": "integer"
-                            }
+                                "type": "integer",
+                            },
                         },
-                        "required": [
-                            "id",
-                            "name",
-                            "name_length",
-                            "team_size"
-                        ],
+                        "required": ["id", "name", "name_length", "team_size"],
                         "title": "Employee",
-                        "type": "object"
+                        "type": "object",
                     },
                     "Employee_6tkbjb_leaf": {
                         "additionalProperties": False,
@@ -1562,54 +1530,44 @@ class TestPydanticComputed(test.TestCase):
                                 "maximum": 2147483647,
                                 "minimum": -2147483648,
                                 "title": "Id",
-                                "type": "integer"
+                                "type": "integer",
                             },
-                            "name": {
-                                "maxLength": 50,
-                                "title": "Name",
-                                "type": "string"
-                            },
+                            "name": {"maxLength": 50, "title": "Name", "type": "string"},
                             "talks_to": {
-                                "items": {
-                                    "$ref": "#/$defs/Employee_fj2ly4_leaf"
-                                },
+                                "items": {"$ref": "#/$defs/Employee_fj2ly4_leaf"},
                                 "title": "Talks To",
-                                "type": "array"
+                                "type": "array",
                             },
                             "manager_id": {
                                 "anyOf": [
                                     {
                                         "maximum": 2147483647,
                                         "minimum": -2147483648,
-                                        "type": "integer"
+                                        "type": "integer",
                                     },
-                                    {
-                                        "type": "null"
-                                    }
+                                    {"type": "null"},
                                 ],
                                 "default": None,
                                 "nullable": True,
-                                "title": "Manager Id"
+                                "title": "Manager Id",
                             },
                             "team_members": {
-                                "items": {
-                                    "$ref": "#/$defs/Employee_fj2ly4_leaf"
-                                },
+                                "items": {"$ref": "#/$defs/Employee_fj2ly4_leaf"},
                                 "title": "Team Members",
-                                "type": "array"
+                                "type": "array",
                             },
                             "name_length": {
                                 "description": "",
                                 "readOnly": True,
                                 "title": "Name Length",
-                                "type": "integer"
+                                "type": "integer",
                             },
                             "team_size": {
                                 "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
                                 "readOnly": True,
                                 "title": "Team Size",
-                                "type": "integer"
-                            }
+                                "type": "integer",
+                            },
                         },
                         "required": [
                             "id",
@@ -1617,11 +1575,11 @@ class TestPydanticComputed(test.TestCase):
                             "talks_to",
                             "team_members",
                             "name_length",
-                            "team_size"
+                            "team_size",
                         ],
                         "title": "Employee",
-                        "type": "object"
-                    }
+                        "type": "object",
+                    },
                 },
                 "additionalProperties": False,
                 "properties": {
@@ -1629,66 +1587,45 @@ class TestPydanticComputed(test.TestCase):
                         "maximum": 2147483647,
                         "minimum": -2147483648,
                         "title": "Id",
-                        "type": "integer"
+                        "type": "integer",
                     },
-                    "name": {
-                        "maxLength": 50,
-                        "title": "Name",
-                        "type": "string"
-                    },
+                    "name": {"maxLength": 50, "title": "Name", "type": "string"},
                     "talks_to": {
-                        "items": {
-                            "$ref": "#/$defs/Employee_6tkbjb_leaf"
-                        },
+                        "items": {"$ref": "#/$defs/Employee_6tkbjb_leaf"},
                         "title": "Talks To",
-                        "type": "array"
+                        "type": "array",
                     },
                     "manager_id": {
                         "anyOf": [
-                            {
-                                "maximum": 2147483647,
-                                "minimum": -2147483648,
-                                "type": "integer"
-                            },
-                            {
-                                "type": "null"
-                            }
+                            {"maximum": 2147483647, "minimum": -2147483648, "type": "integer"},
+                            {"type": "null"},
                         ],
                         "default": None,
                         "nullable": True,
-                        "title": "Manager Id"
+                        "title": "Manager Id",
                     },
                     "team_members": {
-                        "items": {
-                            "$ref": "#/$defs/Employee_6tkbjb_leaf"
-                        },
+                        "items": {"$ref": "#/$defs/Employee_6tkbjb_leaf"},
                         "title": "Team Members",
-                        "type": "array"
+                        "type": "array",
                     },
                     "name_length": {
                         "description": "",
                         "readOnly": True,
                         "title": "Name Length",
-                        "type": "integer"
+                        "type": "integer",
                     },
                     "team_size": {
                         "description": "Computes team size.<br/><br/>Note that this function needs to be annotated with a return type so that pydantic can<br/> generate a valid schema.<br/><br/>Note that the pydantic serializer can't call async methods, but the tortoise helpers<br/> pre-fetch relational data, so that it is available before serialization. So we don't<br/> need to await the relation. We do however have to protect against the case where no<br/> prefetching was done, hence catching and handling the<br/> ``tortoise.exceptions.NoValuesFetched`` exception.",
                         "readOnly": True,
                         "title": "Team Size",
-                        "type": "integer"
-                    }
+                        "type": "integer",
+                    },
                 },
-                "required": [
-                    "id",
-                    "name",
-                    "talks_to",
-                    "team_members",
-                    "name_length",
-                    "team_size"
-                ],
+                "required": ["id", "name", "talks_to", "team_members", "name_length", "team_size"],
                 "title": "Employee",
-                "type": "object"
-            }
+                "type": "object",
+            },
         )
 
 

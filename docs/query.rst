@@ -243,7 +243,7 @@ In PostgreSQL and MYSQL, you can use the ``contains``, ``contained_by`` and ``fi
 .. code-block:: python3
 
     class JSONModel:
-        data = fields.JSONField()
+        data = fields.JSONField[list]()
 
     await JSONModel.create(data=["text", 3, {"msg": "msg2"}])
     obj = await JSONModel.filter(data__contains=[{"msg": "msg2"}]).first()
@@ -257,7 +257,7 @@ In PostgreSQL and MYSQL, you can use the ``contains``, ``contained_by`` and ``fi
 .. code-block:: python3
 
     class JSONModel:
-        data = fields.JSONField()
+        data = fields.JSONField[dict]()
 
     await JSONModel.create(data={"breed": "labrador",
                                  "owner": {

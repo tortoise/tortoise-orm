@@ -12,7 +12,7 @@ from enum import Enum, IntEnum
 from typing import List, Union
 
 import pytz
-from pydantic import ConfigDict
+from pydantic import BaseModel, ConfigDict
 
 from tortoise import fields
 from tortoise.exceptions import ValidationError
@@ -32,6 +32,15 @@ from tortoise.validators import (
 
 def generate_token():
     return binascii.hexlify(os.urandom(16)).decode("ascii")
+
+
+class TestSchemaForJSONField(BaseModel):
+    foo: int
+    bar: str
+    __test__ = False
+
+
+json_pydantic_default = TestSchemaForJSONField(foo=1, bar="baz")
 
 
 class Author(Model):
@@ -286,21 +295,30 @@ class FloatFields(Model):
     floatnum_null = fields.FloatField(null=True)
 
 
+def raise_if_not_dict_or_list(value: Union[dict, list]):
+    if not isinstance(value, (dict, list)):
+        raise ValidationError("Value must be a dict or list.")
+
+
 class JSONFields(Model):
     """
     This model contains many JSON blobs
     """
 
-    @staticmethod
-    def dict_or_list(value: Union[dict, list]):
-        if not isinstance(value, (dict, list)):
-            raise ValidationError("Value must be a dict or list.")
-
     id = fields.IntField(primary_key=True)
-    data = fields.JSONField()
-    data_null = fields.JSONField(null=True)
-    data_default = fields.JSONField(default={"a": 1})
-    data_validate = fields.JSONField(null=True, validators=[lambda v: JSONFields.dict_or_list(v)])
+    data = fields.JSONField()  # type: ignore # Test cases where generics are not provided
+    data_null = fields.JSONField[Union[dict, list]](null=True)
+    data_default = fields.JSONField[dict](default={"a": 1})
+
+    # From Python 3.10 onwards, validator can be defined with staticmethod
+    data_validate = fields.JSONField[Union[dict, list]](
+        null=True, validators=[raise_if_not_dict_or_list]
+    )
+
+    # Test cases where generics are provided and the type is a pydantic base model
+    data_pydantic = fields.JSONField[TestSchemaForJSONField](
+        default=json_pydantic_default, field_type=TestSchemaForJSONField
+    )
 
 
 class UUIDFields(Model):
