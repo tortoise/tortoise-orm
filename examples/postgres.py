@@ -8,7 +8,7 @@ from tortoise.models import Model
 
 class Report(Model):
     id = fields.IntField(primary_key=True)
-    content = fields.JSONField()
+    content = fields.JSONField[dict]()
 
     def __str__(self):
         return str(self.id)

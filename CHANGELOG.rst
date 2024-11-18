@@ -8,6 +8,18 @@ Changelog
 
 0.21
 ====
+0.21.8
+------
+Fixed
+^^^^^
+- TODO
+
+Added
+^^^^^
+- JSONField adds optional generic support, and supports OpenAPI document generation by specifying `field_type` as a pydantic BaseModel (#1763)
+
+
+
 0.21.7
 ------
 Fixed
@@ -24,6 +36,9 @@ Added
 - Add POSIX Regex support for PostgreSQL and MySQL (#1714)
 - support app=None for tortoise.contrib.fastapi.RegisterTortoise (#1733)
 
+Changed
+^^^^^^^
+- Change old pydantic docs link to new one (#1775).
 
 0.21.6
 ------

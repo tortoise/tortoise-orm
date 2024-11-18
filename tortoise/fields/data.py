@@ -46,6 +46,8 @@ __all__ = (
     "UUIDField",
 )
 
+T = TypeVar("T")
+
 # Doing this we can replace json dumps/loads with different implementations
 JsonDumpsFunc = Callable[[Any], str]
 JsonLoadsFunc = Callable[[Union[str, bytes]], Any]
@@ -517,11 +519,13 @@ class FloatField(Field[float], float):
         SQL_TYPE = "DOUBLE"
 
 
-class JSONField(Field[Union[dict, list]], dict, list):  # type: ignore
+class JSONField(Field[T], dict, list):  # type: ignore
     """
     JSON field.
 
     This field can store dictionaries or lists of any JSON-compliant structure.
+
+    You can use generics to make static checking more friendly. Example: ``JSONField[dict[str, str]]``
 
     You can specify your own custom JSON encoder/decoder, leaving at the default should work well.
     If you have ``orjson`` installed, we default to using that,
@@ -531,6 +535,11 @@ class JSONField(Field[Union[dict, list]], dict, list):  # type: ignore
         The custom JSON encoder.
     ``decoder``:
         The custom JSON decoder.
+
+    If you want to use Pydantic model as the field type for generating a better OpenAPI documentation, you can use ``field_type`` to specify the type of the field.
+
+    ``field_type``:
+        The Pydantic model class.
 
     """
 
@@ -555,29 +564,53 @@ class JSONField(Field[Union[dict, list]], dict, list):  # type: ignore
         super().__init__(**kwargs)
         self.encoder = encoder
         self.decoder = decoder
+        if field_type := kwargs.get("field_type", None):
+            self.field_type = field_type
 
     def to_db_value(
-        self, value: Optional[Union[dict, list, str, bytes]], instance: "Union[Type[Model], Model]"
+        self,
+        value: Optional[Union[T, dict, list, str, bytes]],
+        instance: "Union[Type[Model], Model]",
     ) -> Optional[str]:
         self.validate(value)
-        if value is not None:
-            if isinstance(value, (str, bytes)):
-                try:
-                    self.decoder(value)
-                except Exception:
-                    raise FieldError(f"Value {value!r} is invalid json value.")
-                if isinstance(value, bytes):
-                    value = value.decode()
-            else:
-                value = self.encoder(value)
-        return value
+        if value is None:
+            return None
 
-    def to_python_value(
-        self, value: Optional[Union[str, bytes, dict, list]]
-    ) -> Optional[Union[dict, list]]:
         if isinstance(value, (str, bytes)):
             try:
-                return self.decoder(value)
+                self.decoder(value)
+            except Exception:
+                raise FieldError(f"Value {value!r} is invalid json value.")
+            if isinstance(value, bytes):
+                return value.decode()
+            return value
+
+        try:
+            from pydantic import BaseModel
+
+            if isinstance(value, BaseModel):
+                value = value.model_dump()
+        except ImportError:
+            pass
+
+        return self.encoder(value)
+
+    def to_python_value(
+        self, value: Optional[Union[T, str, bytes, dict, list]]
+    ) -> Optional[Union[T, dict, list]]:
+        if isinstance(value, (str, bytes)):
+            try:
+                data = self.decoder(value)
+
+                try:
+                    from pydantic._internal._model_construction import ModelMetaclass
+
+                    if isinstance(self.field_type, ModelMetaclass) and not isinstance(data, list):
+                        return self.field_type(**data)
+                except ImportError:
+                    pass
+
+                return data
             except Exception:
                 raise FieldError(
                     f"Value {value if isinstance(value, str) else value.decode()} is invalid json value."
