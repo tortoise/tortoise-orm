@@ -57,7 +57,7 @@ class Upper(Function):
     database_func = functions.Upper
 
 
-class _Concat(functions.Concat):  # type: ignore
+class _Concat(functions.Concat):
     @staticmethod
     def get_arg_sql(arg, **kwargs):
         sql = arg.get_sql(with_alias=False, **kwargs) if hasattr(arg, "get_sql") else str(arg)

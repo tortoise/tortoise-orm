@@ -38,7 +38,9 @@ class Index:
         self.expressions = expressions
         self.extra = ""
 
-    def get_sql(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool) -> str:
+    def get_sql(
+        self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool
+    ) -> str:
         if self.fields:
             fields = ", ".join(schema_generator.quote(f) for f in self.fields)
         else:

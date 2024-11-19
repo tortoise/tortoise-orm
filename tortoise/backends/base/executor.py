@@ -20,8 +20,8 @@ from typing import (
 )
 
 from pypika import JoinType, Parameter, Table
-from pypika.terms import Parameterizer
 from pypika.queries import QueryBuilder
+from pypika.terms import Parameterizer
 
 from tortoise.exceptions import OperationalError
 from tortoise.expressions import Expression, ResolveContext

@@ -284,12 +284,18 @@ class AwaitableQuery(Generic[MODEL]):
 
         return any(info.term.is_aggregate for info in annotation_info.values())
 
-    def sql(self) -> str:
-        """Return the actual SQL."""
-        if self._db is None:
-            self._db = self._choose_db()  # type: ignore
+    def sql(self, params_inline=False) -> str:
+        """
+        Returns the SQL query that will be executed. By default, it will return the query with
+        placeholders, but if you set `params_inline=True`, it will inline the parameters.
+
+        :param params_inline: Whether to inline the parameters
+        """
+        self._choose_db_if_not_chosen()
 
         sql, _ = self._make_query()
+        if params_inline:
+            sql = self.query.get_sql()
         return sql
 
     def _make_query(self, **pypika_kwargs) -> Tuple[str, List[Any]]:
@@ -299,6 +305,13 @@ class AwaitableQuery(Generic[MODEL]):
         :return: Tuple[str, List[Any]]: The query string and the parameters
         """
         raise NotImplementedError()  # pragma: nocoverage
+
+    def _parametrize_query(self, query: QueryBuilder, **pypika_kwargs) -> Tuple[str, List[Any]]:
+        parameterizer = pypika_kwargs.pop("parameterizer", self._db.executor_class.parameterizer())
+        return (
+            query.get_sql(parameterizer=parameterizer, **pypika_kwargs),
+            parameterizer.values,
+        )
 
     async def _execute(self, sql: str, values: List[Any]) -> Any:
         raise NotImplementedError()  # pragma: nocoverage
@@ -1004,8 +1017,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             and query optimization.
             **The output format may (and will) vary greatly depending on the database backend.**
         """
-        if self._db is None:
-            self._db = self._choose_db()  # type: ignore
+        self._choose_db_if_not_chosen()
         sql, _ = self._make_query()
         return await self._db.executor_class(model=self.model, db=self._db).execute_explain(sql)
 
@@ -1123,11 +1135,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
 
-        parameterizer = pypika_kwargs.pop("parameterizer", self._db.executor_class.parameterizer())
-        return (
-            self.query.get_sql(parameterizer=parameterizer, **pypika_kwargs),
-            parameterizer.values,
-        )
+        return self._parametrize_query(self.query, **pypika_kwargs)
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
         if self._db is None:
@@ -1145,7 +1153,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             db=self._db,
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
-            select_related_idx=self._select_related_idx,
+            select_related_idx=self._select_related_idx,  # type: ignore
         ).execute_select(
             sql,
             values,
@@ -1326,7 +1334,7 @@ class ExistsQuery(AwaitableQuery):
         self.query = copy(self.model._meta.basequery)
         self.resolve_filters()
         self.query._limit = self.query._wrapper_cls(1)
-        self.query._select_other(ValueWrapper(1, allow_parametrize=False))
+        self.query._select_other(ValueWrapper(1, allow_parametrize=False))  # type:ignore[arg-type]
 
         if self._force_indexes:
             self.query._force_indexes = []
@@ -1335,12 +1343,10 @@ class ExistsQuery(AwaitableQuery):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
 
-        parameterizer = pypika_kwargs.pop("parameterizer", self._db.executor_class.parameterizer())
-        return self.query.get_sql(parameterizer=parameterizer), parameterizer.values
+        return self._parametrize_query(self.query, **pypika_kwargs)
 
     def __await__(self) -> Generator[Any, None, bool]:
-        if self._db is None:
-            self._db = self._choose_db()  # type: ignore
+        self._choose_db_if_not_chosen()
         sql, values = self._make_query()
         return self._execute(sql, values).__await__()
 
@@ -1396,15 +1402,11 @@ class CountQuery(AwaitableQuery):
         if self._use_indexes:
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
-        parameterizer = pypika_kwargs.pop("parameterizer", self._db.executor_class.parameterizer())
-        return (
-            self.query.get_sql(parameterizer=parameterizer, **pypika_kwargs),
-            parameterizer.values,
-        )
+
+        return self._parametrize_query(self.query, **pypika_kwargs)
 
     def __await__(self) -> Generator[Any, None, int]:
-        if self._db is None:
-            self._db = self._choose_db()  # type: ignore
+        self._choose_db_if_not_chosen()
         sql, values = self._make_query()
         return self._execute(sql, values).__await__()
 
@@ -1616,11 +1618,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
 
-        parameterizer = pypika_kwargs.pop("parameterizer", self._db.executor_class.parameterizer())
-        return (
-            self.query.get_sql(parameterizer=parameterizer, **pypika_kwargs),
-            parameterizer.values,
-        )
+        return self._parametrize_query(self.query, **pypika_kwargs)
 
     @overload
     def __await__(
@@ -1633,8 +1631,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
     ) -> Generator[Any, None, Tuple[Any, ...]]: ...
 
     def __await__(self) -> Generator[Any, None, Union[List[Any], Tuple[Any, ...]]]:
-        if self._db is None:
-            self._db = self._choose_db()  # type: ignore
+        self._choose_db_if_not_chosen()
         sql, values = self._make_query()
         return self._execute(sql, values).__await__()  # pylint: disable=E1101
 
@@ -1750,11 +1747,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
             self.query._use_indexes = []
             self.query = self.query.use_index(*self._use_indexes)
 
-        parameterizer = pypika_kwargs.pop("parameterizer", self._db.executor_class.parameterizer())
-        return (
-            self.query.get_sql(parameterizer=parameterizer, **pypika_kwargs),
-            parameterizer.values,
-        )
+        return self._parametrize_query(self.query, **pypika_kwargs)
 
     @overload
     def __await__(
@@ -1769,8 +1762,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
     def __await__(
         self,
     ) -> Generator[Any, None, Union[List[Dict[str, Any]], Dict[str, Any]]]:
-        if self._db is None:
-            self._db = self._choose_db()  # type: ignore
+        self._choose_db_if_not_chosen()
         sql, values = self._make_query()
         return self._execute(sql, values).__await__()  # pylint: disable=E1101
 
@@ -1814,8 +1806,7 @@ class RawSQLQuery(AwaitableQuery):
         self._db = db
 
     def _make_query(self, **pypika_kwargs) -> Tuple[str, List[Any]]:
-        self.query = RawSQL(self._sql)
-        return self.query.get_sql(**pypika_kwargs), []
+        return RawSQL(self._sql).get_sql(**pypika_kwargs), []
 
     async def _execute(self, sql: str, values: List[Any]) -> Any:
         instance_list = await self._db.executor_class(
@@ -1825,8 +1816,7 @@ class RawSQLQuery(AwaitableQuery):
         return instance_list
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
-        if self._db is None:
-            self._db = self._choose_db()  # type: ignore
+        self._choose_db_if_not_chosen()
         sql, values = self._make_query()
         return self._execute(sql, values).__await__()
 
@@ -1917,7 +1907,7 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
         queries = self._make_queries()
         return self._execute_many(queries).__await__()
 
-    def sql(self) -> str:
+    def sql(self, params_inline=False) -> str:
         self._choose_db_if_not_chosen()
         queries = self._make_queries()
         return ";".join([sql for sql, _ in queries])
@@ -2017,7 +2007,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         self._make_queries()
         return self._execute_many().__await__()
 
-    def sql(self) -> str:
+    def sql(self, params_inline=False) -> str:
         self._choose_db_if_not_chosen()
         self._make_queries()
         if self._insert_query and self._insert_query_all:

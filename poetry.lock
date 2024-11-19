@@ -2658,7 +2658,7 @@ name = "pypika-tortoise"
 version = "0.2.2"
 description = "Forked from pypika and streamline just for tortoise-orm"
 optional = false
-python-versions = "^3.7"
+python-versions = "^3.8"
 files = []
 develop = false
 
@@ -2666,7 +2666,7 @@ develop = false
 type = "git"
 url = "https://github.com/henadzit/pypika-tortoise.git"
 reference = "parameterization-changes"
-resolved_reference = "e4db01e6ab73045c0cf45ed71eeadba30395905e"
+resolved_reference = "31eea5a7d1299d33ce1776e97aab44879c54de35"
 
 [[package]]
 name = "pytest"
