@@ -9,7 +9,7 @@ from pypika.terms import Criterion
 from pypika.terms import Function as PypikaFunction
 from pypika.terms import Term, ValueWrapper
 
-from tortoise.filters import not_equal
+from tortoise.filters import get_json_filter_operator, not_equal
 
 
 class JSONContains(PypikaFunction):
@@ -71,19 +71,6 @@ operator_keywords = {
 }
 
 
-def _serialize_value(value: Any) -> str | Any:
-    if type(value) in [dict, list]:
-        return json.dumps(value)
-    return value
-
-
 def mysql_json_filter(field: Term, value: Dict) -> Criterion:
-    ((key, filter_value),) = value.items()
-    filter_value = _serialize_value(filter_value)
-    key_parts = [int(item) if item.isdigit() else str(item) for item in key.split("__")]
-    operator_ = (
-        operator_keywords[str(key_parts.pop(-1))]
-        if key_parts[-1] in operator_keywords
-        else operator.eq
-    )
+    key_parts, filter_value, operator_ = get_json_filter_operator(value, operator_keywords)
     return operator_(JSONExtract(field, key_parts), filter_value)  # type:ignore[arg-type]
