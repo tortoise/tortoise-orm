@@ -13,6 +13,7 @@ Changelog
 Fixed
 ^^^^^
 - Fix enums not quoted (#1776)
+- Primary key field should not be nullable (#1778)
 
 Added
 ^^^^^
