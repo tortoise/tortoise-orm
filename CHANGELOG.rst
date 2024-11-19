@@ -6,22 +6,36 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.21
+0.22
 ====
-0.21.8
+
+0.22.0
 ------
 Fixed
 ^^^^^
-- Fix enums not quoted (#1776)
-- Primary key field should not be nullable (#1778)
+- Fix enums not quoted, allowing using of str enums for filters (#1776)
+- Primary key field should not be nullable in pydantic schema (#1778)
+- Fix ambiguous column name when grouping with joining (#1766)
+- Fix same model returned by pydantic_model_creator calls with different arguments (#1741)
 
 Added
 ^^^^^
 - JSONField adds optional generic support, and supports OpenAPI document generation by specifying `field_type` as a pydantic BaseModel (#1763)
+- Add table_name_generator attribute to Tortoise.init for dynamic table name generation (#1770)
+- Support for annotation and joins F() expressions (#1761) (#1765)
+- Allow use of annotate fields within Case-When expression (#1748)
+- Added new queryset methods: last(), latest(), earliest() (#1754) (#1756)
+
 
 Changed
 ^^^^^^^
 - Change old pydantic docs link to new one (#1775).
+- Refactored pydantic_model_creator, interface not changed  (#1763)
+- Values are no longer validated to be right type upon loading from database (#1750)
+- Refactored private field names in queryset classes (#1751)
+
+0.21
+====
 
 0.21.7 <../0.21.7>`_ - 2024-10-14
 ------
@@ -38,7 +52,6 @@ Added
 ^^^^^
 - Add POSIX Regex support for PostgreSQL and MySQL (#1714)
 - support app=None for tortoise.contrib.fastapi.RegisterTortoise (#1733)
-- Added ``table_name_generator`` param to `Tortoise.init` to allow global dynamic table name generation (#1770)
 
 0.21.6 <../0.21.6>`_ - 2024-08-17
 ------
