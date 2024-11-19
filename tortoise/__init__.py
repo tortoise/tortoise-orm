@@ -235,7 +235,6 @@ class Tortoise:
                     continue
                 model._meta._inited = True
                 if not model._meta.db_table:
-                    print("here")
                     model._meta.db_table = (
                         cls.table_name_generator(model)
                         if cls.table_name_generator

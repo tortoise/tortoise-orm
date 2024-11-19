@@ -636,7 +636,6 @@ class ModelMeta(type):
                 value._model = new_class
         meta._model = new_class  # type: ignore
         meta.manager._model = new_class
-
         meta.finalise_fields()
         return new_class
 
