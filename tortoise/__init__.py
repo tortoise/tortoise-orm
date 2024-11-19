@@ -518,7 +518,7 @@ class Tortoise:
         cls._inited = True
 
     @classmethod
-    def _init_routers(cls, routers: Optional[List[Union[str, type]]] = None):
+    def _init_routers(cls, routers: Optional[List[Union[str, type]]] = None) -> None:
         from tortoise.router import router
 
         routers = routers or []

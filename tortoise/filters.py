@@ -123,12 +123,12 @@ def contains(field: Term, value: str) -> Criterion:
     return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"%{escape_like(value)}%"))
 
 
-def search(field: Term, value: str):
+def search(field: Term, value: str) -> Any:
     # will be override in each executor
     pass
 
 
-def posix_regex(field: Term, value: str):
+def posix_regex(field: Term, value: str) -> Any:
     # Will be overridden in each executor
     raise NotImplementedError(
         "The postgres_posix_regex filter operator is not supported by your database backend"

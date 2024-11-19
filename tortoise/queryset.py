@@ -164,7 +164,7 @@ class AwaitableQuery(Generic[MODEL]):
             self._join_table(join)
         return joins[-1][0]
 
-    def _join_table(self, table_criterio_tuple: TableCriterionTuple):
+    def _join_table(self, table_criterio_tuple: TableCriterionTuple) -> None:
         if table_criterio_tuple[0] not in self._joined_tables:
             self.query = self.query.join(table_criterio_tuple[0], how=JoinType.left_outer).on(
                 table_criterio_tuple[1]
@@ -1491,7 +1491,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         raise FieldError(f'Unknown field "{field}" for model "{model}"')
 
-    def _resolve_group_bys(self, *field_names: str):
+    def _resolve_group_bys(self, *field_names: str) -> List:
         group_bys = []
         for field_name in field_names:
             if field_name in self._annotations:
@@ -1777,7 +1777,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
 class RawSQLQuery(AwaitableQuery):
     __slots__ = ("_sql", "_db")
 
-    def __init__(self, model: Type[MODEL], db: BaseDBAsyncClient, sql: str):
+    def __init__(self, model: Type[MODEL], db: BaseDBAsyncClient, sql: str) -> None:
         super().__init__(model)
         self._sql = sql
         self._db = db

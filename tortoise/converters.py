@@ -14,7 +14,7 @@ _escape_table[ord('"')] = '\\"'
 _escape_table[ord("'")] = "\\'"
 
 
-def _escape_unicode(value: str, mapping=None):
+def _escape_unicode(value: str, mapping=None) -> str:
     """escapes *value* without adding quote.
 
     Value should be unicode

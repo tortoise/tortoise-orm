@@ -83,12 +83,12 @@ class ObjectDoesNotExistError(OperationalError, KeyError):
     The DoesNotExist exception is raised when an item with the passed primary key does not exist
     """
 
-    def __init__(self, model: "Type[Model]", pk_name: str, pk_val: Any):
+    def __init__(self, model: "Type[Model]", pk_name: str, pk_val: Any) -> None:
         self.model: "Type[Model]" = model
         self.pk_name: str = pk_name
         self.pk_val: Any = pk_val
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.model.__name__} has no object with {self.pk_name}={self.pk_val}"
 
 

@@ -24,7 +24,7 @@ class ConnectionHandler:
         self._db_config: Optional["DBConfigType"] = None
         self._create_db: bool = False
 
-    async def _init(self, db_config: "DBConfigType", create_db: bool):
+    async def _init(self, db_config: "DBConfigType", create_db: bool) -> None:
         if self._db_config is None:
             self._db_config = db_config
         else:

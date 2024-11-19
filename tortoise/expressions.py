@@ -73,7 +73,7 @@ class Value(Expression):
     Wrapper for a value that should be used as a term in a query.
     """
 
-    def __init__(self, value: Any):
+    def __init__(self, value: Any) -> None:
         self.value = value
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
@@ -90,7 +90,7 @@ class Connector(Enum):
 
 
 class CombinedExpression(Expression):
-    def __init__(self, left: Expression, connector: Connector, right: Any):
+    def __init__(self, left: Expression, connector: Connector, right: Any) -> None:
         self.left = left
         self.connector = connector
         self.right: Expression
@@ -124,7 +124,7 @@ class F(Expression):
     :param name: The name of the field to reference.
     """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         self.name = name
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
@@ -169,43 +169,43 @@ class F(Expression):
             return CombinedExpression(other, connector, self)
         return CombinedExpression(self, connector, other)
 
-    def __neg__(self):
+    def __neg__(self) -> CombinedExpression:
         return self._combine(-1, Connector.mul, False)
 
-    def __add__(self, other):
+    def __add__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.add, False)
 
-    def __sub__(self, other):
+    def __sub__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.sub, False)
 
-    def __mul__(self, other):
+    def __mul__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.mul, False)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.div, False)
 
-    def __mod__(self, other):
+    def __mod__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.mod, False)
 
-    def __pow__(self, other):
+    def __pow__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.pow, False)
 
-    def __radd__(self, other):
+    def __radd__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.add, True)
 
-    def __rsub__(self, other):
+    def __rsub__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.sub, True)
 
-    def __rmul__(self, other):
+    def __rmul__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.mul, True)
 
-    def __rtruediv__(self, other):
+    def __rtruediv__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.div, True)
 
-    def __rmod__(self, other):
+    def __rmod__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.mod, True)
 
-    def __rpow__(self, other):
+    def __rpow__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.pow, True)
 
 
@@ -519,7 +519,7 @@ class Function(Expression):
         self.field_object: "Optional[Field]" = None
         self.default_values = default_values
 
-    def _get_function_field(self, field: Union[Term, str], *default_values):
+    def _get_function_field(self, field: Union[Term, str], *default_values) -> PypikaFunction:
         return self.database_func(field, *default_values)  # type:ignore[arg-type]
 
     def _resolve_nested_field(self, resolve_context: ResolveContext, field: str) -> ResolveResult:
