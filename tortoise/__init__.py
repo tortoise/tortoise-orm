@@ -7,7 +7,18 @@ import warnings
 from copy import deepcopy
 from inspect import isclass
 from types import ModuleType
-from typing import Coroutine, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
+from typing import (
+    Callable,
+    Coroutine,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    Union,
+    cast,
+)
 
 from pypika import Table
 
@@ -30,6 +41,7 @@ from tortoise.utils import generate_schema_for_client
 
 class Tortoise:
     apps: Dict[str, Dict[str, Type["Model"]]] = {}
+    table_name_generator: Optional[Callable[[Type["Model"]], str]] = None
     _inited: bool = False
 
     @classmethod
@@ -223,7 +235,11 @@ class Tortoise:
                     continue
                 model._meta._inited = True
                 if not model._meta.db_table:
-                    model._meta.db_table = model.__name__.lower()
+                    model._meta.db_table = (
+                        cls.table_name_generator(model)
+                        if cls.table_name_generator
+                        else (model.__name__.lower())
+                    )
 
                 for field in sorted(model._meta.fk_fields):
                     init_fk_o2o_field(model, field)
@@ -396,6 +412,7 @@ class Tortoise:
         use_tz: bool = False,
         timezone: str = "UTC",
         routers: Optional[List[Union[str, Type]]] = None,
+        table_name_generator: Optional[Callable[[Type["Model"]], str]] = None,
     ) -> None:
         """
         Sets up Tortoise-ORM.
@@ -455,6 +472,10 @@ class Tortoise:
             Timezone to use, default is UTC.
         :param routers:
             A list of db routers str path or module.
+        :param table_name_generator:
+            A callable that generates table names. The model class will be passed as its argument.
+            If not provided, Tortoise will use the lowercase model name as the table name.
+            Example: ``lambda cls: f"prefix_{cls.__name__.lower()}"``
 
         :raises ConfigurationError: For any configuration error
         """
@@ -486,6 +507,8 @@ class Tortoise:
         use_tz = config.get("use_tz", use_tz)  # type: ignore
         timezone = config.get("timezone", timezone)  # type: ignore
         routers = config.get("routers", routers)  # type: ignore
+
+        cls.table_name_generator = table_name_generator
 
         # Mask passwords in logs output
         passwords = []

@@ -38,6 +38,7 @@ Added
 ^^^^^
 - Add POSIX Regex support for PostgreSQL and MySQL (#1714)
 - support app=None for tortoise.contrib.fastapi.RegisterTortoise (#1733)
+- Added ``table_name_generator`` param to `Tortoise.init` to allow global dynamic table name generation (#1770)
 
 0.21.6 <../0.21.6>`_ - 2024-08-17
 ------
