@@ -637,17 +637,6 @@ class ModelMeta(type):
         meta._model = new_class  # type: ignore
         meta.manager._model = new_class
 
-        table = getattr(meta_class, "table", "")
-        table_name_generator = getattr(meta_class, "table_name_generator", None)
-
-        if table and table_name_generator:
-            raise ConfigurationError(
-                f"Cannot set both 'table' and 'table_name_generator' for model {name}"
-            )
-
-        if callable(table_name_generator):
-            meta.db_table = table_name_generator(new_class)
-
         meta.finalise_fields()
         return new_class
 

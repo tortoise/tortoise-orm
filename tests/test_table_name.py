@@ -1,41 +1,43 @@
 from typing import Type
 
-from tests.testmodels import Tournament
-from tortoise import Model
-from tortoise.contrib import test
-from tortoise.exceptions import ConfigurationError
+from tortoise import Tortoise, fields
+from tortoise.contrib.test import SimpleTestCase
+from tortoise.models import Model
 
 
-def generate_table_name(model_cls: Type[Model]):
+def table_name_generator(model_cls: Type[Model]):
     return f"test_{model_cls.__name__.lower()}"
 
 
-class TestTableNameGenerator(test.TestCase):
-    def test_generator_basic(self):
-        """Test that table name is correctly generated when using generator"""
+class Tournament(Model):
+    id = fields.IntField(pk=True)
+    name = fields.TextField()
+    created_at = fields.DatetimeField(auto_now_add=True)
 
-        class TestModel(Tournament):
-            class Meta:
-                table_name_generator = generate_table_name
 
-        self.assertEqual(TestModel._meta.db_table, "test_testmodel")
+class CustomTable(Model):
+    id = fields.IntField(pk=True)
+    name = fields.TextField()
 
-    def test_both_table_and_generator_raises(self):
-        """Test that setting both table and generator raises ConfigurationError"""
-        with self.assertRaises(ConfigurationError) as context:
+    class Meta:
+        table = "my_custom_table"
 
-            class ConflictModel(Tournament):
-                class Meta:
-                    table = "explicit_table"
-                    table_name_generator = generate_table_name
 
-        self.assertIn("Cannot set both 'table' and 'table_name_generator'", str(context.exception))
+class TestTableNameGenerator(SimpleTestCase):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
+        await Tortoise.init(
+            db_url="sqlite://:memory:",
+            modules={"models": [__name__]},
+            table_name_generator=table_name_generator,
+        )
+        await Tortoise.generate_schemas()
 
-    def test_default_behavior(self):
-        """Test default behavior when no generator or table name is provided"""
+    async def asyncTearDown(self):
+        await Tortoise.close_connections()
 
-        class DefaultModel(Tournament):
-            class Meta:
-                pass
+    async def test_glabal_name_generator(self):
+        self.assertEqual(Tournament._meta.db_table, "test_tournament")
 
-        self.assertEqual(DefaultModel._meta.db_table, "")
+    async def test_custom_table_name_precedence(self):
+        self.assertEqual(CustomTable._meta.db_table, "my_custom_table")

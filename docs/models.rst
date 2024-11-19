@@ -192,22 +192,6 @@ The ``Meta`` class
 
         Set this to configure a manual table name, instead of a generated one
 
-    .. attribute:: table_name_generator
-        :annotation: = None
-
-        Set this to a callable that will generate the table name for the model.
-        The callable should accept the model class as its argument and return a string.
-        Cannot be used together with ``table`` attribute - attempting to set both will raise 
-        a `ConfigurationError`.
-
-        .. code-block:: python3
-
-            def generate_table_name(model_cls):
-                return f"prefix_{model_cls.__name__.lower()}"
-
-            class Meta:
-                table_name_generator = generate_table_name
-
     .. attribute:: table_description
         :annotation: = ""
 
