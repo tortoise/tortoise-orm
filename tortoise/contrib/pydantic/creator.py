@@ -513,7 +513,9 @@ class PydanticModelCreator:
         ptype = python_type
         if field.null:
             json_schema_extra["nullable"] = True
-        if field_name in self._optional or field.default is not None or field.null:
+        if not field.pk and (
+            field_name in self._optional or field.default is not None or field.null
+        ):
             ptype = Optional[ptype]
         if not (self._exclude_read_only and json_schema_extra.get("readOnly") is True):
             return annotation or ptype

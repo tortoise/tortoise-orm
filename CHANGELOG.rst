@@ -12,7 +12,7 @@ Changelog
 ------
 Fixed
 ^^^^^
-- TODO
+- Primary key field should not be nullable (#1778)
 
 Added
 ^^^^^
