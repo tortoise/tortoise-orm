@@ -110,7 +110,7 @@ class AwaitableQuery(Generic[MODEL]):
         self.query: QueryBuilder = QUERY
         self._db: BaseDBAsyncClient = None  # type: ignore
         self.capabilities: Capabilities = model._meta.db.capabilities
-        self._annotations: Dict[str, Expression] = {}
+        self._annotations: Dict[str, Union[Expression, Term]] = {}
         self._custom_filters: Dict[str, FilterInfoDict] = {}
         self._q_objects: List[Q] = []
 
@@ -164,7 +164,7 @@ class AwaitableQuery(Generic[MODEL]):
             self._join_table(join)
         return joins[-1][0]
 
-    def _join_table(self, table_criterio_tuple: TableCriterionTuple):
+    def _join_table(self, table_criterio_tuple: TableCriterionTuple) -> None:
         if table_criterio_tuple[0] not in self._joined_tables:
             self.query = self.query.join(table_criterio_tuple[0], how=JoinType.left_outer).on(
                 table_criterio_tuple[1]
@@ -189,7 +189,7 @@ class AwaitableQuery(Generic[MODEL]):
         self,
         model: "Type[Model]",
         table: Table,
-        orderings: Iterable[Tuple[str, str]],
+        orderings: Iterable[Tuple[str, Union[str, Order]]],
         annotations: Dict[str, Any],
     ) -> None:
         """
@@ -225,9 +225,8 @@ class AwaitableQuery(Generic[MODEL]):
                     {},
                 )
             elif field_name in annotations:
-                annotation = annotations[field_name]
-                if isinstance(annotation, Term):
-                    self.query = self.query.orderby(annotation, order=ordering[1])
+                if isinstance(annotation := annotations[field_name], Term):
+                    term = annotations
                 else:
                     annotation_info = annotation.resolve(
                         ResolveContext(
@@ -237,7 +236,8 @@ class AwaitableQuery(Generic[MODEL]):
                             custom_filters={},
                         )
                     )
-                    self.query = self.query.orderby(annotation_info.term, order=ordering[1])
+                    term = annotation_info.term
+                self.query = self.query.orderby(term, order=ordering[1])
             else:
                 field_object = model._meta.fields_map.get(field_name)
 
@@ -276,7 +276,7 @@ class AwaitableQuery(Generic[MODEL]):
             for join in info.joins:
                 self._join_table(join)
             if key in self._annotations:
-                self.query._select_other(info.term.as_(key))
+                self.query._select_other(info.term.as_(key))  # type:ignore[arg-type]
 
         return any(info.term.is_aggregate for info in annotation_info.values())
 
@@ -345,7 +345,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._select_for_update_of: Set[str] = set()
         self._select_related: Set[str] = set()
         self._select_related_idx: List[
-            Tuple["Type[Model]", int, str, "Type[Model]", Iterable[Optional[str]]]
+            Tuple["Type[Model]", int, Union[Table, str], "Type[Model]", Iterable[Optional[str]]]
         ] = []  # format with: model,idx,model_name,parent_model
         self._force_indexes: Set[str] = set()
         self._use_indexes: Set[str] = set()
@@ -1002,7 +1002,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             self._db = self._choose_db()  # type: ignore
         self._make_query()
         return await self._db.executor_class(model=self.model, db=self._db).execute_explain(
-            self.query
+            self.query  # type:ignore[arg-type]
         )
 
     def using_db(self, _db: Optional[BaseDBAsyncClient]) -> "QuerySet[MODEL]":
@@ -1021,7 +1021,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         field: str,
         forwarded_fields: str,
         path: Iterable[Optional[str]],
-    ) -> Tuple[Table, str]:
+    ) -> "QueryBuilder":
         if field in model._meta.fields_db_projection and forwarded_fields:
             raise FieldError(f'Field "{field}" for model "{model.__name__}" is not relation')
 
@@ -1053,7 +1053,6 @@ class QuerySet(AwaitableQuery[MODEL]):
                 forwarded_fields=forwarded_fields_,
                 path=(*path, field),
             )
-            return self.query
         return self.query
 
     def _make_query(self) -> None:
@@ -1077,7 +1076,7 @@ class QuerySet(AwaitableQuery[MODEL]):
             ]
             self.query = copy(self.model._meta.basequery).select(*db_fields_for_select)
         else:
-            self.query = copy(self.model._meta.basequery_all_fields)
+            self.query = copy(self.model._meta.basequery_all_fields)  # type:ignore[assignment]
             append_item = (
                 self.model,
                 len(self.model._meta.db_fields) + len(self._annotations),
@@ -1136,8 +1135,11 @@ class QuerySet(AwaitableQuery[MODEL]):
             db=self._db,
             prefetch_map=self._prefetch_map,
             prefetch_queries=self._prefetch_queries,
-            select_related_idx=self._select_related_idx,
-        ).execute_select(self.query, custom_fields=list(self._annotations.keys()))
+            select_related_idx=self._select_related_idx,  # type:ignore[arg-type]
+        ).execute_select(
+            self.query,  # type:ignore[arg-type]
+            custom_fields=list(self._annotations),
+        )
         if self._single:
             if len(instance_list) == 1:
                 return instance_list[0]
@@ -1313,7 +1315,7 @@ class ExistsQuery(AwaitableQuery):
         self.query = copy(self.model._meta.basequery)
         self.resolve_filters()
         self.query._limit = 1
-        self.query._select_other(ValueWrapper(1))
+        self.query._select_other(ValueWrapper(1))  # type:ignore[arg-type]
 
         if self._force_indexes:
             self.query._force_indexes = []
@@ -1489,7 +1491,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         raise FieldError(f'Unknown field "{field}" for model "{model}"')
 
-    def _resolve_group_bys(self, *field_names: str):
+    def _resolve_group_bys(self, *field_names: str) -> List:
         group_bys = []
         for field_name in field_names:
             if field_name in self._annotations:
@@ -1775,19 +1777,18 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
 class RawSQLQuery(AwaitableQuery):
     __slots__ = ("_sql", "_db")
 
-    def __init__(self, model: Type[MODEL], db: BaseDBAsyncClient, sql: str):
+    def __init__(self, model: Type[MODEL], db: BaseDBAsyncClient, sql: str) -> None:
         super().__init__(model)
         self._sql = sql
         self._db = db
 
     def _make_query(self) -> None:
-        self.query = RawSQL(self._sql)
+        self.query = RawSQL(self._sql)  # type:ignore[assignment]
 
     async def _execute(self) -> Any:
-        instance_list = await self._db.executor_class(
-            model=self.model,
-            db=self._db,
-        ).execute_select(self.query)
+        instance_list = await self._db.executor_class(model=self.model, db=self._db).execute_select(
+            self.query  # type:ignore[arg-type]
+        )
         return instance_list
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
@@ -1932,14 +1933,16 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
                 alias = f"new_{self.model._meta.db_table}"
                 self._insert_query_all = self._insert_query_all.as_(alias).on_conflict(
                     *self._on_conflict
-                )
-                self._insert_query = self._insert_query.as_(alias).on_conflict(*self._on_conflict)
+                )  # type:ignore[misc]
+                self._insert_query = self._insert_query.as_(alias).on_conflict(
+                    *self._on_conflict
+                )  # type:ignore[misc]
                 for update_field in self._update_fields:
                     self._insert_query_all = self._insert_query_all.do_update(update_field)
                     self._insert_query = self._insert_query.do_update(update_field)
         else:
-            self._insert_query_all = self._executor.insert_query_all
-            self._insert_query = self._executor.insert_query
+            self._insert_query_all = self._executor.insert_query_all  # type:ignore[assignment]
+            self._insert_query = self._executor.insert_query  # type:ignore[assignment]
 
     async def _execute(self) -> None:
         for instance_chunk in chunk(self._objects, self._batch_size):

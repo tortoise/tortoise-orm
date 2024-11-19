@@ -38,7 +38,7 @@ class Index:
         self.expressions = expressions
         self.extra = ""
 
-    def get_sql(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool):
+    def get_sql(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool) -> str:
         if self.fields:
             fields = ", ".join(schema_generator.quote(f) for f in self.fields)
         else:
@@ -54,7 +54,7 @@ class Index:
             extra=self.extra,
         )
 
-    def index_name(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]"):
+    def index_name(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]") -> str:
         return self.name or schema_generator._generate_index_name("idx", model, self.fields)
 
 

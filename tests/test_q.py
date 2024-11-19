@@ -119,10 +119,16 @@ class TestQCall(TestCase):
     def setUp(self) -> None:
         super().setUp()
         self.int_fields_context = ResolveContext(
-            model=IntFields, table=IntFields._meta.basequery, annotations={}, custom_filters={}
+            model=IntFields,
+            table=IntFields._meta.basequery,  # type:ignore[arg-type]
+            annotations={},
+            custom_filters={},
         )
         self.char_fields_context = ResolveContext(
-            model=CharFields, table=CharFields._meta.basequery, annotations={}, custom_filters={}
+            model=CharFields,
+            table=CharFields._meta.basequery,  # type:ignore[arg-type]
+            annotations={},
+            custom_filters={},
         )
 
     def test_q_basic(self):

@@ -1,7 +1,7 @@
 from pypika.terms import Function
 
 
-class Random(Function):  # type: ignore
+class Random(Function):
     """
     Generate random number.
 

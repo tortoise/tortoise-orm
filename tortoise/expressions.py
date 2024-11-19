@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import operator
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
@@ -18,7 +20,7 @@ from typing import (
 from pypika import Case as PypikaCase
 from pypika import Field as PypikaField
 from pypika import Table
-from pypika.functions import DistinctOptionFunction
+from pypika.functions import AggregateFunction, DistinctOptionFunction
 from pypika.terms import ArithmeticExpression, Criterion
 from pypika.terms import Function as PypikaFunction
 from pypika.terms import Term
@@ -71,7 +73,7 @@ class Value(Expression):
     Wrapper for a value that should be used as a term in a query.
     """
 
-    def __init__(self, value: Any):
+    def __init__(self, value: Any) -> None:
         self.value = value
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
@@ -88,7 +90,7 @@ class Connector(Enum):
 
 
 class CombinedExpression(Expression):
-    def __init__(self, left: Expression, connector: Connector, right: Any):
+    def __init__(self, left: Expression, connector: Connector, right: Any) -> None:
         self.left = left
         self.connector = connector
         self.right: Expression
@@ -122,11 +124,11 @@ class F(Expression):
     :param name: The name of the field to reference.
     """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str) -> None:
         self.name = name
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
-        term = PypikaField(self.name)
+        term: Term = PypikaField(self.name)
         joins: List[TableCriterionTuple] = []
         output_field = None
         if self.name.split("__")[0] in resolve_context.model._meta.fetch_fields:
@@ -144,15 +146,15 @@ class F(Expression):
         else:
             # a regular model field, e.g. F("id")
             try:
-                term.name = resolve_context.model._meta.fields_db_projection[self.name]
+                meta = resolve_context.model._meta
+                term.name = meta.fields_db_projection[self.name]  # type:ignore[attr-defined]
 
-                output_field = resolve_context.model._meta.fields_map.get(self.name, None)
-                if output_field:
-                    func = output_field.get_for_dialect(
-                        resolve_context.model._meta.db.capabilities.dialect, "function_cast"
+                if (output_field := meta.fields_map.get(self.name, None)) and (
+                    func := output_field.get_for_dialect(
+                        meta.db.capabilities.dialect, "function_cast"
                     )
-                    if func:
-                        term = func(output_field, term)
+                ):
+                    term = func(output_field, term)
             except KeyError:
                 raise FieldError(
                     f"There is no non-virtual field {self.name} on Model {resolve_context.model.__name__}"
@@ -167,60 +169,60 @@ class F(Expression):
             return CombinedExpression(other, connector, self)
         return CombinedExpression(self, connector, other)
 
-    def __neg__(self):
+    def __neg__(self) -> CombinedExpression:
         return self._combine(-1, Connector.mul, False)
 
-    def __add__(self, other):
+    def __add__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.add, False)
 
-    def __sub__(self, other):
+    def __sub__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.sub, False)
 
-    def __mul__(self, other):
+    def __mul__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.mul, False)
 
-    def __truediv__(self, other):
+    def __truediv__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.div, False)
 
-    def __mod__(self, other):
+    def __mod__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.mod, False)
 
-    def __pow__(self, other):
+    def __pow__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.pow, False)
 
-    def __radd__(self, other):
+    def __radd__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.add, True)
 
-    def __rsub__(self, other):
+    def __rsub__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.sub, True)
 
-    def __rmul__(self, other):
+    def __rmul__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.mul, True)
 
-    def __rtruediv__(self, other):
+    def __rtruediv__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.div, True)
 
-    def __rmod__(self, other):
+    def __rmod__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.mod, True)
 
-    def __rpow__(self, other):
+    def __rpow__(self, other) -> CombinedExpression:
         return self._combine(other, Connector.pow, True)
 
 
-class Subquery(Term):  # type: ignore
-    def __init__(self, query: "AwaitableQuery"):
+class Subquery(Term):
+    def __init__(self, query: "AwaitableQuery") -> None:
         super().__init__()
         self.query = query
 
     def get_sql(self, **kwargs: Any) -> str:
         return self.query.as_query().get_sql(**kwargs)
 
-    def as_(self, alias: str) -> "Selectable":
+    def as_(self, alias: str) -> "Selectable":  # type:ignore[override]
         return self.query.as_query().as_(alias)
 
 
-class RawSQL(Term):  # type: ignore
-    def __init__(self, sql: str):
+class RawSQL(Term):
+    def __init__(self, sql: str) -> None:
         super().__init__()
         self.sql = sql
 
@@ -405,24 +407,18 @@ class Q:
         return modifier
 
     def _get_actual_filter_params(
-        self, resolve_context: ResolveContext, key: str, value: Table
+        self, resolve_context: ResolveContext, key: str, value: Table | FilterInfoDict
     ) -> Tuple[str, Any]:
         filter_key = key
         if (
             key in resolve_context.model._meta.fk_fields
             or key in resolve_context.model._meta.o2o_fields
         ):
-            if hasattr(value, "pk"):
-                filter_value = value.pk
-            else:
-                filter_value = value
             field_object = resolve_context.model._meta.fields_map[key]
             filter_key = cast(str, field_object.source_field)
+            filter_value = getattr(value, "pk", value)
         elif key in resolve_context.model._meta.m2m_fields:
-            if hasattr(value, "pk"):
-                filter_value = value.pk
-            else:
-                filter_value = value
+            filter_value = getattr(value, "pk", value)
         elif (
             key.split("__")[0] in resolve_context.model._meta.fetch_fields
             or key in resolve_context.custom_filters
@@ -512,7 +508,7 @@ class Function(Expression):
 
     __slots__ = ("field", "field_object", "default_values")
 
-    database_func = PypikaFunction
+    database_func: Type[PypikaFunction] = PypikaFunction
     # Enable populate_field_object where we want to try and preserve the field type.
     populate_field_object = False
 
@@ -523,8 +519,8 @@ class Function(Expression):
         self.field_object: "Optional[Field]" = None
         self.default_values = default_values
 
-    def _get_function_field(self, field: Union[Term, str], *default_values):
-        return self.database_func(field, *default_values)
+    def _get_function_field(self, field: Union[Term, str], *default_values) -> PypikaFunction:
+        return self.database_func(field, *default_values)  # type:ignore[arg-type]
 
     def _resolve_nested_field(self, resolve_context: ResolveContext, field: str) -> ResolveResult:
         term, joins, output_field = resolve_nested_field(
@@ -586,7 +582,7 @@ class Aggregate(Function):
     :param is_distinct: Flag for aggregate with distinction
     """
 
-    database_func = DistinctOptionFunction
+    database_func: Type[AggregateFunction] = DistinctOptionFunction
 
     def __init__(
         self,
@@ -599,12 +595,13 @@ class Aggregate(Function):
         self.distinct = distinct
         self.filter = _filter
 
-    def _get_function_field(
+    def _get_function_field(  # type:ignore[override]
         self, field: Union[ArithmeticExpression, PypikaField, str], *default_values
-    ):
+    ) -> DistinctOptionFunction:
+        function = cast(DistinctOptionFunction, self.database_func(field, *default_values))
         if self.distinct:
-            return self.database_func(field, *default_values).distinct()
-        return self.database_func(field, *default_values)
+            function = function.distinct()
+        return function
 
     def _resolve_nested_field(self, resolve_context: ResolveContext, field: str) -> ResolveResult:
         ret = super()._resolve_nested_field(resolve_context, field)
@@ -616,7 +613,7 @@ class Aggregate(Function):
         return ret
 
 
-class _WhenThen(Term):  # type: ignore
+class _WhenThen(Term):
     """This is not a real term, but a helper to store the when and then terms."""
 
     def __init__(self, when: Term, then: Term) -> None:
@@ -673,7 +670,7 @@ class When(Expression):
         if isinstance(self.then, Expression):
             then = self.then.resolve(resolve_context).term
         else:
-            then = Term.wrap_constant(self.then)
+            then = cast(Term, Term.wrap_constant(self.then))
 
         return ResolveResult(term=_WhenThen(modifier.where_criterion, then))
 

@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import json
 import operator
 from functools import partial
 from typing import (
@@ -12,7 +15,7 @@ from typing import (
 )
 
 from pypika import Table
-from pypika.enums import DatePart, SqlTypes
+from pypika.enums import DatePart, Matching, SqlTypes
 from pypika.functions import Cast, Extract, Upper
 from pypika.terms import BasicCriterion, Criterion, Equality, Term, ValueWrapper
 from typing_extensions import NotRequired
@@ -27,21 +30,16 @@ if TYPE_CHECKING:  # pragma: nocoverage
 ##############################################################################
 
 
-class Like(BasicCriterion):  # type: ignore
+class Like(BasicCriterion):
     def __init__(self, left, right, alias=None, escape=" ESCAPE '\\'") -> None:
         """
         A Like that supports an ESCAPE clause
         """
-        super().__init__(" LIKE ", left, right, alias=alias)
+        super().__init__(Matching.like, left, right, alias=alias)
         self.escape = escape
 
-    def get_sql(self, quote_char='"', with_alias=False, **kwargs):
-        sql = "{left}{comparator}{right}{escape}".format(
-            comparator=self.comparator,
-            left=self.left.get_sql(quote_char=quote_char, **kwargs),
-            right=self.right.get_sql(quote_char=quote_char, **kwargs),
-            escape=self.escape,
-        )
+    def get_sql(self, quote_char='"', with_alias=False, **kwargs) -> str:
+        sql = super().get_sql(quote_char=quote_char, with_alias=False, **kwargs) + str(self.escape)
         if with_alias and self.alias:  # pragma: nocoverage
             return '{sql} "{alias}"'.format(sql=sql, alias=self.alias)
         return sql
@@ -125,12 +123,12 @@ def contains(field: Term, value: str) -> Criterion:
     return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"%{escape_like(value)}%"))
 
 
-def search(field: Term, value: str):
+def search(field: Term, value: str) -> Any:
     # will be override in each executor
     pass
 
 
-def posix_regex(field: Term, value: str):
+def posix_regex(field: Term, value: str) -> Any:
     # Will be overridden in each executor
     raise NotImplementedError(
         "The postgres_posix_regex filter operator is not supported by your database backend"
@@ -203,17 +201,17 @@ def extract_microsecond_equal(field: Term, value: int) -> Criterion:
     return Extract(DatePart.microsecond, field).eq(value)
 
 
-def json_contains(field: Term, value: str) -> Criterion:
+def json_contains(field: Term, value: str) -> Criterion:  # type:ignore[empty-body]
     # will be override in each executor
     pass
 
 
-def json_contained_by(field: Term, value: str) -> Criterion:
+def json_contained_by(field: Term, value: str) -> Criterion:  # type:ignore[empty-body]
     # will be override in each executor
     pass
 
 
-def json_filter(field: Term, value: Dict) -> Criterion:
+def json_filter(field: Term, value: Dict) -> Criterion:  # type:ignore[empty-body]
     # will be override in each executor
     pass
 
@@ -356,6 +354,21 @@ def get_json_filter(field_name: str, source_field: str) -> Dict[str, FilterInfoD
             "value_encoder": json_encoder,
         },
     }
+
+
+def get_json_filter_operator(
+    value: dict[str, Any], operator_keywords: dict[str, Callable[..., Criterion]]
+) -> tuple[list[str | int], Any, Callable[..., Criterion]]:
+    ((key, filter_value),) = value.items()
+    if type(filter_value) in (dict, list):
+        filter_value = json.dumps(filter_value)
+    key_parts = [int(item) if item.isdigit() else str(item) for item in key.split("__")]
+    operator_ = (
+        operator_keywords[str(key_parts.pop(-1))]
+        if key_parts[-1] in operator_keywords
+        else operator.eq
+    )
+    return key_parts, filter_value, operator_
 
 
 def get_filters_for_field(

@@ -12,15 +12,18 @@ Changelog
 ------
 Fixed
 ^^^^^
+- Fix enums not quoted (#1776)
 - Primary key field should not be nullable (#1778)
 
 Added
 ^^^^^
 - JSONField adds optional generic support, and supports OpenAPI document generation by specifying `field_type` as a pydantic BaseModel (#1763)
 
+Changed
+^^^^^^^
+- Change old pydantic docs link to new one (#1775).
 
-
-0.21.7
+0.21.7 <../0.21.7>`_ - 2024-10-14
 ------
 Fixed
 ^^^^^
@@ -36,11 +39,7 @@ Added
 - Add POSIX Regex support for PostgreSQL and MySQL (#1714)
 - support app=None for tortoise.contrib.fastapi.RegisterTortoise (#1733)
 
-Changed
-^^^^^^^
-- Change old pydantic docs link to new one (#1775).
-
-0.21.6
+0.21.6 <../0.21.6>`_ - 2024-08-17
 ------
 Fixed
 ^^^^^

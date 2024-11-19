@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, cast
+from typing import TYPE_CHECKING, Callable, Optional, TypeVar, cast
 
 from tortoise import connections
 from tortoise.exceptions import ParamsError
@@ -7,7 +7,8 @@ from tortoise.exceptions import ParamsError
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient, TransactionContext
 
-FuncType = Callable[..., Any]
+T = TypeVar("T")
+FuncType = Callable[..., T]
 F = TypeVar("F", bound=FuncType)
 
 
@@ -52,7 +53,7 @@ def atomic(connection_name: Optional[str] = None) -> Callable[[F], F]:
 
     def wrapper(func: F) -> F:
         @wraps(func)
-        async def wrapped(*args, **kwargs):
+        async def wrapped(*args, **kwargs) -> T:
             async with in_transaction(connection_name):
                 return await func(*args, **kwargs)
 

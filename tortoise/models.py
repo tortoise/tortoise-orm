@@ -487,7 +487,7 @@ class MetaInfo:
 class ModelMeta(type):
     __slots__ = ()
 
-    def __new__(mcs, name: str, bases: Tuple[Type, ...], attrs: dict):
+    def __new__(mcs, name: str, bases: Tuple[Type, ...], attrs: dict) -> "ModelMeta":
         fields_db_projection: Dict[str, str] = {}
         fields_map: Dict[str, Field] = {}
         filters: Dict[str, FilterInfoDict] = {}
@@ -676,7 +676,7 @@ class Model(metaclass=ModelMeta):
             else:
                 setattr(self, key, deepcopy(field_object.default))
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key, value) -> None:
         # set field value override async default function
         if hasattr(self, "_await_when_save"):
             self._await_when_save.pop(key, None)
@@ -782,7 +782,7 @@ class Model(metaclass=ModelMeta):
             raise TypeError("Model instances without id are unhashable")
         return hash(self.pk)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[Tuple]:
         for field in self._meta.db_fields:
             yield field, getattr(self, field)
 
@@ -850,7 +850,7 @@ class Model(metaclass=ModelMeta):
         return self
 
     @classmethod
-    def register_listener(cls, signal: Signals, listener: Callable):
+    def register_listener(cls, signal: Signals, listener: Callable) -> None:
         """
         Register listener to current model class for special Signal.
 
@@ -1020,7 +1020,7 @@ class Model(metaclass=ModelMeta):
             setattr(self, field, getattr(obj, field, None))
 
     @classmethod
-    def _choose_db(cls, for_write: bool = False):
+    def _choose_db(cls, for_write: bool = False) -> BaseDBAsyncClient:
         """
         Return the connection that will be used if this query is executed now.
 

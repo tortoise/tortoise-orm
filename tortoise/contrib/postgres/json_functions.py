@@ -1,11 +1,9 @@
-import json
-import operator
-from typing import Any, Callable, Dict, List
+from typing import Callable, Dict, List
 
 from pypika.enums import JSONOperators
 from pypika.terms import BasicCriterion, Criterion, Term, ValueWrapper
 
-from tortoise.filters import is_null, not_equal, not_null
+from tortoise.filters import get_json_filter_operator, is_null, not_equal, not_null
 
 
 def postgres_json_contains(field: Term, value: str) -> Criterion:
@@ -47,18 +45,6 @@ def _create_json_criterion(items: List, field_term: Term, operator_: Callable, v
     )
 
 
-def _serialize_value(value: Any):
-    if type(value) in [dict, list]:
-        return json.dumps(value)
-    return value
-
-
 def postgres_json_filter(field: Term, value: Dict) -> Criterion:
-    ((key, filter_value),) = value.items()
-    filter_value = _serialize_value(filter_value)
-    key_parts = [int(item) if item.isdigit() else str(item) for item in key.split("__")]
-    operator_ = operator.eq
-    if key_parts[-1] in operator_keywords:
-        operator_ = operator_keywords[str(key_parts.pop(-1))]
-
+    key_parts, filter_value, operator_ = get_json_filter_operator(value, operator_keywords)
     return _create_json_criterion(key_parts, field, operator_, filter_value)
