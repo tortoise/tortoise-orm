@@ -508,7 +508,6 @@ class Tortoise:
         routers = config.get("routers", routers)  # type: ignore
 
         cls.table_name_generator = table_name_generator
-        print(f"{cls.table_name_generator=}")
 
         # Mask passwords in logs output
         passwords = []
