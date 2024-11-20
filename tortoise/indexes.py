@@ -18,7 +18,7 @@ class Index:
         *expressions: Term,
         fields: Optional[Tuple[str, ...]] = None,
         name: Optional[str] = None,
-    ):
+    ) -> None:
         """
         All kinds of index parent class, default is BTreeIndex.
 
@@ -38,7 +38,9 @@ class Index:
         self.expressions = expressions
         self.extra = ""
 
-    def get_sql(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool) -> str:
+    def get_sql(
+        self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool
+    ) -> str:
         if self.fields:
             fields = ", ".join(schema_generator.quote(f) for f in self.fields)
         else:
@@ -65,7 +67,7 @@ class PartialIndex(Index):
         fields: Optional[Tuple[str, ...]] = None,
         name: Optional[str] = None,
         condition: Optional[dict] = None,
-    ):
+    ) -> None:
         super().__init__(*expressions, fields=fields, name=name)
         if condition:
             cond = " WHERE "

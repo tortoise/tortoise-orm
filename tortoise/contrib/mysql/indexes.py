@@ -14,7 +14,7 @@ class FullTextIndex(Index):
         fields: Optional[Tuple[str, ...]] = None,
         name: Optional[str] = None,
         parser_name: Optional[str] = None,
-    ):
+    ) -> None:
         super().__init__(*expressions, fields=fields, name=name)
         if parser_name:
             self.extra = f" WITH PARSER {parser_name}"
