@@ -204,10 +204,13 @@ class Subquery(Term):
         self.query = query
 
     def get_sql(self, **kwargs: Any) -> str:
-        return self.query.as_query().get_sql(**kwargs)
+        self.query._choose_db_if_not_chosen()
+        return self.query._make_query(**kwargs)[0]
 
-    def as_(self, alias: str) -> "Selectable":  # type:ignore[override]
-        return self.query.as_query().as_(alias)
+    def as_(self, alias: str) -> "Selectable":  # type: ignore
+        self.query._choose_db_if_not_chosen()
+        self.query._make_query()
+        return self.query.query.as_(alias)
 
 
 class RawSQL(Term):
@@ -372,12 +375,9 @@ class Q:
                 encoded_value = (
                     param["value_encoder"](value, model, field_object)
                     if param.get("value_encoder")
-                    else model._meta.db.executor_class._field_to_db(field_object, value, model)
+                    else field_object.to_db_value(value, model)
                 )
             op = param["operator"]
-            # this is an ugly hack
-            if op == operator.eq:
-                encoded_value = model._meta.db.query_class._builder()._wrapper_cls(encoded_value)
             criterion = op(table[param["source_field"]], encoded_value)
         return criterion, join
 

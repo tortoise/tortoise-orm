@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pypika import Parameter
+from pypika import Parameter, Parameterizer
 
 from tortoise import Model
 from tortoise.backends.base_postgres.executor import BasePostgresExecutor
@@ -26,3 +26,7 @@ class PsycopgExecutor(BasePostgresExecutor):
 
     def parameter(self, pos: int) -> Parameter:
         return Parameter("%s")
+
+    @classmethod
+    def parameterizer(cls) -> Parameterizer:
+        return Parameterizer(placeholder_factory=lambda _: "%s")

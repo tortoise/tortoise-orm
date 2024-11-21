@@ -14,7 +14,12 @@ class TestCaseWhen(test.TestCase):
 
     async def test_single_when(self):
         category = Case(When(intnum__gte=8, then="big"), default="default")
-        sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
+        sql = (
+            IntFields.all()
+            .annotate(category=category)
+            .values("intnum", "category")
+            .sql(params_inline=True)
+        )
 
         dialect = self.db.schema_generator.DIALECT
         if dialect == "mysql":
@@ -27,7 +32,12 @@ class TestCaseWhen(test.TestCase):
         category = Case(
             When(intnum__gte=8, then="big"), When(intnum__lte=2, then="small"), default="default"
         )
-        sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
+        sql = (
+            IntFields.all()
+            .annotate(category=category)
+            .values("intnum", "category")
+            .sql(params_inline=True)
+        )
 
         dialect = self.db.schema_generator.DIALECT
         if dialect == "mysql":
@@ -38,7 +48,12 @@ class TestCaseWhen(test.TestCase):
 
     async def test_q_object_when(self):
         category = Case(When(Q(intnum__gt=2, intnum__lt=8), then="middle"), default="default")
-        sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
+        sql = (
+            IntFields.all()
+            .annotate(category=category)
+            .values("intnum", "category")
+            .sql(params_inline=True)
+        )
 
         dialect = self.db.schema_generator.DIALECT
         if dialect == "mysql":
@@ -49,7 +64,12 @@ class TestCaseWhen(test.TestCase):
 
     async def test_F_then(self):
         category = Case(When(intnum__gte=8, then=F("intnum_null")), default="default")
-        sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
+        sql = (
+            IntFields.all()
+            .annotate(category=category)
+            .values("intnum", "category")
+            .sql(params_inline=True)
+        )
 
         dialect = self.db.schema_generator.DIALECT
         if dialect == "mysql":
@@ -61,7 +81,12 @@ class TestCaseWhen(test.TestCase):
     async def test_AE_then(self):
         # AE: ArithmeticExpression
         category = Case(When(intnum__gte=8, then=F("intnum") + 1), default="default")
-        sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
+        sql = (
+            IntFields.all()
+            .annotate(category=category)
+            .values("intnum", "category")
+            .sql(params_inline=True)
+        )
 
         dialect = self.db.schema_generator.DIALECT
         if dialect == "mysql":
@@ -72,7 +97,12 @@ class TestCaseWhen(test.TestCase):
 
     async def test_func_then(self):
         category = Case(When(intnum__gte=8, then=Coalesce("intnum_null", 10)), default="default")
-        sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
+        sql = (
+            IntFields.all()
+            .annotate(category=category)
+            .values("intnum", "category")
+            .sql(params_inline=True)
+        )
 
         dialect = self.db.schema_generator.DIALECT
         if dialect == "mysql":
@@ -83,7 +113,12 @@ class TestCaseWhen(test.TestCase):
 
     async def test_F_default(self):
         category = Case(When(intnum__gte=8, then="big"), default=F("intnum_null"))
-        sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
+        sql = (
+            IntFields.all()
+            .annotate(category=category)
+            .values("intnum", "category")
+            .sql(params_inline=True)
+        )
 
         dialect = self.db.schema_generator.DIALECT
         if dialect == "mysql":
@@ -95,7 +130,12 @@ class TestCaseWhen(test.TestCase):
     async def test_AE_default(self):
         # AE: ArithmeticExpression
         category = Case(When(intnum__gte=8, then=8), default=F("intnum") + 1)
-        sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
+        sql = (
+            IntFields.all()
+            .annotate(category=category)
+            .values("intnum", "category")
+            .sql(params_inline=True)
+        )
 
         dialect = self.db.schema_generator.DIALECT
         if dialect == "mysql":
@@ -106,7 +146,12 @@ class TestCaseWhen(test.TestCase):
 
     async def test_func_default(self):
         category = Case(When(intnum__gte=8, then=8), default=Coalesce("intnum_null", 10))
-        sql = IntFields.all().annotate(category=category).values("intnum", "category").sql()
+        sql = (
+            IntFields.all()
+            .annotate(category=category)
+            .values("intnum", "category")
+            .sql(params_inline=True)
+        )
 
         dialect = self.db.schema_generator.DIALECT
         if dialect == "mysql":
@@ -124,7 +169,7 @@ class TestCaseWhen(test.TestCase):
             .annotate(category=category)
             .filter(category__in=["big", "small"])
             .values("intnum")
-            .sql()
+            .sql(params_inline=True)
         )
         dialect = self.db.schema_generator.DIALECT
         if dialect == "mysql":
@@ -139,7 +184,7 @@ class TestCaseWhen(test.TestCase):
             .annotate(intnum_plus_1=F("intnum") + 1)
             .annotate(bigger_than_10=Case(When(Q(intnum_plus_1__gte=10), then=True), default=False))
             .values("id", "intnum", "intnum_plus_1", "bigger_than_10")
-            .sql()
+            .sql(params_inline=True)
         )
 
         dialect = self.db.schema_generator.DIALECT
@@ -155,7 +200,7 @@ class TestCaseWhen(test.TestCase):
             .annotate(intnum_col=Coalesce("intnum", 0))
             .annotate(is_zero=Case(When(Q(intnum_col=0), then=True), default=False))
             .values("id", "intnum_col", "is_zero")
-            .sql()
+            .sql(params_inline=True)
         )
 
         dialect = self.db.schema_generator.DIALECT
@@ -172,7 +217,7 @@ class TestCaseWhen(test.TestCase):
             .annotate(count=Count("id"))
             .group_by("is_zero")
             .values("is_zero", "count")
-            .sql()
+            .sql(params_inline=True)
         )
 
         dialect = self.db.schema_generator.DIALECT
@@ -188,4 +233,4 @@ class TestCaseWhen(test.TestCase):
         with self.assertRaisesRegex(FieldError, "Unknown filter param 'unknown'.+"):
             IntFields.all().annotate(intnum_col=Coalesce("intnum", 0)).annotate(
                 is_zero=Case(When(Q(unknown=0), then="1"), default="2")
-            ).sql()
+            ).sql(params_inline=True)

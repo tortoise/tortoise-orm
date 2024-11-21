@@ -3,7 +3,6 @@ from decimal import Decimal
 from typing import Optional, Type, Union
 
 import pytz
-from pypika import Parameter
 
 from tortoise import Model, fields, timezone
 from tortoise.backends.base.executor import BaseExecutor
@@ -86,9 +85,6 @@ class SqliteExecutor(BaseExecutor):
     }
     EXPLAIN_PREFIX = "EXPLAIN QUERY PLAN"
     DB_NATIVE = {bytes, str, int, float}
-
-    def parameter(self, pos: int) -> Parameter:
-        return Parameter("?")
 
     async def _process_insert_result(self, instance: Model, results: int) -> None:
         pk_field_object = self.model._meta.pk

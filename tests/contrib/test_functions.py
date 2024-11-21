@@ -21,7 +21,7 @@ class TestFunction(test.TestCase):
     @test.requireCapability(dialect="mysql")
     async def test_mysql_func_rand_with_seed(self):
         sql = IntFields.all().annotate(randnum=Rand(0)).values("intnum", "randnum").sql()
-        expected_sql = "SELECT `intnum` `intnum`,RAND(0) `randnum` FROM `intfields`"
+        expected_sql = "SELECT `intnum` `intnum`,RAND(%s) `randnum` FROM `intfields`"
         self.assertEqual(sql, expected_sql)
 
     @test.requireCapability(dialect="postgres")

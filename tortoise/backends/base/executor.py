@@ -19,11 +19,12 @@ from typing import (
     cast,
 )
 
-from pypika import JoinType, Parameter, Query, Table
+from pypika import JoinType, Parameter, Table
 from pypika.queries import QueryBuilder
+from pypika.terms import Parameterizer
 
 from tortoise.exceptions import OperationalError
-from tortoise.expressions import Expression, RawSQL, ResolveContext
+from tortoise.expressions import Expression, ResolveContext
 from tortoise.fields.base import Field
 from tortoise.fields.relational import (
     BackwardFKRelation,
@@ -119,14 +120,17 @@ class BaseExecutor:
                 self.update_cache,
             ) = EXECUTOR_CACHE[key]
 
-    async def execute_explain(self, query: Query) -> Any:
-        sql = " ".join((self.EXPLAIN_PREFIX, query.get_sql()))  # type:ignore[attr-defined]
+    async def execute_explain(self, sql: str) -> Any:
+        sql = " ".join((self.EXPLAIN_PREFIX, sql))
         return (await self.db.execute_query(sql))[1]
 
     async def execute_select(
-        self, query: Union[Query, RawSQL], custom_fields: Optional[list] = None
+        self,
+        sql: str,
+        values: Optional[list] = None,
+        custom_fields: Optional[list] = None,
     ) -> list:
-        _, raw_results = await self.db.execute_query(query.get_sql())  # type:ignore[union-attr]
+        _, raw_results = await self.db.execute_query(sql, values)
         instance_list = []
         for row in raw_results:
             if self.select_related_idx:
@@ -167,14 +171,6 @@ class BaseExecutor:
         result_columns = [self.model._meta.fields_db_projection[c] for c in regular_columns]
         return regular_columns, result_columns
 
-    @classmethod
-    def _field_to_db(
-        cls, field_object: Field, attr: Any, instance: "Union[Type[Model], Model]"
-    ) -> Any:
-        if field_object.__class__ in cls.TO_DB_OVERRIDE:
-            return cls.TO_DB_OVERRIDE[field_object.__class__](field_object, attr, instance)
-        return field_object.to_db_value(attr, instance)
-
     def _prepare_insert_statement(
         self, columns: Sequence[str], has_generated: bool = True, ignore_conflicts: bool = False
     ) -> QueryBuilder:
@@ -194,7 +190,11 @@ class BaseExecutor:
         raise NotImplementedError()  # pragma: nocoverage
 
     def parameter(self, pos: int) -> Parameter:
-        raise NotImplementedError()  # pragma: nocoverage
+        return Parameter(idx=pos + 1)
+
+    @classmethod
+    def parameterizer(cls) -> Parameterizer:
+        return Parameterizer()
 
     async def execute_insert(self, instance: "Model") -> None:
         if not instance._custom_generated_pk:
@@ -256,14 +256,14 @@ class BaseExecutor:
         expressions = expressions or {}
         table = self.model._meta.basetable
         query = self.db.query_class.update(table)
-        count = 0
+        parameter_idx = 0
         for field in update_fields or self.model._meta.fields_db_projection.keys():
             db_column = self.model._meta.fields_db_projection[field]
             field_object = self.model._meta.fields_map[field]
             if not field_object.pk:
                 if field not in expressions.keys():
-                    query = query.set(db_column, self.parameter(count))
-                    count += 1
+                    query = query.set(db_column, self.parameter(parameter_idx))
+                    parameter_idx += 1
                 else:
                     value = (
                         expressions[field]
@@ -279,7 +279,7 @@ class BaseExecutor:
                     )
                     query = query.set(db_column, value)
 
-        query = query.where(table[self.model._meta.db_pk_column] == self.parameter(count))
+        query = query.where(table[self.model._meta.db_pk_column] == self.parameter(parameter_idx))
 
         sql = query.get_sql()
         if not expressions:
@@ -327,10 +327,8 @@ class BaseExecutor:
             if relation_field not in related_objects_for_fetch:
                 related_objects_for_fetch[relation_field] = []
             related_objects_for_fetch[relation_field].append(
-                self._field_to_db(
-                    instance._meta.fields_map[related_field_name],
-                    getattr(instance, related_field_name),
-                    instance,
+                instance._meta.fields_map[related_field_name].to_db_value(
+                    getattr(instance, related_field_name), instance
                 )
             )
 
@@ -372,10 +370,8 @@ class BaseExecutor:
             if relation_field not in related_objects_for_fetch:
                 related_objects_for_fetch[relation_field] = []
             related_objects_for_fetch[relation_field].append(
-                self._field_to_db(
-                    instance._meta.fields_map[related_field_name],
-                    getattr(instance, related_field_name),
-                    instance,
+                instance._meta.fields_map[related_field_name].to_db_value(
+                    getattr(instance, related_field_name), instance
                 )
             )
 
@@ -407,8 +403,7 @@ class BaseExecutor:
     ) -> "Iterable[Model]":
         to_attr, related_query = related_query
         instance_id_set: set = {
-            self._field_to_db(instance._meta.pk, instance.pk, instance)
-            for instance in instance_list
+            instance._meta.pk.to_db_value(instance.pk, instance) for instance in instance_list
         }
 
         field_object: ManyToManyFieldInstance = self.model._meta.fields_map[field]  # type: ignore
