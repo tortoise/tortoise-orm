@@ -4,18 +4,7 @@ import operator
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from enum import Enum, auto
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Iterator, Type, cast
 
 from pypika import Case as PypikaCase
 from pypika import Field as PypikaField
@@ -48,15 +37,15 @@ if TYPE_CHECKING:  # pragma: nocoverage
 class ResolveContext:
     model: Type["Model"]
     table: Table
-    annotations: Dict[str, Any]
-    custom_filters: Dict[str, FilterInfoDict]
+    annotations: dict[str, Any]
+    custom_filters: dict[str, FilterInfoDict]
 
 
 @dataclass
 class ResolveResult:
     term: Term
-    joins: List[TableCriterionTuple] = dataclass_field(default_factory=list)
-    output_field: Optional[Field] = None
+    joins: list[TableCriterionTuple] = dataclass_field(default_factory=list)
+    output_field: Field | None = None
 
 
 class Expression:
@@ -93,25 +82,25 @@ class CombinedExpression(Expression):
     def __init__(self, left: Expression, connector: Connector, right: Any) -> None:
         self.left = left
         self.connector = connector
-        self.right: Expression
-        if isinstance(right, Expression):
-            self.right = right
-        else:
-            self.right = Value(right)
+        self.right = right if isinstance(right, Expression) else Value(right)
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
         left = self.left.resolve(resolve_context)
         right = self.right.resolve(resolve_context)
+        left_output_field, right_output_field = left.output_field, right.output_field  # type: ignore
 
-        if left.output_field and right.output_field:  # type: ignore
-            if type(left.output_field) is not type(right.output_field):  # type: ignore
-                raise FieldError("Cannot use arithmetic expression between different field type")
+        if (
+            left_output_field
+            and right_output_field
+            and type(left_output_field) is not type(right_output_field)
+        ):
+            raise FieldError("Cannot use arithmetic expression between different field type")
 
         operator_func = getattr(operator, self.connector.name)
         return ResolveResult(
             term=operator_func(left.term, right.term),
             joins=list(set(left.joins + right.joins)),  # dedup joins
-            output_field=right.output_field or left.output_field,  # type: ignore
+            output_field=right_output_field or left_output_field,
         )
 
 
@@ -129,7 +118,7 @@ class F(Expression):
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
         term: Term = PypikaField(self.name)
-        joins: List[TableCriterionTuple] = []
+        joins: list[TableCriterionTuple] = []
         output_field = None
         if self.name.split("__")[0] in resolve_context.model._meta.fetch_fields:
             # field in the format of "related_field__field" or "related_field__another_rel_field__field"
@@ -158,7 +147,7 @@ class F(Expression):
             except KeyError:
                 raise FieldError(
                     f"There is no non-virtual field {self.name} on Model {resolve_context.model.__name__}"
-                )
+                ) from None
         return ResolveResult(term=term, output_field=output_field, joins=joins)
 
     def _combine(self, other: Any, connector: Connector, right_hand: bool) -> CombinedExpression:
@@ -260,9 +249,9 @@ class Q:
         if not all(isinstance(node, Q) for node in args):
             raise OperationalError("All ordered arguments must be Q nodes")
         #: Contains the sub-Q's that this Q is made up of
-        self.children: Tuple[Q, ...] = args
+        self.children: tuple[Q, ...] = args
         #: Contains the filters applied to this Q
-        self.filters: Dict[str, FilterInfoDict] = kwargs
+        self.filters: dict[str, FilterInfoDict] = kwargs
         if join_type not in {self.AND, self.OR}:
             raise OperationalError("join_type must be AND or OR")
         #: Specifies if this Q does an AND or OR on its children
@@ -357,7 +346,7 @@ class Q:
 
     def _process_filter_kwarg(
         self, model: "Type[Model]", key: str, value: Any, table: Table
-    ) -> Tuple[Criterion, Optional[Tuple[Table, Criterion]]]:
+    ) -> tuple[Criterion, tuple[Table, Criterion] | None]:
         join = None
 
         if value is None and f"{key}__isnull" in model._meta.filters:
@@ -408,7 +397,7 @@ class Q:
 
     def _get_actual_filter_params(
         self, resolve_context: ResolveContext, key: str, value: Table | FilterInfoDict
-    ) -> Tuple[str, Any]:
+    ) -> tuple[str, Any]:
         filter_key = key
         if (
             key in resolve_context.model._meta.fk_fields
@@ -513,13 +502,13 @@ class Function(Expression):
     populate_field_object = False
 
     def __init__(
-        self, field: Union[str, F, CombinedExpression, "Function"], *default_values: Any
+        self, field: str | F | CombinedExpression | "Function", *default_values: Any
     ) -> None:
         self.field = field
-        self.field_object: "Optional[Field]" = None
+        self.field_object: "Field | None" = None
         self.default_values = default_values
 
-    def _get_function_field(self, field: Union[Term, str], *default_values) -> PypikaFunction:
+    def _get_function_field(self, field: Term | str, *default_values) -> PypikaFunction:
         return self.database_func(field, *default_values)  # type:ignore[arg-type]
 
     def _resolve_nested_field(self, resolve_context: ResolveContext, field: str) -> ResolveResult:
@@ -549,26 +538,22 @@ class Function(Expression):
 
         default_values = self._resolve_default_values(resolve_context)
 
-        res = None
-        if isinstance(self.field, str):
-            function_arg = self._resolve_nested_field(resolve_context, self.field)
-            term = self._get_function_field(function_arg.term, *default_values)
-            res = ResolveResult(
-                term=term,
-                joins=function_arg.joins,
-                output_field=function_arg.output_field,  # type: ignore
-            )
-        else:
-            function_arg = self.field.resolve(resolve_context)
-            term = self._get_function_field(function_arg.term, *default_values)
-            res = ResolveResult(
-                term=term,
-                joins=function_arg.joins,
-                output_field=function_arg.output_field,  # type: ignore
-            )
+        function_arg = (
+            self._resolve_nested_field(resolve_context, self.field)
+            if isinstance(self.field, str)
+            else self.field.resolve(resolve_context)
+        )
+        term = self._get_function_field(function_arg.term, *default_values)
+        res = ResolveResult(
+            term=term,
+            joins=function_arg.joins,
+            output_field=function_arg.output_field,  # type:ignore[call-overload]
+        )
 
-        if self.populate_field_object and res.output_field:  # type: ignore
-            self.field_object = res.output_field  # type: ignore
+        if self.populate_field_object and (
+            res_output_field := res.output_field  # type:ignore[call-overload]
+        ):
+            self.field_object = res_output_field
 
         return res
 
@@ -586,17 +571,17 @@ class Aggregate(Function):
 
     def __init__(
         self,
-        field: Union[str, F, CombinedExpression],
+        field: str | F | CombinedExpression,
         *default_values: Any,
         distinct: bool = False,
-        _filter: Optional[Q] = None,
+        _filter: Q | None = None,
     ) -> None:
         super().__init__(field, *default_values)
         self.distinct = distinct
         self.filter = _filter
 
     def _get_function_field(  # type:ignore[override]
-        self, field: Union[ArithmeticExpression, PypikaField, str], *default_values
+        self, field: ArithmeticExpression | PypikaField | str, *default_values
     ) -> DistinctOptionFunction:
         function = cast(DistinctOptionFunction, self.database_func(field, *default_values))
         if self.distinct:
@@ -634,7 +619,7 @@ class When(Expression):
     def __init__(
         self,
         *args: Q,
-        then: Union[str, F, CombinedExpression, Function],
+        then: str | F | CombinedExpression | Function,
         negate: bool = False,
         **kwargs: Any,
     ) -> None:
@@ -643,7 +628,7 @@ class When(Expression):
         self.negate = negate
         self.kwargs = kwargs
 
-    def _resolve_q_objects(self) -> List[Q]:
+    def _resolve_q_objects(self) -> list[Q]:
         q_objects = []
         for arg in self.args:
             if not isinstance(arg, Q):
@@ -684,7 +669,9 @@ class Case(Expression):
     """
 
     def __init__(
-        self, *args: When, default: Union[str, F, CombinedExpression, Function, None] = None
+        self,
+        *args: When,
+        default: str | F | CombinedExpression | Function | None = None,
     ) -> None:
         self.args = args
         self.default = default

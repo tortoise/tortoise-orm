@@ -488,25 +488,26 @@ class Tortoise:
 
         if config_file:
             config = cls._get_config_from_config_file(config_file)
-
-        if db_url:
+        elif db_url:
             if not modules:
                 raise ConfigurationError('You must specify "db_url" and "modules" together')
             config = generate_config(db_url, modules)
+        else:
+            assert config is not None  # To improve type hints
 
         try:
-            connections_config = config["connections"]  # type: ignore
+            connections_config = config["connections"]
         except KeyError:
             raise ConfigurationError('Config must define "connections" section')
 
         try:
-            apps_config = config["apps"]  # type: ignore
+            apps_config = config["apps"]
         except KeyError:
             raise ConfigurationError('Config must define "apps" section')
 
-        use_tz = config.get("use_tz", use_tz)  # type: ignore
-        timezone = config.get("timezone", timezone)  # type: ignore
-        routers = config.get("routers", routers)  # type: ignore
+        use_tz = config.get("use_tz", use_tz)
+        timezone = config.get("timezone", timezone)
+        routers = config.get("routers", routers)
 
         cls.table_name_generator = table_name_generator
 

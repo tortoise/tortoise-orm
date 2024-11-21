@@ -16,7 +16,7 @@ class PostgreSQLIndex(PartialIndex):
         fields: Optional[Tuple[str, ...]] = None,
         name: Optional[str] = None,
         condition: Optional[dict] = None,
-    ):
+    ) -> None:
         super().__init__(*expressions, fields=fields, name=name)
         if condition:
             cond = " WHERE "
