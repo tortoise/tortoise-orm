@@ -122,7 +122,6 @@ class TestSQL(test.TestCase):
             expected = 'SELECT COUNT(*) FROM "intfields" WHERE "intnum"=?'
         self.assertEqual(sql, expected)
 
-    @test.skip("Update queries are not parameterized yet")
     def test_update(self):
         sql = IntFields.filter(intnum=2).update(intnum=1).sql()
         if self.dialect == "mysql":
@@ -134,4 +133,17 @@ class TestSQL(test.TestCase):
                 expected = 'UPDATE "intfields" SET "intnum"=$1 WHERE "intnum"=$2'
         else:
             expected = 'UPDATE "intfields" SET "intnum"=? WHERE "intnum"=?'
+        self.assertEqual(sql, expected)
+
+    def test_delete(self):
+        sql = IntFields.filter(intnum=2).delete().sql()
+        if self.dialect == "mysql":
+            expected = "DELETE FROM `intfields` WHERE `intnum`=%s"
+        elif self.dialect == "postgres":
+            if self.is_psycopg:
+                expected = 'DELETE FROM "intfields" WHERE "intnum"=%s'
+            else:
+                expected = 'DELETE FROM "intfields" WHERE "intnum"=$1'
+        else:
+            expected = 'DELETE FROM "intfields" WHERE "intnum"=?'
         self.assertEqual(sql, expected)

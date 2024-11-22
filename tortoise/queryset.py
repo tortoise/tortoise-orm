@@ -1197,7 +1197,6 @@ class UpdateQuery(AwaitableQuery):
         self._db = db
         self._limit = limit
         self._orderings = orderings
-        self.values: List[Any] = []
 
     def _make_query(self, **pypika_kwargs) -> Tuple[str, List[Any]]:
         table = self.model._meta.basetable
@@ -1209,7 +1208,6 @@ class UpdateQuery(AwaitableQuery):
         self.resolve_filters()
         # Need to get executor to get correct column_map
         executor = self._db.executor_class(model=self.model, db=self._db)
-        parameter_idx = 0
         for key, value in self.update_kwargs.items():
             field_object = self.model._meta.fields_map.get(key)
             if not field_object:
@@ -1240,13 +1238,9 @@ class UpdateQuery(AwaitableQuery):
                     ).term
                 else:
                     value = executor.column_map[key](value, None)
-            if isinstance(value, Term):
-                self.query = self.query.set(db_field, value)
-            else:
-                self.query = self.query.set(db_field, executor.parameter(parameter_idx))
-                self.values.append(value)
-                parameter_idx += 1
-        return self.query.get_sql(), self.values
+
+            self.query = self.query.set(db_field, value)
+        return self._parametrize_query(self.query, **pypika_kwargs)
 
     def __await__(self) -> Generator[Any, None, int]:
         self._choose_db_if_not_chosen(True)
@@ -1295,7 +1289,7 @@ class DeleteQuery(AwaitableQuery):
             )
         self.resolve_filters()
         self.query._delete_from = True
-        return self.query.get_sql(), []
+        return self._parametrize_query(self.query, **pypika_kwargs)
 
     def __await__(self) -> Generator[Any, None, int]:
         self._choose_db_if_not_chosen(True)
