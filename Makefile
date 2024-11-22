@@ -79,7 +79,7 @@ docs: deps
 _style:
 	isort -src $(checkfiles)
 	black $(checkfiles)
-style: _style deps
+style: deps _style
 
 build: deps
 	rm -fR dist/
