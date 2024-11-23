@@ -147,3 +147,21 @@ class TestSQL(test.TestCase):
         else:
             expected = 'DELETE FROM "intfields" WHERE "intnum"=?'
         self.assertEqual(sql, expected)
+
+    async def test_bulk_update(self):
+        obj1 = await IntFields.create(intnum=1)
+        obj2 = await IntFields.create(intnum=2)
+        obj1.intnum = obj1.intnum + 1
+        obj2.intnum = obj2.intnum + 1
+        sql = IntFields.bulk_update([obj1, obj2], fields=["intnum"]).sql()
+
+        if self.dialect == "mysql":
+            expected = "UPDATE `intfields` SET `intnum`=CASE WHEN `id`=%s THEN %s WHEN `id`=%s THEN %s END WHERE `id` IN (%s,%s)"
+        elif self.dialect == "postgres":
+            if self.is_psycopg:
+                expected = 'UPDATE "intfields" SET "intnum"=CASE WHEN "id"=%s THEN CAST(%s AS INT) WHEN "id"=%s THEN CAST(%s AS INT) END WHERE "id" IN (%s,%s)'
+            else:
+                expected = 'UPDATE "intfields" SET "intnum"=CASE WHEN "id"=$1 THEN CAST($2 AS INT) WHEN "id"=$3 THEN CAST($4 AS INT) END WHERE "id" IN ($5,$6)'
+        else:
+            expected = 'UPDATE "intfields" SET "intnum"=CASE WHEN "id"=? THEN ? WHEN "id"=? THEN ? END WHERE "id" IN (?,?)'
+        self.assertEqual(sql, expected)

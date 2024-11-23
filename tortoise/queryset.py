@@ -1869,14 +1869,15 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
                 case = Case()
                 pk_list = []
                 for obj in objects_item:
-                    value = executor.column_map[pk_attr](obj.pk, None)
-                    field_value = obj._meta.fields_map[field].to_db_value(getattr(obj, field), obj)
+                    pk_value = executor.column_map[pk_attr](obj.pk, None)
+                    field_obj = obj._meta.fields_map[field]
+                    field_value = field_obj.to_db_value(getattr(obj, field), obj)
                     case.when(
-                        pk == value,
+                        pk == pk_value,
                         (
                             Cast(
                                 self.query._wrapper_cls(field_value),
-                                obj._meta.fields_map[field].get_for_dialect(
+                                field_obj.get_for_dialect(
                                     self._db.schema_generator.DIALECT, "SQL_TYPE"
                                 ),
                             )
@@ -1884,11 +1885,11 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
                             else self.query._wrapper_cls(field_value)
                         ),
                     )
-                    pk_list.append(value)
+                    pk_list.append(pk_value)
                 query = query.set(field, case)
                 query = query.where(pk.isin(pk_list))
             self._queries.append(query)
-        return [(query.get_sql(), []) for query in self._queries]
+        return [self._parametrize_query(query) for query in self._queries]
 
     async def _execute_many(self, queries_with_params: List[Tuple[str, List[Any]]]) -> int:
         count = 0
