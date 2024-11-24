@@ -2658,11 +2658,15 @@ name = "pypika-tortoise"
 version = "0.3.0"
 description = "Forked from pypika and streamline just for tortoise-orm"
 optional = false
-python-versions = "<4.0,>=3.8"
-files = [
-    {file = "pypika_tortoise-0.3.0-py3-none-any.whl", hash = "sha256:c374a09591cdb24828d1c28bd0dfcfa2916094f4d3561a65c965b2549aa7c52f"},
-    {file = "pypika_tortoise-0.3.0.tar.gz", hash = "sha256:9bfb796e15ff8b395355ff42d9c4a4146fd716d3cbf9679391ac3a1c06d0e56a"},
-]
+python-versions = "^3.8"
+files = []
+develop = false
+
+[package.source]
+type = "git"
+url = "https://github.com/henadzit/pypika-tortoise.git"
+reference = "fix/query-copying"
+resolved_reference = "87a948c66fabae3e8b444ce29ec26dcf54c756df"
 
 [[package]]
 name = "pytest"
@@ -3855,4 +3859,4 @@ psycopg = ["psycopg"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "e39d83526d00453748662852417b58c5a4f3d6e326671493125b79cad305f801"
+content-hash = "5625f100a8e65812643f1fb01ac3b90a986b9463ccf7bb1f0b0fa3c32cbf27a5"
