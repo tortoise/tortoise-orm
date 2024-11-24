@@ -1915,8 +1915,6 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         "_batch_size",
         "_db",
         "_executor",
-        "_insert_query",
-        "_insert_query_all",
         "_update_fields",
         "_on_conflict",
     )
@@ -1939,37 +1937,35 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
         self._update_fields = update_fields
         self._on_conflict = on_conflict
 
-    def _make_queries(self) -> None:
+    def _make_queries(self) -> Tuple[str, str]:
         self._executor = self._db.executor_class(model=self.model, db=self._db)
         if self._ignore_conflicts or self._update_fields:
             _, columns = self._executor._prepare_insert_columns()
-            self._insert_query = self._executor._prepare_insert_statement(
+            insert_query = self._executor._prepare_insert_statement(
                 columns, ignore_conflicts=self._ignore_conflicts
             )
-            self._insert_query_all = self._insert_query
+            insert_query_all = insert_query
             if self.model._meta.generated_db_fields:
                 _, columns_all = self._executor._prepare_insert_columns(include_generated=True)
-                self._insert_query_all = self._executor._prepare_insert_statement(
+                insert_query_all = self._executor._prepare_insert_statement(
                     columns_all,
                     has_generated=False,
                     ignore_conflicts=self._ignore_conflicts,
                 )
             if self._update_fields:
                 alias = f"new_{self.model._meta.db_table}"
-                self._insert_query_all = self._insert_query_all.as_(alias).on_conflict(
-                    *self._on_conflict
-                )  # type:ignore[misc]
-                self._insert_query = self._insert_query.as_(alias).on_conflict(
-                    *self._on_conflict
-                )  # type:ignore[misc]
+                insert_query_all = insert_query_all.as_(alias).on_conflict(
+                    *(self._on_conflict or [])
+                )
+                insert_query = insert_query.as_(alias).on_conflict(*(self._on_conflict or []))
                 for update_field in self._update_fields:
-                    self._insert_query_all = self._insert_query_all.do_update(update_field)
-                    self._insert_query = self._insert_query.do_update(update_field)
+                    insert_query_all = insert_query_all.do_update(update_field)
+                    insert_query = insert_query.do_update(update_field)
+            return insert_query.get_sql(), insert_query_all.get_sql()
         else:
-            self._insert_query_all = self._executor.insert_query_all  # type:ignore[assignment]
-            self._insert_query = self._executor.insert_query  # type:ignore[assignment]
+            return self._executor.insert_query, self._executor.insert_query_all
 
-    async def _execute_many(self) -> None:
+    async def _execute_many(self, insert_sql: str, insert_sql_all: str) -> None:
         for instance_chunk in chunk(self._objects, self._batch_size):
             values_lists_all = []
             values_lists = []
@@ -1993,18 +1989,23 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
                         ]
                     )
             if values_lists_all:
-                await self._db.execute_many(str(self._insert_query_all), values_lists_all)
+                await self._db.execute_many(insert_sql_all, values_lists_all)
             if values_lists:
-                await self._db.execute_many(str(self._insert_query), values_lists)
+                await self._db.execute_many(insert_sql, values_lists)
 
     def __await__(self) -> Generator[Any, None, None]:
         self._choose_db_if_not_chosen(True)
-        self._make_queries()
-        return self._execute_many().__await__()
+        insert_sql, insert_sql_all = self._make_queries()
+        return self._execute_many(insert_sql, insert_sql_all).__await__()
 
     def sql(self, params_inline=False) -> str:
         self._choose_db_if_not_chosen()
-        self._make_queries()
-        if self._insert_query and self._insert_query_all:
-            return ";".join([str(self._insert_query), str(self._insert_query_all)])
-        return str(self._insert_query or self._insert_query_all)
+        insert_sql, insert_sql_all = self._make_queries()
+
+        if all(o._custom_generated_pk for o in self._objects):
+            return insert_sql_all
+
+        if all(not o._custom_generated_pk for o in self._objects):
+            return insert_sql
+
+        return ";".join([insert_sql, insert_sql_all])
