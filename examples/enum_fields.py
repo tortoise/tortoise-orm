@@ -1,7 +1,8 @@
 from enum import Enum, IntEnum
+from typing import Type, cast
 
 from tortoise import Tortoise, fields, run_async
-from tortoise.fields.data import IntEnumFieldMixin, IntField
+from tortoise.fields.data import IntEnumFieldMixin, IntEnumType, IntField
 from tortoise.models import Model
 
 
@@ -19,21 +20,23 @@ class Currency(str, Enum):
 
 class Protocol(IntEnum):
     A = 10000
-    B = 80000
+    B = 80000  # >32767, beyond the value range of fields.IntEnumField
 
 
-class Int32EnumInstance(IntEnumFieldMixin, IntField):
+class IntEnumInstance(IntEnumFieldMixin, IntField):
     pass
 
 
-def Int32EnumField(enum_type, **kwargs):
-    return Int32EnumInstance(enum_type, **kwargs)
+def IntEnumField(enum_type: Type[IntEnumType], **kwargs) -> IntEnumType:
+    return cast(IntEnumType, IntEnumInstance(enum_type, **kwargs))
 
 
 class EnumFields(Model):
-    service: Service = fields.IntEnumField(Service)
     currency: Currency = fields.CharEnumField(Currency, default=Currency.HUF)
-    protocol: Protocol = Int32EnumField(Protocol)
+    # When each value of the enum_type is between [-32768, 32767], use the fields.IntEnumField
+    service: Service = fields.IntEnumField(Service)
+    # Else, you can use a custom Field
+    protocol: Protocol = IntEnumField(Protocol)
 
 
 async def run():

@@ -9,6 +9,13 @@ Changelog
 0.22
 ====
 
+0.22.1
+------
+
+Added
+^^^^^
+- Add IntEnumFieldMixin to make it easy to Custom IntEnumField (#1781)
+
 0.22.0
 ------
 Fixed

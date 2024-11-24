@@ -1,9 +1,10 @@
 from enum import IntEnum
 
+from examples.enum_fields import IntEnumField as CustomIntEnumField
 from tests import testmodels
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError, IntegrityError
-from tortoise.fields import CharEnumField, IntEnumField
+from tortoise.fields import CharEnumField, IntEnumField, IntField
 
 
 class BadIntEnum1(IntEnum):
@@ -20,6 +21,12 @@ class BadIntEnum2(IntEnum):
 
 class BadIntEnumIfGenerated(IntEnum):
     python_programming = -1
+    database_design = 2
+    system_administration = 3
+
+
+class BadCustomIntEnum(IntEnum):
+    python_programming = IntField.VALUE_RANGE[1] + 1
     database_design = 2
     system_administration = 3
 
@@ -117,6 +124,11 @@ class TestIntEnumFields(test.TestCase):
     def test_manual_description(self):
         fld = IntEnumField(testmodels.Service, description="foo")
         self.assertEqual(fld.description, "foo")
+
+    def test_custom_int_enum_field(self):
+        assert CustomIntEnumField(BadIntEnum1)
+        with self.assertRaises(ConfigurationError):
+            CustomIntEnumField(BadCustomIntEnum)
 
 
 class TestCharEnumFields(test.TestCase):
