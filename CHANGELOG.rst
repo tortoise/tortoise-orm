@@ -14,6 +14,7 @@ Changelog
 Fixed
 ^^^^^
 - Fix unable to use ManyToManyField if OneToOneField passed as Primary Key (#1783)
+- Fix sorting by Term (e.g. RawSQL) (#1788)
 
 0.22.0
 ------
