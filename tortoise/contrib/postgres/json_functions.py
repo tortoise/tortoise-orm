@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import operator
-from typing import Callable
+from typing import Callable, Tuple, cast
 
 from pypika.enums import JSONOperators
 from pypika.functions import Cast
 from pypika.terms import BasicCriterion, Criterion, Term, ValueWrapper
 
 from tortoise.filters import (
-    get_json_filter_operator,
     between_and,
     contains,
     ends_with,
@@ -21,6 +20,7 @@ from tortoise.filters import (
     extract_second_equal,
     extract_week_equal,
     extract_year_equal,
+    get_json_filter_operator,
     insensitive_contains,
     insensitive_ends_with,
     insensitive_exact,
@@ -42,16 +42,16 @@ def postgres_json_contained_by(field: Term, value: str) -> Criterion:
     return BasicCriterion(JSONOperators.CONTAINED_BY, field, ValueWrapper(value))
 
 
-operator_keywords = {
+operator_keywords: dict[str, Callable[..., Criterion]] = {
     "not": not_equal,
     "isnull": is_null,
     "not_isnull": not_null,
     "in": is_in,
     "not_in": not_in,
-    "gte": operator.ge,
-    "gt": operator.gt,
-    "lte": operator.le,
-    "lt": operator.lt,
+    "gte": cast(Callable[..., Criterion], operator.ge),
+    "gt": cast(Callable[..., Criterion], operator.gt),
+    "lte": cast(Callable[..., Criterion], operator.le),
+    "lt": cast(Callable[..., Criterion], operator.lt),
     "range": between_and,
     "contains": contains,
     "startswith": starts_with,
@@ -85,10 +85,15 @@ def _get_json_criterion(items: list):
 
 
 def _create_json_criterion(items: list, field_term: Term, operator_: Callable, value: str):
+    criteria: Tuple[Criterion, str]
     if len(items) == 1:
         term = items.pop(0)
         criteria = (
-            BasicCriterion(JSONOperators.GET_TEXT_VALUE, field_term, ValueWrapper(term, allow_parametrize=False)),
+            BasicCriterion(
+                JSONOperators.GET_TEXT_VALUE,
+                field_term,
+                ValueWrapper(term, allow_parametrize=False),
+            ),
             value,
         )
     else:
@@ -109,6 +114,9 @@ def _create_json_criterion(items: list, field_term: Term, operator_: Callable, v
         extract_year_equal,
     ]:
         criteria = Cast(criteria[0], "timestamp"), criteria[1]
+
+    if operator_ in [operator.gt, operator.ge, operator.lt, operator.le, between_and]:
+        criteria = Cast(criteria[0], "numeric"), criteria[1]
 
     return operator_(*criteria)
 
