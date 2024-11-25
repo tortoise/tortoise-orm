@@ -230,7 +230,7 @@ class AwaitableQuery(Generic[MODEL]):
                 )
             elif field_name in annotations:
                 if isinstance(annotation := annotations[field_name], Term):
-                    term = annotations
+                    term: Term = annotation
                 else:
                     annotation_info = annotation.resolve(
                         ResolveContext(
