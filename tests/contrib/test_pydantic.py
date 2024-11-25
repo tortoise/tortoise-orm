@@ -68,11 +68,16 @@ class TestPydantic(test.TestCase):
             self.Event_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Address_coqnj7_leaf": {
+                    "Address_e4rhju_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
                             "street": {"maxLength": 128, "title": "Street", "type": "string"},
+                            "m2mwitho2opks": {
+                                "items": {"$ref": "#/$defs/M2mWithO2oPk_leajz6_leaf"},
+                                "title": "M2Mwitho2Opks",
+                                "type": "array",
+                            },
                             "event_id": {
                                 "maximum": 9223372036854775807,
                                 "minimum": -9223372036854775808,
@@ -80,8 +85,23 @@ class TestPydantic(test.TestCase):
                                 "type": "integer",
                             },
                         },
-                        "required": ["city", "street", "event_id"],
+                        "required": ["city", "street", "event_id", "m2mwitho2opks"],
                         "title": "Address",
+                        "type": "object",
+                    },
+                    "M2mWithO2oPk_leajz6_leaf": {
+                        "additionalProperties": False,
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": -2147483648,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"maxLength": 64, "title": "Name", "type": "string"},
+                        },
+                        "required": ["id", "name"],
+                        "title": "M2mWithO2oPk",
                         "type": "object",
                     },
                     "Reporter_fgnv33_leaf": {
@@ -202,7 +222,7 @@ class TestPydantic(test.TestCase):
                     },
                     "address": {
                         "anyOf": [
-                            {"$ref": "#/$defs/Address_coqnj7_leaf"},
+                            {"$ref": "#/$defs/Address_e4rhju_leaf"},
                             {"type": "null"},
                         ],
                         "nullable": True,
@@ -229,7 +249,7 @@ class TestPydantic(test.TestCase):
             self.Event_Pydantic_List.model_json_schema(),
             {
                 "$defs": {
-                    "Event_padfez": {
+                    "Event_mfxmwb": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -282,7 +302,7 @@ class TestPydantic(test.TestCase):
                             },
                             "address": {
                                 "anyOf": [
-                                    {"$ref": "#/$defs/Address_coqnj7_leaf"},
+                                    {"$ref": "#/$defs/Address_e4rhju_leaf"},
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -302,11 +322,16 @@ class TestPydantic(test.TestCase):
                         "title": "Event",
                         "type": "object",
                     },
-                    "Address_coqnj7_leaf": {
+                    "Address_e4rhju_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
                             "street": {"maxLength": 128, "title": "Street", "type": "string"},
+                            "m2mwitho2opks": {
+                                "items": {"$ref": "#/$defs/M2mWithO2oPk_leajz6_leaf"},
+                                "title": "M2Mwitho2Opks",
+                                "type": "array",
+                            },
                             "event_id": {
                                 "maximum": 9223372036854775807,
                                 "minimum": -9223372036854775808,
@@ -314,8 +339,23 @@ class TestPydantic(test.TestCase):
                                 "type": "integer",
                             },
                         },
-                        "required": ["city", "street", "event_id"],
+                        "required": ["city", "street", "event_id", "m2mwitho2opks"],
                         "title": "Address",
+                        "type": "object",
+                    },
+                    "M2mWithO2oPk_leajz6_leaf": {
+                        "additionalProperties": False,
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": -2147483648,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"maxLength": 64, "title": "Name", "type": "string"},
+                        },
+                        "required": ["id", "name"],
+                        "title": "M2mWithO2oPk",
                         "type": "object",
                     },
                     "Reporter_fgnv33_leaf": {
@@ -392,7 +432,7 @@ class TestPydantic(test.TestCase):
                     },
                 },
                 "description": "Events on the calendar",
-                "items": {"$ref": "#/$defs/Event_padfez"},
+                "items": {"$ref": "#/$defs/Event_mfxmwb"},
                 "title": "Event_list",
                 "type": "array",
             },
@@ -465,6 +505,21 @@ class TestPydantic(test.TestCase):
                             "token",
                         ],
                         "title": "Event",
+                        "type": "object",
+                    },
+                    "M2mWithO2oPk_leajz6_leaf": {
+                        "additionalProperties": False,
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": -2147483648,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"maxLength": 64, "title": "Name", "type": "string"},
+                        },
+                        "required": ["id", "name"],
+                        "title": "M2mWithO2oPk",
                         "type": "object",
                     },
                     "Reporter_fgnv33_leaf": {
@@ -544,6 +599,11 @@ class TestPydantic(test.TestCase):
                 "properties": {
                     "city": {"maxLength": 64, "title": "City", "type": "string"},
                     "street": {"maxLength": 128, "title": "Street", "type": "string"},
+                    "m2mwitho2opks": {
+                        "items": {"$ref": "#/$defs/M2mWithO2oPk_leajz6_leaf"},
+                        "title": "M2Mwitho2Opks",
+                        "type": "array",
+                    },
                     "event": {"$ref": "#/$defs/Event_zvunzw_leaf"},
                     "event_id": {
                         "maximum": 9223372036854775807,
@@ -552,7 +612,7 @@ class TestPydantic(test.TestCase):
                         "type": "integer",
                     },
                 },
-                "required": ["city", "street", "event", "event_id"],
+                "required": ["city", "street", "event", "event_id", "m2mwitho2opks"],
                 "title": "Address",
                 "type": "object",
             },
@@ -563,7 +623,7 @@ class TestPydantic(test.TestCase):
             self.Tournament_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_jgrv4c_leaf": {
+                    "Event_ln6p2q_leaf": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -612,7 +672,7 @@ class TestPydantic(test.TestCase):
                             },
                             "address": {
                                 "anyOf": [
-                                    {"$ref": "#/$defs/Address_coqnj7_leaf"},
+                                    {"$ref": "#/$defs/Address_e4rhju_leaf"},
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -631,11 +691,16 @@ class TestPydantic(test.TestCase):
                         "title": "Event",
                         "type": "object",
                     },
-                    "Address_coqnj7_leaf": {
+                    "Address_e4rhju_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
                             "street": {"maxLength": 128, "title": "Street", "type": "string"},
+                            "m2mwitho2opks": {
+                                "items": {"$ref": "#/$defs/M2mWithO2oPk_leajz6_leaf"},
+                                "title": "M2Mwitho2Opks",
+                                "type": "array",
+                            },
                             "event_id": {
                                 "maximum": 9223372036854775807,
                                 "minimum": -9223372036854775808,
@@ -643,8 +708,23 @@ class TestPydantic(test.TestCase):
                                 "type": "integer",
                             },
                         },
-                        "required": ["city", "street", "event_id"],
+                        "required": ["city", "street", "event_id", "m2mwitho2opks"],
                         "title": "Address",
+                        "type": "object",
+                    },
+                    "M2mWithO2oPk_leajz6_leaf": {
+                        "additionalProperties": False,
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": -2147483648,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"maxLength": 64, "title": "Name", "type": "string"},
+                        },
+                        "required": ["id", "name"],
+                        "title": "M2mWithO2oPk",
                         "type": "object",
                     },
                     "Reporter_fgnv33_leaf": {
@@ -711,7 +791,7 @@ class TestPydantic(test.TestCase):
                     },
                     "events": {
                         "description": "What tournaments is a happenin'",
-                        "items": {"$ref": "#/$defs/Event_jgrv4c_leaf"},
+                        "items": {"$ref": "#/$defs/Event_ln6p2q_leaf"},
                         "title": "Events",
                         "type": "array",
                     },
@@ -727,7 +807,7 @@ class TestPydantic(test.TestCase):
             self.Team_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "Event_n2kadx_leaf": {
+                    "Event_lfs4vy_leaf": {
                         "additionalProperties": False,
                         "description": "Events on the calendar",
                         "properties": {
@@ -775,7 +855,7 @@ class TestPydantic(test.TestCase):
                             },
                             "address": {
                                 "anyOf": [
-                                    {"$ref": "#/$defs/Address_coqnj7_leaf"},
+                                    {"$ref": "#/$defs/Address_e4rhju_leaf"},
                                     {"type": "null"},
                                 ],
                                 "nullable": True,
@@ -794,11 +874,16 @@ class TestPydantic(test.TestCase):
                         "title": "Event",
                         "type": "object",
                     },
-                    "Address_coqnj7_leaf": {
+                    "Address_e4rhju_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "city": {"maxLength": 64, "title": "City", "type": "string"},
                             "street": {"maxLength": 128, "title": "Street", "type": "string"},
+                            "m2mwitho2opks": {
+                                "items": {"$ref": "#/$defs/M2mWithO2oPk_leajz6_leaf"},
+                                "title": "M2Mwitho2Opks",
+                                "type": "array",
+                            },
                             "event_id": {
                                 "maximum": 9223372036854775807,
                                 "minimum": -9223372036854775808,
@@ -806,8 +891,23 @@ class TestPydantic(test.TestCase):
                                 "type": "integer",
                             },
                         },
-                        "required": ["city", "street", "event_id"],
+                        "required": ["city", "street", "event_id", "m2mwitho2opks"],
                         "title": "Address",
+                        "type": "object",
+                    },
+                    "M2mWithO2oPk_leajz6_leaf": {
+                        "additionalProperties": False,
+                        "properties": {
+                            "id": {
+                                "maximum": 2147483647,
+                                "minimum": -2147483648,
+                                "title": "Id",
+                                "type": "integer",
+                            },
+                            "name": {"maxLength": 64, "title": "Name", "type": "string"},
+                        },
+                        "required": ["id", "name"],
+                        "title": "M2mWithO2oPk",
                         "type": "object",
                     },
                     "Reporter_fgnv33_leaf": {
@@ -874,7 +974,7 @@ class TestPydantic(test.TestCase):
                         "title": "Alias",
                     },
                     "events": {
-                        "items": {"$ref": "#/$defs/Event_n2kadx_leaf"},
+                        "items": {"$ref": "#/$defs/Event_lfs4vy_leaf"},
                         "title": "Events",
                         "type": "array",
                     },
@@ -918,6 +1018,7 @@ class TestPydantic(test.TestCase):
                     "address": {
                         "event_id": self.address.pk,
                         "city": "Santa Monica",
+                        "m2mwitho2opks": [],
                         "street": "Ocean",
                     },
                 },
@@ -970,7 +1071,12 @@ class TestPydantic(test.TestCase):
                     {"id": self.team1.id, "name": "Onesies", "alias": None},
                     {"id": self.team2.id, "name": "T-Shirts", "alias": None},
                 ],
-                "address": {"event_id": self.address.pk, "city": "Santa Monica", "street": "Ocean"},
+                "address": {
+                    "event_id": self.address.pk,
+                    "city": "Santa Monica",
+                    "m2mwitho2opks": [],
+                    "street": "Ocean",
+                },
             },
         )
 
@@ -1004,6 +1110,7 @@ class TestPydantic(test.TestCase):
                     "alias": None,
                 },
                 "event_id": self.address.event_id,
+                "m2mwitho2opks": [],
             },
         )
 
@@ -1040,6 +1147,7 @@ class TestPydantic(test.TestCase):
                         "address": {
                             "event_id": self.address.pk,
                             "city": "Santa Monica",
+                            "m2mwitho2opks": [],
                             "street": "Ocean",
                         },
                     },
@@ -1093,6 +1201,7 @@ class TestPydantic(test.TestCase):
                         "address": {
                             "event_id": self.address.pk,
                             "city": "Santa Monica",
+                            "m2mwitho2opks": [],
                             "street": "Ocean",
                         },
                     },

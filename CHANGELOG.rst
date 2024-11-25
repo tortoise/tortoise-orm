@@ -9,6 +9,12 @@ Changelog
 0.22
 ====
 
+0.22.1
+------
+Fixed
+^^^^^
+- Fix unable to use ManyToManyField if OneToOneField passed as Primary Key (#1783)
+
 0.22.0
 ------
 Fixed

@@ -4,12 +4,16 @@ from typing import TYPE_CHECKING, Any, List, Set, Type, Union, cast
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields import JSONField, TextField, UUIDField
+from tortoise.fields.relational import OneToOneFieldInstance
 from tortoise.indexes import Index
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
-    from tortoise.fields.relational import ForeignKeyFieldInstance  # noqa
-    from tortoise.fields.relational import ManyToManyFieldInstance
+    from tortoise.fields import Field
+    from tortoise.fields.relational import (
+        ForeignKeyFieldInstance,
+        ManyToManyFieldInstance,
+    )
     from tortoise.models import Model
 
 # pylint: disable=R0201
@@ -185,6 +189,13 @@ class BaseSchemaGenerator:
             index_name=self._generate_index_name("uid", model, field_names),
             fields=", ".join([self.quote(f) for f in field_names]),
         )
+
+    def _get_pk_field_sql_type(self, pk_field: "Field") -> str:
+        if isinstance(pk_field, OneToOneFieldInstance):
+            return self._get_pk_field_sql_type(pk_field.related_model._meta.pk)
+        if sql_type := pk_field.get_for_dialect(self.DIALECT, "SQL_TYPE"):
+            return sql_type
+        raise ConfigurationError(f"Can't get SQL type of {pk_field} for {self.DIALECT}")
 
     def _get_table_sql(self, model: "Type[Model]", safe: bool = True) -> dict:
         fields_to_create = []
@@ -380,17 +391,17 @@ class BaseSchemaGenerator:
                 )
             exists = "IF NOT EXISTS " if safe else ""
             table_name = field_object.through
+            backward_type = self._get_pk_field_sql_type(model._meta.pk)
+            forward_type = self._get_pk_field_sql_type(field_object.related_model._meta.pk)
             m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
                 exists=exists,
                 table_name=table_name,
                 backward_fk=backward_fk,
                 forward_fk=forward_fk,
                 backward_key=backward_key,
-                backward_type=model._meta.pk.get_for_dialect(self.DIALECT, "SQL_TYPE"),
+                backward_type=backward_type,
                 forward_key=forward_key,
-                forward_type=field_object.related_model._meta.pk.get_for_dialect(
-                    self.DIALECT, "SQL_TYPE"
-                ),
+                forward_type=forward_type,
                 extra=self._table_generate_extra(table=field_object.through),
                 comment=(
                     self._table_comment_generator(
