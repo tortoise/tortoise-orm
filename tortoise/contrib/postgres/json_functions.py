@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from datetime import date, datetime
+from decimal import Decimal
 import operator
-from typing import Callable, Tuple, cast
+from typing import Any, Callable, Tuple, cast
 
 from pypika.enums import JSONOperators
 from pypika.functions import Cast
@@ -72,33 +74,37 @@ operator_keywords: dict[str, Callable[..., Criterion]] = {
 }
 
 
-def _get_json_criterion(items: list):
-    if len(items) == 2:
-        left = items.pop(0)
-        right = items.pop(0)
+def _get_json_path(key_parts: list[str | int]) -> Criterion:
+    """
+    Recursively build a JSON path from a list of key parts, e.g. ['a', 'b', 'c'] -> 'a'->'b'->>'c'
+    """
+    if len(key_parts) == 2:
+        left = key_parts.pop(0)
+        right = key_parts.pop(0)
         return BasicCriterion(JSONOperators.GET_TEXT_VALUE, ValueWrapper(left), ValueWrapper(right))
 
-    left = items.pop(0)
+    left = key_parts.pop(0)
     return BasicCriterion(
-        JSONOperators.GET_JSON_VALUE, ValueWrapper(left), _get_json_criterion(items)
+        JSONOperators.GET_JSON_VALUE, ValueWrapper(left), _get_json_path(key_parts)
     )
 
 
-def _create_json_criterion(items: list, field_term: Term, operator_: Callable, value: str):
+def _create_json_criterion(
+    key_parts: list[str | int], field_term: Term, operator_: Callable, value: Any
+):
     criteria: Tuple[Criterion, str]
-    if len(items) == 1:
-        term = items.pop(0)
+    if len(key_parts) == 1:
         criteria = (
             BasicCriterion(
                 JSONOperators.GET_TEXT_VALUE,
                 field_term,
-                ValueWrapper(term, allow_parametrize=False),
+                ValueWrapper(key_parts.pop(0)),
             ),
             value,
         )
     else:
         criteria = (
-            BasicCriterion(JSONOperators.GET_JSON_VALUE, field_term, _get_json_criterion(items)),
+            BasicCriterion(JSONOperators.GET_JSON_VALUE, field_term, _get_json_path(key_parts)),
             value,
         )
 
@@ -112,10 +118,15 @@ def _create_json_criterion(items: list, field_term: Term, operator_: Callable, v
         extract_second_equal,
         extract_week_equal,
         extract_year_equal,
-    ]:
+    ] or isinstance(value, (date, datetime)):
         criteria = Cast(criteria[0], "timestamp"), criteria[1]
-
-    if operator_ in [operator.gt, operator.ge, operator.lt, operator.le, between_and]:
+    elif operator_ in [
+        operator.gt,
+        operator.ge,
+        operator.lt,
+        operator.le,
+        between_and,
+    ] or type(value) in (int, float, Decimal):
         criteria = Cast(criteria[0], "numeric"), criteria[1]
 
     return operator_(*criteria)
