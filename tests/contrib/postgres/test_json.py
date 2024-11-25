@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from tests.testmodels import JSONFields
 from tortoise.contrib import test
+from tortoise.exceptions import DoesNotExist
 
 
 @test.requireCapability(dialect="postgres")
@@ -35,6 +36,9 @@ class TestPostgresJSON(test.TestCase):
         self.assertEqual(await self.get_by_data_filter(val__in=["word1", "word2"]), self.obj)
         self.assertEqual(await self.get_by_data_filter(val__not_in=["word3", "word4"]), self.obj)
 
+        with self.assertRaises(DoesNotExist):
+            await self.get_by_data_filter(val__in=["doesnotexist"])
+
     async def test_json_defaults(self):
         self.assertEqual(await self.get_by_data_filter(val__not="word2"), self.obj)
         self.assertEqual(await self.get_by_data_filter(val__isnull=False), self.obj)
@@ -48,12 +52,18 @@ class TestPostgresJSON(test.TestCase):
         self.assertEqual(await self.get_by_data_filter(int_val__lte=200), self.obj)
         self.assertEqual(await self.get_by_data_filter(int_val__range=[100, 200]), self.obj)
 
+        with self.assertRaises(DoesNotExist):
+            await self.get_by_data_filter(int_val__gt=1000)
+
     async def test_json_float_comparisons(self):
         self.assertEqual(await self.get_by_data_filter(float_val__gt=100.0), self.obj)
         self.assertEqual(await self.get_by_data_filter(float_val__gte=100.0), self.obj)
         self.assertEqual(await self.get_by_data_filter(float_val__lt=200.0), self.obj)
         self.assertEqual(await self.get_by_data_filter(float_val__lte=200.0), self.obj)
         self.assertEqual(await self.get_by_data_filter(float_val__range=[100.0, 200.0]), self.obj)
+
+        with self.assertRaises(DoesNotExist):
+            await self.get_by_data_filter(int_val__gt=1000.0)
 
     async def test_json_string_comparisons(self):
         self.assertEqual(await self.get_by_data_filter(val__contains="ord"), self.obj)
@@ -63,6 +73,9 @@ class TestPostgresJSON(test.TestCase):
         self.assertEqual(await self.get_by_data_filter(val__endswith="rd1"), self.obj)
         self.assertEqual(await self.get_by_data_filter(val__iendswith="Rd1"), self.obj)
         self.assertEqual(await self.get_by_data_filter(val__iexact="wOrD1"), self.obj)
+
+        with self.assertRaises(DoesNotExist):
+            await self.get_by_data_filter(val__contains="doesnotexist")
 
     async def test_date_comparisons(self):
         self.assertEqual(
@@ -78,6 +91,13 @@ class TestPostgresJSON(test.TestCase):
             await self.get_by_data_filter(date_val__second=Decimal("59.123456")), self.obj
         )
         self.assertEqual(await self.get_by_data_filter(date_val__microsecond=59123456), self.obj)
+
+    async def test_json_list(self):
+        self.assertEqual(await self.get_by_data_filter(int_list__0__gt=0), self.obj)
+        self.assertEqual(await self.get_by_data_filter(int_list__0__lt=2), self.obj)
+
+        with self.assertRaises(DoesNotExist):
+            await self.get_by_data_filter(int_list__0__range=(20, 30))
 
     async def test_nested(self):
         self.assertEqual(await self.get_by_data_filter(nested__val="word2"), self.obj)

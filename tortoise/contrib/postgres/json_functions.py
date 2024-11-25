@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import operator
 from datetime import date, datetime
 from decimal import Decimal
-import operator
 from typing import Any, Callable, Tuple, cast
 
 from pypika.enums import JSONOperators
@@ -81,12 +81,22 @@ def _get_json_path(key_parts: list[str | int]) -> Criterion:
     if len(key_parts) == 2:
         left = key_parts.pop(0)
         right = key_parts.pop(0)
-        return BasicCriterion(JSONOperators.GET_TEXT_VALUE, ValueWrapper(left), ValueWrapper(right))
+        return BasicCriterion(
+            JSONOperators.GET_TEXT_VALUE, _wrap_key_part(left), _wrap_key_part(right)
+        )
 
     left = key_parts.pop(0)
     return BasicCriterion(
         JSONOperators.GET_JSON_VALUE, ValueWrapper(left), _get_json_path(key_parts)
     )
+
+
+def _wrap_key_part(key_part: str | int) -> Term:
+    if isinstance(key_part, int):
+        # Letting Postgres know that the parameter is an integer, otherwise,
+        # it will fail with a type error.
+        return Cast(ValueWrapper(key_part), "int")
+    return ValueWrapper(key_part)
 
 
 def _create_json_criterion(
@@ -98,7 +108,7 @@ def _create_json_criterion(
             BasicCriterion(
                 JSONOperators.GET_TEXT_VALUE,
                 field_term,
-                ValueWrapper(key_parts.pop(0)),
+                _wrap_key_part(key_parts.pop(0)),
             ),
             value,
         )
@@ -126,7 +136,9 @@ def _create_json_criterion(
         operator.lt,
         operator.le,
         between_and,
-    ] or type(value) in (int, float, Decimal):
+    ] or type(
+        value
+    ) in (int, float, Decimal):
         criteria = Cast(criteria[0], "numeric"), criteria[1]
 
     return operator_(*criteria)
