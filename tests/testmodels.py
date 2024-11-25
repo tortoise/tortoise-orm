@@ -151,6 +151,20 @@ class Address(Model):
     )
 
 
+class M2mWithO2oPk(Model):
+    name = fields.CharField(max_length=64)
+    address: fields.ManyToManyRelation["Address"] = fields.ManyToManyField("models.Address")
+
+
+class O2oPkModelWithM2m(Model):
+    author: fields.OneToOneRelation[Author] = fields.OneToOneField(
+        "models.Author",
+        on_delete=fields.CASCADE,
+        primary_key=True,
+    )
+    nodes: fields.ManyToManyRelation["Node"] = fields.ManyToManyField("models.Node")
+
+
 class Dest_null(Model):
     name = fields.CharField(max_length=64)
 

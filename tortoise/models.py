@@ -614,7 +614,9 @@ class ModelMeta(type):
         meta.pk_attr = pk_attr
         meta.pk = fields_map.get(pk_attr)  # type: ignore
         if meta.pk:
-            meta.db_pk_column = meta.pk.source_field or meta.pk_attr
+            meta.db_pk_column = meta.pk.source_field or (
+                meta.pk_attr + "_id" * isinstance(meta.pk, OneToOneFieldInstance)
+            )
         meta._inited = False
         if not fields_map:
             meta.abstract = True
