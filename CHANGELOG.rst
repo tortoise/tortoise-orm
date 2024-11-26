@@ -11,15 +11,14 @@ Changelog
 
 0.22.1
 ------
-
 Fixed
 ^^^^^
 - Fix unable to use ManyToManyField if OneToOneField passed as Primary Key (#1783)
 - Fix sorting by Term (e.g. RawSQL) (#1788)
 
-Changed
-^^^^^^^
-- Change IntEnumField sql type from small int to int (#1781)
+Added
+^^^^^
+- Add IntEnumFieldMixin to make it easy to Custom IntEnumField (#1781)
 
 0.22.0
 ------

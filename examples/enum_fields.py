@@ -20,15 +20,15 @@ class Currency(str, Enum):
 
 class Protocol(IntEnum):
     A = 10000
-    B = 80000  # >32767, beyond the value range of fields.IntEnumField
+    B = 80000  # >32767, beyond the 'le' value in fields.IntEnumFieldInstance.constraints
 
 
-class IntEnumInstance(IntEnumFieldMixin, IntField):
+class IntEnumFieldInstance(IntEnumFieldMixin, IntField):
     pass
 
 
 def IntEnumField(enum_type: Type[IntEnumType], **kwargs) -> IntEnumType:
-    return cast(IntEnumType, IntEnumInstance(enum_type, **kwargs))
+    return cast(IntEnumType, IntEnumFieldInstance(enum_type, **kwargs))
 
 
 class EnumFields(Model):

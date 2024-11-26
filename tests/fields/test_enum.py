@@ -4,7 +4,7 @@ from examples.enum_fields import IntEnumField as CustomIntEnumField
 from tests import testmodels
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError, IntegrityError
-from tortoise.fields import CharEnumField, IntEnumField, IntField
+from tortoise.fields import CharEnumField, IntEnumField
 
 
 class BadIntEnum1(IntEnum):
@@ -26,7 +26,7 @@ class BadIntEnumIfGenerated(IntEnum):
 
 
 class BadCustomIntEnum(IntEnum):
-    python_programming = IntField.VALUE_RANGE[1] + 1
+    python_programming = 2147483648
     database_design = 2
     system_administration = 3
 

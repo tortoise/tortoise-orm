@@ -6,7 +6,7 @@ import json
 import warnings
 from decimal import Decimal
 from enum import Enum, IntEnum
-from typing import TYPE_CHECKING, Any, Callable, Type, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, Callable, Optional, Type, TypeVar, Union, cast
 from uuid import UUID, uuid4
 
 from pypika import functions
@@ -75,17 +75,19 @@ class IntField(Field[int], int):
     """
 
     SQL_TYPE = "INT"
-    VALUE_RANGE = (-2147483648, 2147483647)
     allows_generated = True
 
-    def __init__(self, primary_key: bool | None = None, **kwargs: Any) -> None:
+    def __init__(self, primary_key: Optional[bool] = None, **kwargs: Any) -> None:
         if primary_key or kwargs.get("pk"):
             kwargs["generated"] = bool(kwargs.get("generated", True))
         super().__init__(primary_key=primary_key, **kwargs)
 
     @property
     def constraints(self) -> dict:
-        return {"ge": self.VALUE_RANGE[0], "le": self.VALUE_RANGE[1]}
+        return {
+            "ge": -2147483648,
+            "le": 2147483647,
+        }
 
     class _db_postgres:
         GENERATED_SQL = "SERIAL NOT NULL PRIMARY KEY"
@@ -112,7 +114,13 @@ class BigIntField(IntField):
     """
 
     SQL_TYPE = "BIGINT"
-    VALUE_RANGE = (-9223372036854775808, 9223372036854775807)
+
+    @property
+    def constraints(self) -> dict:
+        return {
+            "ge": -9223372036854775808,
+            "le": 9223372036854775807,
+        }
 
     class _db_postgres:
         GENERATED_SQL = "BIGSERIAL NOT NULL PRIMARY KEY"
@@ -137,7 +145,13 @@ class SmallIntField(IntField):
     """
 
     SQL_TYPE = "SMALLINT"
-    VALUE_RANGE = (-32768, 32767)
+
+    @property
+    def constraints(self) -> dict:
+        return {
+            "ge": -32768,
+            "le": 32767,
+        }
 
     class _db_postgres:
         GENERATED_SQL = "SMALLSERIAL NOT NULL PRIMARY KEY"
@@ -178,7 +192,7 @@ class CharField(Field[str]):
         }
 
     @property
-    def SQL_TYPE(self) -> str:  # type:ignore[override]
+    def SQL_TYPE(self) -> str:  # type: ignore
         return f"VARCHAR({self.max_length})"
 
     class _db_oracle:
@@ -190,7 +204,7 @@ class CharField(Field[str]):
             return f"NVARCHAR2({self.field.max_length})"
 
 
-class TextField(Field[str], str):  # type:ignore[misc]
+class TextField(Field[str], str):  # type: ignore
     """
     Large Text field.
     """
@@ -200,7 +214,7 @@ class TextField(Field[str], str):  # type:ignore[misc]
 
     def __init__(
         self,
-        primary_key: bool | None = None,
+        primary_key: Optional[bool] = None,
         unique: bool = False,
         db_index: bool = False,
         **kwargs: Any,
@@ -273,13 +287,13 @@ class DecimalField(Field[Decimal], Decimal):
         self.decimal_places = decimal_places
         self.quant = Decimal("1" if decimal_places == 0 else f"1.{('0' * decimal_places)}")
 
-    def to_python_value(self, value: Any) -> Decimal | None:
+    def to_python_value(self, value: Any) -> Optional[Decimal]:
         if value is not None:
             value = Decimal(value).quantize(self.quant).normalize()
         return value
 
     @property
-    def SQL_TYPE(self) -> str:  # type:ignore[override]
+    def SQL_TYPE(self) -> str:  # type: ignore
         return f"DECIMAL({self.max_digits},{self.decimal_places})"
 
     class _db_sqlite:
@@ -332,7 +346,7 @@ class DatetimeField(Field[datetime.datetime], datetime.datetime):
         self.auto_now = auto_now
         self.auto_now_add = auto_now | auto_now_add
 
-    def to_python_value(self, value: Any) -> datetime.datetime | None:
+    def to_python_value(self, value: Any) -> Optional[datetime.datetime]:
         if value is not None:
             if isinstance(value, datetime.datetime):
                 value = value
@@ -347,8 +361,8 @@ class DatetimeField(Field[datetime.datetime], datetime.datetime):
         return value
 
     def to_db_value(
-        self, value: DatetimeFieldQueryValueType | None, instance: "Type[Model] | Model"
-    ) -> DatetimeFieldQueryValueType | None:
+        self, value: Optional[DatetimeFieldQueryValueType], instance: "Union[Type[Model], Model]"
+    ) -> Optional[DatetimeFieldQueryValueType]:
         # Only do this if it is a Model instance, not class. Test for guaranteed instance var
         if hasattr(instance, "_saved_in_db") and (
             self.auto_now
@@ -391,14 +405,14 @@ class DateField(Field[datetime.date], datetime.date):
     skip_to_python_if_native = True
     SQL_TYPE = "DATE"
 
-    def to_python_value(self, value: Any) -> datetime.date | None:
+    def to_python_value(self, value: Any) -> Optional[datetime.date]:
         if value is not None and not isinstance(value, datetime.date):
             value = parse_datetime(value).date()
         return value
 
     def to_db_value(
-        self, value: datetime.date | str | None, instance: "Type[Model] | Model"
-    ) -> datetime.date | None:
+        self, value: Optional[Union[datetime.date, str]], instance: "Union[Type[Model], Model]"
+    ) -> Optional[datetime.date]:
         if value is not None and not isinstance(value, datetime.date):
             value = parse_datetime(value).date()
         self.validate(value)
@@ -423,7 +437,7 @@ class TimeField(Field[datetime.time], datetime.time):
         self.auto_now = auto_now
         self.auto_now_add = auto_now | auto_now_add
 
-    def to_python_value(self, value: Any) -> datetime.time | datetime.timedelta | None:
+    def to_python_value(self, value: Any) -> Optional[Union[datetime.time, datetime.timedelta]]:
         if value is not None:
             if isinstance(value, str):
                 value = datetime.time.fromisoformat(value)
@@ -435,9 +449,9 @@ class TimeField(Field[datetime.time], datetime.time):
 
     def to_db_value(
         self,
-        value: datetime.time | datetime.timedelta | None,
-        instance: "Type[Model] | Model",
-    ) -> datetime.time | datetime.timedelta | None:
+        value: Optional[Union[datetime.time, datetime.timedelta]],
+        instance: "Union[Type[Model], Model]",
+    ) -> Optional[Union[datetime.time, datetime.timedelta]]:
         # Only do this if it is a Model instance, not class. Test for guaranteed instance var
         if hasattr(instance, "_saved_in_db") and (
             self.auto_now
@@ -478,14 +492,14 @@ class TimeDeltaField(Field[datetime.timedelta]):
     class _db_oracle:
         SQL_TYPE = "NUMBER(19)"
 
-    def to_python_value(self, value: Any) -> datetime.timedelta | None:
+    def to_python_value(self, value: Any) -> Optional[datetime.timedelta]:
         if value is None or isinstance(value, datetime.timedelta):
             return value
         return datetime.timedelta(microseconds=value)
 
     def to_db_value(
-        self, value: datetime.timedelta | None, instance: "Type[Model] | Model"
-    ) -> int | None:
+        self, value: Optional[datetime.timedelta], instance: "Union[Type[Model], Model]"
+    ) -> Optional[int]:
         self.validate(value)
 
         if value is None:
@@ -507,7 +521,7 @@ class FloatField(Field[float], float):
         SQL_TYPE = "DOUBLE"
 
 
-class JSONField(Field[T], dict, list):  # type:ignore[misc]
+class JSONField(Field[T], dict, list):  # type: ignore
     """
     JSON field.
 
@@ -557,9 +571,9 @@ class JSONField(Field[T], dict, list):  # type:ignore[misc]
 
     def to_db_value(
         self,
-        value: T | dict | list | str | bytes | None,
-        instance: "Type[Model] | Model",
-    ) -> str | None:
+        value: Optional[Union[T, dict, list, str, bytes]],
+        instance: "Union[Type[Model], Model]",
+    ) -> Optional[str]:
         self.validate(value)
         if value is None:
             return None
@@ -584,8 +598,8 @@ class JSONField(Field[T], dict, list):  # type:ignore[misc]
         return self.encoder(value)
 
     def to_python_value(
-        self, value: T | str | bytes | dict | list | None
-    ) -> T | dict | list | None:
+        self, value: Optional[Union[T, str, bytes, dict, list]]
+    ) -> Optional[Union[T, dict, list]]:
         if isinstance(value, (str, bytes)):
             try:
                 data = self.decoder(value)
@@ -622,20 +636,20 @@ class UUIDField(Field[UUID], UUID):
         SQL_TYPE = "UUID"
 
     def __init__(self, **kwargs: Any) -> None:
-        if (kwargs.get("primary_key") or kwargs.get("pk")) and "default" not in kwargs:
+        if (kwargs.get("primary_key") or kwargs.get("pk", False)) and "default" not in kwargs:
             kwargs["default"] = uuid4
         super().__init__(**kwargs)
 
-    def to_db_value(self, value: Any, instance: "Type[Model] | Model") -> str | None:
+    def to_db_value(self, value: Any, instance: "Union[Type[Model], Model]") -> Optional[str]:
         return value and str(value)
 
-    def to_python_value(self, value: Any) -> UUID | None:
+    def to_python_value(self, value: Any) -> Optional[UUID]:
         if value is None or isinstance(value, UUID):
             return value
         return UUID(value)
 
 
-class BinaryField(Field[bytes], bytes):  # type:ignore[misc]
+class BinaryField(Field[bytes], bytes):  # type: ignore
     """
     Binary field.
 
@@ -658,18 +672,18 @@ class BinaryField(Field[bytes], bytes):  # type:ignore[misc]
 
 class IntEnumFieldMixin:
     validate: Callable
-    VALUE_RANGE: tuple[int, int]
+    constraints: dict[str, int]
 
     def __init__(
         self,
         enum_type: Type[IntEnum],
-        description: str | None = None,
+        description: Optional[str] = None,
         generated: bool = False,
         **kwargs: Any,
     ) -> None:
         # Validate values
-        minimum = 1 if generated else self.VALUE_RANGE[0]
-        maximum = self.VALUE_RANGE[1]
+        minimum = 1 if generated else self.constraints["ge"]
+        maximum = self.constraints["le"]
         for item in enum_type:
             try:
                 value = int(item.value)
@@ -690,15 +704,15 @@ class IntEnumFieldMixin:
         )  # type:ignore[call-arg]
         self.enum_type = enum_type
 
-    def to_python_value(self, value: int | None) -> IntEnum | None:
+    def to_python_value(self, value: Union[int, None]) -> Union[IntEnum, None]:
         return self.enum_type(value) if value is not None else None
 
     def to_db_value(
-        self, value: IntEnum | int | None, instance: "Type[Model] | Model"
-    ) -> int | None:
+        self, value: Union[IntEnum, None, int], instance: "Union[Type[Model], Model]"
+    ) -> Union[int, None]:
         if isinstance(value, IntEnum):
-            value = int(self.enum_type(value.value))
-        elif isinstance(value, int):
+            value = int(value.value)
+        if isinstance(value, int):
             value = int(self.enum_type(value))
         self.validate(value)
         return value
@@ -713,7 +727,7 @@ class IntEnumFieldInstance(IntEnumFieldMixin, SmallIntField):
 
 def IntEnumField(
     enum_type: Type[IntEnumType],
-    description: str | None = None,
+    description: Optional[str] = None,
     **kwargs: Any,
 ) -> IntEnumType:
     """
@@ -740,7 +754,7 @@ class CharEnumFieldInstance(CharField):
     def __init__(
         self,
         enum_type: Type[Enum],
-        description: str | None = None,
+        description: Optional[str] = None,
         max_length: int = 0,
         **kwargs: Any,
     ) -> None:
@@ -758,10 +772,12 @@ class CharEnumFieldInstance(CharField):
         super().__init__(description=description, max_length=max_length, **kwargs)
         self.enum_type = enum_type
 
-    def to_python_value(self, value: str | None) -> Enum | None:
+    def to_python_value(self, value: Union[str, None]) -> Union[Enum, None]:
         return self.enum_type(value) if value is not None else None
 
-    def to_db_value(self, value: Enum | str | None, instance: "Type[Model] | Model") -> str | None:
+    def to_db_value(
+        self, value: Union[Enum, None, str], instance: "Union[Type[Model], Model]"
+    ) -> Union[str, None]:
         self.validate(value)
         if isinstance(value, Enum):
             return str(value.value)
@@ -775,7 +791,7 @@ CharEnumType = TypeVar("CharEnumType", bound=Enum)
 
 def CharEnumField(
     enum_type: Type[CharEnumType],
-    description: str | None = None,
+    description: Optional[str] = None,
     max_length: int = 0,
     **kwargs: Any,
 ) -> CharEnumType:
