@@ -575,6 +575,11 @@ class TestQueryset(test.TestCase):
         )
         self.assertEqual(data[0] + 1, data[1])
 
+    async def test_annotate_order_rawsql(self):
+        qs = IntFields.annotate(idp=RawSQL("id+1")).order_by("-idp")
+        data = await qs.first().values_list("id", "idp")
+        self.assertEqual(data[0] + 1, data[1])
+
     async def test_annotate_expression_filter(self):
         count = await IntFields.annotate(intnum1=F("intnum") + 1).filter(intnum1__gt=30).count()
         self.assertEqual(count, 23)
