@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import operator
 from functools import partial
 from typing import (
@@ -368,8 +367,6 @@ def get_json_filter_operator(
     value: dict[str, Any], operator_keywords: dict[str, Callable[..., Criterion]]
 ) -> tuple[list[str | int], Any, Callable[..., Criterion]]:
     ((key, filter_value),) = value.items()
-    if type(filter_value) in (dict, list):
-        filter_value = json.dumps(filter_value)
     key_parts = [int(item) if item.isdigit() else str(item) for item in key.split("__")]
     operator_ = (
         operator_keywords[str(key_parts.pop(-1))]
