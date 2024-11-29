@@ -16,6 +16,10 @@ Fixed
 - Fix unable to use ManyToManyField if OneToOneField passed as Primary Key (#1783)
 - Fix sorting by Term (e.g. RawSQL) (#1788)
 
+Added
+^^^^^
+- Added type validation for foreign key fields to ensure type safety. Now raises ``FieldError`` when assigning foreign key values with incorrect model types (#1792)
+
 0.22.0
 ------
 Fixed
