@@ -16,6 +16,10 @@ Fixed
 - Fix unable to use ManyToManyField if OneToOneField passed as Primary Key (#1783)
 - Fix sorting by Term (e.g. RawSQL) (#1788)
 
+Added
+^^^^^
+- Add IntEnumFieldMixin to make it easy to Custom IntEnumField (#1781)
+
 0.22.0
 ------
 Fixed

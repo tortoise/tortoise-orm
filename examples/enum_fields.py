@@ -1,6 +1,8 @@
 from enum import Enum, IntEnum
+from typing import Type, cast
 
 from tortoise import Tortoise, fields, run_async
+from tortoise.fields.data import IntEnumFieldMixin, IntEnumType, IntField
 from tortoise.models import Model
 
 
@@ -16,18 +18,36 @@ class Currency(str, Enum):
     USD = "USD"
 
 
+class Protocol(IntEnum):
+    A = 10000
+    B = 80000  # >32767, beyond the 'le' value in fields.IntEnumFieldInstance.constraints
+
+
+class IntEnumFieldInstance(IntEnumFieldMixin, IntField):
+    pass
+
+
+def IntEnumField(enum_type: Type[IntEnumType], **kwargs) -> IntEnumType:
+    return cast(IntEnumType, IntEnumFieldInstance(enum_type, **kwargs))
+
+
 class EnumFields(Model):
-    service: Service = fields.IntEnumField(Service)
     currency: Currency = fields.CharEnumField(Currency, default=Currency.HUF)
+    # When each value of the enum_type is between [-32768, 32767], use the fields.IntEnumField
+    service: Service = fields.IntEnumField(Service)
+    # Else, you can use a custom Field
+    protocol: Protocol = IntEnumField(Protocol)
 
 
 async def run():
     await Tortoise.init(db_url="sqlite://:memory:", modules={"models": ["__main__"]})
     await Tortoise.generate_schemas()
 
-    obj0 = await EnumFields.create(service=Service.python_programming, currency=Currency.USD)
+    obj0 = await EnumFields.create(
+        service=Service.python_programming, currency=Currency.USD, protocol=Protocol.A
+    )
     # also you can use valid int and str value directly
-    await EnumFields.create(service=1, currency="USD")
+    await EnumFields.create(service=1, currency="USD", protocol=Protocol.B.value)
 
     try:
         # invalid enum value will raise ValueError

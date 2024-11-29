@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import datetime
 import functools
 import json
 import warnings
 from decimal import Decimal
 from enum import Enum, IntEnum
-from typing import TYPE_CHECKING, Any, Callable, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Type, TypeVar, Union, cast
 from uuid import UUID, uuid4
 
 from pypika import functions
@@ -668,7 +670,10 @@ class BinaryField(Field[bytes], bytes):  # type: ignore
         SQL_TYPE = "VARBINARY(MAX)"
 
 
-class IntEnumFieldInstance(SmallIntField):
+class IntEnumFieldMixin:
+    validate: Callable
+    constraints: dict[str, int]
+
     def __init__(
         self,
         enum_type: Type[IntEnum],
@@ -677,27 +682,30 @@ class IntEnumFieldInstance(SmallIntField):
         **kwargs: Any,
     ) -> None:
         # Validate values
-        minimum = 1 if generated else -32768
+        minimum = 1 if generated else self.constraints["ge"]
+        maximum = self.constraints["le"]
         for item in enum_type:
             try:
                 value = int(item.value)
             except ValueError:
                 raise ConfigurationError("IntEnumField only supports integer enums!")
-            if not minimum <= value < 32768:
+            if not minimum <= value <= maximum:
+                # To extend value range, see: https://tortoise.github.io/examples/basic.html#enumeration-fields
                 raise ConfigurationError(
-                    "The valid range of IntEnumField's values is {}..32767!".format(minimum)
+                    f"The valid range of IntEnumField's values is {minimum}..{maximum}!"
                 )
 
         # Automatic description for the field if not specified by the user
         if description is None:
             description = "\n".join([f"{e.name}: {int(e.value)}" for e in enum_type])[:2048]
 
-        super().__init__(description=description, **kwargs)
+        super().__init__(
+            description=description, generated=generated, **kwargs
+        )  # type:ignore[call-arg]
         self.enum_type = enum_type
 
     def to_python_value(self, value: Union[int, None]) -> Union[IntEnum, None]:
-        value = self.enum_type(value) if value is not None else None
-        return value
+        return self.enum_type(value) if value is not None else None
 
     def to_db_value(
         self, value: Union[IntEnum, None, int], instance: "Union[Type[Model], Model]"
@@ -711,6 +719,10 @@ class IntEnumFieldInstance(SmallIntField):
 
 
 IntEnumType = TypeVar("IntEnumType", bound=IntEnum)
+
+
+class IntEnumFieldInstance(IntEnumFieldMixin, SmallIntField):
+    pass
 
 
 def IntEnumField(
@@ -735,7 +747,7 @@ def IntEnumField(
         of "name: value" pairs.
 
     """
-    return IntEnumFieldInstance(enum_type, description, **kwargs)  # type: ignore
+    return cast("IntEnumType", IntEnumFieldInstance(enum_type, description, **kwargs))
 
 
 class CharEnumFieldInstance(CharField):
@@ -805,4 +817,4 @@ def CharEnumField(
 
     """
 
-    return CharEnumFieldInstance(enum_type, description, max_length, **kwargs)  # type: ignore
+    return cast("CharEnumType", CharEnumFieldInstance(enum_type, description, max_length, **kwargs))
