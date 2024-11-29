@@ -30,6 +30,7 @@ from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import (
     ConfigurationError,
     DoesNotExist,
+    FieldError,
     IncompleteInstanceError,
     IntegrityError,
     ObjectDoesNotExistError,
@@ -698,6 +699,14 @@ class Model(metaclass=ModelMeta):
                 if value and not value._saved_in_db:
                     raise OperationalError(
                         f"You should first call .save() on {value} before referring to it"
+                    )
+                if type(value) is not meta.fields_map[key].related_model:
+                    expected_model = meta.fields_map[key].related_model.__name__
+                    received_model = type(value).__name__
+                    raise FieldError(
+                        f"Invalid type for foreign key '{key}'. "
+                        f"Expected model type '{expected_model}', but got '{received_model}'. "
+                        f"Make sure you're using the correct model class for this relationship."
                     )
                 setattr(self, key, value)
                 passed_fields.add(meta.fields_map[key].source_field)
