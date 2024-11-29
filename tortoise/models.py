@@ -700,7 +700,7 @@ class Model(metaclass=ModelMeta):
                     raise OperationalError(
                         f"You should first call .save() on {value} before referring to it"
                     )
-                if type(value) is not meta.fields_map[key].related_model:
+                if value and type(value) is not meta.fields_map[key].related_model:
                     expected_model = meta.fields_map[key].related_model.__name__
                     received_model = type(value).__name__
                     raise FieldError(
