@@ -1,6 +1,11 @@
 from tests import testmodels
 from tortoise.contrib import test
-from tortoise.exceptions import IntegrityError, NoValuesFetched, OperationalError
+from tortoise.exceptions import (
+    FieldError,
+    IntegrityError,
+    NoValuesFetched,
+    OperationalError,
+)
 from tortoise.queryset import QuerySet
 
 
@@ -151,6 +156,11 @@ class TestForeignKeyField(test.TestCase):
         tour = await testmodels.Tournament.create(name="Team1")
         await testmodels.MinRelation.create(tournament=tour)
 
+    async def test_minimal__instantiated_create_wrong_type(self):
+        author = await testmodels.Author.create(name="Author1")
+        with self.assertRaises(FieldError):
+            await testmodels.MinRelation.create(tournament=author)
+
     async def test_minimal__instantiated_iterate(self):
         tour = await testmodels.Tournament.create(name="Team1")
         async for _ in tour.minrelations:
@@ -229,3 +239,28 @@ class TestForeignKeyField(test.TestCase):
         event2 = await testmodels.Event.create(name="Event2", tournament=tour)
         event3 = await testmodels.Event.create(name="Event3", tournament=tour)
         self.assertEqual(await tour.events.offset(1).order_by("name"), [event2, event3])
+
+    async def test_fk_correct_type_assignment(self):
+        tour1 = await testmodels.Tournament.create(name="Team1")
+        tour2 = await testmodels.Tournament.create(name="Team2")
+        event = await testmodels.Event(name="Event1", tournament=tour1)
+
+        event.tournament = tour2
+        await event.save()
+        self.assertEqual(event.tournament_id, tour2.id)
+
+    async def test_fk_wrong_type_assignment(self):
+        tour = await testmodels.Tournament.create(name="Team1")
+        author = await testmodels.Author.create(name="Author")
+        rel = await testmodels.MinRelation.create(tournament=tour)
+
+        with self.assertRaises(FieldError):
+            rel.tournament = author
+
+    async def test_fk_none_assignment(self):
+        manager = await testmodels.Employee.create(name="Manager")
+        employee = await testmodels.Employee.create(name="Employee", manager=manager)
+
+        employee.manager = None
+        await employee.save()
+        self.assertIsNone(employee.manager)
