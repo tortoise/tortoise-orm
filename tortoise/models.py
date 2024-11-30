@@ -686,6 +686,15 @@ class Model(metaclass=ModelMeta):
         # set field value override async default function
         if hasattr(self, "_await_when_save"):
             self._await_when_save.pop(key, None)
+        if value is not None and key in (self._meta.fk_fields | self._meta.o2o_fields):
+            expected_model = self._meta.fields_map[key].related_model
+            received_model = type(value)
+            if received_model is not expected_model:
+                raise FieldError(
+                    f"Invalid type for relationship field '{key}'. "
+                    f"Expected model type '{expected_model.__name__}', but got '{received_model.__name__}'. "
+                    "Make sure you're using the correct model class for this relationship."
+                )
         super().__setattr__(key, value)
 
     def _set_kwargs(self, kwargs: dict) -> Set[str]:
@@ -699,14 +708,6 @@ class Model(metaclass=ModelMeta):
                 if value and not value._saved_in_db:
                     raise OperationalError(
                         f"You should first call .save() on {value} before referring to it"
-                    )
-                if value and type(value) is not meta.fields_map[key].related_model:
-                    expected_model = meta.fields_map[key].related_model.__name__
-                    received_model = type(value).__name__
-                    raise FieldError(
-                        f"Invalid type for foreign key '{key}'. "
-                        f"Expected model type '{expected_model}', but got '{received_model}'. "
-                        f"Make sure you're using the correct model class for this relationship."
                     )
                 setattr(self, key, value)
                 passed_fields.add(meta.fields_map[key].source_field)
