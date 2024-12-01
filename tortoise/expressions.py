@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
-from enum import Enum, auto
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Iterator, Type, cast
 
 from pypika import Case as PypikaCase
@@ -70,12 +70,12 @@ class Value(Expression):
 
 
 class Connector(Enum):
-    add = auto()
-    sub = auto()
-    mul = auto()
-    div = auto()
-    pow = auto()
-    mod = auto()
+    add = "add"
+    sub = "sub"
+    mul = "mul"
+    div = "truediv"
+    pow = "pow"
+    mod = "mod"
 
 
 class CombinedExpression(Expression):
@@ -96,7 +96,7 @@ class CombinedExpression(Expression):
         ):
             raise FieldError("Cannot use arithmetic expression between different field type")
 
-        operator_func = getattr(operator, self.connector.name)
+        operator_func = getattr(operator, self.connector.value)
         return ResolveResult(
             term=operator_func(left.term, right.term),
             joins=list(set(left.joins + right.joins)),  # dedup joins
