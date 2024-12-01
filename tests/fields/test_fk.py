@@ -264,3 +264,11 @@ class TestForeignKeyField(test.TestCase):
         employee.manager = None
         await employee.save()
         self.assertIsNone(employee.manager)
+
+    async def test_fk_update_wrong_type(self):
+        tour = await testmodels.Tournament.create(name="Team1")
+        rel = await testmodels.MinRelation.create(tournament=tour)
+        author = await testmodels.Author.create(name="Author1")
+
+        with self.assertRaises(FieldError):
+            await testmodels.MinRelation.filter(id=rel.id).update(tournament=author)
