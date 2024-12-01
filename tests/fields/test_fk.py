@@ -1,10 +1,10 @@
 from tests import testmodels
 from tortoise.contrib import test
 from tortoise.exceptions import (
-    FieldError,
     IntegrityError,
     NoValuesFetched,
     OperationalError,
+    ValidationError,
 )
 from tortoise.queryset import QuerySet
 
@@ -12,7 +12,7 @@ from tortoise.queryset import QuerySet
 class TestForeignKeyField(test.TestCase):
     def assertRaisesWrongTypeException(self, relation_name: str):
         return self.assertRaisesRegex(
-            FieldError, f"Invalid type for relationship field '{relation_name}'"
+            ValidationError, f"Invalid type for relationship field '{relation_name}'"
         )
 
     async def test_empty(self):
