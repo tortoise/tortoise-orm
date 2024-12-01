@@ -13,7 +13,7 @@ Changelog
 ------
 Added
 ^^^^^
-- Added type validation for foreign key fields to ensure type safety. Now raises ``FieldError`` when assigning foreign key values with incorrect model types (#1792)
+- Added type validation for foreign key fields to ensure type safety. Now raises ``ValidationError`` when assigning foreign key values with incorrect model types (#1792)
 0.22.1
 
 0.22.1

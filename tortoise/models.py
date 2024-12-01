@@ -30,12 +30,12 @@ from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import (
     ConfigurationError,
     DoesNotExist,
-    FieldError,
     IncompleteInstanceError,
     IntegrityError,
     ObjectDoesNotExistError,
     OperationalError,
     ParamsError,
+    ValidationError,
 )
 from tortoise.expressions import Expression
 from tortoise.fields.base import Field
@@ -817,7 +817,7 @@ class Model(metaclass=ModelMeta):
         expected_model = cls._meta.fields_map[field_key].related_model
         received_model = type(value)
         if received_model is not expected_model:
-            raise FieldError(
+            raise ValidationError(
                 f"Invalid type for relationship field '{field_key}'. "
                 f"Expected model type '{expected_model.__name__}', but got '{received_model.__name__}'. "
                 "Make sure you're using the correct model class for this relationship."
