@@ -9,6 +9,12 @@ Changelog
 0.22
 ====
 
+0.22.2 (unreleased)
+------
+Fixed
+^^^^^
+- Fix bug related to `Connector.div` in combined expressions. (#1794)
+
 0.22.1
 ------
 Fixed
