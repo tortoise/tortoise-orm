@@ -686,7 +686,7 @@ class Model(metaclass=ModelMeta):
         # set field value override async default function
         if hasattr(self, "_await_when_save"):
             self._await_when_save.pop(key, None)
-        if value is not None and key in (self._meta.fk_fields | self._meta.o2o_fields):
+        if key in self._meta.fk_fields or key in self._meta.o2o_fields:
             self._validate_relation_type(key, value)
         super().__setattr__(key, value)
 
@@ -811,6 +811,9 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def _validate_relation_type(cls, field_key: str, value: Optional["Model"]) -> None:
+        if value is None:
+            return
+
         expected_model = cls._meta.fields_map[field_key].related_model
         received_model = type(value)
         if received_model is not expected_model:
