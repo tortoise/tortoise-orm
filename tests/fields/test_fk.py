@@ -10,6 +10,11 @@ from tortoise.queryset import QuerySet
 
 
 class TestForeignKeyField(test.TestCase):
+    def assertRaisesWrongTypeException(self, relation_name: str):
+        return self.assertRaisesRegex(
+            FieldError, f"Invalid type for relationship field '{relation_name}'"
+        )
+
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.MinRelation.create()
@@ -158,7 +163,7 @@ class TestForeignKeyField(test.TestCase):
 
     async def test_minimal__instantiated_create_wrong_type(self):
         author = await testmodels.Author.create(name="Author1")
-        with self.assertRaises(FieldError):
+        with self.assertRaisesWrongTypeException("tournament"):
             await testmodels.MinRelation.create(tournament=author)
 
     async def test_minimal__instantiated_iterate(self):
@@ -254,7 +259,7 @@ class TestForeignKeyField(test.TestCase):
         author = await testmodels.Author.create(name="Author")
         rel = await testmodels.MinRelation.create(tournament=tour)
 
-        with self.assertRaises(FieldError):
+        with self.assertRaisesWrongTypeException("tournament"):
             rel.tournament = author
 
     async def test_fk_none_assignment(self):
@@ -270,12 +275,12 @@ class TestForeignKeyField(test.TestCase):
         rel = await testmodels.MinRelation.create(tournament=tour)
         author = await testmodels.Author.create(name="Author1")
 
-        with self.assertRaises(FieldError):
+        with self.assertRaisesWrongTypeException("tournament"):
             await testmodels.MinRelation.filter(id=rel.id).update(tournament=author)
 
     async def test_fk_bulk_create_wrong_type(self):
         author = await testmodels.Author.create(name="Author")
-        with self.assertRaises(FieldError):
+        with self.assertRaisesWrongTypeException("tournament"):
             await testmodels.MinRelation.bulk_create(
                 [testmodels.MinRelation(tournament=author) for _ in range(10)]
             )
@@ -287,7 +292,7 @@ class TestForeignKeyField(test.TestCase):
         )
         author = await testmodels.Author.create(name="Author")
 
-        with self.assertRaises(FieldError):
+        with self.assertRaisesWrongTypeException("tournament"):
             await testmodels.MinRelation.bulk_update(
                 [testmodels.MinRelation(id=rel_id, tournament=author) for rel_id in range(1, 10)]
             )
