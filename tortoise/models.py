@@ -30,6 +30,7 @@ from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import (
     ConfigurationError,
     DoesNotExist,
+    FieldError,
     IncompleteInstanceError,
     IntegrityError,
     ObjectDoesNotExistError,
@@ -814,7 +815,14 @@ class Model(metaclass=ModelMeta):
         if value is None:
             return
 
-        expected_model = cls._meta.fields_map[field_key].related_model
+        field = cls._meta.fields_map[field_key]
+        if not isinstance(field, (OneToOneFieldInstance, ForeignKeyFieldInstance)):
+            raise FieldError(
+                f"Field '{field_key}' must be a OneToOne or ForeignKey relation, "
+                f"got {type(field).__name__}"
+            )
+
+        expected_model = field.related_model
         received_model = type(value)
         if received_model is not expected_model:
             raise ValidationError(
