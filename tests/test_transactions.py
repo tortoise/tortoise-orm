@@ -1,4 +1,6 @@
+from unittest.mock import Mock
 from tests.testmodels import CharPkModel, Event, Team, Tournament
+from tortoise import connections
 from tortoise.contrib import test
 from tortoise.exceptions import OperationalError, TransactionManagementError
 from tortoise.transactions import atomic, in_transaction
@@ -213,3 +215,22 @@ class TestTransactions(test.TruncationTestCase):
         self.assertEqual(
             await Tournament.all().values("id", "name"), [{"id": obj.id, "name": "Test1"}]
         )
+
+    async def test_rollback_raising_exception(self):
+        """Tests that if a rollback raises an exception, the connection context is restored."""
+        conn = connections.get("models")
+        with self.assertRaisesRegex(ValueError, "rollback"):
+            async with conn._in_transaction() as tx_conn:
+                tx_conn.rollback = Mock(side_effect=ValueError("rollback"))
+                raise ValueError("initial exception")
+
+        self.assertEqual(connections.get("models"), conn)
+
+    async def test_commit_raising_exception(self):
+        """Tests that if a commit raises an exception, the connection context is restored."""
+        conn = connections.get("models")
+        with self.assertRaisesRegex(ValueError, "commit"):
+            async with conn._in_transaction() as tx_conn:
+                tx_conn.commit = Mock(side_effect=ValueError("commit"))
+
+        self.assertEqual(connections.get("models"), conn)
