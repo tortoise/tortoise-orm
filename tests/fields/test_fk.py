@@ -272,3 +272,22 @@ class TestForeignKeyField(test.TestCase):
 
         with self.assertRaises(FieldError):
             await testmodels.MinRelation.filter(id=rel.id).update(tournament=author)
+
+    async def test_fk_bulk_create_wrong_type(self):
+        author = await testmodels.Author.create(name="Author")
+        with self.assertRaises(FieldError):
+            await testmodels.MinRelation.bulk_create(
+                [testmodels.MinRelation(tournament=author) for _ in range(10)]
+            )
+
+    async def test_fk_bulk_update_wrong_type(self):
+        tour = await testmodels.Tournament.create(name="Team1")
+        await testmodels.MinRelation.bulk_create(
+            [testmodels.MinRelation(id=rel_id, tournament=tour) for rel_id in range(1, 10)]
+        )
+        author = await testmodels.Author.create(name="Author")
+
+        with self.assertRaises(FieldError):
+            await testmodels.MinRelation.bulk_update(
+                [testmodels.MinRelation(id=rel_id, tournament=author) for rel_id in range(1, 10)]
+            )
