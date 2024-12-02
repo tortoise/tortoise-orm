@@ -11,6 +11,10 @@ Changelog
 
 0.22.2 (unreleased)
 ------
+Fixed
+^^^^^
+- Fix bug related to `Connector.div` in combined expressions. (#1794)
+
 Changed
 ^^^^^^^
 - Parametrizes UPDATE, DELETE, bulk update and create operations (#1785)

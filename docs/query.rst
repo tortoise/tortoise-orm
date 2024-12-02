@@ -4,45 +4,45 @@
 Query API
 =========
 
-This document describes how to use QuerySet to build your queries
+This document describes how to use QuerySet to query the database.
 
-Be sure to check `examples <https://github.com/tortoise/tortoise-orm/tree/master/examples>`_ for better understanding
+Be sure to check `examples <https://github.com/tortoise/tortoise-orm/tree/master/examples>`_.
 
-You start your query from your model class:
+Below is an example of a simple query that will return all events with a rating greater than 5:
 
 .. code-block:: python3
 
-    Event.filter(id=1)
+    await Event.filter(rating__gt=5)
 
 There are several method on model itself to start query:
 
 - ``filter(*args, **kwargs)`` - create QuerySet with given filters
 - ``exclude(*args, **kwargs)`` - create QuerySet with given excluding filters
 - ``all()`` - create QuerySet without filters
-- ``first()`` - create QuerySet limited to one object and returning instance instead of list
+- ``first()`` - create QuerySet limited to one object and returning the first object
 - ``annotate()`` - create QuerySet with given annotation
 
-This method returns ``QuerySet`` object, that allows further filtering and some more complex operations
+The methods above return a ``QuerySet`` object, which supports chaining query operations.
 
-Also model class have this methods to create object:
+The following methods can be used to create an object:
 
-- ``create(**kwargs)`` - creates object with given kwargs
-- ``get_or_create(defaults, **kwargs)`` - gets object for given kwargs, if not found create it with additional kwargs from defaults dict
+- ``create(**kwargs)`` - creates an object with given kwargs
+- ``get_or_create(defaults, **kwargs)`` - gets an object for given kwargs, if not found create it with additional kwargs from defaults dict
 
-Also instance of model itself has these methods:
+The instance of a model has the following methods:
 
 - ``save()`` - update instance, or insert it, if it was never saved before
 - ``delete()`` - delete instance from db
 - ``fetch_related(*args)`` - fetches objects related to instance. It can fetch FK relation, Backward-FK relations and M2M relations. It also can fetch variable depth of related objects like this: ``await team.fetch_related('events__tournament')`` - this will fetch all events for team, and for each of this events their tournament will be prefetched too. After fetching objects they should be available normally like this: ``team.events[0].tournament.name``
 
-Another approach to work with related objects on instance is to query them explicitly in ``async for``:
+Another approach to work with related objects on instance is to query them explicitly with ``async for``:
 
 .. code-block:: python3
 
     async for team in event.participants:
         print(team.name)
 
-You also can filter related objects like this:
+The related objects can be filtered:
 
 .. code-block:: python3
 
@@ -53,7 +53,7 @@ which will return you a QuerySet object with predefined filter
 QuerySet
 ========
 
-After you obtained queryset from object you can do following operations with it:
+Once you have a QuerySet, you can perform the following operations with it:
 
 .. automodule:: tortoise.queryset
     :members:
@@ -64,8 +64,8 @@ After you obtained queryset from object you can do following operations with it:
     .. autoclass:: QuerySet
         :inherited-members:
 
-QuerySet could be constructed, filtered and passed around without actually hitting database.
-Only after you ``await`` QuerySet, it will generate query and run it against database.
+QuerySet could be constructed, filtered and passed around without actually hitting the database.
+Only after you ``await`` QuerySet, it will execute the query.
 
 Here are some common usage scenarios with QuerySet (we are using models defined in :ref:`getting_started`):
 
@@ -113,7 +113,7 @@ You could do it using ``.prefetch_related()``:
     # This will fetch tournament with their events and teams for each event
     tournament_list = await Tournament.all().prefetch_related('events__participants')
 
-    # Fetched result for m2m and backward fk relations are stored in list-like container
+    # Fetched result for m2m and backward fk relations are stored in list-like containe#r
     for tournament in tournament_list:
         print([e.name for e in tournament.events])
 
@@ -194,11 +194,14 @@ You can use them like this:
 Filtering
 =========
 
-When using ``.filter()`` method you can use number of modifiers to field names to specify desired operation
+When using the ``.filter()`` method, you can apply various modifiers to field names to specify the desired lookup type.
+In the following example, we filter the Team model to find all teams whose names contain the string CON (case-insensitive):
 
 .. code-block:: python3
 
     teams = await Team.filter(name__icontains='CON')
+
+The following lookup types are available:
 
 - ``not``
 - ``in`` - checks if value of field is in passed list
@@ -219,26 +222,21 @@ When using ``.filter()`` method you can use number of modifiers to field names t
 - ``iexact`` - case insensitive equals
 - ``search`` - full text search
 
-Specially, you can filter date part with one of following, note that current only support PostgreSQL and MySQL, but not sqlite:
+For PostgreSQL and MySQL, the following date related lookup types are available:
 
-.. code-block:: python3
+- ``year`` - e.g. ``await Team.filter(created_at__year=2020)``
+- ``quarter``
+- ``month``
+- ``week``
+- ``day``
+- ``hour``
+- ``minute``
+- ``second``
+- ``microsecond``
 
-    class DatePart(Enum):
-        year = "YEAR"
-        quarter = "QUARTER"
-        month = "MONTH"
-        week = "WEEK"
-        day = "DAY"
-        hour = "HOUR"
-        minute = "MINUTE"
-        second = "SECOND"
-        microsecond = "MICROSECOND"
 
-    teams = await Team.filter(created_at__year=2020)
-    teams = await Team.filter(created_at__month=12)
-    teams = await Team.filter(created_at__day=5)
-
-In PostgreSQL and MYSQL, you can use the ``contains``, ``contained_by`` and ``filter`` options in ``JSONField``:
+In PostgreSQL and MYSQL, you can use the ``contains``, ``contained_by`` and ``filter`` options in ``JSONField``.
+The ``filter`` option allows you to filter the JSON object by its keys and values.
 
 .. code-block:: python3
 
@@ -253,11 +251,6 @@ In PostgreSQL and MYSQL, you can use the ``contains``, ``contained_by`` and ``fi
     await JSONModel.create(data=["tortoise"])
 
     objects = await JSONModel.filter(data__contained_by=["text", "tortoise", "msg"])
-
-.. code-block:: python3
-
-    class JSONModel:
-        data = fields.JSONField[dict]()
 
     await JSONModel.create(data={"breed": "labrador",
                                  "owner": {
@@ -279,7 +272,8 @@ In PostgreSQL and MYSQL, you can use the ``contains``, ``contained_by`` and ``fi
     obj6 = await JSONModel.filter(data__filter={"owner__last__not_isnull": False}).first()
 
 In PostgreSQL and MySQL, you can use ``postgres_posix_regex`` to make comparisons using POSIX regular expressions:
-On PostgreSQL, this uses the ``~`` operator, on MySQL it uses the ``REGEXP`` operator.
+In PostgreSQL, this is done with the ``~`` operator, while in MySQL the ``REGEXP`` operator is used.
+
 
 .. code-block:: python3
     class DemoModel:
@@ -287,6 +281,23 @@ On PostgreSQL, this uses the ``~`` operator, on MySQL it uses the ``REGEXP`` ope
 
     await DemoModel.create(demo_text="Hello World")
     obj = await DemoModel.filter(demo_text__posix_regex="^Hello World$").first()
+
+
+In PostgreSQL, ``filter`` supports additional lookup types:
+
+- ``in`` - ``await JSONModel.filter(data__filter={"breed__in": ["labrador", "poodle"]}).first()``
+- ``not_in``
+- ``gte``
+- ``gt``
+- ``lte``
+- ``lt``
+- ``range`` - ``await JSONModel.filter(data__filter={"age__range": [1, 10]}).first()``
+- ``startswith``
+- ``endswith``
+- ``iexact``
+- ``icontains``
+- ``istartswith``
+- ``iendswith``
 
 
 Complex prefetch

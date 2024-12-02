@@ -1,6 +1,12 @@
 from tests import testmodels
 from tortoise.contrib import test
-from tortoise.exceptions import ConfigurationError, FieldError, IntegrityError
+from tortoise.contrib.test.condition import In
+from tortoise.exceptions import (
+    ConfigurationError,
+    DoesNotExist,
+    FieldError,
+    IntegrityError,
+)
 from tortoise.fields import JSONField
 
 
@@ -65,8 +71,7 @@ class TestJSONFields(test.TestCase):
         obj2 = await testmodels.JSONFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
 
-    @test.requireCapability(dialect="mysql")
-    @test.requireCapability(dialect="postgres")
+    @test.requireCapability(dialect=In("mysql", "postgres"))
     async def test_list_contains(self):
         await testmodels.JSONFields.create(data=["text", 3, {"msg": "msg2"}])
         obj = await testmodels.JSONFields.filter(data__contains=[{"msg": "msg2"}]).first()
@@ -75,8 +80,7 @@ class TestJSONFields(test.TestCase):
         obj2 = await testmodels.JSONFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
 
-    @test.requireCapability(dialect="mysql")
-    @test.requireCapability(dialect="postgres")
+    @test.requireCapability(dialect=In("mysql", "postgres"))
     async def test_list_contained_by(self):
         obj0 = await testmodels.JSONFields.create(data=["text"])
         obj1 = await testmodels.JSONFields.create(data=["tortoise", "msg"])
@@ -89,8 +93,7 @@ class TestJSONFields(test.TestCase):
         self.assertSetEqual(created_objs, objs)
         self.assertTrue(obj3 not in objs)
 
-    @test.requireCapability(dialect="mysql")
-    @test.requireCapability(dialect="postgres")
+    @test.requireCapability(dialect=In("mysql", "postgres"))
     async def test_filter(self):
         obj0 = await testmodels.JSONFields.create(
             data={
@@ -128,8 +131,12 @@ class TestJSONFields(test.TestCase):
         self.assertEqual(obj1, obj2)
         self.assertEqual(obj0, obj3)
 
-    @test.requireCapability(dialect="mysql")
-    @test.requireCapability(dialect="postgres")
+        with self.assertRaises(DoesNotExist):
+            obj = await testmodels.JSONFields.get(data__filter={"breed": "NotFound"})
+        with self.assertRaises(DoesNotExist):
+            await testmodels.JSONFields.get(data__filter={"owner__other_pets__0__name": "NotFound"})
+
+    @test.requireCapability(dialect=In("mysql", "postgres"))
     async def test_filter_not_condition(self):
         obj0 = await testmodels.JSONFields.create(
             data={
@@ -165,8 +172,7 @@ class TestJSONFields(test.TestCase):
         self.assertEqual(obj0, obj2)
         self.assertEqual(obj1, obj3)
 
-    @test.requireCapability(dialect="mysql")
-    @test.requireCapability(dialect="postgres")
+    @test.requireCapability(dialect=In("mysql", "postgres"))
     async def test_filter_is_null_condition(self):
         obj0 = await testmodels.JSONFields.create(
             data={
@@ -203,8 +209,7 @@ class TestJSONFields(test.TestCase):
         self.assertEqual(obj0, obj2)
         self.assertEqual(obj1, obj3)
 
-    @test.requireCapability(dialect="mysql")
-    @test.requireCapability(dialect="postgres")
+    @test.requireCapability(dialect=In("mysql", "postgres"))
     async def test_filter_not_is_null_condition(self):
         obj0 = await testmodels.JSONFields.create(
             data={
