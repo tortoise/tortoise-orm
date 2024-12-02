@@ -1,5 +1,6 @@
 import datetime
 from decimal import Decimal
+import sqlite3
 from typing import Optional, Type, Union
 
 import pytz
@@ -74,6 +75,11 @@ def to_db_time(
     if isinstance(value, datetime.time):
         return value.isoformat()
     return None
+
+
+# Converts Decimal to string for sqlite in cases where it's hard to know the
+# related field, e.g. in raw queries, math or annotations.
+sqlite3.register_adapter(Decimal, str)
 
 
 class SqliteExecutor(BaseExecutor):

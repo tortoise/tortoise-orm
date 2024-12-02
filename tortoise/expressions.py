@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
-from enum import Enum, auto
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Iterator, Type, cast
 
 from pypika import Case as PypikaCase
@@ -12,7 +12,7 @@ from pypika import Table
 from pypika.functions import AggregateFunction, DistinctOptionFunction
 from pypika.terms import ArithmeticExpression, Criterion
 from pypika.terms import Function as PypikaFunction
-from pypika.terms import Term
+from pypika.terms import Term, ValueWrapper
 from pypika.utils import format_alias_sql
 
 from tortoise.exceptions import FieldError, OperationalError
@@ -66,16 +66,16 @@ class Value(Expression):
         self.value = value
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
-        return ResolveResult(term=self.value)
+        return ResolveResult(term=ValueWrapper(self.value))
 
 
 class Connector(Enum):
-    add = auto()
-    sub = auto()
-    mul = auto()
-    div = auto()
-    pow = auto()
-    mod = auto()
+    add = "add"
+    sub = "sub"
+    mul = "mul"
+    div = "truediv"
+    pow = "pow"
+    mod = "mod"
 
 
 class CombinedExpression(Expression):
@@ -96,7 +96,7 @@ class CombinedExpression(Expression):
         ):
             raise FieldError("Cannot use arithmetic expression between different field type")
 
-        operator_func = getattr(operator, self.connector.name)
+        operator_func = getattr(operator, self.connector.value)
         return ResolveResult(
             term=operator_func(left.term, right.term),
             joins=list(set(left.joins + right.joins)),  # dedup joins
@@ -366,7 +366,8 @@ class Q:
             )
             if param.get("value_encoder"):
                 value = param["value_encoder"](value, model)
-            criterion = param["operator"](param["table"][param["field"]], value)
+            op = param["operator"]
+            criterion = op(param["table"][param["field"]], value)
         else:
             if isinstance(value, Term):
                 encoded_value = value

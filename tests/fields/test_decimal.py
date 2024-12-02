@@ -52,11 +52,25 @@ class TestDecimalFields(test.TestCase):
         self.assertEqual(obj.decimal_nodec, 19)
         self.assertEqual(obj.decimal_null, None)
 
-    async def test_f_expression(self):
+    async def test_filter(self):
+        obj0 = await testmodels.DecimalFields.create(decimal=Decimal("1.23456"), decimal_nodec=18.7)
+        obj = await testmodels.DecimalFields.filter(decimal=Decimal("1.2346")).first()
+        self.assertEqual(obj, obj0)
+        obj = (
+            await testmodels.DecimalFields.annotate(d=F("decimal"))
+            .filter(d=Decimal("1.2346"))
+            .first()
+        )
+        self.assertEqual(obj, obj0)
+
+    async def test_f_expression_update(self):
         obj0 = await testmodels.DecimalFields.create(decimal=Decimal("1.23456"), decimal_nodec=18.7)
         await obj0.filter(id=obj0.id).update(decimal=F("decimal") + Decimal("1"))
         obj1 = await testmodels.DecimalFields.get(id=obj0.id)
         self.assertEqual(obj1.decimal, Decimal("2.2346"))
+        await obj0.filter(id=obj0.id).update(decimal=Decimal("1") - F("decimal"))
+        obj1 = await testmodels.DecimalFields.get(id=obj0.id)
+        self.assertEqual(obj1.decimal, Decimal("-1.2346"))
 
     async def test_values(self):
         obj0 = await testmodels.DecimalFields.create(decimal=Decimal("1.23456"), decimal_nodec=18.7)

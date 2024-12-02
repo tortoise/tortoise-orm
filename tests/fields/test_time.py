@@ -13,6 +13,7 @@ from tortoise import Model, fields, timezone
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotIn
 from tortoise.exceptions import ConfigurationError, IntegrityError
+from tortoise.expressions import F
 from tortoise.timezone import get_default_timezone
 
 
@@ -61,6 +62,12 @@ class TestDatetimeFields(TestEmpty):
         obj = await self.model.get(id=obj0.id)
         self.assertEqual(obj.datetime, datetime(2019, 9, 1, 6, 0, 8, tzinfo=get_default_timezone()))
         self.assertEqual(obj.datetime_null, None)
+
+    async def test_filter(self):
+        now = timezone.now()
+        obj = await self.model.create(datetime=now)
+        self.assertEqual(await self.model.filter(datetime=now).first(), obj)
+        self.assertEqual(await self.model.annotate(d=F("datetime")).filter(d=now).first(), obj)
 
     async def test_cast(self):
         now = timezone.now()
