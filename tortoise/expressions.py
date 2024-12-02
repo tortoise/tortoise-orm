@@ -205,7 +205,8 @@ class Subquery(Term):
 
     def get_sql(self, **kwargs: Any) -> str:
         self.query._choose_db_if_not_chosen()
-        return self.query._make_query(**kwargs)[0]
+        self.query._make_query()
+        return self.query.query.get_parameterized_sql(**kwargs)[0]
 
     def as_(self, alias: str) -> "Selectable":  # type: ignore
         self.query._choose_db_if_not_chosen()
