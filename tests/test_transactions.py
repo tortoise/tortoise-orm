@@ -1,4 +1,5 @@
 from unittest.mock import Mock
+
 from tests.testmodels import CharPkModel, Event, Team, Tournament
 from tortoise import connections
 from tortoise.contrib import test
@@ -215,6 +216,11 @@ class TestTransactions(test.TruncationTestCase):
         self.assertEqual(
             await Tournament.all().values("id", "name"), [{"id": obj.id, "name": "Test1"}]
         )
+
+
+@test.requireCapability(supports_transactions=True)
+class TestIsolatedTransactions(test.IsolatedTestCase):
+    """Running these in isolation because they mess with the global state of the connections."""
 
     async def test_rollback_raising_exception(self):
         """Tests that if a rollback raises an exception, the connection context is restored."""
