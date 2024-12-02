@@ -15,12 +15,20 @@ Fixed
 ^^^^^
 - Fix bug related to `Connector.div` in combined expressions. (#1794)
 
+Changed
+^^^^^^^
+- Parametrizes UPDATE, DELETE, bulk update and create operations (#1785)
+
 0.22.1
 ------
 Fixed
 ^^^^^
 - Fix unable to use ManyToManyField if OneToOneField passed as Primary Key (#1783)
 - Fix sorting by Term (e.g. RawSQL) (#1788)
+
+Changed
+^^^^^^^
+- Parametrizes SELECT queries including `.count()`, `.exists()`, `.values()`, `.values_list()` (#1777)
 
 0.22.0
 ------
@@ -38,7 +46,6 @@ Added
 - Support for annotation and joins F() expressions (#1761) (#1765)
 - Allow use of annotate fields within Case-When expression (#1748)
 - Added new queryset methods: last(), latest(), earliest() (#1754) (#1756)
-
 
 Changed
 ^^^^^^^

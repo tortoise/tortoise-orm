@@ -12,7 +12,7 @@ from pypika import Table
 from pypika.functions import AggregateFunction, DistinctOptionFunction
 from pypika.terms import ArithmeticExpression, Criterion
 from pypika.terms import Function as PypikaFunction
-from pypika.terms import Term
+from pypika.terms import Term, ValueWrapper
 from pypika.utils import format_alias_sql
 
 from tortoise.exceptions import FieldError, OperationalError
@@ -66,7 +66,7 @@ class Value(Expression):
         self.value = value
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
-        return ResolveResult(term=self.value)
+        return ResolveResult(term=ValueWrapper(self.value))
 
 
 class Connector(Enum):
@@ -366,7 +366,8 @@ class Q:
             )
             if param.get("value_encoder"):
                 value = param["value_encoder"](value, model)
-            criterion = param["operator"](param["table"][param["field"]], value)
+            op = param["operator"]
+            criterion = op(param["table"][param["field"]], value)
         else:
             if isinstance(value, Term):
                 encoded_value = value
