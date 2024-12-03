@@ -15,6 +15,7 @@ from tests.testmodels import (
     Tournament,
     User,
     json_pydantic_default,
+    EnumFields,
 )
 from tortoise.contrib import test
 from tortoise.contrib.pydantic import (
@@ -1960,3 +1961,122 @@ class TestPydanticMutlipleModelUses(test.TestCase):
         Pydantic2 = pydantic_model_creator(self.ModelWithRelations, name="Foo")
 
         self.assertIs(Pydantic1, Pydantic2)
+
+
+class TestPydanticEnum(test.TestCase):
+    def setUp(self) -> None:
+        self.EnumFields_Pydantic = pydantic_model_creator(EnumFields)
+
+    def test_int_enum(self):
+        with self.assertRaises(ValidationError) as cm:
+            self.EnumFields_Pydantic.model_validate({"id": 1, "service": 4, "currency": "HUF"})
+        self.assertEqual(
+            [
+                {
+                    'type': 'enum',
+                    'loc': ('service',),
+                    'msg': 'Input should be 1, 2 or 3',
+                    'input': 4,
+                    'ctx': {'expected': '1, 2 or 3'}
+                }
+            ],
+            cm.exception.errors(include_url=False)
+        )
+        with self.assertRaises(ValidationError) as cm:
+            self.EnumFields_Pydantic.model_validate({"id": 1, "service": "a string, not int", "currency": "HUF"})
+        self.assertEqual(
+            [
+                {
+                    'type': 'enum',
+                    'loc': ('service',),
+                    'msg': 'Input should be 1, 2 or 3',
+                    'input': "a string, not int",
+                    'ctx': {'expected': '1, 2 or 3'}
+                }
+            ],
+            cm.exception.errors(include_url=False)
+        )
+
+    def test_str_enum(self):
+        with self.assertRaises(ValidationError) as cm:
+            self.EnumFields_Pydantic.model_validate({"id": 1, "service": 3, "currency": "GoofyGooberDollar"})
+        self.assertEqual(
+            [
+                {
+                    'type': 'enum',
+                    'loc': ('currency',),
+                    'msg': "Input should be 'HUF', 'EUR' or 'USD'",
+                    'input': 'GoofyGooberDollar',
+                    'ctx': {'expected': "'HUF', 'EUR' or 'USD'"}
+                }
+            ],
+            cm.exception.errors(include_url=False)
+        )
+        with self.assertRaises(ValidationError) as cm:
+            self.EnumFields_Pydantic.model_validate({"id": 1, "service": 3, "currency": 1})
+        self.assertEqual(
+            [
+                {
+                    'type': 'enum',
+                    'loc': ('currency',),
+                    'msg': "Input should be 'HUF', 'EUR' or 'USD'",
+                    'input': 1,
+                    'ctx': {'expected': "'HUF', 'EUR' or 'USD'"}
+                }
+            ],
+            cm.exception.errors(include_url=False)
+        )
+
+    def test_enum(self):
+        with self.assertRaises(ValidationError) as cm:
+            self.EnumFields_Pydantic.model_validate({"id": 1, "service": 4, "currency": 1})
+        self.assertEqual(
+            [
+                {
+                    'type': 'enum',
+                    'loc': ('service',),
+                    'msg': 'Input should be 1, 2 or 3',
+                    'input': 4, 'ctx': {'expected': '1, 2 or 3'}
+                },
+                {
+                    'type': 'enum',
+                    'loc': ('currency',),
+                    'msg': "Input should be 'HUF', 'EUR' or 'USD'",
+                    'input': 1,
+                    'ctx': {'expected': "'HUF', 'EUR' or 'USD'"}
+                }
+            ],
+            cm.exception.errors(include_url=False)
+        )
+
+        # should simply not raise any error:
+        self.EnumFields_Pydantic.model_validate({"id": 1, "service": 3, "currency": "HUF"})
+
+        self.assertEqual(
+            {
+                'additionalProperties': False,
+                'properties': {
+                    'id': {'maximum': 2147483647, 'minimum': -2147483648, 'title': 'Id', 'type': 'integer'},
+                    'service': {
+                        'description': 'python_programming: 1<br/>database_design: 2<br/>system_administration: 3',
+                        'enum': [1, 2, 3],
+                        'ge': -32768,
+                        'le': 32767,
+                        'title': 'Service',
+                        'type': 'integer'
+                    },
+                    'currency': {
+                        'default': 'HUF',
+                        'description': 'HUF: HUF<br/>EUR: EUR<br/>USD: USD',
+                        'enum': ['HUF', 'EUR', 'USD'],
+                        'maxLength': 3,
+                        'title': 'Currency',
+                        'type': 'string'
+                    }
+                },
+                'required': ['id', 'service'],
+                'title': 'EnumFields',
+                'type': 'object'
+            },
+            self.EnumFields_Pydantic.model_json_schema()
+        )
