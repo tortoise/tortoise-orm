@@ -19,6 +19,10 @@ Changed
 ^^^^^^^
 - Parametrizes UPDATE, DELETE, bulk update and create operations (#1785)
 
+Added
+^^^^^
+- CharEnumField and IntEnumField is supported by pydantic_model_creator (#1798)
+
 0.22.1
 ------
 Fixed

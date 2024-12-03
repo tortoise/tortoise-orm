@@ -62,6 +62,7 @@ Contributors
 * Daniel Szucs ``@Quasar6X``
 * Rui Catarino ``@ruitcatarino``
 * Lance Moe ``@lancemoe``
+* Markus Beckschulte ``@markus96``
 
 Special Thanks
 ==============
