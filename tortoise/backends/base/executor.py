@@ -450,7 +450,7 @@ class BaseExecutor:
             if modifier.having_criterion:
                 query = query.having(modifier.having_criterion)
 
-        _, raw_results = await self.db.execute_query(query.get_sql())
+        _, raw_results = await self.db.execute_query(*query.get_parameterized_sql())
         relations: List[Tuple[Any, Any]] = []
         related_object_list: List["Model"] = []
         model_pk, related_pk = self.model._meta.pk, field_object.related_model._meta.pk
