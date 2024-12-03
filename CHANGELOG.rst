@@ -18,6 +18,7 @@ Fixed
 Changed
 ^^^^^^^
 - Parametrizes UPDATE, DELETE, bulk update and create operations (#1785)
+- Parametrizes related field queries (#1797)
 
 0.22.1
 ------
