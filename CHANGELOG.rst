@@ -14,6 +14,7 @@ Changelog
 Fixed
 ^^^^^
 - Fix bug related to `Connector.div` in combined expressions. (#1794)
+- Fix recovery in case of database downtime (#1796)
 
 Changed
 ^^^^^^^
