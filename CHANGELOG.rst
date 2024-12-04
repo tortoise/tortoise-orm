@@ -54,7 +54,7 @@ Added
 Changed
 ^^^^^^^
 - Change old pydantic docs link to new one (#1775).
-- Refactored pydantic_model_creator, interface not changed  (#1763)
+- Refactored pydantic_model_creator, interface not changed  (#1745)
 - Values are no longer validated to be right type upon loading from database (#1750)
 - Refactored private field names in queryset classes (#1751)
 
