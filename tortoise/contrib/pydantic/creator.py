@@ -1,6 +1,7 @@
 import inspect
 from base64 import b32encode
 from copy import copy
+from enum import IntEnum, Enum
 from hashlib import sha3_224
 from typing import (
     TYPE_CHECKING,
@@ -33,6 +34,7 @@ from tortoise.contrib.pydantic.descriptions import (
 )
 from tortoise.contrib.pydantic.utils import get_annotations
 from tortoise.fields import Field, JSONField
+from tortoise.fields.data import IntEnumFieldInstance, CharEnumFieldInstance
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -509,7 +511,11 @@ class PydanticModelCreator:
             json_schema_extra["readOnly"] = constraints["readOnly"]
             del constraints["readOnly"]
         fconfig.update(constraints)
-        python_type = getattr(field, "related_model", field.field_type)
+        python_type: Union[Type[Enum], Type[IntEnum], Type]
+        if isinstance(field, (IntEnumFieldInstance, CharEnumFieldInstance)):
+            python_type = field.enum_type
+        else:
+            python_type = getattr(field, "related_model", field.field_type)
         ptype = python_type
         if field.null:
             json_schema_extra["nullable"] = True
