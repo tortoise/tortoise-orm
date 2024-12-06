@@ -1,6 +1,6 @@
 import datetime
-from decimal import Decimal
 import sqlite3
+from decimal import Decimal
 from typing import Optional, Type, Union
 
 import pytz

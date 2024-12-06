@@ -7,6 +7,8 @@ import psycopg.conninfo
 import psycopg.pq
 import psycopg.rows
 import psycopg_pool
+from pypika.dialects.postgresql import PostgreSQLQuery, PostgreSQLQueryBuilder
+from pypika.terms import Parameterizer
 
 import tortoise.backends.base.client as base_client
 import tortoise.backends.base_postgres.client as postgres_client
@@ -28,7 +30,26 @@ class AsyncConnectionPool(psycopg_pool.AsyncConnectionPool):
         await self.putconn(connection)
 
 
+class PsycopgSQLQuery(PostgreSQLQuery):
+    @classmethod
+    def _builder(cls, **kwargs) -> "PostgreSQLQueryBuilder":
+        return PsycopgSQLQueryBuilder(**kwargs)
+
+
+class PsycopgSQLQueryBuilder(PostgreSQLQueryBuilder):
+    """
+    Psycopg opted to use a custom parameter placeholder, so we need to override the default
+    """
+
+    def get_parameterized_sql(self, **kwargs) -> typing.Tuple[str, list]:
+        parameterizer = kwargs.pop(
+            "parameterizer", Parameterizer(placeholder_factory=lambda _: "%s")
+        )
+        return super().get_parameterized_sql(parameterizer=parameterizer, **kwargs)
+
+
 class PsycopgClient(postgres_client.BasePostgresClient):
+    query_class: typing.Type[PsycopgSQLQuery] = PsycopgSQLQuery
     executor_class: typing.Type[executor.PsycopgExecutor] = executor.PsycopgExecutor
     schema_generator: typing.Type[PsycopgSchemaGenerator] = PsycopgSchemaGenerator
     _pool: typing.Optional[AsyncConnectionPool] = None

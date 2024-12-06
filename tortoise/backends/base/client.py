@@ -246,7 +246,7 @@ class TransactionContext(Generic[T_conn]):
     def __init__(self, connection: Any) -> None:
         self.connection = connection
         self.connection_name = connection.connection_name
-        self.lock = getattr(connection, "_trxlock", None)
+        self.lock = connection._trxlock
 
     async def ensure_connection(self) -> None:
         if not self.connection._connection:
@@ -255,21 +255,23 @@ class TransactionContext(Generic[T_conn]):
 
     async def __aenter__(self) -> T_conn:
         await self.ensure_connection()
-        await self.lock.acquire()  # type:ignore
+        await self.lock.acquire()
         self.token = connections.set(self.connection_name, self.connection)
         await self.connection.start()
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        if not self.connection._finalized:
-            if exc_type:
-                # Can't rollback a transaction that already failed.
-                if exc_type is not TransactionManagementError:
-                    await self.connection.rollback()
-            else:
-                await self.connection.commit()
-        connections.reset(self.token)
-        self.lock.release()  # type:ignore
+        try:
+            if not self.connection._finalized:
+                if exc_type:
+                    # Can't rollback a transaction that already failed.
+                    if exc_type is not TransactionManagementError:
+                        await self.connection.rollback()
+                else:
+                    await self.connection.commit()
+        finally:
+            connections.reset(self.token)
+            self.lock.release()
 
 
 class TransactionContextPooled(TransactionContext):
@@ -287,16 +289,18 @@ class TransactionContextPooled(TransactionContext):
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        if not self.connection._finalized:
-            if exc_type:
-                # Can't rollback a transaction that already failed.
-                if exc_type is not TransactionManagementError:
-                    await self.connection.rollback()
-            else:
-                await self.connection.commit()
-        if self.connection._parent._pool:
-            await self.connection._parent._pool.release(self.connection._connection)
-        connections.reset(self.token)
+        try:
+            if not self.connection._finalized:
+                if exc_type:
+                    # Can't rollback a transaction that already failed.
+                    if exc_type is not TransactionManagementError:
+                        await self.connection.rollback()
+                else:
+                    await self.connection.commit()
+        finally:
+            if self.connection._parent._pool:
+                await self.connection._parent._pool.release(self.connection._connection)
+            connections.reset(self.token)
 
 
 class NestedTransactionContext(TransactionContext):
@@ -313,11 +317,11 @@ class NestedTransactionContext(TransactionContext):
 
 class NestedTransactionPooledContext(TransactionContext):
     async def __aenter__(self) -> T_conn:
-        await self.lock.acquire()  # type:ignore
+        await self.lock.acquire()
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self.lock.release()  # type:ignore
+        self.lock.release()
         if not self.connection._finalized:
             if exc_type:
                 # Can't rollback a transaction that already failed.

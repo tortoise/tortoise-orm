@@ -184,7 +184,9 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         criterion = forward_field == pks_f[0] if len(pks_f) == 1 else forward_field.isin(pks_f)
         select_query = select_query.where(criterion)
 
-        _, already_existing_relations_raw = await db.execute_query(str(select_query))
+        _, already_existing_relations_raw = await db.execute_query(
+            *select_query.get_parameterized_sql()
+        )
         already_existing_forward_pks = {
             related_pk_formatting_func(r[forward_key], self.instance)
             for r in already_existing_relations_raw
@@ -194,7 +196,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
             query = db.query_class.into(through_table).columns(forward_field, backward_field)
             for pk_f in pks_f_to_insert:
                 query = query.insert(pk_f, pk_b)
-            await db.execute_query(str(query))
+            await db.execute_query(*query.get_parameterized_sql())
 
     async def clear(self, using_db: "Optional[BaseDBAsyncClient]" = None) -> None:
         """
@@ -237,7 +239,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
                     [related_pk_formatting_func(i.pk, i) for i in instances]
                 )
         query = db.query_class.from_(through_table).where(condition).delete()
-        await db.execute_query(str(query))
+        await db.execute_query(*query.get_parameterized_sql())
 
 
 class RelationalField(Field[MODEL]):

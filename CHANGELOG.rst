@@ -19,10 +19,12 @@ Added
 Fixed
 ^^^^^
 - Fix bug related to `Connector.div` in combined expressions. (#1794)
+- Fix recovery in case of database downtime (#1796)
 
 Changed
 ^^^^^^^
 - Parametrizes UPDATE, DELETE, bulk update and create operations (#1785)
+- Parametrizes related field queries (#1797)
 
 0.22.1
 ------
