@@ -9,7 +9,7 @@ Changelog
 0.22
 ====
 
-0.22.2 (unreleased)
+0.22.2
 ------
 Fixed
 ^^^^^
