@@ -71,8 +71,6 @@ class PartialIndex(Index):
         super().__init__(*expressions, fields=fields, name=name)
         if condition:
             cond = " WHERE "
-            items = []
-            for k, v in condition.items():
-                items.append(f"{k} = {ValueWrapper(v)}")
+            items = [f"{k} = {ValueWrapper(v)}" for k, v in condition.items()]
             cond += " AND ".join(items)
             self.extra = cond
