@@ -30,11 +30,13 @@ from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.exceptions import (
     ConfigurationError,
     DoesNotExist,
+    FieldError,
     IncompleteInstanceError,
     IntegrityError,
     ObjectDoesNotExistError,
     OperationalError,
     ParamsError,
+    ValidationError,
 )
 from tortoise.expressions import Expression
 from tortoise.fields.base import Field
@@ -685,6 +687,8 @@ class Model(metaclass=ModelMeta):
         # set field value override async default function
         if hasattr(self, "_await_when_save"):
             self._await_when_save.pop(key, None)
+        if key in self._meta.fk_fields or key in self._meta.o2o_fields:
+            self._validate_relation_type(key, value)
         super().__setattr__(key, value)
 
     def _set_kwargs(self, kwargs: dict) -> Set[str]:
@@ -805,6 +809,27 @@ class Model(metaclass=ModelMeta):
     Alias to the models Primary Key.
     Can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc...
     """
+
+    @classmethod
+    def _validate_relation_type(cls, field_key: str, value: Optional["Model"]) -> None:
+        if value is None:
+            return
+
+        field = cls._meta.fields_map[field_key]
+        if not isinstance(field, (OneToOneFieldInstance, ForeignKeyFieldInstance)):
+            raise FieldError(
+                f"Field '{field_key}' must be a OneToOne or ForeignKey relation, "
+                f"got {type(field).__name__}"
+            )
+
+        expected_model = field.related_model
+        received_model = type(value)
+        if received_model is not expected_model:
+            raise ValidationError(
+                f"Invalid type for relationship field '{field_key}'. "
+                f"Expected model type '{expected_model.__name__}', but got '{received_model.__name__}'. "
+                "Make sure you're using the correct model class for this relationship."
+            )
 
     @classmethod
     async def _getbypk(cls: Type[MODEL], key: Any) -> MODEL:

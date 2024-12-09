@@ -11,6 +11,11 @@ Changelog
 
 0.22.2
 ------
+Added
+^^^^^
+- Added type validation for foreign key fields to ensure type safety. Now raises ``ValidationError`` when assigning foreign key values with incorrect model types (#1792)
+0.22.1
+
 Fixed
 ^^^^^
 - Fix bug related to `Connector.div` in combined expressions. (#1794)

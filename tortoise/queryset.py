@@ -1204,6 +1204,7 @@ class UpdateQuery(AwaitableQuery):
             if field_object.pk:
                 raise IntegrityError(f"Field {key} is PK and can not be updated")
             if isinstance(field_object, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
+                self.model._validate_relation_type(key, value)
                 fk_field: str = field_object.source_field  # type: ignore
                 db_field = self.model._meta.fields_map[fk_field].source_field
                 value = executor.column_map[fk_field](
