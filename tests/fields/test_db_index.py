@@ -3,6 +3,40 @@ from typing import Any
 from tortoise import fields
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
+from tortoise.indexes import Index
+
+
+class CustomIndex(Index):
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        self._foo = ""
+
+
+class TestIndexHashEqual(test.TestCase):
+    def test_index_eq(self):
+        assert Index(fields=("id",)) == Index(fields=("id",))
+        assert CustomIndex(fields=("id",)) == CustomIndex(fields=("id",))
+        assert Index(fields=("id", "name")) == Index(fields=["id", "name"])
+
+        assert Index(fields=("id", "name")) != Index(fields=("name", "id"))
+        assert Index(fields=("id",)) != Index(fields=("name",))
+        assert CustomIndex(fields=("id",)) != Index(fields=("id",))
+
+    def test_index_hash(self):
+        assert hash(Index(fields=("id",))) == hash(Index(fields=("id",)))
+        assert hash(Index(fields=("id", "name"))) == hash(Index(fields=["id", "name"]))
+        assert hash(CustomIndex(fields=("id", "name"))) == hash(CustomIndex(fields=["id", "name"]))
+
+        assert hash(Index(fields=("id", "name"))) != hash(Index(fields=["name", "id"]))
+        assert hash(Index(fields=("id",))) != hash(Index(fields=("name",)))
+
+        indexes = {Index(fields=("id",))}
+        indexes.add(Index(fields=("id",)))
+        assert len(indexes) == 1
+        indexes.add(CustomIndex(fields=("id",)))
+        assert len(indexes) == 2
+        indexes.add(Index(fields=("name",)))
+        assert len(indexes) == 3
 
 
 class TestIndexAlias(test.TestCase):

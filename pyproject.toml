@@ -192,6 +192,8 @@ source = ["tortoise"]
 [tool.coverage.report]
 show_missing = true
 
+[tool.ruff]
+line-length = 100
 [tool.ruff.lint]
 ignore = ["E501"]
 
