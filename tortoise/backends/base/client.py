@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import abc
 import asyncio
 from typing import (
     Any,
@@ -243,39 +244,16 @@ class ConnectionWrapper(Generic[T_conn]):
 
 
 class TransactionContext(Generic[T_conn]):
-    """A context manager for transactions. It is returned from in_transaction and _in_transaction."""
+    """A context manager interface for transactions. It is returned from in_transaction
+    and _in_transaction."""
 
-    __slots__ = ("connection", "connection_name", "token", "lock")
+    connection: T_conn
 
-    def __init__(self, connection: Any) -> None:
-        self.connection = connection
-        self.connection_name = connection.connection_name
-        self.lock = connection._trxlock
+    @abc.abstractmethod
+    async def __aenter__(self) -> T_conn: ...
 
-    async def ensure_connection(self) -> None:
-        if not self.connection._connection:
-            await self.connection._parent.create_connection(with_db=True)
-            self.connection._connection = self.connection._parent._connection
-
-    async def __aenter__(self) -> T_conn:
-        await self.ensure_connection()
-        await self.lock.acquire()
-        self.token = connections.set(self.connection_name, self.connection)
-        await self.connection.start()
-        return self.connection
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        try:
-            if not self.connection._finalized:
-                if exc_type:
-                    # Can't rollback a transaction that already failed.
-                    if exc_type is not TransactionManagementError:
-                        await self.connection.rollback()
-                else:
-                    await self.connection.commit()
-        finally:
-            connections.reset(self.token)
-            self.lock.release()
+    @abc.abstractmethod
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None: ...
 
 
 class TransactionContextPooled(TransactionContext):
@@ -283,12 +261,18 @@ class TransactionContextPooled(TransactionContext):
 
     __slots__ = ("conn_wrapper", "connection", "connection_name", "token")
 
+    def __init__(self, connection: Any) -> None:
+        self.connection = connection
+        self.connection_name = connection.connection_name
+
     async def ensure_connection(self) -> None:
         if not self.connection._parent._pool:
             await self.connection._parent.create_connection(with_db=True)
 
     async def __aenter__(self) -> T_conn:
         await self.ensure_connection()
+        # Set the context variable so the current task is always seeing a
+        # TransactionWrapper conneciton.
         self.token = connections.set(self.connection_name, self.connection)
         self.connection._connection = await self.connection._parent._pool.acquire()
         await self.connection.start()
@@ -310,6 +294,10 @@ class TransactionContextPooled(TransactionContext):
 
 
 class NestedTransactionContext(TransactionContext):
+    def __init__(self, connection: Any) -> None:
+        self.connection = connection
+        self.connection_name = connection.connection_name
+
     async def __aenter__(self) -> T_conn:
         return self.connection
 
@@ -346,14 +334,11 @@ class PoolConnectionWrapper(Generic[T_conn]):
 
 
 class BaseTransactionWrapper:
-    async def start(self) -> None:
-        raise NotImplementedError()  # pragma: nocoverage
+    @abc.abstractmethod
+    async def start(self) -> None: ...
 
-    def release(self) -> None:
-        raise NotImplementedError()  # pragma: nocoverage
+    @abc.abstractmethod
+    async def rollback(self) -> None: ...
 
-    async def rollback(self) -> None:
-        raise NotImplementedError()  # pragma: nocoverage
-
-    async def commit(self) -> None:
-        raise NotImplementedError()  # pragma: nocoverage
+    @abc.abstractmethod
+    async def commit(self) -> None: ...

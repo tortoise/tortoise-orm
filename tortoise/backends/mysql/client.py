@@ -229,7 +229,6 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         self.connection_name = connection.connection_name
         self._connection: mysql.Connection = connection._connection
         self._lock = asyncio.Lock()
-        self._trxlock = asyncio.Lock()
         self.log = connection.log
         self._finalized: Optional[bool] = None
         self.fetch_inserted = connection.fetch_inserted

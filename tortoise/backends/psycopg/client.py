@@ -214,7 +214,6 @@ class TransactionWrapper(PsycopgClient, base_client.BaseTransactionWrapper):
     def __init__(self, connection: PsycopgClient) -> None:
         self._connection: psycopg.AsyncConnection = connection._connection
         self._lock = asyncio.Lock()
-        self._trxlock = asyncio.Lock()
         self.log = connection.log
         self.connection_name = connection.connection_name
         self._finalized = False
