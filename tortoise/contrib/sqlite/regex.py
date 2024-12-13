@@ -3,7 +3,7 @@ import re
 from typing import cast
 
 import aiosqlite
-from pypika.terms import BasicCriterion, Term, Function
+from pypika.terms import BasicCriterion, Term
 
 
 class SQLiteRegexMatching(enum.Enum):
