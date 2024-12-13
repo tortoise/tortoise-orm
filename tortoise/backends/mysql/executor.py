@@ -4,7 +4,7 @@ from pypika import functions
 from pypika.enums import SqlTypes
 from pypika.terms import BasicCriterion, Criterion
 from pypika.utils import format_quotes
-from pypika.functions import Cast
+from pypika.functions import Cast, Coalesce
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
@@ -103,7 +103,7 @@ def mysql_search(field: Term, value: str) -> SearchCriterion:
 
 
 def mysql_posix_regex(field: Term, value: str) -> BasicCriterion:
-    return BasicCriterion(MySQLRegexpComparators.REGEXP, Cast(field, SqlTypes.VARCHAR), StrWrapper(value))
+    return BasicCriterion(MySQLRegexpComparators.REGEXP, Coalesce(Cast(field, SqlTypes.VARCHAR)), StrWrapper(value))
 
 
 class MySQLExecutor(BaseExecutor):
