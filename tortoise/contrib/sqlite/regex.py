@@ -4,7 +4,8 @@ from typing import cast
 
 import aiosqlite
 from pypika.terms import BasicCriterion, Term
-
+from pypika.functions import Cast
+from pypika.enums import SqlTypes
 
 class SQLiteRegexMatching(enum.Enum):
     POSIX_REGEX = " REGEXP "
@@ -13,14 +14,12 @@ class SQLiteRegexMatching(enum.Enum):
 
 def posix_sqlite_regexp(field: Term, value: str):
     term = cast(Term, field.wrap_constant(value))
-    return BasicCriterion(SQLiteRegexMatching.POSIX_REGEX, field, term)
-    # return Function("regexp", field, term)
+    return BasicCriterion(SQLiteRegexMatching.POSIX_REGEX, Cast(field, SqlTypes.VARCHAR), term)
 
 
 def insensitive_posix_sqlite_regexp(field: Term, value: str):
     term = cast(Term, field.wrap_constant(value))
-    return BasicCriterion(SQLiteRegexMatching.IPOSIX_REGEX, field, term)
-    # return Function("iregexp", field, term)
+    return BasicCriterion(SQLiteRegexMatching.IPOSIX_REGEX, Cast(field, SqlTypes.VARCHAR), term)
 
 async def install_regexp_function(connection: aiosqlite.Connection):
     def regexp(expr, item):

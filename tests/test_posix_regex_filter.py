@@ -56,7 +56,6 @@ class TestCaseInsensitivePosixRegexFilter(test.TestCase):
     @test.requireCapability(dialect="sqlite")
     async def test_case_insensitive_regex_filter_sqlite(self):
         author = await testmodels.Author.create(name="Johann Wolfgang von Goethe")
-        print(testmodels.Author.filter(name__iposix_regex="^johann [a-zA-Z]+ Von goethe$").sql(params_inline=True))
         self.assertEqual(
             set(
                 await testmodels.Author.filter(
