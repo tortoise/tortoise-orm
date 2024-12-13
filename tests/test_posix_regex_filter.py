@@ -42,29 +42,30 @@ class TestPosixRegexFilter(test.TestCase):
 
     @test.requireCapability(dialect="postgres")
     async def test_regex_filter_works_with_null_field_postgres(self):
-        t = await testmodels.Tournament.create(name="Test")
+        await testmodels.Tournament.create(name="Test")
         print(testmodels.Tournament.filter(desc__posix_regex="^test$").sql())
         self.assertEqual(
             set(
-                await testmodels.Tournament.filter(
-                    desc__posix_regex="^test$"
-                ).values_list("name", flat=True)
+                await testmodels.Tournament.filter(desc__posix_regex="^test$").values_list(
+                    "name", flat=True
+                )
             ),
             set(),
         )
 
     @test.requireCapability(dialect="sqlite")
     async def test_regex_filter_works_with_null_field_sqlite(self):
-        t = await testmodels.Tournament.create(name="Test")
+        await testmodels.Tournament.create(name="Test")
         print(testmodels.Tournament.filter(desc__posix_regex="^test$").sql())
         self.assertEqual(
             set(
-                await testmodels.Tournament.filter(
-                    desc__posix_regex="^test$"
-                ).values_list("name", flat=True)
+                await testmodels.Tournament.filter(desc__posix_regex="^test$").values_list(
+                    "name", flat=True
+                )
             ),
             set(),
         )
+
 
 class TestCaseInsensitivePosixRegexFilter(test.TestCase):
     @test.requireCapability(dialect="postgres")
