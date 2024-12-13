@@ -103,7 +103,7 @@ def mysql_search(field: Term, value: str) -> SearchCriterion:
 
 
 def mysql_posix_regex(field: Term, value: str) -> BasicCriterion:
-    return BasicCriterion(MySQLRegexpComparators.REGEXP, Cast(field, SqlTypes.VARCHAR), StrWrapper(value))  # type:ignore[arg-type]
+    return BasicCriterion(MySQLRegexpComparators.REGEXP, Cast(field, SqlTypes.VARCHAR), StrWrapper(value))
 
 
 class MySQLExecutor(BaseExecutor):
