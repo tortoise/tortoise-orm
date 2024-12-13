@@ -69,6 +69,7 @@ class TestConcurrencyIsolated(test.IsolatedTestCase):
         count = await Tournament.all().count()
         self.assertEqual(count, 1000)
 
+
 @test.requireCapability(supports_transactions=True)
 class TestConcurrencyTransactioned(test.TestCase):
     async def test_concurrency_read(self):

@@ -10,7 +10,7 @@ from tortoise import BaseDBAsyncClient
 from tortoise.backends.base.client import (
     BaseTransactionWrapper,
     ConnectionWrapper,
-    NestedTransactionPooledContext,
+    NestedTransactionContext,
     PoolConnectionWrapper,
     TransactionContext,
 )
@@ -175,7 +175,7 @@ class ODBCTransactionWrapper(BaseTransactionWrapper):
         self._parent = connection
 
     def _in_transaction(self) -> "TransactionContext":
-        return NestedTransactionPooledContext(self)
+        return NestedTransactionContext(self)
 
     def acquire_connection(self) -> ConnWrapperType:
         return ConnectionWrapper(self._lock, self)

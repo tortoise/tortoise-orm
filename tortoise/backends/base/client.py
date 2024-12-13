@@ -218,10 +218,12 @@ class BaseDBAsyncClient:
 
 
 class ConnectionWrapper(Generic[T_conn]):
+    """Wraps the connections with a lock to facilitate safe concurrent access when using
+    asyncio.gather, TaskGroup, or similar."""
+
     __slots__ = ("connection", "lock", "client")
 
     def __init__(self, lock: asyncio.Lock, client: Any) -> None:
-        """Wraps the connections with a lock to facilitate safe concurrent access."""
         self.lock: asyncio.Lock = lock
         self.client = client
         self.connection: T_conn = client._connection
@@ -241,6 +243,8 @@ class ConnectionWrapper(Generic[T_conn]):
 
 
 class TransactionContext(Generic[T_conn]):
+    """A context manager for transactions. It is returned from in_transaction and _in_transaction."""
+
     __slots__ = ("connection", "connection_name", "token", "lock")
 
     def __init__(self, connection: Any) -> None:
@@ -275,6 +279,8 @@ class TransactionContext(Generic[T_conn]):
 
 
 class TransactionContextPooled(TransactionContext):
+    "A version of TransactionContext that uses a pool to acquire connections."
+
     __slots__ = ("conn_wrapper", "connection", "connection_name", "token")
 
     async def ensure_connection(self) -> None:
@@ -315,23 +321,10 @@ class NestedTransactionContext(TransactionContext):
                     await self.connection.rollback()
 
 
-class NestedTransactionPooledContext(TransactionContext):
-    async def __aenter__(self) -> T_conn:
-        await self.lock.acquire()
-        return self.connection
-
-    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self.lock.release()
-        if not self.connection._finalized:
-            if exc_type:
-                # Can't rollback a transaction that already failed.
-                if exc_type is not TransactionManagementError:
-                    await self.connection.rollback()
-
-
 class PoolConnectionWrapper(Generic[T_conn]):
+    """Class to manage acquiring from and releasing connections to a pool."""
+
     def __init__(self, client: Any) -> None:
-        """Class to manage acquiring from and releasing connections to a pool."""
         self.pool = client._pool
         self.client = client
         self.connection: Optional[T_conn] = None
@@ -343,7 +336,7 @@ class PoolConnectionWrapper(Generic[T_conn]):
 
     async def __aenter__(self) -> T_conn:
         await self.ensure_connection()
-        # get first available connection
+        # get first available connection. If none available, wait until one is released
         self.connection = await self.pool.acquire()
         return cast(T_conn, self.connection)
 

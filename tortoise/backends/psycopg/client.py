@@ -221,7 +221,7 @@ class TransactionWrapper(PsycopgClient, base_client.BaseTransactionWrapper):
         self._parent = connection
 
     def _in_transaction(self) -> base_client.TransactionContext:
-        return base_client.NestedTransactionPooledContext(self)
+        return base_client.NestedTransactionContext(self)
 
     def acquire_connection(self) -> base_client.ConnectionWrapper[psycopg.AsyncConnection]:
         return base_client.ConnectionWrapper(self._lock, self)
