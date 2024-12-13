@@ -5,6 +5,8 @@ from pypika.terms import BasicCriterion, Term
 from pypika.functions import Cast
 from pypika.enums import SqlTypes
 
+from tortoise.functions import Coalesce
+
 
 class PostgresRegexMatching(enum.Enum):
     POSIX_REGEX = " ~ "

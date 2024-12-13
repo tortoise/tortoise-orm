@@ -23,6 +23,8 @@ def insensitive_posix_sqlite_regexp(field: Term, value: str):
 
 async def install_regexp_function(connection: aiosqlite.Connection):
     def regexp(expr, item):
+        if not expr or not item:
+            return False
         return re.search(expr, item) is not None
 
     def iregexp(expr, item):
