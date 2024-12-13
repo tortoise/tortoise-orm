@@ -6,7 +6,7 @@ from pypika.terms import BasicCriterion, Term
 
 class PostgresRegexMatching(enum.Enum):
     POSIX_REGEX = " ~ "
-    IPOSIX_REGEX = " *~ "
+    IPOSIX_REGEX = " ~* "
 
 
 def postgres_posix_regex(field: Term, value: str):
