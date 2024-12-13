@@ -105,7 +105,7 @@ def mysql_search(field: Term, value: str) -> SearchCriterion:
 
 def mysql_posix_regex(field: Term, value: str) -> BasicCriterion:
     return BasicCriterion(
-        MySQLRegexpComparators.REGEXP, Coalesce(Cast(field, SqlTypes.VARCHAR)), StrWrapper(value)
+        MySQLRegexpComparators.REGEXP, Coalesce(Cast(field, SqlTypes.CHAR)), StrWrapper(value)
     )
 
 
