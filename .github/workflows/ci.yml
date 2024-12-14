@@ -79,7 +79,7 @@ jobs:
         if: matrix.python-version != '3.13'
         run: PYTHONPATH=$DEST pytest $PYTEST_ARGS $DEST/_tests.py
         env:
-          DEST=examples/blacksheep
+          DEST: examples/blacksheep
           PYTHONDEVMODE: 1
           PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --tb=native -q"
       - name: Upload Coverage
