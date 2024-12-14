@@ -337,7 +337,7 @@ class BaseExecutor:
         related_object_map: Dict[str, list] = {}
         for entry in related_object_list:
             object_id = getattr(entry, relation_field)
-            if object_id in related_object_map.keys():
+            if object_id in related_object_map:
                 related_object_map[object_id].append(entry)
             else:
                 related_object_map[object_id] = [entry]

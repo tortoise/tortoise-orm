@@ -565,7 +565,7 @@ class JSONField(Field[T], dict, list):  # type: ignore
         super().__init__(**kwargs)
         self.encoder = encoder
         self.decoder = decoder
-        if field_type := kwargs.get("field_type", None):
+        if field_type := kwargs.get("field_type"):
             self.field_type = field_type
 
     def to_db_value(

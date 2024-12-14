@@ -336,7 +336,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         if not self.has_db_field:  # pragma: nocoverage
             return None
         return {
-            "": getattr(self, "SQL_TYPE"),
+            "": self.SQL_TYPE,
             **{
                 dialect: _db["SQL_TYPE"]
                 for dialect, _db in self._get_dialects().items()
