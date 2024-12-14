@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Optional, Tuple, Type
+from typing import TYPE_CHECKING, Any, Optional, Tuple, Type
 
 from pypika.terms import Term, ValueWrapper
 
@@ -58,6 +58,12 @@ class Index:
 
     def index_name(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]") -> str:
         return self.name or schema_generator._generate_index_name("idx", model, self.fields)
+
+    def __hash__(self) -> int:
+        return hash((tuple(self.fields), self.name, tuple(self.expressions)))
+
+    def __eq__(self, other: Any) -> bool:
+        return type(self) is type(other) and self.__dict__ == other.__dict__
 
 
 class PartialIndex(Index):
