@@ -154,6 +154,16 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
 [[tool.mypy.overrides]]
+module = "examples.blacksheep.*"
+# TODO: remove this override when blacksheep support python3.13
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
+module = "tortoise.contrib.blacksheep.*"
+# TODO: remove this override when blacksheep support python3.13
+disallow_untyped_decorators = false
+
+[[tool.mypy.overrides]]
 module = "tortoise.contrib.test.*"
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
