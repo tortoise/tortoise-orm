@@ -1,3 +1,4 @@
+import contextlib
 import datetime
 import functools
 import json
@@ -585,13 +586,12 @@ class JSONField(Field[T], dict, list):  # type: ignore
                 return value.decode()
             return value
 
-        try:
-            from pydantic import BaseModel
+        if hasattr(value, "model_dump"):
+            with contextlib.suppress(ImportError):
+                from pydantic import BaseModel
 
-            if isinstance(value, BaseModel):
-                value = value.model_dump()
-        except ImportError:
-            pass
+                if isinstance(value, BaseModel):
+                    value = value.model_dump()
 
         return self.encoder(value)
 
@@ -602,13 +602,14 @@ class JSONField(Field[T], dict, list):  # type: ignore
             try:
                 data = self.decoder(value)
 
-                try:
-                    from pydantic._internal._model_construction import ModelMetaclass
+                if not isinstance(data, list):
+                    with contextlib.suppress(ImportError):
+                        from pydantic._internal._model_construction import (
+                            ModelMetaclass,
+                        )
 
-                    if isinstance(self.field_type, ModelMetaclass) and not isinstance(data, list):
-                        return self.field_type(**data)
-                except ImportError:
-                    pass
+                        if isinstance(self.field_type, ModelMetaclass):
+                            return self.field_type(**data)
 
                 return data
             except Exception:
