@@ -1,7 +1,7 @@
 import inspect
 from base64 import b32encode
 from copy import copy
-from enum import IntEnum, Enum
+from enum import Enum, IntEnum
 from hashlib import sha3_224
 from typing import (
     TYPE_CHECKING,
@@ -34,7 +34,7 @@ from tortoise.contrib.pydantic.descriptions import (
 )
 from tortoise.contrib.pydantic.utils import get_annotations
 from tortoise.fields import Field, JSONField
-from tortoise.fields.data import IntEnumFieldInstance, CharEnumFieldInstance
+from tortoise.fields.data import CharEnumFieldInstance, IntEnumFieldInstance
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
