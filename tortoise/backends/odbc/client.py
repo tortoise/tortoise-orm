@@ -10,7 +10,7 @@ from tortoise import BaseDBAsyncClient
 from tortoise.backends.base.client import (
     BaseTransactionWrapper,
     ConnectionWrapper,
-    NestedTransactionPooledContext,
+    NestedTransactionContext,
     PoolConnectionWrapper,
     TransactionContext,
 )
@@ -168,14 +168,13 @@ class ODBCTransactionWrapper(BaseTransactionWrapper):
         self.connection_name = connection.connection_name
         self._connection: asyncodbc.Connection = connection._connection
         self._lock = asyncio.Lock()
-        self._trxlock = asyncio.Lock()
         self.log = connection.log
         self._finalized: Optional[bool] = None
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 
     def _in_transaction(self) -> "TransactionContext":
-        return NestedTransactionPooledContext(self)
+        return NestedTransactionContext(self)
 
     def acquire_connection(self) -> ConnWrapperType:
         return ConnectionWrapper(self._lock, self)

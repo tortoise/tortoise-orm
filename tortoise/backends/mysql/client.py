@@ -29,7 +29,7 @@ from tortoise.backends.base.client import (
     BaseTransactionWrapper,
     Capabilities,
     ConnectionWrapper,
-    NestedTransactionPooledContext,
+    NestedTransactionContext,
     PoolConnectionWrapper,
     TransactionContext,
     TransactionContextPooled,
@@ -229,14 +229,13 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         self.connection_name = connection.connection_name
         self._connection: mysql.Connection = connection._connection
         self._lock = asyncio.Lock()
-        self._trxlock = asyncio.Lock()
         self.log = connection.log
         self._finalized: Optional[bool] = None
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 
     def _in_transaction(self) -> "TransactionContext":
-        return NestedTransactionPooledContext(self)
+        return NestedTransactionContext(self)
 
     def acquire_connection(self) -> ConnectionWrapper[mysql.Connection]:
         return ConnectionWrapper(self._lock, self)

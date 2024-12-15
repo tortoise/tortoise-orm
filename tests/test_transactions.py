@@ -44,10 +44,23 @@ class TestTransactions(test.TruncationTestCase):
         obj2 = await CharPkModel.filter(id="FooMip").first()
         self.assertIsNone(obj2)
 
-    async def test_nested_transactions(self):
+    async def test_consequent_nested_transactions(self):
         async with in_transaction():
-            tournament = Tournament(name="Test")
-            await tournament.save()
+            await Tournament.create(name="Test")
+            async with in_transaction():
+                await Tournament.create(name="Nested 1")
+            await Tournament.create(name="Test 2")
+            async with in_transaction():
+                await Tournament.create(name="Nested 1")
+
+        self.assertEqual(
+            set(await Tournament.all().values_list("name", flat=True)),
+            set(["Test", "Test 2", "Nested 1", "Nested 1"]),
+        )
+
+    async def test_caught_exception_in_nested_transaction(self):
+        async with in_transaction():
+            tournament = await Tournament.create(name="Test")
             await Tournament.filter(id=tournament.id).update(name="Updated name")
             saved_event = await Tournament.filter(name="Updated name").first()
             self.assertEqual(saved_event.id, tournament.id)
@@ -63,6 +76,33 @@ class TestTransactions(test.TruncationTestCase):
         # self.assertIsNotNone(saved_event)
         not_saved_event = await Tournament.filter(name="Nested").first()
         self.assertIsNone(not_saved_event)
+
+    async def test_nested_tx_do_not_commit(self):
+        with self.assertRaises(SomeException):
+            async with in_transaction():
+                tournament = await Tournament.create(name="Test")
+                async with in_transaction():
+                    tournament.name = "Nested"
+                    await tournament.save()
+
+                raise SomeException("Some error")
+
+        self.assertEqual(await Tournament.filter(id=tournament.id).count(), 0)
+
+    async def test_three_nested_transactions(self):
+        async with in_transaction():
+            tournament1 = await Tournament.create(name="Test")
+            async with in_transaction():
+                tournament2 = await Tournament.create(name="Nested")
+                async with in_transaction():
+                    tournament3 = await Tournament.create(name="Nested2")
+
+        self.assertEqual(
+            await Tournament.filter(
+                id__in=[tournament1.id, tournament2.id, tournament3.id]
+            ).count(),
+            3,
+        )
 
     async def test_transaction_decorator(self):
         @atomic()

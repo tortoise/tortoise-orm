@@ -19,10 +19,6 @@ class TestConcurrencyIsolated(test.IsolatedTestCase):
         all_read = await Tournament.all()
         self.assertEqual(set(all_write), set(all_read))
 
-    async def create_trans_concurrent(self):
-        async with in_transaction():
-            await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
-
     async def test_nonconcurrent_get_or_create(self):
         unas = [await UniqueName.get_or_create(name="c") for _ in range(10)]
         una_created = [una[1] for una in unas if una[1] is True]
@@ -41,21 +37,37 @@ class TestConcurrencyIsolated(test.IsolatedTestCase):
 
     @test.skipIf(sys.version_info < (3, 7), "aiocontextvars backport not handling this well")
     @test.requireCapability(supports_transactions=True)
-    async def test_concurrency_transactions_concurrent(self):
-        await asyncio.gather(*[self.create_trans_concurrent() for _ in range(10)])
+    async def test_concurrent_transactions_with_multiple_ops(self):
+        async def create_in_transaction():
+            async with in_transaction():
+                await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
+
+        await asyncio.gather(*[create_in_transaction() for _ in range(10)])
         count = await Tournament.all().count()
         self.assertEqual(count, 1000)
 
-    async def create_trans(self):
-        async with in_transaction():
-            await Tournament.create(name="Test")
+    @test.skipIf(sys.version_info < (3, 7), "aiocontextvars backport not handling this well")
+    @test.requireCapability(supports_transactions=True)
+    async def test_concurrent_transactions_with_single_op(self):
+        async def create():
+            async with in_transaction():
+                await Tournament.create(name="Test")
+
+        await asyncio.gather(*[create() for _ in range(100)])
+        count = await Tournament.all().count()
+        self.assertEqual(count, 100)
 
     @test.skipIf(sys.version_info < (3, 7), "aiocontextvars backport not handling this well")
     @test.requireCapability(supports_transactions=True)
-    async def test_concurrency_transactions(self):
-        await asyncio.gather(*[self.create_trans() for _ in range(100)])
+    async def test_nested_concurrent_transactions_with_multiple_ops(self):
+        async def create_in_transaction():
+            async with in_transaction():
+                async with in_transaction():
+                    await asyncio.gather(*[Tournament.create(name="Test") for _ in range(100)])
+
+        await asyncio.gather(*[create_in_transaction() for _ in range(10)])
         count = await Tournament.all().count()
-        self.assertEqual(count, 100)
+        self.assertEqual(count, 1000)
 
 
 @test.requireCapability(supports_transactions=True)

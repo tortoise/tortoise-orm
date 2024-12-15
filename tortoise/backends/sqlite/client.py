@@ -24,9 +24,11 @@ from tortoise.backends.base.client import (
     ConnectionWrapper,
     NestedTransactionContext,
     TransactionContext,
+    T_conn,
 )
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
+from tortoise.connection import connections
 from tortoise.exceptions import (
     IntegrityError,
     OperationalError,
@@ -118,7 +120,7 @@ class SqliteClient(BaseDBAsyncClient):
         return ConnectionWrapper(self._lock, self)
 
     def _in_transaction(self) -> "TransactionContext":
-        return TransactionContext(TransactionWrapper(self))
+        return SqliteTransactionContext(TransactionWrapper(self), self._lock)
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
@@ -165,12 +167,53 @@ class SqliteClient(BaseDBAsyncClient):
             await connection.executescript(query)
 
 
+class SqliteTransactionContext(TransactionContext):
+    """A SQLite-specific transaction context.
+
+    SQLite uses a single connection, meaning that transactions need to
+    acquire an exclusive lock on the connection to prevent other operations
+    from interfering with the transaction. This is done by acquiring a lock
+    on the connection object itself.
+    """
+
+    __slots__ = ("connection", "connection_name", "token", "_trxlock")
+
+    def __init__(self, connection: Any, trxlock: asyncio.Lock) -> None:
+        self.connection = connection
+        self.connection_name = connection.connection_name
+        self._trxlock = trxlock
+
+    async def ensure_connection(self) -> None:
+        if not self.connection._connection:
+            await self.connection._parent.create_connection(with_db=True)
+            self.connection._connection = self.connection._parent._connection
+
+    async def __aenter__(self) -> T_conn:
+        await self.ensure_connection()
+        await self._trxlock.acquire()
+        self.token = connections.set(self.connection_name, self.connection)
+        await self.connection.start()
+        return self.connection
+
+    async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
+        try:
+            if not self.connection._finalized:
+                if exc_type:
+                    # Can't rollback a transaction that already failed.
+                    if exc_type is not TransactionManagementError:
+                        await self.connection.rollback()
+                else:
+                    await self.connection.commit()
+        finally:
+            connections.reset(self.token)
+            self._trxlock.release()
+
+
 class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
     def __init__(self, connection: SqliteClient) -> None:
         self.connection_name = connection.connection_name
         self._connection: aiosqlite.Connection = cast(aiosqlite.Connection, connection._connection)
         self._lock = asyncio.Lock()
-        self._trxlock = connection._lock
         self.log = connection.log
         self._finalized = False
         self.fetch_inserted = connection.fetch_inserted

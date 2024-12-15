@@ -214,14 +214,13 @@ class TransactionWrapper(PsycopgClient, base_client.BaseTransactionWrapper):
     def __init__(self, connection: PsycopgClient) -> None:
         self._connection: psycopg.AsyncConnection = connection._connection
         self._lock = asyncio.Lock()
-        self._trxlock = asyncio.Lock()
         self.log = connection.log
         self.connection_name = connection.connection_name
         self._finalized = False
         self._parent = connection
 
     def _in_transaction(self) -> base_client.TransactionContext:
-        return base_client.NestedTransactionPooledContext(self)
+        return base_client.NestedTransactionContext(self)
 
     def acquire_connection(self) -> base_client.ConnectionWrapper[psycopg.AsyncConnection]:
         return base_client.ConnectionWrapper(self._lock, self)

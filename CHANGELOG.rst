@@ -8,6 +8,12 @@ Changelog
 
 0.22
 ====
+0.22.3 (unreleased)
+------
+Fixed
+^^^^^
+- Fixed a deadlock in three level nested transactions (#1810)
+
 
 0.22.2
 ------
