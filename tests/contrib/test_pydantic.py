@@ -2056,9 +2056,16 @@ class TestPydanticEnum(test.TestCase):
 
         # should simply not raise any error:
         self.EnumFields_Pydantic.model_validate({"id": 1, "service": 3, "currency": "HUF"})
-
         self.assertEqual(
             {
+                "$defs": {
+                    "Currency": {
+                        "enum": ["HUF", "EUR", "USD"],
+                        "title": "Currency",
+                        "type": "string",
+                    },
+                    "Service": {"enum": [1, 2, 3], "title": "Service", "type": "integer"},
+                },
                 "additionalProperties": False,
                 "properties": {
                     "id": {
@@ -2068,20 +2075,16 @@ class TestPydanticEnum(test.TestCase):
                         "type": "integer",
                     },
                     "service": {
+                        "$ref": "#/$defs/Service",
                         "description": "python_programming: 1<br/>database_design: 2<br/>system_administration: 3",
-                        "enum": [1, 2, 3],
                         "ge": -32768,
                         "le": 32767,
-                        "title": "Service",
-                        "type": "integer",
                     },
                     "currency": {
+                        "$ref": "#/$defs/Currency",
                         "default": "HUF",
                         "description": "HUF: HUF<br/>EUR: EUR<br/>USD: USD",
-                        "enum": ["HUF", "EUR", "USD"],
                         "maxLength": 3,
-                        "title": "Currency",
-                        "type": "string",
                     },
                 },
                 "required": ["id", "service"],
