@@ -65,13 +65,19 @@ class ConnectionHandler:
     def _clear_storage(self) -> None:
         self._get_storage().clear()
 
-    def _discover_client_class(self, engine: str) -> Type["BaseDBAsyncClient"]:
+    def _discover_client_class(self, db_info: dict) -> Type["BaseDBAsyncClient"]:
         # Let exception bubble up for transparency
-        engine_module = importlib.import_module(engine)
+        engine_str = db_info.get("engine", "")
+        engine_module = importlib.import_module(engine_str)
         try:
-            client_class = engine_module.client_class
+            if hasattr(engine_module, "get_client_class"):
+                client_class = engine_module.get_client_class(db_info)
+            else:
+                client_class = engine_module.client_class
         except AttributeError:
-            raise ConfigurationError(f'Backend for engine "{engine}" does not implement db client')
+            raise ConfigurationError(
+                f'Backend for engine "{engine_str}" does not implement db client'
+            )
         return client_class
 
     def _get_db_info(self, conn_alias: str) -> Union[str, Dict]:
@@ -93,7 +99,7 @@ class ConnectionHandler:
         db_info = self._get_db_info(conn_alias)
         if isinstance(db_info, str):
             db_info = expand_db_url(db_info)
-        client_class = self._discover_client_class(db_info.get("engine", ""))
+        client_class = self._discover_client_class(db_info)
         db_params = db_info["credentials"].copy()
         db_params.update({"connection_name": conn_alias})
         connection: "BaseDBAsyncClient" = client_class(**db_params)

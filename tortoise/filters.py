@@ -138,7 +138,14 @@ def search(field: Term, value: str) -> Any:
 def posix_regex(field: Term, value: str) -> Any:
     # Will be overridden in each executor
     raise NotImplementedError(
-        "The postgres_posix_regex filter operator is not supported by your database backend"
+        "The posix_regex filter operator is not supported by your database backend"
+    )
+
+
+def insensitive_posix_regex(field: Term, value: str):
+    # Will be overridden in each executor
+    raise NotImplementedError(
+        "The insensitive_posix_regex filter operator is not supported by your database backend"
     )
 
 
@@ -502,6 +509,12 @@ def get_filters_for_field(
             "field": actual_field_name,
             "source_field": source_field,
             "operator": posix_regex,
+            "value_encoder": string_encoder,
+        },
+        f"{field_name}__iposix_regex": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": insensitive_posix_regex,
             "value_encoder": string_encoder,
         },
         f"{field_name}__year": {
