@@ -183,7 +183,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
             await connection.executemany(query, values)
 
     @translate_exceptions
-    async def start(self) -> None:
+    async def begin(self) -> None:
         self.transaction = self._connection.transaction()
         await self.transaction.start()
 

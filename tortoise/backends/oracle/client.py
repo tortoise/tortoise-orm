@@ -118,6 +118,6 @@ class OraclePoolConnectionWrapper(PoolConnectionWrapper):
 
 
 class TransactionWrapper(ODBCTransactionWrapper, OracleClient):
-    async def start(self) -> None:
+    async def begin(self) -> None:
         await self._connection.execute("SET TRANSACTION READ WRITE")
-        await super().start()
+        await super().begin()

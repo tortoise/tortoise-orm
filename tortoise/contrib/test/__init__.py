@@ -323,7 +323,7 @@ class TransactionTestContext:
     async def __aenter__(self):
         await self.ensure_connection()
         self.token = connections.set(self.connection_name, self.connection)
-        await self.connection.start()
+        await self.connection.begin()
         return self.connection
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:

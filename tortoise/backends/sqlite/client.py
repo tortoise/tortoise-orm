@@ -192,7 +192,7 @@ class SqliteTransactionContext(TransactionContext):
         await self.ensure_connection()
         await self._trxlock.acquire()
         self.token = connections.set(self.connection_name, self.connection)
-        await self.connection.start()
+        await self.connection.begin()
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -229,7 +229,7 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
             # Already within transaction, so ideal for performance
             await connection.executemany(query, values)
 
-    async def start(self) -> None:
+    async def begin(self) -> None:
         try:
             await self._connection.commit()
             await self._connection.execute("BEGIN")

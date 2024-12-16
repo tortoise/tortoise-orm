@@ -220,7 +220,7 @@ class TransactionWrapper(PsycopgClient, base_client.BaseTransactionWrapper):
         return base_client.ConnectionWrapper(self._lock, self)
 
     @postgres_client.translate_exceptions
-    async def start(self) -> None:
+    async def begin(self) -> None:
         self._transaction = self._connection.transaction()
         await self._transaction.__aenter__()
 

@@ -51,6 +51,6 @@ class MSSQLClient(ODBCClient):
 
 
 class TransactionWrapper(ODBCTransactionWrapper, MSSQLClient):
-    async def start(self) -> None:
+    async def begin(self) -> None:
         await self._connection.execute("BEGIN TRANSACTION")
-        await super().start()
+        await super().begin()

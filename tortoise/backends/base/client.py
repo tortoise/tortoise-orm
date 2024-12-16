@@ -275,7 +275,7 @@ class TransactionContextPooled(TransactionContext):
         # TransactionWrapper conneciton.
         self.token = connections.set(self.connection_name, self.connection)
         self.connection._connection = await self.connection._parent._pool.acquire()
-        await self.connection.start()
+        await self.connection.begin()
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -299,7 +299,7 @@ class NestedTransactionContext(TransactionContext):
         self.connection_name = connection.connection_name
 
     async def __aenter__(self) -> T_conn:
-        await self.connection.start()
+        await self.connection.begin()
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -338,7 +338,7 @@ class PoolConnectionWrapper(Generic[T_conn]):
 
 class BaseTransactionWrapper:
     @abc.abstractmethod
-    async def start(self) -> None: ...
+    async def begin(self) -> None: ...
 
     @abc.abstractmethod
     async def rollback(self) -> None: ...

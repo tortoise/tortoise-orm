@@ -248,7 +248,7 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
                 await cursor.executemany(query, values)
 
     @translate_exceptions
-    async def start(self) -> None:
+    async def begin(self) -> None:
         await self._connection.begin()
         self._finalized = False
 
