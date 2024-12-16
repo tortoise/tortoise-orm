@@ -1,10 +1,10 @@
 from tests import testmodels
 from tortoise.contrib import test
 
+
 class RegexTestCase(test.TestCase):
     async def asyncSetUp(self) -> None:
         await super().asyncSetUp()
-
 
 
 class TestPosixRegexFilter(test.TestCase):

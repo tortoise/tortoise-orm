@@ -11,7 +11,7 @@ from typing import (
     Sequence,
     Tuple,
     TypeVar,
-    cast, override,
+    cast,
 )
 
 import aiosqlite
@@ -23,13 +23,15 @@ from tortoise.backends.base.client import (
     Capabilities,
     ConnectionWrapper,
     NestedTransactionContext,
-    TransactionContext,
     T_conn,
+    TransactionContext,
 )
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
-from tortoise.contrib.sqlite.regex import install_regexp_functions as install_regexp_functions_to_db
 from tortoise.connection import connections
+from tortoise.contrib.sqlite.regex import (
+    install_regexp_functions as install_regexp_functions_to_db,
+)
 from tortoise.exceptions import (
     IntegrityError,
     OperationalError,
@@ -253,14 +255,15 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
 
 class SqliteClientWithRegexpSupport(SqliteClient):
     capabilities = Capabilities(
-        "sqlite", daemon=False, requires_limit=True, inline_comment=True, support_for_update=False, support_for_posix_regex_queries=True
+        "sqlite",
+        daemon=False,
+        requires_limit=True,
+        inline_comment=True,
+        support_for_update=False,
+        support_for_posix_regex_queries=True,
     )
 
     async def create_connection(self, with_db: bool) -> None:
         await super().create_connection(with_db)
-        await install_regexp_functions_to_db(self._connection)
-
-
-# class TransactionWrapperWithRegexpSupport(TransactionWrapper):
-#     def __init__(self, connection: SqliteClientWithRegexpSupport) -> None:
-#         super().__init__(connection)
+        if self._connection:
+            await install_regexp_functions_to_db(self._connection)

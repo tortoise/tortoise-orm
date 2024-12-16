@@ -52,7 +52,9 @@ class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
     query_class: Type[PostgreSQLQuery] = PostgreSQLQuery
     executor_class: Type[BasePostgresExecutor] = BasePostgresExecutor
     schema_generator: Type[BasePostgresSchemaGenerator] = BasePostgresSchemaGenerator
-    capabilities = Capabilities("postgres", support_update_limit_order_by=False, support_for_posix_regex_queries=True)
+    capabilities = Capabilities(
+        "postgres", support_update_limit_order_by=False, support_for_posix_regex_queries=True
+    )
     connection_class: "Optional[Union[AsyncConnection, Connection]]" = None
     loop: Optional[AbstractEventLoop] = None
     _pool: Optional[Any] = None

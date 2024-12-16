@@ -75,7 +75,9 @@ class ConnectionHandler:
             else:
                 client_class = engine_module.client_class
         except AttributeError:
-            raise ConfigurationError(f'Backend for engine "{engine_str}" does not implement db client')
+            raise ConfigurationError(
+                f'Backend for engine "{engine_str}" does not implement db client'
+            )
         return client_class
 
     def _get_db_info(self, conn_alias: str) -> Union[str, Dict]:

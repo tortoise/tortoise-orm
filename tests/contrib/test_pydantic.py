@@ -7,6 +7,7 @@ from tests.testmodels import (
     Address,
     CamelCaseAliasPerson,
     Employee,
+    EnumFields,
     Event,
     IntFields,
     JSONFields,

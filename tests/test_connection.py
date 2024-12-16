@@ -159,7 +159,9 @@ class TestConnections(SimpleTestCase):
 
         mocked_get_db_info.assert_called_once_with(alias)
         mocked_expand_db_url.assert_called_once_with("some_db_url")
-        mocked_discover_client_class.assert_called_once_with({"engine": "some_engine", "credentials": {"cred_key": "some_val"}})
+        mocked_discover_client_class.assert_called_once_with(
+            {"engine": "some_engine", "credentials": {"cred_key": "some_val"}}
+        )
         expected_client_class.assert_called_once_with(**expected_db_params)
         self.assertEqual(ret_val, "some_connection")
 
@@ -185,7 +187,9 @@ class TestConnections(SimpleTestCase):
 
         mocked_get_db_info.assert_called_once_with(alias)
         mocked_expand_db_url.assert_not_called()
-        mocked_discover_client_class.assert_called_once_with({"engine": "some_engine", "credentials": {"cred_key": "some_val"}})
+        mocked_discover_client_class.assert_called_once_with(
+            {"engine": "some_engine", "credentials": {"cred_key": "some_val"}}
+        )
         expected_client_class.assert_called_once_with(**expected_db_params)
         self.assertEqual(ret_val, "some_connection")
 
