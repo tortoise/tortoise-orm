@@ -168,7 +168,9 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         self._parent: AsyncpgDBClient = connection
 
     def _in_transaction(self) -> "TransactionContext":
-        return NestedTransactionContext(self)
+        # since we need to store the transaction object for each transaction block,
+        # we need to wrap the connection with its own TransactionWrapper
+        return NestedTransactionContext(TransactionWrapper(self))
 
     def acquire_connection(self) -> ConnectionWrapper[asyncpg.Connection]:
         return ConnectionWrapper(self._lock, self)
@@ -196,3 +198,6 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
             raise TransactionManagementError("Transaction already finalised")
         await self.transaction.rollback()
         self._finalized = True
+
+    async def safepoint_rollback(self) -> None:
+        await self.rollback()

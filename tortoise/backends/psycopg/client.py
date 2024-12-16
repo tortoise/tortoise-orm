@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import _AsyncGeneratorContextManager
 import typing
 from ssl import SSLContext
 
@@ -129,13 +130,7 @@ class PsycopgClient(postgres_client.BasePostgresClient):
         async with self.acquire_connection() as connection:
             async with connection.cursor() as cursor:
                 self.log.debug("%s: %s", query, values)
-                try:
-                    await cursor.executemany(query, values)
-                except Exception:
-                    await connection.rollback()
-                    raise
-                else:
-                    await connection.commit()
+                await cursor.executemany(query, values)
 
     @postgres_client.translate_exceptions
     async def execute_query(
@@ -149,11 +144,7 @@ class PsycopgClient(postgres_client.BasePostgresClient):
             cursor: typing.Union[psycopg.AsyncCursor, psycopg.AsyncServerCursor]
             async with connection.cursor(row_factory=row_factory) as cursor:
                 self.log.debug("%s: %s", query, values)
-                try:
-                    await cursor.execute(query, values)
-                except psycopg.errors.IntegrityError:
-                    await connection.rollback()
-                    raise
+                await cursor.execute(query, values)
 
                 rowcount = int(cursor.rowcount or cursor.rownumber or 0)
 
@@ -216,33 +207,40 @@ class TransactionWrapper(PsycopgClient, base_client.BaseTransactionWrapper):
         self._lock = asyncio.Lock()
         self.log = connection.log
         self.connection_name = connection.connection_name
+        self._transaction: _AsyncGeneratorContextManager[psycopg.AsyncTransaction] = None
         self._finalized = False
         self._parent = connection
 
     def _in_transaction(self) -> base_client.TransactionContext:
-        return base_client.NestedTransactionContext(self)
+        # since we need to store the transaction object for each transaction block,
+        # we need to wrap the connection with its own TransactionWrapper
+        return base_client.NestedTransactionContext(TransactionWrapper(self))
 
     def acquire_connection(self) -> base_client.ConnectionWrapper[psycopg.AsyncConnection]:
         return base_client.ConnectionWrapper(self._lock, self)
 
     @postgres_client.translate_exceptions
     async def start(self) -> None:
-        # We're not using explicit transactions here because psycopg takes care of that
-        # automatically when autocommit is disabled.
-        await self._connection.set_autocommit(False)
+        self._transaction = self._connection.transaction()
+        await self._transaction.__aenter__()
 
     async def commit(self) -> None:
         if self._finalized:
             raise exceptions.TransactionManagementError("Transaction already finalised")
 
-        await self._connection.commit()
-        await self._connection.set_autocommit(True)
+        await self._transaction.__aexit__(None, None, None)
         self._finalized = True
 
     async def rollback(self) -> None:
         if self._finalized:
             raise exceptions.TransactionManagementError("Transaction already finalised")
 
-        await self._connection.rollback()
-        await self._connection.set_autocommit(True)
+        await self._transaction.__aexit__(psycopg.Rollback, psycopg.Rollback(), None)
+        self._finalized = True
+
+    async def safepoint_rollback(self) -> None:
+        if self._finalized:
+            raise exceptions.TransactionManagementError("Transaction already finalised")
+
+        await self._transaction.__aexit__(psycopg.Rollback, psycopg.Rollback(), None)
         self._finalized = True

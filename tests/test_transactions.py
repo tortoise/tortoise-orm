@@ -89,6 +89,38 @@ class TestTransactions(test.TruncationTestCase):
 
         self.assertEqual(await Tournament.filter(id=tournament.id).count(), 0)
 
+    async def test_nested_rollback_does_not_enable_autocommit(self):
+        with self.assertRaisesRegex(SomeException, "Error 2"):
+            async with in_transaction():
+                await Tournament.create(name="Test1")
+                with self.assertRaisesRegex(SomeException, "Error 1"):
+                    async with in_transaction():
+                        await Tournament.create(name="Test2")
+                        raise SomeException("Error 1")
+
+                await Tournament.create(name="Test3")
+                raise SomeException("Error 2")
+
+        self.assertEqual(await Tournament.all().count(), 0)
+
+    async def test_nested_savepoint_rollbacks(self):
+        async with in_transaction():
+            await Tournament.create(name="Outer Transaction")
+
+            with self.assertRaisesRegex(SomeException, "Inner 1"):
+                async with in_transaction():
+                    await Tournament.create(name="Inner 1")
+                    raise SomeException("Inner 1")
+
+            with self.assertRaisesRegex(SomeException, "Inner 2"):
+                async with in_transaction():
+                    await Tournament.create(name="Inner 2")
+                    raise SomeException("Inner 2")
+
+        self.assertEqual(
+            await Tournament.all().values_list("name", flat=True), ["Outer Transaction"]
+        )
+
     async def test_three_nested_transactions(self):
         async with in_transaction():
             tournament1 = await Tournament.create(name="Test")

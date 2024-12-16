@@ -299,6 +299,7 @@ class NestedTransactionContext(TransactionContext):
         self.connection_name = connection.connection_name
 
     async def __aenter__(self) -> T_conn:
+        await self.connection.start()
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -306,7 +307,9 @@ class NestedTransactionContext(TransactionContext):
             if exc_type:
                 # Can't rollback a transaction that already failed.
                 if exc_type is not TransactionManagementError:
-                    await self.connection.rollback()
+                    await self.connection.safepoint_rollback()
+            else:
+                await self.connection.commit()
 
 
 class PoolConnectionWrapper(Generic[T_conn]):
@@ -339,6 +342,9 @@ class BaseTransactionWrapper:
 
     @abc.abstractmethod
     async def rollback(self) -> None: ...
+
+    @abc.abstractmethod
+    async def safepoint_rollback(self) -> None: ...
 
     @abc.abstractmethod
     async def commit(self) -> None: ...
