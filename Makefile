@@ -47,6 +47,9 @@ test: deps
 test_sqlite:
 	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: pytest --cov-report= $(pytest_opts)
 
+test_sqlite_regexp:
+	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory:?install_regexp_functions=True pytest --cov-report= $(pytest_opts)
+
 test_postgres_asyncpg:
 	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="asyncpg://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" pytest $(pytest_opts) --cov-append --cov-report=
 

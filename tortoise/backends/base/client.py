@@ -46,6 +46,7 @@ class Capabilities:
     :param support_for_update: Indicates that this DB supports SELECT ... FOR UPDATE SQL statement.
     :param support_index_hint: Support force index or use index.
     :param support_update_limit_order_by: support update/delete with limit and order by.
+    :param: support_for_posix_regex_queries: indicated if the db supports posix regex queries
     """
 
     def __init__(
@@ -63,6 +64,7 @@ class Capabilities:
         support_index_hint: bool = False,
         # support update/delete with limit and order by
         support_update_limit_order_by: bool = True,
+        support_for_posix_regex_queries: bool = False,
     ) -> None:
         super().__setattr__("_mutable", True)
 
@@ -74,6 +76,7 @@ class Capabilities:
         self.support_for_update = support_for_update
         self.support_index_hint = support_index_hint
         self.support_update_limit_order_by = support_update_limit_order_by
+        self.support_for_posix_regex_queries = support_for_posix_regex_queries
         super().__setattr__("_mutable", False)
 
     def __setattr__(self, attr: str, value: Any) -> None:

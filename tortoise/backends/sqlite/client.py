@@ -11,7 +11,7 @@ from typing import (
     Sequence,
     Tuple,
     TypeVar,
-    cast,
+    cast, override,
 )
 
 import aiosqlite
@@ -28,7 +28,7 @@ from tortoise.backends.base.client import (
 )
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
-from tortoise.contrib.sqlite.regex import install_regexp_function
+from tortoise.contrib.sqlite.regex import install_regexp_functions as install_regexp_functions_to_db
 from tortoise.connection import connections
 from tortoise.exceptions import (
     IntegrityError,
@@ -84,7 +84,6 @@ class SqliteClient(BaseDBAsyncClient):
             for pragma, val in self.pragmas.items():
                 cursor = await self._connection.execute(f"PRAGMA {pragma}={val}")
                 await cursor.close()
-            await install_regexp_function(self._connection)
             self.log.debug(
                 "Created connection %s with params: filename=%s %s",
                 self._connection,
@@ -213,6 +212,7 @@ class SqliteTransactionContext(TransactionContext):
 
 class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
     def __init__(self, connection: SqliteClient) -> None:
+        self.capabilities = connection.capabilities
         self.connection_name = connection.connection_name
         self._connection: aiosqlite.Connection = cast(aiosqlite.Connection, connection._connection)
         self._lock = asyncio.Lock()
@@ -249,3 +249,18 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.commit()
         self._finalized = True
+
+
+class SqliteClientWithRegexpSupport(SqliteClient):
+    capabilities = Capabilities(
+        "sqlite", daemon=False, requires_limit=True, inline_comment=True, support_for_update=False, support_for_posix_regex_queries=True
+    )
+
+    async def create_connection(self, with_db: bool) -> None:
+        await super().create_connection(with_db)
+        await install_regexp_functions_to_db(self._connection)
+
+
+# class TransactionWrapperWithRegexpSupport(TransactionWrapper):
+#     def __init__(self, connection: SqliteClientWithRegexpSupport) -> None:
+#         super().__init__(connection)
