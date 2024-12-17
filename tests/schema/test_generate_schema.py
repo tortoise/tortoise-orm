@@ -1094,7 +1094,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS "uidx_teamevents_event_i_664dbc" ON "teamevent
     "gist" TSVECTOR NOT NULL,
     "sp_gist" VARCHAR(200) NOT NULL,
     "hash" VARCHAR(200) NOT NULL,
-    "partial" VARCHAR(200) NOT NULL
+    "partial" VARCHAR(200) NOT NULL,
+    "array" TEXT[] NOT NULL  DEFAULT ('a','b','c')
 );
 CREATE INDEX "idx_index_bloom_280137" ON "index" USING BLOOM ("bloom");
 CREATE INDEX "idx_index_brin_a54a00" ON "index" USING BRIN ("brin");
@@ -1118,7 +1119,8 @@ CREATE INDEX "idx_index_partial_c5be6a" ON "index" USING  ("partial") WHERE id =
     "gist" TSVECTOR NOT NULL,
     "sp_gist" VARCHAR(200) NOT NULL,
     "hash" VARCHAR(200) NOT NULL,
-    "partial" VARCHAR(200) NOT NULL
+    "partial" VARCHAR(200) NOT NULL,
+    "array" TEXT[] NOT NULL  DEFAULT ('a','b','c')
 );
 CREATE INDEX IF NOT EXISTS "idx_index_bloom_280137" ON "index" USING BLOOM ("bloom");
 CREATE INDEX IF NOT EXISTS "idx_index_brin_a54a00" ON "index" USING BRIN ("brin");

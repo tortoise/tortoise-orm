@@ -107,3 +107,5 @@ ENV/
 # MyPy caches
 .mypy_cache/
 
+# macos
+.DS_Store
