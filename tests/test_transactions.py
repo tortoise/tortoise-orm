@@ -289,11 +289,6 @@ class TestTransactions(test.TruncationTestCase):
             await Tournament.all().values("id", "name"), [{"id": obj.id, "name": "Test1"}]
         )
 
-
-@test.requireCapability(supports_transactions=True)
-class TestIsolatedTransactions(test.IsolatedTestCase):
-    """Running these in isolation because they mess with the global state of the connections."""
-
     async def test_rollback_raising_exception(self):
         """Tests that if a rollback raises an exception, the connection context is restored."""
         conn = connections.get("models")

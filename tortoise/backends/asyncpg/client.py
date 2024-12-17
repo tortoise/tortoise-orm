@@ -158,12 +158,16 @@ class AsyncpgDBClient(BasePostgresClient):
 
 
 class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
+    """A transactional connection wrapper for psycopg.
+
+    asyncpg implements nested transactions (savepoints) natively, so we don't need to.
+    """
     def __init__(self, connection: AsyncpgDBClient) -> None:
         self._connection: asyncpg.Connection = connection._connection
         self._lock = asyncio.Lock()
         self.log = connection.log
         self.connection_name = connection.connection_name
-        self.transaction: Transaction = None
+        self.transaction: Optional[Transaction] = None
         self._finalized = False
         self._parent: AsyncpgDBClient = connection
 
@@ -187,17 +191,27 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
         self.transaction = self._connection.transaction()
         await self.transaction.start()
 
+    async def savepoint(self) -> None:
+        return await self.begin()
+
     async def commit(self) -> None:
+        if not self.transaction:
+            raise TransactionManagementError("Transaction is in invalid state")
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self.transaction.commit()
         self._finalized = True
 
+    async def release_savepoint(self) -> None:
+        return await self.commit()
+
     async def rollback(self) -> None:
+        if not self.transaction:
+            raise TransactionManagementError("Transaction is in invalid state")
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self.transaction.rollback()
         self._finalized = True
 
-    async def safepoint_rollback(self) -> None:
+    async def savepoint_rollback(self) -> None:
         await self.rollback()

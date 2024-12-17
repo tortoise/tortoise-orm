@@ -200,6 +200,10 @@ class PsycopgClient(postgres_client.BasePostgresClient):
 
 
 class TransactionWrapper(PsycopgClient, base_client.BaseTransactionWrapper):
+    """A transactional connection wrapper for psycopg.
+
+    psycopg implements nested transactions (savepoints) natively, so we don't need to.
+    """
     _connection: psycopg.AsyncConnection
 
     def __init__(self, connection: PsycopgClient) -> None:
@@ -207,7 +211,9 @@ class TransactionWrapper(PsycopgClient, base_client.BaseTransactionWrapper):
         self._lock = asyncio.Lock()
         self.log = connection.log
         self.connection_name = connection.connection_name
-        self._transaction: _AsyncGeneratorContextManager[psycopg.AsyncTransaction] = None
+        self._transaction: typing.Optional[
+            _AsyncGeneratorContextManager[psycopg.AsyncTransaction]
+        ] = None
         self._finalized = False
         self._parent = connection
 
@@ -224,23 +230,29 @@ class TransactionWrapper(PsycopgClient, base_client.BaseTransactionWrapper):
         self._transaction = self._connection.transaction()
         await self._transaction.__aenter__()
 
+    async def savepoint(self) -> None:
+        return await self.begin()
+
     async def commit(self) -> None:
+        if not self._transaction:
+            raise exceptions.TransactionManagementError("Transaction is in invalid state")
         if self._finalized:
             raise exceptions.TransactionManagementError("Transaction already finalised")
 
         await self._transaction.__aexit__(None, None, None)
         self._finalized = True
 
+    async def release_savepoint(self) -> None:
+        return await self.commit()
+
     async def rollback(self) -> None:
+        if not self._transaction:
+            raise exceptions.TransactionManagementError("Transaction is in invalid state")
         if self._finalized:
             raise exceptions.TransactionManagementError("Transaction already finalised")
 
         await self._transaction.__aexit__(psycopg.Rollback, psycopg.Rollback(), None)
         self._finalized = True
 
-    async def safepoint_rollback(self) -> None:
-        if self._finalized:
-            raise exceptions.TransactionManagementError("Transaction already finalised")
-
-        await self._transaction.__aexit__(psycopg.Rollback, psycopg.Rollback(), None)
-        self._finalized = True
+    async def savepoint_rollback(self) -> None:
+        return await self.rollback()

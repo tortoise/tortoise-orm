@@ -297,40 +297,8 @@ class TruncationTestCase(SimpleTestCase):
         await super()._tearDownDB()
 
 
-class TransactionTestContext:
-    __slots__ = ("connection", "connection_name", "token", "uses_pool")
-
-    def __init__(self, connection) -> None:
-        self.connection = connection
-        self.connection_name = connection.connection_name
-        self.uses_pool = hasattr(self.connection._parent, "_pool")
-
-    async def ensure_connection(self) -> None:
-        is_conn_established = self.connection._connection is not None
-        if self.uses_pool:
-            is_conn_established = self.connection._parent._pool is not None
-
-        # If the underlying pool/connection hasn't been established then
-        # first create the pool/connection
-        if not is_conn_established:
-            await self.connection._parent.create_connection(with_db=True)
-
-        if self.uses_pool:
-            self.connection._connection = await self.connection._parent._pool.acquire()
-        else:
-            self.connection._connection = self.connection._parent._connection
-
-    async def __aenter__(self):
-        await self.ensure_connection()
-        self.token = connections.set(self.connection_name, self.connection)
-        await self.connection.begin()
-        return self.connection
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        await self.connection.rollback()
-        if self.uses_pool:
-            await self.connection._parent._pool.release(self.connection._connection)
-        connections.reset(self.token)
+class _RollbackException(Exception):
+    pass
 
 
 class TestCase(TruncationTestCase):
@@ -344,11 +312,12 @@ class TestCase(TruncationTestCase):
     async def asyncSetUp(self) -> None:
         await super().asyncSetUp()
         self._db = connections.get("models")
-        self._transaction = TransactionTestContext(self._db._in_transaction().connection)
-        await self._transaction.__aenter__()  # type: ignore
+        self._transaction = self._db._in_transaction()
+        await self._transaction.__aenter__()
 
     async def asyncTearDown(self) -> None:
-        await self._transaction.__aexit__(None, None, None)
+        # this will cause a rollback
+        await self._transaction.__aexit__(_RollbackException, _RollbackException(), None)
         await super().asyncTearDown()
 
     async def _tearDownDB(self) -> None:

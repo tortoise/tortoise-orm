@@ -19,6 +19,7 @@ try:
 except ImportError:
     import aiomysql as mysql
     from pymysql.charset import charset_by_name
+    from pymysql.constants import COMMAND
     from pymysql import err as errors
 
 from pypika import MySQLQuery
@@ -105,6 +106,7 @@ class MySQLClient(BaseDBAsyncClient):
         self._template: dict = {}
         self._pool: Optional[mysql.Pool] = None
         self._connection = None
+        self._savepoint_counter: int = 0
 
     async def create_connection(self, with_db: bool) -> None:
         if charset_by_name(self.charset) is None:
@@ -229,13 +231,14 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         self.connection_name = connection.connection_name
         self._connection: mysql.Connection = connection._connection
         self._lock = asyncio.Lock()
+        self._savepoint: Optional[str] = None
         self.log = connection.log
         self._finalized: Optional[bool] = None
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 
     def _in_transaction(self) -> "TransactionContext":
-        return NestedTransactionContext(self)
+        return NestedTransactionContext(TransactionWrapper(self))
 
     def acquire_connection(self) -> ConnectionWrapper[mysql.Connection]:
         return ConnectionWrapper(self._lock, self)
@@ -258,8 +261,44 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         await self._connection.commit()
         self._finalized = True
 
+    @translate_exceptions
+    async def savepoint(self) -> None:
+        # get the savepoint counter from the root connection
+        parent = self._parent
+        while getattr(parent, "_parent", None) is not None:
+            parent = getattr(parent, "_parent")
+
+        self._savepoint = f"sp_{parent._savepoint_counter}"
+        parent._savepoint_counter += 1
+        await self._connection._execute_command(COMMAND.COM_QUERY, f"SAVEPOINT {self._savepoint}")
+        await self._connection._read_ok_packet()
+
     async def rollback(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.rollback()
+        self._finalized = True
+
+    async def savepoint_rollback(self) -> None:
+        if self._finalized:
+            raise TransactionManagementError("Transaction already finalised")
+        if self._savepoint is None:
+            raise TransactionManagementError("No savepoint to rollback to")
+        await self._connection._execute_command(
+            COMMAND.COM_QUERY, f"ROLLBACK TO SAVEPOINT {self._savepoint}"
+        )
+        await self._connection._read_ok_packet()
+        self._savepoint = None
+        self._finalized = True
+
+    async def release_savepoint(self) -> None:
+        if self._finalized:
+            raise TransactionManagementError("Transaction already finalised")
+        if self._savepoint is None:
+            raise TransactionManagementError("No savepoint to release")
+        await self._connection._execute_command(
+            COMMAND.COM_QUERY, f"RELEASE SAVEPOINT {self._savepoint}"
+        )
+        await self._connection._read_ok_packet()
+        self._savepoint = None
         self._finalized = True
