@@ -9,6 +9,8 @@ from tests.testmodels import (
     Employee,
     EnumFields,
     Event,
+    ModelTestPydanticMetaBackwardRelations1,
+    ModelTestPydanticMetaBackwardRelations2,
     IntFields,
     JSONFields,
     Reporter,
@@ -33,11 +35,17 @@ class TestPydantic(test.TestCase):
         self.Tournament_Pydantic = pydantic_model_creator(Tournament)
         self.Team_Pydantic = pydantic_model_creator(Team)
         self.Address_Pydantic = pydantic_model_creator(Address)
+        self.ModelTestPydanticMetaBackwardRelations1_Pydantic = pydantic_model_creator(
+            ModelTestPydanticMetaBackwardRelations1
+        )
+        self.ModelTestPydanticMetaBackwardRelations2_Pydantic = pydantic_model_creator(
+            ModelTestPydanticMetaBackwardRelations2
+        )
 
         class PydanticMetaOverride:
             backward_relations = False
 
-        self.Event_Pydantic_non_backward = pydantic_model_creator(
+        self.Event_Pydantic_non_backward_from_override = pydantic_model_creator(
             Event, meta_override=PydanticMetaOverride, name="Event_non_backward"
         )
 
@@ -55,14 +63,24 @@ class TestPydantic(test.TestCase):
         self.maxDiff = None
 
     async def test_backward_relations(self):
+        # from meta_override:
         event_schema = copy.deepcopy(dict(self.Event_Pydantic.model_json_schema()))
-        event_non_backward_schema = copy.deepcopy(
-            dict(self.Event_Pydantic_non_backward.model_json_schema())
+        event_non_backward_schema_by_override = copy.deepcopy(
+            dict(self.Event_Pydantic_non_backward_from_override.model_json_schema())
         )
         self.assertTrue("address" in event_schema["properties"])
-        self.assertFalse("address" in event_non_backward_schema["properties"])
+        self.assertFalse("address" in event_non_backward_schema_by_override["properties"])
         del event_schema["properties"]["address"]
-        self.assertEqual(event_schema["properties"], event_non_backward_schema["properties"])
+        self.assertEqual(event_schema["properties"], event_non_backward_schema_by_override["properties"])
+
+        # from PydanticMeta:
+        test_model1_schema = self.ModelTestPydanticMetaBackwardRelations1_Pydantic.model_json_schema()
+        test_model2_schema = self.ModelTestPydanticMetaBackwardRelations2_Pydantic.model_json_schema()
+        self.assertTrue("threes" in test_model2_schema["properties"])
+        self.assertFalse("threes" in test_model1_schema["properties"])
+        del test_model2_schema["properties"]["threes"]
+        self.assertEqual(test_model2_schema["properties"], test_model1_schema["properties"])
+        print(test_model2_schema)
 
     def test_event_schema(self):
         self.assertEqual(
