@@ -23,8 +23,8 @@ from tortoise.backends.base.client import (
     Capabilities,
     ConnectionWrapper,
     NestedTransactionContext,
-    TransactionContext,
     T_conn,
+    TransactionContext,
 )
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
@@ -247,3 +247,15 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.commit()
         self._finalized = True
+
+    async def savepoint(self) -> None:
+        # TODO
+        pass
+
+    async def savepoint_rollback(self) -> None:
+        # TODO
+        pass
+
+    async def release_savepoint(self) -> None:
+        # TODO
+        pass

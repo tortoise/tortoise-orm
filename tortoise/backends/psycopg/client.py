@@ -1,6 +1,6 @@
 import asyncio
-from contextlib import _AsyncGeneratorContextManager
 import typing
+from contextlib import _AsyncGeneratorContextManager
 from ssl import SSLContext
 
 import psycopg
@@ -204,6 +204,7 @@ class TransactionWrapper(PsycopgClient, base_client.BaseTransactionWrapper):
 
     psycopg implements nested transactions (savepoints) natively, so we don't need to.
     """
+
     _connection: psycopg.AsyncConnection
 
     def __init__(self, connection: PsycopgClient) -> None:

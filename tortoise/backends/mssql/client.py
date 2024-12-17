@@ -5,6 +5,7 @@ from pypika.dialects import MSSQLQuery
 
 from tortoise.backends.base.client import (
     Capabilities,
+    NestedTransactionContext,
     TransactionContext,
     TransactionContextPooled,
 )
@@ -57,6 +58,9 @@ def _gen_savepoint_name(_c=count()) -> str:
 
 
 class TransactionWrapper(ODBCTransactionWrapper, MSSQLClient):
+    def _in_transaction(self) -> "TransactionContext":
+        return NestedTransactionContext(TransactionWrapper(self))
+
     async def begin(self) -> None:
         await self._connection.execute("BEGIN TRANSACTION")
         await super().begin()

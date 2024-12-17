@@ -162,6 +162,7 @@ class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
 
     asyncpg implements nested transactions (savepoints) natively, so we don't need to.
     """
+
     def __init__(self, connection: AsyncpgDBClient) -> None:
         self._connection: asyncpg.Connection = connection._connection
         self._lock = asyncio.Lock()

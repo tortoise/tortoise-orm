@@ -203,3 +203,15 @@ class ODBCTransactionWrapper(BaseTransactionWrapper):
         await self._connection.rollback()
         self._finalized = True
         self._connection._conn.autocommit = True
+
+    async def savepoint(self) -> None:
+        # TODO
+        pass
+
+    async def savepoint_rollback(self) -> None:
+        # TODO
+        pass
+
+    async def release_savepoint(self) -> None:
+        # TODO
+        pass
