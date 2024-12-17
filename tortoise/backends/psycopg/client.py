@@ -244,7 +244,7 @@ class TransactionWrapper(PsycopgClient, base_client.BaseTransactionWrapper):
         self._finalized = True
 
     async def release_savepoint(self) -> None:
-        return await self.commit()
+        await self.commit()
 
     async def rollback(self) -> None:
         if not self._transaction:
@@ -256,4 +256,4 @@ class TransactionWrapper(PsycopgClient, base_client.BaseTransactionWrapper):
         self._finalized = True
 
     async def savepoint_rollback(self) -> None:
-        return await self.rollback()
+        await self.rollback()

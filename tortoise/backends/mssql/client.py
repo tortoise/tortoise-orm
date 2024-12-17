@@ -77,8 +77,8 @@ class TransactionWrapper(ODBCTransactionWrapper, MSSQLClient):
         await self._connection.execute(f"ROLLBACK TRANSACTION {self._savepoint}")
 
     async def release_savepoint(self) -> None:
+        # MSSQL does not support releasing savepoints
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         if self._savepoint is None:
             raise TransactionManagementError("No savepoint to rollback to")
-        # MSSQL does not support releasing savepoints
