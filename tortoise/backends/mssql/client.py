@@ -1,3 +1,4 @@
+from itertools import count
 from typing import Any, SupportsInt
 
 from pypika.dialects import MSSQLQuery
@@ -14,6 +15,7 @@ from tortoise.backends.odbc.client import (
     ODBCTransactionWrapper,
     translate_exceptions,
 )
+from tortoise.exceptions import TransactionManagementError
 
 
 class MSSQLClient(ODBCClient):
@@ -50,7 +52,29 @@ class MSSQLClient(ODBCClient):
                 return (await cursor.fetchone())[0]
 
 
+def _gen_savepoint_name(_c=count()) -> str:
+    return f"tortoise_savepoint_{next(_c)}"
+
+
 class TransactionWrapper(ODBCTransactionWrapper, MSSQLClient):
     async def begin(self) -> None:
         await self._connection.execute("BEGIN TRANSACTION")
         await super().begin()
+
+    async def savepoint(self) -> None:
+        self._savepoint = _gen_savepoint_name()
+        await self._connection.execute(f"SAVE TRANSACTION {self._savepoint}")
+
+    async def savepoint_rollback(self) -> None:
+        if self._finalized:
+            raise TransactionManagementError("Transaction already finalised")
+        if self._savepoint is None:
+            raise TransactionManagementError("No savepoint to rollback to")
+        await self._connection.execute(f"ROLLBACK TRANSACTION {self._savepoint}")
+
+    async def release_savepoint(self) -> None:
+        if self._finalized:
+            raise TransactionManagementError("Transaction already finalised")
+        if self._savepoint is None:
+            raise TransactionManagementError("No savepoint to rollback to")
+        # MSSQL does not support releasing savepoints

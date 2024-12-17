@@ -1,5 +1,6 @@
 import asyncio
 from functools import wraps
+from itertools import count
 from typing import (
     Any,
     Callable,
@@ -263,13 +264,7 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
 
     @translate_exceptions
     async def savepoint(self) -> None:
-        # get the savepoint counter from the root connection
-        parent = self._parent
-        while getattr(parent, "_parent", None) is not None:
-            parent = getattr(parent, "_parent")
-
-        self._savepoint = f"sp_{parent._savepoint_counter}"
-        parent._savepoint_counter += 1
+        self._savepoint = _gen_savepoint_name()
         await self._connection._execute_command(COMMAND.COM_QUERY, f"SAVEPOINT {self._savepoint}")
         await self._connection._read_ok_packet()
 
@@ -302,3 +297,7 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         await self._connection._read_ok_packet()
         self._savepoint = None
         self._finalized = True
+
+
+def _gen_savepoint_name(_c=count()) -> str:
+    return f"tortoise_savepoint_{next(_c)}"
