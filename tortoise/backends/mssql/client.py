@@ -1,5 +1,5 @@
 from itertools import count
-from typing import Any, SupportsInt
+from typing import Any, Optional, SupportsInt
 
 from pypika.dialects import MSSQLQuery
 
@@ -58,6 +58,10 @@ def _gen_savepoint_name(_c=count()) -> str:
 
 
 class TransactionWrapper(ODBCTransactionWrapper, MSSQLClient):
+    def __init__(self, connection: ODBCClient) -> None:
+        super().__init__(connection)
+        self._savepoint: Optional[str] = None
+
     def _in_transaction(self) -> "TransactionContext":
         return NestedTransactionContext(TransactionWrapper(self))
 
@@ -75,10 +79,14 @@ class TransactionWrapper(ODBCTransactionWrapper, MSSQLClient):
         if self._savepoint is None:
             raise TransactionManagementError("No savepoint to rollback to")
         await self._connection.execute(f"ROLLBACK TRANSACTION {self._savepoint}")
+        self._savepoint = None
+        self._finalized = True
 
     async def release_savepoint(self) -> None:
-        # MSSQL does not support releasing savepoints
+        # MSSQL does not support releasing savepoints, so no action
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         if self._savepoint is None:
             raise TransactionManagementError("No savepoint to rollback to")
+        self._savepoint = None
+        self._finalized = True

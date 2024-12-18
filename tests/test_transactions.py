@@ -21,7 +21,12 @@ async def atomic_decorated_func():
 
 
 @test.requireCapability(supports_transactions=True)
-class TestTransactions(test.TruncationTestCase):
+class TestTransactions(test.IsolatedTestCase):
+    """This test case uses IsolatedTestCase to ensure that
+    - there is no open transaction before the test starts
+    - commits in these tests do not impact other tests
+    """
+
     async def test_transactions(self):
         with self.assertRaises(SomeException):
             async with in_transaction():
@@ -51,11 +56,11 @@ class TestTransactions(test.TruncationTestCase):
                 await Tournament.create(name="Nested 1")
             await Tournament.create(name="Test 2")
             async with in_transaction():
-                await Tournament.create(name="Nested 1")
+                await Tournament.create(name="Nested 2")
 
         self.assertEqual(
             set(await Tournament.all().values_list("name", flat=True)),
-            set(["Test", "Test 2", "Nested 1", "Nested 1"]),
+            set(["Test", "Nested 1", "Test 2", "Nested 2"]),
         )
 
     async def test_caught_exception_in_nested_transaction(self):

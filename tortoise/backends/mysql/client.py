@@ -107,7 +107,6 @@ class MySQLClient(BaseDBAsyncClient):
         self._template: dict = {}
         self._pool: Optional[mysql.Pool] = None
         self._connection = None
-        self._savepoint_counter: int = 0
 
     async def create_connection(self, with_db: bool) -> None:
         if charset_by_name(self.charset) is None:
