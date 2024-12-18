@@ -415,7 +415,7 @@ def init_memory_sqlite(models: AsyncFunc) -> AsyncFunc: ...
 
 
 def init_memory_sqlite(
-    models: Union[ModulesConfigType, AsyncFunc, None] = None
+    models: Union[ModulesConfigType, AsyncFunc, None] = None,
 ) -> Union[AsyncFunc, AsyncFuncDeco]:
     """
     For single file style to run code with memory sqlite

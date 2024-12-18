@@ -24,7 +24,7 @@ class TestTwoDatabases(test.SimpleTestCase):
 
     async def asyncTearDown(self) -> None:
         await Tortoise._drop_databases()
-        await super(TestTwoDatabases, self).asyncTearDown()
+        await super().asyncTearDown()
 
     async def test_two_databases(self):
         tournament = await Tournament.create(name="Tournament")

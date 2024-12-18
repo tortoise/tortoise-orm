@@ -15,10 +15,6 @@ class TestInitErrors(test.SimpleTestCase):
             pass
         Tortoise._inited = False
 
-    async def asyncTearDown(self) -> None:
-        await Tortoise._reset_apps()
-        await super(TestInitErrors, self).asyncTearDown()
-
     async def test_basic_init(self):
         await Tortoise.init(
             {

@@ -26,9 +26,6 @@ class TestGenerateSchema(test.SimpleTestCase):
             "engine"
         ]
 
-    async def asyncTearDown(self) -> None:
-        await Tortoise._reset_apps()
-
     async def init_for(self, module: str, safe=False) -> None:
         if self.engine != "tortoise.backends.sqlite":
             raise test.SkipTest("sqlite only")
