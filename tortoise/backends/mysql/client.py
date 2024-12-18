@@ -17,6 +17,7 @@ try:
     import asyncmy as mysql
     from asyncmy import errors
     from asyncmy.charset import charset_by_name
+    from asyncmy.constants import COMMAND
 except ImportError:
     import aiomysql as mysql
     from pymysql.charset import charset_by_name

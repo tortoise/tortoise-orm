@@ -205,13 +205,10 @@ class ODBCTransactionWrapper(BaseTransactionWrapper):
         self._connection._conn.autocommit = True
 
     async def savepoint(self) -> None:
-        # TODO
         pass
 
     async def savepoint_rollback(self) -> None:
-        # TODO
         pass
 
     async def release_savepoint(self) -> None:
-        # TODO
         pass
