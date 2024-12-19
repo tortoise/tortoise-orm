@@ -9,7 +9,7 @@ Changelog
 0.23
 ====
 
-0.23.1 (unreleased)
+0.23.0 (unreleased)
 ------
 Added
 ^^^^^

@@ -10,7 +10,7 @@ Tortoise ORM provides a simple way to manage transactions. You can use the
 ``atomic()`` and ``in_transaction()`` can be nested. The inner blocks will create transaction savepoints,
 and if an exception is raised and then caught outside of a nested block, the transaction will be rolled back
 to the state before the block was entered. The outermost block will be the one that actually commits the transaction.
-The savepoints are supported for Postgres, SQLite, MySQL and SQLite. For other databases, it is advised to
+The savepoints are supported for Postgres, MySQL, MSSQL and SQLite. For other databases, it is advised to
 propagate the exception to the outermost block to ensure that the transaction is rolled back.
 
   .. code-block:: python3
