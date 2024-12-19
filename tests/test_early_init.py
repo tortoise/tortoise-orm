@@ -35,8 +35,8 @@ class Event(Model):
         ordering = ["name"]
 
 
-class TestBasic(test.TestCase):
-    def test_early_init(self):
+class TestBasic(test.SimpleTestCase):
+    async def test_early_init(self):
         self.maxDiff = None
         Event_TooEarly = pydantic_model_creator(Event)
         self.assertEqual(

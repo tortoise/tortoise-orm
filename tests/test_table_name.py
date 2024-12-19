@@ -33,9 +33,6 @@ class TestTableNameGenerator(SimpleTestCase):
         )
         await Tortoise.generate_schemas()
 
-    async def asyncTearDown(self):
-        await Tortoise.close_connections()
-
     async def test_glabal_name_generator(self):
         self.assertEqual(Tournament._meta.db_table, "test_tournament")
 

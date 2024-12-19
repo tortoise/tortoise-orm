@@ -6,14 +6,21 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.22
+0.23
 ====
-0.22.3 (unreleased)
+
+0.23.0 (unreleased)
 ------
+Added
+^^^^^
+- Implement savepoints for transactions (#1816)
+
 Fixed
 ^^^^^
 - Fixed a deadlock in three level nested transactions (#1810)
 
+0.22
+====
 
 0.22.2
 ------

@@ -4,6 +4,7 @@ from decimal import Decimal
 import pytz
 
 from tests.testmodels import DefaultModel
+from tortoise import connections
 from tortoise.backends.asyncpg import AsyncpgDBClient
 from tortoise.backends.mssql import MSSQLClient
 from tortoise.backends.mysql import MySQLClient
@@ -16,7 +17,7 @@ from tortoise.contrib import test
 class TestDefault(test.TestCase):
     async def asyncSetUp(self) -> None:
         await super(TestDefault, self).asyncSetUp()
-        db = self._db
+        db = connections.get("models")
         if isinstance(db, MySQLClient):
             await db.execute_query(
                 "insert into defaultmodel (`int_default`,`float_default`,`decimal_default`,`bool_default`,`char_default`,`date_default`,`datetime_default`) values (DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT,DEFAULT)",
