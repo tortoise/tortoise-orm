@@ -62,8 +62,7 @@ class TestPydantic(test.TestCase):
         await self.event2.participants.add(self.team1, self.team2)
         self.maxDiff = None
 
-    async def test_backward_relations(self):
-        # from meta_override:
+    async def test_backward_relations_with_meta_override(self):
         event_schema = copy.deepcopy(dict(self.Event_Pydantic.model_json_schema()))
         event_non_backward_schema_by_override = copy.deepcopy(
             dict(self.Event_Pydantic_non_backward_from_override.model_json_schema())
@@ -73,7 +72,7 @@ class TestPydantic(test.TestCase):
         del event_schema["properties"]["address"]
         self.assertEqual(event_schema["properties"], event_non_backward_schema_by_override["properties"])
 
-        # from PydanticMeta:
+    async def test_backward_relations_with_pydantic_meta(self):
         test_model1_schema = self.ModelTestPydanticMetaBackwardRelations1_Pydantic.model_json_schema()
         test_model2_schema = self.ModelTestPydanticMetaBackwardRelations2_Pydantic.model_json_schema()
         self.assertTrue("threes" in test_model2_schema["properties"])
