@@ -25,7 +25,7 @@ def _escape_unicode(value: str, mapping=None) -> str:
 escape_string = _escape_unicode
 
 
-def escape_item(val: Any, charset, mapping=None) -> str:
+def escape_item(val: Any, mapping=None) -> str:
     if mapping is None:
         mapping = encoders
     encoder = mapping.get(type(val))
@@ -37,31 +37,28 @@ def escape_item(val: Any, charset, mapping=None) -> str:
         except KeyError:
             raise TypeError("no default type converter defined")
 
-    if encoder in (escape_dict, escape_sequence):
-        val = encoder(val, charset, mapping)
-    else:
-        val = encoder(val, mapping)
+    val = encoder(val, mapping)
     return val
 
 
-def escape_dict(val: Dict, charset, mapping=None) -> dict:
+def escape_dict(val: Dict, mapping=None) -> dict:
     n = {}
     for k, v in val.items():
-        quoted = escape_item(v, charset, mapping)
+        quoted = escape_item(v, mapping)
         n[k] = quoted
     return n
 
 
-def escape_sequence(val: Sequence, charset, mapping=None) -> str:
+def escape_sequence(val: Sequence, mapping=None) -> str:
     n = []
     for item in val:
-        quoted = escape_item(item, charset, mapping)
+        quoted = escape_item(item, mapping)
         n.append(quoted)
     return "(" + ",".join(n) + ")"
 
 
-def escape_set(val: Set, charset, mapping=None) -> str:
-    return ",".join([escape_item(x, charset, mapping) for x in val])
+def escape_set(val: Set, mapping=None) -> str:
+    return ",".join([escape_item(x, mapping) for x in val])
 
 
 def escape_bool(value: bool, mapping=None) -> str:
