@@ -1,10 +1,20 @@
 from tests import testmodels
 from tortoise.contrib import test
-from tortoise.exceptions import IntegrityError, NoValuesFetched, OperationalError
+from tortoise.exceptions import (
+    IntegrityError,
+    NoValuesFetched,
+    OperationalError,
+    ValidationError,
+)
 from tortoise.queryset import QuerySet
 
 
 class TestForeignKeyField(test.TestCase):
+    def assertRaisesWrongTypeException(self, relation_name: str):
+        return self.assertRaisesRegex(
+            ValidationError, f"Invalid type for relationship field '{relation_name}'"
+        )
+
     async def test_empty(self):
         with self.assertRaises(IntegrityError):
             await testmodels.MinRelation.create()
@@ -151,6 +161,11 @@ class TestForeignKeyField(test.TestCase):
         tour = await testmodels.Tournament.create(name="Team1")
         await testmodels.MinRelation.create(tournament=tour)
 
+    async def test_minimal__instantiated_create_wrong_type(self):
+        author = await testmodels.Author.create(name="Author1")
+        with self.assertRaisesWrongTypeException("tournament"):
+            await testmodels.MinRelation.create(tournament=author)
+
     async def test_minimal__instantiated_iterate(self):
         tour = await testmodels.Tournament.create(name="Team1")
         async for _ in tour.minrelations:
@@ -229,3 +244,57 @@ class TestForeignKeyField(test.TestCase):
         event2 = await testmodels.Event.create(name="Event2", tournament=tour)
         event3 = await testmodels.Event.create(name="Event3", tournament=tour)
         self.assertEqual(await tour.events.offset(1).order_by("name"), [event2, event3])
+
+    async def test_fk_correct_type_assignment(self):
+        tour1 = await testmodels.Tournament.create(name="Team1")
+        tour2 = await testmodels.Tournament.create(name="Team2")
+        event = await testmodels.Event(name="Event1", tournament=tour1)
+
+        event.tournament = tour2
+        await event.save()
+        self.assertEqual(event.tournament_id, tour2.id)
+
+    async def test_fk_wrong_type_assignment(self):
+        tour = await testmodels.Tournament.create(name="Team1")
+        author = await testmodels.Author.create(name="Author")
+        rel = await testmodels.MinRelation.create(tournament=tour)
+
+        with self.assertRaisesWrongTypeException("tournament"):
+            rel.tournament = author
+
+    async def test_fk_none_assignment(self):
+        manager = await testmodels.Employee.create(name="Manager")
+        employee = await testmodels.Employee.create(name="Employee", manager=manager)
+
+        employee.manager = None
+        await employee.save()
+        self.assertIsNone(employee.manager)
+
+    async def test_fk_update_wrong_type(self):
+        tour = await testmodels.Tournament.create(name="Team1")
+        rel = await testmodels.MinRelation.create(tournament=tour)
+        author = await testmodels.Author.create(name="Author1")
+
+        with self.assertRaisesWrongTypeException("tournament"):
+            await testmodels.MinRelation.filter(id=rel.id).update(tournament=author)
+
+    async def test_fk_bulk_create_wrong_type(self):
+        author = await testmodels.Author.create(name="Author")
+        with self.assertRaisesWrongTypeException("tournament"):
+            await testmodels.MinRelation.bulk_create(
+                [testmodels.MinRelation(tournament=author) for _ in range(10)]
+            )
+
+    async def test_fk_bulk_update_wrong_type(self):
+        tour = await testmodels.Tournament.create(name="Team1")
+        await testmodels.MinRelation.bulk_create(
+            [testmodels.MinRelation(tournament=tour) for _ in range(1, 10)]
+        )
+        author = await testmodels.Author.create(name="Author")
+
+        with self.assertRaisesWrongTypeException("tournament"):
+            relations = await testmodels.MinRelation.all()
+            await testmodels.MinRelation.bulk_update(
+                [testmodels.MinRelation(id=rel.id, tournament=author) for rel in relations],
+                fields=["tournament"],
+            )
