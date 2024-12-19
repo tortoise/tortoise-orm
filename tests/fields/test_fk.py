@@ -295,5 +295,6 @@ class TestForeignKeyField(test.TestCase):
         with self.assertRaisesWrongTypeException("tournament"):
             relations = await testmodels.MinRelation.all()
             await testmodels.MinRelation.bulk_update(
-                [testmodels.MinRelation(id=rel.id, tournament=author) for rel in relations]
+                [testmodels.MinRelation(id=rel.id, tournament=author) for rel in relations],
+                fields=["tournament"],
             )
