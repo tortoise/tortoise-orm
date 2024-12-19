@@ -126,6 +126,24 @@ class Event(Model):
         return self.name
 
 
+class ModelTestPydanticMetaBackwardRelations1(Model):
+    class PydanticMeta:
+        backward_relations = False
+
+
+class ModelTestPydanticMetaBackwardRelations2(Model):
+    ...
+
+
+class ModelTestPydanticMetaBackwardRelations3(Model):
+    one: fields.ForeignKeyRelation[ModelTestPydanticMetaBackwardRelations1] = fields.ForeignKeyField(
+        "models.ModelTestPydanticMetaBackwardRelations1", related_name="threes"
+    )
+    two: fields.ForeignKeyRelation[ModelTestPydanticMetaBackwardRelations2] = fields.ForeignKeyField(
+        "models.ModelTestPydanticMetaBackwardRelations2", related_name="threes"
+    )
+
+
 class Node(Model):
     name = fields.CharField(max_length=10)
 

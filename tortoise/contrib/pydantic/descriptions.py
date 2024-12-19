@@ -113,7 +113,7 @@ class PydanticMetaData:
         exclude = tuple(get_param_from_pydantic_meta("exclude", default_meta.exclude))
         computed = tuple(get_param_from_pydantic_meta("computed", default_meta.computed))
         backward_relations = bool(
-            get_param_from_pydantic_meta("backward_relations_raw", default_meta.backward_relations)
+            get_param_from_pydantic_meta("backward_relations", default_meta.backward_relations)
         )
         max_recursion = int(
             get_param_from_pydantic_meta("max_recursion", default_meta.max_recursion)
