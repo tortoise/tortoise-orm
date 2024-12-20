@@ -18,6 +18,7 @@ Added
 Fixed
 ^^^^^
 - Fixed a deadlock in three level nested transactions (#1810)
+- Fix backward_relations in PydanticMeta (#1814)
 
 0.22
 ====
