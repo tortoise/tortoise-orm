@@ -1,5 +1,5 @@
 from tortoise import Model, fields
-from tortoise.contrib.postgres.fields import TSVectorField
+from tortoise.contrib.postgres.fields import TSVectorField, ArrayField
 from tortoise.contrib.postgres.indexes import (
     BloomIndex,
     BrinIndex,
@@ -19,6 +19,7 @@ class Index(Model):
     sp_gist = fields.CharField(max_length=200)
     hash = fields.CharField(max_length=200)
     partial = fields.CharField(max_length=200)
+    array = ArrayField(element_type="text", default=["a", "b", "c"])
 
     class Meta:
         indexes = [
