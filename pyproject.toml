@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tortoise-orm"
-version = "0.22.2"
+version = "0.23.0"
 description = "Easy async ORM for python, built with relations in mind"
 authors = ["Andrey Bondar <andrey@bondar.ru>", "Nickolas Grigoriadis <nagrigoriadis@gmail.com>", "long2ice <long2ice@gmail.com>"]
 license = "Apache-2.0"
