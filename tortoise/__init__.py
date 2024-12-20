@@ -1,15 +1,18 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import importlib
 import importlib.metadata as importlib_metadata
 import json
+import logging
 import os
 import warnings
 from copy import deepcopy
 from inspect import isclass
 from types import ModuleType
 from typing import Any, Callable, Coroutine, Iterable, Type, cast
+from urllib.parse import quote_plus
 
 from pypika import Query, Table
 
@@ -495,27 +498,31 @@ class Tortoise:
 
         cls.table_name_generator = table_name_generator
 
-        # Mask passwords in logs output
-        passwords = []
-        for name, info in connections_config.items():
-            if isinstance(info, str):
-                info = expand_db_url(info)
-            if password := info.get("credentials", {}).get("password"):
-                passwords.append(password)
-
-        str_connection_config = str(connections_config)
-        for password in passwords:
-            str_connection_config = str_connection_config.replace(
-                password,
-                # Show one third of the password at beginning (may be better for debugging purposes)
-                f"{password[0:len(password) // 3]}***",
+        if logger.isEnabledFor(logging.DEBUG):
+            # Mask passwords in logs output
+            connections_config_copied = copy.deepcopy(connections_config)
+            for name, info in connections_config_copied.items():
+                if is_string := isinstance(info, str):
+                    info_dict = expand_db_url(info)
+                else:
+                    info_dict = info
+                if password := info_dict.get("credentials", {}).get("password"):
+                    # Show one third of the password at beginning (may be better for debugging purposes)
+                    password_star = f"{password[0:len(password) // 3]}***"
+                    if is_string:
+                        if (passwd := ":" + password) in info:
+                            info = info.replace(passwd, ":" + password_star)
+                        else:
+                            # password in db_url may be unquoted
+                            info = info.replace(":" + quote_plus(password), ":" + password_star)
+                        connections_config_copied[name] = info
+                    else:
+                        info["credentials"]["password"] = password_star
+            logger.debug(
+                "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
+                str(connections_config_copied),
+                str(apps_config),
             )
-
-        logger.debug(
-            "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
-            str_connection_config,
-            str(apps_config),
-        )
 
         cls._init_timezone(use_tz, timezone)
         await connections._init(connections_config, _create_db)
