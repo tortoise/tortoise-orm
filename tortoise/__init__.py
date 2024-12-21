@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import copy
 import importlib
 import importlib.metadata as importlib_metadata
 import json
@@ -500,27 +499,24 @@ class Tortoise:
 
         if logger.isEnabledFor(logging.DEBUG):
             # Mask passwords in logs output
-            connections_config_copied = copy.deepcopy(connections_config)
-            for name, info in connections_config_copied.items():
-                if is_string := isinstance(info, str):
-                    info_dict = expand_db_url(info)
-                else:
-                    info_dict = info
-                if password := info_dict.get("credentials", {}).get("password"):
-                    # Show one third of the password at beginning (may be better for debugging purposes)
-                    password_star = f"{password[0:len(password) // 3]}***"
-                    if is_string:
-                        if (passwd := ":" + password) in info:
-                            info = info.replace(passwd, ":" + password_star)
-                        else:
-                            # password in db_url may be unquoted
-                            info = info.replace(":" + quote_plus(password), ":" + password_star)
-                        connections_config_copied[name] = info
-                    else:
-                        info["credentials"]["password"] = password_star
+            passwords = []
+            for name, info in connections_config.items():
+                if isinstance(info, str):
+                    info = expand_db_url(info)
+                if password := info.get("credentials", {}).get("password"):
+                    passwords.append(password)
+
+            str_connection_config = str(connections_config)
+            for password in passwords:
+                # Show one third of the password at beginning (may be better for debugging purposes)
+                star_passwd = f"{password[0:len(password) // 3]}***"
+                str_connection_config = str_connection_config.replace(
+                    password,
+                    star_passwd,
+                ).replace(quote_plus(password), star_passwd)
             logger.debug(
                 "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
-                str(connections_config_copied),
+                str_connection_config,
                 str(apps_config),
             )
 
