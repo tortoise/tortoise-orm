@@ -779,6 +779,8 @@ class Model(metaclass=ModelMeta):
         return self
 
     def __str__(self) -> str:
+        if self.pk:
+            return f"<{self.__class__.__name__}: {self.pk}>"
         return f"<{self.__class__.__name__}>"
 
     def __repr__(self) -> str:
