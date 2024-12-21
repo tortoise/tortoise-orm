@@ -186,7 +186,7 @@ class ODBCTransactionWrapper(BaseTransactionWrapper):
             cursor = await connection.cursor()
             await cursor.executemany(query, values)
 
-    async def start(self) -> None:
+    async def begin(self) -> None:
         self._finalized = False
         self._connection._conn.autocommit = False
 
@@ -203,3 +203,12 @@ class ODBCTransactionWrapper(BaseTransactionWrapper):
         await self._connection.rollback()
         self._finalized = True
         self._connection._conn.autocommit = True
+
+    async def savepoint(self) -> None:
+        pass
+
+    async def savepoint_rollback(self) -> None:
+        pass
+
+    async def release_savepoint(self) -> None:
+        pass

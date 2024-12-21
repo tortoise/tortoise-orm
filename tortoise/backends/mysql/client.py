@@ -1,5 +1,6 @@
 import asyncio
 from functools import wraps
+from itertools import count
 from typing import (
     Any,
     Callable,
@@ -16,9 +17,11 @@ try:
     import asyncmy as mysql
     from asyncmy import errors
     from asyncmy.charset import charset_by_name
+    from asyncmy.constants import COMMAND
 except ImportError:
     import aiomysql as mysql
     from pymysql.charset import charset_by_name
+    from pymysql.constants import COMMAND
     from pymysql import err as errors
 
 from pypika import MySQLQuery
@@ -229,13 +232,14 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         self.connection_name = connection.connection_name
         self._connection: mysql.Connection = connection._connection
         self._lock = asyncio.Lock()
+        self._savepoint: Optional[str] = None
         self.log = connection.log
         self._finalized: Optional[bool] = None
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 
     def _in_transaction(self) -> "TransactionContext":
-        return NestedTransactionContext(self)
+        return NestedTransactionContext(TransactionWrapper(self))
 
     def acquire_connection(self) -> ConnectionWrapper[mysql.Connection]:
         return ConnectionWrapper(self._lock, self)
@@ -248,7 +252,7 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
                 await cursor.executemany(query, values)
 
     @translate_exceptions
-    async def start(self) -> None:
+    async def begin(self) -> None:
         await self._connection.begin()
         self._finalized = False
 
@@ -258,8 +262,42 @@ class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
         await self._connection.commit()
         self._finalized = True
 
+    @translate_exceptions
+    async def savepoint(self) -> None:
+        self._savepoint = _gen_savepoint_name()
+        await self._connection._execute_command(COMMAND.COM_QUERY, f"SAVEPOINT {self._savepoint}")
+        await self._connection._read_ok_packet()
+
     async def rollback(self) -> None:
         if self._finalized:
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.rollback()
         self._finalized = True
+
+    async def savepoint_rollback(self) -> None:
+        if self._finalized:
+            raise TransactionManagementError("Transaction already finalised")
+        if self._savepoint is None:
+            raise TransactionManagementError("No savepoint to rollback to")
+        await self._connection._execute_command(
+            COMMAND.COM_QUERY, f"ROLLBACK TO SAVEPOINT {self._savepoint}"
+        )
+        await self._connection._read_ok_packet()
+        self._savepoint = None
+        self._finalized = True
+
+    async def release_savepoint(self) -> None:
+        if self._finalized:
+            raise TransactionManagementError("Transaction already finalised")
+        if self._savepoint is None:
+            raise TransactionManagementError("No savepoint to release")
+        await self._connection._execute_command(
+            COMMAND.COM_QUERY, f"RELEASE SAVEPOINT {self._savepoint}"
+        )
+        await self._connection._read_ok_packet()
+        self._savepoint = None
+        self._finalized = True
+
+
+def _gen_savepoint_name(_c=count()) -> str:
+    return f"tortoise_savepoint_{next(_c)}"

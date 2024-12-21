@@ -21,7 +21,12 @@ async def atomic_decorated_func():
 
 
 @test.requireCapability(supports_transactions=True)
-class TestTransactions(test.TruncationTestCase):
+class TestTransactions(test.IsolatedTestCase):
+    """This test case uses IsolatedTestCase to ensure that
+    - there is no open transaction before the test starts
+    - commits in these tests do not impact other tests
+    """
+
     async def test_transactions(self):
         with self.assertRaises(SomeException):
             async with in_transaction():
@@ -51,11 +56,11 @@ class TestTransactions(test.TruncationTestCase):
                 await Tournament.create(name="Nested 1")
             await Tournament.create(name="Test 2")
             async with in_transaction():
-                await Tournament.create(name="Nested 1")
+                await Tournament.create(name="Nested 2")
 
         self.assertEqual(
             set(await Tournament.all().values_list("name", flat=True)),
-            set(["Test", "Test 2", "Nested 1", "Nested 1"]),
+            set(["Test", "Nested 1", "Test 2", "Nested 2"]),
         )
 
     async def test_caught_exception_in_nested_transaction(self):
@@ -71,9 +76,8 @@ class TestTransactions(test.TruncationTestCase):
                     self.assertEqual(tournament.id, saved_tournament.id)
                     raise SomeException("Some error")
 
-        # TODO: reactive once savepoints are implemented
-        # saved_event = await Tournament.filter(name="Updated name").first()
-        # self.assertIsNotNone(saved_event)
+        saved_event = await Tournament.filter(name="Updated name").first()
+        self.assertIsNotNone(saved_event)
         not_saved_event = await Tournament.filter(name="Nested").first()
         self.assertIsNone(not_saved_event)
 
@@ -88,6 +92,64 @@ class TestTransactions(test.TruncationTestCase):
                 raise SomeException("Some error")
 
         self.assertEqual(await Tournament.filter(id=tournament.id).count(), 0)
+
+    async def test_nested_rollback_does_not_enable_autocommit(self):
+        with self.assertRaisesRegex(SomeException, "Error 2"):
+            async with in_transaction():
+                await Tournament.create(name="Test1")
+                with self.assertRaisesRegex(SomeException, "Error 1"):
+                    async with in_transaction():
+                        await Tournament.create(name="Test2")
+                        raise SomeException("Error 1")
+
+                await Tournament.create(name="Test3")
+                raise SomeException("Error 2")
+
+        self.assertEqual(await Tournament.all().count(), 0)
+
+    async def test_nested_savepoint_rollbacks(self):
+        async with in_transaction():
+            await Tournament.create(name="Outer Transaction 1")
+
+            with self.assertRaisesRegex(SomeException, "Inner 1"):
+                async with in_transaction():
+                    await Tournament.create(name="Inner 1")
+                    raise SomeException("Inner 1")
+
+            await Tournament.create(name="Outer Transaction 2")
+
+            with self.assertRaisesRegex(SomeException, "Inner 2"):
+                async with in_transaction():
+                    await Tournament.create(name="Inner 2")
+                    raise SomeException("Inner 2")
+
+            await Tournament.create(name="Outer Transaction 3")
+
+        self.assertEqual(
+            await Tournament.all().values_list("name", flat=True),
+            ["Outer Transaction 1", "Outer Transaction 2", "Outer Transaction 3"],
+        )
+
+    async def test_nested_savepoint_rollback_but_other_succeed(self):
+        async with in_transaction():
+            await Tournament.create(name="Outer Transaction 1")
+
+            with self.assertRaisesRegex(SomeException, "Inner 1"):
+                async with in_transaction():
+                    await Tournament.create(name="Inner 1")
+                    raise SomeException("Inner 1")
+
+            await Tournament.create(name="Outer Transaction 2")
+
+            async with in_transaction():
+                await Tournament.create(name="Inner 2")
+
+            await Tournament.create(name="Outer Transaction 3")
+
+        self.assertEqual(
+            await Tournament.all().values_list("name", flat=True),
+            ["Outer Transaction 1", "Outer Transaction 2", "Inner 2", "Outer Transaction 3"],
+        )
 
     async def test_three_nested_transactions(self):
         async with in_transaction():
@@ -256,11 +318,6 @@ class TestTransactions(test.TruncationTestCase):
         self.assertEqual(
             await Tournament.all().values("id", "name"), [{"id": obj.id, "name": "Test1"}]
         )
-
-
-@test.requireCapability(supports_transactions=True)
-class TestIsolatedTransactions(test.IsolatedTestCase):
-    """Running these in isolation because they mess with the global state of the connections."""
 
     async def test_rollback_raising_exception(self):
         """Tests that if a rollback raises an exception, the connection context is restored."""

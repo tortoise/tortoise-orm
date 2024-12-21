@@ -2,6 +2,7 @@ import asyncio
 import os
 import sqlite3
 from functools import wraps
+from itertools import count
 from typing import (
     Any,
     Callable,
@@ -120,7 +121,7 @@ class SqliteClient(BaseDBAsyncClient):
         return ConnectionWrapper(self._lock, self)
 
     def _in_transaction(self) -> "TransactionContext":
-        return SqliteTransactionContext(TransactionWrapper(self), self._lock)
+        return SqliteTransactionContext(SqliteTransactionWrapper(self), self._lock)
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
@@ -192,7 +193,7 @@ class SqliteTransactionContext(TransactionContext):
         await self.ensure_connection()
         await self._trxlock.acquire()
         self.token = connections.set(self.connection_name, self.connection)
-        await self.connection.start()
+        await self.connection.begin()
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
@@ -209,18 +210,19 @@ class SqliteTransactionContext(TransactionContext):
             self._trxlock.release()
 
 
-class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
+class SqliteTransactionWrapper(SqliteClient, BaseTransactionWrapper):
     def __init__(self, connection: SqliteClient) -> None:
         self.connection_name = connection.connection_name
         self._connection: aiosqlite.Connection = cast(aiosqlite.Connection, connection._connection)
         self._lock = asyncio.Lock()
+        self._savepoint: Optional[str] = None
         self.log = connection.log
         self._finalized = False
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 
     def _in_transaction(self) -> "TransactionContext":
-        return NestedTransactionContext(self)
+        return NestedTransactionContext(SqliteTransactionWrapper(self))
 
     @translate_exceptions
     async def execute_many(self, query: str, values: List[list]) -> None:
@@ -229,7 +231,7 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
             # Already within transaction, so ideal for performance
             await connection.executemany(query, values)
 
-    async def start(self) -> None:
+    async def begin(self) -> None:
         try:
             await self._connection.commit()
             await self._connection.execute("BEGIN")
@@ -247,3 +249,26 @@ class TransactionWrapper(SqliteClient, BaseTransactionWrapper):
             raise TransactionManagementError("Transaction already finalised")
         await self._connection.commit()
         self._finalized = True
+
+    async def savepoint(self) -> None:
+        self._savepoint = _gen_savepoint_name()
+        await self._connection.execute(f"SAVEPOINT {self._savepoint}")
+
+    async def savepoint_rollback(self) -> None:
+        if self._finalized:
+            raise TransactionManagementError("Transaction already finalised")
+        if self._savepoint is None:
+            raise TransactionManagementError("No savepoint to rollback to")
+        await self._connection.execute(f"ROLLBACK TO {self._savepoint}")
+        self._savepoint = None
+
+    async def release_savepoint(self) -> None:
+        if self._finalized:
+            raise TransactionManagementError("Transaction already finalised")
+        if self._savepoint is None:
+            raise TransactionManagementError("No savepoint to rollback to")
+        await self._connection.execute(f"RELEASE {self._savepoint}")
+
+
+def _gen_savepoint_name(_c=count()) -> str:
+    return f"tortoise_savepoint_{next(_c)}"

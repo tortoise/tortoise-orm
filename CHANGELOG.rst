@@ -6,14 +6,23 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.22
+0.23
 ====
-0.22.3 (unreleased)
+
+0.23.0 (unreleased)
 ------
+Added
+^^^^^
+- Implement savepoints for transactions (#1816)
+- Added type validation for foreign key fields to ensure type safety. Now raises `ValidationError` when assigning foreign key values with incorrect model types (#1792)
+
 Fixed
 ^^^^^
 - Fixed a deadlock in three level nested transactions (#1810)
+- Fix backward_relations in PydanticMeta (#1814)
 
+0.22
+====
 
 0.22.2
 ------

@@ -1,9 +1,11 @@
-from typing import Any, SupportsInt
+from itertools import count
+from typing import Any, Optional, SupportsInt
 
 from pypika.dialects import MSSQLQuery
 
 from tortoise.backends.base.client import (
     Capabilities,
+    NestedTransactionContext,
     TransactionContext,
     TransactionContextPooled,
 )
@@ -14,6 +16,7 @@ from tortoise.backends.odbc.client import (
     ODBCTransactionWrapper,
     translate_exceptions,
 )
+from tortoise.exceptions import TransactionManagementError
 
 
 class MSSQLClient(ODBCClient):
@@ -50,7 +53,40 @@ class MSSQLClient(ODBCClient):
                 return (await cursor.fetchone())[0]
 
 
+def _gen_savepoint_name(_c=count()) -> str:
+    return f"tortoise_savepoint_{next(_c)}"
+
+
 class TransactionWrapper(ODBCTransactionWrapper, MSSQLClient):
-    async def start(self) -> None:
+    def __init__(self, connection: ODBCClient) -> None:
+        super().__init__(connection)
+        self._savepoint: Optional[str] = None
+
+    def _in_transaction(self) -> "TransactionContext":
+        return NestedTransactionContext(TransactionWrapper(self))
+
+    async def begin(self) -> None:
         await self._connection.execute("BEGIN TRANSACTION")
-        await super().start()
+        await super().begin()
+
+    async def savepoint(self) -> None:
+        self._savepoint = _gen_savepoint_name()
+        await self._connection.execute(f"SAVE TRANSACTION {self._savepoint}")
+
+    async def savepoint_rollback(self) -> None:
+        if self._finalized:
+            raise TransactionManagementError("Transaction already finalised")
+        if self._savepoint is None:
+            raise TransactionManagementError("No savepoint to rollback to")
+        await self._connection.execute(f"ROLLBACK TRANSACTION {self._savepoint}")
+        self._savepoint = None
+        self._finalized = True
+
+    async def release_savepoint(self) -> None:
+        # MSSQL does not support releasing savepoints, so no action
+        if self._finalized:
+            raise TransactionManagementError("Transaction already finalised")
+        if self._savepoint is None:
+            raise TransactionManagementError("No savepoint to rollback to")
+        self._savepoint = None
+        self._finalized = True
