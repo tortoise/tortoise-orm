@@ -4,12 +4,14 @@ import asyncio
 import importlib
 import importlib.metadata as importlib_metadata
 import json
+import logging
 import os
 import warnings
 from copy import deepcopy
 from inspect import isclass
 from types import ModuleType
 from typing import Any, Callable, Coroutine, Iterable, Type, cast
+from urllib.parse import quote_plus
 
 from pypika import Query, Table
 
@@ -495,27 +497,28 @@ class Tortoise:
 
         cls.table_name_generator = table_name_generator
 
-        # Mask passwords in logs output
-        passwords = []
-        for name, info in connections_config.items():
-            if isinstance(info, str):
-                info = expand_db_url(info)
-            if password := info.get("credentials", {}).get("password"):
-                passwords.append(password)
+        if logger.isEnabledFor(logging.DEBUG):
+            # Mask passwords in logs output
+            passwords = []
+            for name, info in connections_config.items():
+                if isinstance(info, str):
+                    info = expand_db_url(info)
+                if password := info.get("credentials", {}).get("password"):
+                    passwords.append(password)
 
-        str_connection_config = str(connections_config)
-        for password in passwords:
-            str_connection_config = str_connection_config.replace(
-                password,
+            str_connection_config = str(connections_config)
+            for password in passwords:
                 # Show one third of the password at beginning (may be better for debugging purposes)
-                f"{password[0:len(password) // 3]}***",
+                star_passwd = f"{password[0:len(password) // 3]}***"
+                str_connection_config = str_connection_config.replace(
+                    password,
+                    star_passwd,
+                ).replace(quote_plus(password), star_passwd)
+            logger.debug(
+                "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
+                str_connection_config,
+                str(apps_config),
             )
-
-        logger.debug(
-            "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
-            str_connection_config,
-            str(apps_config),
-        )
 
         cls._init_timezone(use_tz, timezone)
         await connections._init(connections_config, _create_db)
