@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Any, Optional, Tuple, Type
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Type
 
 from pypika.terms import Term, ValueWrapper
 
@@ -16,8 +18,8 @@ class Index:
     def __init__(
         self,
         *expressions: Term,
-        fields: Optional[Tuple[str, ...]] = None,
-        name: Optional[str] = None,
+        fields: tuple[str, ...] | list[str] | None = None,
+        name: str | None = None,
     ) -> None:
         """
         All kinds of index parent class, default is BTreeIndex.
@@ -37,6 +39,16 @@ class Index:
         self.name = name
         self.expressions = expressions
         self.extra = ""
+
+    def __repr__(self) -> str:
+        argument = ""
+        if self.expressions:
+            argument += ", ".join(map(str, self.expressions))
+        if fields := self.fields:
+            argument += f"{fields=}"
+        if name := self.name:
+            argument += f", {name=}"
+        return self.__class__.__name__ + "(" + argument + ")"
 
     def get_sql(
         self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool
@@ -70,9 +82,9 @@ class PartialIndex(Index):
     def __init__(
         self,
         *expressions: Term,
-        fields: Optional[Tuple[str, ...]] = None,
-        name: Optional[str] = None,
-        condition: Optional[dict] = None,
+        fields: tuple[str, ...] | list[str] | None = None,
+        name: str | None = None,
+        condition: dict | None = None,
     ) -> None:
         super().__init__(*expressions, fields=fields, name=name)
         if condition:

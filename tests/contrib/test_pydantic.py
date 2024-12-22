@@ -9,10 +9,10 @@ from tests.testmodels import (
     Employee,
     EnumFields,
     Event,
-    ModelTestPydanticMetaBackwardRelations1,
-    ModelTestPydanticMetaBackwardRelations2,
     IntFields,
     JSONFields,
+    ModelTestPydanticMetaBackwardRelations1,
+    ModelTestPydanticMetaBackwardRelations2,
     Reporter,
     Team,
     Tournament,
@@ -70,11 +70,17 @@ class TestPydantic(test.TestCase):
         self.assertTrue("address" in event_schema["properties"])
         self.assertFalse("address" in event_non_backward_schema_by_override["properties"])
         del event_schema["properties"]["address"]
-        self.assertEqual(event_schema["properties"], event_non_backward_schema_by_override["properties"])
+        self.assertEqual(
+            event_schema["properties"], event_non_backward_schema_by_override["properties"]
+        )
 
     async def test_backward_relations_with_pydantic_meta(self):
-        test_model1_schema = self.ModelTestPydanticMetaBackwardRelations1_Pydantic.model_json_schema()
-        test_model2_schema = self.ModelTestPydanticMetaBackwardRelations2_Pydantic.model_json_schema()
+        test_model1_schema = (
+            self.ModelTestPydanticMetaBackwardRelations1_Pydantic.model_json_schema()
+        )
+        test_model2_schema = (
+            self.ModelTestPydanticMetaBackwardRelations2_Pydantic.model_json_schema()
+        )
         self.assertTrue("threes" in test_model2_schema["properties"])
         self.assertFalse("threes" in test_model1_schema["properties"])
         del test_model2_schema["properties"]["threes"]

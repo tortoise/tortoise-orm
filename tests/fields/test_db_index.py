@@ -1,5 +1,7 @@
 from typing import Any
 
+from pypika.terms import Field
+
 from tortoise import fields
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
@@ -12,7 +14,7 @@ class CustomIndex(Index):
         self._foo = ""
 
 
-class TestIndexHashEqual(test.TestCase):
+class TestIndexHashEqualRepr(test.TestCase):
     def test_index_eq(self):
         assert Index(fields=("id",)) == Index(fields=("id",))
         assert CustomIndex(fields=("id",)) == CustomIndex(fields=("id",))
@@ -37,6 +39,15 @@ class TestIndexHashEqual(test.TestCase):
         assert len(indexes) == 2
         indexes.add(Index(fields=("name",)))
         assert len(indexes) == 3
+
+    def test_index_repr(self):
+        assert repr(Index(fields=("id",))) == "Index(fields=['id'])"
+        assert repr(Index(fields=("id", "name"))) == "Index(fields=['id', 'name'])"
+        assert repr(Index(fields=("id",), name="MyIndex")) == "Index(fields=['id'], name='MyIndex')"
+        assert repr(Index(Field("id"))) == f'Index({str(Field("id"))})'
+        assert repr(Index(Field("a"), name="Id")) == f"Index({str(Field('a'))}, name='Id')"
+        with self.assertRaises(ValueError):
+            Index(Field("id"), fields=("name",))
 
 
 class TestIndexAlias(test.TestCase):

@@ -131,16 +131,19 @@ class ModelTestPydanticMetaBackwardRelations1(Model):
         backward_relations = False
 
 
-class ModelTestPydanticMetaBackwardRelations2(Model):
-    ...
+class ModelTestPydanticMetaBackwardRelations2(Model): ...
 
 
 class ModelTestPydanticMetaBackwardRelations3(Model):
-    one: fields.ForeignKeyRelation[ModelTestPydanticMetaBackwardRelations1] = fields.ForeignKeyField(
-        "models.ModelTestPydanticMetaBackwardRelations1", related_name="threes"
+    one: fields.ForeignKeyRelation[ModelTestPydanticMetaBackwardRelations1] = (
+        fields.ForeignKeyField(
+            "models.ModelTestPydanticMetaBackwardRelations1", related_name="threes"
+        )
     )
-    two: fields.ForeignKeyRelation[ModelTestPydanticMetaBackwardRelations2] = fields.ForeignKeyField(
-        "models.ModelTestPydanticMetaBackwardRelations2", related_name="threes"
+    two: fields.ForeignKeyRelation[ModelTestPydanticMetaBackwardRelations2] = (
+        fields.ForeignKeyField(
+            "models.ModelTestPydanticMetaBackwardRelations2", related_name="threes"
+        )
     )
 
 
