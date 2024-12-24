@@ -108,6 +108,7 @@ class MySQLClient(BaseDBAsyncClient):
         self._template: dict = {}
         self._pool: Optional[mysql.Pool] = None
         self._connection = None
+        self._pool_init_lock = asyncio.Lock()
 
     async def create_connection(self, with_db: bool) -> None:
         if charset_by_name(self.charset) is None:
@@ -172,10 +173,10 @@ class MySQLClient(BaseDBAsyncClient):
         await self.close()
 
     def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
-        return PoolConnectionWrapper(self)
+        return PoolConnectionWrapper(self, self._pool_init_lock)
 
     def _in_transaction(self) -> "TransactionContext":
-        return TransactionContextPooled(TransactionWrapper(self))
+        return TransactionContextPooled(TransactionWrapper(self), self._pool_init_lock)
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:

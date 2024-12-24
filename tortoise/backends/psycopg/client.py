@@ -193,10 +193,10 @@ class PsycopgClient(postgres_client.BasePostgresClient):
     def acquire_connection(
         self,
     ) -> typing.Union[base_client.ConnectionWrapper, PoolConnectionWrapper]:
-        return PoolConnectionWrapper(self)
+        return PoolConnectionWrapper(self, self._pool_init_lock)
 
     def _in_transaction(self) -> base_client.TransactionContext:
-        return base_client.TransactionContextPooled(TransactionWrapper(self))
+        return base_client.TransactionContextPooled(TransactionWrapper(self), self._pool_init_lock)
 
 
 class TransactionWrapper(PsycopgClient, base_client.BaseTransactionWrapper):
