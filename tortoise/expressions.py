@@ -6,14 +6,14 @@ from dataclasses import field as dataclass_field
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Iterator, Type, cast
 
-from pypika import Case as PypikaCase
-from pypika import Field as PypikaField
-from pypika import Table
-from pypika.functions import AggregateFunction, DistinctOptionFunction
-from pypika.terms import ArithmeticExpression, Criterion
-from pypika.terms import Function as PypikaFunction
-from pypika.terms import Term, ValueWrapper
-from pypika.utils import format_alias_sql
+from pypika_tortoise import Case as PypikaCase
+from pypika_tortoise import Field as PypikaField
+from pypika_tortoise import Table
+from pypika_tortoise.functions import AggregateFunction, DistinctOptionFunction
+from pypika_tortoise.terms import ArithmeticExpression, Criterion
+from pypika_tortoise.terms import Function as PypikaFunction
+from pypika_tortoise.terms import Term, ValueWrapper
+from pypika_tortoise.utils import format_alias_sql
 
 from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.base import Field
@@ -27,7 +27,7 @@ from tortoise.query_utils import (
 )
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from pypika.queries import Selectable
+    from pypika_tortoise.queries import Selectable
 
     from tortoise.models import Model
     from tortoise.queryset import AwaitableQuery

@@ -20,11 +20,11 @@ from typing import (
     overload,
 )
 
-from pypika import JoinType, Order, Table
-from pypika.analytics import Count
-from pypika.functions import Cast
-from pypika.queries import QueryBuilder
-from pypika.terms import Case, Field, Star, Term, ValueWrapper
+from pypika_tortoise import JoinType, Order, Table
+from pypika_tortoise.analytics import Count
+from pypika_tortoise.functions import Cast
+from pypika_tortoise.queries import QueryBuilder
+from pypika_tortoise.terms import Case, Field, Star, Term, ValueWrapper
 from typing_extensions import Literal, Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities

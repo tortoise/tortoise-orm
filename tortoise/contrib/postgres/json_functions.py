@@ -5,9 +5,9 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Callable, Tuple, cast
 
-from pypika.enums import JSONOperators
-from pypika.functions import Cast
-from pypika.terms import BasicCriterion, Criterion, Term, ValueWrapper
+from pypika_tortoise.enums import JSONOperators
+from pypika_tortoise.functions import Cast
+from pypika_tortoise.terms import BasicCriterion, Criterion, Term, ValueWrapper
 
 from tortoise.filters import (
     between_and,

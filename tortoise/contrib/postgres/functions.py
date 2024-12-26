@@ -1,4 +1,4 @@
-from pypika.terms import Function, Term
+from pypika_tortoise.terms import Function, Term
 
 
 class ToTsVector(Function):

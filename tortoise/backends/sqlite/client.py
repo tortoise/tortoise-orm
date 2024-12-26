@@ -16,7 +16,7 @@ from typing import (
 )
 
 import aiosqlite
-from pypika import SQLLiteQuery
+from pypika_tortoise import SQLLiteQuery
 
 from tortoise.backends.base.client import (
     BaseDBAsyncClient,

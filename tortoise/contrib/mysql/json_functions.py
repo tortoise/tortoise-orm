@@ -4,10 +4,10 @@ import json
 import operator
 from typing import Any, Dict, List
 
-from pypika.functions import Cast
-from pypika.terms import Criterion
-from pypika.terms import Function as PypikaFunction
-from pypika.terms import Term, ValueWrapper
+from pypika_tortoise.functions import Cast
+from pypika_tortoise.terms import Criterion
+from pypika_tortoise.terms import Function as PypikaFunction
+from pypika_tortoise.terms import Term, ValueWrapper
 
 from tortoise.filters import get_json_filter_operator, not_equal
 

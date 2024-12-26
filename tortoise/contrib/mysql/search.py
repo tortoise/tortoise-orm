@@ -1,10 +1,10 @@
 from enum import Enum
 from typing import Any, Optional
 
-from pypika.enums import Comparator
-from pypika.terms import BasicCriterion
-from pypika.terms import Function as PypikaFunction
-from pypika.terms import Term
+from pypika_tortoise.enums import Comparator
+from pypika_tortoise.terms import BasicCriterion
+from pypika_tortoise.terms import Function as PypikaFunction
+from pypika_tortoise.terms import Term
 
 
 class Comp(Comparator):

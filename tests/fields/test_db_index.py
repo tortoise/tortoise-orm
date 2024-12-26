@@ -1,6 +1,6 @@
 from typing import Any
 
-from pypika.terms import Field
+from pypika_tortoise.terms import Field
 
 from tortoise import fields
 from tortoise.contrib import test

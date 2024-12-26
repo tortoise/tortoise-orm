@@ -11,7 +11,7 @@ from inspect import isclass
 from types import ModuleType
 from typing import Any, Callable, Coroutine, Iterable, Type, cast
 
-from pypika import Query, Table
+from pypika_tortoise import Query, Table
 
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config

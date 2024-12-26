@@ -1,4 +1,4 @@
-from pypika import CustomFunction
+from pypika_tortoise import CustomFunction
 
 from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test

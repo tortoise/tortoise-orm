@@ -15,7 +15,7 @@ from typing import (
     cast,
 )
 
-from pypika import Query
+from pypika_tortoise import Query
 
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator

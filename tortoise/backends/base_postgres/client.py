@@ -15,7 +15,7 @@ from typing import (
     Union,
 )
 
-from pypika import PostgreSQLQuery
+from pypika_tortoise import PostgreSQLQuery
 
 from tortoise.backends.base.client import (
     BaseDBAsyncClient,

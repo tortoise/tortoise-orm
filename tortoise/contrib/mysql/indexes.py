@@ -1,6 +1,6 @@
 from typing import Optional, Tuple
 
-from pypika.terms import Term
+from pypika_tortoise.terms import Term
 
 from tortoise.indexes import Index
 

@@ -7,9 +7,9 @@ from enum import Enum, IntEnum
 from typing import TYPE_CHECKING, Any, Callable, Optional, Type, TypeVar, Union
 from uuid import UUID, uuid4
 
-from pypika import functions
-from pypika.enums import SqlTypes
-from pypika.terms import Term
+from pypika_tortoise import functions
+from pypika_tortoise.enums import SqlTypes
+from pypika_tortoise.terms import Term
 
 from tortoise import timezone
 from tortoise.exceptions import ConfigurationError, FieldError

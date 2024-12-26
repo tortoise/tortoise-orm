@@ -8,8 +8,8 @@ import psycopg.conninfo
 import psycopg.pq
 import psycopg.rows
 import psycopg_pool
-from pypika.dialects.postgresql import PostgreSQLQuery, PostgreSQLQueryBuilder
-from pypika.terms import Parameterizer
+from pypika_tortoise.dialects.postgresql import PostgreSQLQuery, PostgreSQLQueryBuilder
+from pypika_tortoise.terms import Parameterizer
 
 import tortoise.backends.base.client as base_client
 import tortoise.backends.base_postgres.client as postgres_client

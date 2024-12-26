@@ -19,8 +19,8 @@ from typing import (
     cast,
 )
 
-from pypika import JoinType, Parameter, Table
-from pypika.queries import QueryBuilder
+from pypika_tortoise import JoinType, Parameter, Table
+from pypika_tortoise.queries import QueryBuilder
 
 from tortoise.exceptions import OperationalError
 from tortoise.expressions import Expression, ResolveContext
