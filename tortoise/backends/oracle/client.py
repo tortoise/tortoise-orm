@@ -1,6 +1,6 @@
 import datetime
 import functools
-from typing import TYPE_CHECKING, Any, SupportsInt, Union
+from typing import TYPE_CHECKING, Any, SupportsInt, Union, cast
 
 import pyodbc
 import pytz
@@ -105,7 +105,8 @@ class OraclePoolConnectionWrapper(PoolConnectionWrapper):
     async def __aenter__(self) -> "asyncodbc.Connection":
         connection = await super().__aenter__()
         if getattr(self.client, "database", False) and not hasattr(connection, "current_schema"):
-            await connection.execute(f'ALTER SESSION SET CURRENT_SCHEMA = "{self.client.user}"')
+            client = cast(OracleClient, self.client)
+            await connection.execute(f'ALTER SESSION SET CURRENT_SCHEMA = "{client.user}"')
             await connection.execute("ALTER SESSION SET NLS_DATE_FORMAT = 'YYYY-MM-DD'")
             await connection.execute(
                 "ALTER SESSION SET NLS_TIMESTAMP_TZ_FORMAT = 'YYYY-MM-DD\"T\"HH24:MI:SSTZH:TZM'"
@@ -113,7 +114,7 @@ class OraclePoolConnectionWrapper(PoolConnectionWrapper):
             await connection.add_output_converter(
                 pyodbc.SQL_TYPE_TIMESTAMP, self._timestamp_convert
             )
-            setattr(connection, "current_schema", self.client.user)
+            setattr(connection, "current_schema", client.user)
         return connection
 
 

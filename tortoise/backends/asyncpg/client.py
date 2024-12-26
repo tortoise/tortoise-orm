@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, Callable, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Callable, List, Optional, Tuple, TypeVar
 
 import asyncpg
 from asyncpg.transaction import Transaction
@@ -7,10 +7,9 @@ from asyncpg.transaction import Transaction
 from tortoise.backends.asyncpg.executor import AsyncpgExecutor
 from tortoise.backends.asyncpg.schema_generator import AsyncpgSchemaGenerator
 from tortoise.backends.base.client import (
-    BaseTransactionWrapper,
+    TransactionalDBClient,
     ConnectionWrapper,
     NestedTransactionContext,
-    PoolConnectionWrapper,
     TransactionContext,
     TransactionContextPooled,
 )
@@ -99,9 +98,6 @@ class AsyncpgDBClient(BasePostgresClient):
             pass
         await self.close()
 
-    def acquire_connection(self) -> Union["PoolConnectionWrapper", "ConnectionWrapper"]:
-        return PoolConnectionWrapper(self, self._pool_init_lock)
-
     def _in_transaction(self) -> "TransactionContext":
         return TransactionContextPooled(TransactionWrapper(self), self._pool_init_lock)
 
@@ -157,7 +153,7 @@ class AsyncpgDBClient(BasePostgresClient):
             return list(map(dict, await connection.fetch(query)))
 
 
-class TransactionWrapper(AsyncpgDBClient, BaseTransactionWrapper):
+class TransactionWrapper(AsyncpgDBClient, TransactionalDBClient):
     """A transactional connection wrapper for psycopg.
 
     asyncpg implements nested transactions (savepoints) natively, so we don't need to.

@@ -8,7 +8,7 @@ import pyodbc
 
 from tortoise import BaseDBAsyncClient
 from tortoise.backends.base.client import (
-    BaseTransactionWrapper,
+    TransactionalDBClient,
     ConnectionWrapper,
     NestedTransactionContext,
     PoolConnectionWrapper,
@@ -163,14 +163,14 @@ class ODBCClient(BaseDBAsyncClient, ABC):
                 await cursor.execute(query)
 
 
-class ODBCTransactionWrapper(BaseTransactionWrapper):
+class ODBCTransactionWrapper(TransactionalDBClient):
     def __init__(self, connection: ODBCClient) -> None:
         self.database = connection.database
         self.connection_name = connection.connection_name
         self._connection: asyncodbc.Connection = connection._connection
         self._lock = asyncio.Lock()
         self.log = connection.log
-        self._finalized: Optional[bool] = None
+        self._finalized: bool = False
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 

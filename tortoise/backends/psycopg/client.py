@@ -15,7 +15,6 @@ import tortoise.backends.base.client as base_client
 import tortoise.backends.base_postgres.client as postgres_client
 import tortoise.backends.psycopg.executor as executor
 import tortoise.exceptions as exceptions
-from tortoise.backends.base.client import PoolConnectionWrapper
 from tortoise.backends.psycopg.schema_generator import PsycopgSchemaGenerator
 
 FuncType = typing.Callable[..., typing.Any]
@@ -190,16 +189,11 @@ class PsycopgClient(postgres_client.BasePostgresClient):
         ) as exc:
             raise exceptions.TransactionManagementError(exc)
 
-    def acquire_connection(
-        self,
-    ) -> typing.Union[base_client.ConnectionWrapper, PoolConnectionWrapper]:
-        return PoolConnectionWrapper(self, self._pool_init_lock)
-
     def _in_transaction(self) -> base_client.TransactionContext:
         return base_client.TransactionContextPooled(TransactionWrapper(self), self._pool_init_lock)
 
 
-class TransactionWrapper(PsycopgClient, base_client.BaseTransactionWrapper):
+class TransactionWrapper(PsycopgClient, base_client.TransactionalDBClient):
     """A transactional connection wrapper for psycopg.
 
     psycopg implements nested transactions (savepoints) natively, so we don't need to.

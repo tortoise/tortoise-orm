@@ -129,8 +129,8 @@ class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
         finally:
             await self.close()
 
-    def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
-        return PoolConnectionWrapper(self._pool, self._pool_init_lock)
+    def acquire_connection(self) -> Union[ConnectionWrapper, PoolConnectionWrapper]:
+        return PoolConnectionWrapper(self, self._pool_init_lock)
 
     @abc.abstractmethod
     def _in_transaction(self) -> "TransactionContext":

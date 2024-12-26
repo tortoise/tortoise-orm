@@ -29,7 +29,7 @@ from pypika import MySQLQuery
 from tortoise import timezone
 from tortoise.backends.base.client import (
     BaseDBAsyncClient,
-    BaseTransactionWrapper,
+    TransactionalDBClient,
     Capabilities,
     ConnectionWrapper,
     NestedTransactionContext,
@@ -228,14 +228,14 @@ class MySQLClient(BaseDBAsyncClient):
                 await cursor.execute(query)
 
 
-class TransactionWrapper(MySQLClient, BaseTransactionWrapper):
+class TransactionWrapper(MySQLClient, TransactionalDBClient):
     def __init__(self, connection: MySQLClient) -> None:
         self.connection_name = connection.connection_name
         self._connection: mysql.Connection = connection._connection
         self._lock = asyncio.Lock()
         self._savepoint: Optional[str] = None
         self.log = connection.log
-        self._finalized: Optional[bool] = None
+        self._finalized: bool = False
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 

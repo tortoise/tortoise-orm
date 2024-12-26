@@ -20,7 +20,7 @@ from pypika import SQLLiteQuery
 
 from tortoise.backends.base.client import (
     BaseDBAsyncClient,
-    BaseTransactionWrapper,
+    TransactionalDBClient,
     Capabilities,
     ConnectionWrapper,
     NestedTransactionContext,
@@ -210,7 +210,7 @@ class SqliteTransactionContext(TransactionContext):
             self._trxlock.release()
 
 
-class SqliteTransactionWrapper(SqliteClient, BaseTransactionWrapper):
+class SqliteTransactionWrapper(SqliteClient, TransactionalDBClient):
     def __init__(self, connection: SqliteClient) -> None:
         self.connection_name = connection.connection_name
         self._connection: aiosqlite.Connection = cast(aiosqlite.Connection, connection._connection)
