@@ -326,6 +326,8 @@ class TransactionContextPooled(TransactionContext):
 
 
 class NestedTransactionContext(TransactionContext):
+    __slots__ = ("client", "connection_name")
+
     def __init__(self, client: TransactionalDBClient) -> None:
         self.client = client
         self.connection_name = client.connection_name
@@ -346,6 +348,8 @@ class NestedTransactionContext(TransactionContext):
 
 class PoolConnectionWrapper(Generic[T_conn]):
     """Class to manage acquiring from and releasing connections to a pool."""
+
+    __slots__ = ("client", "connection", "_pool_init_lock")
 
     def __init__(self, client: BaseDBAsyncClient, pool_init_lock: asyncio.Lock) -> None:
         self.client = client
