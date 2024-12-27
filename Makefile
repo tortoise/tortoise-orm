@@ -2,6 +2,11 @@ checkfiles = tortoise/ examples/ tests/ conftest.py
 py_warn = PYTHONDEVMODE=1
 pytest_opts = -n auto --cov=tortoise --cov-append --tb=native -q
 
+TORTOISE_MYSQL_PASS ?= 123456
+TORTOISE_POSTGRES_PASS ?= 123456
+TORTOISE_MSSQL_PASS ?= 123456
+TORTOISE_ORACLE_PASS ?= 123456
+
 help:
 	@echo  "Tortoise ORM development makefile"
 	@echo
@@ -76,10 +81,10 @@ docs: deps
 	rm -fR ./build
 	sphinx-build -M html docs build
 
+style: deps _style
 _style:
 	isort -src $(checkfiles)
 	black $(checkfiles)
-style: _style deps
 
 build: deps
 	rm -fR dist/
