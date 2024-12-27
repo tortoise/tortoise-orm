@@ -1,4 +1,4 @@
-from pypika.terms import Function
+from pypika_tortoise.terms import Function
 
 
 class Random(Function):

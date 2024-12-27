@@ -1,7 +1,7 @@
 from typing import Union
 
-from pypika.enums import Comparator
-from pypika.terms import BasicCriterion, Function, Term
+from pypika_tortoise.enums import Comparator
+from pypika_tortoise.terms import BasicCriterion, Function, Term
 
 from tortoise.contrib.postgres.functions import ToTsQuery, ToTsVector
 

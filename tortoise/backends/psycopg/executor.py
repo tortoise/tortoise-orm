@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from pypika import Parameter
+from pypika_tortoise import Parameter
 
 from tortoise import Model
 from tortoise.backends.base_postgres.executor import BasePostgresExecutor

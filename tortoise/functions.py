@@ -1,4 +1,4 @@
-from pypika import functions
+from pypika_tortoise import functions
 
 from tortoise.expressions import Aggregate, Function
 

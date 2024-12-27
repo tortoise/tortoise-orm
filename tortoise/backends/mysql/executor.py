@@ -1,7 +1,7 @@
-from pypika import functions
-from pypika.enums import SqlTypes
-from pypika.terms import BasicCriterion, Criterion
-from pypika.utils import format_quotes
+from pypika_tortoise import functions
+from pypika_tortoise.enums import SqlTypes
+from pypika_tortoise.terms import BasicCriterion, Criterion
+from pypika_tortoise.utils import format_quotes
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor

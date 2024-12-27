@@ -11,7 +11,7 @@ except ImportError:  # pragma: nocoverage
     from iso8601 import parse_date
 
     parse_datetime = functools.partial(parse_date, default_timezone=None)
-from pypika import OracleQuery
+from pypika_tortoise import OracleQuery
 
 from tortoise.backends.base.client import (
     Capabilities,

@@ -16,7 +16,7 @@ from typing import (
     overload,
 )
 
-from pypika.terms import Term
+from pypika_tortoise.terms import Term
 
 from tortoise.exceptions import ConfigurationError, ValidationError
 from tortoise.validators import Validator

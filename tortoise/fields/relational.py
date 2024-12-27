@@ -14,7 +14,7 @@ from typing import (
     overload,
 )
 
-from pypika import Table
+from pypika_tortoise import Table
 from typing_extensions import Literal
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import pytz
-from pypika.terms import Function as PupikaFunction
+from pypika_tortoise.terms import Function as PupikaFunction
 
 from tests.testmodels import (
     Currency,

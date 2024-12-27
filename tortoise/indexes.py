@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Type
 
-from pypika.terms import Term, ValueWrapper
+from pypika_tortoise.terms import Term, ValueWrapper
 
 if TYPE_CHECKING:
     from tortoise import Model

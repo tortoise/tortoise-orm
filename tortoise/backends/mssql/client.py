@@ -1,7 +1,7 @@
 from itertools import count
 from typing import Any, Optional, SupportsInt
 
-from pypika.dialects import MSSQLQuery
+from pypika_tortoise.dialects import MSSQLQuery
 
 from tortoise.backends.base.client import (
     Capabilities,

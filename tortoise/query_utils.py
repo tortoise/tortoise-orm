@@ -3,8 +3,8 @@ from __future__ import annotations
 from copy import copy
 from typing import TYPE_CHECKING, List, Optional, Tuple, Type, cast
 
-from pypika import Table
-from pypika.terms import Criterion, Term
+from pypika_tortoise import Table
+from pypika_tortoise.terms import Criterion, Term
 
 from tortoise.exceptions import ConfigurationError, OperationalError
 from tortoise.fields.base import Field
