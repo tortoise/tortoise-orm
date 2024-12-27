@@ -998,3 +998,9 @@ class CallableDefault(Model):
     id = fields.IntField(primary_key=True)
     callable_default = fields.CharField(max_length=32, default=callable_default)
     async_default = fields.CharField(max_length=32, default=async_callable_default)
+
+
+class BenchmarkModel(Model):
+    timestamp = fields.DatetimeField(auto_now_add=True)
+    level = fields.SmallIntField(index=True)
+    text = fields.CharField(max_length=255, index=True)

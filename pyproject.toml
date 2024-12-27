@@ -64,6 +64,7 @@ coveralls = "*"
 pytest = "*"
 pytest-xdist = "*"
 pytest-cov = "*"
+pytest-codspeed = { version = "*", python = "^3.9" }
 # Pypi
 twine = "*"
 # Sample integration - Quart

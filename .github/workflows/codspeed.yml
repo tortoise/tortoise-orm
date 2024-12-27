@@ -1,0 +1,31 @@
+name: CodSpeed
+
+on:
+  pull_request:
+  # `workflow_dispatch` allows CodSpeed to trigger backtest
+  # performance analysis in order to generate initial data.
+  workflow_dispatch:
+
+jobs:
+  benchmarks:
+    name: Run benchmarks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.9"
+
+      - name: Install and configure Poetry
+        run: |
+          pip install -U pip poetry
+          poetry config virtualenvs.create false
+
+      - name: Install dependencies
+        run: make build
+
+      - name: Run benchmarks
+        uses: CodSpeedHQ/action@v3
+        with:
+          token: ${{ secrets.CODSPEED_TOKEN }}
+          run: pytest tests/benchmarks --codspeed
