@@ -11,7 +11,6 @@ from copy import deepcopy
 from inspect import isclass
 from types import ModuleType
 from typing import Any, Callable, Coroutine, Iterable, Type, cast
-from urllib.parse import quote_plus
 
 from pypika import Query, Table
 
@@ -500,24 +499,7 @@ class Tortoise:
         cls.table_name_generator = table_name_generator
 
         if logger.isEnabledFor(logging.DEBUG):
-            # Mask passwords in logs output
-            passwords = []
-            for name, info in connections_config.items():
-                if isinstance(info, str):
-                    info = expand_db_url(info)
-                if password := info.get("credentials", {}).get("password"):
-                    passwords.append(password)
-
-            str_connection_config = str(connections_config)
-            for password in passwords:
-                # Show one third of the password at beginning (may be better for debugging purposes)
-                star_passwd = f"{password[0:len(password) // 3]}***"
-                if (quoted_passwd := quote_plus(password)) in str_connection_config:
-                    str_connection_config = str_connection_config.replace(
-                        quoted_passwd, star_passwd
-                    )
-                else:
-                    str_connection_config = str_connection_config.replace(password, star_passwd)
+            str_connection_config = cls.star_password(connections_config)
             logger.debug(
                 "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
                 str_connection_config,
@@ -530,6 +512,25 @@ class Tortoise:
         cls._init_routers(routers)
 
         cls._inited = True
+
+    @staticmethod
+    def star_password(connections_config) -> str:
+        # Mask passwords to hide sensitive information in logs output
+        passwords = []
+        for name, info in connections_config.items():
+            if isinstance(info, str):
+                info = expand_db_url(info)
+            if password := info.get("credentials", {}).get("password"):
+                passwords.append(password)
+
+        str_connection_config = str(connections_config)
+        for password in passwords:
+            str_connection_config = str_connection_config.replace(
+                password,
+                # Show one third of the password at beginning (may be better for debugging purposes)
+                f"{password[0:len(password) // 3]}***",
+            )
+        return str_connection_config
 
     @classmethod
     def _init_routers(cls, routers: list[str | type] | None = None) -> None:
