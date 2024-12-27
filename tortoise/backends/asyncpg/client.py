@@ -100,10 +100,10 @@ class AsyncpgDBClient(BasePostgresClient):
         await self.close()
 
     def acquire_connection(self) -> Union["PoolConnectionWrapper", "ConnectionWrapper"]:
-        return PoolConnectionWrapper(self)
+        return PoolConnectionWrapper(self, self._pool_init_lock)
 
     def _in_transaction(self) -> "TransactionContext":
-        return TransactionContextPooled(TransactionWrapper(self))
+        return TransactionContextPooled(TransactionWrapper(self), self._pool_init_lock)
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> Optional[asyncpg.Record]:

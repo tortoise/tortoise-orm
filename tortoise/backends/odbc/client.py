@@ -70,6 +70,7 @@ class ODBCClient(BaseDBAsyncClient, ABC):
         self._template: dict = {}
         self._pool: Optional[asyncodbc.Pool] = None
         self._connection = None
+        self._pool_init_lock = asyncio.Lock()
 
     async def create_connection(self, with_db: bool) -> None:
         self._template = {
@@ -114,7 +115,7 @@ class ODBCClient(BaseDBAsyncClient, ABC):
             self._pool = None
 
     def acquire_connection(self) -> ConnWrapperType:
-        return PoolConnectionWrapper(self)
+        return PoolConnectionWrapper(self, self._pool_init_lock)
 
     @translate_exceptions
     async def execute_many(self, query: str, values: list) -> None:

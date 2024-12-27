@@ -41,7 +41,7 @@ class MSSQLClient(ODBCClient):
         self.dsn = f"DRIVER={driver};SERVER={host},{port};UID={user};PWD={password};"
 
     def _in_transaction(self) -> "TransactionContext":
-        return TransactionContextPooled(TransactionWrapper(self))
+        return TransactionContextPooled(TransactionWrapper(self), self._pool_init_lock)
 
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:

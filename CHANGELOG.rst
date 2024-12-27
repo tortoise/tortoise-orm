@@ -9,6 +9,12 @@ Changelog
 0.23
 ====
 
+0.23.1
+------
+Fixed
+^^^^^
+- Concurrent connection pool initialization (#1825)
+
 0.23.0
 ------
 Added

@@ -222,10 +222,10 @@ class ConnectionWrapper(Generic[T_conn]):
     """Wraps the connections with a lock to facilitate safe concurrent access when using
     asyncio.gather, TaskGroup, or similar."""
 
-    __slots__ = ("connection", "lock", "client")
+    __slots__ = ("connection", "_lock", "client")
 
     def __init__(self, lock: asyncio.Lock, client: Any) -> None:
-        self.lock: asyncio.Lock = lock
+        self._lock: asyncio.Lock = lock
         self.client = client
         self.connection: T_conn = client._connection
 
@@ -235,12 +235,12 @@ class ConnectionWrapper(Generic[T_conn]):
             self.connection = self.client._connection
 
     async def __aenter__(self) -> T_conn:
-        await self.lock.acquire()
+        await self._lock.acquire()
         await self.ensure_connection()
         return self.connection
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
-        self.lock.release()
+        self._lock.release()
 
 
 class TransactionContext(Generic[T_conn]):
@@ -259,15 +259,19 @@ class TransactionContext(Generic[T_conn]):
 class TransactionContextPooled(TransactionContext):
     "A version of TransactionContext that uses a pool to acquire connections."
 
-    __slots__ = ("conn_wrapper", "connection", "connection_name", "token")
+    __slots__ = ("connection", "connection_name", "token", "_pool_init_lock")
 
-    def __init__(self, connection: Any) -> None:
+    def __init__(self, connection: Any, pool_init_lock: asyncio.Lock) -> None:
         self.connection = connection
         self.connection_name = connection.connection_name
+        self._pool_init_lock = pool_init_lock
 
     async def ensure_connection(self) -> None:
         if not self.connection._parent._pool:
-            await self.connection._parent.create_connection(with_db=True)
+            # a safeguard against multiple concurrent tasks trying to initialize the pool
+            async with self._pool_init_lock:
+                if not self.connection._parent._pool:
+                    await self.connection._parent.create_connection(with_db=True)
 
     async def __aenter__(self) -> T_conn:
         await self.ensure_connection()
@@ -315,25 +319,27 @@ class NestedTransactionContext(TransactionContext):
 class PoolConnectionWrapper(Generic[T_conn]):
     """Class to manage acquiring from and releasing connections to a pool."""
 
-    def __init__(self, client: Any) -> None:
-        self.pool = client._pool
+    def __init__(self, client: Any, pool_init_lock: asyncio.Lock) -> None:
         self.client = client
         self.connection: Optional[T_conn] = None
+        self._pool_init_lock = pool_init_lock
 
     async def ensure_connection(self) -> None:
-        if not self.pool:
-            await self.client.create_connection(with_db=True)
-            self.pool = self.client._pool
+        if not self.client._pool:
+            # a safeguard against multiple concurrent tasks trying to initialize the pool
+            async with self._pool_init_lock:
+                if not self.client._pool:
+                    await self.client.create_connection(with_db=True)
 
     async def __aenter__(self) -> T_conn:
         await self.ensure_connection()
         # get first available connection. If none available, wait until one is released
-        self.connection = await self.pool.acquire()
+        self.connection = await self.client._pool.acquire()
         return cast(T_conn, self.connection)
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         # release the connection back to the pool
-        await self.pool.release(self.connection)
+        await self.client._pool.release(self.connection)
 
 
 class BaseTransactionWrapper:
