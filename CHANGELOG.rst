@@ -13,6 +13,7 @@ Changelog
 ------
 Fixed
 ^^^^^
+- Rename pypika to pypika_tortoise for fixing package name conflict (#1829)
 - Concurrent connection pool initialization (#1825)
 
 0.23.0
