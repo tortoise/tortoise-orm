@@ -1180,6 +1180,9 @@ class Model(metaclass=ModelMeta):
         instance._saved_in_db = False
         db = using_db or cls._choose_db(True)
         await instance.save(using_db=db, force_create=True)
+        import asyncio
+
+        await asyncio.sleep(0.1)
         return instance
 
     @classmethod
