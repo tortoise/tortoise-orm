@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from decimal import Decimal
 import random
@@ -17,13 +19,13 @@ def setup_database():
 
 @pytest.fixture(scope="module", autouse=True)
 def skip_if_codspeed_not_enabled(request):
-    if not request.config.getoption("--codspeed"):
-        pytest.skip("codspeed tests are disabled")
+    if not request.config.getoption("--codspeed", default=None):
+        pytest.skip("codspeed is not enabled")
 
 
 @pytest.fixture
 def few_fields_benchmark_dataset() -> list[BenchmarkFewFields]:
-    async def _create():
+    async def _create() -> list[BenchmarkFewFields]:
         res = []
         for _ in range(100):
             res.append(await BenchmarkFewFields.create(level=random.randint(0, 100), text="test"))
@@ -34,7 +36,7 @@ def few_fields_benchmark_dataset() -> list[BenchmarkFewFields]:
 
 @pytest.fixture
 def many_fields_benchmark_dataset() -> list[BenchmarkManyFields]:
-    async def _create():
+    async def _create() -> list[BenchmarkManyFields]:
         res = []
         for _ in range(100):
             res.append(
