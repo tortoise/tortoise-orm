@@ -100,6 +100,16 @@ def _restore_default() -> None:
     Tortoise._inited = True
 
 
+async def truncate_all_models() -> None:
+    # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys
+    for app in Tortoise.apps.values():
+        for model in app.values():
+            quote_char = model._meta.db.query_class._builder().QUOTE_CHAR
+            await model._meta.db.execute_script(
+                f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"  # nosec
+            )
+
+
 def initializer(
     modules: Iterable[Union[str, ModuleType]],
     db_url: Optional[str] = None,
@@ -287,13 +297,7 @@ class TruncationTestCase(SimpleTestCase):
 
     async def _tearDownDB(self) -> None:
         _restore_default()
-        # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys
-        for app in Tortoise.apps.values():
-            for model in app.values():
-                quote_char = model._meta.db.query_class._builder().QUOTE_CHAR
-                await model._meta.db.execute_script(
-                    f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"  # nosec
-                )
+        await truncate_all_models()
         await super()._tearDownDB()
 
 
