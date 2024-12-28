@@ -5,35 +5,24 @@ import random
 from tests.testmodels import BenchmarkFewFields, BenchmarkManyFields
 
 
-def test_get_few_fields(benchmark):
+def test_create_few_fields(benchmark):
     loop = asyncio.get_event_loop()
-    minid = maxid = -1
-
-    async def _setup():
-        nonlocal minid, maxid
-        for _ in range(100):
-            o = await BenchmarkFewFields.create(level=random.randint(0, 100), text="test")
-            minid = min(minid, o.id) if minid != -1 else o.id
-            maxid = max(maxid, o.id) if maxid != -1 else o.id
-
-    loop.run_until_complete(_setup())
 
     @benchmark
     def bench():
         async def _bench():
-            await BenchmarkFewFields.get(id=random.randint(minid, maxid))
+            await BenchmarkFewFields.create(level=random.randint(0, 100), text="test")
 
         loop.run_until_complete(_bench())
 
 
-def test_get_many_fields(benchmark):
+def test_create_many_fields(benchmark):
     loop = asyncio.get_event_loop()
-    minid = maxid = -1
 
-    async def _setup():
-        nonlocal minid, maxid
-        for _ in range(100):
-            o = await BenchmarkManyFields.create(
+    @benchmark
+    def bench():
+        async def _bench():
+            await BenchmarkManyFields.create(
                 level=random.randint(0, 100),
                 text="test",
                 col_float1=2.2,
@@ -69,14 +58,5 @@ def test_get_many_fields(benchmark):
                 col_decimal4=None,
                 col_json4=None,
             )
-            minid = min(minid, o.id) if minid != -1 else o.id
-            maxid = max(maxid, o.id) if maxid != -1 else o.id
-
-    loop.run_until_complete(_setup())
-
-    @benchmark
-    def bench():
-        async def _bench():
-            await BenchmarkManyFields.get(id=random.randint(minid, maxid))
 
         loop.run_until_complete(_bench())
