@@ -1003,13 +1003,13 @@ class CallableDefault(Model):
 class BenchmarkFewFields(Model):
     timestamp = fields.DatetimeField(auto_now_add=True)
     level = fields.SmallIntField(index=True)
-    text = fields.CharField(max_length=255, index=True)
+    text = fields.CharField(max_length=255)
 
 
 class BenchmarkManyFields(Model):
     timestamp = fields.DatetimeField(auto_now_add=True)
     level = fields.SmallIntField(index=True)
-    text = fields.CharField(max_length=255, index=True)
+    text = fields.CharField(max_length=255)
 
     col_float1 = fields.FloatField(default=2.2)
     col_smallint1 = fields.SmallIntField(default=2)
