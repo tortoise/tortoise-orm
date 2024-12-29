@@ -152,7 +152,7 @@ Tortoise ORM currently supports the following databases:
 
 * `SQLite` (requires ``aiosqlite``)
 * `PostgreSQL` (requires ``asyncpg``)
-* `MySQL` (requires ``asyncmy``)
+* `MySQL` (requires ``asyncmy`` or ``aiomysql``)
 * `Microsoft SQL Server`/`Oracle` (requires ``asyncodbc``)
 
 ``generate_schema`` generates the schema on an empty database. Tortoise generates schemas in safe mode by default which
