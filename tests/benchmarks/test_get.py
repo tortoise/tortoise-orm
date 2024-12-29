@@ -12,7 +12,8 @@ def test_get_few_fields(benchmark, few_fields_benchmark_dataset):
     @benchmark
     def bench():
         async def _bench():
-            await BenchmarkFewFields.get(id=random.randint(minid, maxid))
+            randid = random.randint(minid, maxid)  # nosec
+            await BenchmarkFewFields.get(id=randid)
 
         loop.run_until_complete(_bench())
 
@@ -25,6 +26,7 @@ def test_get_many_fields(benchmark, many_fields_benchmark_dataset):
     @benchmark
     def bench():
         async def _bench():
-            await BenchmarkManyFields.get(id=random.randint(minid, maxid))
+            randid = random.randint(minid, maxid)  # nosec
+            await BenchmarkManyFields.get(id=randid)
 
         loop.run_until_complete(_bench())

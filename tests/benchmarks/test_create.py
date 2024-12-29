@@ -11,7 +11,8 @@ def test_create_few_fields(benchmark):
     @benchmark
     def bench():
         async def _bench():
-            await BenchmarkFewFields.create(level=random.randint(0, 100), text="test")
+            level = random.randint(0, 100)  # nosec
+            await BenchmarkFewFields.create(level=level, text="test")
 
         loop.run_until_complete(_bench())
 
@@ -23,7 +24,7 @@ def test_create_many_fields(benchmark):
     def bench():
         async def _bench():
             await BenchmarkManyFields.create(
-                level=random.randint(0, 100),
+                level=random.randint(0, 100),  # nosec
                 text="test",
                 col_float1=2.2,
                 col_smallint1=2,

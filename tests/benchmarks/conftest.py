@@ -28,7 +28,8 @@ def few_fields_benchmark_dataset() -> list[BenchmarkFewFields]:
     async def _create() -> list[BenchmarkFewFields]:
         res = []
         for _ in range(100):
-            res.append(await BenchmarkFewFields.create(level=random.randint(0, 100), text="test"))
+            level = random.randint(0, 100)  # nosec
+            res.append(await BenchmarkFewFields.create(level=level, text="test"))
         return res
 
     return asyncio.get_event_loop().run_until_complete(_create())
@@ -41,7 +42,7 @@ def many_fields_benchmark_dataset() -> list[BenchmarkManyFields]:
         for _ in range(100):
             res.append(
                 await BenchmarkManyFields.create(
-                    level=random.randint(0, 100),
+                    level=random.randint(0, 100),  # nosec
                     text="test",
                     col_float1=2.2,
                     col_smallint1=2,
