@@ -38,7 +38,7 @@ Extending index is simply, you just need to inherit the `tortoise.indexes.Index`
 .. code-block:: python3
 
     from typing import Optional, Set
-    from pypika.terms import Term
+    from pypika_tortoise.terms import Term
     from tortoise.indexes import Index
 
     class FullTextIndex(Index):

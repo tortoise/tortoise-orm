@@ -200,7 +200,7 @@ class AwaitableQuery(Generic[MODEL]):
         Applies standard ordering to QuerySet.
 
         :param model: The Model this queryset is based on.
-        :param table: ``pypika.Table`` to keep track of the virtual SQL table
+        :param table: ``pypika_tortoise.Table`` to keep track of the virtual SQL table
             (to allow self referential joins)
         :param orderings: What columns/order to order by
         :param annotations:  Annotations that may be ordered on

@@ -69,7 +69,7 @@ You can define custom functions which are not builtin, such as ``TruncMonth`` an
 
 .. code-block:: python3
 
-    from pypika import CustomFunction
+    from pypika_tortoise import CustomFunction
     from tortoise.expressions import F, Function
 
     class TruncMonth(Function):
@@ -85,7 +85,7 @@ And you can also use functions in update, the example is only suitable for MySQL
 
     from tortoise.expressions import F
     from tortoise.functions import Function
-    from pypika.terms import Function as PupikaFunction
+    from pypika_tortoise.terms import Function as PupikaFunction
 
     class JsonSet(Function):
         class PypikaJsonSet(PupikaFunction):
