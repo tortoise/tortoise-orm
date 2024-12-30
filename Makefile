@@ -64,7 +64,7 @@ test_mysql:
 
 test_mysql_asyncmy:
 	$(MAKE) deps_with_asyncmy
-	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}" pytest $(pytest_opts) --cov-append --cov-report=
+	$(MAKE) test_mysql
 	# Restore dependencies to the default
 	$(MAKE) deps
 
