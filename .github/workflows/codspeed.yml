@@ -3,7 +3,7 @@ name: CodSpeed
 on:
   push:
     branches:
-      - main
+      - develop
   pull_request:
   # `workflow_dispatch` allows CodSpeed to trigger backtest
   # performance analysis in order to generate initial data.
