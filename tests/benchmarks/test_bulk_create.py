@@ -9,7 +9,7 @@ def test_bulk_create_few_fields(benchmark):
 
     data = [
         BenchmarkFewFields(
-            level=random.choice([10, 20, 30, 40, 50]), text=f"Insert from C, item {i}"
+            level=random.choice([10, 20, 30, 40, 50]), text=f"Insert from C, item {i}"  # nosec
         )
         for i in range(100)
     ]
@@ -17,8 +17,6 @@ def test_bulk_create_few_fields(benchmark):
     @benchmark
     def bench():
         async def _bench():
-            level = random.randint(0, 100)  # nosec
-            await BenchmarkFewFields.create(level=level, text="test")
             await BenchmarkFewFields.bulk_create(data)
 
         loop.run_until_complete(_bench())
@@ -32,7 +30,6 @@ def test_bulk_create_many_fields(benchmark, gen_many_fields_data):
     @benchmark
     def bench():
         async def _bench():
-            await BenchmarkManyFields.create(**gen_many_fields_data())
             await BenchmarkManyFields.bulk_create(data)
 
         loop.run_until_complete(_bench())
