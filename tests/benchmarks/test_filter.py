@@ -1,6 +1,6 @@
 import asyncio
-from decimal import Decimal
 import random
+from decimal import Decimal
 
 from tests.testmodels import BenchmarkFewFields, BenchmarkManyFields
 

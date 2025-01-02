@@ -1,5 +1,5 @@
 from tortoise import Model
-from tortoise.contrib.postgres.fields import TSVectorField, ArrayField
+from tortoise.contrib.postgres.fields import ArrayField, TSVectorField
 
 
 class PostgresFields(Model):
