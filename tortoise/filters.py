@@ -13,7 +13,7 @@ from typing import (
     TypedDict,
 )
 
-from pypika_tortoise import Table
+from pypika_tortoise import SqlContext, Table
 from pypika_tortoise.enums import DatePart, Matching, SqlTypes
 from pypika_tortoise.functions import Cast, Extract, Upper
 from pypika_tortoise.terms import (
@@ -43,9 +43,9 @@ class Like(BasicCriterion):
         super().__init__(Matching.like, left, right, alias=alias)
         self.escape = escape
 
-    def get_sql(self, quote_char='"', with_alias=False, **kwargs) -> str:
-        sql = super().get_sql(quote_char=quote_char, with_alias=False, **kwargs) + str(self.escape)
-        if with_alias and self.alias:  # pragma: nocoverage
+    def get_sql(self, ctx: SqlContext):
+        sql = super().get_sql(ctx.copy(with_alias=False)) + str(self.escape)
+        if ctx.with_alias and self.alias:  # pragma: nocoverage
             return '{sql} "{alias}"'.format(sql=sql, alias=self.alias)
         return sql
 

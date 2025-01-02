@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Any, Optional
 
+from pypika_tortoise import SqlContext
 from pypika_tortoise.enums import Comparator
 from pypika_tortoise.terms import BasicCriterion
 from pypika_tortoise.terms import Function as PypikaFunction
@@ -28,7 +29,7 @@ class Against(PypikaFunction):
         super(Against, self).__init__("AGAINST", expr)
         self.mode = mode
 
-    def get_special_params_sql(self, **kwargs: Any) -> Any:
+    def get_special_params_sql(self, ctx: SqlContext) -> Any:
         if not self.mode:
             return ""
         return self.mode.value

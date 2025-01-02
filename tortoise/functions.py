@@ -1,4 +1,4 @@
-from pypika_tortoise import functions
+from pypika_tortoise import SqlContext, functions
 
 from tortoise.expressions import Aggregate, Function
 
@@ -59,12 +59,11 @@ class Upper(Function):
 
 class _Concat(functions.Concat):
     @staticmethod
-    def get_arg_sql(arg, **kwargs):
-        sql = arg.get_sql(with_alias=False, **kwargs) if hasattr(arg, "get_sql") else str(arg)
+    def get_arg_sql(arg, ctx: SqlContext):
+        sql = arg.get_sql(ctx.copy(with_alias=False)) if hasattr(arg, "get_sql") else str(arg)
         # explicitly convert to text for postgres to avoid errors like
         # "could not determine data type of parameter $1"
-        dialect = kwargs.get("dialect", None)
-        if dialect and dialect.value == "postgresql":
+        if ctx.dialect.value == "postgresql":
             return f"{sql}::text"
         return sql
 

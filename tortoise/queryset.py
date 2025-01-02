@@ -1784,7 +1784,7 @@ class RawSQLQuery(AwaitableQuery):
         instance_list = await self._db.executor_class(
             model=self.model,
             db=self._db,
-        ).execute_select(RawSQL(self._sql).get_sql(), [])
+        ).execute_select(RawSQL(self._sql).get_sql(self._db.query_class.SQL_CONTEXT), [])
         return instance_list
 
     def __await__(self) -> Generator[Any, None, List[MODEL]]:
