@@ -13,6 +13,7 @@ from tests.testmodels import (
     Event,
     IntFields,
     JSONFields,
+    Reporter,
     Service,
     SmallIntFields,
     SourceFieldPk,
@@ -21,7 +22,7 @@ from tests.testmodels import (
 )
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import In, NotEQ
-from tortoise.expressions import Case, F, Q, When
+from tortoise.expressions import Case, F, Q, Subquery, When
 from tortoise.functions import Function, Upper
 
 
@@ -246,3 +247,18 @@ class TestUpdate(test.TestCase):
             .update(name=F("upped_name"))
         )
         self.assertEqual((await Tournament.get(pk=tournament.pk)).name, "AAA")
+
+    async def test_update_with_filter_subquery(self):
+        t1 = await Tournament.create(name="1")
+        r1 = await Reporter.create(name="1")
+        e1 = await Event.create(name="1", tournament=t1, reporter=r1)
+
+        # NOTE: this is intentionally written with Subquery and known PKs to test
+        # whether subqueries are parameterized correctly.
+        await Event.filter(
+            tournament_id__in=Subquery(Tournament.filter(pk__in=[t1.pk]).values("id")),
+            reporter_id__in=Subquery(Reporter.filter(pk__in=[r1.pk]).values("id")),
+        ).update(token="hello_world")
+
+        await e1.refresh_from_db(fields=["token"])
+        self.assertEqual(e1.token, "hello_world")
