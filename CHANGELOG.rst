@@ -18,6 +18,7 @@ Fixed
 Changed
 ^^^^^^^
 - Optimize field conversion to database format to speed up `create` and `bulk_create` (#1840)
+- Improved query performance by optimizing SQL generation (#1837)
 
 0.23.0
 ------
