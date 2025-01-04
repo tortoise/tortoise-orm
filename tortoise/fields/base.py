@@ -259,11 +259,6 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         if value is not None and not isinstance(value, self.field_type):
             value = self.field_type(value)  # pylint: disable=E1102
 
-        if self.__class__ in self.model._meta.db.executor_class.TO_DB_OVERRIDE:
-            value = self.model._meta.db.executor_class.TO_DB_OVERRIDE[self.__class__](
-                self, value, instance
-            )
-
         self.validate(value)
         return value
 
