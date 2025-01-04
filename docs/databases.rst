@@ -79,7 +79,7 @@ So if the ``DB_FILE`` is "/data/db.sqlite3" then the string will be ``sqlite:///
 Required Parameters
 -------------------
 
-``path``:
+``file_path``:
     Path to SQLite3 file. ``:memory:`` is a special path that indicates in-memory database.
 
 Optional parameters:
