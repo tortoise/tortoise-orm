@@ -1,6 +1,6 @@
 from typing import Any, Optional, Type, Union
 
-from tortoise import Model, fields
+from tortoise import Model
 from tortoise.backends.odbc.executor import ODBCExecutor
 from tortoise.exceptions import UnSupportedError
 from tortoise.fields import BooleanField
@@ -16,9 +16,5 @@ def to_db_bool(
 
 
 class MSSQLExecutor(ODBCExecutor):
-    TO_DB_OVERRIDE = {
-        fields.BooleanField: to_db_bool,
-    }
-
     async def execute_explain(self, sql: str) -> Any:
         raise UnSupportedError("MSSQL does not support explain")

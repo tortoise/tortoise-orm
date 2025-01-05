@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import decimal
 from copy import copy
-from functools import partial
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -24,7 +23,6 @@ from pypika_tortoise.queries import QueryBuilder
 
 from tortoise.exceptions import OperationalError
 from tortoise.expressions import Expression, ResolveContext
-from tortoise.fields.base import Field
 from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
@@ -47,7 +45,6 @@ EXECUTOR_CACHE: Dict[
 
 
 class BaseExecutor:
-    TO_DB_OVERRIDE: Dict[Type[Field], Callable] = {}
     FILTER_FUNC_OVERRIDE: Dict[Callable, Callable] = {}
     EXPLAIN_PREFIX: str = "EXPLAIN"
     DB_NATIVE = {bytes, str, int, float, decimal.Decimal, datetime.datetime, datetime.date}
@@ -84,12 +81,7 @@ class BaseExecutor:
             self.column_map: Dict[str, Callable[[Any, Any], Any]] = {}
             for column in self.regular_columns_all:
                 field_object = self.model._meta.fields_map[column]
-                if field_object.__class__ in self.TO_DB_OVERRIDE:
-                    self.column_map[column] = partial(
-                        self.TO_DB_OVERRIDE[field_object.__class__], field_object
-                    )
-                else:
-                    self.column_map[column] = field_object.to_db_value
+                self.column_map[column] = field_object.to_db_value
 
             table = self.model._meta.basetable
             basequery = cast(QueryBuilder, self.model._meta.basequery)

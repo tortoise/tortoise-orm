@@ -5,7 +5,7 @@ from typing import Optional, Type, Union
 
 import pytz
 
-from tortoise import Model, fields, timezone
+from tortoise import Model, timezone
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.contrib.sqlite.regex import (
     insensitive_posix_sqlite_regexp,
@@ -88,12 +88,6 @@ sqlite3.register_adapter(Decimal, str)
 
 
 class SqliteExecutor(BaseExecutor):
-    TO_DB_OVERRIDE = {
-        fields.BooleanField: to_db_bool,
-        fields.DecimalField: to_db_decimal,
-        fields.DatetimeField: to_db_datetime,
-        fields.TimeField: to_db_time,
-    }
     EXPLAIN_PREFIX = "EXPLAIN QUERY PLAN"
     DB_NATIVE = {bytes, str, int, float}
     FILTER_FUNC_OVERRIDE = {
