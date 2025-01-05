@@ -28,8 +28,8 @@ from tortoise.fields.relational import (
 from tortoise.filters import get_m2m_filters
 from tortoise.log import logger
 from tortoise.models import Model, ModelMeta
-from tortoise.utils import generate_schema_for_client
 from tortoise.timezone import _reset_timezone_cache
+from tortoise.utils import generate_schema_for_client
 
 
 class Tortoise:

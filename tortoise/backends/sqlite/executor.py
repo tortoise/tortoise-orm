@@ -8,13 +8,8 @@ from tortoise.contrib.sqlite.regex import (
     insensitive_posix_sqlite_regexp,
     posix_sqlite_regexp,
 )
-from tortoise.fields import (
-    BigIntField,
-    IntField,
-    SmallIntField,
-)
+from tortoise.fields import BigIntField, IntField, SmallIntField
 from tortoise.filters import insensitive_posix_regex, posix_regex
-
 
 # Conversion for the cases where it's hard to know the
 # related field, e.g. in raw queries, math or annotations.
