@@ -6,15 +6,18 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.23
+0.24
 ====
 
-0.23.1
+0.24.0 (unreleased)
 ------
 Fixed
 ^^^^^
 - Rename pypika to pypika_tortoise for fixing package name conflict (#1829)
 - Concurrent connection pool initialization (#1825)
+Changed
+^^^^^^^
+- Optimize field conversion to database format to speed up `create` and `bulk_create` (#1840)
 
 0.23.0
 ------
