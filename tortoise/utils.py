@@ -37,9 +37,11 @@ async def generate_schema_for_client(client: "BaseDBAsyncClient", safe: bool) ->
     :param safe: When set to true, creates the table only when it does not already exist.
     """
     generator = client.schema_generator(client)
-    schema = get_schema_sql(client, safe)
-    logger.debug("Creating schema: %s", schema)
-    if schema:  # pragma: nobranch
+    if schema := generator.get_create_schema_sql(safe):  # pragma: nobranch
+        if client.schema_generator.DIALECT == "mysql":
+            # MySQL does not support 'IF NOT EXISTS' syntax for `INDEX`
+            schema = schema.replace(" INDEX IF NOT EXISTS", " INDEX")
+        logger.debug("Creating schema: %s", schema)
         await generator.generate_from_string(schema)
 
 
