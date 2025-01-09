@@ -1102,7 +1102,7 @@ CREATE INDEX "idx_index_gin_a403ee" ON "index" USING GIN ("gin");
 CREATE INDEX "idx_index_gist_c807bf" ON "index" USING GIST ("gist");
 CREATE INDEX "idx_index_sp_gist_2c0bad" ON "index" USING SPGIST ("sp_gist");
 CREATE INDEX "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");
-CREATE INDEX "idx_index_partial_c5be6a" ON "index" USING  ("partial") WHERE id = 1;""",
+CREATE INDEX "idx_index_partial_c5be6a" ON "index" USING ("partial") WHERE id = 1;""",
         )
 
     async def test_index_safe(self):
@@ -1126,7 +1126,7 @@ CREATE INDEX IF NOT EXISTS "idx_index_gin_a403ee" ON "index" USING GIN ("gin");
 CREATE INDEX IF NOT EXISTS "idx_index_gist_c807bf" ON "index" USING GIST ("gist");
 CREATE INDEX IF NOT EXISTS "idx_index_sp_gist_2c0bad" ON "index" USING SPGIST ("sp_gist");
 CREATE INDEX IF NOT EXISTS "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");
-CREATE INDEX IF NOT EXISTS "idx_index_partial_c5be6a" ON "index" USING  ("partial") WHERE id = 1;""",
+CREATE INDEX IF NOT EXISTS "idx_index_partial_c5be6a" ON "index" USING ("partial") WHERE id = 1;""",
         )
 
     async def test_m2m_no_auto_create(self):
