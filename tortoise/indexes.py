@@ -58,9 +58,9 @@ class Index:
         else:
             expressions = [f"({expression.get_sql()})" for expression in self.expressions]
             fields = ", ".join(expressions)
-
+        exists = "IF NOT EXISTS " if safe and schema_generator.DIALECT != "mysql" else ""
         return self.INDEX_CREATE_TEMPLATE.format(
-            exists="IF NOT EXISTS " if safe else "",
+            exists=exists,
             index_name=schema_generator.quote(self.index_name(schema_generator, model)),
             index_type=f" {self.INDEX_TYPE} ",
             table_name=schema_generator.quote(model._meta.db_table),
