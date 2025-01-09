@@ -26,10 +26,10 @@ class TestTwoDatabases(test.SimpleTestCase):
         await Tortoise._drop_databases()
         await super().asyncTearDown()
 
-    def build_select_sql(self, table="eventtwo") -> str:
+    def build_select_sql(self) -> str:
         if isinstance(self.db, OracleClient):
-            return f'SELECT * FROM "{table}"'
-        return f"SELECT * FROM {table}"
+            return 'SELECT * FROM "eventtwo"'
+        return "SELECT * FROM eventtwo"
 
     async def test_two_databases(self):
         tournament = await Tournament.create(name="Tournament")
