@@ -1,7 +1,8 @@
 import urllib.parse as urlparse
 import uuid
+from collections.abc import Iterable
 from types import ModuleType
-from typing import Any, Dict, Iterable, Optional, Union
+from typing import Any, Optional, Union
 
 from tortoise.exceptions import ConfigurationError
 
@@ -12,7 +13,7 @@ urlparse.uses_netloc.append("sqlite")
 urlparse.uses_netloc.append("mysql")
 urlparse.uses_netloc.append("oracle")
 urlparse.uses_netloc.append("mssql")
-DB_LOOKUP: Dict[str, Dict[str, Any]] = {
+DB_LOOKUP: dict[str, dict[str, Any]] = {
     "psycopg": {
         "engine": "tortoise.backends.psycopg",
         "vmap": {
@@ -182,7 +183,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
 
 def generate_config(
     db_url: str,
-    app_modules: Dict[str, Iterable[Union[str, ModuleType]]],
+    app_modules: dict[str, Iterable[Union[str, ModuleType]]],
     connection_label: Optional[str] = None,
     testing: bool = False,
 ) -> dict:

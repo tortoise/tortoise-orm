@@ -1,4 +1,4 @@
-from typing import Optional, Tuple
+from typing import Optional
 
 from pypika_tortoise.terms import Term
 
@@ -11,7 +11,7 @@ class FullTextIndex(Index):
     def __init__(
         self,
         *expressions: Term,
-        fields: Optional[Tuple[str, ...]] = None,
+        fields: Optional[tuple[str, ...]] = None,
         name: Optional[str] = None,
         parser_name: Optional[str] = None,
     ) -> None:

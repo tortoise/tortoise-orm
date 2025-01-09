@@ -1,8 +1,6 @@
+from collections.abc import Callable
 from enum import Enum
-from typing import TYPE_CHECKING, TypeVar
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
+from typing import TypeVar
 
 T = TypeVar("T")
 FuncType = Callable[[T], T]

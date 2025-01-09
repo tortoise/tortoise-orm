@@ -1,9 +1,10 @@
 import asyncio
 import inspect
 import re
+from collections.abc import Awaitable, Callable, Generator, Iterable
 from copy import copy, deepcopy
 from functools import partial
-from typing import TYPE_CHECKING, Any, Optional, Type, TypedDict, TypeVar, Union, cast
+from typing import Any, Optional, Type, TypedDict, TypeVar, Union, cast
 
 from pypika_tortoise import Order, Query, Table
 from pypika_tortoise.terms import Term
@@ -50,9 +51,6 @@ from tortoise.queryset import (
 from tortoise.router import router
 from tortoise.signals import Signals
 from tortoise.transactions import in_transaction
-
-if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable, Generator, Iterable
 
 MODEL = TypeVar("MODEL", bound="Model")
 EMPTY = object()

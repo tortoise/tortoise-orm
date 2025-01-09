@@ -1,5 +1,6 @@
 import asyncio
 import typing
+from collections.abc import Callable
 from contextlib import _AsyncGeneratorContextManager
 from ssl import SSLContext
 
@@ -17,7 +18,7 @@ import tortoise.backends.psycopg.executor as executor
 import tortoise.exceptions as exceptions
 from tortoise.backends.psycopg.schema_generator import PsycopgSchemaGenerator
 
-FuncType = typing.Callable[..., typing.Any]
+FuncType = Callable[..., typing.Any]
 F = typing.TypeVar("F", bound=FuncType)
 
 
@@ -41,7 +42,7 @@ class PsycopgSQLQueryBuilder(PostgreSQLQueryBuilder):
     Psycopg opted to use a custom parameter placeholder, so we need to override the default
     """
 
-    def get_parameterized_sql(self, **kwargs) -> typing.Tuple[str, list]:
+    def get_parameterized_sql(self, **kwargs) -> tuple[str, list]:
         parameterizer = kwargs.pop(
             "parameterizer", Parameterizer(placeholder_factory=lambda _: "%s")
         )
@@ -137,7 +138,7 @@ class PsycopgClient(postgres_client.BasePostgresClient):
         query: str,
         values: typing.Optional[list] = None,
         row_factory=psycopg.rows.dict_row,
-    ) -> typing.Tuple[int, typing.List[dict]]:
+    ) -> tuple[int, list[dict]]:
         connection: psycopg.AsyncConnection
         async with self.acquire_connection() as connection:
             cursor: typing.Union[psycopg.AsyncCursor, psycopg.AsyncServerCursor]
@@ -152,11 +153,11 @@ class PsycopgClient(postgres_client.BasePostgresClient):
                 else:
                     rows = []
 
-                return rowcount, typing.cast(typing.List[dict], rows)
+                return rowcount, typing.cast(list[dict], rows)
 
     async def execute_query_dict(
         self, query: str, values: typing.Optional[list] = None
-    ) -> typing.List[dict]:
+    ) -> list[dict]:
         rowcount, rows = await self.execute_query(query, values, row_factory=psycopg.rows.dict_row)
         return rows
 

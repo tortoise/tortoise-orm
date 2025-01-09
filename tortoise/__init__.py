@@ -7,10 +7,11 @@ import json
 import logging
 import os
 import warnings
+from collections.abc import Callable, Coroutine, Iterable
 from copy import deepcopy
 from inspect import isclass
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, Type, cast
+from typing import Any, Type, cast
 
 from pypika_tortoise import Query, Table
 
@@ -29,9 +30,6 @@ from tortoise.filters import get_m2m_filters
 from tortoise.log import logger
 from tortoise.models import Model, ModelMeta
 from tortoise.utils import generate_schema_for_client
-
-if TYPE_CHECKING:
-    from collections.abc import Callable, Coroutine, Iterable
 
 
 class Tortoise:

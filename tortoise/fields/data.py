@@ -2,9 +2,10 @@ import datetime
 import functools
 import json
 import warnings
+from collections.abc import Callable
 from decimal import Decimal
 from enum import Enum, IntEnum
-from typing import TYPE_CHECKING, Any, Callable, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Optional, Type, TypeVar, Union
 from uuid import UUID, uuid4
 
 from pypika_tortoise import functions

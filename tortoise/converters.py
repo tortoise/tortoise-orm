@@ -1,11 +1,9 @@
 import datetime
 import time
+from collections.abc import Sequence
 from datetime import timedelta
 from decimal import Decimal
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from collections.abc import Sequence
+from typing import Any
 
 _escape_table = [chr(x) for x in range(128)]
 _escape_table[0] = "\\0"

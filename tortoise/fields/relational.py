@@ -1,18 +1,5 @@
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    AsyncGenerator,
-    Generator,
-    Generic,
-    Iterator,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    overload,
-)
+from collections.abc import AsyncGenerator, Generator, Iterator
+from typing import TYPE_CHECKING, Any, Generic, Optional, Type, TypeVar, Union, overload
 
 from pypika_tortoise import Table
 from typing_extensions import Literal
@@ -59,7 +46,7 @@ class ReverseRelation(Generic[MODEL]):
         self.from_field = from_field
         self._fetched = False
         self._custom_query = False
-        self.related_objects: List[MODEL] = []
+        self.related_objects: list[MODEL] = []
 
     @property
     def _query(self) -> "QuerySet[MODEL]":
@@ -91,7 +78,7 @@ class ReverseRelation(Generic[MODEL]):
         self._raise_if_not_fetched()
         return self.related_objects[item]
 
-    def __await__(self) -> Generator[Any, None, List[MODEL]]:
+    def __await__(self) -> Generator[Any, None, list[MODEL]]:
         return self._query.__await__()
 
     async def __aiter__(self) -> AsyncGenerator[Any, MODEL]:
@@ -130,7 +117,7 @@ class ReverseRelation(Generic[MODEL]):
         """
         return self._query.offset(offset)
 
-    def _set_result_for_query(self, sequence: List[MODEL], attr: Optional[str] = None) -> None:
+    def _set_result_for_query(self, sequence: list[MODEL], attr: Optional[str] = None) -> None:
         self._fetched = True
         self.related_objects = sequence
         if attr:
@@ -218,7 +205,7 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
 
     async def _remove_or_clear(
         self,
-        instances: Optional[Tuple[MODEL, ...]] = None,
+        instances: Optional[tuple[MODEL, ...]] = None,
         using_db: "Optional[BaseDBAsyncClient]" = None,
     ) -> None:
         db = using_db or self.remote_model._meta.db

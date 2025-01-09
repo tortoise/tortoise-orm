@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from collections.abc import Iterator
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from enum import Enum
@@ -27,8 +28,6 @@ from tortoise.query_utils import (
 )
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from collections.abc import Iterator
-
     from pypika_tortoise.queries import Selectable
 
     from tortoise.models import Model

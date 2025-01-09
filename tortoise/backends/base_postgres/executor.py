@@ -1,5 +1,6 @@
 import uuid
-from typing import Optional, Sequence, cast
+from collections.abc import Sequence
+from typing import Optional, cast
 
 from pypika_tortoise.dialects import PostgreSQLQueryBuilder
 from pypika_tortoise.terms import Term

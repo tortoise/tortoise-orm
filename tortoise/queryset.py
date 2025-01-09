@@ -1,4 +1,5 @@
 import types
+from collections.abc import AsyncIterator, Callable, Generator, Iterable
 from copy import copy
 from typing import (
     TYPE_CHECKING,
@@ -48,8 +49,6 @@ from tortoise.utils import chunk
 QUERY: QueryBuilder = QueryBuilder()
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from collections.abc import AsyncIterator, Callable, Generator, Iterable
-
     from tortoise.models import Model
 
 MODEL = TypeVar("MODEL", bound="Model")

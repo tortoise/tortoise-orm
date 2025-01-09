@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+from collections.abc import Callable, Iterable
 from functools import partial
 from typing import TYPE_CHECKING, Any, Optional, TypedDict
 
@@ -20,8 +21,6 @@ from tortoise.fields import Field, JSONField
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from collections.abc import Callable, Iterable
-
     from tortoise.models import Model
 
 

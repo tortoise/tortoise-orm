@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, List, Type
+from typing import TYPE_CHECKING, Any, Type
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
@@ -29,8 +29,8 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
 
     def __init__(self, client: "MSSQLClient") -> None:
         super().__init__(client)
-        self._field_indexes = []  # type: List[str]
-        self._foreign_keys = []  # type: List[str]
+        self._field_indexes = []  # type: list[str]
+        self._foreign_keys = []  # type: list[str]
 
     def quote(self, val: str) -> str:
         return f"[{val}]"
@@ -59,7 +59,7 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
     def _escape_default_value(self, default: Any):
         return encoders.get(type(default))(default)  # type: ignore
 
-    def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
+    def _get_index_sql(self, model: "Type[Model]", field_names: list[str], safe: bool) -> str:
         return super(MSSQLSchemaGenerator, self)._get_index_sql(model, field_names, False)
 
     def _get_table_sql(self, model: "Type[Model]", safe: bool = True) -> dict:
@@ -109,7 +109,7 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
             default=default,
         )
 
-    def _get_inner_statements(self) -> List[str]:
+    def _get_inner_statements(self) -> list[str]:
         extra = self._foreign_keys + list(dict.fromkeys(self._field_indexes))
         self._field_indexes.clear()
         self._foreign_keys.clear()

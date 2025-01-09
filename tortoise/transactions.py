@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from functools import wraps
 from typing import TYPE_CHECKING, Optional, TypeVar, cast
 
@@ -5,8 +6,6 @@ from tortoise import connections
 from tortoise.exceptions import ParamsError
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from collections.abc import Callable
-
     from tortoise.backends.base.client import BaseDBAsyncClient, TransactionContext
 
 T = TypeVar("T")

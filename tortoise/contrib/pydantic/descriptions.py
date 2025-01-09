@@ -1,6 +1,7 @@
 import dataclasses
 import sys
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, Type
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, Optional, Type
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -18,12 +19,12 @@ if TYPE_CHECKING:  # pragma: nocoverage
 @dataclasses.dataclass
 class ModelDescription:
     pk_field: Field
-    data_fields: List[Field] = dataclasses.field(default_factory=list)
-    fk_fields: List[Field] = dataclasses.field(default_factory=list)
-    backward_fk_fields: List[Field] = dataclasses.field(default_factory=list)
-    o2o_fields: List[Field] = dataclasses.field(default_factory=list)
-    backward_o2o_fields: List[Field] = dataclasses.field(default_factory=list)
-    m2m_fields: List[Field] = dataclasses.field(default_factory=list)
+    data_fields: list[Field] = dataclasses.field(default_factory=list)
+    fk_fields: list[Field] = dataclasses.field(default_factory=list)
+    backward_fk_fields: list[Field] = dataclasses.field(default_factory=list)
+    o2o_fields: list[Field] = dataclasses.field(default_factory=list)
+    backward_o2o_fields: list[Field] = dataclasses.field(default_factory=list)
+    m2m_fields: list[Field] = dataclasses.field(default_factory=list)
 
     @classmethod
     def from_model(cls, model: Type["Model"]) -> Self:
@@ -73,13 +74,13 @@ class ComputedFieldDescription:
 @dataclasses.dataclass
 class PydanticMetaData:
     #: If not empty, only fields this property contains will be in the pydantic model
-    include: Tuple[str, ...] = ()
+    include: tuple[str, ...] = ()
 
     #: Fields listed in this property will be excluded from pydantic model
-    exclude: Tuple[str, ...] = dataclasses.field(default_factory=lambda: ("Meta",))
+    exclude: tuple[str, ...] = dataclasses.field(default_factory=lambda: ("Meta",))
 
     #: Computed fields can be listed here to use in pydantic model
-    computed: Tuple[str, ...] = dataclasses.field(default_factory=tuple)
+    computed: tuple[str, ...] = dataclasses.field(default_factory=tuple)
 
     #: Use backward relations without annotations - not recommended, it can be huge data
     #: without control
@@ -143,9 +144,9 @@ class PydanticMetaData:
         def get_param_from_meta_override(attr: str) -> Any:
             return getattr(meta_override, attr, getattr(self, attr))
 
-        default_include: Tuple[str, ...] = tuple(get_param_from_meta_override("include"))
-        default_exclude: Tuple[str, ...] = tuple(get_param_from_meta_override("exclude"))
-        default_computed: Tuple[str, ...] = tuple(get_param_from_meta_override("computed"))
+        default_include: tuple[str, ...] = tuple(get_param_from_meta_override("include"))
+        default_exclude: tuple[str, ...] = tuple(get_param_from_meta_override("exclude"))
+        default_computed: tuple[str, ...] = tuple(get_param_from_meta_override("computed"))
         default_config: Optional[ConfigDict] = self.model_config
 
         backward_relations: bool = bool(get_param_from_meta_override("backward_relations"))
@@ -170,9 +171,9 @@ class PydanticMetaData:
 
     def finalize_meta(
         self,
-        exclude: Tuple[str, ...] = (),
-        include: Tuple[str, ...] = (),
-        computed: Tuple[str, ...] = (),
+        exclude: tuple[str, ...] = (),
+        include: tuple[str, ...] = (),
+        computed: tuple[str, ...] = (),
         allow_cycles: Optional[bool] = None,
         sort_alphabetically: Optional[bool] = None,
         model_config: Optional[ConfigDict] = None,

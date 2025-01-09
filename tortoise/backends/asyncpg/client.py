@@ -1,5 +1,6 @@
 import asyncio
-from typing import Any, Callable, List, Optional, Tuple, TypeVar
+from collections.abc import Callable
+from typing import Any, Optional, TypeVar
 
 import asyncpg
 from asyncpg.transaction import Transaction
@@ -126,7 +127,7 @@ class AsyncpgDBClient(BasePostgresClient):
     @translate_exceptions
     async def execute_query(
         self, query: str, values: Optional[list] = None
-    ) -> Tuple[int, List[dict]]:
+    ) -> tuple[int, list[dict]]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             if values:
@@ -145,7 +146,7 @@ class AsyncpgDBClient(BasePostgresClient):
             return len(rows), rows
 
     @translate_exceptions
-    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> list[dict]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             if values:

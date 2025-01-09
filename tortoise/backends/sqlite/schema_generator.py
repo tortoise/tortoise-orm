@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
@@ -8,7 +8,7 @@ class SqliteSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "sqlite"
 
     @classmethod
-    def _get_escape_translation_table(cls) -> List[str]:
+    def _get_escape_translation_table(cls) -> list[str]:
         table = super()._get_escape_translation_table()
         table[ord('"')] = '"'
         table[ord("'")] = "'"

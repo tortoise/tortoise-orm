@@ -5,19 +5,10 @@ import sys
 import typing
 import unittest
 from asyncio.events import AbstractEventLoop
+from collections.abc import Callable, Coroutine, Iterable
 from functools import partial, wraps
 from types import ModuleType
-from typing import (
-    Any,
-    Callable,
-    Coroutine,
-    Iterable,
-    List,
-    Optional,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, Optional, TypeVar, Union, cast
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 
 from tortoise import Model, Tortoise, connections
@@ -237,7 +228,7 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
         Tortoise._inited = False
 
     def assertListSortEqual(
-        self, list1: List[Any], list2: List[Any], msg: Any = ..., sorted_key: Optional[str] = None
+        self, list1: list[Any], list2: list[Any], msg: Any = ..., sorted_key: Optional[str] = None
     ) -> None:
         if isinstance(list1[0], Model):
             super().assertListEqual(
@@ -406,7 +397,7 @@ T = TypeVar("T")
 P = ParamSpec("P")
 AsyncFunc = Callable[P, Coroutine[None, None, T]]
 AsyncFuncDeco = Callable[..., AsyncFunc]
-ModulesConfigType = Union[str, List[str]]
+ModulesConfigType = Union[str, list[str]]
 MEMORY_SQLITE = "sqlite://:memory:"
 
 
@@ -455,7 +446,7 @@ def init_memory_sqlite(
             ...
     """
 
-    def wrapper(func: AsyncFunc, ms: List[str]):
+    def wrapper(func: AsyncFunc, ms: list[str]):
         @wraps(func)
         async def runner(*args, **kwargs) -> T:
             await Tortoise.init(db_url=MEMORY_SQLITE, modules={"models": ms})
