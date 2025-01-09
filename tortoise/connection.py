@@ -3,7 +3,7 @@ import contextvars
 import importlib
 from contextvars import ContextVar
 from copy import copy
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Optional, Type, Union
 
 from tortoise.backends.base.config_generator import expand_db_url
 from tortoise.exceptions import ConfigurationError
@@ -11,11 +11,11 @@ from tortoise.exceptions import ConfigurationError
 if TYPE_CHECKING:
     from tortoise.backends.base.client import BaseDBAsyncClient
 
-    DBConfigType = Dict[str, Any]
+    DBConfigType = dict[str, Any]
 
 
 class ConnectionHandler:
-    _conn_storage: ContextVar[Dict[str, "BaseDBAsyncClient"]] = contextvars.ContextVar(
+    _conn_storage: ContextVar[dict[str, "BaseDBAsyncClient"]] = contextvars.ContextVar(
         "_conn_storage", default={}
     )
 
@@ -52,14 +52,14 @@ class ConnectionHandler:
             )
         return self._db_config
 
-    def _get_storage(self) -> Dict[str, "BaseDBAsyncClient"]:
+    def _get_storage(self) -> dict[str, "BaseDBAsyncClient"]:
         return self._conn_storage.get()
 
-    def _set_storage(self, new_storage: Dict[str, "BaseDBAsyncClient"]) -> contextvars.Token:
+    def _set_storage(self, new_storage: dict[str, "BaseDBAsyncClient"]) -> contextvars.Token:
         # Should be used only for testing purposes.
         return self._conn_storage.set(new_storage)
 
-    def _copy_storage(self) -> Dict[str, "BaseDBAsyncClient"]:
+    def _copy_storage(self) -> dict[str, "BaseDBAsyncClient"]:
         return copy(self._get_storage())
 
     def _clear_storage(self) -> None:
@@ -80,7 +80,7 @@ class ConnectionHandler:
             )
         return client_class
 
-    def _get_db_info(self, conn_alias: str) -> Union[str, Dict]:
+    def _get_db_info(self, conn_alias: str) -> Union[str, dict]:
         try:
             return self.db_config[conn_alias]
         except KeyError:
@@ -117,7 +117,7 @@ class ConnectionHandler:
 
         :raises ConfigurationError: If the connection alias does not exist.
         """
-        storage: Dict[str, "BaseDBAsyncClient"] = self._get_storage()
+        storage: dict[str, "BaseDBAsyncClient"] = self._get_storage()
         try:
             return storage[conn_alias]
         except KeyError:
@@ -174,7 +174,7 @@ class ConnectionHandler:
             if alias not in prev_storage:
                 prev_storage[alias] = conn
 
-    def all(self) -> List["BaseDBAsyncClient"]:
+    def all(self) -> list["BaseDBAsyncClient"]:
         """Returns a list of connection objects from the storage in the `current context`."""
         # The reason this method iterates over db_config and not over `storage` directly is
         # because: assume that someone calls `discard` with a certain alias, and calls this

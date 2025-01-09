@@ -1,21 +1,22 @@
 import sys
-from typing import TYPE_CHECKING, Any, Iterable, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Optional
 
 from tortoise.log import logger
+
+if TYPE_CHECKING:  # pragma: nocoverage
+    from collections.abc import Iterable
+
+    from tortoise.backends.base.client import BaseDBAsyncClient
 
 if sys.version_info >= (3, 12):
     from itertools import batched
 else:
     from itertools import islice
 
-    def batched(iterable: Iterable[Any], n: int) -> Iterable[Tuple[Any]]:
+    def batched(iterable: Iterable[Any], n: int) -> Iterable[tuple[Any]]:
         it = iter(iterable)
         while batch := tuple(islice(it, n)):
             yield batch
-
-
-if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.backends.base.client import BaseDBAsyncClient
 
 
 def get_schema_sql(client: "BaseDBAsyncClient", safe: bool) -> str:

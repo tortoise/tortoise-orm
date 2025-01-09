@@ -4,7 +4,7 @@ import operator
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Iterator, Type, cast
+from typing import TYPE_CHECKING, Any, Type, cast
 
 from pypika_tortoise import Case as PypikaCase
 from pypika_tortoise import Field as PypikaField
@@ -27,6 +27,8 @@ from tortoise.query_utils import (
 )
 
 if TYPE_CHECKING:  # pragma: nocoverage
+    from collections.abc import Iterator
+
     from pypika_tortoise.queries import Selectable
 
     from tortoise.models import Model

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Type
+from typing import TYPE_CHECKING, Any, Type
 
 from tortoise.connection import connections
 from tortoise.exceptions import ConfigurationError
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from tortoise import BaseDBAsyncClient, Model
 
 

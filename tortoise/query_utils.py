@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import copy
-from typing import TYPE_CHECKING, List, Optional, Tuple, Type, cast
+from typing import TYPE_CHECKING, Optional, Type, cast
 
 from pypika_tortoise import Table
 from pypika_tortoise.terms import Criterion, Term
@@ -20,13 +20,13 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.queryset import QuerySet
 
 
-TableCriterionTuple = Tuple[Table, Criterion]
+TableCriterionTuple = tuple[Table, Criterion]
 
 
 def get_joins_for_related_field(
     table: Table, related_field: RelationalField, related_field_name: str
-) -> List[TableCriterionTuple]:
-    required_joins: List[TableCriterionTuple] = []
+) -> list[TableCriterionTuple]:
+    required_joins: list[TableCriterionTuple] = []
 
     related_table: Table = related_field.related_model._meta.basetable
     if isinstance(related_field, ManyToManyFieldInstance):
@@ -80,7 +80,7 @@ def get_joins_for_related_field(
 
 def resolve_nested_field(
     model: Type["Model"], table: Table, field: str
-) -> Tuple[Term, List[TableCriterionTuple], Optional[Field]]:
+) -> tuple[Term, list[TableCriterionTuple], Optional[Field]]:
     """
     Resolves a nested field string like events__participants__name and
     returns the pypika term, required joins and the Field that can be used for
@@ -165,7 +165,7 @@ class QueryModifier:
     def __init__(
         self,
         where_criterion: Optional[Criterion] = None,
-        joins: Optional[List[TableCriterionTuple]] = None,
+        joins: Optional[list[TableCriterionTuple]] = None,
         having_criterion: Optional[Criterion] = None,
     ) -> None:
         self.where_criterion: Criterion = where_criterion or EmptyCriterion()
