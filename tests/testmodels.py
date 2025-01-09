@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict
 from tortoise import fields
 from tortoise.exceptions import ValidationError
 from tortoise.fields import NO_ACTION
+from tortoise.indexes import Index
 from tortoise.manager import Manager
 from tortoise.models import Model
 from tortoise.queryset import QuerySet
@@ -149,6 +150,9 @@ class ModelTestPydanticMetaBackwardRelations3(Model):
 
 class Node(Model):
     name = fields.CharField(max_length=10)
+
+    class Meta:
+        indexes = [Index(fields=("name",))]
 
 
 class Tree(Model):

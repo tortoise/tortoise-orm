@@ -25,12 +25,19 @@ from tortoise.fields.relational import (
     ManyToManyFieldInstance,
     OneToOneFieldInstance,
 )
+from tortoise.indexes import Index
+
+
+def dump_index(obj):
+    if isinstance(obj, Index):
+        return repr(obj)
+    return obj
 
 
 class TestDescribeModels(test.TestCase):
     def test_describe_models_all_serializable(self):
         val = Tortoise.describe_models()
-        json.dumps(val)
+        json.dumps(val, default=dump_index)
         self.assertIn("models.SourceFields", val.keys())
         self.assertIn("models.Event", val.keys())
 
