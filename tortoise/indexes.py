@@ -15,6 +15,11 @@ class Index:
         "CREATE{index_type}INDEX {exists}{index_name} ON {table_name} ({fields}){extra};"
     )
 
+    class _db_mysql:
+        INDEX_CREATE_TEMPLATE = (
+            "CREATE{index_type}INDEX {index_name} ON {table_name} ({fields}){extra};"
+        )
+
     def __init__(
         self,
         *expressions: Term,
@@ -50,6 +55,12 @@ class Index:
             argument += f", {name=}"
         return self.__class__.__name__ + "(" + argument + ")"
 
+    def get_for_dialect(self, dialect: str, key: str) -> Any:
+        value = getattr(self, key, "")
+        if dialect_special := getattr(self, f"_db_{dialect.lower()}", None):
+            return getattr(dialect_special, key, value)
+        return value
+
     def get_sql(
         self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool
     ) -> str:
@@ -58,12 +69,11 @@ class Index:
         else:
             expressions = [f"({expression.get_sql()})" for expression in self.expressions]
             fields = ", ".join(expressions)
-        exists = "IF NOT EXISTS " if safe and schema_generator.DIALECT != "mysql" else ""
-        index_type = f" {self.INDEX_TYPE} " if self.INDEX_TYPE else " "
-        return self.INDEX_CREATE_TEMPLATE.format(
-            exists=exists,
+        template = self.get_for_dialect(schema_generator.DIALECT, "INDEX_CREATE_TEMPLATE")
+        return template.format(
+            exists="IF NOT EXISTS " if safe else "",
             index_name=schema_generator.quote(self.index_name(schema_generator, model)),
-            index_type=index_type,
+            index_type=f" {self.INDEX_TYPE} " if self.INDEX_TYPE else " ",
             table_name=schema_generator.quote(model._meta.db_table),
             fields=fields,
             extra=self.extra,
