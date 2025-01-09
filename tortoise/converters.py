@@ -2,7 +2,10 @@ import datetime
 import time
 from datetime import timedelta
 from decimal import Decimal
-from typing import Any, Dict, Sequence, Set
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 _escape_table = [chr(x) for x in range(128)]
 _escape_table[0] = "\\0"
@@ -45,7 +48,7 @@ def escape_item(val: Any, mapping=None) -> str:
     return val
 
 
-def escape_dict(val: Dict, mapping=None) -> dict:
+def escape_dict(val: dict, mapping=None) -> dict:
     n = {}
     for k, v in val.items():
         quoted = escape_item(v, mapping)
@@ -61,7 +64,7 @@ def escape_sequence(val: Sequence, mapping=None) -> str:
     return "'{" + ",".join(n) + "}'"
 
 
-def escape_set(val: Set, mapping=None) -> str:
+def escape_set(val: set, mapping=None) -> str:
     return ",".join([escape_item(x, mapping) for x in val])
 
 
