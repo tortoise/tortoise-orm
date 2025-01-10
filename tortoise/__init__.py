@@ -7,10 +7,11 @@ import json
 import logging
 import os
 import warnings
+from collections.abc import Callable, Coroutine, Iterable
 from copy import deepcopy
 from inspect import isclass
 from types import ModuleType
-from typing import Any, Callable, Coroutine, Iterable, Type, cast
+from typing import Any, Type, cast
 
 from pypika_tortoise import Query, Table
 

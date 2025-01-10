@@ -1,5 +1,3 @@
-from typing import List
-
 from fastapi import APIRouter, HTTPException
 from models import Users
 from schemas import Status, User_Pydantic, UserIn_Pydantic
@@ -7,7 +5,7 @@ from schemas import Status, User_Pydantic, UserIn_Pydantic
 router = APIRouter()
 
 
-@router.get("/users", response_model=List[User_Pydantic])
+@router.get("/users", response_model=list[User_Pydantic])
 async def get_users():
     return await User_Pydantic.from_queryset(Users.all())
 

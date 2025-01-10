@@ -1,5 +1,6 @@
 import sys
-from typing import TYPE_CHECKING, Any, Iterable, Optional, Tuple
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Any, Optional
 
 from tortoise.log import logger
 
@@ -8,7 +9,7 @@ if sys.version_info >= (3, 12):
 else:
     from itertools import islice
 
-    def batched(iterable: Iterable[Any], n: int) -> Iterable[Tuple[Any]]:
+    def batched(iterable: Iterable[Any], n: int) -> Iterable[tuple[Any]]:
         it = iter(iterable)
         while batch := tuple(islice(it, n)):
             yield batch

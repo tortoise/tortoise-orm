@@ -1,19 +1,10 @@
 import asyncio
 import os
 import sqlite3
+from collections.abc import Callable, Coroutine, Sequence
 from functools import wraps
 from itertools import count
-from typing import (
-    Any,
-    Callable,
-    Coroutine,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    TypeVar,
-    cast,
-)
+from typing import Any, Optional, TypeVar, cast
 
 import aiosqlite
 from pypika_tortoise import SQLLiteQuery
@@ -138,7 +129,7 @@ class SqliteClient(BaseDBAsyncClient):
             return (await connection.execute_insert(query, values))[0]
 
     @translate_exceptions
-    async def execute_many(self, query: str, values: List[list]) -> None:
+    async def execute_many(self, query: str, values: list[list]) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             # This code is only ever called in AUTOCOMMIT mode
@@ -154,7 +145,7 @@ class SqliteClient(BaseDBAsyncClient):
     @translate_exceptions
     async def execute_query(
         self, query: str, values: Optional[list] = None
-    ) -> Tuple[int, Sequence[dict]]:
+    ) -> tuple[int, Sequence[dict]]:
         query = query.replace("\x00", "'||CHAR(0)||'")
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
@@ -163,7 +154,7 @@ class SqliteClient(BaseDBAsyncClient):
             return (connection.total_changes - start) or len(rows), rows
 
     @translate_exceptions
-    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> list[dict]:
         query = query.replace("\x00", "'||CHAR(0)||'")
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
@@ -234,7 +225,7 @@ class SqliteTransactionWrapper(SqliteClient, TransactionalDBClient):
         return NestedTransactionContext(SqliteTransactionWrapper(self))
 
     @translate_exceptions
-    async def execute_many(self, query: str, values: List[list]) -> None:
+    async def execute_many(self, query: str, values: list[list]) -> None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             # Already within transaction, so ideal for performance

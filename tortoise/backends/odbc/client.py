@@ -1,7 +1,8 @@
 import asyncio
 from abc import ABC
+from collections.abc import Callable, Coroutine
 from functools import wraps
-from typing import Any, Callable, Coroutine, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Optional, TypeVar, Union
 
 import asyncodbc
 import pyodbc
@@ -133,7 +134,7 @@ class ODBCClient(BaseDBAsyncClient, ABC):
     @translate_exceptions
     async def execute_query(
         self, query: str, values: Optional[list] = None
-    ) -> Tuple[int, List[dict]]:
+    ) -> tuple[int, list[dict]]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
@@ -152,7 +153,7 @@ class ODBCClient(BaseDBAsyncClient, ABC):
                     return cursor.rowcount, [dict(zip(fields, row)) for row in rows]
                 return cursor.rowcount, []
 
-    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> list[dict]:
         return (await self.execute_query(query, values))[1]
 
     @translate_exceptions

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
@@ -15,10 +15,10 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
 
     def __init__(self, client: "BasePostgresClient") -> None:
         super().__init__(client)
-        self.comments_array: List[str] = []
+        self.comments_array: list[str] = []
 
     @classmethod
-    def _get_escape_translation_table(cls) -> List[str]:
+    def _get_escape_translation_table(cls) -> list[str]:
         table = super()._get_escape_translation_table()
         table[ord("'")] = "''"
         return table

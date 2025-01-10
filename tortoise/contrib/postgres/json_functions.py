@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import operator
+from collections.abc import Callable
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any, Callable, Tuple, cast
+from typing import Any, cast
 
 from pypika_tortoise.enums import JSONOperators
 from pypika_tortoise.functions import Cast
@@ -102,7 +103,7 @@ def _wrap_key_part(key_part: str | int) -> Term:
 def _create_json_criterion(
     key_parts: list[str | int], field_term: Term, operator_: Callable, value: Any
 ):
-    criteria: Tuple[Criterion, str]
+    criteria: tuple[Criterion, str]
     if len(key_parts) == 1:
         criteria = (
             BasicCriterion(

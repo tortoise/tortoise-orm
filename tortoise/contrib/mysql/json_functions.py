@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import operator
-from typing import Any, Dict, List
+from typing import Any
 
 from pypika_tortoise.functions import Cast
 from pypika_tortoise.terms import Criterion
@@ -18,7 +18,7 @@ class JSONContains(PypikaFunction):
 
 
 class JSONExtract(PypikaFunction):
-    def __init__(self, column_name: Term, query_list: List[int | str | Term]) -> None:
+    def __init__(self, column_name: Term, query_list: list[int | str | Term]) -> None:
         query = self.make_query(query_list)
         super().__init__("JSON_EXTRACT", column_name, query)
 
@@ -30,7 +30,7 @@ class JSONExtract(PypikaFunction):
             return f".{value}"
         return str(value)
 
-    def make_query(self, query_list: List[Term | int | str]) -> str:
+    def make_query(self, query_list: list[Term | int | str]) -> str:
         query = ["$"]
         for value in query_list:
             query.append(self.serialize_value(value))
@@ -71,6 +71,6 @@ operator_keywords = {
 }
 
 
-def mysql_json_filter(field: Term, value: Dict) -> Criterion:
+def mysql_json_filter(field: Term, value: dict) -> Criterion:
     key_parts, filter_value, operator_ = get_json_filter_operator(value, operator_keywords)
     return operator_(JSONExtract(field, key_parts), filter_value)  # type:ignore[arg-type]
