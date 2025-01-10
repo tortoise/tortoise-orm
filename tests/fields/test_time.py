@@ -26,6 +26,14 @@ class TestEmpty(test.TestCase):
 
 
 class TestDatetimeFields(TestEmpty):
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
+        timezone._reset_timezone_cache()
+
+    async def asyncTearDown(self):
+        await super().asyncTearDown()
+        timezone._reset_timezone_cache()
+
     def test_both_auto_bad(self):
         with self.assertRaisesRegex(
             ConfigurationError, "You can choose only 'auto_now' or 'auto_now_add'"

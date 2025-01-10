@@ -1188,8 +1188,6 @@ class UpdateQuery(AwaitableQuery):
             self.resolve_ordering(self.model, table, self._orderings, self._annotations)
 
         self.resolve_filters()
-        # Need to get executor to get correct column_map
-        executor = self._db.executor_class(model=self.model, db=self._db)
         for key, value in self.update_kwargs.items():
             field_object = self.model._meta.fields_map.get(key)
             if not field_object:
@@ -1200,7 +1198,7 @@ class UpdateQuery(AwaitableQuery):
                 self.model._validate_relation_type(key, value)
                 fk_field: str = field_object.source_field  # type: ignore
                 db_field = self.model._meta.fields_map[fk_field].source_field
-                value = executor.column_map[fk_field](
+                value = self.model._meta.fields_map[fk_field].to_db_value(
                     getattr(value, field_object.to_field_instance.model_field_name),
                     None,
                 )
@@ -1220,7 +1218,7 @@ class UpdateQuery(AwaitableQuery):
                         )
                     ).term
                 else:
-                    value = executor.column_map[key](value, None)
+                    value = self.model._meta.fields_map[key].to_db_value(value, None)
 
             self.query = self.query.set(db_field, value)
 
@@ -1831,7 +1829,6 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
             )
 
         self.resolve_filters()
-        executor = self._db.executor_class(model=self.model, db=self._db)
         pk_attr = self.model._meta.pk_attr
         source_pk_attr = self.model._meta.fields_map[pk_attr].source_field or pk_attr
         pk = Field(source_pk_attr)
@@ -1841,7 +1838,7 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
                 case = Case()
                 pk_list = []
                 for obj in objects_item:
-                    pk_value = executor.column_map[pk_attr](obj.pk, None)
+                    pk_value = self.model._meta.fields_map[pk_attr].to_db_value(obj.pk, None)
                     field_obj = obj._meta.fields_map[field]
                     field_value = field_obj.to_db_value(getattr(obj, field), obj)
                     case.when(
@@ -1938,6 +1935,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
             return self._executor.insert_query, self._executor.insert_query_all
 
     async def _execute_many(self, insert_sql: str, insert_sql_all: str) -> None:
+        fields_map = self.model._meta.fields_map
         for instance_chunk in chunk(self._objects, self._batch_size):
             values_lists_all = []
             values_lists = []
@@ -1945,7 +1943,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
                 if instance._custom_generated_pk:
                     values_lists_all.append(
                         [
-                            self._executor.column_map[field_name](
+                            fields_map[field_name].to_db_value(
                                 getattr(instance, field_name), instance
                             )
                             for field_name in self._executor.regular_columns_all
@@ -1954,7 +1952,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
                 else:
                     values_lists.append(
                         [
-                            self._executor.column_map[field_name](
+                            fields_map[field_name].to_db_value(
                                 getattr(instance, field_name), instance
                             )
                             for field_name in self._executor.regular_columns
