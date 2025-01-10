@@ -18,9 +18,6 @@ Fixed
 Changed
 ^^^^^^^
 - Optimize field conversion to database format to speed up `create` and `bulk_create` (#1840)
-
-Changed
-^^^^^
 - Drop support for Python3.8 (#1848)
 
 0.23.0
