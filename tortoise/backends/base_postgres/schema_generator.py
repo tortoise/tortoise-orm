@@ -1,7 +1,8 @@
-from typing import TYPE_CHECKING, Any, List
+from typing import TYPE_CHECKING, Any, List, Optional, Type
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
+from tortoise.models import Model
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from .client import BasePostgresClient
@@ -9,6 +10,10 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 class BasePostgresSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "postgres"
+    INDEX_CREATE_TEMPLATE = (
+        'CREATE INDEX {exists}"{index_name}" ON "{table_name}" {index_type}({fields}){extra};'
+    )
+    UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace("INDEX", "UNIQUE INDEX")
     TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE \"{table}\" IS '{comment}';"
     COLUMN_COMMENT_TEMPLATE = 'COMMENT ON COLUMN "{table}"."{column}" IS \'{comment}\';'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}'
@@ -61,3 +66,19 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
         if isinstance(default, bool):
             return default
         return encoders.get(type(default))(default)  # type: ignore
+
+    def _get_index_sql(
+        self,
+        model: "Type[Model]",
+        field_names: List[str],
+        safe: bool,
+        index_name: Optional[str] = None,
+        index_type: Optional[str] = None,
+        extra: Optional[str] = None,
+    ) -> str:
+        if index_type:
+            index_type = f"USING {index_type}"
+
+        return super()._get_index_sql(
+            model, field_names, safe, index_name=index_name, index_type=index_type, extra=extra
+        )

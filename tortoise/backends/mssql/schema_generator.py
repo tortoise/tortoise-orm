@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, List, Type
+from typing import TYPE_CHECKING, Any, List, Optional, Type
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
@@ -59,8 +59,18 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
     def _escape_default_value(self, default: Any):
         return encoders.get(type(default))(default)  # type: ignore
 
-    def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
-        return super(MSSQLSchemaGenerator, self)._get_index_sql(model, field_names, False)
+    def _get_index_sql(
+        self,
+        model: "Type[Model]",
+        field_names: List[str],
+        safe: bool,
+        index_name: Optional[str] = None,
+        index_type: Optional[str] = None,
+        extra: Optional[str] = None,
+    ) -> str:
+        return super(MSSQLSchemaGenerator, self)._get_index_sql(
+            model, field_names, False, index_name=index_name, index_type=index_type, extra=extra
+        )
 
     def _get_table_sql(self, model: "Type[Model]", safe: bool = True) -> dict:
         return super(MSSQLSchemaGenerator, self)._get_table_sql(model, False)

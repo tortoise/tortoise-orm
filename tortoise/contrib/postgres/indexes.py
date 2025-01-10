@@ -2,9 +2,7 @@ from tortoise.indexes import PartialIndex
 
 
 class PostgreSQLIndex(PartialIndex):
-    INDEX_CREATE_TEMPLATE = (
-        "CREATE INDEX {exists}{index_name} ON {table_name} USING{index_type}({fields}){extra};"
-    )
+    pass
 
 
 class BloomIndex(PostgreSQLIndex):

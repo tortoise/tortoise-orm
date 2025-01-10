@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, List, Type
+from typing import TYPE_CHECKING, Any, List, Optional, Type
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
@@ -11,7 +11,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 class MySQLSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "mysql"
     TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({fields}){extra}{comment};"
-    INDEX_CREATE_TEMPLATE = "KEY `{index_name}` ({fields})"
+    INDEX_CREATE_TEMPLATE = "{index_type}KEY `{index_name}` ({fields}){extra}"
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE KEY `{index_name}` ({fields})"
     UNIQUE_INDEX_CREATE_TEMPLATE = UNIQUE_CONSTRAINT_CREATE_TEMPLATE
     FIELD_TEMPLATE = "`{name}` {type}{nullable}{unique}{primary}{comment}{default}"
@@ -68,9 +68,19 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     def _escape_default_value(self, default: Any):
         return encoders.get(type(default))(default)  # type: ignore
 
-    def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
+    def _get_index_sql(
+        self,
+        model: "Type[Model]",
+        field_names: List[str],
+        safe: bool,
+        index_name: Optional[str] = None,
+        index_type: Optional[str] = None,
+        extra: Optional[str] = None,
+    ) -> str:
         """Get index SQLs, but keep them for ourselves"""
-        index_create_sql = super()._get_index_sql(model, field_names, safe)
+        index_create_sql = super()._get_index_sql(
+            model, field_names, safe, index_name=index_name, index_type=index_type, extra=extra
+        )
         self._field_indexes.append(index_create_sql)
         return ""
 
