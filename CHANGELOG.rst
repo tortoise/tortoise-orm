@@ -18,7 +18,7 @@ Fixed
 
 Changed
 ^^^^^
-- Drop support for Python3.8 (#1847)
+- Drop support for Python3.8 (#1848)
 
 0.23.0
 ------
