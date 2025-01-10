@@ -4005,4 +4005,4 @@ psycopg = ["psycopg"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "89251670bb43811b5a4e55682b2c95f77bba6884881a5ef10072c8fe2bfe3539"
+content-hash = "9061eb1b827ae897e5e1eee0caf4c70daeab232eee4da5d2eff4427e079acf5e"
