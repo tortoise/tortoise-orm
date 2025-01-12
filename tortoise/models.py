@@ -471,6 +471,43 @@ class MetaInfo:
             self.filters[key] = filter_info
 
 
+# Searching for Field attributes in the class hierarchy
+def _search_for_field_attributes(base: Type, attrs: dict) -> None:
+    """
+    Searching for class attributes of type fields.Field
+    in the given class.
+
+    If an attribute of the class is an instance of fields.Field,
+    then it will be added to the fields dict. But only, if the
+    key is not already in the dict. So derived classes have a higher
+    precedence. Multiple Inheritance is supported from left to right.
+
+    After checking the given class, the function will look into
+    the classes according to the MRO (method resolution order).
+
+    The MRO is 'natural' order, in which python traverses methods and
+    fields. For more information on the magic behind check out:
+    `The Python 2.3 Method Resolution Order
+    <https://www.python.org/download/releases/2.3/mro/>`_.
+    """
+    for parent in base.__mro__[1:]:
+        _search_for_field_attributes(parent, attrs)
+    meta = getattr(base, "_meta", None)
+    if meta:
+        # For abstract classes
+        for key, value in meta.fields_map.items():
+            attrs[key] = value
+        # For abstract classes manager
+        for key, value in base.__dict__.items():
+            if isinstance(value, Manager) and key not in attrs:
+                attrs[key] = value.__class__()
+    else:
+        # For mixin classes
+        for key, value in base.__dict__.items():
+            if isinstance(value, Field) and key not in attrs:
+                attrs[key] = value
+
+
 class ModelMeta(type):
     __slots__ = ()
 
@@ -484,46 +521,10 @@ class ModelMeta(type):
         meta_class: "Model.Meta" = attrs.get("Meta", type("Meta", (), {}))
         pk_attr: str = "id"
 
-        # Searching for Field attributes in the class hierarchy
-        def __search_for_field_attributes(base: Type, attrs: dict) -> None:
-            """
-            Searching for class attributes of type fields.Field
-            in the given class.
-
-            If an attribute of the class is an instance of fields.Field,
-            then it will be added to the fields dict. But only, if the
-            key is not already in the dict. So derived classes have a higher
-            precedence. Multiple Inheritance is supported from left to right.
-
-            After checking the given class, the function will look into
-            the classes according to the MRO (method resolution order).
-
-            The MRO is 'natural' order, in which python traverses methods and
-            fields. For more information on the magic behind check out:
-            `The Python 2.3 Method Resolution Order
-            <https://www.python.org/download/releases/2.3/mro/>`_.
-            """
-            for parent in base.__mro__[1:]:
-                __search_for_field_attributes(parent, attrs)
-            meta = getattr(base, "_meta", None)
-            if meta:
-                # For abstract classes
-                for key, value in meta.fields_map.items():
-                    attrs[key] = value
-                # For abstract classes manager
-                for key, value in base.__dict__.items():
-                    if isinstance(value, Manager) and key not in attrs:
-                        attrs[key] = value.__class__()
-            else:
-                # For mixin classes
-                for key, value in base.__dict__.items():
-                    if isinstance(value, Field) and key not in attrs:
-                        attrs[key] = value
-
         # Start searching for fields in the base classes.
         inherited_attrs: dict = {}
         for base in bases:
-            __search_for_field_attributes(base, inherited_attrs)
+            _search_for_field_attributes(base, inherited_attrs)
         if inherited_attrs:
             # Ensure that the inherited fields are before the defined ones.
             attrs = {**inherited_attrs, **attrs}
