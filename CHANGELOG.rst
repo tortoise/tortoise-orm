@@ -15,14 +15,12 @@ Fixed
 ^^^^^
 - Rename pypika to pypika_tortoise for fixing package name conflict (#1829)
 - Concurrent connection pool initialization (#1825)
-Changed
-^^^^^^^
-- Optimize field conversion to database format to speed up `create` and `bulk_create` (#1840)
-- Drop support for Python3.8 (#1848)
 
 Changed
-^^^^^
-- Drop support for Python3.8 (#1847)
+^^^^^^^
+- Drop support for Python3.8 (#1848)
+- Optimize field conversion to database format to speed up `create` and `bulk_create` (#1840)
+- Improved query performance by optimizing SQL generation (#1837)
 
 0.23.0
 ------

@@ -9,6 +9,7 @@ import psycopg.conninfo
 import psycopg.pq
 import psycopg.rows
 import psycopg_pool
+from pypika_tortoise import SqlContext
 from pypika_tortoise.dialects.postgresql import PostgreSQLQuery, PostgreSQLQueryBuilder
 from pypika_tortoise.terms import Parameterizer
 
@@ -42,11 +43,12 @@ class PsycopgSQLQueryBuilder(PostgreSQLQueryBuilder):
     Psycopg opted to use a custom parameter placeholder, so we need to override the default
     """
 
-    def get_parameterized_sql(self, **kwargs) -> tuple[str, list]:
-        parameterizer = kwargs.pop(
-            "parameterizer", Parameterizer(placeholder_factory=lambda _: "%s")
-        )
-        return super().get_parameterized_sql(parameterizer=parameterizer, **kwargs)
+    def get_parameterized_sql(self, ctx: SqlContext | None = None) -> tuple[str, list]:
+        if not ctx:
+            ctx = self.QUERY_CLS.SQL_CONTEXT
+        if not ctx.parameterizer:
+            ctx = ctx.copy(parameterizer=Parameterizer(placeholder_factory=lambda _: "%s"))
+        return super().get_parameterized_sql(ctx)
 
 
 class PsycopgClient(postgres_client.BasePostgresClient):
