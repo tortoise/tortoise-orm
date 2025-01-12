@@ -511,7 +511,26 @@ def _search_for_field_attributes(base: Type, attrs: dict) -> None:
 class ModelMeta(type):
     __slots__ = ()
 
-    def __new__(mcs, name: str, bases: tuple[Type, ...], attrs: dict) -> "ModelMeta":
+    @staticmethod
+    def parse_pk_attr(attrs: dict, pk_attr: str, name: str) -> tuple[bool, str]:
+        custom_pk_present = False
+        for key, value in attrs.items():
+            if isinstance(value, Field):
+                if value.pk:
+                    if custom_pk_present:
+                        raise ConfigurationError(
+                            f"Can't create model {name} with two primary keys,"
+                            " only single primary key is supported"
+                        )
+                    if value.generated and not value.allows_generated:
+                        raise ConfigurationError(
+                            f"Field '{key}' ({value.__class__.__name__}) can't be DB-generated"
+                        )
+                    custom_pk_present = True
+                    pk_attr = key
+        return custom_pk_present, pk_attr
+
+    def __new__(cls, name: str, bases: tuple[Type, ...], attrs: dict) -> "ModelMeta":
         fields_db_projection: dict[str, str] = {}
         fields_map: dict[str, Field] = {}
         filters: dict[str, FilterInfoDict] = {}
@@ -530,21 +549,7 @@ class ModelMeta(type):
             attrs = {**inherited_attrs, **attrs}
 
         if name != "Model":
-            custom_pk_present = False
-            for key, value in attrs.items():
-                if isinstance(value, Field):
-                    if value.pk:
-                        if custom_pk_present:
-                            raise ConfigurationError(
-                                f"Can't create model {name} with two primary keys,"
-                                " only single primary key is supported"
-                            )
-                        if value.generated and not value.allows_generated:
-                            raise ConfigurationError(
-                                f"Field '{key}' ({value.__class__.__name__}) can't be DB-generated"
-                            )
-                        custom_pk_present = True
-                        pk_attr = key
+            custom_pk_present, pk_attr = cls.parse_pk_attr(attrs, pk_attr, name)
 
             if not custom_pk_present and not getattr(meta_class, "abstract", None):
                 if "id" not in attrs:
@@ -571,8 +576,8 @@ class ModelMeta(type):
                 elif isinstance(value, ManyToManyFieldInstance):
                     m2m_fields.add(key)
                 else:
-                    fields_db_projection[key] = value.source_field or key
-                    field, source_field = fields_map[key], fields_db_projection[key]
+                    field = fields_map[key]
+                    source_field = fields_db_projection[key] = value.source_field or key
                     filters.update(
                         get_filters_for_field(
                             field_name=key, field=field, source_field=source_field
@@ -612,7 +617,7 @@ class ModelMeta(type):
         if not fields_map:
             meta.abstract = True
 
-        new_class = super().__new__(mcs, name, bases, attrs)
+        new_class = super().__new__(cls, name, bases, attrs)
         for field in meta.fields_map.values():
             field.model = new_class  # type: ignore
 
