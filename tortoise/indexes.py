@@ -67,7 +67,8 @@ class Index:
         if self.fields:
             fields = ", ".join(schema_generator.quote(f) for f in self.fields)
         else:
-            expressions = [f"({expression.get_sql()})" for expression in self.expressions]
+            ctx = schema_generator.client.query_class.SQL_CONTEXT
+            expressions = [f"({expression.get_sql(ctx)})" for expression in self.expressions]
             fields = ", ".join(expressions)
         template = self.get_for_dialect(schema_generator.DIALECT, "INDEX_CREATE_TEMPLATE")
         return template.format(

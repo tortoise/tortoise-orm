@@ -2,7 +2,6 @@ import asyncio
 import datetime
 import decimal
 from copy import copy
-from functools import partial
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -24,7 +23,6 @@ from pypika_tortoise.queries import QueryBuilder
 
 from tortoise.exceptions import OperationalError
 from tortoise.expressions import Expression, ResolveContext
-from tortoise.fields.base import Field
 from tortoise.fields.relational import (
     BackwardFKRelation,
     BackwardOneToOneRelation,
@@ -42,12 +40,11 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 EXECUTOR_CACHE: Dict[
     Tuple[str, Optional[str], str],
-    Tuple[list, str, list, str, Dict[str, Callable], str, Dict[str, str]],
+    Tuple[list, str, list, str, str, Dict[str, str]],
 ] = {}
 
 
 class BaseExecutor:
-    TO_DB_OVERRIDE: Dict[Type[Field], Callable] = {}
     FILTER_FUNC_OVERRIDE: Dict[Callable, Callable] = {}
     EXPLAIN_PREFIX: str = "EXPLAIN"
     DB_NATIVE = {bytes, str, int, float, decimal.Decimal, datetime.datetime, datetime.date}
@@ -81,16 +78,6 @@ class BaseExecutor:
                     self._prepare_insert_statement(columns_all, has_generated=False)
                 )
 
-            self.column_map: Dict[str, Callable[[Any, Any], Any]] = {}
-            for column in self.regular_columns_all:
-                field_object = self.model._meta.fields_map[column]
-                if field_object.__class__ in self.TO_DB_OVERRIDE:
-                    self.column_map[column] = partial(
-                        self.TO_DB_OVERRIDE[field_object.__class__], field_object
-                    )
-                else:
-                    self.column_map[column] = field_object.to_db_value
-
             table = self.model._meta.basetable
             basequery = cast(QueryBuilder, self.model._meta.basequery)
             self.delete_query = str(
@@ -103,7 +90,6 @@ class BaseExecutor:
                 self.insert_query,
                 self.regular_columns_all,
                 self.insert_query_all,
-                self.column_map,
                 self.delete_query,
                 self.update_cache,
             )
@@ -114,7 +100,6 @@ class BaseExecutor:
                 self.insert_query,
                 self.regular_columns_all,
                 self.insert_query_all,
-                self.column_map,
                 self.delete_query,
                 self.update_cache,
             ) = EXECUTOR_CACHE[key]
@@ -194,7 +179,9 @@ class BaseExecutor:
     async def execute_insert(self, instance: "Model") -> None:
         if not instance._custom_generated_pk:
             values = [
-                self.column_map[field_name](getattr(instance, field_name), instance)
+                self.model._meta.fields_map[field_name].to_db_value(
+                    getattr(instance, field_name), instance
+                )
                 for field_name in self.regular_columns
             ]
             insert_result = await self.db.execute_insert(self.insert_query, values)
@@ -202,7 +189,9 @@ class BaseExecutor:
 
         else:
             values = [
-                self.column_map[field_name](getattr(instance, field_name), instance)
+                self.model._meta.fields_map[field_name].to_db_value(
+                    getattr(instance, field_name), instance
+                )
                 for field_name in self.regular_columns_all
             ]
             await self.db.execute_insert(self.insert_query_all, values)
@@ -219,14 +208,18 @@ class BaseExecutor:
                 if instance._custom_generated_pk:
                     values_lists_all.append(
                         [
-                            self.column_map[field_name](getattr(instance, field_name), instance)
+                            self.model._meta.fields_map[field_name].to_db_value(
+                                getattr(instance, field_name), instance
+                            )
                             for field_name in self.regular_columns_all
                         ]
                     )
                 else:
                     values_lists.append(
                         [
-                            self.column_map[field_name](getattr(instance, field_name), instance)
+                            self.model._meta.fields_map[field_name].to_db_value(
+                                getattr(instance, field_name), instance
+                            )
                             for field_name in self.regular_columns
                         ]
                     )
@@ -292,7 +285,7 @@ class BaseExecutor:
                 if isinstance(instance_field, Expression):
                     expressions[field] = instance_field
                 else:
-                    value = self.column_map[field](instance_field, instance)
+                    value = self.model._meta.fields_map[field].to_db_value(instance_field, instance)
                     values.append(value)
         values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
         return (

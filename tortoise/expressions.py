@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Iterator, Type, cast
 
 from pypika_tortoise import Case as PypikaCase
 from pypika_tortoise import Field as PypikaField
-from pypika_tortoise import Table
+from pypika_tortoise import SqlContext, Table
 from pypika_tortoise.functions import AggregateFunction, DistinctOptionFunction
 from pypika_tortoise.terms import ArithmeticExpression, Criterion
 from pypika_tortoise.terms import Function as PypikaFunction
@@ -203,10 +203,10 @@ class Subquery(Term):
         super().__init__()
         self.query = query
 
-    def get_sql(self, **kwargs: Any) -> str:
+    def get_sql(self, ctx: SqlContext) -> str:
         self.query._choose_db_if_not_chosen()
         self.query._make_query()
-        return self.query.query.get_parameterized_sql(**kwargs)[0]
+        return self.query.query.get_parameterized_sql(ctx)[0]
 
     def as_(self, alias: str) -> "Selectable":  # type: ignore
         self.query._choose_db_if_not_chosen()
@@ -219,9 +219,9 @@ class RawSQL(Term):
         super().__init__()
         self.sql = sql
 
-    def get_sql(self, with_alias: bool = False, **kwargs: Any) -> str:
-        if with_alias:
-            return format_alias_sql(sql=self.sql, alias=self.alias, **kwargs)
+    def get_sql(self, ctx: SqlContext) -> str:
+        if ctx.with_alias:
+            return format_alias_sql(sql=self.sql, alias=self.alias, ctx=ctx)
         return self.sql
 
 

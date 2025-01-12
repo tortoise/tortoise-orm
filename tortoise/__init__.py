@@ -28,6 +28,7 @@ from tortoise.fields.relational import (
 from tortoise.filters import get_m2m_filters
 from tortoise.log import logger
 from tortoise.models import Model, ModelMeta
+from tortoise.timezone import _reset_timezone_cache
 from tortoise.utils import generate_schema_for_client
 
 
@@ -614,6 +615,7 @@ class Tortoise:
     def _init_timezone(cls, use_tz: bool, timezone: str) -> None:
         os.environ["USE_TZ"] = str(use_tz)
         os.environ["TIMEZONE"] = timezone
+        _reset_timezone_cache()
 
 
 def run_async(coro: Coroutine) -> None:

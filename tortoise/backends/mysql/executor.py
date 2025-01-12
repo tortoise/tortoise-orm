@@ -1,6 +1,6 @@
 import enum
 
-from pypika_tortoise import functions
+from pypika_tortoise import functions, SqlContext
 from pypika_tortoise.enums import SqlTypes
 from pypika_tortoise.functions import Cast, Coalesce
 from pypika_tortoise.terms import BasicCriterion, Criterion
@@ -43,8 +43,8 @@ class StrWrapper(ValueWrapper):
     Naive str wrapper that doesn't use the monkey-patched pypika ValueWrapper for MySQL
     """
 
-    def get_value_sql(self, **kwargs) -> str:
-        quote_char = kwargs.get("secondary_quote_char") or ""
+    def get_value_sql(self, ctx: SqlContext) -> str:
+        quote_char = ctx.secondary_quote_char or ""
         value = self.value.replace(quote_char, quote_char * 2)
         return format_quotes(value, quote_char)
 
