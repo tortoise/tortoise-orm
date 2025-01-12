@@ -512,7 +512,7 @@ class ModelMeta(type):
     __slots__ = ()
 
     @staticmethod
-    def parse_pk_attr(attrs: dict, pk_attr: str, name: str) -> tuple[bool, str]:
+    def parse_custom_pk(attrs: dict, pk_attr: str, name: str, is_abstract) -> tuple[dict, str]:
         custom_pk_present = False
         for key, value in attrs.items():
             if isinstance(value, Field):
@@ -528,7 +528,17 @@ class ModelMeta(type):
                         )
                     custom_pk_present = True
                     pk_attr = key
-        return custom_pk_present, pk_attr
+
+        if not custom_pk_present and not is_abstract:
+            if "id" not in attrs:
+                attrs = {"id": IntField(primary_key=True), **attrs}
+
+            if not isinstance(attrs["id"], Field) or not attrs["id"].pk:
+                raise ConfigurationError(
+                    f"Can't create model {name} without explicit primary key if field 'id'"
+                    " already present"
+                )
+        return attrs, pk_attr
 
     def __new__(cls, name: str, bases: tuple[Type, ...], attrs: dict) -> "ModelMeta":
         fields_db_projection: dict[str, str] = {}
@@ -547,23 +557,13 @@ class ModelMeta(type):
         if inherited_attrs:
             # Ensure that the inherited fields are before the defined ones.
             attrs = {**inherited_attrs, **attrs}
-
+        is_abstract = getattr(meta_class, "abstract", False)
         if name != "Model":
-            custom_pk_present, pk_attr = cls.parse_pk_attr(attrs, pk_attr, name)
-
-            if not custom_pk_present and not getattr(meta_class, "abstract", None):
-                if "id" not in attrs:
-                    attrs = {"id": IntField(primary_key=True), **attrs}
-
-                if not isinstance(attrs["id"], Field) or not attrs["id"].pk:
-                    raise ConfigurationError(
-                        f"Can't create model {name} without explicit primary key if field 'id'"
-                        " already present"
-                    )
+            attrs, pk_attr = cls.parse_custom_pk(attrs, pk_attr, name, is_abstract)
 
         for key, value in attrs.items():
             if isinstance(value, Field):
-                if getattr(meta_class, "abstract", None):
+                if is_abstract:
                     value = deepcopy(value)
 
                 fields_map[key] = value
