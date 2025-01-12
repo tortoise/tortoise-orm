@@ -115,6 +115,7 @@ target-version = ["py39", "py310", "py311", "py312", "py313"]
 [tool.mypy]
 pretty = true
 exclude = ["docs"]
+python_version = "3.9"
 ignore_missing_imports = true
 check_untyped_defs = true
 disallow_subclassing_any = true
