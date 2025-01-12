@@ -1,4 +1,4 @@
-from typing import List, Optional, Type
+from typing import Optional, Type
 
 from tests.testmodels import Signals
 from tortoise import BaseDBAsyncClient
@@ -20,7 +20,7 @@ async def signal_post_save(
     instance: Signals,
     created: bool,
     using_db: "Optional[BaseDBAsyncClient]",
-    update_fields: List,
+    update_fields: list,
 ) -> None:
     await Signals.filter(name="test2").update(name="test_post-save")
     await Signals.filter(name="test6").update(name="test_post-save")

@@ -1,7 +1,7 @@
 # pylint: disable=E0611,E0401
 import os
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from routers import router as users_router
