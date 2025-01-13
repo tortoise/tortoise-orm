@@ -1055,10 +1055,10 @@ class BenchmarkManyFields(Model):
 
 class ModelWithIndexes(Model):
     id = fields.IntField(primary_key=True)
-    indexed = fields.CharField(max_length=255, index=True)
-    unique_indexed = fields.CharField(max_length=255, unique=True)
-    f1 = fields.CharField(max_length=255)
-    f2 = fields.CharField(max_length=255)
+    indexed = fields.CharField(max_length=16, index=True)
+    unique_indexed = fields.CharField(max_length=16, unique=True)
+    f1 = fields.CharField(max_length=16)
+    f2 = fields.CharField(max_length=16)
     u1 = fields.IntField()
     u2 = fields.IntField()
 
