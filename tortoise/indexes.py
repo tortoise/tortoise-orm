@@ -4,6 +4,8 @@ from typing import Any
 
 from pypika_tortoise.terms import Term, ValueWrapper
 
+from tortoise.exceptions import ConfigurationError
+
 
 class Index:
     INDEX_TYPE = ""
@@ -24,14 +26,25 @@ class Index:
         """
         self.fields = list(fields or [])
         if not expressions and not fields:
-            raise ValueError("At least one field or expression is required to define an " "index.")
+            raise ConfigurationError(
+                "At least one field or expression is required to define an " "index."
+            )
         if expressions and fields:
-            raise ValueError(
+            raise ConfigurationError(
                 "Index.fields and expressions are mutually exclusive.",
             )
         self.name = name
         self.expressions = expressions
         self.extra = ""
+
+    def describe(self) -> dict:
+        return {
+            "fields": self.fields,
+            "expressions": [str(expression) for expression in self.expressions],
+            "name": self.name,
+            "type": self.INDEX_TYPE,
+            "extra": self.extra,
+        }
 
     def __repr__(self) -> str:
         argument = ""

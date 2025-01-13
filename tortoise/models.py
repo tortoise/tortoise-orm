@@ -229,7 +229,7 @@ class MetaInfo:
         self.schema: Optional[str] = getattr(meta, "schema", None)
         self.app: Optional[str] = getattr(meta, "app", None)
         self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
-        self.indexes: Tuple[Tuple[str, ...], ...] = get_together(meta, "indexes")
+        self.indexes: Tuple[Union[Tuple[str, ...], Index], ...] = get_together(meta, "indexes")
         self._default_ordering: Tuple[Tuple[str, Order], ...] = prepare_default_ordering(meta)
         self._ordering_validated: bool = False
         self.fields: Set[str] = set()
@@ -1467,6 +1467,15 @@ class Model(metaclass=ModelMeta):
                     )
 
     @classmethod
+    def _describe_index(
+        cls, index: Union[Index, Tuple[str, ...]], serializable: bool
+    ) -> Union[Index, Tuple[str, ...], dict]:
+        if isinstance(index, Index):
+            return index.describe() if serializable else index
+
+        return index
+
+    @classmethod
     def describe(cls, serializable: bool = True) -> dict:
         """
         Describes the given list of models or ALL registered models.
@@ -1511,7 +1520,7 @@ class Model(metaclass=ModelMeta):
             "description": cls._meta.table_description or None,
             "docstring": inspect.cleandoc(cls.__doc__ or "") or None,
             "unique_together": cls._meta.unique_together or [],
-            "indexes": cls._meta.indexes or [],
+            "indexes": [cls._describe_index(index, serializable) for index in cls._meta.indexes],
             "pk_field": cls._meta.fields_map[cls._meta.pk_attr].describe(serializable),
             "data_fields": [
                 field.describe(serializable)
