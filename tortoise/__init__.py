@@ -7,7 +7,7 @@ import json
 import logging
 import os
 import warnings
-from copy import deepcopy
+from copy import copy, deepcopy
 from inspect import isclass
 from types import ModuleType
 from typing import Any, Callable, Coroutine, Iterable, Type, cast
@@ -382,9 +382,9 @@ class Tortoise:
                 model._meta.finalise_model()
                 model._meta.basetable = Table(name=model._meta.db_table, schema=model._meta.schema)
                 basequery = model._meta.db.query_class.from_(model._meta.basetable)
-                model._meta.basequery = cast(Query, basequery)
+                model._meta.basequery = cast(Query, copy(basequery))
                 model._meta.basequery_all_fields = cast(
-                    Query, basequery.select(*model._meta.db_fields)
+                    Query, copy(basequery).select(*model._meta.db_fields)
                 )
 
     @classmethod

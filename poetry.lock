@@ -2744,9 +2744,9 @@ develop = false
 
 [package.source]
 type = "git"
-url = "https://github.com/henadzit/pypika-tortoise.git"
-reference = "feat/sql-context"
-resolved_reference = "1f04a322dbfb755daf36404fc7d5195794d1d215"
+url = "https://github.com/henadzit/pypika-tortoise"
+reference = "do-not-use-builder"
+resolved_reference = "cd0d76a4bd0383d8a270180309c57c7bcaea2cc9"
 
 [[package]]
 name = "pytest"
@@ -4005,4 +4005,4 @@ psycopg = ["psycopg"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "9061eb1b827ae897e5e1eee0caf4c70daeab232eee4da5d2eff4427e079acf5e"
+content-hash = "ed1d60975235b7c81710a30704586f35ea84492a69a5992b071e0b22b03b1af7"
