@@ -582,7 +582,7 @@ class ModelMeta(type):
                         )
         return (fields_map, filters, fk_fields, m2m_fields, o2o_fields)
 
-    def __new__(cls, name: str, bases: tuple[Type, ...], attrs: dict) -> "ModelMeta":
+    def __new__(cls, name: str, bases: tuple[Type, ...], attrs: dict[str, Any]) -> "ModelMeta":
         fields_db_projection: dict[str, str] = {}
         meta_class: "Model.Meta" = attrs.get("Meta", type("Meta", (), {}))
         pk_attr: str = "id"
@@ -597,7 +597,7 @@ class ModelMeta(type):
         is_abstract = getattr(meta_class, "abstract", False)
         if name != "Model":
             attrs, pk_attr = cls.parse_custom_pk(attrs, pk_attr, name, is_abstract)
-        (fields_map, filters, fk_fields, m2m_fields, o2o_fields) = cls.dispatch_fields(
+        fields_map, filters, fk_fields, m2m_fields, o2o_fields = cls.dispatch_fields(
             attrs, fields_db_projection, is_abstract
         )
 
