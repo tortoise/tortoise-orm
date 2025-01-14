@@ -640,7 +640,7 @@ class ModelMeta(type):
 
         if new_class.__doc__ and not meta.table_description:
             meta.table_description = inspect.cleandoc(new_class.__doc__).split("\n")[0]
-        for key, value in attrs.items():
+        for value in attrs.values():
             if isinstance(value, Manager):
                 value._model = new_class
         meta._model = new_class  # type: ignore
