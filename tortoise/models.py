@@ -582,6 +582,38 @@ class ModelMeta(type):
                         )
         return (fields_map, filters, fk_fields, m2m_fields, o2o_fields)
 
+    @staticmethod
+    def build_meta(
+        meta_class,
+        fields_map,
+        fields_db_projection,
+        filters,
+        fk_fields,
+        o2o_fields,
+        m2m_fields,
+        pk_attr,
+    ) -> MetaInfo:
+        meta = MetaInfo(meta_class)
+        meta.fields_map = fields_map
+        meta.fields_db_projection = fields_db_projection
+        meta._filters = filters
+        meta.fk_fields = fk_fields
+        meta.o2o_fields = o2o_fields
+        meta.m2m_fields = m2m_fields
+        meta.pk_attr = pk_attr
+        if pk_field := fields_map.get(pk_attr):
+            meta.pk = pk_field  # type:ignore
+            if pk_field.source_field:
+                meta.db_pk_column = pk_field.source_field
+            elif isinstance(pk_field, OneToOneFieldInstance):
+                meta.db_pk_column = f"{pk_attr}_id"
+            else:
+                meta.db_pk_column = pk_attr
+        meta._inited = False
+        if not fields_map:
+            meta.abstract = True
+        return meta
+
     def __new__(cls, name: str, bases: tuple[Type, ...], attrs: dict[str, Any]) -> "ModelMeta":
         fields_db_projection: dict[str, str] = {}
         meta_class: "Model.Meta" = attrs.get("Meta", type("Meta", (), {}))
@@ -604,29 +636,16 @@ class ModelMeta(type):
         # Clean the class attributes
         for slot in fields_map:
             attrs.pop(slot, None)
-        attrs["_meta"] = meta = MetaInfo(meta_class)
-
-        meta.fields_map = fields_map
-        meta.fields_db_projection = fields_db_projection
-        meta._filters = filters
-        meta.fk_fields = fk_fields
-        meta.backward_fk_fields = set()
-        meta.o2o_fields = o2o_fields
-        meta.backward_o2o_fields = set()
-        meta.m2m_fields = m2m_fields
-        meta.default_connection = None
-        meta.pk_attr = pk_attr
-        meta.pk = fields_map.get(pk_attr)  # type: ignore
-        if meta.pk:
-            if meta.pk.source_field:
-                meta.db_pk_column = meta.pk.source_field
-            elif isinstance(meta.pk, OneToOneFieldInstance):
-                meta.db_pk_column = f"{meta.pk_attr}_id"
-            else:
-                meta.db_pk_column = meta.pk_attr
-        meta._inited = False
-        if not fields_map:
-            meta.abstract = True
+        attrs["_meta"] = meta = cls.build_meta(
+            meta_class,
+            fields_map,
+            fields_db_projection,
+            filters,
+            fk_fields,
+            o2o_fields,
+            m2m_fields,
+            pk_attr,
+        )
 
         new_class = super().__new__(cls, name, bases, attrs)
         for field in meta.fields_map.values():
