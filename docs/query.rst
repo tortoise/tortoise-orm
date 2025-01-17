@@ -221,6 +221,7 @@ The following lookup types are available:
 - ``iendswith`` - case insensitive ``endswith``
 - ``iexact`` - case insensitive equals
 - ``search`` - full text search
+- ``date`` - date search on datetime field e.g.; `await Team.filter(created_at__date=datetime.date(2020, 5, 20))`
 
 For PostgreSQL and MySQL, the following date related lookup types are available:
 
