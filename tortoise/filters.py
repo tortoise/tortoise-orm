@@ -15,7 +15,7 @@ from typing import (
 
 from pypika_tortoise import SqlContext, Table
 from pypika_tortoise.enums import DatePart, Matching, SqlTypes
-from pypika_tortoise.functions import Cast, Extract, Upper
+from pypika_tortoise.functions import Cast, Date, Extract, Upper
 from pypika_tortoise.terms import (
     BasicCriterion,
     Criterion,
@@ -183,6 +183,10 @@ def insensitive_ends_with(field: Term, value: str) -> Criterion:
     return Like(
         Upper(Cast(field, SqlTypes.VARCHAR)), field.wrap_constant(Upper(f"%{escape_like(value)}"))
     )
+
+
+def date_equal(field: Term, value: str) -> Criterion:
+    return Date(field).eq(value)
 
 
 def extract_year_equal(field: Term, value: int) -> Criterion:
@@ -522,6 +526,11 @@ def get_filters_for_field(
             "source_field": source_field,
             "operator": insensitive_posix_regex,
             "value_encoder": string_encoder,
+        },
+        f"{field_name}__date": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": date_equal,
         },
         f"{field_name}__year": {
             "field": actual_field_name,

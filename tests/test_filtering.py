@@ -164,6 +164,15 @@ class TestFiltering(test.TestCase):
         self.assertEqual(len(tournaments), 2)
         self.assertSetEqual({t.name for t in tournaments}, {"0", "1"})
 
+    async def test_filter_date(self):
+        await DatetimeFields.create(
+            datetime=datetime.datetime(
+                year=2020, month=5, day=20, hour=0, minute=0, second=0, microsecond=0
+            )
+        )
+        date = datetime.date(2020, 5, 20)
+        self.assertEqual(await Tournament.filter(created__date=date).count(), 1)
+
     @test.requireCapability(dialect="mysql")
     @test.requireCapability(dialect="postgres")
     async def test_filter_exact(self):
