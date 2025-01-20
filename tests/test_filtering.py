@@ -171,7 +171,7 @@ class TestFiltering(test.TestCase):
             )
         )
         date = datetime.date(2020, 5, 20)
-        self.assertEqual(await Tournament.filter(created__date=date).count(), 1)
+        self.assertEqual(await DatetimeFields.filter(datetime__date=date).count(), 1)
 
     @test.requireCapability(dialect="mysql")
     @test.requireCapability(dialect="postgres")
