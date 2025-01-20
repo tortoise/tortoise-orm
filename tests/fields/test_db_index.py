@@ -6,6 +6,7 @@ from tortoise import fields
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 from tortoise.indexes import Index
+from tests.testmodels import ModelWithIndexes
 
 
 class CustomIndex(Index):
@@ -14,7 +15,7 @@ class CustomIndex(Index):
         self._foo = ""
 
 
-class TestIndexHashEqualRepr(test.TestCase):
+class TestIndexHashEqualRepr(test.SimpleTestCase):
     def test_index_eq(self):
         assert Index(fields=("id",)) == Index(fields=("id",))
         assert CustomIndex(fields=("id",)) == CustomIndex(fields=("id",))
@@ -46,7 +47,7 @@ class TestIndexHashEqualRepr(test.TestCase):
         assert repr(Index(fields=("id",), name="MyIndex")) == "Index(fields=['id'], name='MyIndex')"
         assert repr(Index(Field("id"))) == f'Index({str(Field("id"))})'
         assert repr(Index(Field("a"), name="Id")) == f"Index({str(Field('a'))}, name='Id')"
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ConfigurationError):
             Index(Field("id"), fields=("name",))
 
 
@@ -94,3 +95,11 @@ class TestIndexAliasUUID(TestIndexAlias):
 class TestIndexAliasChar(TestIndexAlias):
     Field = fields.CharField
     init_kwargs = {"max_length": 10}
+
+
+class TestModelWithIndexes(test.TestCase):
+    def test_meta(self):
+        self.assertEqual(ModelWithIndexes._meta.indexes, [Index(fields=("f1", "f2"))])
+        self.assertTrue(ModelWithIndexes._meta.fields_map["id"].index)
+        self.assertTrue(ModelWithIndexes._meta.fields_map["indexed"].index)
+        self.assertTrue(ModelWithIndexes._meta.fields_map["unique_indexed"].unique)

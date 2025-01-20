@@ -724,10 +724,10 @@ CREATE TABLE IF NOT EXISTS `teamevents` (
             """CREATE TABLE IF NOT EXISTS `index` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `full_text` LONGTEXT NOT NULL,
-    `geometry` GEOMETRY NOT NULL
-) CHARACTER SET utf8mb4;
-CREATE FULLTEXT INDEX IF NOT EXISTS `idx_index_full_te_3caba4` ON `index` (`full_text`) WITH PARSER ngram;
-CREATE SPATIAL INDEX IF NOT EXISTS `idx_index_geometr_0b4dfb` ON `index` (`geometry`);""",
+    `geometry` GEOMETRY NOT NULL,
+    FULLTEXT KEY `idx_index_full_te_3caba4` (`full_text`) WITH PARSER ngram,
+    SPATIAL KEY `idx_index_geometr_0b4dfb` (`geometry`)
+) CHARACTER SET utf8mb4;""",
         )
 
     async def test_index_unsafe(self):
@@ -738,10 +738,10 @@ CREATE SPATIAL INDEX IF NOT EXISTS `idx_index_geometr_0b4dfb` ON `index` (`geome
             """CREATE TABLE `index` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `full_text` LONGTEXT NOT NULL,
-    `geometry` GEOMETRY NOT NULL
-) CHARACTER SET utf8mb4;
-CREATE FULLTEXT INDEX `idx_index_full_te_3caba4` ON `index` (`full_text`) WITH PARSER ngram;
-CREATE SPATIAL INDEX `idx_index_geometr_0b4dfb` ON `index` (`geometry`);""",
+    `geometry` GEOMETRY NOT NULL,
+    FULLTEXT KEY `idx_index_full_te_3caba4` (`full_text`) WITH PARSER ngram,
+    SPATIAL KEY `idx_index_geometr_0b4dfb` (`geometry`)
+) CHARACTER SET utf8mb4;""",
         )
 
     async def test_m2m_no_auto_create(self):
@@ -1102,7 +1102,7 @@ CREATE INDEX "idx_index_gin_a403ee" ON "index" USING GIN ("gin");
 CREATE INDEX "idx_index_gist_c807bf" ON "index" USING GIST ("gist");
 CREATE INDEX "idx_index_sp_gist_2c0bad" ON "index" USING SPGIST ("sp_gist");
 CREATE INDEX "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");
-CREATE INDEX "idx_index_partial_c5be6a" ON "index" USING  ("partial") WHERE id = 1;""",
+CREATE INDEX "idx_index_partial_c5be6a" ON "index" ("partial") WHERE id = 1;""",
         )
 
     async def test_index_safe(self):
@@ -1126,7 +1126,7 @@ CREATE INDEX IF NOT EXISTS "idx_index_gin_a403ee" ON "index" USING GIN ("gin");
 CREATE INDEX IF NOT EXISTS "idx_index_gist_c807bf" ON "index" USING GIST ("gist");
 CREATE INDEX IF NOT EXISTS "idx_index_sp_gist_2c0bad" ON "index" USING SPGIST ("sp_gist");
 CREATE INDEX IF NOT EXISTS "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");
-CREATE INDEX IF NOT EXISTS "idx_index_partial_c5be6a" ON "index" USING  ("partial") WHERE id = 1;""",
+CREATE INDEX IF NOT EXISTS "idx_index_partial_c5be6a" ON "index" ("partial") WHERE id = 1;""",
         )
 
     async def test_m2m_no_auto_create(self):

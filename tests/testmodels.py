@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict
 from tortoise import fields
 from tortoise.exceptions import ValidationError
 from tortoise.fields import NO_ACTION
+from tortoise.indexes import Index
 from tortoise.manager import Manager
 from tortoise.models import Model
 from tortoise.queryset import QuerySet
@@ -1050,3 +1051,19 @@ class BenchmarkManyFields(Model):
     col_text4 = fields.TextField(null=True)
     col_decimal4 = fields.DecimalField(12, 8, null=True)
     col_json4 = fields.JSONField[dict](null=True)
+
+
+class ModelWithIndexes(Model):
+    id = fields.IntField(primary_key=True)
+    indexed = fields.CharField(max_length=16, index=True)
+    unique_indexed = fields.CharField(max_length=16, unique=True)
+    f1 = fields.CharField(max_length=16)
+    f2 = fields.CharField(max_length=16)
+    u1 = fields.IntField()
+    u2 = fields.IntField()
+
+    class Meta:
+        indexes = [
+            Index(fields=["f1", "f2"]),
+        ]
+        unique_together = [("u1", "u2")]

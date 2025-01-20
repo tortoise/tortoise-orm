@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 import re
 from hashlib import sha256
-from typing import TYPE_CHECKING, Any, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Type, cast
+
+from pypika_tortoise.context import DEFAULT_SQL_CONTEXT
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields import JSONField, TextField, UUIDField
@@ -23,8 +27,10 @@ class BaseSchemaGenerator:
     DIALECT = "sql"
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment};'
     FIELD_TEMPLATE = '"{name}" {type}{nullable}{unique}{primary}{default}{comment}'
-    INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON "{table_name}" ({fields});'
-    UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace(" INDEX", " UNIQUE INDEX")
+    INDEX_CREATE_TEMPLATE = (
+        'CREATE {index_type}INDEX {exists}"{index_name}" ON "{table_name}" ({fields}){extra};'
+    )
+    UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace("INDEX", "UNIQUE INDEX")
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{index_name}" UNIQUE ({fields})'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}{comment}'
     FK_TEMPLATE = ' REFERENCES "{table}" ("{field}") ON DELETE {on_delete}{comment}'
@@ -140,7 +146,7 @@ class BaseSchemaGenerator:
         return sha256(";".join(args).encode("utf-8")).hexdigest()[:length]
 
     def _generate_index_name(
-        self, prefix: str, model: "Union[Type[Model], str]", field_names: list[str]
+        self, prefix: str, model: "Type[Model] | str", field_names: list[str]
     ) -> str:
         # NOTE: for compatibility, index name should not be longer than 30
         # characters (Oracle limit).
@@ -167,12 +173,22 @@ class BaseSchemaGenerator:
         )
         return index_name
 
-    def _get_index_sql(self, model: "Type[Model]", field_names: list[str], safe: bool) -> str:
+    def _get_index_sql(
+        self,
+        model: "Type[Model]",
+        field_names: list[str],
+        safe: bool,
+        index_name: str | None = None,
+        index_type: str | None = None,
+        extra: str | None = None,
+    ) -> str:
         return self.INDEX_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
-            index_name=self._generate_index_name("idx", model, field_names),
+            index_name=index_name or self._generate_index_name("idx", model, field_names),
+            index_type=f"{index_type} " if index_type else "",
             table_name=model._meta.db_table,
             fields=", ".join([self.quote(f) for f in field_names]),
+            extra=f"{extra}" if extra else "",
         )
 
     def _get_unique_index_sql(self, exists: str, table_name: str, field_names: list[str]) -> str:
@@ -180,8 +196,10 @@ class BaseSchemaGenerator:
         return self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
             exists=exists,
             index_name=index_name,
+            index_type="",
             table_name=table_name,
             fields=", ".join([self.quote(f) for f in field_names]),
+            extra="",
         )
 
     def _get_unique_constraint_sql(self, model: "Type[Model]", field_names: list[str]) -> str:
@@ -324,22 +342,37 @@ class BaseSchemaGenerator:
                     self._get_unique_constraint_sql(model, unique_together_to_create)
                 )
 
-        # Indexes.
         _indexes = [
             self._get_index_sql(model, [field_name], safe=safe) for field_name in fields_with_index
         ]
 
         if model._meta.indexes:
-            for indexes_list in model._meta.indexes:
-                if not isinstance(indexes_list, Index):
-                    indexes_to_create = []
-                    for field in indexes_list:
+            for index in model._meta.indexes:
+                if not isinstance(index, Index):
+                    fields = []
+                    for field in index:
                         field_object = model._meta.fields_map[field]
-                        indexes_to_create.append(field_object.source_field or field)
+                        fields.append(field_object.source_field or field)
 
-                    _indexes.append(self._get_index_sql(model, indexes_to_create, safe=safe))
+                    _indexes.append(self._get_index_sql(model, fields, safe=safe))
                 else:
-                    _indexes.append(indexes_list.get_sql(self, model, safe))
+                    if index.fields:
+                        fields = [f for f in index.fields]
+                    elif index.expressions:
+                        fields = [
+                            f"({expression.get_sql(DEFAULT_SQL_CONTEXT)})"
+                            for expression in index.expressions
+                        ]
+                    else:
+                        raise ConfigurationError(
+                            "At least one field or expression is required to define an index."
+                        )
+
+                    _indexes.append(
+                        self._get_index_sql(
+                            model, fields, safe=safe, index_type=index.INDEX_TYPE, extra=index.extra
+                        )
+                    )
 
         field_indexes_sqls = [val for val in list(dict.fromkeys(_indexes)) if val]
 

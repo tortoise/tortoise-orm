@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Any, Type
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
@@ -85,11 +87,21 @@ class OracleSchemaGenerator(BaseSchemaGenerator):
     def _escape_default_value(self, default: Any):
         return encoders.get(type(default))(default)  # type: ignore
 
-    def _get_index_sql(self, model: "Type[Model]", field_names: list[str], safe: bool) -> str:
-        return super(OracleSchemaGenerator, self)._get_index_sql(model, field_names, False)
+    def _get_index_sql(
+        self,
+        model: "Type[Model]",
+        field_names: list[str],
+        safe: bool,
+        index_name: str | None = None,
+        index_type: str | None = None,
+        extra: str | None = None,
+    ) -> str:
+        return super()._get_index_sql(
+            model, field_names, False, index_name=index_name, index_type=index_type, extra=extra
+        )
 
     def _get_table_sql(self, model: "Type[Model]", safe: bool = True) -> dict:
-        return super(OracleSchemaGenerator, self)._get_table_sql(model, False)
+        return super()._get_table_sql(model, False)
 
     def _create_fk_string(
         self,

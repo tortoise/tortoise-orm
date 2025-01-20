@@ -5,6 +5,7 @@ from typing import Union
 from tests.testmodels import (
     Event,
     JSONFields,
+    ModelWithIndexes,
     Reporter,
     SourceFields,
     StraightFields,
@@ -1560,4 +1561,20 @@ class TestDescribeModel(test.SimpleTestCase):
                 "backward_o2o_fields": [],
                 "m2m_fields": [],
             },
+        )
+
+    def test_describe_indexes_serializable(self):
+        val = ModelWithIndexes.describe()
+
+        self.assertEqual(
+            val["indexes"],
+            [{"fields": ["f1", "f2"], "expressions": [], "name": None, "type": "", "extra": ""}],
+        )
+
+    def test_describe_indexes_not_serializable(self):
+        val = ModelWithIndexes.describe(serializable=False)
+
+        self.assertEqual(
+            val["indexes"],
+            ModelWithIndexes._meta.indexes,
         )

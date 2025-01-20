@@ -26,35 +26,30 @@ class TestTwoDatabases(test.SimpleTestCase):
         await Tortoise._drop_databases()
         await super().asyncTearDown()
 
+    def build_select_sql(self) -> str:
+        if isinstance(self.db, OracleClient):
+            return 'SELECT * FROM "eventtwo"'
+        return "SELECT * FROM eventtwo"
+
     async def test_two_databases(self):
         tournament = await Tournament.create(name="Tournament")
         await EventTwo.create(name="Event", tournament_id=tournament.id)
 
+        select_sql = self.build_select_sql()
         with self.assertRaises(OperationalError):
-            if isinstance(self.db, OracleClient):
-                await self.db.execute_query('SELECT * FROM "eventtwo"')
-            else:
-                await self.db.execute_query("SELECT * FROM eventtwo")
-        if isinstance(self.db, OracleClient):
-            _, results = await self.second_db.execute_query('SELECT * FROM "eventtwo"')
-        else:
-            _, results = await self.second_db.execute_query("SELECT * FROM eventtwo")
+            await self.db.execute_query(select_sql)
+        _, results = await self.second_db.execute_query(select_sql)
         self.assertEqual(dict(results[0]), {"id": 1, "name": "Event", "tournament_id": 1})
 
     async def test_two_databases_relation(self):
         tournament = await Tournament.create(name="Tournament")
         event = await EventTwo.create(name="Event", tournament_id=tournament.id)
 
+        select_sql = self.build_select_sql()
         with self.assertRaises(OperationalError):
-            if isinstance(self.db, OracleClient):
-                await self.db.execute_query('SELECT * FROM "eventtwo"')
-            else:
-                await self.db.execute_query("SELECT * FROM eventtwo")
+            await self.db.execute_query(select_sql)
 
-        if isinstance(self.db, OracleClient):
-            _, results = await self.second_db.execute_query('SELECT * FROM "eventtwo"')
-        else:
-            _, results = await self.second_db.execute_query("SELECT * FROM eventtwo")
+        _, results = await self.second_db.execute_query(select_sql)
         self.assertEqual(dict(results[0]), {"id": 1, "name": "Event", "tournament_id": 1})
 
         teams = []
