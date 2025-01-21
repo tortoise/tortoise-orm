@@ -174,6 +174,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS "uidx_teamevents_event_i_664dbc" ON "teamevent
         sql = self.get_sql("CREATE INDEX")
         self.assertIsNotNone(re.search(r"idx_tournament_created_\w+", sql))
 
+    async def test_create_index_with_custom_name(self):
+        await self.init_for("tests.testmodels")
+        sql = self.get_sql("f3")
+        self.assertIn("model_with_indexes__f3", sql)
+
     async def test_fk_bad_model_name(self):
         with self.assertRaisesRegex(
             ConfigurationError, 'ForeignKeyField accepts model name in format "app.Model"'
