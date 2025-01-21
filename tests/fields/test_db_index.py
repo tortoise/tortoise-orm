@@ -2,11 +2,11 @@ from typing import Any
 
 from pypika_tortoise.terms import Field
 
+from tests.testmodels import ModelWithIndexes
 from tortoise import fields
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 from tortoise.indexes import Index
-from tests.testmodels import ModelWithIndexes
 
 
 class CustomIndex(Index):
