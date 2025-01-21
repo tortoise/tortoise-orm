@@ -169,17 +169,6 @@ class BaseSchemaGenerator:
         )
         return index_name
 
-    def _generate_custom_index_sql(self, index: Index, model: "Type[Model]", safe: bool) -> str:
-
-        return self._get_index_sql(
-            model,
-            index.field_names,
-            safe=safe,
-            index_name=index.name,
-            index_type=index.INDEX_TYPE,
-            extra=index.extra,
-        )
-
     def _get_index_sql(
         self,
         model: "Type[Model]",
@@ -356,7 +345,14 @@ class BaseSchemaGenerator:
         if model._meta.indexes:
             for index in model._meta.indexes:
                 if isinstance(index, Index):
-                    idx_sql = self._generate_custom_index_sql(index, model, safe)
+                    idx_sql = self._get_index_sql(
+                        model,
+                        index.field_names,
+                        safe=safe,
+                        index_name=index.name,
+                        index_type=index.INDEX_TYPE,
+                        extra=index.extra,
+                    )
                 else:
                     fields = []
                     for field in index:
