@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from pypika_tortoise.context import DEFAULT_SQL_CONTEXT
 from pypika_tortoise.terms import Term, ValueWrapper
 
 from tortoise.exceptions import ConfigurationError
@@ -45,6 +46,19 @@ class Index:
             "type": self.INDEX_TYPE,
             "extra": self.extra,
         }
+
+    @property
+    def field_names(self) -> list[str]:
+        if self.fields:
+            return list(self.fields)
+        elif self.expressions:
+            return [
+                f"({expression.get_sql(DEFAULT_SQL_CONTEXT)})" for expression in self.expressions
+            ]
+        else:
+            raise ConfigurationError(
+                "At least one field or expression is required to define an index."
+            )
 
     def __repr__(self) -> str:
         argument = ""
