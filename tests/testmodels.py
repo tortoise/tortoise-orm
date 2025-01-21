@@ -1059,11 +1059,13 @@ class ModelWithIndexes(Model):
     unique_indexed = fields.CharField(max_length=16, unique=True)
     f1 = fields.CharField(max_length=16)
     f2 = fields.CharField(max_length=16)
+    f3 = fields.CharField(max_length=16)
     u1 = fields.IntField()
     u2 = fields.IntField()
 
     class Meta:
         indexes = [
             Index(fields=["f1", "f2"]),
+            Index(fields=["f3"], name="model_with_indexes__f3"),
         ]
         unique_together = [("u1", "u2")]

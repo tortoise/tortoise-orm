@@ -171,6 +171,27 @@ class BaseSchemaGenerator:
         )
         return index_name
 
+    def _generate_custom_index_sql(self, index: Index, model: "Type[Model]", safe: bool) -> str:
+        if index.fields:
+            fields = list(index.fields)
+        elif index.expressions:
+            fields = [
+                f"({expression.get_sql(DEFAULT_SQL_CONTEXT)})" for expression in index.expressions
+            ]
+        else:
+            raise ConfigurationError(
+                "At least one field or expression is required to define an index."
+            )
+
+        return self._get_index_sql(
+            model,
+            fields,
+            safe=safe,
+            index_name=index.name,
+            index_type=index.INDEX_TYPE,
+            extra=index.extra,
+        )
+
     def _get_index_sql(
         self,
         model: "Type[Model]",
@@ -346,31 +367,17 @@ class BaseSchemaGenerator:
 
         if model._meta.indexes:
             for index in model._meta.indexes:
-                if not isinstance(index, Index):
+                if isinstance(index, Index):
+                    idx_sql = self._generate_custom_index_sql(index, model, safe)
+                else:
                     fields = []
                     for field in index:
                         field_object = model._meta.fields_map[field]
                         fields.append(field_object.source_field or field)
+                    idx_sql = self._get_index_sql(model, fields, safe=safe)
 
-                    _indexes.append(self._get_index_sql(model, fields, safe=safe))
-                else:
-                    if index.fields:
-                        fields = [f for f in index.fields]
-                    elif index.expressions:
-                        fields = [
-                            f"({expression.get_sql(DEFAULT_SQL_CONTEXT)})"
-                            for expression in index.expressions
-                        ]
-                    else:
-                        raise ConfigurationError(
-                            "At least one field or expression is required to define an index."
-                        )
-
-                    _indexes.append(
-                        self._get_index_sql(
-                            model, fields, safe=safe, index_type=index.INDEX_TYPE, extra=index.extra
-                        )
-                    )
+                if idx_sql:
+                    _indexes.append(idx_sql)
 
         field_indexes_sqls = [val for val in list(dict.fromkeys(_indexes)) if val]
 

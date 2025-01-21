@@ -1568,7 +1568,16 @@ class TestDescribeModel(test.SimpleTestCase):
 
         self.assertEqual(
             val["indexes"],
-            [{"fields": ["f1", "f2"], "expressions": [], "name": None, "type": "", "extra": ""}],
+            [
+                {"fields": ["f1", "f2"], "expressions": [], "name": None, "type": "", "extra": ""},
+                {
+                    "fields": ["f3"],
+                    "expressions": [],
+                    "name": "model_with_indexes__f3",
+                    "type": "",
+                    "extra": "",
+                },
+            ],
         )
 
     def test_describe_indexes_not_serializable(self):
