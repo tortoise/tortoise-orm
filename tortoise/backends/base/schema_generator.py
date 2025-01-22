@@ -345,14 +345,7 @@ class BaseSchemaGenerator:
         if model._meta.indexes:
             for index in model._meta.indexes:
                 if isinstance(index, Index):
-                    idx_sql = self._get_index_sql(
-                        model,
-                        index.field_names,
-                        safe=safe,
-                        index_name=index.name,
-                        index_type=index.INDEX_TYPE,
-                        extra=index.extra,
-                    )
+                    idx_sql = index.get_sql(self, model, safe)
                 else:
                     fields = []
                     for field in index:
