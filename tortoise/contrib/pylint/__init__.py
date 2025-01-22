@@ -2,15 +2,16 @@
 Tortoise PyLint plugin
 """
 
-from typing import Any, Dict, Iterator, List
+from collections.abc import Iterator
+from typing import Any
 
 from astroid import MANAGER, inference_tip, nodes
 from astroid.exceptions import AstroidError
 from astroid.nodes import AnnAssign, Assign, ClassDef
 from pylint.lint import PyLinter
 
-MODELS: Dict[str, ClassDef] = {}
-FUTURE_RELATIONS: Dict[str, list] = {}
+MODELS: dict[str, ClassDef] = {}
+FUTURE_RELATIONS: dict[str, list] = {}
 
 
 def register(linter: PyLinter) -> None:  # pylint: disable=unused-argument
@@ -123,7 +124,7 @@ def apply_type_shim(cls: ClassDef, _context: Any = None) -> Iterator[ClassDef]:
     """
     Morphs model fields to representative type
     """
-    base_nodes: List[ClassDef] = [cls]
+    base_nodes: list[ClassDef] = [cls]
 
     # Use the type inference standard
     try:

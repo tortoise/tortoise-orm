@@ -99,7 +99,7 @@ Tortoise ORM follows a the following agreed upon style:
 * Always try to separate out terms clearly rather than concatenate words directly:
     * ``some_purpose`` instead of ``somepurpose``
     * ``SomePurpose`` instead of ``Somepurpose``
-* Keep in mind the targeted Python versions of ``>=3.8``:
+* Keep in mind the targeted Python versions of ``>=3.9``:
     * Do use f-strings
 * Please try and provide type annotations where you can, it will improve auto-completion in editors, and better static analysis.
 

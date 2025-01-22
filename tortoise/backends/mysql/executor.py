@@ -1,6 +1,6 @@
 import enum
 
-from pypika_tortoise import functions, SqlContext
+from pypika_tortoise import SqlContext, functions
 from pypika_tortoise.enums import SqlTypes
 from pypika_tortoise.functions import Cast, Coalesce
 from pypika_tortoise.terms import BasicCriterion, Criterion

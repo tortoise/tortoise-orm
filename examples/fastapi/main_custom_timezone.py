@@ -1,6 +1,6 @@
 # pylint: disable=E0611,E0401
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
 
 from config import register_orm
 from fastapi import FastAPI

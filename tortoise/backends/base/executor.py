@@ -1,22 +1,9 @@
 import asyncio
 import datetime
 import decimal
+from collections.abc import Callable, Iterable, Sequence
 from copy import copy
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Sequence,
-    Set,
-    Tuple,
-    Type,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Optional, Type, Union, cast
 
 from pypika_tortoise import JoinType, Parameter, Table
 from pypika_tortoise.queries import QueryBuilder
@@ -38,14 +25,14 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.query_utils import Prefetch
     from tortoise.queryset import QuerySet
 
-EXECUTOR_CACHE: Dict[
-    Tuple[str, Optional[str], str],
-    Tuple[list, str, list, str, str, Dict[str, str]],
+EXECUTOR_CACHE: dict[
+    tuple[str, Optional[str], str],
+    tuple[list, str, list, str, str, dict[str, str]],
 ] = {}
 
 
 class BaseExecutor:
-    FILTER_FUNC_OVERRIDE: Dict[Callable, Callable] = {}
+    FILTER_FUNC_OVERRIDE: dict[Callable, Callable] = {}
     EXPLAIN_PREFIX: str = "EXPLAIN"
     DB_NATIVE = {bytes, str, int, float, decimal.Decimal, datetime.datetime, datetime.date}
 
@@ -53,10 +40,10 @@ class BaseExecutor:
         self,
         model: "Type[Model]",
         db: "BaseDBAsyncClient",
-        prefetch_map: "Optional[Dict[str, Set[Union[str, Prefetch]]]]" = None,
-        prefetch_queries: Optional[Dict[str, List[Tuple[Optional[str], "QuerySet"]]]] = None,
+        prefetch_map: "Optional[dict[str, set[Union[str, Prefetch]]]]" = None,
+        prefetch_queries: Optional[dict[str, list[tuple[Optional[str], "QuerySet"]]]] = None,
         select_related_idx: Optional[
-            List[Tuple["Type[Model]", int, str, "Type[Model]", Iterable[Optional[str]]]]
+            list[tuple["Type[Model]", int, str, "Type[Model]", Iterable[Optional[str]]]]
         ] = None,
     ) -> None:
         self.model = model
@@ -83,7 +70,7 @@ class BaseExecutor:
             self.delete_query = str(
                 basequery.where(table[self.model._meta.db_pk_column] == self.parameter(0)).delete()
             )
-            self.update_cache: Dict[str, str] = {}
+            self.update_cache: dict[str, str] = {}
 
             EXECUTOR_CACHE[key] = (
                 self.regular_columns,
@@ -121,7 +108,7 @@ class BaseExecutor:
                 _, current_idx, _, _, path = self.select_related_idx[0]
                 row_items = list(dict(row).items())
                 instance: "Model" = self.model._init_from_db(**dict(row_items[:current_idx]))
-                instances: Dict[Any, Any] = {path: instance}
+                instances: dict[Any, Any] = {path: instance}
                 for model, index, *__, full_path in self.select_related_idx[1:]:
                     (*path, attr) = full_path
                     related_items = row_items[current_idx : current_idx + index]
@@ -146,7 +133,7 @@ class BaseExecutor:
 
     def _prepare_insert_columns(
         self, include_generated: bool = False
-    ) -> Tuple[List[str], List[str]]:
+    ) -> tuple[list[str], list[str]]:
         regular_columns = []
         for column in self.model._meta.fields_db_projection.keys():
             field_object = self.model._meta.fields_map[column]
@@ -232,7 +219,7 @@ class BaseExecutor:
     def get_update_sql(
         self,
         update_fields: Optional[Iterable[str]],
-        expressions: Optional[Dict[str, Expression]],
+        expressions: Optional[dict[str, Expression]],
     ) -> str:
         """
         Generates the SQL for updating a model depending on provided update_fields.
@@ -303,10 +290,10 @@ class BaseExecutor:
         self,
         instance_list: "Iterable[Model]",
         field: str,
-        related_query: Tuple[Optional[str], "QuerySet"],
+        related_query: tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
         to_attr, related_query = related_query
-        related_objects_for_fetch: Dict[str, list] = {}
+        related_objects_for_fetch: dict[str, list] = {}
         related_field: BackwardFKRelation = self.model._meta.fields_map[field]  # type: ignore
         related_field_name = related_field.to_field_instance.model_field_name
         relation_field = related_field.relation_field
@@ -327,7 +314,7 @@ class BaseExecutor:
             **{f"{k}__in": v for k, v in related_objects_for_fetch.items()}
         )
 
-        related_object_map: Dict[str, list] = {}
+        related_object_map: dict[str, list] = {}
         for entry in related_object_list:
             object_id = getattr(entry, relation_field)
             if object_id in related_object_map.keys():
@@ -346,10 +333,10 @@ class BaseExecutor:
         self,
         instance_list: "Iterable[Model]",
         field: str,
-        related_query: Tuple[Optional[str], "QuerySet"],
+        related_query: tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
         to_attr, related_query = related_query
-        related_objects_for_fetch: Dict[str, list] = {}
+        related_objects_for_fetch: dict[str, list] = {}
         related_field: BackwardOneToOneRelation = self.model._meta.fields_map[field]  # type: ignore
         related_field_name = related_field.to_field_instance.model_field_name
         relation_field = related_field.relation_field
@@ -387,7 +374,7 @@ class BaseExecutor:
         self,
         instance_list: "Iterable[Model]",
         field: str,
-        related_query: Tuple[Optional[str], "QuerySet"],
+        related_query: tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
         to_attr, related_query = related_query
         instance_id_set: set = {
@@ -420,7 +407,7 @@ class BaseExecutor:
         )
 
         if related_query._q_objects:
-            joined_tables: List[Table] = []
+            joined_tables: list[Table] = []
             modifier = QueryModifier()
             for node in related_query._q_objects:
                 modifier &= node.resolve(
@@ -444,11 +431,11 @@ class BaseExecutor:
                 query = query.having(modifier.having_criterion)
 
         _, raw_results = await self.db.execute_query(*query.get_parameterized_sql())
-        relations: List[Tuple[Any, Any]] = []
-        related_object_list: List["Model"] = []
+        relations: list[tuple[Any, Any]] = []
+        related_object_list: list["Model"] = []
         model_pk, related_pk = self.model._meta.pk, field_object.related_model._meta.pk
         for e in raw_results:
-            pk_values: Tuple[Any, Any] = (
+            pk_values: tuple[Any, Any] = (
                 model_pk.to_python_value(e["_backward_relation_key"]),
                 related_pk.to_python_value(e[related_pk_field]),
             )
@@ -458,7 +445,7 @@ class BaseExecutor:
             model=related_query.model, db=self.db, prefetch_map=related_query._prefetch_map
         )._execute_prefetch_queries(related_object_list)
         related_object_map = {e.pk: e for e in related_object_list}
-        relation_map: Dict[str, list] = {}
+        relation_map: dict[str, list] = {}
 
         for object_id, related_object_id in relations:
             if object_id not in relation_map:
@@ -474,12 +461,12 @@ class BaseExecutor:
         self,
         instance_list: "Iterable[Model]",
         field: str,
-        related_query: Tuple[Optional[str], "QuerySet"],
+        related_query: tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
         to_attr, related_queryset = related_query
-        related_objects_for_fetch: Dict[str, list] = {}
+        related_objects_for_fetch: dict[str, list] = {}
         relation_key_field = f"{field}_id"
-        model_to_field: Dict["Type[Model]", str] = {}
+        model_to_field: dict["Type[Model]", str] = {}
         for instance in instance_list:
             if (value := getattr(instance, relation_key_field)) is not None:
                 if (model_cls := instance.__class__) in model_to_field:
@@ -495,7 +482,7 @@ class BaseExecutor:
                 setattr(instance, field, None)
 
         if related_objects_for_fetch:
-            conditions: Dict[str, Any] = {}
+            conditions: dict[str, Any] = {}
             for k, v in related_objects_for_fetch.items():
                 if len(v) == 1:
                     v = v[0]
@@ -536,7 +523,7 @@ class BaseExecutor:
         self,
         instance_id_list: "Iterable[Model]",
         field: str,
-        related_query: Tuple[Optional[str], "QuerySet"],
+        related_query: tuple[Optional[str], "QuerySet"],
     ) -> "Iterable[Model]":
         if field in self.model._meta.backward_fk_fields:
             return await self._prefetch_reverse_relation(instance_id_list, field, related_query)

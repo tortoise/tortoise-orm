@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Any, List, Optional, Type
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Type
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
@@ -31,8 +33,8 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
 
     def __init__(self, client: "MySQLClient") -> None:
         super().__init__(client)
-        self._field_indexes = []  # type: List[str]
-        self._foreign_keys = []  # type: List[str]
+        self._field_indexes = []  # type: list[str]
+        self._foreign_keys = []  # type: list[str]
 
     def quote(self, val: str) -> str:
         return f"`{val}`"
@@ -71,11 +73,11 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     def _get_index_sql(
         self,
         model: "Type[Model]",
-        field_names: List[str],
+        field_names: list[str],
         safe: bool,
-        index_name: Optional[str] = None,
-        index_type: Optional[str] = None,
-        extra: Optional[str] = None,
+        index_name: str | None = None,
+        index_type: str | None = None,
+        extra: str | None = None,
     ) -> str:
         """Get index SQLs, but keep them for ourselves"""
         index_create_sql = super()._get_index_sql(
@@ -106,7 +108,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
             return comment
         return fk
 
-    def _get_inner_statements(self) -> List[str]:
+    def _get_inner_statements(self) -> list[str]:
         extra = self._foreign_keys + list(dict.fromkeys(self._field_indexes))
         self._field_indexes.clear()
         self._foreign_keys.clear()

@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Any, List, Optional, Type
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Type
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
@@ -29,8 +31,8 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
 
     def __init__(self, client: "MSSQLClient") -> None:
         super().__init__(client)
-        self._field_indexes = []  # type: List[str]
-        self._foreign_keys = []  # type: List[str]
+        self._field_indexes = []  # type: list[str]
+        self._foreign_keys = []  # type: list[str]
 
     def quote(self, val: str) -> str:
         return f"[{val}]"
@@ -62,18 +64,18 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
     def _get_index_sql(
         self,
         model: "Type[Model]",
-        field_names: List[str],
+        field_names: list[str],
         safe: bool,
-        index_name: Optional[str] = None,
-        index_type: Optional[str] = None,
-        extra: Optional[str] = None,
+        index_name: str | None = None,
+        index_type: str | None = None,
+        extra: str | None = None,
     ) -> str:
-        return super(MSSQLSchemaGenerator, self)._get_index_sql(
+        return super()._get_index_sql(
             model, field_names, False, index_name=index_name, index_type=index_type, extra=extra
         )
 
     def _get_table_sql(self, model: "Type[Model]", safe: bool = True) -> dict:
-        return super(MSSQLSchemaGenerator, self)._get_table_sql(model, False)
+        return super()._get_table_sql(model, False)
 
     def _create_fk_string(
         self,
@@ -109,7 +111,7 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
     ) -> str:
         if nullable == "":
             unique = ""
-        return super(MSSQLSchemaGenerator, self)._create_string(
+        return super()._create_string(
             db_column=db_column,
             field_type=field_type,
             nullable=nullable,
@@ -119,7 +121,7 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
             default=default,
         )
 
-    def _get_inner_statements(self) -> List[str]:
+    def _get_inner_statements(self) -> list[str]:
         extra = self._foreign_keys + list(dict.fromkeys(self._field_indexes))
         self._field_indexes.clear()
         self._foreign_keys.clear()

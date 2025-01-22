@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import sys
 import warnings
+from collections.abc import Generator, Iterable
 from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from types import ModuleType
-from typing import TYPE_CHECKING, Dict, Generator, Iterable, Optional, Union
+from typing import TYPE_CHECKING
 
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel  # pylint: disable=E0611
@@ -99,11 +100,11 @@ class RegisterTortoise(AbstractAsyncContextManager):
 
     def __init__(
         self,
-        app: Optional[FastAPI] = None,
-        config: Optional[dict] = None,
-        config_file: Optional[str] = None,
-        db_url: Optional[str] = None,
-        modules: Optional[Dict[str, Iterable[Union[str, ModuleType]]]] = None,
+        app: FastAPI | None = None,
+        config: dict | None = None,
+        config_file: str | None = None,
+        db_url: str | None = None,
+        modules: dict[str, Iterable[str | ModuleType]] | None = None,
         generate_schemas: bool = False,
         add_exception_handlers: bool = False,
         use_tz: bool = False,
@@ -173,10 +174,10 @@ class RegisterTortoise(AbstractAsyncContextManager):
 
 def register_tortoise(
     app: "FastAPI",
-    config: Optional[dict] = None,
-    config_file: Optional[str] = None,
-    db_url: Optional[str] = None,
-    modules: Optional[Dict[str, Iterable[Union[str, ModuleType]]]] = None,
+    config: dict | None = None,
+    config_file: str | None = None,
+    db_url: str | None = None,
+    modules: dict[str, Iterable[str | ModuleType]] | None = None,
     generate_schemas: bool = False,
     add_exception_handlers: bool = False,
 ) -> None:

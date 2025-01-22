@@ -1,25 +1,10 @@
 import asyncio
 import inspect
 import re
+from collections.abc import Awaitable, Callable, Generator, Iterable
 from copy import copy, deepcopy
 from functools import partial
-from typing import (
-    Any,
-    Awaitable,
-    Callable,
-    Dict,
-    Generator,
-    Iterable,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypedDict,
-    TypeVar,
-    Union,
-    cast,
-)
+from typing import Any, Optional, Type, TypedDict, TypeVar, Union, cast
 
 from pypika_tortoise import Order, Query, Table
 from pypika_tortoise.terms import Term
@@ -71,7 +56,7 @@ MODEL = TypeVar("MODEL", bound="Model")
 EMPTY = object()
 
 
-def get_together(meta: "Model.Meta", together: str) -> Tuple[Tuple[str, ...], ...]:
+def get_together(meta: "Model.Meta", together: str) -> tuple[tuple[str, ...], ...]:
     _together = getattr(meta, together, ())
 
     if _together and isinstance(_together, (list, tuple)) and isinstance(_together[0], str):
@@ -81,7 +66,7 @@ def get_together(meta: "Model.Meta", together: str) -> Tuple[Tuple[str, ...], ..
     return _together
 
 
-def prepare_default_ordering(meta: "Model.Meta") -> Tuple[Tuple[str, Order], ...]:
+def prepare_default_ordering(meta: "Model.Meta") -> tuple[tuple[str, Order], ...]:
     ordering_list = getattr(meta, "ordering", ())
 
     parsed_ordering = tuple(
@@ -151,7 +136,7 @@ def _m2m_getter(
     return val
 
 
-def _get_comments(cls: "Type[Model]") -> Dict[str, str]:
+def _get_comments(cls: "Type[Model]") -> dict[str, str]:
     """
     Get comments exactly before attributes
 
@@ -228,37 +213,37 @@ class MetaInfo:
         self.db_table: str = getattr(meta, "table", "")
         self.schema: Optional[str] = getattr(meta, "schema", None)
         self.app: Optional[str] = getattr(meta, "app", None)
-        self.unique_together: Tuple[Tuple[str, ...], ...] = get_together(meta, "unique_together")
-        self.indexes: Tuple[Union[Tuple[str, ...], Index], ...] = get_together(meta, "indexes")
-        self._default_ordering: Tuple[Tuple[str, Order], ...] = prepare_default_ordering(meta)
+        self.unique_together: tuple[tuple[str, ...], ...] = get_together(meta, "unique_together")
+        self.indexes: tuple[Union[tuple[str, ...], Index], ...] = get_together(meta, "indexes")
+        self._default_ordering: tuple[tuple[str, Order], ...] = prepare_default_ordering(meta)
         self._ordering_validated: bool = False
-        self.fields: Set[str] = set()
-        self.db_fields: Set[str] = set()
-        self.m2m_fields: Set[str] = set()
-        self.fk_fields: Set[str] = set()
-        self.o2o_fields: Set[str] = set()
-        self.backward_fk_fields: Set[str] = set()
-        self.backward_o2o_fields: Set[str] = set()
-        self.fetch_fields: Set[str] = set()
-        self.fields_db_projection: Dict[str, str] = {}
-        self.fields_db_projection_reverse: Dict[str, str] = {}
-        self._filters: Dict[str, FilterInfoDict] = {}
-        self.filters: Dict[str, FilterInfoDict] = {}
-        self.fields_map: Dict[str, Field] = {}
+        self.fields: set[str] = set()
+        self.db_fields: set[str] = set()
+        self.m2m_fields: set[str] = set()
+        self.fk_fields: set[str] = set()
+        self.o2o_fields: set[str] = set()
+        self.backward_fk_fields: set[str] = set()
+        self.backward_o2o_fields: set[str] = set()
+        self.fetch_fields: set[str] = set()
+        self.fields_db_projection: dict[str, str] = {}
+        self.fields_db_projection_reverse: dict[str, str] = {}
+        self._filters: dict[str, FilterInfoDict] = {}
+        self.filters: dict[str, FilterInfoDict] = {}
+        self.fields_map: dict[str, Field] = {}
         self._inited: bool = False
         self.default_connection: Optional[str] = None
         self.basequery: Query = Query()
         self.basequery_all_fields: Query = Query()
         self.basetable: Table = Table("")
         self.pk_attr: str = getattr(meta, "pk_attr", "")
-        self.generated_db_fields: Tuple[str, ...] = None  # type: ignore
+        self.generated_db_fields: tuple[str, ...] = None  # type: ignore
         self._model: Type["Model"] = None  # type: ignore
         self.table_description: str = getattr(meta, "table_description", "")
         self.pk: Field = None  # type: ignore
         self.db_pk_column: str = ""
-        self.db_native_fields: List[Tuple[str, str, Field]] = []
-        self.db_default_fields: List[Tuple[str, str, Field]] = []
-        self.db_complex_fields: List[Tuple[str, str, Field]] = []
+        self.db_native_fields: list[tuple[str, str, Field]] = []
+        self.db_default_fields: list[tuple[str, str, Field]] = []
+        self.db_complex_fields: list[tuple[str, str, Field]] = []
 
     @property
     def full_name(self) -> str:
@@ -296,7 +281,7 @@ class MetaInfo:
         return connections.get(self.default_connection)
 
     @property
-    def ordering(self) -> Tuple[Tuple[str, Order], ...]:
+    def ordering(self) -> tuple[tuple[str, Order], ...]:
         if not self._ordering_validated:
             unknown_fields = {f for f, _ in self._default_ordering} - self.fields
             raise ConfigurationError(
@@ -489,144 +474,40 @@ class MetaInfo:
 class ModelMeta(type):
     __slots__ = ()
 
-    def __new__(mcs, name: str, bases: Tuple[Type, ...], attrs: dict) -> "ModelMeta":
-        fields_db_projection: Dict[str, str] = {}
-        fields_map: Dict[str, Field] = {}
-        filters: Dict[str, FilterInfoDict] = {}
-        fk_fields: Set[str] = set()
-        m2m_fields: Set[str] = set()
-        o2o_fields: Set[str] = set()
+    def __new__(cls, name: str, bases: tuple[Type, ...], attrs: dict[str, Any]) -> "ModelMeta":
+        fields_db_projection: dict[str, str] = {}
         meta_class: "Model.Meta" = attrs.get("Meta", type("Meta", (), {}))
         pk_attr: str = "id"
-
-        # Searching for Field attributes in the class hierarchy
-        def __search_for_field_attributes(base: Type, attrs: dict) -> None:
-            """
-            Searching for class attributes of type fields.Field
-            in the given class.
-
-            If an attribute of the class is an instance of fields.Field,
-            then it will be added to the fields dict. But only, if the
-            key is not already in the dict. So derived classes have a higher
-            precedence. Multiple Inheritance is supported from left to right.
-
-            After checking the given class, the function will look into
-            the classes according to the MRO (method resolution order).
-
-            The MRO is 'natural' order, in which python traverses methods and
-            fields. For more information on the magic behind check out:
-            `The Python 2.3 Method Resolution Order
-            <https://www.python.org/download/releases/2.3/mro/>`_.
-            """
-            for parent in base.__mro__[1:]:
-                __search_for_field_attributes(parent, attrs)
-            meta = getattr(base, "_meta", None)
-            if meta:
-                # For abstract classes
-                for key, value in meta.fields_map.items():
-                    attrs[key] = value
-                # For abstract classes manager
-                for key, value in base.__dict__.items():
-                    if isinstance(value, Manager) and key not in attrs:
-                        attrs[key] = value.__class__()
-            else:
-                # For mixin classes
-                for key, value in base.__dict__.items():
-                    if isinstance(value, Field) and key not in attrs:
-                        attrs[key] = value
 
         # Start searching for fields in the base classes.
         inherited_attrs: dict = {}
         for base in bases:
-            __search_for_field_attributes(base, inherited_attrs)
+            cls._search_for_field_attributes(base, inherited_attrs)
         if inherited_attrs:
             # Ensure that the inherited fields are before the defined ones.
             attrs = {**inherited_attrs, **attrs}
-
+        is_abstract = getattr(meta_class, "abstract", False)
         if name != "Model":
-            custom_pk_present = False
-            for key, value in attrs.items():
-                if isinstance(value, Field):
-                    if value.pk:
-                        if custom_pk_present:
-                            raise ConfigurationError(
-                                f"Can't create model {name} with two primary keys,"
-                                " only single primary key is supported"
-                            )
-                        if value.generated and not value.allows_generated:
-                            raise ConfigurationError(
-                                f"Field '{key}' ({value.__class__.__name__}) can't be DB-generated"
-                            )
-                        custom_pk_present = True
-                        pk_attr = key
-
-            if not custom_pk_present and not getattr(meta_class, "abstract", None):
-                if "id" not in attrs:
-                    attrs = {"id": IntField(primary_key=True), **attrs}
-
-                if not isinstance(attrs["id"], Field) or not attrs["id"].pk:
-                    raise ConfigurationError(
-                        f"Can't create model {name} without explicit primary key if field 'id'"
-                        " already present"
-                    )
-
-        for key, value in attrs.items():
-            if isinstance(value, Field):
-                if getattr(meta_class, "abstract", None):
-                    value = deepcopy(value)
-
-                fields_map[key] = value
-                value.model_field_name = key
-
-                if isinstance(value, OneToOneFieldInstance):
-                    o2o_fields.add(key)
-                elif isinstance(value, ForeignKeyFieldInstance):
-                    fk_fields.add(key)
-                elif isinstance(value, ManyToManyFieldInstance):
-                    m2m_fields.add(key)
-                else:
-                    fields_db_projection[key] = value.source_field or key
-                    field, source_field = fields_map[key], fields_db_projection[key]
-                    filters.update(
-                        get_filters_for_field(
-                            field_name=key, field=field, source_field=source_field
-                        )
-                    )
-                    if value.pk:
-                        filters.update(
-                            get_filters_for_field(
-                                field_name="pk", field=field, source_field=source_field
-                            )
-                        )
+            attrs, pk_attr = cls._parse_custom_pk(attrs, pk_attr, name, is_abstract)
+        fields_map, filters, fk_fields, m2m_fields, o2o_fields = cls._dispatch_fields(
+            attrs, fields_db_projection, is_abstract
+        )
 
         # Clean the class attributes
         for slot in fields_map:
             attrs.pop(slot, None)
-        attrs["_meta"] = meta = MetaInfo(meta_class)
+        attrs["_meta"] = meta = cls.build_meta(
+            meta_class,
+            fields_map,
+            fields_db_projection,
+            filters,
+            fk_fields,
+            o2o_fields,
+            m2m_fields,
+            pk_attr,
+        )
 
-        meta.fields_map = fields_map
-        meta.fields_db_projection = fields_db_projection
-        meta._filters = filters
-        meta.fk_fields = fk_fields
-        meta.backward_fk_fields = set()
-        meta.o2o_fields = o2o_fields
-        meta.backward_o2o_fields = set()
-        meta.m2m_fields = m2m_fields
-        meta.default_connection = None
-        meta.pk_attr = pk_attr
-        meta.pk = fields_map.get(pk_attr)  # type: ignore
-        if meta.pk:
-            if meta.pk.source_field:
-                meta.db_pk_column = meta.pk.source_field
-            elif isinstance(meta.pk, OneToOneFieldInstance):
-                meta.db_pk_column = f"{meta.pk_attr}_id"
-            else:
-                meta.db_pk_column = meta.pk_attr
-        meta._inited = False
-        if not fields_map:
-            meta.abstract = True
-
-        new_class = super().__new__(mcs, name, bases, attrs)
+        new_class = super().__new__(cls, name, bases, attrs)
         for field in meta.fields_map.values():
             field.model = new_class  # type: ignore
 
@@ -638,13 +519,152 @@ class ModelMeta(type):
 
         if new_class.__doc__ and not meta.table_description:
             meta.table_description = inspect.cleandoc(new_class.__doc__).split("\n")[0]
-        for key, value in attrs.items():
+        for value in attrs.values():
             if isinstance(value, Manager):
                 value._model = new_class
         meta._model = new_class  # type: ignore
         meta.manager._model = new_class
         meta.finalise_fields()
         return new_class
+
+    @classmethod
+    def _search_for_field_attributes(cls, base: Type, attrs: dict) -> None:
+        """
+        Searching for class attributes of type fields.Field
+        in the given class.
+
+        If an attribute of the class is an instance of fields.Field,
+        then it will be added to the fields dict. But only, if the
+        key is not already in the dict. So derived classes have a higher
+        precedence. Multiple Inheritance is supported from left to right.
+
+        After checking the given class, the function will look into
+        the classes according to the MRO (method resolution order).
+
+        The MRO is 'natural' order, in which python traverses methods and
+        fields. For more information on the magic behind check out:
+        `The Python 2.3 Method Resolution Order
+        <https://www.python.org/download/releases/2.3/mro/>`_.
+        """
+        for parent in base.__mro__[1:]:
+            # Searching for Field attributes in the class hierarchy
+            cls._search_for_field_attributes(parent, attrs)
+        if meta := getattr(base, "_meta", None):
+            # For abstract classes
+            for key, value in meta.fields_map.items():
+                attrs[key] = value
+            # For abstract classes manager
+            for key, value in base.__dict__.items():
+                if isinstance(value, Manager) and key not in attrs:
+                    attrs[key] = value.__class__()
+        else:
+            # For mixin classes
+            for key, value in base.__dict__.items():
+                if isinstance(value, Field) and key not in attrs:
+                    attrs[key] = value
+
+    @staticmethod
+    def _parse_custom_pk(attrs: dict, pk_attr: str, name: str, is_abstract) -> tuple[dict, str]:
+        custom_pk_present = False
+        for key, value in attrs.items():
+            if isinstance(value, Field):
+                if value.pk:
+                    if custom_pk_present:
+                        raise ConfigurationError(
+                            f"Can't create model {name} with two primary keys,"
+                            " only single primary key is supported"
+                        )
+                    if value.generated and not value.allows_generated:
+                        raise ConfigurationError(
+                            f"Field '{key}' ({value.__class__.__name__}) can't be DB-generated"
+                        )
+                    custom_pk_present = True
+                    pk_attr = key
+
+        if not custom_pk_present and not is_abstract:
+            if "id" not in attrs:
+                attrs = {"id": IntField(primary_key=True), **attrs}
+
+            if not isinstance(attrs["id"], Field) or not attrs["id"].pk:
+                raise ConfigurationError(
+                    f"Can't create model {name} without explicit primary key if field 'id'"
+                    " already present"
+                )
+        return attrs, pk_attr
+
+    @staticmethod
+    def _dispatch_fields(attrs: dict, fields_db_projection: dict, is_abstract) -> tuple[
+        dict[str, Field],
+        dict[str, FilterInfoDict],
+        set[str],
+        set[str],
+        set[str],
+    ]:
+        fields_map: dict[str, Field] = {}
+        filters: dict[str, FilterInfoDict] = {}
+        fk_fields: set[str] = set()
+        m2m_fields: set[str] = set()
+        o2o_fields: set[str] = set()
+        for key, value in attrs.items():
+            if isinstance(value, Field):
+                if is_abstract:
+                    value = deepcopy(value)
+
+                field = fields_map[key] = value
+                value.model_field_name = key
+
+                if isinstance(value, OneToOneFieldInstance):
+                    o2o_fields.add(key)
+                elif isinstance(value, ForeignKeyFieldInstance):
+                    fk_fields.add(key)
+                elif isinstance(value, ManyToManyFieldInstance):
+                    m2m_fields.add(key)
+                else:
+                    source_field = fields_db_projection[key] = value.source_field or key
+                    filters.update(
+                        get_filters_for_field(
+                            field_name=key, field=field, source_field=source_field
+                        )
+                    )
+                    if value.pk:
+                        filters.update(
+                            get_filters_for_field(
+                                field_name="pk", field=field, source_field=source_field
+                            )
+                        )
+        return (fields_map, filters, fk_fields, m2m_fields, o2o_fields)
+
+    @staticmethod
+    def build_meta(
+        meta_class: "Model.Meta",
+        fields_map: dict[str, Field],
+        fields_db_projection: dict[str, str],
+        filters: dict[str, FilterInfoDict],
+        fk_fields: set[str],
+        o2o_fields: set[str],
+        m2m_fields: set[str],
+        pk_attr: str,
+    ) -> MetaInfo:
+        meta = MetaInfo(meta_class)
+        meta.fields_map = fields_map
+        meta.fields_db_projection = fields_db_projection
+        meta._filters = filters
+        meta.fk_fields = fk_fields
+        meta.o2o_fields = o2o_fields
+        meta.m2m_fields = m2m_fields
+        meta.pk_attr = pk_attr
+        if pk_field := fields_map.get(pk_attr):
+            meta.pk = pk_field  # type:ignore
+            if pk_field.source_field:
+                meta.db_pk_column = pk_field.source_field
+            elif isinstance(pk_field, OneToOneFieldInstance):
+                meta.db_pk_column = f"{pk_attr}_id"
+            else:
+                meta.db_pk_column = pk_attr
+        meta._inited = False
+        if not fields_map:
+            meta.abstract = True
+        return meta
 
     def __getitem__(cls: Type[MODEL], key: Any) -> QuerySetSingle[MODEL]:  # type: ignore
         return cls._getbypk(key)  # type: ignore
@@ -657,7 +677,7 @@ class Model(metaclass=ModelMeta):
 
     # I don' like this here, but it makes auto completion and static analysis much happier
     _meta = MetaInfo(None)  # type: ignore
-    _listeners: Dict[Signals, Dict[Type[MODEL], List[Callable]]] = {  # type: ignore
+    _listeners: dict[Signals, dict[Type[MODEL], list[Callable]]] = {  # type: ignore
         Signals.pre_save: {},
         Signals.post_save: {},
         Signals.pre_delete: {},
@@ -670,7 +690,7 @@ class Model(metaclass=ModelMeta):
         self._partial = False
         self._saved_in_db = False
         self._custom_generated_pk = False
-        self._await_when_save: Dict[str, Callable[[], Awaitable[Any]]] = {}
+        self._await_when_save: dict[str, Callable[[], Awaitable[Any]]] = {}
 
         # Assign defaults for missing fields
         for key in meta.fields.difference(self._set_kwargs(kwargs)):
@@ -691,7 +711,7 @@ class Model(metaclass=ModelMeta):
             self._validate_relation_type(key, value)
         super().__setattr__(key, value)
 
-    def _set_kwargs(self, kwargs: dict) -> Set[str]:
+    def _set_kwargs(self, kwargs: dict) -> set[str]:
         meta = self._meta
 
         # Assign values and do type conversions
@@ -737,7 +757,7 @@ class Model(metaclass=ModelMeta):
         self._await_when_save = {}
 
         meta = self._meta
-        inited_keys: Set[str] = set()
+        inited_keys: set[str] = set()
         try:
             # This is like so for performance reasons.
             #  We want to avoid conditionals and calling .to_python_value()
@@ -759,7 +779,7 @@ class Model(metaclass=ModelMeta):
                 inited_keys.add(key)
         except KeyError:
             self._partial = True
-            native_fields: List[Field] = [f for *_, f in meta.db_native_fields]
+            native_fields: list[Field] = [f for *_, f in meta.db_native_fields]
             default_fields = complex_fields = None
             for key, value in kwargs.items():
                 if key in inited_keys or key not in meta.fields_map:
@@ -791,7 +811,7 @@ class Model(metaclass=ModelMeta):
             raise TypeError("Model instances without id are unhashable")
         return hash(self.pk)
 
-    def __iter__(self) -> Iterable[Tuple]:
+    def __iter__(self) -> Iterable[tuple]:
         for field in self._meta.db_fields:
             yield field, getattr(self, field)
 
@@ -1069,7 +1089,7 @@ class Model(metaclass=ModelMeta):
         defaults: Optional[dict] = None,
         using_db: Optional[BaseDBAsyncClient] = None,
         **kwargs: Any,
-    ) -> Tuple[Self, bool]:
+    ) -> tuple[Self, bool]:
         """
         Fetches the object if exists (filtering on the provided parameters),
         else creates an instance with any unspecified parameters as default values.
@@ -1092,7 +1112,7 @@ class Model(metaclass=ModelMeta):
     @classmethod
     async def _create_or_get(
         cls, db: BaseDBAsyncClient, defaults: dict, **kwargs
-    ) -> Tuple[Self, bool]:
+    ) -> tuple[Self, bool]:
         """Try to create, if fails with IntegrityError then try to get"""
         for key in defaults.keys() & kwargs.keys():
             if (default_value := defaults[key]) != (query_value := kwargs[key]):
@@ -1120,7 +1140,7 @@ class Model(metaclass=ModelMeta):
         cls,
         nowait: bool = False,
         skip_locked: bool = False,
-        of: Tuple[str, ...] = (),
+        of: tuple[str, ...] = (),
         using_db: Optional[BaseDBAsyncClient] = None,
     ) -> QuerySet[Self]:
         """
@@ -1137,7 +1157,7 @@ class Model(metaclass=ModelMeta):
         defaults: Optional[dict] = None,
         using_db: Optional[BaseDBAsyncClient] = None,
         **kwargs: Any,
-    ) -> Tuple[MODEL, bool]:
+    ) -> tuple[MODEL, bool]:
         """
         A convenience method for updating an object with the given kwargs, creating a new one if necessary.
 
@@ -1218,7 +1238,7 @@ class Model(metaclass=ModelMeta):
         id_list: Iterable[Union[str, int]],
         field_name: str = "pk",
         using_db: Optional[BaseDBAsyncClient] = None,
-    ) -> Dict[str, MODEL]:
+    ) -> dict[str, MODEL]:
         """
         Return a dictionary mapping each of the given IDs to the object with
         that ID. If `id_list` isn't provided, evaluate the entire QuerySet.
@@ -1468,8 +1488,8 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def _describe_index(
-        cls, index: Union[Index, Tuple[str, ...]], serializable: bool
-    ) -> Union[Index, Tuple[str, ...], dict]:
+        cls, index: Union[Index, tuple[str, ...]], serializable: bool
+    ) -> Union[Index, tuple[str, ...], dict]:
         if isinstance(index, Index):
             return index.describe() if serializable else index
 

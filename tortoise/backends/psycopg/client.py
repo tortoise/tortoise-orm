@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import asyncio
-import typing
+from collections.abc import Callable
 from contextlib import _AsyncGeneratorContextManager
 from ssl import SSLContext
+from typing import Any, Type, TypeVar, cast
 
 import psycopg
 import psycopg.conninfo
@@ -20,8 +21,8 @@ import tortoise.backends.psycopg.executor as executor
 import tortoise.exceptions as exceptions
 from tortoise.backends.psycopg.schema_generator import PsycopgSchemaGenerator
 
-FuncType = typing.Callable[..., typing.Any]
-F = typing.TypeVar("F", bound=FuncType)
+FuncType = Callable[..., Any]
+F = TypeVar("F", bound=FuncType)
 
 
 class AsyncConnectionPool(psycopg_pool.AsyncConnectionPool):
@@ -44,7 +45,7 @@ class PsycopgSQLQueryBuilder(PostgreSQLQueryBuilder):
     Psycopg opted to use a custom parameter placeholder, so we need to override the default
     """
 
-    def get_parameterized_sql(self, ctx: SqlContext | None = None) -> typing.Tuple[str, list]:
+    def get_parameterized_sql(self, ctx: SqlContext | None = None) -> tuple[str, list]:
         if not ctx:
             ctx = self.QUERY_CLS.SQL_CONTEXT
         if not ctx.parameterizer:
@@ -53,10 +54,10 @@ class PsycopgSQLQueryBuilder(PostgreSQLQueryBuilder):
 
 
 class PsycopgClient(postgres_client.BasePostgresClient):
-    query_class: typing.Type[PsycopgSQLQuery] = PsycopgSQLQuery
-    executor_class: typing.Type[executor.PsycopgExecutor] = executor.PsycopgExecutor
-    schema_generator: typing.Type[PsycopgSchemaGenerator] = PsycopgSchemaGenerator
-    _pool: typing.Optional[AsyncConnectionPool] = None
+    query_class: Type[PsycopgSQLQuery] = PsycopgSQLQuery
+    executor_class: Type[executor.PsycopgExecutor] = executor.PsycopgExecutor
+    schema_generator: Type[PsycopgSchemaGenerator] = PsycopgSchemaGenerator
+    _pool: AsyncConnectionPool | None = None
     _connection: psycopg.AsyncConnection
     default_timeout: float = 30
 
@@ -120,7 +121,7 @@ class PsycopgClient(postgres_client.BasePostgresClient):
         except psycopg.errors.InvalidCatalogName:  # pragma: nocoverage
             pass
 
-    async def execute_insert(self, query: str, values: list) -> typing.Optional[typing.Any]:
+    async def execute_insert(self, query: str, values: list) -> Any | None:
         inserted, rows = await self.execute_query(query, values)
         if rows:
             return rows[0]
@@ -139,12 +140,12 @@ class PsycopgClient(postgres_client.BasePostgresClient):
     async def execute_query(
         self,
         query: str,
-        values: typing.Optional[list] = None,
+        values: list | None = None,
         row_factory=psycopg.rows.dict_row,
-    ) -> typing.Tuple[int, typing.List[dict]]:
+    ) -> tuple[int, list[dict]]:
         connection: psycopg.AsyncConnection
         async with self.acquire_connection() as connection:
-            cursor: typing.Union[psycopg.AsyncCursor, psycopg.AsyncServerCursor]
+            cursor: psycopg.AsyncCursor | psycopg.AsyncServerCursor
             async with connection.cursor(row_factory=row_factory) as cursor:
                 self.log.debug("%s: %s", query, values)
                 await cursor.execute(query, values)
@@ -156,11 +157,9 @@ class PsycopgClient(postgres_client.BasePostgresClient):
                 else:
                     rows = []
 
-                return rowcount, typing.cast(typing.List[dict], rows)
+                return rowcount, cast(list[dict], rows)
 
-    async def execute_query_dict(
-        self, query: str, values: typing.Optional[list] = None
-    ) -> typing.List[dict]:
+    async def execute_query_dict(self, query: str, values: list | None = None) -> list[dict]:
         rowcount, rows = await self.execute_query(query, values, row_factory=psycopg.rows.dict_row)
         return rows
 
@@ -210,9 +209,7 @@ class TransactionWrapper(PsycopgClient, base_client.TransactionalDBClient):
         self._lock = asyncio.Lock()
         self.log = connection.log
         self.connection_name = connection.connection_name
-        self._transaction: typing.Optional[
-            _AsyncGeneratorContextManager[psycopg.AsyncTransaction]
-        ] = None
+        self._transaction: _AsyncGeneratorContextManager[psycopg.AsyncTransaction] | None = None
         self._finalized = False
         self._parent = connection
 

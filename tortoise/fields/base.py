@@ -1,20 +1,8 @@
 import sys
 import warnings
+from collections.abc import Callable
 from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Generic,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Generic, Optional, Type, TypeVar, Union, overload
 
 from pypika_tortoise.terms import Term
 
@@ -52,7 +40,7 @@ NO_ACTION = OnDelete.NO_ACTION
 
 class _FieldMeta(type):
     # TODO: Require functions to return field instances instead of this hack
-    def __new__(mcs, name: str, bases: Tuple[Type, ...], attrs: dict) -> type:
+    def __new__(mcs, name: str, bases: tuple[Type, ...], attrs: dict) -> type:
         if len(bases) > 1 and bases[0] is Field:
             # Instantiate class with only the 1st base class (should be Field)
             cls = type.__new__(mcs, name, (bases[0],), attrs)
@@ -187,7 +175,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         db_index: Optional[bool] = None,
         description: Optional[str] = None,
         model: "Optional[Model]" = None,
-        validators: Optional[List[Union[Validator, Callable]]] = None,
+        validators: Optional[list[Union[Validator, Callable]]] = None,
         **kwargs: Any,
     ) -> None:
         if (index := kwargs.pop("index", None)) is not None:
@@ -238,7 +226,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         self.model_field_name = ""
         self.description = description
         self.docstring: Optional[str] = None
-        self.validators: List[Union[Validator, Callable]] = validators or []
+        self.validators: list[Union[Validator, Callable]] = validators or []
         # TODO: consider making this not be set from constructor
         self.model: Type["Model"] = model  # type: ignore
         self.reference: "Optional[Field]" = None
@@ -306,7 +294,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         """
         return {}
 
-    def _get_dialects(self) -> Dict[str, dict]:
+    def _get_dialects(self) -> dict[str, dict]:
         ret = {}
         for dialect in [key for key in dir(self) if key.startswith("_db_")]:
             item = {}
@@ -321,7 +309,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             ret[dialect[4:]] = item
         return ret
 
-    def get_db_field_types(self) -> Optional[Dict[str, str]]:
+    def get_db_field_types(self) -> Optional[dict[str, str]]:
         """
         Returns the DB types for this field.
 
@@ -401,7 +389,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
                 return str(typ).replace("typing.", "")
             return f"{typ.__module__}.{typ.__name__}"
 
-        def type_name(typ: Any) -> Union[str, List[str]]:
+        def type_name(typ: Any) -> Union[str, list[str]]:
             try:
                 return typ._meta.full_name
             except (AttributeError, TypeError):

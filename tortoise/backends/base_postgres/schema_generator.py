@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Any, List, Optional, Type
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Type
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
@@ -20,10 +22,10 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
 
     def __init__(self, client: "BasePostgresClient") -> None:
         super().__init__(client)
-        self.comments_array: List[str] = []
+        self.comments_array: list[str] = []
 
     @classmethod
-    def _get_escape_translation_table(cls) -> List[str]:
+    def _get_escape_translation_table(cls) -> list[str]:
         table = super()._get_escape_translation_table()
         table[ord("'")] = "''"
         return table
@@ -70,11 +72,11 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
     def _get_index_sql(
         self,
         model: "Type[Model]",
-        field_names: List[str],
+        field_names: list[str],
         safe: bool,
-        index_name: Optional[str] = None,
-        index_type: Optional[str] = None,
-        extra: Optional[str] = None,
+        index_name: str | None = None,
+        index_type: str | None = None,
+        extra: str | None = None,
     ) -> str:
         if index_type:
             index_type = f"USING {index_type}"

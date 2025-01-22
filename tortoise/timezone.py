@@ -1,12 +1,12 @@
+import functools
 import os
 from datetime import datetime, time, tzinfo
-from functools import lru_cache
 from typing import Optional, Union
 
 import pytz
 
 
-@lru_cache(maxsize=None)
+@functools.cache
 def get_use_tz() -> bool:
     """
     Get use_tz from env set in Tortoise config.
@@ -14,7 +14,7 @@ def get_use_tz() -> bool:
     return os.environ.get("USE_TZ") == "True"
 
 
-@lru_cache(maxsize=None)
+@functools.cache
 def get_timezone() -> str:
     """
     Get timezone from env set in Tortoise config.
@@ -32,7 +32,7 @@ def now() -> datetime:
         return datetime.now(get_default_timezone())
 
 
-@lru_cache(maxsize=None)
+@functools.cache
 def get_default_timezone() -> tzinfo:
     """
     Return the default time zone as a tzinfo instance.

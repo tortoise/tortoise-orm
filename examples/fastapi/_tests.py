@@ -2,11 +2,11 @@
 # pylint: disable=E0611,E0401
 import multiprocessing
 import os
+from collections.abc import AsyncGenerator
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import AsyncGenerator, Tuple
 
 import anyio
 import pytest
@@ -74,7 +74,7 @@ class UserTester:
         assert user_obj.id == user_id
         return user_obj
 
-    async def user_list(self, async_client: AsyncClient) -> Tuple[datetime, Users, User_Pydantic]:
+    async def user_list(self, async_client: AsyncClient) -> tuple[datetime, Users, User_Pydantic]:
         utc_now = datetime.now(pytz.utc)
         user_obj = await Users.create(username="test")
         response = await async_client.get("/users")

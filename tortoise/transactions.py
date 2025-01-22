@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from functools import wraps
-from typing import TYPE_CHECKING, Callable, Optional, TypeVar, cast
+from typing import TYPE_CHECKING, Optional, TypeVar, cast
 
 from tortoise import connections
 from tortoise.exceptions import ParamsError

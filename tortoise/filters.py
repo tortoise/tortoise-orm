@@ -1,17 +1,9 @@
 from __future__ import annotations
 
 import operator
+from collections.abc import Callable, Iterable
 from functools import partial
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Dict,
-    Iterable,
-    Optional,
-    Tuple,
-    TypedDict,
-)
+from typing import TYPE_CHECKING, Any, Optional, TypedDict
 
 from pypika_tortoise import SqlContext, Table
 from pypika_tortoise.enums import DatePart, Matching, SqlTypes
@@ -80,7 +72,7 @@ def string_encoder(value: Any, instance: "Model", field: Field) -> str:
     return str(value)
 
 
-def json_encoder(value: Any, instance: "Model", field: Field) -> Dict:
+def json_encoder(value: Any, instance: "Model", field: Field) -> dict:
     return value
 
 
@@ -112,7 +104,7 @@ def not_in(field: Term, value: Any) -> Criterion:
     )
 
 
-def between_and(field: Term, value: Tuple[Any, Any]) -> Criterion:
+def between_and(field: Term, value: tuple[Any, Any]) -> Criterion:
     return field.between(value[0], value[1])
 
 
@@ -231,7 +223,7 @@ def json_contained_by(field: Term, value: str) -> Criterion:  # type:ignore[empt
     pass
 
 
-def json_filter(field: Term, value: Dict) -> Criterion:  # type:ignore[empty-body]
+def json_filter(field: Term, value: dict) -> Criterion:  # type:ignore[empty-body]
     # will be override in each executor
     pass
 
@@ -250,7 +242,7 @@ class FilterInfoDict(TypedDict):
     source_field: NotRequired[str]
 
 
-def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> Dict[str, FilterInfoDict]:
+def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> dict[str, FilterInfoDict]:
     target_table_pk = field.related_model._meta.pk
     return {
         field_name: {
@@ -286,7 +278,7 @@ def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> Dict[str
 
 def get_backward_fk_filters(
     field_name: str, field: BackwardFKRelation
-) -> Dict[str, FilterInfoDict]:
+) -> dict[str, FilterInfoDict]:
     target_table_pk = field.related_model._meta.pk
     return {
         field_name: {
@@ -332,7 +324,7 @@ def get_backward_fk_filters(
     }
 
 
-def get_json_filter(field_name: str, source_field: str) -> Dict[str, FilterInfoDict]:
+def get_json_filter(field_name: str, source_field: str) -> dict[str, FilterInfoDict]:
     actual_field_name = field_name
     return {
         field_name: {
@@ -391,7 +383,7 @@ def get_json_filter_operator(
 
 def get_filters_for_field(
     field_name: str, field: Optional[Field], source_field: str
-) -> Dict[str, FilterInfoDict]:
+) -> dict[str, FilterInfoDict]:
     if isinstance(field, ManyToManyFieldInstance):
         return get_m2m_filters(field_name, field)
     if isinstance(field, BackwardFKRelation):

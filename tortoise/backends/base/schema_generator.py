@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import re
 from hashlib import sha256
-from typing import TYPE_CHECKING, Any, List, Optional, Set, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Type, cast
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields import JSONField, TextField, UUIDField
@@ -109,7 +111,7 @@ class BaseSchemaGenerator:
         return ""
 
     @classmethod
-    def _get_escape_translation_table(cls) -> List[str]:
+    def _get_escape_translation_table(cls) -> list[str]:
         """escape sequence taken based on definition provided by PostgreSQL and MySQL"""
         _escape_table = [chr(x) for x in range(128)]
         _escape_table[0] = "\\0"
@@ -130,7 +132,7 @@ class BaseSchemaGenerator:
     def _table_generate_extra(self, table: str) -> str:
         return ""
 
-    def _get_inner_statements(self) -> List[str]:
+    def _get_inner_statements(self) -> list[str]:
         return []
 
     def quote(self, val: str) -> str:
@@ -142,7 +144,7 @@ class BaseSchemaGenerator:
         return sha256(";".join(args).encode("utf-8")).hexdigest()[:length]
 
     def _generate_index_name(
-        self, prefix: str, model: "Union[Type[Model], str]", field_names: List[str]
+        self, prefix: str, model: "Type[Model] | str", field_names: list[str]
     ) -> str:
         # NOTE: for compatibility, index name should not be longer than 30
         # characters (Oracle limit).
@@ -172,11 +174,11 @@ class BaseSchemaGenerator:
     def _get_index_sql(
         self,
         model: "Type[Model]",
-        field_names: List[str],
+        field_names: list[str],
         safe: bool,
-        index_name: Optional[str] = None,
-        index_type: Optional[str] = None,
-        extra: Optional[str] = None,
+        index_name: str | None = None,
+        index_type: str | None = None,
+        extra: str | None = None,
     ) -> str:
         return self.INDEX_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
@@ -187,7 +189,7 @@ class BaseSchemaGenerator:
             extra=f"{extra}" if extra else "",
         )
 
-    def _get_unique_index_sql(self, exists: str, table_name: str, field_names: List[str]) -> str:
+    def _get_unique_index_sql(self, exists: str, table_name: str, field_names: list[str]) -> str:
         index_name = self._generate_index_name("uidx", table_name, field_names)
         return self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
             exists=exists,
@@ -198,7 +200,7 @@ class BaseSchemaGenerator:
             extra="",
         )
 
-    def _get_unique_constraint_sql(self, model: "Type[Model]", field_names: List[str]) -> str:
+    def _get_unique_constraint_sql(self, model: "Type[Model]", field_names: list[str]) -> str:
         return self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(
             index_name=self._generate_index_name("uid", model, field_names),
             fields=", ".join([self.quote(f) for f in field_names]),
@@ -216,7 +218,7 @@ class BaseSchemaGenerator:
         fields_with_index = []
         m2m_tables_for_create = []
         references = set()
-        models_to_create: "List[Type[Model]]" = []
+        models_to_create: "list[Type[Model]]" = []
 
         self._get_models_to_create(models_to_create)
         models_tables = [model._meta.db_table for model in models_to_create]
@@ -456,7 +458,7 @@ class BaseSchemaGenerator:
             "m2m_tables": m2m_tables_for_create,
         }
 
-    def _get_models_to_create(self, models_to_create: "List[Type[Model]]") -> None:
+    def _get_models_to_create(self, models_to_create: "list[Type[Model]]") -> None:
         from tortoise import Tortoise
 
         for app in Tortoise.apps.values():
@@ -466,7 +468,7 @@ class BaseSchemaGenerator:
                     models_to_create.append(model)
 
     def get_create_schema_sql(self, safe: bool = True) -> str:
-        models_to_create: "List[Type[Model]]" = []
+        models_to_create: "list[Type[Model]]" = []
 
         self._get_models_to_create(models_to_create)
 
@@ -476,9 +478,9 @@ class BaseSchemaGenerator:
 
         tables_to_create_count = len(tables_to_create)
 
-        created_tables: Set[dict] = set()
-        ordered_tables_for_create: List[str] = []
-        m2m_tables_to_create: List[str] = []
+        created_tables: set[dict] = set()
+        ordered_tables_for_create: list[str] = []
+        m2m_tables_to_create: list[str] = []
         while True:
             if len(created_tables) == tables_to_create_count:
                 break

@@ -2,18 +2,8 @@ from __future__ import annotations
 
 import abc
 import asyncio
-from typing import (
-    Any,
-    Generic,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-)
+from collections.abc import Sequence
+from typing import Any, Generic, Type, TypeVar, cast
 
 from pypika_tortoise import Query
 
@@ -164,7 +154,7 @@ class BaseDBAsyncClient(abc.ABC):
         """
         raise NotImplementedError()  # pragma: nocoverage
 
-    def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
+    def acquire_connection(self) -> "ConnectionWrapper" | "PoolConnectionWrapper":
         """
         Acquires a connection from the pool.
         Will return the current context connection if already in a transaction.
@@ -186,8 +176,8 @@ class BaseDBAsyncClient(abc.ABC):
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_query(
-        self, query: str, values: Optional[list] = None
-    ) -> Tuple[int, Sequence[dict]]:
+        self, query: str, values: list | None = None
+    ) -> tuple[int, Sequence[dict]]:
         """
         Executes a RAW SQL query statement, and returns the resultset.
 
@@ -206,7 +196,7 @@ class BaseDBAsyncClient(abc.ABC):
         """
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def execute_many(self, query: str, values: List[list]) -> None:
+    async def execute_many(self, query: str, values: list[list]) -> None:
         """
         Executes a RAW bulk insert statement, like execute_insert, but returns no data.
 
@@ -215,7 +205,7 @@ class BaseDBAsyncClient(abc.ABC):
         """
         raise NotImplementedError()  # pragma: nocoverage
 
-    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+    async def execute_query_dict(self, query: str, values: list | None = None) -> list[dict]:
         """
         Executes a RAW SQL query statement, and returns the resultset as a list of dicts.
 
@@ -356,7 +346,7 @@ class PoolConnectionWrapper(Generic[T_conn]):
 
     def __init__(self, client: BaseDBAsyncClient, pool_init_lock: asyncio.Lock) -> None:
         self.client = client
-        self.connection: Optional[T_conn] = None
+        self.connection: T_conn | None = None
         self._pool_init_lock = pool_init_lock
 
     async def ensure_connection(self) -> None:

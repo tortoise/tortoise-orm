@@ -21,12 +21,12 @@ class Mode(Enum):
 
 class Match(PypikaFunction):
     def __init__(self, *columns: Term) -> None:
-        super(Match, self).__init__("MATCH", *columns)
+        super().__init__("MATCH", *columns)
 
 
 class Against(PypikaFunction):
     def __init__(self, expr: Term, mode: Optional[Mode] = None) -> None:
-        super(Against, self).__init__("AGAINST", expr)
+        super().__init__("AGAINST", expr)
         self.mode = mode
 
     def get_special_params_sql(self, ctx: SqlContext) -> Any:
