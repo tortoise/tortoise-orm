@@ -126,7 +126,11 @@ def initializer(
     if db_url is not None:  # pragma: nobranch
         _TORTOISE_TEST_DB = db_url
     _CONFIG = getDBConfig(app_label=app_label, modules=_MODULES)
-    loop = loop or asyncio.get_event_loop()
+    if not loop:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
     _LOOP = loop
     loop.run_until_complete(_init_db(_CONFIG))
     _CONNECTIONS = connections._copy_storage()
