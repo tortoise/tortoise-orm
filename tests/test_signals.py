@@ -1,4 +1,4 @@
-from typing import Optional, Type
+from typing import Optional
 
 from tests.testmodels import Signals
 from tortoise import BaseDBAsyncClient
@@ -8,7 +8,7 @@ from tortoise.signals import post_delete, post_save, pre_delete, pre_save
 
 @pre_save(Signals)
 async def signal_pre_save(
-    sender: "Type[Signals]", instance: Signals, using_db, update_fields
+    sender: "type[Signals]", instance: Signals, using_db, update_fields
 ) -> None:
     await Signals.filter(name="test1").update(name="test_pre-save")
     await Signals.filter(name="test5").update(name="test_pre-save")
@@ -16,7 +16,7 @@ async def signal_pre_save(
 
 @post_save(Signals)
 async def signal_post_save(
-    sender: "Type[Signals]",
+    sender: "type[Signals]",
     instance: Signals,
     created: bool,
     using_db: "Optional[BaseDBAsyncClient]",
@@ -28,14 +28,14 @@ async def signal_post_save(
 
 @pre_delete(Signals)
 async def signal_pre_delete(
-    sender: "Type[Signals]", instance: Signals, using_db: "Optional[BaseDBAsyncClient]"
+    sender: "type[Signals]", instance: Signals, using_db: "Optional[BaseDBAsyncClient]"
 ) -> None:
     await Signals.filter(name="test3").update(name="test_pre-delete")
 
 
 @post_delete(Signals)
 async def signal_post_delete(
-    sender: "Type[Signals]", instance: Signals, using_db: "Optional[BaseDBAsyncClient]"
+    sender: "type[Signals]", instance: Signals, using_db: "Optional[BaseDBAsyncClient]"
 ) -> None:
     await Signals.filter(name="test4").update(name="test_post-delete")
 

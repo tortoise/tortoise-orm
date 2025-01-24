@@ -2,7 +2,6 @@ import os
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
 from time import sleep
-from typing import Type
 from unittest.mock import patch
 
 import pytz
@@ -18,7 +17,7 @@ from tortoise.timezone import get_default_timezone
 
 
 class TestEmpty(test.TestCase):
-    model: Type[Model] = testmodels.DatetimeFields
+    model: type[Model] = testmodels.DatetimeFields
 
     async def test_empty(self):
         with self.assertRaises(IntegrityError):

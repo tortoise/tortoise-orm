@@ -1,17 +1,7 @@
 import types
 from collections.abc import AsyncIterator, Callable, Generator, Iterable
 from copy import copy
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Generic,
-    Optional,
-    Type,
-    TypeVar,
-    Union,
-    cast,
-    overload,
-)
+from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, Union, cast, overload
 
 from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
@@ -97,9 +87,9 @@ class AwaitableQuery(Generic[MODEL]):
         "_q_objects",
     )
 
-    def __init__(self, model: Type[MODEL]) -> None:
+    def __init__(self, model: type[MODEL]) -> None:
         self._joined_tables: list[Table] = []
-        self.model: "Type[MODEL]" = model
+        self.model: "type[MODEL]" = model
         self.query: QueryBuilder = QUERY
         self._db: BaseDBAsyncClient = None  # type: ignore
         self.capabilities: Capabilities = model._meta.db.capabilities
@@ -184,7 +174,7 @@ class AwaitableQuery(Generic[MODEL]):
 
     def resolve_ordering(
         self,
-        model: "Type[Model]",
+        model: "type[Model]",
         table: Table,
         orderings: Iterable[tuple[str, Union[str, Order]]],
         annotations: dict[str, Any],
@@ -326,7 +316,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_force_indexes",
     )
 
-    def __init__(self, model: Type[MODEL]) -> None:
+    def __init__(self, model: type[MODEL]) -> None:
         super().__init__(model)
         self.fields: set[str] = model._meta.db_fields
         self._prefetch_map: dict[str, set[Union[str, Prefetch]]] = {}
@@ -347,7 +337,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._select_for_update_of: set[str] = set()
         self._select_related: set[str] = set()
         self._select_related_idx: list[
-            tuple["Type[Model]", int, Union[Table, str], "Type[Model]", Iterable[Optional[str]]]
+            tuple["type[Model]", int, Union[Table, str], "type[Model]", Iterable[Optional[str]]]
         ] = []  # format with: model,idx,model_name,parent_model
         self._force_indexes: set[str] = set()
         self._use_indexes: set[str] = set()
@@ -1017,7 +1007,7 @@ class QuerySet(AwaitableQuery[MODEL]):
 
     def _join_table_with_select_related(
         self,
-        model: "Type[Model]",
+        model: "type[Model]",
         table: Table,
         field: str,
         forwarded_fields: str,
@@ -1162,7 +1152,7 @@ class UpdateQuery(AwaitableQuery):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: type[MODEL],
         update_kwargs: dict[str, Any],
         db: BaseDBAsyncClient,
         q_objects: list[Q],
@@ -1241,7 +1231,7 @@ class DeleteQuery(AwaitableQuery):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: type[MODEL],
         db: BaseDBAsyncClient,
         q_objects: list[Q],
         annotations: dict[str, Any],
@@ -1288,7 +1278,7 @@ class ExistsQuery(AwaitableQuery):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: type[MODEL],
         db: BaseDBAsyncClient,
         q_objects: list[Q],
         annotations: dict[str, Any],
@@ -1339,7 +1329,7 @@ class CountQuery(AwaitableQuery):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: type[MODEL],
         db: BaseDBAsyncClient,
         q_objects: list[Q],
         annotations: dict[str, Any],
@@ -1395,12 +1385,12 @@ class CountQuery(AwaitableQuery):
 class FieldSelectQuery(AwaitableQuery):
     # pylint: disable=W0223
 
-    def __init__(self, model: Type[MODEL], annotations: dict[str, Any]) -> None:
+    def __init__(self, model: type[MODEL], annotations: dict[str, Any]) -> None:
         super().__init__(model)
         self._annotations = annotations
 
     def _join_table_with_forwarded_fields(
-        self, model: Type[MODEL], table: Table, field: str, forwarded_fields: str
+        self, model: type[MODEL], table: Table, field: str, forwarded_fields: str
     ) -> tuple[Table, str]:
         if field in model._meta.fields_db_projection and not forwarded_fields:
             return table, model._meta.fields_db_projection[field]
@@ -1459,7 +1449,7 @@ class FieldSelectQuery(AwaitableQuery):
 
         raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')
 
-    def resolve_to_python_value(self, model: Type[MODEL], field: str) -> Callable:
+    def resolve_to_python_value(self, model: type[MODEL], field: str) -> Callable:
         if field in model._meta.fetch_fields:
             # return as is to get whole model objects
             return lambda x: x
@@ -1522,7 +1512,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: type[MODEL],
         db: BaseDBAsyncClient,
         q_objects: list[Q],
         single: bool,
@@ -1650,7 +1640,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: type[MODEL],
         db: BaseDBAsyncClient,
         q_objects: list[Q],
         single: bool,
@@ -1768,7 +1758,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
 class RawSQLQuery(AwaitableQuery):
     __slots__ = ("_sql", "_db")
 
-    def __init__(self, model: Type[MODEL], db: BaseDBAsyncClient, sql: str) -> None:
+    def __init__(self, model: type[MODEL], db: BaseDBAsyncClient, sql: str) -> None:
         super().__init__(model)
         self._sql = sql
         self._db = db
@@ -1790,7 +1780,7 @@ class BulkUpdateQuery(UpdateQuery, Generic[MODEL]):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: type[MODEL],
         db: BaseDBAsyncClient,
         q_objects: list[Q],
         annotations: dict[str, Any],
@@ -1890,7 +1880,7 @@ class BulkCreateQuery(AwaitableQuery, Generic[MODEL]):
 
     def __init__(
         self,
-        model: Type[MODEL],
+        model: type[MODEL],
         db: BaseDBAsyncClient,
         objects: Iterable[MODEL],
         batch_size: Optional[int] = None,

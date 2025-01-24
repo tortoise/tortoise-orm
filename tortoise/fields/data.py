@@ -5,7 +5,7 @@ import warnings
 from collections.abc import Callable
 from decimal import Decimal
 from enum import Enum, IntEnum
-from typing import TYPE_CHECKING, Any, Optional, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Optional, TypeVar, Union
 from uuid import UUID, uuid4
 
 from pypika_tortoise import functions
@@ -360,7 +360,7 @@ class DatetimeField(Field[datetime.datetime], datetime.datetime):
         return value
 
     def to_db_value(
-        self, value: Optional[DatetimeFieldQueryValueType], instance: "Union[Type[Model], Model]"
+        self, value: Optional[DatetimeFieldQueryValueType], instance: "Union[type[Model], Model]"
     ) -> Optional[DatetimeFieldQueryValueType]:
         # Only do this if it is a Model instance, not class. Test for guaranteed instance var
         if hasattr(instance, "_saved_in_db") and (
@@ -410,7 +410,7 @@ class DateField(Field[datetime.date], datetime.date):
         return value
 
     def to_db_value(
-        self, value: Optional[Union[datetime.date, str]], instance: "Union[Type[Model], Model]"
+        self, value: Optional[Union[datetime.date, str]], instance: "Union[type[Model], Model]"
     ) -> Optional[datetime.date]:
         if value is not None and not isinstance(value, datetime.date):
             value = parse_datetime(value).date()
@@ -449,7 +449,7 @@ class TimeField(Field[datetime.time], datetime.time):
     def to_db_value(
         self,
         value: Optional[Union[datetime.time, datetime.timedelta]],
-        instance: "Union[Type[Model], Model]",
+        instance: "Union[type[Model], Model]",
     ) -> Optional[Union[datetime.time, datetime.timedelta]]:
         # Only do this if it is a Model instance, not class. Test for guaranteed instance var
         if hasattr(instance, "_saved_in_db") and (
@@ -497,7 +497,7 @@ class TimeDeltaField(Field[datetime.timedelta]):
         return datetime.timedelta(microseconds=value)
 
     def to_db_value(
-        self, value: Optional[datetime.timedelta], instance: "Union[Type[Model], Model]"
+        self, value: Optional[datetime.timedelta], instance: "Union[type[Model], Model]"
     ) -> Optional[int]:
         self.validate(value)
 
@@ -571,7 +571,7 @@ class JSONField(Field[T], dict, list):  # type: ignore
     def to_db_value(
         self,
         value: Optional[Union[T, dict, list, str, bytes]],
-        instance: "Union[Type[Model], Model]",
+        instance: "Union[type[Model], Model]",
     ) -> Optional[str]:
         self.validate(value)
         if value is None:
@@ -639,7 +639,7 @@ class UUIDField(Field[UUID], UUID):
             kwargs["default"] = uuid4
         super().__init__(**kwargs)
 
-    def to_db_value(self, value: Any, instance: "Union[Type[Model], Model]") -> Optional[str]:
+    def to_db_value(self, value: Any, instance: "Union[type[Model], Model]") -> Optional[str]:
         return value and str(value)
 
     def to_python_value(self, value: Any) -> Optional[UUID]:
@@ -672,7 +672,7 @@ class BinaryField(Field[bytes], bytes):  # type: ignore
 class IntEnumFieldInstance(SmallIntField):
     def __init__(
         self,
-        enum_type: Type[IntEnum],
+        enum_type: type[IntEnum],
         description: Optional[str] = None,
         generated: bool = False,
         **kwargs: Any,
@@ -701,7 +701,7 @@ class IntEnumFieldInstance(SmallIntField):
         return value
 
     def to_db_value(
-        self, value: Union[IntEnum, None, int], instance: "Union[Type[Model], Model]"
+        self, value: Union[IntEnum, None, int], instance: "Union[type[Model], Model]"
     ) -> Union[int, None]:
         if isinstance(value, IntEnum):
             value = int(value.value)
@@ -715,7 +715,7 @@ IntEnumType = TypeVar("IntEnumType", bound=IntEnum)
 
 
 def IntEnumField(
-    enum_type: Type[IntEnumType],
+    enum_type: type[IntEnumType],
     description: Optional[str] = None,
     **kwargs: Any,
 ) -> IntEnumType:
@@ -742,7 +742,7 @@ def IntEnumField(
 class CharEnumFieldInstance(CharField):
     def __init__(
         self,
-        enum_type: Type[Enum],
+        enum_type: type[Enum],
         description: Optional[str] = None,
         max_length: int = 0,
         **kwargs: Any,
@@ -765,7 +765,7 @@ class CharEnumFieldInstance(CharField):
         return self.enum_type(value) if value is not None else None
 
     def to_db_value(
-        self, value: Union[Enum, None, str], instance: "Union[Type[Model], Model]"
+        self, value: Union[Enum, None, str], instance: "Union[type[Model], Model]"
     ) -> Union[str, None]:
         self.validate(value)
         if isinstance(value, Enum):
@@ -779,7 +779,7 @@ CharEnumType = TypeVar("CharEnumType", bound=Enum)
 
 
 def CharEnumField(
-    enum_type: Type[CharEnumType],
+    enum_type: type[CharEnumType],
     description: Optional[str] = None,
     max_length: int = 0,
     **kwargs: Any,

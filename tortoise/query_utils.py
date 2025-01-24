@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import copy
-from typing import TYPE_CHECKING, Optional, Type, cast
+from typing import TYPE_CHECKING, Optional, cast
 
 from pypika_tortoise import Table
 from pypika_tortoise.terms import Criterion, Term
@@ -79,7 +79,7 @@ def get_joins_for_related_field(
 
 
 def resolve_nested_field(
-    model: Type["Model"], table: Table, field: str
+    model: type["Model"], table: Table, field: str
 ) -> tuple[Term, list[TableCriterionTuple], Optional[Field]]:
     """
     Resolves a nested field string like events__participants__name and

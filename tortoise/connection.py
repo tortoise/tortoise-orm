@@ -3,7 +3,7 @@ import contextvars
 import importlib
 from contextvars import ContextVar
 from copy import copy
-from typing import TYPE_CHECKING, Any, Optional, Type, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from tortoise.backends.base.config_generator import expand_db_url
 from tortoise.exceptions import ConfigurationError
@@ -65,7 +65,7 @@ class ConnectionHandler:
     def _clear_storage(self) -> None:
         self._get_storage().clear()
 
-    def _discover_client_class(self, db_info: dict) -> Type["BaseDBAsyncClient"]:
+    def _discover_client_class(self, db_info: dict) -> type["BaseDBAsyncClient"]:
         # Let exception bubble up for transparency
         engine_str = db_info.get("engine", "")
         engine_module = importlib.import_module(engine_str)

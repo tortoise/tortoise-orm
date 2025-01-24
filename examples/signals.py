@@ -2,7 +2,7 @@
 This example demonstrates model signals usage
 """
 
-from typing import Optional, Type
+from typing import Optional
 
 from tortoise import BaseDBAsyncClient, Tortoise, fields, run_async
 from tortoise.models import Model
@@ -22,14 +22,14 @@ class Signal(Model):
 
 @pre_save(Signal)
 async def signal_pre_save(
-    sender: "Type[Signal]", instance: Signal, using_db, update_fields
+    sender: "type[Signal]", instance: Signal, using_db, update_fields
 ) -> None:
     print(sender, instance, using_db, update_fields)
 
 
 @post_save(Signal)
 async def signal_post_save(
-    sender: "Type[Signal]",
+    sender: "type[Signal]",
     instance: Signal,
     created: bool,
     using_db: "Optional[BaseDBAsyncClient]",
@@ -40,14 +40,14 @@ async def signal_post_save(
 
 @pre_delete(Signal)
 async def signal_pre_delete(
-    sender: "Type[Signal]", instance: Signal, using_db: "Optional[BaseDBAsyncClient]"
+    sender: "type[Signal]", instance: Signal, using_db: "Optional[BaseDBAsyncClient]"
 ) -> None:
     print(sender, instance, using_db)
 
 
 @post_delete(Signal)
 async def signal_post_delete(
-    sender: "Type[Signal]", instance: Signal, using_db: "Optional[BaseDBAsyncClient]"
+    sender: "type[Signal]", instance: Signal, using_db: "Optional[BaseDBAsyncClient]"
 ) -> None:
     print(sender, instance, using_db)
 

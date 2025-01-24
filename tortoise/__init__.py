@@ -11,7 +11,7 @@ from collections.abc import Callable, Coroutine, Iterable
 from copy import deepcopy
 from inspect import isclass
 from types import ModuleType
-from typing import Any, Type, cast
+from typing import Any, cast
 
 from pypika_tortoise import Query, Table
 
@@ -34,8 +34,8 @@ from tortoise.utils import generate_schema_for_client
 
 
 class Tortoise:
-    apps: dict[str, dict[str, Type["Model"]]] = {}
-    table_name_generator: Callable[[Type["Model"]], str] | None = None
+    apps: dict[str, dict[str, type["Model"]]] = {}
+    table_name_generator: Callable[[type["Model"]], str] | None = None
     _inited: bool = False
 
     @classmethod
@@ -53,7 +53,7 @@ class Tortoise:
 
     @classmethod
     def describe_model(
-        cls, model: Type["Model"], serializable: bool = True
+        cls, model: type["Model"], serializable: bool = True
     ) -> dict[str, Any]:  # pragma: nocoverage
         """
         Describes the given list of models or ALL registered models.
@@ -79,7 +79,7 @@ class Tortoise:
 
     @classmethod
     def describe_models(
-        cls, models: list[Type["Model"]] | None = None, serializable: bool = True
+        cls, models: list[type["Model"]] | None = None, serializable: bool = True
     ) -> dict[str, dict[str, Any]]:
         """
         Describes the given list of models or ALL registered models.
@@ -115,7 +115,7 @@ class Tortoise:
 
     @classmethod
     def _init_relations(cls) -> None:
-        def get_related_model(related_app_name: str, related_model_name: str) -> Type["Model"]:
+        def get_related_model(related_app_name: str, related_model_name: str) -> type["Model"]:
             """
             Test, if app and model really exist. Throws a ConfigurationError with a hopefully
             helpful message. If successful, returns the requested model.
@@ -151,7 +151,7 @@ class Tortoise:
                 )
             return items[0], items[1]
 
-        def init_fk_o2o_field(model: Type["Model"], field: str, is_o2o=False) -> None:
+        def init_fk_o2o_field(model: type["Model"], field: str, is_o2o=False) -> None:
             fk_object = cast(
                 "OneToOneFieldInstance | ForeignKeyFieldInstance", model._meta.fields_map[field]
             )
@@ -284,7 +284,7 @@ class Tortoise:
                     related_model._meta.add_field(backward_relation_name, m2m_relation)
 
     @classmethod
-    def _discover_models(cls, models_path: ModuleType | str, app_label: str) -> list[Type["Model"]]:
+    def _discover_models(cls, models_path: ModuleType | str, app_label: str) -> list[type["Model"]]:
         if isinstance(models_path, ModuleType):
             module = models_path
         else:
@@ -329,7 +329,7 @@ class Tortoise:
 
         :raises ConfigurationError: If models are invalid.
         """
-        app_models: list[Type[Model]] = []
+        app_models: list[type[Model]] = []
         for models_path in models_paths:
             app_models += cls._discover_models(models_path, app_label)
 
@@ -399,7 +399,7 @@ class Tortoise:
         use_tz: bool = False,
         timezone: str = "UTC",
         routers: list[str | type] | None = None,
-        table_name_generator: Callable[[Type["Model"]], str] | None = None,
+        table_name_generator: Callable[[type["Model"]], str] | None = None,
     ) -> None:
         """
         Sets up Tortoise-ORM: loads apps and models, configures database connections but does not

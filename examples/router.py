@@ -1,11 +1,7 @@
 """
 This example to use router to implement read/write separation
 """
-
-from typing import Type
-
-from tortoise import Tortoise, fields, run_async
-from tortoise.models import Model
+from tortoise import Model, Tortoise, fields, run_async
 
 
 class Event(Model):
@@ -21,10 +17,10 @@ class Event(Model):
 
 
 class Router:
-    def db_for_read(self, model: Type[Model]):
+    def db_for_read(self, model: type[Model]):
         return "slave"
 
-    def db_for_write(self, model: Type[Model]):
+    def db_for_write(self, model: type[Model]):
         return "master"
 
 

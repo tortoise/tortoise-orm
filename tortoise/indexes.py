@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Type
+from typing import TYPE_CHECKING, Any
 
 from pypika_tortoise.context import DEFAULT_SQL_CONTEXT
 from pypika_tortoise.terms import Term, ValueWrapper
@@ -51,12 +51,12 @@ class Index:
             "extra": self.extra,
         }
 
-    def index_name(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]") -> str:
+    def index_name(self, schema_generator: "BaseSchemaGenerator", model: "type[Model]") -> str:
         # This function is required by aerich
         return self.name or schema_generator._generate_index_name("idx", model, self.field_names)
 
     def get_sql(
-        self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool
+        self, schema_generator: "BaseSchemaGenerator", model: "type[Model]", safe: bool
     ) -> str:
         # This function is required by aerich
         return schema_generator._get_index_sql(

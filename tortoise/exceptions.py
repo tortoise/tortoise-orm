@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 if TYPE_CHECKING:
-    from tortoise import Model, Type
+    from tortoise import Model
 
 
 class BaseORMException(Exception):
@@ -55,8 +55,8 @@ class NoValuesFetched(OperationalError):
 class NotExistOrMultiple(OperationalError):
     TEMPLATE = ""
 
-    def __init__(self, model: "Union[Type[Model], str]", *args) -> None:
-        self.model: "Optional[Type[Model]]" = None
+    def __init__(self, model: "Union[type[Model], str]", *args) -> None:
+        self.model: "Optional[type[Model]]" = None
         if isinstance(model, str):
             args = (model,) + args
         else:
@@ -83,8 +83,8 @@ class ObjectDoesNotExistError(OperationalError, KeyError):
     The DoesNotExist exception is raised when an item with the passed primary key does not exist
     """
 
-    def __init__(self, model: "Type[Model]", pk_name: str, pk_val: Any) -> None:
-        self.model: "Type[Model]" = model
+    def __init__(self, model: "type[Model]", pk_name: str, pk_val: Any) -> None:
+        self.model: "type[Model]" = model
         self.pk_name: str = pk_name
         self.pk_val: Any = pk_val
 

@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Type, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from pypika_tortoise import Case as PypikaCase
 from pypika_tortoise import Field as PypikaField
@@ -36,7 +36,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 @dataclass(frozen=True)
 class ResolveContext:
-    model: Type["Model"]
+    model: type["Model"]
     table: Table
     annotations: dict[str, Any]
     custom_filters: dict[str, FilterInfoDict]
@@ -350,7 +350,7 @@ class Q:
         return modifier
 
     def _process_filter_kwarg(
-        self, model: "Type[Model]", key: str, value: Any, table: Table
+        self, model: "type[Model]", key: str, value: Any, table: Table
     ) -> tuple[Criterion, tuple[Table, Criterion] | None]:
         join = None
 
@@ -500,7 +500,7 @@ class Function(Expression):
 
     __slots__ = ("field", "field_object", "default_values")
 
-    database_func: Type[PypikaFunction] = PypikaFunction
+    database_func: type[PypikaFunction] = PypikaFunction
     # Enable populate_field_object where we want to try and preserve the field type.
     populate_field_object = False
 
@@ -570,7 +570,7 @@ class Aggregate(Function):
     :param is_distinct: Flag for aggregate with distinction
     """
 
-    database_func: Type[AggregateFunction] = DistinctOptionFunction
+    database_func: type[AggregateFunction] = DistinctOptionFunction
 
     def __init__(
         self,

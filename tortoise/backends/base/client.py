@@ -3,7 +3,7 @@ from __future__ import annotations
 import abc
 import asyncio
 from collections.abc import Sequence
-from typing import Any, Generic, Type, TypeVar, cast
+from typing import Any, Generic, TypeVar, cast
 
 from pypika_tortoise import Query
 
@@ -85,17 +85,17 @@ class BaseDBAsyncClient(abc.ABC):
     Parameters get passed as kwargs, and is mostly driver specific.
 
     .. attribute:: query_class
-        :annotation: Type[pypika_tortoise.Query]
+        :annotation: type[pypika_tortoise.Query]
 
         The PyPika Query dialect (low level dialect)
 
     .. attribute:: executor_class
-        :annotation: Type[BaseExecutor]
+        :annotation: type[BaseExecutor]
 
         The executor dialect class (high level dialect)
 
     .. attribute:: schema_generator
-        :annotation: Type[BaseSchemaGenerator]
+        :annotation: type[BaseSchemaGenerator]
 
         The DDL schema generator
 
@@ -109,9 +109,9 @@ class BaseDBAsyncClient(abc.ABC):
     _parent: "BaseDBAsyncClient"
     _pool: Any
     connection_name: str
-    query_class: Type[Query] = Query
-    executor_class: Type[BaseExecutor] = BaseExecutor
-    schema_generator: Type[BaseSchemaGenerator] = BaseSchemaGenerator
+    query_class: type[Query] = Query
+    executor_class: type[BaseExecutor] = BaseExecutor
+    schema_generator: type[BaseSchemaGenerator] = BaseSchemaGenerator
     capabilities: Capabilities = Capabilities("")
 
     def __init__(self, connection_name: str, fetch_inserted: bool = True, **kwargs: Any) -> None:

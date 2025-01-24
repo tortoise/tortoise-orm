@@ -1,5 +1,5 @@
 import sys
-from typing import TYPE_CHECKING, List, Type, Union
+from typing import TYPE_CHECKING, List, Union
 
 import pydantic
 from pydantic import BaseModel, ConfigDict, RootModel
@@ -17,7 +17,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 
 def _get_fetch_fields(
-    pydantic_class: "Type[PydanticModel]", model_class: "Type[Model]"
+    pydantic_class: "type[PydanticModel]", model_class: "type[Model]"
 ) -> list[str]:
     """
     Recursively collect fields needed to fetch

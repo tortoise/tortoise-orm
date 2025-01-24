@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from hashlib import sha256
-from typing import TYPE_CHECKING, Any, Type, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields import JSONField, TextField, UUIDField
@@ -144,7 +144,7 @@ class BaseSchemaGenerator:
         return sha256(";".join(args).encode("utf-8")).hexdigest()[:length]
 
     def _generate_index_name(
-        self, prefix: str, model: "Type[Model] | str", field_names: list[str]
+        self, prefix: str, model: "type[Model] | str", field_names: list[str]
     ) -> str:
         # NOTE: for compatibility, index name should not be longer than 30
         # characters (Oracle limit).
@@ -173,7 +173,7 @@ class BaseSchemaGenerator:
 
     def _get_index_sql(
         self,
-        model: "Type[Model]",
+        model: "type[Model]",
         field_names: list[str],
         safe: bool,
         index_name: str | None = None,
@@ -200,7 +200,7 @@ class BaseSchemaGenerator:
             extra="",
         )
 
-    def _get_unique_constraint_sql(self, model: "Type[Model]", field_names: list[str]) -> str:
+    def _get_unique_constraint_sql(self, model: "type[Model]", field_names: list[str]) -> str:
         return self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(
             index_name=self._generate_index_name("uid", model, field_names),
             fields=", ".join([self.quote(f) for f in field_names]),
@@ -213,12 +213,12 @@ class BaseSchemaGenerator:
             return sql_type
         raise ConfigurationError(f"Can't get SQL type of {pk_field} for {self.DIALECT}")
 
-    def _get_table_sql(self, model: "Type[Model]", safe: bool = True) -> dict:
+    def _get_table_sql(self, model: "type[Model]", safe: bool = True) -> dict:
         fields_to_create = []
         fields_with_index = []
         m2m_tables_for_create = []
         references = set()
-        models_to_create: "list[Type[Model]]" = []
+        models_to_create: "list[type[Model]]" = []
 
         self._get_models_to_create(models_to_create)
         models_tables = [model._meta.db_table for model in models_to_create]
@@ -458,7 +458,7 @@ class BaseSchemaGenerator:
             "m2m_tables": m2m_tables_for_create,
         }
 
-    def _get_models_to_create(self, models_to_create: "list[Type[Model]]") -> None:
+    def _get_models_to_create(self, models_to_create: "list[type[Model]]") -> None:
         from tortoise import Tortoise
 
         for app in Tortoise.apps.values():
@@ -468,7 +468,7 @@ class BaseSchemaGenerator:
                     models_to_create.append(model)
 
     def get_create_schema_sql(self, safe: bool = True) -> str:
-        models_to_create: "list[Type[Model]]" = []
+        models_to_create: "list[type[Model]]" = []
 
         self._get_models_to_create(models_to_create)
 

@@ -1,5 +1,3 @@
-from typing import Type
-
 from tests.testmodels import (
     Author,
     Book,
@@ -845,7 +843,7 @@ class TestQueryset(test.TestCase):
 
 
 class TestNotExist(test.TestCase):
-    exp_cls: Type[NotExistOrMultiple] = DoesNotExist
+    exp_cls: type[NotExistOrMultiple] = DoesNotExist
 
     @test.requireCapability(dialect="sqlite")
     def test_does_not_exist(self):

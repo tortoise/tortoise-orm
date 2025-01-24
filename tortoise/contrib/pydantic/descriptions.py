@@ -1,7 +1,7 @@
 import dataclasses
 import sys
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Optional, Type
+from typing import TYPE_CHECKING, Any, Optional
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -27,7 +27,7 @@ class ModelDescription:
     m2m_fields: list[Field] = dataclasses.field(default_factory=list)
 
     @classmethod
-    def from_model(cls, model: Type["Model"]) -> Self:
+    def from_model(cls, model: type["Model"]) -> Self:
         return cls(
             pk_field=model._meta.fields_map[model._meta.pk_attr],
             data_fields=[
@@ -140,7 +140,7 @@ class PydanticMetaData:
         )
         return pmd
 
-    def construct_pydantic_meta(self, meta_override: Type) -> "PydanticMetaData":
+    def construct_pydantic_meta(self, meta_override: type) -> "PydanticMetaData":
         def get_param_from_meta_override(attr: str) -> Any:
             return getattr(meta_override, attr, getattr(self, attr))
 

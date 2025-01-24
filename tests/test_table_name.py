@@ -1,11 +1,9 @@
-from typing import Type
-
 from tortoise import Tortoise, fields
 from tortoise.contrib.test import SimpleTestCase
 from tortoise.models import Model
 
 
-def table_name_generator(model_cls: Type[Model]):
+def table_name_generator(model_cls: type[Model]):
     return f"test_{model_cls.__name__.lower()}"
 
 

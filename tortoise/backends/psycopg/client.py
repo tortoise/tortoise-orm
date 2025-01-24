@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import Callable
 from contextlib import _AsyncGeneratorContextManager
 from ssl import SSLContext
-from typing import Any, Type, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 import psycopg
 import psycopg.conninfo
@@ -54,9 +54,9 @@ class PsycopgSQLQueryBuilder(PostgreSQLQueryBuilder):
 
 
 class PsycopgClient(postgres_client.BasePostgresClient):
-    query_class: Type[PsycopgSQLQuery] = PsycopgSQLQuery
-    executor_class: Type[executor.PsycopgExecutor] = executor.PsycopgExecutor
-    schema_generator: Type[PsycopgSchemaGenerator] = PsycopgSchemaGenerator
+    query_class: type[PsycopgSQLQuery] = PsycopgSQLQuery
+    executor_class: type[executor.PsycopgExecutor] = executor.PsycopgExecutor
+    schema_generator: type[PsycopgSchemaGenerator] = PsycopgSchemaGenerator
     _pool: AsyncConnectionPool | None = None
     _connection: psycopg.AsyncConnection
     default_timeout: float = 30

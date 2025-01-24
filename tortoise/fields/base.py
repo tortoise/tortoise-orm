@@ -2,7 +2,7 @@ import sys
 import warnings
 from collections.abc import Callable
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Generic, Optional, Type, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, Union, overload
 
 from pypika_tortoise.terms import Term
 
@@ -40,7 +40,7 @@ NO_ACTION = OnDelete.NO_ACTION
 
 class _FieldMeta(type):
     # TODO: Require functions to return field instances instead of this hack
-    def __new__(mcs, name: str, bases: tuple[Type, ...], attrs: dict) -> type:
+    def __new__(mcs, name: str, bases: tuple[type, ...], attrs: dict) -> type:
         if len(bases) > 1 and bases[0] is Field:
             # Instantiate class with only the 1st base class (should be Field)
             cls = type.__new__(mcs, name, (bases[0],), attrs)
@@ -73,7 +73,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
     These attributes needs to be defined when defining an actual field type.
 
     .. attribute:: field_type
-        :annotation: Type[Any]
+        :annotation: type[Any]
 
         The Python type the field is.
         If adding a type as a mixin, _FieldMeta will automatically set this to that.
@@ -137,7 +137,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
     """
 
     # Field_type is a readonly property for the instance, it is set by _FieldMeta
-    field_type: Type[Any] = None  # type: ignore
+    field_type: type[Any] = None  # type: ignore
     indexable: bool = True
     has_db_field: bool = True
     skip_to_python_if_native: bool = False
@@ -153,13 +153,13 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             return super().__new__(cls)
 
         @overload
-        def __get__(self, instance: None, owner: Type["Model"]) -> "Field[VALUE]": ...
+        def __get__(self, instance: None, owner: type["Model"]) -> "Field[VALUE]": ...
 
         @overload
-        def __get__(self, instance: "Model", owner: Type["Model"]) -> VALUE: ...
+        def __get__(self, instance: "Model", owner: type["Model"]) -> VALUE: ...
 
         def __get__(
-            self, instance: Optional["Model"], owner: Type["Model"]
+            self, instance: Optional["Model"], owner: type["Model"]
         ) -> "Field[VALUE] | VALUE": ...
 
         def __set__(self, instance: "Model", value: VALUE) -> None: ...
@@ -228,10 +228,10 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         self.docstring: Optional[str] = None
         self.validators: list[Union[Validator, Callable]] = validators or []
         # TODO: consider making this not be set from constructor
-        self.model: Type["Model"] = model  # type: ignore
+        self.model: type["Model"] = model  # type: ignore
         self.reference: "Optional[Field]" = None
 
-    def to_db_value(self, value: Any, instance: "Union[Type[Model], Model]") -> Any:
+    def to_db_value(self, value: Any, instance: "Union[type[Model], Model]") -> Any:
         """
         Converts from the Python type to the DB type.
 
@@ -390,7 +390,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
                 }
         """
 
-        def _type_name(typ: Type) -> str:
+        def _type_name(typ: type) -> str:
             if typ.__module__ == "builtins":
                 return typ.__name__
             if typ.__module__ == "typing":

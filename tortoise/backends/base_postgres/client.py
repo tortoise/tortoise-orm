@@ -3,7 +3,7 @@ import asyncio
 from asyncio.events import AbstractEventLoop
 from collections.abc import Callable, Coroutine
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Optional, SupportsInt, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Optional, SupportsInt, TypeVar, Union
 
 from pypika_tortoise import PostgreSQLQuery
 
@@ -39,9 +39,9 @@ class BasePostgresPool:
 
 class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
     DSN_TEMPLATE = "postgres://{user}:{password}@{host}:{port}/{database}"
-    query_class: Type[PostgreSQLQuery] = PostgreSQLQuery
-    executor_class: Type[BasePostgresExecutor] = BasePostgresExecutor
-    schema_generator: Type[BasePostgresSchemaGenerator] = BasePostgresSchemaGenerator
+    query_class: type[PostgreSQLQuery] = PostgreSQLQuery
+    executor_class: type[BasePostgresExecutor] = BasePostgresExecutor
+    schema_generator: type[BasePostgresSchemaGenerator] = BasePostgresSchemaGenerator
     capabilities = Capabilities(
         "postgres", support_update_limit_order_by=False, support_for_posix_regex_queries=True
     )

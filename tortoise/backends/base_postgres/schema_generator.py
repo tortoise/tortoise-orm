@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Type
+from typing import TYPE_CHECKING, Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
@@ -71,7 +71,7 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
 
     def _get_index_sql(
         self,
-        model: "Type[Model]",
+        model: "type[Model]",
         field_names: list[str],
         safe: bool,
         index_name: str | None = None,

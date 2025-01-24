@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Type
+from typing import TYPE_CHECKING, Any
 
 from tortoise.connection import connections
 from tortoise.exceptions import ConfigurationError
@@ -17,7 +17,7 @@ class ConnectionRouter:
     def init_routers(self, routers: list[Callable]) -> None:
         self._routers = [r() for r in routers]
 
-    def _router_func(self, model: Type["Model"], action: str) -> Any:
+    def _router_func(self, model: type["Model"], action: str) -> Any:
         for r in self._routers:
             try:
                 method = getattr(r, action)
@@ -29,16 +29,16 @@ class ConnectionRouter:
                 if chosen_db:
                     return chosen_db
 
-    def _db_route(self, model: Type["Model"], action: str) -> "BaseDBAsyncClient" | None:
+    def _db_route(self, model: type["Model"], action: str) -> "BaseDBAsyncClient" | None:
         try:
             return connections.get(self._router_func(model, action))
         except ConfigurationError:
             return None
 
-    def db_for_read(self, model: Type["Model"]) -> "BaseDBAsyncClient" | None:
+    def db_for_read(self, model: type["Model"]) -> "BaseDBAsyncClient" | None:
         return self._db_route(model, "db_for_read")
 
-    def db_for_write(self, model: Type["Model"]) -> "BaseDBAsyncClient" | None:
+    def db_for_write(self, model: type["Model"]) -> "BaseDBAsyncClient" | None:
         return self._db_route(model, "db_for_write")
 
 

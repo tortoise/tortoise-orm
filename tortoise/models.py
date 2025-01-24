@@ -4,7 +4,7 @@ import re
 from collections.abc import Awaitable, Callable, Generator, Iterable
 from copy import copy, deepcopy
 from functools import partial
-from typing import Any, Optional, Type, TypedDict, TypeVar, Union, cast
+from typing import Any, Optional, TypedDict, TypeVar, Union, cast
 
 from pypika_tortoise import Order, Query, Table
 from pypika_tortoise.terms import Term
@@ -94,7 +94,7 @@ def _fk_setter(
 
 
 def _fk_getter(
-    self: "Model", _key: str, ftype: "Type[Model]", relation_field: str, to_field: str
+    self: "Model", _key: str, ftype: "type[Model]", relation_field: str, to_field: str
 ) -> Awaitable:
     try:
         return getattr(self, _key)
@@ -106,7 +106,7 @@ def _fk_getter(
 
 
 def _rfk_getter(
-    self: "Model", _key: str, ftype: "Type[Model]", frelfield: str, from_field: str
+    self: "Model", _key: str, ftype: "type[Model]", frelfield: str, from_field: str
 ) -> ReverseRelation:
     val = getattr(self, _key, None)
     if val is None:
@@ -116,7 +116,7 @@ def _rfk_getter(
 
 
 def _ro2o_getter(
-    self: "Model", _key: str, ftype: "Type[Model]", frelfield: str, from_field: str
+    self: "Model", _key: str, ftype: "type[Model]", frelfield: str, from_field: str
 ) -> "QuerySetSingle[Optional[Model]]":
     if hasattr(self, _key):
         return getattr(self, _key)
@@ -136,7 +136,7 @@ def _m2m_getter(
     return val
 
 
-def _get_comments(cls: "Type[Model]") -> dict[str, str]:
+def _get_comments(cls: "type[Model]") -> dict[str, str]:
     """
     Get comments exactly before attributes
 
@@ -237,7 +237,7 @@ class MetaInfo:
         self.basetable: Table = Table("")
         self.pk_attr: str = getattr(meta, "pk_attr", "")
         self.generated_db_fields: tuple[str, ...] = None  # type: ignore
-        self._model: Type["Model"] = None  # type: ignore
+        self._model: type["Model"] = None  # type: ignore
         self.table_description: str = getattr(meta, "table_description", "")
         self.pk: Field = None  # type: ignore
         self.db_pk_column: str = ""
@@ -474,7 +474,7 @@ class MetaInfo:
 class ModelMeta(type):
     __slots__ = ()
 
-    def __new__(cls, name: str, bases: tuple[Type, ...], attrs: dict[str, Any]) -> "ModelMeta":
+    def __new__(cls, name: str, bases: tuple[type, ...], attrs: dict[str, Any]) -> "ModelMeta":
         fields_db_projection: dict[str, str] = {}
         meta_class: "Model.Meta" = attrs.get("Meta", type("Meta", (), {}))
         pk_attr: str = "id"
@@ -528,7 +528,7 @@ class ModelMeta(type):
         return new_class
 
     @classmethod
-    def _search_for_field_attributes(cls, base: Type, attrs: dict) -> None:
+    def _search_for_field_attributes(cls, base: type, attrs: dict) -> None:
         """
         Searching for class attributes of type fields.Field
         in the given class.
@@ -666,7 +666,7 @@ class ModelMeta(type):
             meta.abstract = True
         return meta
 
-    def __getitem__(cls: Type[MODEL], key: Any) -> QuerySetSingle[MODEL]:  # type: ignore
+    def __getitem__(cls: type[MODEL], key: Any) -> QuerySetSingle[MODEL]:  # type: ignore
         return cls._getbypk(key)  # type: ignore
 
 
@@ -677,7 +677,7 @@ class Model(metaclass=ModelMeta):
 
     # I don' like this here, but it makes auto completion and static analysis much happier
     _meta = MetaInfo(None)  # type: ignore
-    _listeners: dict[Signals, dict[Type[MODEL], list[Callable]]] = {  # type: ignore
+    _listeners: dict[Signals, dict[type[MODEL], list[Callable]]] = {  # type: ignore
         Signals.pre_save: {},
         Signals.post_save: {},
         Signals.pre_delete: {},
@@ -749,7 +749,7 @@ class Model(metaclass=ModelMeta):
         return passed_fields
 
     @classmethod
-    def _init_from_db(cls: Type[MODEL], **kwargs: Any) -> MODEL:
+    def _init_from_db(cls: type[MODEL], **kwargs: Any) -> MODEL:
         self = cls.__new__(cls)
         self._partial = False
         self._saved_in_db = True
@@ -852,7 +852,7 @@ class Model(metaclass=ModelMeta):
             )
 
     @classmethod
-    async def _getbypk(cls: Type[MODEL], key: Any) -> MODEL:
+    async def _getbypk(cls: type[MODEL], key: Any) -> MODEL:
         try:
             return await cls.get(pk=key)
         except (DoesNotExist, ValueError):
@@ -1153,7 +1153,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def update_or_create(
-        cls: Type[MODEL],
+        cls: type[MODEL],
         defaults: Optional[dict] = None,
         using_db: Optional[BaseDBAsyncClient] = None,
         **kwargs: Any,
@@ -1177,7 +1177,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def create(
-        cls: Type[MODEL], using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
+        cls: type[MODEL], using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
     ) -> MODEL:
         """
         Create a record in the DB and returns the object.
@@ -1204,7 +1204,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def bulk_update(
-        cls: Type[MODEL],
+        cls: type[MODEL],
         objects: Iterable[MODEL],
         fields: Iterable[str],
         batch_size: Optional[int] = None,
@@ -1234,7 +1234,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     async def in_bulk(
-        cls: Type[MODEL],
+        cls: type[MODEL],
         id_list: Iterable[Union[str, int]],
         field_name: str = "pk",
         using_db: Optional[BaseDBAsyncClient] = None,
@@ -1251,7 +1251,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def bulk_create(
-        cls: Type[MODEL],
+        cls: type[MODEL],
         objects: Iterable[MODEL],
         batch_size: Optional[int] = None,
         ignore_conflicts: bool = False,
@@ -1394,7 +1394,7 @@ class Model(metaclass=ModelMeta):
 
     @classmethod
     def exists(
-        cls: Type[MODEL], *args: Q, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
+        cls: type[MODEL], *args: Q, using_db: Optional[BaseDBAsyncClient] = None, **kwargs: Any
     ) -> ExistsQuery:
         """
         Return True/False whether record exists with the provided filter parameters.

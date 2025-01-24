@@ -3,7 +3,7 @@ import datetime
 import decimal
 from collections.abc import Callable, Iterable, Sequence
 from copy import copy
-from typing import TYPE_CHECKING, Any, Optional, Type, Union, cast
+from typing import TYPE_CHECKING, Any, Optional, Union, cast
 
 from pypika_tortoise import JoinType, Parameter, Table
 from pypika_tortoise.queries import QueryBuilder
@@ -38,12 +38,12 @@ class BaseExecutor:
 
     def __init__(
         self,
-        model: "Type[Model]",
+        model: "type[Model]",
         db: "BaseDBAsyncClient",
         prefetch_map: "Optional[dict[str, set[Union[str, Prefetch]]]]" = None,
         prefetch_queries: Optional[dict[str, list[tuple[Optional[str], "QuerySet"]]]] = None,
         select_related_idx: Optional[
-            list[tuple["Type[Model]", int, str, "Type[Model]", Iterable[Optional[str]]]]
+            list[tuple["type[Model]", int, str, "type[Model]", Iterable[Optional[str]]]]
         ] = None,
     ) -> None:
         self.model = model
@@ -262,7 +262,7 @@ class BaseExecutor:
         return sql
 
     async def execute_update(
-        self, instance: "Union[Type[Model], Model]", update_fields: Optional[Iterable[str]]
+        self, instance: "Union[type[Model], Model]", update_fields: Optional[Iterable[str]]
     ) -> int:
         values = []
         expressions = {}
@@ -279,7 +279,7 @@ class BaseExecutor:
             await self.db.execute_query(self.get_update_sql(update_fields, expressions), values)
         )[0]
 
-    async def execute_delete(self, instance: "Union[Type[Model], Model]") -> int:
+    async def execute_delete(self, instance: "Union[type[Model], Model]") -> int:
         return (
             await self.db.execute_query(
                 self.delete_query, [self.model._meta.pk.to_db_value(instance.pk, instance)]
@@ -466,7 +466,7 @@ class BaseExecutor:
         to_attr, related_queryset = related_query
         related_objects_for_fetch: dict[str, list] = {}
         relation_key_field = f"{field}_id"
-        model_to_field: dict["Type[Model]", str] = {}
+        model_to_field: dict["type[Model]", str] = {}
         for instance in instance_list:
             if (value := getattr(instance, relation_key_field)) is not None:
                 if (model_cls := instance.__class__) in model_to_field:
@@ -510,7 +510,7 @@ class BaseExecutor:
                 to_attr, related_query = self._prefetch_queries[field_name][0]
             else:
                 relation_field = self.model._meta.fields_map[field_name]
-                related_model: "Type[Model]" = relation_field.related_model  # type: ignore
+                related_model: "type[Model]" = relation_field.related_model  # type: ignore
                 related_query = related_model.all().using_db(self.db)
                 related_query.query = copy(
                     related_query.model._meta.basequery
