@@ -357,8 +357,9 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         # and therefore first need to instantiate dialect_cls
         elif isinstance(dialect_value, property) and dialect_cls is not None:
             try:
-                # instantiate the dialect_cls
-                dialect_cls_instance = dialect_cls(self)
+                # instantiate the dialect_cls. Codacy does not like dialect_cls(self), so lets do it manually
+                dialect_cls_instance = dialect_cls.__new__(dialect_cls)
+                dialect_cls_instance.__init__(self)
             except TypeError:
                 pass
             else:
