@@ -354,9 +354,9 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             v = getattr(self, key, None)  # get the requested key if present, also works with property
             return v  # and return it
         # it could be that dialect_value is a computed property, like in CharField._db_oracle.SQL_TYPE,
-        # and therefore first need to instanciate it
-        elif isinstance(dialect_value, property) and isinstance(dialect_cls, type):
-            return getattr(dialect_cls(self), key)  # instanciate the dialect_cls and get the value from the property
+        # and therefore first need to instantiate dialect_cls
+        elif isinstance(dialect_value, property) and callable(dialect_cls):
+            return getattr(dialect_cls(self), key)  # instantiate the dialect_cls and get the value from the property
         return dialect_value
 
     def describe(self, serializable: bool) -> dict:
