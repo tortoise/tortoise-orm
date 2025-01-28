@@ -347,15 +347,16 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         :param dialect: The requested SQL Dialect.
         :param key: The attribute/method name.
         """
-        dialect_cls = getattr(self, f"_db_{dialect}", None)
+        dialect_cls = getattr(self, f"_db_{dialect}", None)  # get, if present, the dialect class
+        # get, if present, the key of the dialect class. If no dialect class was found previously, it will also be None:
         dialect_value = getattr(dialect_cls, key, None)
-        if dialect_value is None:
-            v = getattr(self, key, None)
-            if isinstance(v, property):
-                return getattr(self, key)
-            return v
+        if dialect_value is None:  # if the key was not found in the dialect class, we have to look in self
+            v = getattr(self, key, None)  # get the requested key if present, also works with property
+            return v  # and return it
+        # it could be that dialect_value is a computed property, like in CharField._db_oracle.SQL_TYPE,
+        # and therefore first need to instanciate it
         elif isinstance(dialect_value, property) and isinstance(dialect_cls, type):
-            return getattr(dialect_cls(self), key)
+            return getattr(dialect_cls(self), key)  # instanciate the dialect_cls and get the value from the property
         return dialect_value
 
     def describe(self, serializable: bool) -> dict:
