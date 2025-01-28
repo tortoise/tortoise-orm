@@ -347,26 +347,18 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         :param dialect: The requested SQL Dialect.
         :param key: The attribute/method name.
         """
-        dialect_cls = getattr(self, f"_db_{dialect}", None)  # get, if present, the dialect class
-        # get, if present, the key of the dialect class. If no dialect class was found previously, it will also be None:
-        dialect_value = getattr(dialect_cls, key, None)
-        if dialect_value is None:  # if the key was not found in the dialect class, we have to look in self
-            v = getattr(self, key, None)  # get the requested key if present, also works with property
-            return v  # and return it
-        # it could be that dialect_value is a computed property, like in CharField._db_oracle.SQL_TYPE,
-        # and therefore first need to instantiate dialect_cls
-        elif isinstance(dialect_value, property) and dialect_cls is not None:
-            try:
-                # instantiate the dialect_cls. Codacy does not like dialect_cls(self), so lets do it manually
-                dialect_cls_instance = dialect_cls.__new__(dialect_cls)
-                dialect_cls_instance.__init__(self)
-            except TypeError:
-                pass
-            else:
-                # and get the value from the property
-                return getattr(dialect_cls_instance, key)
-            return None
-        return dialect_value
+        try:
+            dialect_cls = getattr(self, f"_db_{dialect}")  # throws AttributeError if not present
+            dialect_value = getattr(dialect_cls, key)  # throws AttributeError if not present
+        except AttributeError:
+            pass
+        else:  # we have dialect_cls and dialect_value, so lets use it
+            # it could be that dialect_value is a computed property, like in CharField._db_oracle.SQL_TYPE,
+            # and therefore one first needs to instantiate dialect_cls
+            if isinstance(dialect_value, property):
+                return getattr(dialect_cls(self), key)
+            return dialect_value
+        return getattr(self, key, None)  # there is nothing special defined, return the value of self
 
     def describe(self, serializable: bool) -> dict:
         """
