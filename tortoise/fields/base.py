@@ -355,8 +355,16 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             return v  # and return it
         # it could be that dialect_value is a computed property, like in CharField._db_oracle.SQL_TYPE,
         # and therefore first need to instantiate dialect_cls
-        elif isinstance(dialect_value, property) and callable(dialect_cls):
-            return getattr(dialect_cls(self), key)  # instantiate the dialect_cls and get the value from the property
+        elif isinstance(dialect_value, property) and dialect_cls is not None:
+            try:
+                # instantiate the dialect_cls
+                dialect_cls_instance = dialect_cls(self)
+            except TypeError:
+                pass
+            else:
+                # and get the value from the property
+                return getattr(dialect_cls_instance, key)
+            return None
         return dialect_value
 
     def describe(self, serializable: bool) -> dict:
