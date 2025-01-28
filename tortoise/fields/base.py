@@ -1,5 +1,4 @@
 import sys
-import traceback
 import warnings
 from collections.abc import Callable
 from enum import Enum
