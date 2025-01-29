@@ -326,12 +326,17 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         """
         if not self.has_db_field:  # pragma: nocoverage
             return None
+        default = getattr(self, "SQL_TYPE")
         return {
-            "": getattr(self, "SQL_TYPE"),
+            "": default,
             **{
-                dialect: _db["SQL_TYPE"]
-                for dialect, _db in self._get_dialects().items()
-                if "SQL_TYPE" in _db
+                dialect: sql_type
+                for dialect, sql_type in (
+                    (key[4:], self.get_for_dialect(key[4:], "SQL_TYPE"))
+                    for key in dir(self)
+                    if key.startswith("_db_")
+                )
+                if sql_type != default
             },
         }
 
@@ -342,8 +347,18 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         :param dialect: The requested SQL Dialect.
         :param key: The attribute/method name.
         """
-        dialect_data = self._get_dialects().get(dialect, {})
-        return dialect_data.get(key, getattr(self, key, None))
+        try:
+            dialect_cls = getattr(self, f"_db_{dialect}")  # throws AttributeError if not present
+            dialect_value = getattr(dialect_cls, key)  # throws AttributeError if not present
+        except AttributeError:
+            pass
+        else:  # we have dialect_cls and dialect_value, so lets use it
+            # it could be that dialect_value is a computed property, like in CharField._db_oracle.SQL_TYPE,
+            # and therefore one first needs to instantiate dialect_cls
+            if isinstance(dialect_value, property):
+                return getattr(dialect_cls(self), key)
+            return dialect_value
+        return getattr(self, key, None)  # there is nothing special defined, return the value of self
 
     def describe(self, serializable: bool) -> dict:
         """

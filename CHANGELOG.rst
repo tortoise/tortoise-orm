@@ -6,6 +6,18 @@ Changelog
 
 .. rst-class:: emphasize-children
 
+0.25
+====
+
+0.25.0 (unreleased)
+------
+Fixed
+^^^^^
+
+Changed
+^^^^^^^
+- add benchmarks for `get_for_dialect` (#1862)
+
 0.24
 ====
 
