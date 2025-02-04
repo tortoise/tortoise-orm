@@ -7,7 +7,10 @@ from pypika_tortoise.terms import Term
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
-from tortoise.contrib.postgres.array_functions import postgres_array_contains
+from tortoise.contrib.postgres.array_functions import (
+    postgres_array_contains,
+    postgres_array_contained_by,
+)
 from tortoise.contrib.postgres.json_functions import (
     postgres_json_contained_by,
     postgres_json_contains,
@@ -20,6 +23,7 @@ from tortoise.contrib.postgres.regex import (
 from tortoise.contrib.postgres.search import SearchCriterion
 from tortoise.filters import (
     array_contains,
+    array_contained_by,
     insensitive_posix_regex,
     json_contained_by,
     json_contains,
@@ -39,6 +43,7 @@ class BasePostgresExecutor(BaseExecutor):
     FILTER_FUNC_OVERRIDE = {
         search: postgres_search,
         array_contains: postgres_array_contains,
+        array_contained_by: postgres_array_contained_by,
         json_contains: postgres_json_contains,
         json_contained_by: postgres_json_contained_by,
         json_filter: postgres_json_filter,

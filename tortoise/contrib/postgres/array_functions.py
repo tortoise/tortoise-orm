@@ -6,6 +6,7 @@ from pypika_tortoise.terms import Array, BasicCriterion, Criterion, Term
 
 class PostgresArrayOperators(str, Enum):
     CONTAINS = "@>"
+    CONTAINED_BY = "<@"
 
 
 def postgres_array_contains(field: Term, value: Union[Any, Sequence[Any]]) -> Criterion:
@@ -13,3 +14,7 @@ def postgres_array_contains(field: Term, value: Union[Any, Sequence[Any]]) -> Cr
         value = (value,)
 
     return BasicCriterion(PostgresArrayOperators.CONTAINS, field, Array(*value))
+
+
+def postgres_array_contained_by(field: Term, value: Sequence[Any]) -> Criterion:
+    return BasicCriterion(PostgresArrayOperators.CONTAINED_BY, field, Array(*value))

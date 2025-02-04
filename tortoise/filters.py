@@ -214,22 +214,23 @@ def extract_microsecond_equal(field: Term, value: int) -> Criterion:
     return Extract(DatePart.microsecond, field).eq(value)
 
 
-def json_contains(field: Term, value: str) -> Criterion:  # type:ignore[empty-body]
-    # will be override in each executor
-    pass
+def json_contains(field: Term, value: str) -> Criterion:
+    raise NotImplementedError("must be overridden in each executor")
 
 
-def json_contained_by(field: Term, value: str) -> Criterion:  # type:ignore[empty-body]
-    # will be override in each executor
-    pass
+def json_contained_by(field: Term, value: str) -> Criterion:
+    raise NotImplementedError("must be overridden in each executor")
 
 
-def json_filter(field: Term, value: dict) -> Criterion:  # type:ignore[empty-body]
-    # will be override in each executor
-    pass
+def json_filter(field: Term, value: dict) -> Criterion:
+    raise NotImplementedError("must be overridden in each xecutor")
 
 
 def array_contains(field: Term, value: Union[Any, Sequence[Any]]) -> Criterion:
+    raise NotImplementedError("must be overridden in each executor")
+
+
+def array_contained_by(field: Term, value: Union[Any, Sequence[Any]]) -> Criterion:
     raise NotImplementedError("must be overridden in each executor")
 
 
@@ -414,6 +415,11 @@ def get_array_filter(field_name: str, source_field: str) -> dict[str, FilterInfo
             "field": field_name,
             "source_field": source_field,
             "operator": array_contains,
+        },
+        f"{field_name}__contained_by": {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": array_contained_by,
         },
     }
 
