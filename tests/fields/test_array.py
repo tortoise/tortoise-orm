@@ -42,3 +42,36 @@ class TestArrayFields(test.IsolatedTestCase):
         obj0 = await testmodels.ArrayFields.create(array=[0])
         values = await testmodels.ArrayFields.get(id=obj0.id).values_list("array", flat=True)
         self.assertEqual(values, [0])
+
+    async def test_contains_single_value(self):
+        await testmodels.ArrayFields.create(array=[1, 2, 3])
+        await testmodels.ArrayFields.create(array=[4, 5, 6])
+        await testmodels.ArrayFields.create(array=[7, 8, 9])
+
+        found = await testmodels.ArrayFields.filter(array__contains=[2]).values_list(
+            "array", flat=True
+        )
+        self.assertEqual(list(found), [[1, 2, 3]])
+
+        found = await testmodels.ArrayFields.filter(array__contains=[10]).values_list(
+            "array", flat=True
+        )
+        self.assertEqual(list(found), [])
+
+    async def test_contains_multiple_values(self):
+        await testmodels.ArrayFields.create(array_str=["a", "b", "c"], array=[])
+
+        found = await testmodels.ArrayFields.filter(
+            array_str__contains=["a", "b", "c"]
+        ).values_list("array_str", flat=True)
+        self.assertEqual(list(found), [["a", "b", "c"]])
+
+        found = await testmodels.ArrayFields.filter(array_str__contains=["a", "b"]).values_list(
+            "array_str", flat=True
+        )
+        self.assertEqual(list(found), [["a", "b", "c"]])
+
+        found = await testmodels.ArrayFields.filter(
+            array_str__contains=["a", "b", "c", "d"]
+        ).values_list("array_str", flat=True)
+        self.assertEqual(list(found), [])

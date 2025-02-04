@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from collections.abc import Callable, Iterable
 from functools import partial
-from typing import TYPE_CHECKING, Any, Optional, TypedDict
+from typing import TYPE_CHECKING, Any, Optional, Sequence, TypedDict, Union
 
 from pypika_tortoise import SqlContext, Table
 from pypika_tortoise.enums import DatePart, Matching, SqlTypes
@@ -17,6 +17,7 @@ from pypika_tortoise.terms import (
 )
 from typing_extensions import NotRequired
 
+from tortoise.contrib.postgres.fields import ArrayField
 from tortoise.fields import Field, JSONField
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
 
@@ -228,6 +229,10 @@ def json_filter(field: Term, value: dict) -> Criterion:  # type:ignore[empty-bod
     pass
 
 
+def array_contains(field: Term, value: Union[Any, Sequence[Any]]) -> Criterion:
+    raise NotImplementedError("must be overridden in each executor")
+
+
 ##############################################################################
 # Filter resolvers
 ##############################################################################
@@ -381,15 +386,50 @@ def get_json_filter_operator(
     return key_parts, filter_value, operator_
 
 
+def get_array_filter(field_name: str, source_field: str) -> dict[str, FilterInfoDict]:
+    return {
+        field_name: {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": operator.eq,
+        },
+        f"{field_name}__not": {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": not_equal,
+        },
+        f"{field_name}__isnull": {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": is_null,
+            "value_encoder": bool_encoder,
+        },
+        f"{field_name}__not_isnull": {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": not_null,
+            "value_encoder": bool_encoder,
+        },
+        f"{field_name}__contains": {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": array_contains,
+        },
+    }
+
+
 def get_filters_for_field(
     field_name: str, field: Optional[Field], source_field: str
 ) -> dict[str, FilterInfoDict]:
-    if isinstance(field, ManyToManyFieldInstance):
-        return get_m2m_filters(field_name, field)
-    if isinstance(field, BackwardFKRelation):
-        return get_backward_fk_filters(field_name, field)
-    if isinstance(field, JSONField):
-        return get_json_filter(field_name, source_field)
+    if field:
+        if isinstance(field, ManyToManyFieldInstance):
+            return get_m2m_filters(field_name, field)
+        if isinstance(field, BackwardFKRelation):
+            return get_backward_fk_filters(field_name, field)
+        if isinstance(field, JSONField):
+            return get_json_filter(field_name, source_field)
+        if isinstance(field, ArrayField):
+            return get_array_filter(field_name, source_field)
 
     actual_field_name = field_name
     if field_name == "pk" and field:
