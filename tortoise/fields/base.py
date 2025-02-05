@@ -358,7 +358,8 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             if isinstance(dialect_value, property):
                 return getattr(dialect_cls(self), key)
             return dialect_value
-        return getattr(self, key, None)  # there is nothing special defined, return the value of self
+        # If there is nothing special defined, return the value of self
+        return getattr(self, key, None)
 
     def describe(self, serializable: bool) -> dict:
         """
