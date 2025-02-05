@@ -234,6 +234,10 @@ def array_contained_by(field: Term, value: Union[Any, Sequence[Any]]) -> Criteri
     raise NotImplementedError("must be overridden in each executor")
 
 
+def array_overlap(field: Term, value: Union[Any, Sequence[Any]]) -> Criterion:
+    raise NotImplementedError("must be overridden in each executor")
+
+
 ##############################################################################
 # Filter resolvers
 ##############################################################################
@@ -420,6 +424,11 @@ def get_array_filter(field_name: str, source_field: str) -> dict[str, FilterInfo
             "field": field_name,
             "source_field": source_field,
             "operator": array_contained_by,
+        },
+        f"{field_name}__overlap": {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": array_overlap,
         },
     }
 

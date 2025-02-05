@@ -115,3 +115,23 @@ class TestArrayFields(test.IsolatedTestCase):
             array_str__contained_by=["x", "y", "z"]
         ).values_list("array_str", flat=True)
         self.assertEqual(list(found), [])
+
+    async def test_overlap_ints(self):
+        await testmodels.ArrayFields.create(array=[1, 2, 3])
+        await testmodels.ArrayFields.create(array=[2, 3, 4])
+        await testmodels.ArrayFields.create(array=[3, 4, 5])
+
+        found = await testmodels.ArrayFields.filter(array__overlap=[1, 2]).values_list(
+            "array", flat=True
+        )
+        self.assertEqual(sorted(list(found)), [[1, 2, 3], [2, 3, 4]])
+
+        found = await testmodels.ArrayFields.filter(array__overlap=[4]).values_list(
+            "array", flat=True
+        )
+        self.assertEqual(sorted(list(found)), [[2, 3, 4], [3, 4, 5]])
+
+        found = await testmodels.ArrayFields.filter(array__overlap=[1, 2, 3, 4, 5]).values_list(
+            "array", flat=True
+        )
+        self.assertEqual(sorted(list(found)), [[1, 2, 3], [2, 3, 4], [3, 4, 5]])
