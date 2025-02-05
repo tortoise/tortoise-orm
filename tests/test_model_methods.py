@@ -1,6 +1,8 @@
 import os
 from uuid import uuid4
 
+import pytest
+
 from tests.testmodels import (
     Dest_null,
     Event,
@@ -121,6 +123,8 @@ class TestModelMethods(test.TestCase):
         n_mdl = await self.cls.get(id=self.mdl.id)
         self.assertEqual(n_mdl.name, "Test")
         self.assertEqual(n_mdl.desc, "Something")
+        with pytest.raises(OperationalError):
+            await self.mdl.save(update_fields=["id"])
 
     async def test_create(self):
         mdl = self.cls(name="Test2")
