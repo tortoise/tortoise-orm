@@ -11,6 +11,7 @@ from tortoise.contrib.postgres.array_functions import (
     postgres_array_contains,
     postgres_array_contained_by,
     postgres_array_overlap,
+    postgres_array_length,
 )
 from tortoise.contrib.postgres.json_functions import (
     postgres_json_contained_by,
@@ -32,6 +33,7 @@ from tortoise.filters import (
     json_filter,
     posix_regex,
     search,
+    array_length,
 )
 
 
@@ -52,6 +54,7 @@ class BasePostgresExecutor(BaseExecutor):
         json_filter: postgres_json_filter,
         posix_regex: postgres_posix_regex,
         insensitive_posix_regex: postgres_insensitive_posix_regex,
+        array_length: postgres_array_length,
     }
 
     def _prepare_insert_statement(

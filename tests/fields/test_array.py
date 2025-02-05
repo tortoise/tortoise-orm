@@ -135,3 +135,17 @@ class TestArrayFields(test.IsolatedTestCase):
             "array", flat=True
         )
         self.assertEqual(sorted(list(found)), [[1, 2, 3], [2, 3, 4], [3, 4, 5]])
+
+    async def test_array_length(self):
+        await testmodels.ArrayFields.create(array=[1, 2, 3])
+        await testmodels.ArrayFields.create(array=[1])
+        await testmodels.ArrayFields.create(array=[1, 2])
+
+        found = await testmodels.ArrayFields.filter(array__len=3).values_list("array", flat=True)
+        self.assertEqual(list(found), [[1, 2, 3]])
+
+        found = await testmodels.ArrayFields.filter(array__len=1).values_list("array", flat=True)
+        self.assertEqual(list(found), [[1]])
+
+        found = await testmodels.ArrayFields.filter(array__len=0).values_list("array", flat=True)
+        self.assertEqual(list(found), [])

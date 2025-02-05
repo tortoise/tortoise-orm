@@ -73,6 +73,10 @@ def string_encoder(value: Any, instance: "Model", field: Field) -> str:
     return str(value)
 
 
+def int_encoder(value: Any, instance: "Model", field: Field) -> int:
+    return int(value)
+
+
 def json_encoder(value: Any, instance: "Model", field: Field) -> dict:
     return value
 
@@ -235,6 +239,10 @@ def array_contained_by(field: Term, value: Union[Any, Sequence[Any]]) -> Criteri
 
 
 def array_overlap(field: Term, value: Union[Any, Sequence[Any]]) -> Criterion:
+    raise NotImplementedError("must be overridden in each executor")
+
+
+def array_length(field: Term, value: int) -> Criterion:
     raise NotImplementedError("must be overridden in each executor")
 
 
@@ -429,6 +437,12 @@ def get_array_filter(field_name: str, source_field: str) -> dict[str, FilterInfo
             "field": field_name,
             "source_field": source_field,
             "operator": array_overlap,
+        },
+        f"{field_name}__len": {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": array_length,
+            "value_encoder": int_encoder,
         },
     }
 
