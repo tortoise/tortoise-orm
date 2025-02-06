@@ -14,6 +14,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         app,
         use_tz=False,
         timezone="Asia/Shanghai",
+        add_exception_handlers=True,
     ):
         # db connected
         yield

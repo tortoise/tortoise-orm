@@ -7,10 +7,6 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from types import ModuleType
 from typing import TYPE_CHECKING
 
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel  # pylint: disable=E0611
-from starlette.routing import _DefaultLifespan
-
 from tortoise import Tortoise, connections
 from tortoise.exceptions import DoesNotExist, IntegrityError
 from tortoise.log import logger
@@ -18,14 +14,29 @@ from tortoise.log import logger
 if TYPE_CHECKING:
     from fastapi import FastAPI, Request
 
+
 if sys.version_info >= (3, 11):
     from typing import Self
 else:
     from typing_extensions import Self
 
 
-class HTTPNotFoundError(BaseModel):
-    detail: str
+def tortoise_exception_handlers() -> dict:
+    from fastapi.responses import JSONResponse
+
+    async def doesnotexist_exception_handler(request: "Request", exc: DoesNotExist):
+        return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+    async def integrityerror_exception_handler(request: "Request", exc: IntegrityError):
+        return JSONResponse(
+            status_code=422,
+            content={"detail": [{"loc": [], "msg": str(exc), "type": "IntegrityError"}]},
+        )
+
+    return {
+        DoesNotExist: doesnotexist_exception_handler,
+        IntegrityError: integrityerror_exception_handler,
+    }
 
 
 class RegisterTortoise(AbstractAsyncContextManager):
@@ -122,17 +133,22 @@ class RegisterTortoise(AbstractAsyncContextManager):
         self._create_db = _create_db
 
         if add_exception_handlers and app is not None:
+            from starlette.middleware.exceptions import ExceptionMiddleware
 
-            @app.exception_handler(DoesNotExist)
-            async def doesnotexist_exception_handler(request: "Request", exc: DoesNotExist):
-                return JSONResponse(status_code=404, content={"detail": str(exc)})
+            warnings.warn(
+                "Setting `add_exception_handlers` to be true is deprecated, "
+                "use `FastAPI(exception_handlers=tortoise_exception_handlers())` instead."
+                "See more about it on https://tortoise.github.io/examples/fastapi",
+                DeprecationWarning,
+            )
+            original_call_func = ExceptionMiddleware.__call__
 
-            @app.exception_handler(IntegrityError)
-            async def integrityerror_exception_handler(request: "Request", exc: IntegrityError):
-                return JSONResponse(
-                    status_code=422,
-                    content={"detail": [{"loc": [], "msg": str(exc), "type": "IntegrityError"}]},
-                )
+            async def wrap_middleware_call(self, *args, **kw) -> None:
+                if DoesNotExist not in self._exception_handlers:
+                    self._exception_handlers.update(tortoise_exception_handlers())
+                await original_call_func(self, *args, **kw)
+
+            ExceptionMiddleware.__call__ = wrap_middleware_call  # type:ignore
 
     async def init_orm(self) -> None:  # pylint: disable=W0612
         await Tortoise.init(
@@ -166,8 +182,7 @@ class RegisterTortoise(AbstractAsyncContextManager):
 
     def __await__(self) -> Generator[None, None, Self]:
         async def _self() -> Self:
-            await self.init_orm()
-            return self
+            return await self.__aenter__()
 
         return _self().__await__()
 
@@ -182,8 +197,9 @@ def register_tortoise(
     add_exception_handlers: bool = False,
 ) -> None:
     """
-    Registers ``startup`` and ``shutdown`` events to set-up and tear-down Tortoise-ORM
-    inside a FastAPI application.
+    Registers Tortoise-ORM with set-up at the beginning of FastAPI application's lifespan
+    (which allow user to read/write data from/to db inside the lifespan function),
+    and tear-down at the end of that lifespan.
 
     You can configure using only one of ``config``, ``config_file``
     and ``(db_url, modules)``.
@@ -245,40 +261,26 @@ def register_tortoise(
     ConfigurationError
         For any configuration error
     """
-    orm = RegisterTortoise(
-        app,
-        config,
-        config_file,
-        db_url,
-        modules,
-        generate_schemas,
-        add_exception_handlers,
-    )
-    if isinstance(lifespan := app.router.lifespan_context, _DefaultLifespan):
-        # Leave on_event here to compare with old versions
-        # So people can upgrade tortoise-orm in running project without changing any code
+    from fastapi.routing import _merge_lifespan_context
 
-        @app.on_event("startup")
-        async def init_orm() -> None:  # pylint: disable=W0612
-            await orm.init_orm()
+    # Leave this function here to compare with old versions
+    # So people can upgrade tortoise-orm in running project without changing any code
 
-        @app.on_event("shutdown")
-        async def close_orm() -> None:  # pylint: disable=W0612
-            await orm.close_orm()
+    @asynccontextmanager
+    async def orm_lifespan(app_instance: "FastAPI"):
+        async with RegisterTortoise(
+            app_instance,
+            config,
+            config_file,
+            db_url,
+            modules,
+            generate_schemas,
+        ):
+            yield
 
-    else:
-        # If custom lifespan was passed to app, register tortoise in it
-        warnings.warn(
-            "`register_tortoise` function is deprecated, "
-            "use the `RegisterTortoise` class instead."
-            "See more about it on https://tortoise.github.io/examples/fastapi",
-            DeprecationWarning,
-        )
+    original_lifespan = app.router.lifespan_context
+    app.router.lifespan_context = _merge_lifespan_context(orm_lifespan, original_lifespan)
 
-        @asynccontextmanager
-        async def orm_lifespan(app_instance: "FastAPI"):
-            async with orm:
-                async with lifespan(app_instance):
-                    yield
-
-        app.router.lifespan_context = orm_lifespan
+    if add_exception_handlers:
+        for exp_type, endpoint in tortoise_exception_handlers().items():
+            app.exception_handler(exp_type)(endpoint)
