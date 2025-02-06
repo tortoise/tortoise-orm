@@ -21,7 +21,6 @@ from tortoise.utils import chunk
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
-    from tortoise.fields.base import Field
     from tortoise.models import Model
     from tortoise.query_utils import Prefetch
     from tortoise.queryset import QuerySet
@@ -265,20 +264,16 @@ class BaseExecutor:
     async def execute_update(
         self, instance: "Union[type[Model], Model]", update_fields: Optional[Iterable[str]]
     ) -> int:
-        fields: "dict[str, Field]" = {
-            field: field_obj
-            for field in update_fields or self.model._meta.fields_db_projection
-            if not (field_obj := self.model._meta.fields_map[field]).pk
-        }
-        if not fields:
-            raise OperationalError(f"Can't update pk field only, use `{self.model.__name__}.create` instead.")
         values = []
         expressions = {}
-        for field, field_obj in fields.items():
-            if isinstance(instance_field := getattr(instance, field), Expression):
-                expressions[field] = instance_field
-            else:
-                values.append(field_obj.to_db_value(instance_field, instance))
+        for field in update_fields or self.model._meta.fields_db_projection.keys():
+            if not (field_obj := self.model._meta.fields_map[field]).pk:
+                if isinstance(instance_field := getattr(instance, field), Expression):
+                    expressions[field] = instance_field
+                else:
+                    values.append(field_obj.to_db_value(instance_field, instance))
+        if not values and not expressions:
+            raise OperationalError(f"Can't update pk field only, use `{self.model.__name__}.create` instead.")
         values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
         return (
             await self.db.execute_query(self.get_update_sql(update_fields, expressions), values)
