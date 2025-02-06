@@ -9,10 +9,10 @@ import pytest
 from tests.testmodels import (
     BenchmarkFewFields,
     BenchmarkManyFields,
-    Tournament,
+    DecimalFields,
     Event,
     Team,
-    DecimalFields,
+    Tournament,
 )
 from tortoise.contrib.test import _restore_default, truncate_all_models
 

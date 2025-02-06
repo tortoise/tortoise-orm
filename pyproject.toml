@@ -81,7 +81,7 @@ httpx = "*"
 # Aiohttp support
 aiohttp = "*"
 # BlackSheep support
-blacksheep = {version = "^2.0.7", python = "<3.13"}
+blacksheep = "^2.0.8"
 pytest-asyncio = ">=0.24.0"
 # mypy
 types-PyYAML = "*"
@@ -154,16 +154,6 @@ check_untyped_defs = true
 disallow_untyped_calls = true
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
-
-[[tool.mypy.overrides]]
-module = "examples.blacksheep.*"
-# TODO: remove this override when blacksheep support python3.13
-disallow_untyped_decorators = false
-
-[[tool.mypy.overrides]]
-module = "tortoise.contrib.blacksheep.*"
-# TODO: remove this override when blacksheep support python3.13
-disallow_untyped_decorators = false
 
 [[tool.mypy.overrides]]
 module = "tortoise.contrib.test.*"

@@ -1,6 +1,7 @@
 """
 This example to use router to implement read/write separation
 """
+
 from tortoise import Model, Tortoise, fields, run_async
 
 

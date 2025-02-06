@@ -69,17 +69,13 @@ jobs:
           ACCEPT_EULA=Y sudo apt-get install -y msodbcsql18
       - name: Run ci
         run: make ci
-      - name: Test FastAPI Example
+      - name: Test FastAPI/Blacksheep Example
         run: |
-          export DEST=examples/fastapi && PYTHONPATH=$DEST pytest $PYTEST_ARGS $DEST/_tests.py
+          PYTHONPATH=$DEST_FASTAPI pytest $PYTEST_ARGS $DEST_FASTAPI/_tests.py
+          PYTHONPATH=$DEST_BLACKSHEEP pytest $PYTEST_ARGS $DEST_BLACKSHEEP/_tests.py
         env:
-          PYTHONDEVMODE: 1
-          PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --tb=native -q"
-      - name: Test Blacksheep Example
-        if: matrix.python-version != '3.13'
-        run: PYTHONPATH=$DEST pytest $PYTEST_ARGS $DEST/_tests.py
-        env:
-          DEST: examples/blacksheep
+          DEST_FASTAPI: examples/fastapi
+          DEST_BLACKSHEEP: examples/blacksheep
           PYTHONDEVMODE: 1
           PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --tb=native -q"
       - name: Upload Coverage
