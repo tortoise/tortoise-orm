@@ -273,7 +273,9 @@ class BaseExecutor:
                 else:
                     values.append(field_obj.to_db_value(instance_field, instance))
         if not values and not expressions:
-            raise OperationalError(f"Can't update pk field only, use `{self.model.__name__}.create` instead.")
+            raise OperationalError(
+                f"Can't update pk field only, use `{self.model.__name__}.create` instead."
+            )
         values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
         return (
             await self.db.execute_query(self.get_update_sql(update_fields, expressions), values)
