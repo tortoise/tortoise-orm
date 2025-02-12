@@ -285,7 +285,7 @@ PostgreSQL and SQLite also support ``iposix_regex``, which makes case insensive 
     obj = await DemoModel.filter(demo_text__iposix_regex="^hello world$").first()
 
 
-In PostgreSQL, for ``JSONField``, ``filter`` supports additional lookup types:
+With PostgreSQL, for ``JSONField``, ``filter`` supports additional lookup types:
 
 - ``in`` - ``await JSONModel.filter(data__filter={"breed__in": ["labrador", "poodle"]}).first()``
 - ``not_in``
@@ -301,7 +301,7 @@ In PostgreSQL, for ``JSONField``, ``filter`` supports additional lookup types:
 - ``istartswith``
 - ``iendswith``
 
-In PostgreSQL, for ``ArrayField``, the following lookup types are available:
+With PostgreSQL, ``ArrayField`` can be used with the following lookup types:
 
 - ``contains`` - ``await ArrayFields.filter(array__contains=[1, 2, 3]).first()`` which will use the ``@>`` operator
 - ``contained_by`` - will use the ``<@`` operator

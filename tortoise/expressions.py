@@ -355,29 +355,30 @@ class Q:
         join = None
 
         if value is None and f"{key}__isnull" in model._meta.filters:
-            filter = model._meta.get_filter(f"{key}__isnull")
+            filter_info = model._meta.get_filter(f"{key}__isnull")
             value = True
         else:
-            filter = model._meta.get_filter(key)
+            filter_info = model._meta.get_filter(key)
 
-        if "table" in filter:
+        if "table" in filter_info:
             # join the table
             join = (
-                filter["table"],
-                table[model._meta.db_pk_column] == filter["table"][filter["backward_key"]],
+                filter_info["table"],
+                table[model._meta.db_pk_column]
+                == filter_info["table"][filter_info["backward_key"]],
             )
-            if "value_encoder" in filter:
-                value = filter["value_encoder"](value, model)
-            table = filter["table"]
+            if "value_encoder" in filter_info:
+                value = filter_info["value_encoder"](value, model)
+            table = filter_info["table"]
         elif not isinstance(value, Term):
-            field_object = model._meta.fields_map[filter["field"]]
+            field_object = model._meta.fields_map[filter_info["field"]]
             value = (
-                filter["value_encoder"](value, model, field_object)
-                if "value_encoder" in filter
+                filter_info["value_encoder"](value, model, field_object)
+                if "value_encoder" in filter_info
                 else field_object.to_db_value(value, model)
             )
-        op = filter["operator"]
-        criterion = op(table[filter.get("source_field", filter["field"])], value)
+        op = filter_info["operator"]
+        criterion = op(table[filter_info.get("source_field", filter_info["field"])], value)
         return criterion, join
 
     def _resolve_regular_kwarg(

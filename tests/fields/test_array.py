@@ -44,120 +44,92 @@ class TestArrayFields(test.IsolatedTestCase):
         self.assertEqual(values, [0])
 
     async def test_eq_filter(self):
-        o1 = await testmodels.ArrayFields.create(array=[1, 2, 3])
-        o2 = await testmodels.ArrayFields.create(array=[1, 2])
+        obj1 = await testmodels.ArrayFields.create(array=[1, 2, 3])
+        obj2 = await testmodels.ArrayFields.create(array=[1, 2])
 
         found = await testmodels.ArrayFields.filter(array=[1, 2, 3]).first()
-        self.assertEqual(found, o1)
+        self.assertEqual(found, obj1)
 
         found = await testmodels.ArrayFields.filter(array=[1, 2]).first()
-        self.assertEqual(found, o2)
+        self.assertEqual(found, obj2)
 
     async def test_not_filter(self):
         await testmodels.ArrayFields.create(array=[1, 2, 3])
-        o2 = await testmodels.ArrayFields.create(array=[1, 2])
+        obj2 = await testmodels.ArrayFields.create(array=[1, 2])
 
         found = await testmodels.ArrayFields.filter(array__not=[1, 2, 3]).first()
-        self.assertEqual(found, o2)
+        self.assertEqual(found, obj2)
 
     async def test_contains_ints(self):
-        await testmodels.ArrayFields.create(array=[1, 2, 3])
-        await testmodels.ArrayFields.create(array=[2, 3])
+        obj1 = await testmodels.ArrayFields.create(array=[1, 2, 3])
+        obj2 = await testmodels.ArrayFields.create(array=[2, 3])
         await testmodels.ArrayFields.create(array=[4, 5, 6])
 
-        found = await testmodels.ArrayFields.filter(array__contains=[2]).values_list(
-            "array", flat=True
-        )
-        self.assertEqual(list(found), [[1, 2, 3], [2, 3]])
+        found = await testmodels.ArrayFields.filter(array__contains=[2])
+        self.assertEqual(found, [obj1, obj2])
 
-        found = await testmodels.ArrayFields.filter(array__contains=[10]).values_list(
-            "array", flat=True
-        )
-        self.assertEqual(list(found), [])
+        found = await testmodels.ArrayFields.filter(array__contains=[10])
+        self.assertEqual(found, [])
 
     async def test_contains_smallints(self):
-        o1 = await testmodels.ArrayFields.create(array=[], array_smallint=[1, 2, 3])
+        obj1 = await testmodels.ArrayFields.create(array=[], array_smallint=[1, 2, 3])
 
         found = await testmodels.ArrayFields.filter(array_smallint__contains=[2]).first()
-        self.assertEqual(found, o1)
+        self.assertEqual(found, obj1)
 
     async def test_contains_strs(self):
-        await testmodels.ArrayFields.create(array_str=["a", "b", "c"], array=[])
+        obj1 = await testmodels.ArrayFields.create(array_str=["a", "b", "c"], array=[])
 
-        found = await testmodels.ArrayFields.filter(
-            array_str__contains=["a", "b", "c"]
-        ).values_list("array_str", flat=True)
-        self.assertEqual(list(found), [["a", "b", "c"]])
+        found = await testmodels.ArrayFields.filter(array_str__contains=["a", "b", "c"])
+        self.assertEqual(found, [obj1])
 
-        found = await testmodels.ArrayFields.filter(array_str__contains=["a", "b"]).values_list(
-            "array_str", flat=True
-        )
-        self.assertEqual(list(found), [["a", "b", "c"]])
+        found = await testmodels.ArrayFields.filter(array_str__contains=["a", "b"])
+        self.assertEqual(found, [obj1])
 
-        found = await testmodels.ArrayFields.filter(
-            array_str__contains=["a", "b", "c", "d"]
-        ).values_list("array_str", flat=True)
-        self.assertEqual(list(found), [])
+        found = await testmodels.ArrayFields.filter(array_str__contains=["a", "b", "c", "d"])
+        self.assertEqual(found, [])
 
     async def test_contained_by_ints(self):
-        await testmodels.ArrayFields.create(array=[1])
-        await testmodels.ArrayFields.create(array=[1, 2])
-        await testmodels.ArrayFields.create(array=[1, 2, 3])
+        obj1 = await testmodels.ArrayFields.create(array=[1])
+        obj2 = await testmodels.ArrayFields.create(array=[1, 2])
+        obj3 = await testmodels.ArrayFields.create(array=[1, 2, 3])
 
-        found = await testmodels.ArrayFields.filter(array__contained_by=[1, 2, 3]).values_list(
-            "array", flat=True
-        )
-        self.assertEqual(sorted(list(found)), [[1], [1, 2], [1, 2, 3]])
+        found = await testmodels.ArrayFields.filter(array__contained_by=[1, 2, 3])
+        self.assertEqual(found, [obj1, obj2, obj3])
 
-        found = await testmodels.ArrayFields.filter(array__contained_by=[1, 2]).values_list(
-            "array", flat=True
-        )
-        self.assertEqual(sorted(list(found)), [[1], [1, 2]])
+        found = await testmodels.ArrayFields.filter(array__contained_by=[1, 2])
+        self.assertEqual(found, [obj1, obj2])
 
-        found = await testmodels.ArrayFields.filter(array__contained_by=[1]).values_list(
-            "array", flat=True
-        )
-        self.assertEqual(list(found), [[1]])
+        found = await testmodels.ArrayFields.filter(array__contained_by=[1])
+        self.assertEqual(found, [obj1])
 
     async def test_contained_by_strs(self):
-        await testmodels.ArrayFields.create(array_str=["a"], array=[])
-        await testmodels.ArrayFields.create(array_str=["a", "b"], array=[])
-        await testmodels.ArrayFields.create(array_str=["a", "b", "c"], array=[])
+        obj1 = await testmodels.ArrayFields.create(array_str=["a"], array=[])
+        obj2 = await testmodels.ArrayFields.create(array_str=["a", "b"], array=[])
+        obj3 = await testmodels.ArrayFields.create(array_str=["a", "b", "c"], array=[])
 
-        found = await testmodels.ArrayFields.filter(
-            array_str__contained_by=["a", "b", "c", "d"]
-        ).values_list("array_str", flat=True)
-        self.assertEqual(sorted(list(found)), [["a"], ["a", "b"], ["a", "b", "c"]])
+        found = await testmodels.ArrayFields.filter(array_str__contained_by=["a", "b", "c", "d"])
+        self.assertEqual(found, [obj1, obj2, obj3])
 
-        found = await testmodels.ArrayFields.filter(array_str__contained_by=["a", "b"]).values_list(
-            "array_str", flat=True
-        )
-        self.assertEqual(sorted(list(found)), [["a"], ["a", "b"]])
+        found = await testmodels.ArrayFields.filter(array_str__contained_by=["a", "b"])
+        self.assertEqual(found, [obj1, obj2])
 
-        found = await testmodels.ArrayFields.filter(
-            array_str__contained_by=["x", "y", "z"]
-        ).values_list("array_str", flat=True)
-        self.assertEqual(list(found), [])
+        found = await testmodels.ArrayFields.filter(array_str__contained_by=["x", "y", "z"])
+        self.assertEqual(found, [])
 
     async def test_overlap_ints(self):
-        await testmodels.ArrayFields.create(array=[1, 2, 3])
-        await testmodels.ArrayFields.create(array=[2, 3, 4])
-        await testmodels.ArrayFields.create(array=[3, 4, 5])
+        obj1 = await testmodels.ArrayFields.create(array=[1, 2, 3])
+        obj2 = await testmodels.ArrayFields.create(array=[2, 3, 4])
+        obj3 = await testmodels.ArrayFields.create(array=[3, 4, 5])
 
-        found = await testmodels.ArrayFields.filter(array__overlap=[1, 2]).values_list(
-            "array", flat=True
-        )
-        self.assertEqual(sorted(list(found)), [[1, 2, 3], [2, 3, 4]])
+        found = await testmodels.ArrayFields.filter(array__overlap=[1, 2])
+        self.assertEqual(found, [obj1, obj2])
 
-        found = await testmodels.ArrayFields.filter(array__overlap=[4]).values_list(
-            "array", flat=True
-        )
-        self.assertEqual(sorted(list(found)), [[2, 3, 4], [3, 4, 5]])
+        found = await testmodels.ArrayFields.filter(array__overlap=[4])
+        self.assertEqual(found, [obj2, obj3])
 
-        found = await testmodels.ArrayFields.filter(array__overlap=[1, 2, 3, 4, 5]).values_list(
-            "array", flat=True
-        )
-        self.assertEqual(sorted(list(found)), [[1, 2, 3], [2, 3, 4], [3, 4, 5]])
+        found = await testmodels.ArrayFields.filter(array__overlap=[1, 2, 3, 4, 5])
+        self.assertEqual(found, [obj1, obj2, obj3])
 
     async def test_array_length(self):
         await testmodels.ArrayFields.create(array=[1, 2, 3])
