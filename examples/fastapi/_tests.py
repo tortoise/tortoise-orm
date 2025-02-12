@@ -96,6 +96,23 @@ class TestUser(UserTester):
         await self.user_list(client)
 
 
+@pytest.mark.anyio
+async def test_404(client: AsyncClient) -> None:
+    response = await client.get("/404")
+    assert response.status_code == 404, response.text
+    data = response.json()
+    assert isinstance(data["detail"], str)
+
+
+@pytest.mark.anyio
+async def test_422(client: AsyncClient) -> None:
+    response = await client.get("/422")
+    assert response.status_code == 422, response.text
+    data = response.json()
+    assert isinstance(data["detail"], list)
+    assert isinstance(data["detail"][0], dict)
+
+
 class TestUserEast(UserTester):
     timezone = "Asia/Shanghai"
     delta_hours = 8
@@ -121,6 +138,23 @@ class TestUserEast(UserTester):
         created_at = user_obj.created_at
         assert (created_at.hour - time.hour) in [self.delta_hours, self.delta_hours - 24]
         assert item.model_dump()["created_at"].hour == created_at.hour
+
+
+@pytest.mark.anyio
+async def test_404_east(client_east: AsyncClient) -> None:
+    response = await client_east.get("/404")
+    assert response.status_code == 404, response.text
+    data = response.json()
+    assert isinstance(data["detail"], str)
+
+
+@pytest.mark.anyio
+async def test_422_east(client_east: AsyncClient) -> None:
+    response = await client_east.get("/422")
+    assert response.status_code == 422, response.text
+    data = response.json()
+    assert isinstance(data["detail"], list)
+    assert isinstance(data["detail"][0], dict)
 
 
 def query_without_app(pk: int) -> int:

@@ -8,5 +8,4 @@ register_orm = partial(
     db_url=os.getenv("DB_URL", "sqlite://db.sqlite3"),
     modules={"models": ["models"]},
     generate_schemas=True,
-    add_exception_handlers=True,
 )

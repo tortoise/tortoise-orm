@@ -33,3 +33,14 @@ async def delete_user(user_id: int):
     if not deleted_count:
         raise HTTPException(status_code=404, detail=f"User {user_id} not found")
     return Status(message=f"Deleted user {user_id}")
+
+
+@router.get("/404")
+async def get_404():
+    await Users.get(id=0)
+
+
+@router.get("/422")
+async def get_422():
+    obj = await Users.create(username="foo")
+    await Users.create(username=obj.username)
