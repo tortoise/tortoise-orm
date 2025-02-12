@@ -267,7 +267,8 @@ class BaseExecutor:
         values = []
         expressions = {}
         for field in update_fields or self.model._meta.fields_db_projection.keys():
-            if not (field_obj := self.model._meta.fields_map[field]).pk:
+            field_obj = self.model._meta.fields_map[field]
+            if not field_obj.pk:
                 if isinstance(instance_field := getattr(instance, field), Expression):
                     expressions[field] = instance_field
                 else:
