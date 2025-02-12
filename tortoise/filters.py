@@ -9,6 +9,7 @@ from pypika_tortoise import SqlContext, Table
 from pypika_tortoise.enums import DatePart, Matching, SqlTypes
 from pypika_tortoise.functions import Cast, Extract, Upper
 from pypika_tortoise.terms import (
+    Array,
     BasicCriterion,
     Criterion,
     Equality,
@@ -79,6 +80,13 @@ def int_encoder(value: Any, instance: "Model", field: Field) -> int:
 
 def json_encoder(value: Any, instance: "Model", field: Field) -> dict:
     return value
+
+
+def array_encoder(value: Union[Any, Sequence[Any]], instance: "Model", field: Field) -> Any:
+    # Casting to the exact type of the field to avoid issues with psycopg that tries
+    # to use the smallest possible type which can lead to errors,
+    # e.g. {1,2} will be casted to smallint[] instead of integer[].
+    return Cast(Array(*value), field.get_db_field_type())
 
 
 ##############################################################################
@@ -343,42 +351,41 @@ def get_backward_fk_filters(
 
 
 def get_json_filter(field_name: str, source_field: str) -> dict[str, FilterInfoDict]:
-    actual_field_name = field_name
     return {
         field_name: {
-            "field": actual_field_name,
+            "field": field_name,
             "source_field": source_field,
             "operator": operator.eq,
         },
         f"{field_name}__not": {
-            "field": actual_field_name,
+            "field": field_name,
             "source_field": source_field,
             "operator": not_equal,
         },
         f"{field_name}__isnull": {
-            "field": actual_field_name,
+            "field": field_name,
             "source_field": source_field,
             "operator": is_null,
             "value_encoder": bool_encoder,
         },
         f"{field_name}__not_isnull": {
-            "field": actual_field_name,
+            "field": field_name,
             "source_field": source_field,
             "operator": not_null,
             "value_encoder": bool_encoder,
         },
         f"{field_name}__contains": {
-            "field": actual_field_name,
+            "field": field_name,
             "source_field": source_field,
             "operator": json_contains,
         },
         f"{field_name}__contained_by": {
-            "field": actual_field_name,
+            "field": field_name,
             "source_field": source_field,
             "operator": json_contained_by,
         },
         f"{field_name}__filter": {
-            "field": actual_field_name,
+            "field": field_name,
             "source_field": source_field,
             "operator": json_filter,
             "value_encoder": json_encoder,
@@ -399,17 +406,21 @@ def get_json_filter_operator(
     return key_parts, filter_value, operator_
 
 
-def get_array_filter(field_name: str, source_field: str) -> dict[str, FilterInfoDict]:
+def get_array_filter(
+    field_name: str, source_field: str, field: ArrayField
+) -> dict[str, FilterInfoDict]:
     return {
         field_name: {
             "field": field_name,
             "source_field": source_field,
             "operator": operator.eq,
+            "value_encoder": array_encoder,
         },
         f"{field_name}__not": {
             "field": field_name,
             "source_field": source_field,
             "operator": not_equal,
+            "value_encoder": array_encoder,
         },
         f"{field_name}__isnull": {
             "field": field_name,
@@ -427,16 +438,19 @@ def get_array_filter(field_name: str, source_field: str) -> dict[str, FilterInfo
             "field": field_name,
             "source_field": source_field,
             "operator": array_contains,
+            "value_encoder": array_encoder,
         },
         f"{field_name}__contained_by": {
             "field": field_name,
             "source_field": source_field,
             "operator": array_contained_by,
+            "value_encoder": array_encoder,
         },
         f"{field_name}__overlap": {
             "field": field_name,
             "source_field": source_field,
             "operator": array_overlap,
+            "value_encoder": array_encoder,
         },
         f"{field_name}__len": {
             "field": field_name,
@@ -458,7 +472,7 @@ def get_filters_for_field(
         if isinstance(field, JSONField):
             return get_json_filter(field_name, source_field)
         if isinstance(field, ArrayField):
-            return get_array_filter(field_name, source_field)
+            return get_array_filter(field_name, source_field, field)
 
     actual_field_name = field_name
     if field_name == "pk" and field:

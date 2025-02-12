@@ -355,33 +355,29 @@ class Q:
         join = None
 
         if value is None and f"{key}__isnull" in model._meta.filters:
-            param = model._meta.get_filter(f"{key}__isnull")
+            filter = model._meta.get_filter(f"{key}__isnull")
             value = True
         else:
-            param = model._meta.get_filter(key)
+            filter = model._meta.get_filter(key)
 
-        pk_db_field = model._meta.db_pk_column
-        if param.get("table"):
+        if "table" in filter:
+            # join the table
             join = (
-                param["table"],
-                table[pk_db_field] == param["table"][param["backward_key"]],
+                filter["table"],
+                table[model._meta.db_pk_column] == filter["table"][filter["backward_key"]],
             )
-            if param.get("value_encoder"):
-                value = param["value_encoder"](value, model)
-            op = param["operator"]
-            criterion = op(param["table"][param["field"]], value)
-        else:
-            if isinstance(value, Term):
-                encoded_value = value
-            else:
-                field_object = model._meta.fields_map[param["field"]]
-                encoded_value = (
-                    param["value_encoder"](value, model, field_object)
-                    if param.get("value_encoder")
-                    else field_object.to_db_value(value, model)
-                )
-            op = param["operator"]
-            criterion = op(table[param["source_field"]], encoded_value)
+            if "value_encoder" in filter:
+                value = filter["value_encoder"](value, model)
+            table = filter["table"]
+        elif not isinstance(value, Term):
+            field_object = model._meta.fields_map[filter["field"]]
+            value = (
+                filter["value_encoder"](value, model, field_object)
+                if "value_encoder" in filter
+                else field_object.to_db_value(value, model)
+            )
+        op = filter["operator"]
+        criterion = op(table[filter.get("source_field", filter["field"])], value)
         return criterion, join
 
     def _resolve_regular_kwarg(

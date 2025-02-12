@@ -7,3 +7,4 @@ class ArrayFields(Model):
     array = ArrayField()
     array_null = ArrayField(null=True)
     array_str = ArrayField(element_type="varchar(1)", null=True)
+    array_smallint = ArrayField(element_type="smallint", null=True)

@@ -43,6 +43,23 @@ class TestArrayFields(test.IsolatedTestCase):
         values = await testmodels.ArrayFields.get(id=obj0.id).values_list("array", flat=True)
         self.assertEqual(values, [0])
 
+    async def test_eq_filter(self):
+        o1 = await testmodels.ArrayFields.create(array=[1, 2, 3])
+        o2 = await testmodels.ArrayFields.create(array=[1, 2])
+
+        found = await testmodels.ArrayFields.filter(array=[1, 2, 3]).first()
+        self.assertEqual(found, o1)
+
+        found = await testmodels.ArrayFields.filter(array=[1, 2]).first()
+        self.assertEqual(found, o2)
+
+    async def test_not_filter(self):
+        await testmodels.ArrayFields.create(array=[1, 2, 3])
+        o2 = await testmodels.ArrayFields.create(array=[1, 2])
+
+        found = await testmodels.ArrayFields.filter(array__not=[1, 2, 3]).first()
+        self.assertEqual(found, o2)
+
     async def test_contains_ints(self):
         await testmodels.ArrayFields.create(array=[1, 2, 3])
         await testmodels.ArrayFields.create(array=[2, 3])
@@ -57,6 +74,12 @@ class TestArrayFields(test.IsolatedTestCase):
             "array", flat=True
         )
         self.assertEqual(list(found), [])
+
+    async def test_contains_smallints(self):
+        o1 = await testmodels.ArrayFields.create(array=[], array_smallint=[1, 2, 3])
+
+        found = await testmodels.ArrayFields.filter(array_smallint__contains=[2]).first()
+        self.assertEqual(found, o1)
 
     async def test_contains_strs(self):
         await testmodels.ArrayFields.create(array_str=["a", "b", "c"], array=[])

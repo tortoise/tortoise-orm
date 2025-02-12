@@ -1,8 +1,6 @@
 from enum import Enum
-from typing import Any, Sequence, Union
 
-from pypika_tortoise.terms import Array, BasicCriterion, Criterion, Term
-from pypika_tortoise.functions import Function
+from pypika_tortoise.terms import BasicCriterion, Criterion, Function, Term
 
 
 class PostgresArrayOperators(str, Enum):
@@ -11,19 +9,21 @@ class PostgresArrayOperators(str, Enum):
     OVERLAP = "&&"
 
 
-def postgres_array_contains(field: Term, value: Union[Any, Sequence[Any]]) -> Criterion:
-    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
-        value = (value,)
-
-    return BasicCriterion(PostgresArrayOperators.CONTAINS, field, Array(*value))
+# The value in the functions below is casted to the exact type of the field with value_encoder
+# to avoid issues with psycopg that tries to use the smallest possible type which can lead to errors,
+# e.g. {1,2} will be casted to smallint[] instead of integer[].
 
 
-def postgres_array_contained_by(field: Term, value: Sequence[Any]) -> Criterion:
-    return BasicCriterion(PostgresArrayOperators.CONTAINED_BY, field, Array(*value))
+def postgres_array_contains(field: Term, value: Term) -> Criterion:
+    return BasicCriterion(PostgresArrayOperators.CONTAINS, field, value)
 
 
-def postgres_array_overlap(field: Term, value: Sequence[Any]) -> Criterion:
-    return BasicCriterion(PostgresArrayOperators.OVERLAP, field, Array(*value))
+def postgres_array_contained_by(field: Term, value: Term) -> Criterion:
+    return BasicCriterion(PostgresArrayOperators.CONTAINED_BY, field, value)
+
+
+def postgres_array_overlap(field: Term, value: Term) -> Criterion:
+    return BasicCriterion(PostgresArrayOperators.OVERLAP, field, value)
 
 
 def postgres_array_length(field: Term, value: int) -> Criterion:

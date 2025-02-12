@@ -317,6 +317,13 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
 
         return ret
 
+    def get_db_field_type(self) -> str:
+        """
+        Returns the DB field type for this field for the current dialect.
+        """
+        dialect = self.model._meta.db.capabilities.dialect
+        return self.get_for_dialect(dialect, "SQL_TYPE")
+
     def get_db_field_types(self) -> Optional[dict[str, str]]:
         """
         Returns the DB types for this field.
