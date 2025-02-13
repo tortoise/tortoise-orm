@@ -1,8 +1,6 @@
 import os
 from uuid import uuid4
 
-import pytest
-
 from tests.testmodels import (
     Dest_null,
     Event,
@@ -123,8 +121,26 @@ class TestModelMethods(test.TestCase):
         n_mdl = await self.cls.get(id=self.mdl.id)
         self.assertEqual(n_mdl.name, "Test")
         self.assertEqual(n_mdl.desc, "Something")
-        with pytest.raises(OperationalError):
+        # Not allow to update pk field only
+        with self.assertRaisesRegex(OperationalError, "Can't update pk field only"):
             await self.mdl.save(update_fields=["id"])
+        # But update pk field with others is allowed
+        self.mdl.desc = new_desc = "..."
+        with self.assertWarnsRegex(RuntimeWarning, "Do not add pk field to `update_fields`!"):
+            await self.mdl.save(update_fields=["id", "desc"])
+        n_mdl = await self.cls.get(id=self.mdl.id)
+        self.assertEqual(n_mdl.desc, new_desc)
+        # update_fields include pk field and pk value was changed,
+        # does not change the current pk to the new one.
+        old_id = self.mdl.id
+        self.mdl.desc = "foo"
+        self.mdl.id += 1000
+        with self.assertWarnsRegex(RuntimeWarning, "It may change exists record by mistake."):
+            await self.mdl.save(update_fields=["id", "desc"])
+        with self.assertRaises(DoesNotExist):
+            await self.cls.get(id=self.mdl.id)
+        n_mdl = await self.cls.get(id=old_id)
+        self.assertEqual(n_mdl.desc, new_desc)  # desc value not changed either
 
     async def test_create(self):
         mdl = self.cls(name="Test2")

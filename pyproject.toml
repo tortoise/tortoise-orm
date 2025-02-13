@@ -184,6 +184,7 @@ asyncio_default_fixture_loop_scope = "session"
 filterwarnings = [
     'ignore:`pk` is deprecated:DeprecationWarning',
     'ignore:`index` is deprecated:DeprecationWarning',
+    'ignore:Do not add pk field to `update_fields`!:RuntimeWarning',
 ]
 
 [tool.coverage.run]

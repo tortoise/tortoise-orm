@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import decimal
+import warnings
 from collections.abc import Callable, Iterable, Sequence
 from copy import copy
 from typing import TYPE_CHECKING, Any, Optional, Union, cast
@@ -268,15 +269,22 @@ class BaseExecutor:
         expressions = {}
         for field in update_fields or self.model._meta.fields_db_projection.keys():
             field_obj = self.model._meta.fields_map[field]
-            if not field_obj.pk:
-                if isinstance(instance_field := getattr(instance, field), Expression):
-                    expressions[field] = instance_field
-                else:
-                    values.append(field_obj.to_db_value(instance_field, instance))
-        if not values and not expressions:
-            raise OperationalError(
-                f"Can't update pk field only, use `{self.model.__name__}.create` instead."
-            )
+            if field_obj.pk:
+                if update_fields:
+                    if len(update_fields) == 1:  # type:ignore
+                        raise OperationalError(
+                            f"Can't update pk field only, use `{self.model.__name__}.create` instead."
+                        )
+                    else:
+                        warnings.warn(
+                            "Do not add pk field to `update_fields`! It may change exists record by mistake.",
+                            RuntimeWarning,
+                        )
+                continue
+            if isinstance(instance_field := getattr(instance, field), Expression):
+                expressions[field] = instance_field
+            else:
+                values.append(field_obj.to_db_value(instance_field, instance))
         values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
         return (
             await self.db.execute_query(self.get_update_sql(update_fields, expressions), values)
