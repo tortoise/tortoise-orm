@@ -61,6 +61,8 @@ def _pydantic_recursion_protector(
     name=None,
     allow_cycles: bool = False,
     sort_alphabetically: Optional[bool] = None,
+    globalns: Optional[dict] = None,
+    localns: Optional[dict] = None,
 ) -> Optional[type[PydanticModel]]:
     """
     It is an inner function to protect pydantic model creator against cyclic recursion
@@ -93,6 +95,8 @@ def _pydantic_recursion_protector(
         _stack=stack,
         allow_cycles=allow_cycles,
         sort_alphabetically=sort_alphabetically,
+        globalns=globalns,
+        localns=localns,
         _as_submodel=True,
     )
     return pmc.create_pydantic_model()
@@ -237,6 +241,8 @@ class PydanticModelCreator:
         model_config: Optional[ConfigDict] = None,
         validators: Optional[dict[str, Any]] = None,
         module: str = __name__,
+        globalns: Optional[dict] = None,
+        localns: Optional[dict] = None,
         _stack: tuple = (),
         _as_submodel: bool = False,
     ) -> None:
@@ -288,7 +294,7 @@ class PydanticModelCreator:
 
         self._as_submodel = _as_submodel
 
-        self._annotations = get_annotations(cls)
+        self._annotations = get_annotations(cls, globalns=globalns, localns=localns)
 
         self._pconfig: ConfigDict
 
@@ -304,6 +310,9 @@ class PydanticModelCreator:
 
         self._validators = validators
         self._module = module
+
+        self.globalns = globalns
+        self.localns = localns
 
         self._stack = _stack
 
@@ -523,7 +532,9 @@ class PydanticModelCreator:
         field: ComputedFieldDescription,
     ) -> Optional[Any]:
         func = field.function
-        annotation = get_annotations(self._cls, func).get("return", None)
+        annotation = get_annotations(
+            self._cls, func, globalns=self.globalns, localns=self.localns
+        ).get("return", None)
         comment = _cleandoc(func)
         if annotation is not None:
             c_f = computed_field(return_type=annotation, description=comment)
@@ -555,6 +566,8 @@ class PydanticModelCreator:
                 stack=new_stack,
                 allow_cycles=self.meta.allow_cycles,
                 sort_alphabetically=self.meta.sort_alphabetically,
+                globalns=self.globalns,
+                localns=self.localns,
             )
         else:
             pmodel = None
@@ -581,6 +594,8 @@ def pydantic_model_creator(
     model_config: Optional[ConfigDict] = None,
     validators: Optional[dict[str, Any]] = None,
     module: str = __name__,
+    globalns: Optional[dict] = None,
+    localns: Optional[dict] = None,
 ) -> type[PydanticModel]:
     """
     Function to build `Pydantic Model <https://docs.pydantic.dev/latest/concepts/models/>`__ off Tortoise Model.
@@ -607,6 +622,8 @@ def pydantic_model_creator(
     :param model_config: A custom config to use as pydantic config.
     :param validators: A dictionary of methods that validate fields.
     :param module: The name of the module that the model belongs to.
+    :param globalns: If specified, use this dictionary as the globals map.
+    :param localns: If specified, use this dictionary as the locals map.
 
         Note: Created pydantic model uses config_class parameter and PydanticMeta's
             config_class as its Config class's bases(Only if provided!), but it
@@ -627,5 +644,7 @@ def pydantic_model_creator(
         model_config=model_config,
         validators=validators,
         module=module,
+        globalns=globalns,
+        localns=localns,
     )
     return pmc.create_pydantic_model()
