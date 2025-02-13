@@ -464,7 +464,7 @@ def get_array_filter(
 def get_filters_for_field(
     field_name: str, field: Optional[Field], source_field: str
 ) -> dict[str, FilterInfoDict]:
-    if field:
+    if field is not None:
         if isinstance(field, ManyToManyFieldInstance):
             return get_m2m_filters(field_name, field)
         if isinstance(field, BackwardFKRelation):
