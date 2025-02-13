@@ -5,7 +5,12 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 
-def get_annotations(cls: "type[Model]", method: Optional[Callable] = None, globalns: dict = None, localns: dict = None) -> dict[str, Any]:
+def get_annotations(
+    cls: "type[Model]",
+    method: Optional[Callable] = None,
+    globalns: Optional[dict] = None,
+    localns: Optional[dict] = None,
+) -> dict[str, Any]:
     """
     Get all annotations including base classes
     :param cls: The model class we need annotations from

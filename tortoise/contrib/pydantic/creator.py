@@ -61,8 +61,8 @@ def _pydantic_recursion_protector(
     name=None,
     allow_cycles: bool = False,
     sort_alphabetically: Optional[bool] = None,
-    globalns: dict = None,
-    localns: dict = None,
+    globalns: Optional[dict] = None,
+    localns: Optional[dict] = None,
 ) -> Optional[type[PydanticModel]]:
     """
     It is an inner function to protect pydantic model creator against cyclic recursion
@@ -241,8 +241,8 @@ class PydanticModelCreator:
         model_config: Optional[ConfigDict] = None,
         validators: Optional[dict[str, Any]] = None,
         module: str = __name__,
-        globalns: dict = None,
-        localns: dict = None,
+        globalns: Optional[dict] = None,
+        localns: Optional[dict] = None,
         _stack: tuple = (),
         _as_submodel: bool = False,
     ) -> None:
@@ -532,7 +532,9 @@ class PydanticModelCreator:
         field: ComputedFieldDescription,
     ) -> Optional[Any]:
         func = field.function
-        annotation = get_annotations(self._cls, func, globalns=self.globalns, localns=self.localns).get("return", None)
+        annotation = get_annotations(
+            self._cls, func, globalns=self.globalns, localns=self.localns
+        ).get("return", None)
         comment = _cleandoc(func)
         if annotation is not None:
             c_f = computed_field(return_type=annotation, description=comment)
@@ -592,8 +594,8 @@ def pydantic_model_creator(
     model_config: Optional[ConfigDict] = None,
     validators: Optional[dict[str, Any]] = None,
     module: str = __name__,
-    globalns: dict = None,
-    localns: dict = None,
+    globalns: Optional[dict] = None,
+    localns: Optional[dict] = None,
 ) -> type[PydanticModel]:
     """
     Function to build `Pydantic Model <https://docs.pydantic.dev/latest/concepts/models/>`__ off Tortoise Model.
