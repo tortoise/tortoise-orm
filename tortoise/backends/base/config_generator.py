@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import urllib.parse as urlparse
 import uuid
 from collections.abc import Iterable
 from types import ModuleType
-from typing import Any, Optional, Union
+from typing import Any
 
 from tortoise.exceptions import ConfigurationError
 
@@ -135,7 +137,7 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
     db_backend = url.scheme
     db = DB_LOOKUP[db_backend]
     if db.get("skip_first_char", True):
-        path: Optional[str] = url.path[1:]
+        path: str | None = url.path[1:]
     else:
         path = url.netloc + url.path
 
@@ -183,8 +185,8 @@ def expand_db_url(db_url: str, testing: bool = False) -> dict:
 
 def generate_config(
     db_url: str,
-    app_modules: dict[str, Iterable[Union[str, ModuleType]]],
-    connection_label: Optional[str] = None,
+    app_modules: dict[str, Iterable[str | ModuleType]],
+    connection_label: str | None = None,
     testing: bool = False,
 ) -> dict:
     _connection_label = connection_label or "default"

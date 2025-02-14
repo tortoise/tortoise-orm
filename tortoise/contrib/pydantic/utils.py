@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Optional, get_type_hints
+from typing import TYPE_CHECKING, Any, get_type_hints
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 
-def get_annotations(cls: "type[Model]", method: Optional[Callable] = None) -> dict[str, Any]:
+def get_annotations(cls: type[Model], method: Callable | None = None) -> dict[str, Any]:
     """
     Get all annotations including base classes
     :param cls: The model class we need annotations from

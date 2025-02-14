@@ -197,6 +197,10 @@ show_missing = true
 line-length = 100
 [tool.ruff.lint]
 ignore = ["E501"]
+extend-select = [
+    "FA",     # https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
+    "UP",     # https://docs.astral.sh/ruff/rules/#pyupgrade-up
+]
 
 [tool.bandit]
 exclude_dirs = ["tests", 'examples/*/_tests.py', "conftest.py"]

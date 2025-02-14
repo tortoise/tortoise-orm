@@ -24,10 +24,10 @@ else:
 def tortoise_exception_handlers() -> dict:
     from fastapi.responses import JSONResponse
 
-    async def doesnotexist_exception_handler(request: "Request", exc: DoesNotExist):
+    async def doesnotexist_exception_handler(request: Request, exc: DoesNotExist):
         return JSONResponse(status_code=404, content={"detail": str(exc)})
 
-    async def integrityerror_exception_handler(request: "Request", exc: IntegrityError):
+    async def integrityerror_exception_handler(request: Request, exc: IntegrityError):
         return JSONResponse(
             status_code=422,
             content={"detail": [{"loc": [], "msg": str(exc), "type": "IntegrityError"}]},
@@ -188,7 +188,7 @@ class RegisterTortoise(AbstractAsyncContextManager):
 
 
 def register_tortoise(
-    app: "FastAPI",
+    app: FastAPI,
     config: dict | None = None,
     config_file: str | None = None,
     db_url: str | None = None,
@@ -267,7 +267,7 @@ def register_tortoise(
     # So people can upgrade tortoise-orm in running project without changing any code
 
     @asynccontextmanager
-    async def orm_lifespan(app_instance: "FastAPI"):
+    async def orm_lifespan(app_instance: FastAPI):
         async with RegisterTortoise(
             app_instance,
             config,

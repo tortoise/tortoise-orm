@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator

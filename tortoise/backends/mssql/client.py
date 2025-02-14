@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from itertools import count
-from typing import Any, Optional, SupportsInt
+from typing import Any, SupportsInt
 
 from pypika_tortoise.dialects import MSSQLQuery
 
@@ -40,7 +42,7 @@ class MSSQLClient(ODBCClient):
         super().__init__(**kwargs)
         self.dsn = f"DRIVER={driver};SERVER={host},{port};UID={user};PWD={password};"
 
-    def _in_transaction(self) -> "TransactionContext":
+    def _in_transaction(self) -> TransactionContext:
         return TransactionContextPooled(TransactionWrapper(self), self._pool_init_lock)
 
     @translate_exceptions
@@ -60,9 +62,9 @@ def _gen_savepoint_name(_c=count()) -> str:
 class TransactionWrapper(ODBCTransactionWrapper, MSSQLClient):
     def __init__(self, connection: ODBCClient) -> None:
         super().__init__(connection)
-        self._savepoint: Optional[str] = None
+        self._savepoint: str | None = None
 
-    def _in_transaction(self) -> "TransactionContext":
+    def _in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(TransactionWrapper(self))
 
     async def begin(self) -> None:

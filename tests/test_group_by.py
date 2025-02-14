@@ -5,7 +5,7 @@ from tortoise.functions import Avg, Count, Sum, Upper
 
 class TestGroupBy(test.TestCase):
     async def asyncSetUp(self) -> None:
-        await super(TestGroupBy, self).asyncSetUp()
+        await super().asyncSetUp()
         self.a1 = await Author.create(name="author1")
         self.a2 = await Author.create(name="author2")
         self.books1 = [

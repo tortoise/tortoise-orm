@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import copy
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, cast
 
 from pypika_tortoise import Table
 from pypika_tortoise.terms import Criterion, Term
@@ -79,8 +79,8 @@ def get_joins_for_related_field(
 
 
 def resolve_nested_field(
-    model: type["Model"], table: Table, field: str
-) -> tuple[Term, list[TableCriterionTuple], Optional[Field]]:
+    model: type[Model], table: Table, field: str
+) -> tuple[Term, list[TableCriterionTuple], Field | None]:
     """
     Resolves a nested field string like events__participants__name and
     returns the pypika term, required joins and the Field that can be used for
@@ -164,9 +164,9 @@ class QueryModifier:
 
     def __init__(
         self,
-        where_criterion: Optional[Criterion] = None,
-        joins: Optional[list[TableCriterionTuple]] = None,
-        having_criterion: Optional[Criterion] = None,
+        where_criterion: Criterion | None = None,
+        joins: list[TableCriterionTuple] | None = None,
+        having_criterion: Criterion | None = None,
     ) -> None:
         self.where_criterion: Criterion = where_criterion or EmptyCriterion()
         self.joins = joins or []
@@ -215,13 +215,13 @@ class Prefetch:
 
     __slots__ = ("relation", "queryset", "to_attr")
 
-    def __init__(self, relation: str, queryset: "QuerySet", to_attr: Optional[str] = None) -> None:
+    def __init__(self, relation: str, queryset: QuerySet, to_attr: str | None = None) -> None:
         self.to_attr = to_attr
         self.relation = relation
         self.queryset = queryset
         self.queryset.query = copy(self.queryset.model._meta.basequery)
 
-    def resolve_for_queryset(self, queryset: "QuerySet") -> None:
+    def resolve_for_queryset(self, queryset: QuerySet) -> None:
         """
         Called internally to generate prefetching query.
 

@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import sys
-from typing import TYPE_CHECKING, List, Union
+from typing import TYPE_CHECKING, Union
 
 import pydantic
 from pydantic import BaseModel, ConfigDict, RootModel
@@ -16,9 +18,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.queryset import QuerySet, QuerySetSingle
 
 
-def _get_fetch_fields(
-    pydantic_class: "type[PydanticModel]", model_class: "type[Model]"
-) -> list[str]:
+def _get_fetch_fields(pydantic_class: type[PydanticModel], model_class: type[Model]) -> list[str]:
     """
     Recursively collect fields needed to fetch
     :param pydantic_class: The pydantic model class
@@ -28,7 +28,7 @@ def _get_fetch_fields(
     fetch_fields = []
     for field_name, field_type in pydantic_class.__annotations__.items():
         origin = getattr(field_type, "__origin__", None)
-        if origin in (list, List, Union):
+        if origin in (list, list, Union):
             field_type = field_type.__args__[0]
 
         # noinspection PyProtectedMember
@@ -65,7 +65,7 @@ class PydanticModel(BaseModel):
         return value
 
     @classmethod
-    async def from_tortoise_orm(cls, obj: "Model") -> Self:
+    async def from_tortoise_orm(cls, obj: Model) -> Self:
         """
         Returns a serializable pydantic model instance built from the provided model instance.
 
@@ -92,7 +92,7 @@ class PydanticModel(BaseModel):
         return cls.model_validate(obj)
 
     @classmethod
-    async def from_queryset_single(cls, queryset: "QuerySetSingle") -> Self:
+    async def from_queryset_single(cls, queryset: QuerySetSingle) -> Self:
         """
         Returns a serializable pydantic model instance for a single model
         from the provided queryset.
@@ -105,7 +105,7 @@ class PydanticModel(BaseModel):
         return cls.model_validate(await queryset.prefetch_related(*fetch_fields))
 
     @classmethod
-    async def from_queryset(cls, queryset: "QuerySet") -> list[Self]:
+    async def from_queryset(cls, queryset: QuerySet) -> list[Self]:
         """
         Returns a serializable pydantic model instance that contains a list of models,
         from the provided queryset.
@@ -127,7 +127,7 @@ class PydanticListModel(RootModel):
     """
 
     @classmethod
-    async def from_queryset(cls, queryset: "QuerySet") -> Self:
+    async def from_queryset(cls, queryset: QuerySet) -> Self:
         """
         Returns a serializable pydantic model instance that contains a list of models,
         from the provided queryset.

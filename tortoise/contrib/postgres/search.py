@@ -1,4 +1,4 @@
-from typing import Union
+from __future__ import annotations
 
 from pypika_tortoise.enums import Comparator
 from pypika_tortoise.terms import BasicCriterion, Function, Term
@@ -11,7 +11,7 @@ class Comp(Comparator):
 
 
 class SearchCriterion(BasicCriterion):
-    def __init__(self, field: Term, expr: Union[Term, Function]) -> None:
+    def __init__(self, field: Term, expr: Term | Function) -> None:
         if isinstance(expr, Function):
             _expr = expr
         else:

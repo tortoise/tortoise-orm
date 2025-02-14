@@ -106,7 +106,7 @@ class BaseDBAsyncClient(abc.ABC):
     """
 
     _connection: Any
-    _parent: "BaseDBAsyncClient"
+    _parent: BaseDBAsyncClient
     _pool: Any
     connection_name: str
     query_class: type[Query] = Query
@@ -154,14 +154,14 @@ class BaseDBAsyncClient(abc.ABC):
         """
         raise NotImplementedError()  # pragma: nocoverage
 
-    def acquire_connection(self) -> "ConnectionWrapper" | "PoolConnectionWrapper":
+    def acquire_connection(self) -> ConnectionWrapper | PoolConnectionWrapper:
         """
         Acquires a connection from the pool.
         Will return the current context connection if already in a transaction.
         """
         raise NotImplementedError()  # pragma: nocoverage
 
-    def _in_transaction(self) -> "TransactionContext":
+    def _in_transaction(self) -> TransactionContext:
         raise NotImplementedError()  # pragma: nocoverage
 
     async def execute_insert(self, query: str, values: list) -> Any:

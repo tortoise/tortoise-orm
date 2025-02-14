@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import uuid
 from collections.abc import Sequence
-from typing import Optional, cast
+from typing import cast
 
 from pypika_tortoise.dialects import PostgreSQLQueryBuilder
 from pypika_tortoise.terms import Term
@@ -54,7 +56,7 @@ class BasePostgresExecutor(BaseExecutor):
             query = query.on_conflict().do_nothing()
         return query
 
-    async def _process_insert_result(self, instance: Model, results: Optional[dict]) -> None:
+    async def _process_insert_result(self, instance: Model, results: dict | None) -> None:
         if results:
             generated_fields = self.model._meta.generated_db_fields
             db_projection = instance._meta.fields_db_projection_reverse

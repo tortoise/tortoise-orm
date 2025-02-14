@@ -29,7 +29,7 @@ from tortoise.contrib.pydantic import (
 
 class TestPydantic(test.TestCase):
     async def asyncSetUp(self) -> None:
-        await super(TestPydantic, self).asyncSetUp()
+        await super().asyncSetUp()
         self.Event_Pydantic = pydantic_model_creator(Event)
         self.Event_Pydantic_List = pydantic_queryset_creator(Event)
         self.Tournament_Pydantic = pydantic_model_creator(Tournament)
@@ -1392,7 +1392,7 @@ class TestPydantic(test.TestCase):
 
 class TestPydanticCycle(test.TestCase):
     async def asyncSetUp(self) -> None:
-        await super(TestPydanticCycle, self).asyncSetUp()
+        await super().asyncSetUp()
         self.Employee_Pydantic = pydantic_model_creator(Employee)
 
         self.root = await Employee.create(name="Root")
@@ -1599,7 +1599,7 @@ class TestPydanticCycle(test.TestCase):
 
 class TestPydanticComputed(test.TestCase):
     async def asyncSetUp(self) -> None:
-        await super(TestPydanticComputed, self).asyncSetUp()
+        await super().asyncSetUp()
         self.Employee_Pydantic = pydantic_model_creator(Employee)
         self.employee = await Employee.create(name="Some Employee")
         self.maxDiff = None

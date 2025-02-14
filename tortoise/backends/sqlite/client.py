@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import asyncio
 import os
 import sqlite3
 from collections.abc import Callable, Coroutine, Sequence
 from functools import wraps
 from itertools import count
-from typing import Any, Optional, TypeVar, cast
+from typing import Any, TypeVar, cast
 
 import aiosqlite
 from pypika_tortoise import SQLLiteQuery
@@ -71,7 +73,7 @@ class SqliteClient(BaseDBAsyncClient):
         self.pragmas.setdefault("journal_size_limit", 16384)
         self.pragmas.setdefault("foreign_keys", "ON")
 
-        self._connection: Optional[aiosqlite.Connection] = None
+        self._connection: aiosqlite.Connection | None = None
         self._lock = asyncio.Lock()
 
     async def create_connection(self, with_db: bool) -> None:
@@ -119,7 +121,7 @@ class SqliteClient(BaseDBAsyncClient):
     def acquire_connection(self) -> ConnectionWrapper:
         return ConnectionWrapper(self._lock, self)
 
-    def _in_transaction(self) -> "TransactionContext":
+    def _in_transaction(self) -> TransactionContext:
         return SqliteTransactionContext(SqliteTransactionWrapper(self), self._lock)
 
     @translate_exceptions
@@ -144,7 +146,7 @@ class SqliteClient(BaseDBAsyncClient):
 
     @translate_exceptions
     async def execute_query(
-        self, query: str, values: Optional[list] = None
+        self, query: str, values: list | None = None
     ) -> tuple[int, Sequence[dict]]:
         query = query.replace("\x00", "'||CHAR(0)||'")
         async with self.acquire_connection() as connection:
@@ -154,7 +156,7 @@ class SqliteClient(BaseDBAsyncClient):
             return (connection.total_changes - start) or len(rows), rows
 
     @translate_exceptions
-    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> list[dict]:
+    async def execute_query_dict(self, query: str, values: list | None = None) -> list[dict]:
         query = query.replace("\x00", "'||CHAR(0)||'")
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
@@ -215,13 +217,13 @@ class SqliteTransactionWrapper(SqliteClient, TransactionalDBClient):
         self.connection_name = connection.connection_name
         self._connection: aiosqlite.Connection = cast(aiosqlite.Connection, connection._connection)
         self._lock = asyncio.Lock()
-        self._savepoint: Optional[str] = None
+        self._savepoint: str | None = None
         self.log = connection.log
         self._finalized = False
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 
-    def _in_transaction(self) -> "TransactionContext":
+    def _in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(SqliteTransactionWrapper(self))
 
     @translate_exceptions

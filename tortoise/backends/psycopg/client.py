@@ -36,7 +36,7 @@ class AsyncConnectionPool(psycopg_pool.AsyncConnectionPool):
 
 class PsycopgSQLQuery(PostgreSQLQuery):
     @classmethod
-    def _builder(cls, **kwargs) -> "PostgreSQLQueryBuilder":
+    def _builder(cls, **kwargs) -> PostgreSQLQueryBuilder:
         return PsycopgSQLQueryBuilder(**kwargs)
 
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import inspect
 import os as _os
@@ -8,7 +10,7 @@ from asyncio.events import AbstractEventLoop
 from collections.abc import Callable, Coroutine, Iterable
 from functools import partial, wraps
 from types import ModuleType
-from typing import Any, Optional, TypeVar, Union, cast
+from typing import Any, TypeVar, Union, cast
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 
 from tortoise import Model, Tortoise, connections
@@ -51,11 +53,11 @@ On success it will be marked as unexpected success.
 _CONFIG: dict = {}
 _CONNECTIONS: dict = {}
 _LOOP: AbstractEventLoop = None  # type: ignore
-_MODULES: Iterable[Union[str, ModuleType]] = []
+_MODULES: Iterable[str | ModuleType] = []
 _CONN_CONFIG: dict = {}
 
 
-def getDBConfig(app_label: str, modules: Iterable[Union[str, ModuleType]]) -> dict:
+def getDBConfig(app_label: str, modules: Iterable[str | ModuleType]) -> dict:
     """
     DB Config factory, for use in testing.
 
@@ -102,10 +104,10 @@ async def truncate_all_models() -> None:
 
 
 def initializer(
-    modules: Iterable[Union[str, ModuleType]],
-    db_url: Optional[str] = None,
+    modules: Iterable[str | ModuleType],
+    db_url: str | None = None,
     app_label: str = "models",
-    loop: Optional[AbstractEventLoop] = None,
+    loop: AbstractEventLoop | None = None,
 ) -> None:
     """
     Sets up the DB for testing. Must be called as part of test environment setup.
@@ -233,7 +235,7 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
         Tortoise._inited = False
 
     def assertListSortEqual(
-        self, list1: list[Any], list2: list[Any], msg: Any = ..., sorted_key: Optional[str] = None
+        self, list1: list[Any], list2: list[Any], msg: Any = ..., sorted_key: str | None = None
     ) -> None:
         if isinstance(list1[0], Model):
             super().assertListEqual(
@@ -265,7 +267,7 @@ class IsolatedTestCase(SimpleTestCase):
     If you define a ``tortoise_test_modules`` list, it overrides the DB setup module for the tests.
     """
 
-    tortoise_test_modules: Iterable[Union[str, ModuleType]] = []
+    tortoise_test_modules: Iterable[str | ModuleType] = []
 
     async def _setUpDB(self) -> None:
         await super()._setUpDB()
@@ -407,7 +409,7 @@ MEMORY_SQLITE = "sqlite://:memory:"
 
 
 @typing.overload
-def init_memory_sqlite(models: Union[ModulesConfigType, None] = None) -> AsyncFuncDeco: ...
+def init_memory_sqlite(models: ModulesConfigType | None = None) -> AsyncFuncDeco: ...
 
 
 @typing.overload
@@ -415,8 +417,8 @@ def init_memory_sqlite(models: AsyncFunc) -> AsyncFunc: ...
 
 
 def init_memory_sqlite(
-    models: Union[ModulesConfigType, AsyncFunc, None] = None,
-) -> Union[AsyncFunc, AsyncFuncDeco]:
+    models: ModulesConfigType | AsyncFunc | None = None,
+) -> AsyncFunc | AsyncFuncDeco:
     """
     For single file style to run code with memory sqlite
 

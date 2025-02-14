@@ -11,9 +11,15 @@ from pypika_tortoise import Case as PypikaCase
 from pypika_tortoise import Field as PypikaField
 from pypika_tortoise import SqlContext, Table
 from pypika_tortoise.functions import AggregateFunction, DistinctOptionFunction
-from pypika_tortoise.terms import ArithmeticExpression, Criterion
+from pypika_tortoise.terms import (
+    ArithmeticExpression,
+    Criterion,
+)
 from pypika_tortoise.terms import Function as PypikaFunction
-from pypika_tortoise.terms import Term, ValueWrapper
+from pypika_tortoise.terms import (
+    Term,
+    ValueWrapper,
+)
 from pypika_tortoise.utils import format_alias_sql
 
 from tortoise.exceptions import FieldError, OperationalError
@@ -36,7 +42,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 @dataclass(frozen=True)
 class ResolveContext:
-    model: type["Model"]
+    model: type[Model]
     table: Table
     annotations: dict[str, Any]
     custom_filters: dict[str, FilterInfoDict]
@@ -200,7 +206,7 @@ class F(Expression):
 
 
 class Subquery(Term):
-    def __init__(self, query: "AwaitableQuery") -> None:
+    def __init__(self, query: AwaitableQuery) -> None:
         super().__init__()
         self.query = query
 
@@ -209,7 +215,7 @@ class Subquery(Term):
         self.query._make_query()
         return self.query.query.get_parameterized_sql(ctx)[0]
 
-    def as_(self, alias: str) -> "Selectable":  # type: ignore
+    def as_(self, alias: str) -> Selectable:  # type: ignore
         self.query._choose_db_if_not_chosen()
         self.query._make_query()
         return self.query.query.as_(alias)
@@ -246,7 +252,7 @@ class Q:
     AND = "AND"
     OR = "OR"
 
-    def __init__(self, *args: "Q", join_type: str = AND, **kwargs: Any) -> None:
+    def __init__(self, *args: Q, join_type: str = AND, **kwargs: Any) -> None:
         if args and kwargs:
             newarg = Q(join_type=join_type, **kwargs)
             args = (newarg,) + args
@@ -263,7 +269,7 @@ class Q:
         self.join_type = join_type
         self._is_negated = False
 
-    def __and__(self, other: "Q") -> "Q":
+    def __and__(self, other: Q) -> Q:
         """
         Returns a binary AND of Q objects, use ``AND`` operator.
 
@@ -273,7 +279,7 @@ class Q:
             raise OperationalError("AND operation requires a Q node")
         return Q(self, other, join_type=self.AND)
 
-    def __or__(self, other: "Q") -> "Q":
+    def __or__(self, other: Q) -> Q:
         """
         Returns a binary OR of Q objects, use ``OR`` operator.
 
@@ -283,7 +289,7 @@ class Q:
             raise OperationalError("OR operation requires a Q node")
         return Q(self, other, join_type=self.OR)
 
-    def __invert__(self) -> "Q":
+    def __invert__(self) -> Q:
         """
         Returns a negated instance of the Q object, use ``~`` operator.
         """
@@ -350,7 +356,7 @@ class Q:
         return modifier
 
     def _process_filter_kwarg(
-        self, model: "type[Model]", key: str, value: Any, table: Table
+        self, model: type[Model], key: str, value: Any, table: Table
     ) -> tuple[Criterion, tuple[Table, Criterion] | None]:
         join = None
 
@@ -505,10 +511,10 @@ class Function(Expression):
     populate_field_object = False
 
     def __init__(
-        self, field: str | F | CombinedExpression | "Function", *default_values: Any
+        self, field: str | F | CombinedExpression | Function, *default_values: Any
     ) -> None:
         self.field = field
-        self.field_object: "Field | None" = None
+        self.field_object: Field | None = None
         self.default_values = default_values
 
     def _get_function_field(self, field: Term | str, *default_values) -> PypikaFunction:

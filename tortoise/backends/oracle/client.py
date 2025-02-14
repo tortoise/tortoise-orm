@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import datetime
 import functools
-from typing import TYPE_CHECKING, Any, SupportsInt, Union, cast
+from typing import TYPE_CHECKING, Any, SupportsInt, cast
 
 import pyodbc
 import pytz
@@ -56,10 +58,10 @@ class OracleClient(ODBCClient):
             dbq += f"/{self.database}"
         self.dsn = f"DRIVER={driver};DBQ={dbq};UID={user};PWD={password};"
 
-    def _in_transaction(self) -> "TransactionContext":
+    def _in_transaction(self) -> TransactionContext:
         return TransactionContextPooled(TransactionWrapper(self), self._pool_init_lock)
 
-    def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
+    def acquire_connection(self) -> ConnectionWrapper | PoolConnectionWrapper:
         return OraclePoolConnectionWrapper(self, self._pool_init_lock)
 
     async def db_create(self) -> None:
@@ -102,7 +104,7 @@ class OraclePoolConnectionWrapper(PoolConnectionWrapper):
         except ValueError:
             return parse_datetime(value.decode()[:-32]).astimezone(tz=pytz.utc)
 
-    async def __aenter__(self) -> "asyncodbc.Connection":
+    async def __aenter__(self) -> asyncodbc.Connection:
         connection = await super().__aenter__()
         if getattr(self.client, "database", False) and not hasattr(connection, "current_schema"):
             client = cast(OracleClient, self.client)
@@ -114,7 +116,7 @@ class OraclePoolConnectionWrapper(PoolConnectionWrapper):
             await connection.add_output_converter(
                 pyodbc.SQL_TYPE_TIMESTAMP, self._timestamp_convert
             )
-            setattr(connection, "current_schema", client.user)
+            connection.current_schema = client.user
         return connection
 
 

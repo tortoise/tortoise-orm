@@ -3,7 +3,7 @@ from __future__ import annotations
 import operator
 from collections.abc import Callable, Iterable
 from functools import partial
-from typing import TYPE_CHECKING, Any, Optional, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 from pypika_tortoise import SqlContext, Table
 from pypika_tortoise.enums import DatePart, Matching, SqlTypes
@@ -38,7 +38,7 @@ class Like(BasicCriterion):
     def get_sql(self, ctx: SqlContext):
         sql = super().get_sql(ctx.copy(with_alias=False)) + str(self.escape)
         if ctx.with_alias and self.alias:  # pragma: nocoverage
-            return '{sql} "{alias}"'.format(sql=sql, alias=self.alias)
+            return f'{sql} "{self.alias}"'
         return sql
 
 
@@ -52,27 +52,27 @@ def escape_like(val: str) -> str:
 ##############################################################################
 
 
-def list_encoder(values: Iterable[Any], instance: "Model", field: Field) -> list:
+def list_encoder(values: Iterable[Any], instance: Model, field: Field) -> list:
     """Encodes an iterable of a given field into a database-compatible format."""
     return [field.to_db_value(element, instance) for element in values]
 
 
-def related_list_encoder(values: Iterable[Any], instance: "Model", field: Field) -> list:
+def related_list_encoder(values: Iterable[Any], instance: Model, field: Field) -> list:
     return [
         field.to_db_value(element.pk if hasattr(element, "pk") else element, instance)
         for element in values
     ]
 
 
-def bool_encoder(value: Any, instance: "Model", field: Field) -> bool:
+def bool_encoder(value: Any, instance: Model, field: Field) -> bool:
     return bool(value)
 
 
-def string_encoder(value: Any, instance: "Model", field: Field) -> str:
+def string_encoder(value: Any, instance: Model, field: Field) -> str:
     return str(value)
 
 
-def json_encoder(value: Any, instance: "Model", field: Field) -> dict:
+def json_encoder(value: Any, instance: Model, field: Field) -> dict:
     return value
 
 
@@ -382,7 +382,7 @@ def get_json_filter_operator(
 
 
 def get_filters_for_field(
-    field_name: str, field: Optional[Field], source_field: str
+    field_name: str, field: Field | None, source_field: str
 ) -> dict[str, FilterInfoDict]:
     if isinstance(field, ManyToManyFieldInstance):
         return get_m2m_filters(field_name, field)

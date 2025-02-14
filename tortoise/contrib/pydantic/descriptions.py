@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import dataclasses
 import sys
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 if sys.version_info >= (3, 11):
     from typing import Self
@@ -27,7 +29,7 @@ class ModelDescription:
     m2m_fields: list[Field] = dataclasses.field(default_factory=list)
 
     @classmethod
-    def from_model(cls, model: type["Model"]) -> Self:
+    def from_model(cls, model: type[Model]) -> Self:
         return cls(
             pk_field=model._meta.fields_map[model._meta.pk_attr],
             data_fields=[
@@ -68,7 +70,7 @@ class ModelDescription:
 class ComputedFieldDescription:
     field_type: Any
     function: Callable[[], Any]
-    description: Optional[str]
+    description: str | None
 
 
 @dataclasses.dataclass
@@ -101,7 +103,7 @@ class PydanticMetaData:
     sort_alphabetically: bool = False
 
     #: Allows user to specify custom config for generated model
-    model_config: Optional[ConfigDict] = None
+    model_config: ConfigDict | None = None
 
     @classmethod
     def from_pydantic_meta(cls, old_pydantic_meta: Any) -> Self:
@@ -140,14 +142,14 @@ class PydanticMetaData:
         )
         return pmd
 
-    def construct_pydantic_meta(self, meta_override: type) -> "PydanticMetaData":
+    def construct_pydantic_meta(self, meta_override: type) -> PydanticMetaData:
         def get_param_from_meta_override(attr: str) -> Any:
             return getattr(meta_override, attr, getattr(self, attr))
 
         default_include: tuple[str, ...] = tuple(get_param_from_meta_override("include"))
         default_exclude: tuple[str, ...] = tuple(get_param_from_meta_override("exclude"))
         default_computed: tuple[str, ...] = tuple(get_param_from_meta_override("computed"))
-        default_config: Optional[ConfigDict] = self.model_config
+        default_config: ConfigDict | None = self.model_config
 
         backward_relations: bool = bool(get_param_from_meta_override("backward_relations"))
 
@@ -174,10 +176,10 @@ class PydanticMetaData:
         exclude: tuple[str, ...] = (),
         include: tuple[str, ...] = (),
         computed: tuple[str, ...] = (),
-        allow_cycles: Optional[bool] = None,
-        sort_alphabetically: Optional[bool] = None,
-        model_config: Optional[ConfigDict] = None,
-    ) -> "PydanticMetaData":
+        allow_cycles: bool | None = None,
+        sort_alphabetically: bool | None = None,
+        model_config: ConfigDict | None = None,
+    ) -> PydanticMetaData:
         _sort_fields: bool = (
             self.sort_alphabetically if sort_alphabetically is None else sort_alphabetically
         )

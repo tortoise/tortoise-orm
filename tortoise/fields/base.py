@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import sys
 import warnings
 from collections.abc import Callable
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, Union, overload
 
 from pypika_tortoise.terms import Term
 
@@ -142,40 +144,38 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
     has_db_field: bool = True
     skip_to_python_if_native: bool = False
     allows_generated: bool = False
-    function_cast: Optional[Callable[[Term], Term]] = None
+    function_cast: Callable[[Term], Term] | None = None
     SQL_TYPE: str = None  # type: ignore
     GENERATED_SQL: str = None  # type: ignore
 
     # These methods are just to make IDE/Linters happy:
     if TYPE_CHECKING:
 
-        def __new__(cls, *args: Any, **kwargs: Any) -> "Field[VALUE]":
+        def __new__(cls, *args: Any, **kwargs: Any) -> Field[VALUE]:
             return super().__new__(cls)
 
         @overload
-        def __get__(self, instance: None, owner: type["Model"]) -> "Field[VALUE]": ...
+        def __get__(self, instance: None, owner: type[Model]) -> Field[VALUE]: ...
 
         @overload
-        def __get__(self, instance: "Model", owner: type["Model"]) -> VALUE: ...
+        def __get__(self, instance: Model, owner: type[Model]) -> VALUE: ...
 
-        def __get__(
-            self, instance: Optional["Model"], owner: type["Model"]
-        ) -> "Field[VALUE] | VALUE": ...
+        def __get__(self, instance: Model | None, owner: type[Model]) -> Field[VALUE] | VALUE: ...
 
-        def __set__(self, instance: "Model", value: VALUE) -> None: ...
+        def __set__(self, instance: Model, value: VALUE) -> None: ...
 
     def __init__(
         self,
-        source_field: Optional[str] = None,
+        source_field: str | None = None,
         generated: bool = False,
-        primary_key: Optional[bool] = None,
+        primary_key: bool | None = None,
         null: bool = False,
         default: Any = None,
         unique: bool = False,
-        db_index: Optional[bool] = None,
-        description: Optional[str] = None,
-        model: "Optional[Model]" = None,
-        validators: Optional[list[Union[Validator, Callable]]] = None,
+        db_index: bool | None = None,
+        description: str | None = None,
+        model: Model | None = None,
+        validators: list[Validator | Callable] | None = None,
         **kwargs: Any,
     ) -> None:
         if (index := kwargs.pop("index", None)) is not None:
@@ -225,13 +225,13 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         self.index = bool(db_index)
         self.model_field_name = ""
         self.description = description
-        self.docstring: Optional[str] = None
-        self.validators: list[Union[Validator, Callable]] = validators or []
+        self.docstring: str | None = None
+        self.validators: list[Validator | Callable] = validators or []
         # TODO: consider making this not be set from constructor
-        self.model: type["Model"] = model  # type: ignore
-        self.reference: "Optional[Field]" = None
+        self.model: type[Model] = model  # type: ignore
+        self.reference: Field | None = None
 
-    def to_db_value(self, value: Any, instance: "Union[type[Model], Model]") -> Any:
+    def to_db_value(self, value: Any, instance: type[Model] | Model) -> Any:
         """
         Converts from the Python type to the DB type.
 
@@ -317,7 +317,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
 
         return ret
 
-    def get_db_field_types(self) -> Optional[dict[str, str]]:
+    def get_db_field_types(self) -> dict[str, str] | None:
         """
         Returns the DB types for this field.
 
@@ -326,7 +326,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         """
         if not self.has_db_field:  # pragma: nocoverage
             return None
-        default = getattr(self, "SQL_TYPE")
+        default = self.SQL_TYPE
         return {
             "": default,
             **{
@@ -413,7 +413,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
                 return str(typ).replace("typing.", "")
             return f"{typ.__module__}.{typ.__name__}"
 
-        def type_name(typ: Any) -> Union[str, list[str]]:
+        def type_name(typ: Any) -> str | list[str]:
             try:
                 return typ._meta.full_name
             except (AttributeError, TypeError):
@@ -426,7 +426,7 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
                 except TypeError:
                     return str(typ)
 
-        def default_name(default: Any) -> Optional[Union[int, float, str, bool]]:
+        def default_name(default: Any) -> int | float | str | bool | None:
             if isinstance(default, (int, float, str, bool, type(None))):
                 return default
             if callable(default):

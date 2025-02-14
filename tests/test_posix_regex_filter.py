@@ -8,7 +8,6 @@ class RegexTestCase(test.TestCase):
 
 
 class TestPosixRegexFilter(test.TestCase):
-
     @test.requireCapability(support_for_posix_regex_queries=True)
     async def test_regex_filter(self):
         author = await testmodels.Author.create(name="Johann Wolfgang von Goethe")

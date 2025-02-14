@@ -31,7 +31,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         "){extra}{comment};"
     )
 
-    def __init__(self, client: "MySQLClient") -> None:
+    def __init__(self, client: MySQLClient) -> None:
         super().__init__(client)
         self._field_indexes = []  # type: list[str]
         self._foreign_keys = []  # type: list[str]
@@ -72,7 +72,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
 
     def _get_index_sql(
         self,
-        model: "type[Model]",
+        model: type[Model],
         field_names: list[str],
         safe: bool,
         index_name: str | None = None,

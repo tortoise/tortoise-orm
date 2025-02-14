@@ -12,7 +12,7 @@ class TestDecimalFields(test.TestCase):
     def test_max_digits_empty(self):
         with self.assertRaisesRegex(
             TypeError,
-            "missing 2 required positional arguments: 'max_digits' and" " 'decimal_places'",
+            "missing 2 required positional arguments: 'max_digits' and 'decimal_places'",
         ):
             fields.DecimalField()  # pylint: disable=E1120
 
@@ -169,25 +169,31 @@ class TestDecimalFields(test.TestCase):
             FieldError,
             "There is no non-virtual field not_exist on Model DecimalFields",
         ):
-            await testmodels.DecimalFields.all().annotate(sum_decimal=Sum(F("not_exist"))).values(
-                "sum_decimal"
+            await (
+                testmodels.DecimalFields.all()
+                .annotate(sum_decimal=Sum(F("not_exist")))
+                .values("sum_decimal")
             )
 
     async def test_aggregate_sum_different_field_type_at_right_with_f_expression(self):
         with self.assertRaisesRegex(
             FieldError, "Cannot use arithmetic expression between different field type"
         ):
-            await testmodels.DecimalFields.all().annotate(
-                sum_decimal=Sum(F("decimal") + F("id"))
-            ).values("sum_decimal")
+            await (
+                testmodels.DecimalFields.all()
+                .annotate(sum_decimal=Sum(F("decimal") + F("id")))
+                .values("sum_decimal")
+            )
 
     async def test_aggregate_sum_different_field_type_at_left_with_f_expression(self):
         with self.assertRaisesRegex(
             FieldError, "Cannot use arithmetic expression between different field type"
         ):
-            await testmodels.DecimalFields.all().annotate(
-                sum_decimal=Sum(F("id") + F("decimal"))
-            ).values("sum_decimal")
+            await (
+                testmodels.DecimalFields.all()
+                .annotate(sum_decimal=Sum(F("id") + F("decimal")))
+                .values("sum_decimal")
+            )
 
     async def test_aggregate_avg(self):
         await testmodels.DecimalFields.create(decimal=Decimal("0"), decimal_nodec=1)

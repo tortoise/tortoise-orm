@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import asyncio
 from collections.abc import Callable, Coroutine
 from functools import wraps
 from itertools import count
-from typing import Any, Optional, SupportsInt, TypeVar, Union
+from typing import Any, SupportsInt, TypeVar
 
 try:
     import asyncmy as mysql
@@ -11,9 +13,9 @@ try:
     from asyncmy.constants import COMMAND
 except ImportError:
     import aiomysql as mysql
+    from pymysql import err as errors
     from pymysql.charset import charset_by_name
     from pymysql.constants import COMMAND
-    from pymysql import err as errors
 
 from pypika_tortoise import MySQLQuery
 
@@ -101,7 +103,7 @@ class MySQLClient(BaseDBAsyncClient):
         self.pool_maxsize = int(self.extra.pop("maxsize", 5))
 
         self._template: dict = {}
-        self._pool: Optional[mysql.Pool] = None
+        self._pool: mysql.Pool | None = None
         self._connection = None
         self._pool_init_lock = asyncio.Lock()
 
@@ -132,7 +134,7 @@ class MySQLClient(BaseDBAsyncClient):
                             if self.storage_engine.lower() != "innodb":  # pragma: nobranch
                                 self.capabilities.__dict__["supports_transactions"] = False
                         hours = timezone.now().utcoffset().seconds / 3600  # type: ignore
-                        tz = "{:+d}:{:02d}".format(int(hours), int((hours % 1) * 60))
+                        tz = f"{int(hours):+d}:{int((hours % 1) * 60):02d}"
                         await cursor.execute(f"SET time_zone='{tz}';")
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
         except errors.OperationalError:
@@ -167,10 +169,10 @@ class MySQLClient(BaseDBAsyncClient):
             pass
         await self.close()
 
-    def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
+    def acquire_connection(self) -> ConnectionWrapper | PoolConnectionWrapper:
         return PoolConnectionWrapper(self, self._pool_init_lock)
 
-    def _in_transaction(self) -> "TransactionContext":
+    def _in_transaction(self) -> TransactionContext:
         return TransactionContextPooled(TransactionWrapper(self), self._pool_init_lock)
 
     @translate_exceptions
@@ -199,9 +201,7 @@ class MySQLClient(BaseDBAsyncClient):
                     await cursor.executemany(query, values)
 
     @translate_exceptions
-    async def execute_query(
-        self, query: str, values: Optional[list] = None
-    ) -> tuple[int, list[dict]]:
+    async def execute_query(self, query: str, values: list | None = None) -> tuple[int, list[dict]]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
@@ -212,7 +212,7 @@ class MySQLClient(BaseDBAsyncClient):
                     return cursor.rowcount, [dict(zip(fields, row)) for row in rows]
                 return cursor.rowcount, []
 
-    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> list[dict]:
+    async def execute_query_dict(self, query: str, values: list | None = None) -> list[dict]:
         return (await self.execute_query(query, values))[1]
 
     @translate_exceptions
@@ -228,13 +228,13 @@ class TransactionWrapper(MySQLClient, TransactionalDBClient):
         self.connection_name = connection.connection_name
         self._connection: mysql.Connection = connection._connection
         self._lock = asyncio.Lock()
-        self._savepoint: Optional[str] = None
+        self._savepoint: str | None = None
         self.log = connection.log
         self._finalized: bool = False
         self.fetch_inserted = connection.fetch_inserted
         self._parent = connection
 
-    def _in_transaction(self) -> "TransactionContext":
+    def _in_transaction(self) -> TransactionContext:
         return NestedTransactionContext(TransactionWrapper(self))
 
     def acquire_connection(self) -> ConnectionWrapper[mysql.Connection]:
