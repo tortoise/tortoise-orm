@@ -11,6 +11,10 @@ Changelog
 
 0.25.0 (unreleased)
 ------
+Added
+^^^^^
+- Added MySQL-specific ENUM type support for CharEnumField (#1883)
+
 Fixed
 ^^^^^
 - Fixed asyncio "no current event loop" deprecation warning by replacing `asyncio.get_event_loop()` with modern event loop handling using `get_running_loop()` with fallback to `new_event_loop()` (#1865)
