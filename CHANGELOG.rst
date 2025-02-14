@@ -18,6 +18,7 @@ Fixed
 Changed
 ^^^^^^^
 - add benchmarks for `get_for_dialect` (#1862)
+- Apply future style type hints (#1878)
 
 0.24
 ====
