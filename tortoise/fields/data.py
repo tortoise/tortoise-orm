@@ -764,7 +764,6 @@ class CharEnumFieldInstance(CharField):
 
     class _db_mysql:
         def __init__(self, field: "CharEnumFieldInstance") -> None:
-            field.description = None
             self.field = field
 
         @property
