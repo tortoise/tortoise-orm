@@ -1,6 +1,6 @@
+# pylint: disable=E0401,E0611
 from __future__ import annotations
 
-# pylint: disable=E0401,E0611
 from uuid import UUID
 
 from blacksheep import Response

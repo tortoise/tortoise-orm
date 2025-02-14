@@ -7,7 +7,7 @@ from tortoise.fields import Field
 from tortoise.fields import UUIDField as UUIDFieldBase
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.models import Model  # noqa pylint: disable=unused-import
+    from tortoise.models import Model
 
 
 class GeometryField(Field):
