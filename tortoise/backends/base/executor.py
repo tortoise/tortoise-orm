@@ -1,7 +1,6 @@
 import asyncio
 import datetime
 import decimal
-import warnings
 from collections.abc import Callable, Iterable, Sequence
 from copy import copy
 from typing import TYPE_CHECKING, Any, Optional, Union, cast
@@ -271,17 +270,12 @@ class BaseExecutor:
             field_obj = self.model._meta.fields_map[field]
             if field_obj.pk:
                 if update_fields:
-                    if len(update_fields) == 1:  # type:ignore
-                        raise OperationalError(
-                            f"Can't update pk field only, use `{self.model.__name__}.create` instead."
-                        )
-                    else:
-                        warnings.warn(
-                            "Do not add pk field to `update_fields`! It may change exists record by mistake.",
-                            RuntimeWarning,
-                        )
+                    raise OperationalError(
+                        f"Can't update pk field, use `{self.model.__name__}.create` instead."
+                    )
                 continue
-            if isinstance(instance_field := getattr(instance, field), Expression):
+            instance_field = getattr(instance, field)
+            if isinstance(instance_field, Expression):
                 expressions[field] = instance_field
             else:
                 values.append(field_obj.to_db_value(instance_field, instance))

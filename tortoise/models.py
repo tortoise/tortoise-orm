@@ -968,6 +968,7 @@ class Model(metaclass=ModelMeta):
 
         :raises IncompleteInstanceError: If the model is partial and the fields are not available for persistence.
         :raises IntegrityError: If the model can't be created or updated (specifically if force_create or force_update has been set)
+        :raises OperationalError: If update_fields include pk field.
         """
         await self._set_async_default_field()
         db = using_db or self._choose_db(True)

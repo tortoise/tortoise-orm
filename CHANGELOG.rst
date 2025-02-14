@@ -13,8 +13,8 @@ Changelog
 ------
 Fixed
 ^^^^^
+- Fix update pk field raises unfriendly error (#1873)
 - Fixed asyncio "no current event loop" deprecation warning by replacing `asyncio.get_event_loop()` with modern event loop handling using `get_running_loop()` with fallback to `new_event_loop()` (#1865)
-- Fix update pk field only raises unfriendly error (#1873)
 
 Changed
 ^^^^^^^
@@ -24,9 +24,9 @@ Changed
 ------
 Fixed
 ^^^^^
+- `_get_dialects`: support properties (#1859)
 - Rename pypika to pypika_tortoise for fixing package name conflict (#1829)
 - Concurrent connection pool initialization (#1825)
-- `_get_dialects`: support properties (#1859)
 
 Changed
 ^^^^^^^
