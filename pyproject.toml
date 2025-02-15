@@ -10,7 +10,7 @@ packages = [
     { include = "tortoise" }
 ]
 include = ["CHANGELOG.rst", "LICENSE", "README.rst"]
-# classifieres is dynamic because `tool.poetry` section will create Python classifiers automatically
+# classifieres is dynamic because poetry will create Python classifiers automatically with value in `tool.poetry` section
 dynamic = [ "classifiers" ]
 requires-python = ">=3.9"
 dependencies = [
