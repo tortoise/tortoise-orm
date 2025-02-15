@@ -12,7 +12,7 @@ else:
 def _read_version():
     text = Path("pyproject.toml").read_text()
     data = tomllib.loads(text)
-    return data["tool"]["poetry"]["version"]
+    return data["project"]["version"]
 
 
 def test_version():
