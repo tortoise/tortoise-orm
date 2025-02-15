@@ -10,26 +10,8 @@ packages = [
     { include = "tortoise" }
 ]
 include = ["CHANGELOG.rst", "LICENSE", "README.rst"]
-classifiers = [
-    "License :: OSI Approved :: Apache Software License",
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy",
-    "Programming Language :: PL/SQL",
-    "Framework :: AsyncIO",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Database",
-    "Operating System :: POSIX",
-    "Operating System :: MacOS :: MacOS X",
-    "Operating System :: Microsoft :: Windows",
-]
+# classifieres is dynamic because `tool.poetry` section will create Python classifiers automatically
+dynamic = [ "classifiers" ]
 requires-python = ">=3.9"
 dependencies = [
     "pypika-tortoise (>=0.5.0,<1.0.0)",
@@ -57,6 +39,26 @@ documentation = "https://tortoise-orm.readthedocs.io"
 
 [tool.poetry]
 requires-poetry = ">=2.0"
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Programming Language :: PL/SQL",
+    "Framework :: AsyncIO",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Database",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<4.0"
