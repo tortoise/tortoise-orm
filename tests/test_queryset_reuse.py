@@ -16,17 +16,17 @@ class TestQueryReuse(test.TestCase):
         self.assertEqual(res.id_plus_one, a.id + 1)
         self.assertEqual(res.id_plus_two, a.id + 2)
         with self.assertRaises(AttributeError):
-            res.id_plus_three
+            getattr(res, "id_plus_three")
 
         res = await query2.first()
         self.assertEqual(res.id_plus_one, a.id + 1)
         self.assertEqual(res.id_plus_three, a.id + 3)
         with self.assertRaises(AttributeError):
-            res.id_plus_two
+            getattr(res, "id_plus_two")
 
         res = await query1.first()
         with self.assertRaises(AttributeError):
-            res.id_plus_three
+            getattr(res, "id_plus_three")
 
     async def test_filters(self):
         a = await Tournament.create(name="A")
