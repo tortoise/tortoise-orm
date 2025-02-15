@@ -6,9 +6,6 @@ license = {text="Apache-2.0"}
 readme = "README.rst"
 description = "Easy async ORM for python, built with relations in mind"
 keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio", "psycopg"]
-packages = [
-    { include = "tortoise" }
-]
 include = ["CHANGELOG.rst", "LICENSE", "README.rst"]
 # classifieres is dynamic because poetry will create Python classifiers automatically with value in `tool.poetry` section
 dynamic = [ "classifiers" ]
@@ -39,6 +36,9 @@ documentation = "https://tortoise-orm.readthedocs.io"
 
 [tool.poetry]
 requires-poetry = ">=2.0"
+packages = [
+    { include = "tortoise" }
+]
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Development Status :: 3 - Alpha",
