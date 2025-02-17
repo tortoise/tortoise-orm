@@ -4,40 +4,44 @@
 Migration
 =========
 
-This document describes how to use `Aerich` to make migrations.
+.. note::
+    Aerich is not as mature yet, expect some issues here and there.
 
-You can see `https://github.com/tortoise/aerich <https://github.com/tortoise/aerich>`_ for more details.
+This document describes how to use `Aerich` to manage schema changes.
+
+Check out `aerich repository <https://github.com/tortoise/aerich>`_ for more details.
 
 Quick Start
 ===========
 
 .. code-block:: shell
 
+
     > aerich -h
 
     Usage: aerich [OPTIONS] COMMAND [ARGS]...
 
     Options:
-      -c, --config TEXT  Config file.  [default: aerich.ini]
-      --app TEXT         Tortoise-ORM app name.  [default: models]
-      -n, --name TEXT    Name of section in .ini file to use for aerich config.
-                         [default: aerich]
+      -V, --version      Show the version and exit.
+      -c, --config TEXT  Config file.  [default: pyproject.toml]
+      --app TEXT         Tortoise-ORM app name.
       -h, --help         Show this message and exit.
 
     Commands:
       downgrade  Downgrade to specified version.
-      heads      Show current available heads in migrate location.
-      history    List all migrate items.
-      init       Init config file and generate root migrate location.
-      init-db    Generate schema and generate app migrate location.
-      migrate    Generate migrate changes file.
-      upgrade    Upgrade to latest version.
+      heads      Show currently available heads (unapplied migrations).
+      history    List all migrations.
+      init       Initialize aerich config and create migrations folder.
+      init-db    Generate schema and generate app migration folder.
+      inspectdb  Prints the current database tables to stdout as Tortoise-ORM...
+      migrate    Generate a migration file for the current state of the models.
+      upgrade    Upgrade to specified migration version.
+
 
 Usage
 =====
 
-You need add `aerich.models` to your `Tortoise-ORM` config first,
-example:
+Add ``aerich.models`` to your `Tortoise-ORM` config first:
 
 .. code-block:: python3
 
@@ -60,12 +64,13 @@ Initialization
 
     Usage: aerich init [OPTIONS]
 
-      Init config file and generate root migrate location.
+      Initialize aerich config and create migrations folder.
 
     Options:
-      -t, --tortoise-orm TEXT  Tortoise-ORM config module dict variable, like settings.TORTOISE_ORM.
-                               [required]
-      --location TEXT          Migrate store location.  [default: ./migrations]
+      -t, --tortoise-orm TEXT  Tortoise-ORM config dict location, like
+                              `settings.TORTOISE_ORM`.  [required]
+      --location TEXT          Migrations folder.  [default: ./migrations]
+      -s, --src_folder TEXT    Folder of the source, relative to the project root.
       -h, --help               Show this message and exit.
 
 
