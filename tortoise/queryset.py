@@ -190,6 +190,8 @@ class AwaitableQuery(Generic[MODEL]):
             (to allow self referential joins)
         :param orderings: What columns/order to order by
         :param annotations:  Annotations that may be ordered on
+        :param fields_for_select: Fields that are selected in the SELECT clause. It might be None
+            if not applicable or the default fields are selected.
 
         :raises FieldError: If a field provided does not exist in model.
         """

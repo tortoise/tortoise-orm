@@ -18,6 +18,7 @@ Added
 Fixed
 ^^^^^
 - Fix update pk field raises unfriendly error (#1873)
+- Using `.distinct()` with an annotation and `.order_by()` produces invalid SQL for PostgreSQL (#1886)
 
 Changed
 ^^^^^^^
