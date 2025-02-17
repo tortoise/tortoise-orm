@@ -190,8 +190,8 @@ class AwaitableQuery(Generic[MODEL]):
             (to allow self referential joins)
         :param orderings: What columns/order to order by
         :param annotations:  Annotations that may be ordered on
-        :param fields_for_select: Fields that are selected in the SELECT clause. It might be None
-            if not applicable or the default fields are selected.
+        :param fields_for_select: Contains fields that are selected in the SELECT clause if
+            .only(), .values() or .values_list() are used.
 
         :raises FieldError: If a field provided does not exist in model.
         """
@@ -218,11 +218,14 @@ class AwaitableQuery(Generic[MODEL]):
                 )
             elif field_name in annotations:
                 term: Term
-                if fields_for_select and field_name in fields_for_select:
-                    # the annotation is SELECTed, we can just reference it
+                if not fields_for_select or field_name in fields_for_select:
+                    # The annotation is SELECTed, we can just reference it in the following cases:
+                    # - Empty fields_for_select means that all columns and annotations are selected,
+                    #   hence we can reference the annotation.
+                    # - The annotation is in fields_for_select, hence we can reference it.
                     term = PseudoColumn(field_name)
                 else:
-                    # the annotation is not in SELECT, resolve it
+                    # The annotation is not in SELECT, resolve it
                     annotation = annotations[field_name]
                     if isinstance(annotation, Term):
                         term = annotation
