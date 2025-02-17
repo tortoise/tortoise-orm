@@ -13,6 +13,7 @@ from pypika_tortoise.enums import SqlTypes
 from pypika_tortoise.terms import Term
 
 from tortoise import timezone
+from tortoise.converters import escape_str
 from tortoise.exceptions import ConfigurationError, FieldError
 from tortoise.fields.base import Field
 from tortoise.timezone import get_default_timezone, get_timezone, get_use_tz, localtime
@@ -760,6 +761,15 @@ class CharEnumFieldInstance(CharField):
 
         super().__init__(description=description, max_length=max_length, **kwargs)
         self.enum_type = enum_type
+
+    class _db_mysql:
+        def __init__(self, field: "CharEnumFieldInstance") -> None:
+            self.field = field
+
+        @property
+        def SQL_TYPE(self) -> str:
+            enum_values = ", ".join(escape_str(e.value) for e in self.field.enum_type)
+            return f"ENUM({enum_values})"
 
     def to_python_value(self, value: Union[str, None]) -> Union[Enum, None]:
         return self.enum_type(value) if value is not None else None

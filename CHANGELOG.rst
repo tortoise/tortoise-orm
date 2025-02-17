@@ -11,6 +11,10 @@ Changelog
 
 0.24.1 (unreleased)
 ------
+Added
+^^^^^
+- Added MySQL-specific ENUM type support for CharEnumField (#1883)
+
 Fixed
 ^^^^^
 - Fix update pk field raises unfriendly error (#1873)
