@@ -20,9 +20,6 @@ Introduction
 
 Tortoise ORM is an easy-to-use ``asyncio`` ORM *(Object Relational Mapper)* inspired by Django.
 
-Tortoise ORM was built with relations in mind and admiration for the excellent and popular Django ORM.
-It's engraved in its design that you are working not with just tables, you work with relational data.
-
 You can find the docs at `Documentation <https://tortoise.github.io>`_
 
 .. note::
@@ -63,7 +60,7 @@ Getting Started
 
 Installation
 ------------
-First you have to install Tortoise ORM like this:
+First you have to install Tortoise ORM:
 
 .. code-block:: bash
 
@@ -91,8 +88,7 @@ For `Microsoft SQL Server`/`Oracle` (**not fully tested**):
 Quick Tutorial
 --------------
 
-The primary entity of tortoise is ``tortoise.models.Model``.
-You can start writing models like this:
+To create models, extend ``tortoise.models.Model``:
 
 
 .. code-block:: python3
@@ -126,13 +122,11 @@ You can start writing models like this:
             return self.name
 
 
-After you defined all your models, tortoise needs you to init them, in order to create backward relations between models and match your db client with the appropriate models.
-
-You can do it like this:
+After you defined all your models, tortoise needs you to init them, in order to create backward relations between models and match your db client with the appropriate models:
 
 .. code-block:: python3
 
-    from tortoise import Tortoise
+    from tortoise import Tortoise, run_async
 
     async def init():
         # Here we connect to a SQLite DB file.
@@ -146,7 +140,7 @@ You can do it like this:
         await Tortoise.generate_schemas()
 
 
-Here we create a connection to an SQLite database in the local directory called ``db.sqlite3``. Then we discover and initialise the models.
+The above code creates a connection to an SQLite database in the local directory called ``db.sqlite3``. Then it discovers and initialises the models.
 
 Tortoise ORM currently supports the following databases:
 
@@ -155,11 +149,10 @@ Tortoise ORM currently supports the following databases:
 * `MySQL` (requires ``asyncmy`` or ``aiomysql``)
 * `Microsoft SQL Server`/`Oracle` (requires ``asyncodbc``)
 
-``generate_schema`` generates the schema on an empty database. Tortoise generates schemas in safe mode by default which
-includes the ``IF NOT EXISTS`` clause, so you may include it in your main code.
+``generate_schema`` generates the schema on an empty database. ``generate_schema`` uses ``IF NOT EXISTS`` to avoid errors when the schema already exists.
 
 
-After that you can start using your models:
+The following code demonstrates how to create and query models:
 
 .. code-block:: python3
 
