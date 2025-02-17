@@ -9,7 +9,7 @@ Models
 Usage
 =====
 
-To get working with models, first import them
+All models should be derived from ``Model``. To start describing the models, import ``Model`` from ``tortoise.models``.
 
 .. code-block:: python3
 
@@ -47,13 +47,13 @@ With that start describing the models
         def __str__(self):
             return self.name
 
-Let see in details what we accomplished here:
+Let's look at the details of what we accomplished here:
 
 .. code-block:: python3
 
     class Tournament(Model):
 
-Every model should be derived from ``Model``. You also can derive from your own ``Model`` subclasses and you can make abstract models in the following way:
+Every model should be derived from ``Model`` or its subclasses. Custom ``Model`` subclasses can be created in the following way:
 
 .. code-block:: python3
 
@@ -81,7 +81,7 @@ If you define the variable ``__models__`` in the module which you load your mode
 Primary Keys
 ------------
 
-In Tortoise ORM we require that a model has a primary key.
+In Tortoise ORM, every model must have a primary key.
 
 That primary key will be accessible through a reserved field ``pk`` which will be an alias of whichever field has been nominated as a primary key.
 That alias field can be used as a field name when doing filtering e.g. ``.filter(pk=...)`` etc…
@@ -97,13 +97,13 @@ That alias field can be used as a field name when doing filtering e.g. ``.filter
     CharField
     UUIDField
 
-One must define a primary key by setting a ``primary_key`` parameter to ``True``.
-If you don't define a primary key, we will create a primary key of type ``IntField`` with name of ``id`` for you.
+One must define a primary key by setting the ``primary_key`` parameter to ``True``.
+If you don't define a primary key, the primary key will be generated as an ``IntField`` with name of ``id``.
 
 .. note::
    If this is used on an Integer Field, ``generated`` will be set to ``True`` unless you explicitly pass ``generated=False`` as well.
 
-Any of these are valid primary key definitions in a Model:
+Any of these are valid primary key definitions:
 
 .. code-block:: python3
 
