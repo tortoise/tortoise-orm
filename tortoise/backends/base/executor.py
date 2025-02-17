@@ -269,13 +269,18 @@ class BaseExecutor:
         values = []
         expressions = {}
         for field in update_fields or self.model._meta.fields_db_projection.keys():
-            if not self.model._meta.fields_map[field].pk:
-                instance_field = getattr(instance, field)
-                if isinstance(instance_field, Expression):
-                    expressions[field] = instance_field
-                else:
-                    value = self.model._meta.fields_map[field].to_db_value(instance_field, instance)
-                    values.append(value)
+            field_obj = self.model._meta.fields_map[field]
+            if field_obj.pk:
+                if update_fields:
+                    raise OperationalError(
+                        f"Can't update pk field, use `{self.model.__name__}.create` instead."
+                    )
+                continue
+            instance_field = getattr(instance, field)
+            if isinstance(instance_field, Expression):
+                expressions[field] = instance_field
+            else:
+                values.append(field_obj.to_db_value(instance_field, instance))
         values.append(self.model._meta.pk.to_db_value(instance.pk, instance))
         return (
             await self.db.execute_query(self.get_update_sql(update_fields, expressions), values)

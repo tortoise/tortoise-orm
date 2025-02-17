@@ -361,33 +361,30 @@ class Q:
         join = None
 
         if value is None and f"{key}__isnull" in model._meta.filters:
-            param = model._meta.get_filter(f"{key}__isnull")
+            filter_info = model._meta.get_filter(f"{key}__isnull")
             value = True
         else:
-            param = model._meta.get_filter(key)
+            filter_info = model._meta.get_filter(key)
 
-        pk_db_field = model._meta.db_pk_column
-        if param.get("table"):
+        if "table" in filter_info:
+            # join the table
             join = (
-                param["table"],
-                table[pk_db_field] == param["table"][param["backward_key"]],
+                filter_info["table"],
+                table[model._meta.db_pk_column]
+                == filter_info["table"][filter_info["backward_key"]],
             )
-            if param.get("value_encoder"):
-                value = param["value_encoder"](value, model)
-            op = param["operator"]
-            criterion = op(param["table"][param["field"]], value)
-        else:
-            if isinstance(value, Term):
-                encoded_value = value
-            else:
-                field_object = model._meta.fields_map[param["field"]]
-                encoded_value = (
-                    param["value_encoder"](value, model, field_object)
-                    if param.get("value_encoder")
-                    else field_object.to_db_value(value, model)
-                )
-            op = param["operator"]
-            criterion = op(table[param["source_field"]], encoded_value)
+            if "value_encoder" in filter_info:
+                value = filter_info["value_encoder"](value, model)
+            table = filter_info["table"]
+        elif not isinstance(value, Term):
+            field_object = model._meta.fields_map[filter_info["field"]]
+            value = (
+                filter_info["value_encoder"](value, model, field_object)
+                if "value_encoder" in filter_info
+                else field_object.to_db_value(value, model)
+            )
+        op = filter_info["operator"]
+        criterion = op(table[filter_info.get("source_field", filter_info["field"])], value)
         return criterion, join
 
     def _resolve_regular_kwarg(
