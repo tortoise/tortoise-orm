@@ -9,13 +9,13 @@ Models
 Usage
 =====
 
-To get working with models, first you should import them
+To get working with models, first import them
 
 .. code-block:: python3
 
     from tortoise.models import Model
 
-With that you can start describing your own models like that
+With that start describing the models
 
 .. code-block:: python3
 
@@ -53,7 +53,7 @@ Let see in details what we accomplished here:
 
     class Tournament(Model):
 
-Every model should be derived from base model. You also can derive from your own model subclasses and you can make abstract models like this
+Every model should be derived from ``Model``. You also can derive from your own ``Model`` subclasses and you can make abstract models in the following way:
 
 .. code-block:: python3
 
@@ -68,7 +68,7 @@ Every model should be derived from base model. You also can derive from your own
         def __str__(self):
             return self.name
 
-This models won't be created in schema generation and won't create relations to other models.
+This model will not affect the schema, but it will be available for inheritance.
 
 
 Further we have field ``fields.DatetimeField(auto_now=True)``. Options ``auto_now`` and ``auto_now_add`` work like Django's options.

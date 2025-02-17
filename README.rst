@@ -26,7 +26,7 @@ You can find the docs at `Documentation <https://tortoise.github.io>`_
    Tortoise ORM is a young project and breaking changes are to be expected.
    We keep a `Changelog <https://tortoise.github.io/CHANGELOG.html>`_ and it will have possible breakage clearly documented.
 
-Tortoise ORM is supported on CPython >= 3.9 for SQLite, MySQL and PostgreSQL and Microsoft SQL Server and Oracle.
+Tortoise ORM supports CPython 3.9 and later for SQLite, MySQL, PostgreSQL, Microsoft SQL Server, and Oracle.
 
 Why was Tortoise ORM built?
 ---------------------------
@@ -48,12 +48,12 @@ It also performs well when compared to other Python ORMs. In `our benchmarks <ht
 How is an ORM useful?
 ---------------------
 
-When you build an application or service that uses a relational database, there is a point where you can't get away with just using parameterized queries or even query builder. You just keep repeating yourself, writing slightly different code for each entity.
-Code has no idea about relations between data, so you end up concatenating your data almost manually.
-It is also easy to make mistakes in how you access your database, which can be exploited by SQL-injection attacks.
-Your data rules are also distributed, increasing the complexity of managing your data, and even worse, could lead to those rules being applied inconsistently.
+An Object-Relational Mapper (ORM) abstracts database interactions, allowing developers to work with databases using high-level, object-oriented code instead of raw SQL.
 
-An ORM (Object Relational Mapper) is designed to address these issues, by centralising your data model and data rules, ensuring that your data is managed safely (providing immunity to SQL-injection) and keeping track of relationships so you don't have to.
+* Reduces boilerplate SQL, allowing faster development with cleaner, more readable code.
+* Helps prevent SQL injection by using parameterized queries.
+* Centralized schema and relationship definitions make code easier to manage and modify.
+* Handles schema changes through version-controlled migrations.
 
 Getting Started
 ===============
