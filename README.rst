@@ -60,35 +60,35 @@ Getting Started
 
 Installation
 ------------
-First you have to install Tortoise ORM:
 
-.. code-block:: bash
+The following table shows the available installation options for different databases (note that there are multiple options of clients for some databases):
 
-    pip install tortoise-orm
+.. list-table:: Available Installation Options
+   :header-rows: 1
+   :widths: 30 70
 
-You can also install with your db driver (`aiosqlite` is builtin):
+   * - Database
+     - Installation Command
+   * - SQLite
+     - ``pip install tortoise-orm``
+   * - PostgreSQL (psycopg)
+     - ``pip install tortoise-orm[psycopg]``
+   * - PostgreSQL (asyncpg)
+     - ``pip install tortoise-orm[asyncpg]``
+   * - MySQL (aiomysql)
+     - ``pip install tortoise-orm[aiomysql]``
+   * - MySQL (asyncmy)
+     - ``pip install tortoise-orm[asyncmy]``
+   * - MS SQL
+     - ``pip install tortoise-orm[asyncodbc]``
+   * - Oracle
+     - ``pip install tortoise-orm[asyncodbc]``
 
-.. code-block:: bash
-
-    pip install "tortoise-orm[asyncpg]"
-
-
-For `MySQL`:
-
-.. code-block:: bash
-
-    pip install "tortoise-orm[asyncmy]"
-
-For `Microsoft SQL Server`/`Oracle` (**not fully tested**):
-
-.. code-block:: bash
-
-    pip install "tortoise-orm[asyncodbc]"
 
 Quick Tutorial
 --------------
 
-To create models, extend ``tortoise.models.Model``:
+Define the models by inheriting from ``tortoise.models.Model``.
 
 
 .. code-block:: python3
@@ -100,9 +100,6 @@ To create models, extend ``tortoise.models.Model``:
         id = fields.IntField(primary_key=True)
         name = fields.TextField()
 
-        def __str__(self):
-            return self.name
-
 
     class Event(Model):
         id = fields.IntField(primary_key=True)
@@ -110,19 +107,15 @@ To create models, extend ``tortoise.models.Model``:
         tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
         participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
 
-        def __str__(self):
-            return self.name
-
 
     class Team(Model):
         id = fields.IntField(primary_key=True)
         name = fields.TextField()
 
-        def __str__(self):
-            return self.name
 
-
-After you defined all your models, tortoise needs you to init them, in order to create backward relations between models and match your db client with the appropriate models:
+After defining the models, Tortoise ORM needs to be initialized to establish the relationships between models and connect to the database.
+The code below creates a connection to a SQLite DB database with the ``aiosqlite`` client. ``generate_schema`` sets up schema on an empty database.
+``generate_schema`` is for development purposes only, check out ``aerich`` or other migration tools for production use.
 
 .. code-block:: python3
 
@@ -139,63 +132,66 @@ After you defined all your models, tortoise needs you to init them, in order to 
         # Generate the schema
         await Tortoise.generate_schemas()
 
+    run_async(main())
 
-The above code creates a connection to an SQLite database in the local directory called ``db.sqlite3``. Then it discovers and initialises the models.
+``run_async`` is a helper function to run simple Tortoise scripts. Check out `Documentation <https://tortoise.github.io>`_ for FastAPI, Sanic and other integrations.
 
-Tortoise ORM currently supports the following databases:
-
-* `SQLite` (requires ``aiosqlite``)
-* `PostgreSQL` (requires ``asyncpg``)
-* `MySQL` (requires ``asyncmy`` or ``aiomysql``)
-* `Microsoft SQL Server`/`Oracle` (requires ``asyncodbc``)
-
-``generate_schema`` generates the schema on an empty database. ``generate_schema`` uses ``IF NOT EXISTS`` to avoid errors when the schema already exists.
-
-
-The following code demonstrates how to create and query models:
+With the Tortoise initialized, the models are available for use:
 
 .. code-block:: python3
 
-    # Create instance by save
-    tournament = Tournament(name='New Tournament')
-    await tournament.save()
+    async def main():
+        await Tortoise.init(
+            db_url='sqlite://db.sqlite3',
+            modules={'models': ['app.models']}
+        )
+        await Tortoise.generate_schemas()
 
-    # Or by .create()
-    await Event.create(name='Without participants', tournament=tournament)
-    event = await Event.create(name='Test', tournament=tournament)
-    participants = []
-    for i in range(2):
-        team = await Team.create(name='Team {}'.format(i + 1))
-        participants.append(team)
+        # Creating an instance with .save()
+        tournament = Tournament(name='New Tournament')
+        await tournament.save()
 
-    # M2M Relationship management is quite straightforward
-    # (also look for methods .remove(...) and .clear())
-    await event.participants.add(*participants)
+        # Or with .create()
+        await Event.create(name='Without participants', tournament=tournament)
+        event = await Event.create(name='Test', tournament=tournament)
+        participants = []
+        for i in range(2):
+            team = await Team.create(name='Team {}'.format(i + 1))
+            participants.append(team)
 
-    # You can query a related entity with async for
-    async for team in event.participants:
-        pass
+        # Many to Many Relationship management is quite straightforward
+        # (there are .remove(...) and .clear() too)
+        await event.participants.add(*participants)
 
-    # After making a related query you can iterate with regular for,
-    # which can be extremely convenient when using it with other packages,
-    # for example some kind of serializers with nested support
-    for team in event.participants:
-        pass
+        # Iterate over related entities with the async context manager
+        async for team in event.participants:
+            print(team.name)
+
+        # The related entities are cached and can be iterated in the synchronous way afterwards
+        for team in event.participants:
+            pass
+
+        # Use prefetch_related to fetch related objects
+        selected_events = await Event.filter(
+            participants=participants[0].id
+        ).prefetch_related('participants', 'tournament')
+        for event in selected_events:
+            print(event.tournament.name)
+            print([t.name for t in event.participants])
+
+        # Prefetch multiple levels of related entities
+        await Team.all().prefetch_related('events__tournament')
+
+        # Filter and order by related models too
+        await Tournament.filter(
+            events__name__in=['Test', 'Prod']
+        ).order_by('-events__participants__name').distinct()
+
+    run_async(main())
 
 
-    # Or you can make a preemptive call to fetch related objects
-    selected_events = await Event.filter(
-        participants=participants[0].id
-    ).prefetch_related('participants', 'tournament')
+Learn more at the `documentation site <https://tortoise.github.io>`_
 
-    # Tortoise supports variable depth of prefetching related entities
-    # This will fetch all events for Team and in those events tournaments will be prefetched
-    await Team.all().prefetch_related('events__tournament')
-
-    # You can filter and order by related models too
-    await Tournament.filter(
-        events__name__in=['Test', 'Prod']
-    ).order_by('-events__participants__name').distinct()
 
 Migration
 =========
