@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import types
-from collections.abc import AsyncIterator, Callable, Generator, Iterable
+from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable
 from copy import copy
 from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, cast, overload
 
@@ -9,7 +9,7 @@ from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
 from pypika_tortoise.functions import Cast
 from pypika_tortoise.queries import QueryBuilder
-from pypika_tortoise.terms import Case, Field, Star, Term, ValueWrapper
+from pypika_tortoise.terms import Case, Field, Star, Term, ValueWrapper, PseudoColumn
 from typing_extensions import Literal, Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
@@ -179,7 +179,8 @@ class AwaitableQuery(Generic[MODEL]):
         model: type[Model],
         table: Table,
         orderings: Iterable[tuple[str, str | Order]],
-        annotations: dict[str, Any],
+        annotations: dict[str, Term | Expression],
+        fields_for_select: Collection[str] | None = None,
     ) -> None:
         """
         Applies standard ordering to QuerySet.
@@ -214,18 +215,24 @@ class AwaitableQuery(Generic[MODEL]):
                     {},
                 )
             elif field_name in annotations:
-                if isinstance(annotation := annotations[field_name], Term):
-                    term: Term = annotation
+                term: Term
+                if fields_for_select and field_name in fields_for_select:
+                    # the annotation is SELECTed, we can just reference it
+                    term = PseudoColumn(field_name)
                 else:
-                    annotation_info = annotation.resolve(
-                        ResolveContext(
-                            model=self.model,
-                            table=table,
-                            annotations=annotations,
-                            custom_filters={},
-                        )
-                    )
-                    term = annotation_info.term
+                    # the annotation is not in SELECT, resolve it
+                    annotation = annotations[field_name]
+                    if isinstance(annotation, Term):
+                        term = annotation
+                    else:
+                        term = annotation.resolve(
+                            ResolveContext(
+                                model=self.model,
+                                table=table,
+                                annotations=annotations,
+                                custom_filters={},
+                            )
+                        ).term
                 self.query = self.query.orderby(term, order=ordering[1])
             else:
                 field_object = model._meta.fields_map.get(field_name)
@@ -1078,7 +1085,11 @@ class QuerySet(AwaitableQuery[MODEL]):
             if append_item not in self._select_related_idx:
                 self._select_related_idx.append(append_item)
         self.resolve_ordering(
-            self.model, self.model._meta.basetable, self._orderings, self._annotations
+            self.model,
+            self.model._meta.basetable,
+            self._orderings,
+            self._annotations,
+            self._fields_for_select,
         )
         self.resolve_filters()
         if self._limit is not None:
@@ -1562,6 +1573,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
             table=self.model._meta.basetable,
             orderings=self._orderings,
             annotations=self._annotations,
+            fields_for_select=self._fields_for_select_list,
         )
         self.resolve_filters()
         if self._limit:
@@ -1683,6 +1695,7 @@ class ValuesQuery(FieldSelectQuery, Generic[SINGLE]):
             table=self.model._meta.basetable,
             orderings=self._orderings,
             annotations=self._annotations,
+            fields_for_select=self._fields_for_select.keys(),
         )
         self.resolve_filters()
 
