@@ -14,6 +14,7 @@ Changelog
 Added
 ^^^^^
 - Implement __contains, __contained_by, __overlap and __len for ArrayField (#1877)
+- Added default range validation to IntField, BigIntField, SmallIntField
 
 Fixed
 ^^^^^

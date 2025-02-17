@@ -1,6 +1,6 @@
 from tests import testmodels
 from tortoise.contrib import test
-from tortoise.exceptions import IntegrityError
+from tortoise.exceptions import IntegrityError, ValidationError
 from tortoise.expressions import F
 
 
@@ -37,6 +37,13 @@ class TestIntFields(test.TestCase):
 
         obj2 = await testmodels.IntFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
+
+        with self.assertRaises(ValidationError):
+            await testmodels.IntFields.create(intnum=-2147483649)
+
+    async def test_max(self):
+        with self.assertRaises(ValidationError):
+            await testmodels.IntFields.create(intnum=2147483648)
 
     async def test_cast(self):
         obj0 = await testmodels.IntFields.create(intnum="3")
@@ -83,6 +90,13 @@ class TestSmallIntFields(test.TestCase):
         obj2 = await testmodels.SmallIntFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
 
+        with self.assertRaises(ValidationError):
+            await testmodels.SmallIntFields.create(smallintnum=-32769)
+
+    async def test_max(self):
+        with self.assertRaises(ValidationError):
+            await testmodels.SmallIntFields.create(smallintnum=32768)
+
     async def test_values(self):
         obj0 = await testmodels.SmallIntFields.create(smallintnum=2)
         values = await testmodels.SmallIntFields.get(id=obj0.id).values("smallintnum")
@@ -124,6 +138,13 @@ class TestBigIntFields(test.TestCase):
         await obj.save()
         obj2 = await testmodels.BigIntFields.get(id=obj.id)
         self.assertEqual(obj, obj2)
+
+        with self.assertRaises(ValidationError):
+            await testmodels.BigIntFields.create(intnum=-9223372036854775809)
+
+    async def test_max(self):
+        with self.assertRaises(ValidationError):
+            await testmodels.BigIntFields.create(intnum=9223372036854775808)
 
     async def test_cast(self):
         obj0 = await testmodels.BigIntFields.create(intnum="3")

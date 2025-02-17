@@ -13,7 +13,7 @@ from pypika_tortoise.enums import SqlTypes
 from pypika_tortoise.terms import Term
 
 from tortoise import timezone
-from tortoise.exceptions import ConfigurationError, FieldError
+from tortoise.exceptions import ConfigurationError, FieldError, ValidationError
 from tortoise.fields.base import Field
 from tortoise.timezone import get_default_timezone, get_timezone, get_use_tz, localtime
 from tortoise.validators import MaxLengthValidator
@@ -75,17 +75,32 @@ class IntField(Field[int], int):
 
     SQL_TYPE = "INT"
     allows_generated = True
+    GE = -2147483648
+    LE = 2147483647
 
     def __init__(self, primary_key: Optional[bool] = None, **kwargs: Any) -> None:
         if primary_key or kwargs.get("pk"):
             kwargs["generated"] = bool(kwargs.get("generated", True))
         super().__init__(primary_key=primary_key, **kwargs)
 
+    def to_db_value(self, value: Any, instance: "Union[type[Model], Model]") -> Any:
+        if value is not None:
+            if not isinstance(value, int):
+                value = int(value)  # pylint: disable=E1102
+            if not self.GE <= value <= self.LE:
+                raise ValidationError(
+                    f"{self.model_field_name}: "
+                    f"Value should be less or equal to {self.LE} and greater or equal to {self.GE}"
+                )
+
+        self.validate(value)
+        return value
+
     @property
     def constraints(self) -> dict:
         return {
-            "ge": -2147483648,
-            "le": 2147483647,
+            "ge": self.GE,
+            "le": self.LE,
         }
 
     class _db_postgres:
@@ -113,13 +128,8 @@ class BigIntField(IntField):
     """
 
     SQL_TYPE = "BIGINT"
-
-    @property
-    def constraints(self) -> dict:
-        return {
-            "ge": -9223372036854775808,
-            "le": 9223372036854775807,
-        }
+    GE = -9223372036854775808
+    LE = 9223372036854775807
 
     class _db_postgres:
         GENERATED_SQL = "BIGSERIAL NOT NULL PRIMARY KEY"
@@ -144,13 +154,8 @@ class SmallIntField(IntField):
     """
 
     SQL_TYPE = "SMALLINT"
-
-    @property
-    def constraints(self) -> dict:
-        return {
-            "ge": -32768,
-            "le": 32767,
-        }
+    GE = -32768
+    LE = 32767
 
     class _db_postgres:
         GENERATED_SQL = "SMALLSERIAL NOT NULL PRIMARY KEY"
