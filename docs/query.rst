@@ -48,7 +48,7 @@ The related objects can be filtered:
 
     await team.events.filter(name='First')
 
-which will return you a QuerySet object with predefined filter
+which will return you a QuerySet object with predefined filter.
 
 QuerySet
 ========

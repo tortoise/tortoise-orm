@@ -156,4 +156,4 @@ With the Tortoise initialized, the models are available for use:
     run_async(main())
 
 .. note::
-    Find more examples (including transactions, several databases and a little more complex querying) in :ref:`examples` and :ref:`query_api`.
+    Find more examples (including transactions, using multiple databases and more complex querying) in :ref:`examples` and :ref:`query_api`.

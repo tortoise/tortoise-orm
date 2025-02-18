@@ -7,19 +7,21 @@ Expressions
 Q Expression
 ============
 
-Sometimes you need to do more complicated queries than the simple AND ``<model>.filter()`` provides. Luckily we have Q objects to spice things up and help you find what you need. These Q-objects can then be used as argument to ``<model>.filter()`` instead.
+The ``Q`` Expression provides advanced querying capabilities beyond the basic filtering provided by ``<model>.filter()``. Q objects enable complex query construction and can be used as arguments to ``<model>.filter()``.
 
-Q objects are extremely versatile, some example use cases:
- - creating an OR filter
- - nested filters
- - inverted filters
- - combining any of the above to simply write complicated multilayer filters
+Key features of ``Q`` objects include:
+ - Construction of OR conditions
+ - Creation of nested filters
+ - Filter inversion
+ - Combination of multiple conditions into complex queries
 
-Q objects can take any (special) kwargs for filtering that ``<model>.filter()`` accepts, see those docs for a full list of filter options in that regard.
+``Q`` objects accept any filtering parameters that ``<model>.filter()`` supports. Please refer to :ref:`query_api` for a complete list of available options.
 
-They can also be combined by using bitwise operators (``|`` is OR and ``&`` is AND for those unfamiliar with bitwise operators)
+``Q`` objects can be combined using bitwise operators:
+ - ``|`` for OR operations
+ - ``&`` for AND operations
 
-For example to find the events with as name ``Event 1`` or ``Event 2``:
+Example of using Q objects to query events with specific names:
 
 .. code-block:: python3
 
@@ -27,7 +29,7 @@ For example to find the events with as name ``Event 1`` or ``Event 2``:
         Q(name='Event 1') | Q(name='Event 2')
     )
 
-Q objects can be nested as well, the above for example is equivalent to:
+Q objects also support nesting. The following example is equivalent to the previous one:
 
 .. code-block:: python3
 
@@ -35,13 +37,12 @@ Q objects can be nested as well, the above for example is equivalent to:
         Q(Q(name='Event 1'), Q(name='Event 2'), join_type="OR")
     )
 
-If join type is omitted it defaults to ``AND``.
+If the join_type parameter is not specified, it defaults to "AND".
 
 .. note::
-    Q objects without filter arguments are considered NOP and will be ignored for the final query (regardless on if they are used as ``AND`` or ``OR`` param)
+    Q objects without filter arguments are treated as no-operation (NOP) and are excluded from the final query, regardless of whether they are used in AND or OR operations.
 
-
-Also, Q objects support negated to generate ``NOT`` (``~`` operator) clause in your query
+The NOT operation can be achieved using the negation operator (``~``):
 
 .. code-block:: python3
 
@@ -54,33 +55,35 @@ Also, Q objects support negated to generate ``NOT`` (``~`` operator) clause in y
 F Expression
 ============
 
-An `F` object represents the value of a model field. It makes it possible to refer to model field values and perform database operations using them without actually having to pull them out of the database into Python memory.
+The ``F`` Expression represents a model field value and enables database operations on field values without loading them into Python memory. This is particularly useful for atomic operations.
 
-For example to use ``F`` to update user balance atomic:
+Example of using F expressions for balance updates (this is just an example and such updates are not recommended for use in financial applications):
 
 .. code-block:: python3
 
     from tortoise.expressions import F
 
     await User.filter(id=1).update(balance = F('balance') - 10)
+
     await User.filter(id=1).update(balance = F('balance') + F('award'), award = 0)
 
-    # or use .save()
+    # Using F expressions with .save()
     user = await User.get(id=1)
     user.balance = F('balance') - 10
     await user.save(update_fields=['balance'])
 
-For this if you want access updated `F` field again, you should call `refresh_from_db` to refresh special fields first.
+When working with F expressions, you must refresh the model instance to access updated field values:
 
 .. code-block:: python3
 
-    # Can't do this!
-    balance = user.balance
-    await user.refresh_from_db(fields=['balance'])
-    # Great!
+    # Incorrect - balance value may be stale
     balance = user.balance
 
-And you can also use `F` in `annotate`.
+    # Correct - refresh the balance field first
+    await user.refresh_from_db(fields=['balance'])
+    balance = user.balance
+
+F expressions can also be used in annotations:
 
 .. code-block:: python3
 
@@ -89,7 +92,7 @@ And you can also use `F` in `annotate`.
 Subquery
 ========
 
-You can use `Subquery` in `filter()` and `annotate()`.
+Subquery expressions can be utilized in both ``filter()`` and ``annotate()`` operations:
 
 .. code-block:: python3
 
@@ -101,9 +104,7 @@ You can use `Subquery` in `filter()` and `annotate()`.
 RawSQL
 ======
 
-`RawSQL` just like `Subquery` but provides the ability to write raw sql.
-
-You can use `RawSQL` in `filter()` and `annotate()`.
+RawSQL provides the capability to execute raw SQL queries within ``filter()`` and ``annotate()`` operations. This offers maximum flexibility when needed:
 
 .. code-block:: python3
 
@@ -111,16 +112,23 @@ You can use `RawSQL` in `filter()` and `annotate()`.
     await Tournament.filter(pk=1).annotate(idp=RawSQL('id + 1')).filter(idp=2).values("idp")
     await Tournament.filter(pk=RawSQL("id + 1"))
 
-
 Case-When Expression
 ====================
 
-Build classic `CASE WHEN ... THEN ... ELSE ... END` sql snippet.
+The Case-When expression enables the construction of conditional logic using ``CASE WHEN ... THEN ... ELSE ... END`` SQL statements.
 
 .. autoclass:: tortoise.expressions.When
 
 .. autoclass:: tortoise.expressions.Case
 
-.. code-block:: py3
+Example usage:
 
-    results = await IntModel.all().annotate(category=Case(When(intnum__gte=8, then='big'), When(intnum__lte=2, then='small'), default='middle'))
+.. code-block:: python3
+
+    results = await IntModel.all().annotate(
+        category=Case(
+            When(intnum__gte=8, then='big'),
+            When(intnum__lte=2, then='small'),
+            default='middle'
+        )
+    )

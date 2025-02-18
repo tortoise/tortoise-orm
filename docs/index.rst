@@ -62,7 +62,6 @@ Model definitions:
 Operations on models, queries and complex aggregations:
 
 .. code-block:: python3
-
     # Creating a record
     await Tournament.create(name='Another Tournament')
 
