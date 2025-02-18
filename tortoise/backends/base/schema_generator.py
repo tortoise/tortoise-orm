@@ -226,7 +226,7 @@ class BaseSchemaGenerator:
             )
         return ""
 
-    def _get_field_creation_string(
+    def _get_field_sql_and_related_table(
         self, field_object: Field, table_name: str, column_name: str, default: str, comment: str
     ) -> tuple[str, str]:
         nullable = " NOT NULL" if not field_object.null else ""
@@ -410,7 +410,7 @@ class BaseSchemaGenerator:
                 fields_to_create.append(create_pk_field)
                 continue
 
-            field_creation_string, related_table_name = self._get_field_creation_string(
+            field_creation_string, related_table_name = self._get_field_sql_and_related_table(
                 field_object, table_name, column_name, default, comment
             )
             if related_table_name:
