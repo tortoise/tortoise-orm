@@ -21,7 +21,6 @@ Fixed
 
 Changed
 ^^^^^^^
-- Apply future style type hints (#1878)
 
 0.24.0
 ------

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
@@ -72,7 +73,7 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
     def _get_index_sql(
         self,
         model: type[Model],
-        field_names: list[str],
+        field_names: Sequence[str],
         safe: bool,
         index_name: str | None = None,
         index_type: str | None = None,

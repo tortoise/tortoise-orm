@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from hashlib import sha256
 from typing import TYPE_CHECKING, Any, cast
 
@@ -143,29 +144,30 @@ class BaseSchemaGenerator:
         # Hash a set of string values and get a digest of the given length.
         return sha256(";".join(args).encode("utf-8")).hexdigest()[:length]
 
-    def _generate_index_name(
-        self, prefix: str, model: type[Model] | str, field_names: list[str]
+    def _get_index_name(
+        self, prefix: str, model: type[Model] | str, field_names: Sequence[str]
     ) -> str:
         # NOTE: for compatibility, index name should not be longer than 30
         # characters (Oracle limit).
         # That's why we slice some of the strings here.
+        template = "{prefix}_{table}_{field}_{hash}"
         table_name = model if isinstance(model, str) else model._meta.db_table
-        index_name = f"{prefix}_{table_name[:11]}_{field_names[0][:7]}_{self._make_hash(table_name, *field_names, length=6)}"
-        return index_name
+        hash_ = self._make_hash(table_name, *field_names, length=6)
+        return template.format(
+            prefix=prefix, table=table_name[:11], field=field_names[0][:7], hash=hash_
+        )
 
-    def _generate_fk_name(
-        self, from_table: str, from_field: str, to_table: str, to_field: str
-    ) -> str:
-        # NOTE: for compatibility, index name should not be longer than 30
-        # characters (Oracle limit).
+    def _get_fk_name(self, from_table: str, from_field: str, to_table: str, to_field: str) -> str:
+        # NOTE: for compatibility, index name should not be longer than 30 characters (Oracle limit).
         # That's why we slice some of the strings here.
-        index_name = f"fk_{from_table[:8]}_{to_table[:8]}_{self._make_hash(from_table, from_field, to_table, to_field, length=8)}"
-        return index_name
+        template = "fk_{f}_{t}_{h}"
+        hash_ = self._make_hash(from_table, from_field, to_table, to_field, length=8)
+        return template.format(f=from_table[:8], t=to_table[:8], h=hash_)
 
     def _get_index_sql(
         self,
         model: type[Model],
-        field_names: list[str],
+        field_names: Sequence[str],
         safe: bool,
         index_name: str | None = None,
         index_type: str | None = None,
@@ -173,15 +175,17 @@ class BaseSchemaGenerator:
     ) -> str:
         return self.INDEX_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
-            index_name=index_name or self._generate_index_name("idx", model, field_names),
+            index_name=index_name or self._get_index_name("idx", model, field_names),
             index_type=f"{index_type} " if index_type else "",
             table_name=model._meta.db_table,
             fields=", ".join([self.quote(f) for f in field_names]),
             extra=f"{extra}" if extra else "",
         )
 
-    def _get_unique_index_sql(self, exists: str, table_name: str, field_names: list[str]) -> str:
-        index_name = self._generate_index_name("uidx", table_name, field_names)
+    def _get_unique_index_sql(
+        self, exists: str, table_name: str, field_names: Sequence[str]
+    ) -> str:
+        index_name = self._get_index_name("uidx", table_name, field_names)
         return self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
             exists=exists,
             index_name=index_name,
@@ -191,9 +195,9 @@ class BaseSchemaGenerator:
             extra="",
         )
 
-    def _get_unique_constraint_sql(self, model: type[Model], field_names: list[str]) -> str:
+    def _get_unique_constraint_sql(self, model: type[Model], field_names: Sequence[str]) -> str:
         return self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(
-            index_name=self._generate_index_name("uid", model, field_names),
+            index_name=self._get_index_name("uid", model, field_names),
             fields=", ".join([self.quote(f) for f in field_names]),
         )
 
@@ -204,7 +208,7 @@ class BaseSchemaGenerator:
             return sql_type
         raise ConfigurationError(f"Can't get SQL type of {pk_field} for {self.DIALECT}")
 
-    def _generate_pk_create_sql(self, field_object: Field, column_name: str, comment: str) -> str:
+    def _get_pk_create_sql(self, field_object: Field, column_name: str, comment: str) -> str:
         if field_object.pk and field_object.generated:
             generated_sql = field_object.get_for_dialect(self.DIALECT, "GENERATED_SQL")
             if generated_sql:  # pragma: nobranch
@@ -215,16 +219,14 @@ class BaseSchemaGenerator:
                 )
         return ""
 
-    def _generate_field_comment(
-        self, field_object: Field, table_name: str, column_name: str
-    ) -> str:
+    def _get_field_comment(self, field_object: Field, table_name: str, column_name: str) -> str:
         if desc := field_object.description:
             return self._column_comment_generator(
                 table=table_name, column=column_name, comment=desc
             )
         return ""
 
-    def _generate_field_creation(
+    def _get_field_creation_string(
         self, field_object: Field, table_name: str, column_name: str, default: str, comment: str
     ) -> tuple[str, str]:
         nullable = " NOT NULL" if not field_object.null else ""
@@ -234,7 +236,7 @@ class BaseSchemaGenerator:
         field_creation_string, related_table_name = "", ""
         if getattr(field_object, "reference", None):
             reference = cast("ForeignKeyFieldInstance", field_object.reference)
-            comment = self._generate_field_comment(reference, table_name, column_name)
+            comment = self._get_field_comment(reference, table_name, column_name)
 
             to_field_name = reference.to_field_instance.source_field
             if not to_field_name:
@@ -251,7 +253,7 @@ class BaseSchemaGenerator:
                     comment="",
                     default=default,
                 ) + self._create_fk_string(
-                    constraint_name=self._generate_fk_name(
+                    constraint_name=self._get_fk_name(
                         table_name,
                         column_name,
                         related_table_name,
@@ -275,8 +277,10 @@ class BaseSchemaGenerator:
             )
         return field_creation_string, related_table_name
 
-    def _generate_indexes(self, model: type[Model], fields: list[str], safe: bool) -> list[str]:
-        indexes = [self._get_index_sql(model, [field], safe=safe) for field in fields]
+    def _get_field_indexes_sqls(
+        self, model: type[Model], field_names: Sequence[str], safe: bool
+    ) -> list[str]:
+        indexes = [self._get_index_sql(model, [field], safe=safe) for field in field_names]
 
         if model._meta.indexes:
             for index in model._meta.indexes:
@@ -293,7 +297,7 @@ class BaseSchemaGenerator:
 
         return [val for val in list(dict.fromkeys(indexes)) if val]
 
-    def _generate_m2m_tables(
+    def _get_m2m_tables(
         self, model: type[Model], table_name: str, safe: bool, models_tables: list[str]
     ) -> list[str]:
         m2m_tables_for_create = []
@@ -366,7 +370,7 @@ class BaseSchemaGenerator:
             m2m_tables_for_create.append(m2m_create_string)
         return m2m_tables_for_create
 
-    def _generate_field_default(
+    def _get_field_default(
         self, field_object: Field, table_name: str, column_name: str, model: type[Model]
     ) -> str:
         auto_now_add = getattr(field_object, "auto_now_add", False)
@@ -393,22 +397,20 @@ class BaseSchemaGenerator:
         fields_to_create = []
         fields_with_index = []
         references = set()
-        models_to_create: list[type[Model]] = []
-
-        self._get_models_to_create(models_to_create)
+        models_to_create: list[type[Model]] = self._get_models_to_create()
         table_name = model._meta.db_table
         models_tables = [model._meta.db_table for model in models_to_create]
         for field_name, column_name in model._meta.fields_db_projection.items():
             field_object = model._meta.fields_map[field_name]
-            comment = self._generate_field_comment(field_object, table_name, column_name)
-            default = self._generate_field_default(field_object, table_name, column_name, model)
+            comment = self._get_field_comment(field_object, table_name, column_name)
+            default = self._get_field_default(field_object, table_name, column_name, model)
 
             # TODO: PK generation needs to move out of schema generator.
-            if create_pk_field := self._generate_pk_create_sql(field_object, column_name, comment):
+            if create_pk_field := self._get_pk_create_sql(field_object, column_name, comment):
                 fields_to_create.append(create_pk_field)
                 continue
 
-            field_creation_string, related_table_name = self._generate_field_creation(
+            field_creation_string, related_table_name = self._get_field_creation_string(
                 field_object, table_name, column_name, default, comment
             )
             if related_table_name:
@@ -428,7 +430,7 @@ class BaseSchemaGenerator:
                     self._get_unique_constraint_sql(model, unique_together_to_create)
                 )
 
-        field_indexes_sqls = self._generate_indexes(model, fields_with_index, safe)
+        field_indexes_sqls = self._get_field_indexes_sqls(model, fields_with_index, safe)
 
         fields_to_create.extend(self._get_inner_statements())
 
@@ -451,7 +453,7 @@ class BaseSchemaGenerator:
 
         table_create_string += self._post_table_hook()
 
-        m2m_tables_for_create = self._generate_m2m_tables(model, table_name, safe, models_tables)
+        m2m_tables_for_create = self._get_m2m_tables(model, table_name, safe, models_tables)
 
         return {
             "table": table_name,
@@ -461,19 +463,19 @@ class BaseSchemaGenerator:
             "m2m_tables": m2m_tables_for_create,
         }
 
-    def _get_models_to_create(self, models_to_create: list[type[Model]]) -> None:
+    def _get_models_to_create(self) -> list[type[Model]]:
         from tortoise import Tortoise
 
+        models_to_create: list[type[Model]] = []
         for app in Tortoise.apps.values():
             for model in app.values():
                 if model._meta.db == self.client:
                     model._check()
                     models_to_create.append(model)
+        return models_to_create
 
     def get_create_schema_sql(self, safe: bool = True) -> str:
-        models_to_create: list[type[Model]] = []
-
-        self._get_models_to_create(models_to_create)
+        models_to_create = self._get_models_to_create()
 
         tables_to_create = []
         for model in models_to_create:

@@ -53,7 +53,7 @@ class Index:
 
     def index_name(self, schema_generator: BaseSchemaGenerator, model: type[Model]) -> str:
         # This function is required by aerich
-        return self.name or schema_generator._generate_index_name("idx", model, self.field_names)
+        return self.name or schema_generator._get_index_name("idx", model, self.field_names)
 
     def get_sql(self, schema_generator: BaseSchemaGenerator, model: type[Model], safe: bool) -> str:
         # This function is required by aerich
