@@ -150,19 +150,17 @@ class BaseSchemaGenerator:
         # NOTE: for compatibility, index name should not be longer than 30
         # characters (Oracle limit).
         # That's why we slice some of the strings here.
-        template = "{prefix}_{table}_{field}_{hash}"
         table_name = model if isinstance(model, str) else model._meta.db_table
-        hash_ = self._make_hash(table_name, *field_names, length=6)
-        return template.format(
-            prefix=prefix, table=table_name[:11], field=field_names[0][:7], hash=hash_
-        )
+        table = table_name[:11]
+        field = field_names[0][:7]
+        hash = self._make_hash(table_name, *field_names, length=6)
+        return f"{prefix}_{table}_{field}_{hash}"
 
     def _get_fk_name(self, from_table: str, from_field: str, to_table: str, to_field: str) -> str:
         # NOTE: for compatibility, index name should not be longer than 30 characters (Oracle limit).
         # That's why we slice some of the strings here.
-        template = "fk_{f}_{t}_{h}"
-        hash_ = self._make_hash(from_table, from_field, to_table, to_field, length=8)
-        return template.format(f=from_table[:8], t=to_table[:8], h=hash_)
+        hash = self._make_hash(from_table, from_field, to_table, to_field, length=8)
+        return f"fk_{from_table[:8]}_{to_table[:8]}_{hash}"
 
     def _get_index_sql(
         self,
