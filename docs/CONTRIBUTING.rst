@@ -24,12 +24,6 @@ If not you are welcome to open one.
 If you have an incomplete change, but won't/can't continue working on it, please create a PR in any case and mark it as ``(WIP)`` so we can help each other.
 
 
-Have a chat
-===========
-
-We have a chatroom on `Gitter <https://gitter.im/tortoise/community>`_
-
-
 Project structure
 =================
 

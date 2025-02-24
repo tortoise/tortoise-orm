@@ -9,6 +9,7 @@ from tests.testmodels import (
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotEQ
 from tortoise.exceptions import ConfigurationError, FieldError
+from tortoise.expressions import Q, Case, When
 from tortoise.functions import Count, Sum
 
 
@@ -93,6 +94,45 @@ class TestOrderBy(test.TestCase):
             "-events_count"
         )
         self.assertEqual([t.name for t in tournaments], ["1", "2"])
+
+    async def test_distinct_values_with_annotation(self):
+        await Tournament.create(name="3")
+        await Tournament.create(name="1")
+        await Tournament.create(name="2")
+
+        tournaments = (
+            await Tournament.annotate(
+                name_orderable=Case(
+                    When(Q(name="1"), then="1"),
+                    When(Q(name="2"), then="2"),
+                    When(Q(name="3"), then="3"),
+                    default="-1",
+                ),
+            )
+            .distinct()
+            .order_by("name_orderable", "-created")
+            .values("name", "name_orderable", "created")
+        )
+        self.assertEqual([t["name"] for t in tournaments], ["1", "2", "3"])
+
+    async def test_distinct_all_withl_annotation(self):
+        await Tournament.create(name="3")
+        await Tournament.create(name="1")
+        await Tournament.create(name="2")
+
+        tournaments = (
+            await Tournament.annotate(
+                name_orderable=Case(
+                    When(Q(name="1"), then="1"),
+                    When(Q(name="2"), then="2"),
+                    When(Q(name="3"), then="3"),
+                    default="-1",
+                ),
+            )
+            .distinct()
+            .order_by("name_orderable", "-created")
+        )
+        self.assertEqual([t.name for t in tournaments], ["1", "2", "3"])
 
 
 class TestDefaultOrdering(test.TestCase):

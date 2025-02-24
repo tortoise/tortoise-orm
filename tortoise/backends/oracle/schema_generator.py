@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
@@ -32,7 +33,7 @@ class OracleSchemaGenerator(BaseSchemaGenerator):
         "){extra};"
     )
 
-    def __init__(self, client: "OracleClient") -> None:
+    def __init__(self, client: OracleClient) -> None:
         super().__init__(client)
         self._field_indexes: list[str] = []
         self._foreign_keys: list[str] = []
@@ -89,8 +90,8 @@ class OracleSchemaGenerator(BaseSchemaGenerator):
 
     def _get_index_sql(
         self,
-        model: "type[Model]",
-        field_names: list[str],
+        model: type[Model],
+        field_names: Sequence[str],
         safe: bool,
         index_name: str | None = None,
         index_type: str | None = None,
@@ -100,7 +101,7 @@ class OracleSchemaGenerator(BaseSchemaGenerator):
             model, field_names, False, index_name=index_name, index_type=index_type, extra=extra
         )
 
-    def _get_table_sql(self, model: "type[Model]", safe: bool = True) -> dict:
+    def _get_table_sql(self, model: type[Model], safe: bool = True) -> dict:
         return super()._get_table_sql(model, False)
 
     def _create_fk_string(

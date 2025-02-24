@@ -41,9 +41,9 @@ endif
 
 lint: deps build
 ifneq ($(shell which black),)
-	black --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
+	black $(checkfiles)
 endif
-	ruff check $(checkfiles)
+	ruff check --fix $(checkfiles)
 	mypy $(checkfiles)
 	#pylint $(checkfiles)
 	bandit -c pyproject.toml -r $(checkfiles)

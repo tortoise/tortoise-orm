@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 from pypika_tortoise.terms import Field
@@ -45,7 +47,7 @@ class TestIndexHashEqualRepr(test.SimpleTestCase):
         assert repr(Index(fields=("id",))) == "Index(fields=['id'])"
         assert repr(Index(fields=("id", "name"))) == "Index(fields=['id', 'name'])"
         assert repr(Index(fields=("id",), name="MyIndex")) == "Index(fields=['id'], name='MyIndex')"
-        assert repr(Index(Field("id"))) == f'Index({str(Field("id"))})'
+        assert repr(Index(Field("id"))) == f"Index({str(Field('id'))})"
         assert repr(Index(Field("a"), name="Id")) == f"Index({str(Field('a'))}, name='Id')"
         with self.assertRaises(ConfigurationError):
             Index(Field("id"), fields=("name",))

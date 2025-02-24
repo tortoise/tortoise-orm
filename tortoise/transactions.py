@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from collections.abc import Callable
 from functools import wraps
-from typing import TYPE_CHECKING, Optional, TypeVar, cast
+from typing import TYPE_CHECKING, TypeVar, cast
 
 from tortoise import connections
 from tortoise.exceptions import ParamsError
@@ -13,7 +15,7 @@ FuncType = Callable[..., T]
 F = TypeVar("F", bound=FuncType)
 
 
-def _get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
+def _get_connection(connection_name: str | None) -> BaseDBAsyncClient:
     if connection_name:
         connection = connections.get(connection_name)
     elif len(connections.db_config) == 1:
@@ -27,7 +29,7 @@ def _get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
     return connection
 
 
-def in_transaction(connection_name: Optional[str] = None) -> "TransactionContext":
+def in_transaction(connection_name: str | None = None) -> TransactionContext:
     """
     Transaction context manager.
 
@@ -41,7 +43,7 @@ def in_transaction(connection_name: Optional[str] = None) -> "TransactionContext
     return connection._in_transaction()
 
 
-def atomic(connection_name: Optional[str] = None) -> Callable[[F], F]:
+def atomic(connection_name: str | None = None) -> Callable[[F], F]:
     """
     Transaction decorator.
 

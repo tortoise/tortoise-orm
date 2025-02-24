@@ -120,7 +120,7 @@ class TestForeignKeyField(test.TestCase):
         tour = await testmodels.Tournament.create(name="Team1")
         with self.assertRaisesRegex(
             NoValuesFetched,
-            "No values were fetched for this relation," " first use .fetch_related()",
+            "No values were fetched for this relation, first use .fetch_related()",
         ):
             "a" in tour.minrelations  # pylint: disable=W0104
 
@@ -128,7 +128,7 @@ class TestForeignKeyField(test.TestCase):
         tour = await testmodels.Tournament.create(name="Team1")
         with self.assertRaisesRegex(
             NoValuesFetched,
-            "No values were fetched for this relation," " first use .fetch_related()",
+            "No values were fetched for this relation, first use .fetch_related()",
         ):
             for _ in tour.minrelations:
                 pass
@@ -137,7 +137,7 @@ class TestForeignKeyField(test.TestCase):
         tour = await testmodels.Tournament.create(name="Team1")
         with self.assertRaisesRegex(
             NoValuesFetched,
-            "No values were fetched for this relation," " first use .fetch_related()",
+            "No values were fetched for this relation, first use .fetch_related()",
         ):
             len(tour.minrelations)
 
@@ -145,7 +145,7 @@ class TestForeignKeyField(test.TestCase):
         tour = await testmodels.Tournament.create(name="Team1")
         with self.assertRaisesRegex(
             NoValuesFetched,
-            "No values were fetched for this relation," " first use .fetch_related()",
+            "No values were fetched for this relation, first use .fetch_related()",
         ):
             bool(tour.minrelations)
 
@@ -153,7 +153,7 @@ class TestForeignKeyField(test.TestCase):
         tour = await testmodels.Tournament.create(name="Team1")
         with self.assertRaisesRegex(
             NoValuesFetched,
-            "No values were fetched for this relation," " first use .fetch_related()",
+            "No values were fetched for this relation, first use .fetch_related()",
         ):
             tour.minrelations[0]  # pylint: disable=W0104
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import inspect
 from base64 import b32encode
 from collections.abc import MutableMapping
@@ -52,7 +54,7 @@ def _cleandoc(obj: Any) -> str:
 
 
 def _pydantic_recursion_protector(
-    cls: "type[Model]",
+    cls: type[Model],
     *,
     stack: tuple,
     exclude: tuple[str, ...] = (),
@@ -60,8 +62,8 @@ def _pydantic_recursion_protector(
     computed: tuple[str, ...] = (),
     name=None,
     allow_cycles: bool = False,
-    sort_alphabetically: Optional[bool] = None,
-) -> Optional[type[PydanticModel]]:
+    sort_alphabetically: bool | None = None,
+) -> type[PydanticModel] | None:
     """
     It is an inner function to protect pydantic model creator against cyclic recursion
     """
@@ -99,8 +101,8 @@ def _pydantic_recursion_protector(
 
 
 class FieldMap(MutableMapping[str, Union[Field, ComputedFieldDescription]]):
-    def __init__(self, meta: PydanticMetaData, pk_field: Optional[Field] = None):
-        self._field_map: dict[str, Union[Field, ComputedFieldDescription]] = {}
+    def __init__(self, meta: PydanticMetaData, pk_field: Field | None = None):
+        self._field_map: dict[str, Field | ComputedFieldDescription] = {}
         self.pk_raw_field = pk_field.model_field_name if pk_field is not None else ""
         if pk_field:
             self.pk_raw_field = pk_field.model_field_name
@@ -125,7 +127,7 @@ class FieldMap(MutableMapping[str, Union[Field, ComputedFieldDescription]]):
     def sort_alphabetically(self) -> None:
         self._field_map = {k: self._field_map[k] for k in sorted(self._field_map)}
 
-    def sort_definition_order(self, cls: "type[Model]", computed: tuple[str, ...]) -> None:
+    def sort_definition_order(self, cls: type[Model], computed: tuple[str, ...]) -> None:
         self._field_map = {
             k: self._field_map[k]
             for k in tuple(cls._meta.fields_map.keys()) + computed
@@ -149,7 +151,7 @@ class FieldMap(MutableMapping[str, Union[Field, ComputedFieldDescription]]):
                     self.pop(raw_field, None)
             self[name] = field
 
-    def computed_field_map_update(self, computed: tuple[str, ...], cls: "type[Model]"):
+    def computed_field_map_update(self, computed: tuple[str, ...], cls: type[Model]):
         self._field_map.update(
             {
                 k: ComputedFieldDescription(
@@ -163,14 +165,14 @@ class FieldMap(MutableMapping[str, Union[Field, ComputedFieldDescription]]):
 
 
 def pydantic_queryset_creator(
-    cls: "type[Model]",
+    cls: type[Model],
     *,
     name=None,
     exclude: tuple[str, ...] = (),
     include: tuple[str, ...] = (),
     computed: tuple[str, ...] = (),
-    allow_cycles: Optional[bool] = None,
-    sort_alphabetically: Optional[bool] = None,
+    allow_cycles: bool | None = None,
+    sort_alphabetically: bool | None = None,
 ) -> type[PydanticListModel]:
     """
     Function to build a `Pydantic Model <https://docs.pydantic.dev/latest/concepts/models/>`__ list off Tortoise Model.
@@ -224,24 +226,24 @@ def pydantic_queryset_creator(
 class PydanticModelCreator:
     def __init__(
         self,
-        cls: "type[Model]",
-        name: Optional[str] = None,
-        exclude: Optional[tuple[str, ...]] = None,
-        include: Optional[tuple[str, ...]] = None,
-        computed: Optional[tuple[str, ...]] = None,
-        optional: Optional[tuple[str, ...]] = None,
-        allow_cycles: Optional[bool] = None,
-        sort_alphabetically: Optional[bool] = None,
+        cls: type[Model],
+        name: str | None = None,
+        exclude: tuple[str, ...] | None = None,
+        include: tuple[str, ...] | None = None,
+        computed: tuple[str, ...] | None = None,
+        optional: tuple[str, ...] | None = None,
+        allow_cycles: bool | None = None,
+        sort_alphabetically: bool | None = None,
         exclude_readonly: bool = False,
-        meta_override: Optional[type] = None,
-        model_config: Optional[ConfigDict] = None,
-        validators: Optional[dict[str, Any]] = None,
+        meta_override: type | None = None,
+        model_config: ConfigDict | None = None,
+        validators: dict[str, Any] | None = None,
         module: str = __name__,
         _stack: tuple = (),
         _as_submodel: bool = False,
     ) -> None:
-        self._cls: "type[Model]" = cls
-        self._stack: tuple[tuple["type[Model]", str, int], ...] = (
+        self._cls: type[Model] = cls
+        self._stack: tuple[tuple[type[Model], str, int], ...] = (
             _stack  # ((type[Model], field_name, max_recursion),)
         )
         self._is_default: bool = (
@@ -401,13 +403,13 @@ class PydanticModelCreator:
     def _process_field(
         self,
         field_name: str,
-        field: Union[Field, ComputedFieldDescription],
+        field: Field | ComputedFieldDescription,
     ) -> None:
         json_schema_extra: dict[str, Any] = {}
         fconfig: dict[str, Any] = {
             "json_schema_extra": json_schema_extra,
         }
-        field_property: Optional[Any] = None
+        field_property: Any | None = None
         is_to_one_relation: bool = False
         if isinstance(field, Field):
             field_property, is_to_one_relation = self._process_normal_field(
@@ -448,7 +450,7 @@ class PydanticModelCreator:
         field: Field,
         json_schema_extra: dict[str, Any],
         fconfig: dict[str, Any],
-    ) -> tuple[Optional[Any], bool]:
+    ) -> tuple[Any | None, bool]:
         if isinstance(
             field, (ForeignKeyFieldInstance, OneToOneFieldInstance, BackwardOneToOneRelation)
         ):
@@ -462,11 +464,11 @@ class PydanticModelCreator:
     def _process_single_field_relation(
         self,
         field_name: str,
-        field: Union[ForeignKeyFieldInstance, OneToOneFieldInstance, BackwardOneToOneRelation],
+        field: ForeignKeyFieldInstance | OneToOneFieldInstance | BackwardOneToOneRelation,
         json_schema_extra: dict[str, Any],
-    ) -> Optional[type[PydanticModel]]:
+    ) -> type[PydanticModel] | None:
         python_type = getattr(field, "related_model", field.field_type)
-        model: Optional[type[PydanticModel]] = self._get_submodel(python_type, field_name)
+        model: type[PydanticModel] | None = self._get_submodel(python_type, field_name)
         if model:
             self._relational_fields_index.append((field_name, model.__name__))
             if field.null:
@@ -480,8 +482,8 @@ class PydanticModelCreator:
     def _process_many_field_relation(
         self,
         field_name: str,
-        field: Union[BackwardFKRelation, ManyToManyFieldInstance],
-    ) -> Optional[type[list[type[PydanticModel]]]]:
+        field: BackwardFKRelation | ManyToManyFieldInstance,
+    ) -> type[list[type[PydanticModel]]] | None:
         python_type = field.related_model
         model = self._get_submodel(python_type, field_name)
         if model:
@@ -495,14 +497,14 @@ class PydanticModelCreator:
         field: Field,
         json_schema_extra: dict[str, Any],
         fconfig: dict[str, Any],
-    ) -> Optional[Any]:
+    ) -> Any | None:
         annotation = self._annotations.get(field_name, None)
         constraints = copy(field.constraints)
         if "readOnly" in constraints:
             json_schema_extra["readOnly"] = constraints["readOnly"]
             del constraints["readOnly"]
         fconfig.update(constraints)
-        python_type: Union[type[Enum], type[IntEnum], type]
+        python_type: type[Enum] | type[IntEnum] | type
         if isinstance(field, (IntEnumFieldInstance, CharEnumFieldInstance)):
             python_type = field.enum_type
         else:
@@ -521,7 +523,7 @@ class PydanticModelCreator:
     def _process_computed_field(
         self,
         field: ComputedFieldDescription,
-    ) -> Optional[Any]:
+    ) -> Any | None:
         func = field.function
         annotation = get_annotations(self._cls, func).get("return", None)
         comment = _cleandoc(func)
@@ -532,8 +534,8 @@ class PydanticModelCreator:
         return None
 
     def _get_submodel(
-        self, _model: Optional["type[Model]"], field_name: str
-    ) -> Optional[type[PydanticModel]]:
+        self, _model: type[Model] | None, field_name: str
+    ) -> type[PydanticModel] | None:
         """Get Pydantic model for the submodel"""
 
         if _model:
@@ -567,19 +569,19 @@ class PydanticModelCreator:
 
 
 def pydantic_model_creator(
-    cls: "type[Model]",
+    cls: type[Model],
     *,
     name=None,
-    exclude: Optional[tuple[str, ...]] = None,
-    include: Optional[tuple[str, ...]] = None,
-    computed: Optional[tuple[str, ...]] = None,
-    optional: Optional[tuple[str, ...]] = None,
-    allow_cycles: Optional[bool] = None,
-    sort_alphabetically: Optional[bool] = None,
+    exclude: tuple[str, ...] | None = None,
+    include: tuple[str, ...] | None = None,
+    computed: tuple[str, ...] | None = None,
+    optional: tuple[str, ...] | None = None,
+    allow_cycles: bool | None = None,
+    sort_alphabetically: bool | None = None,
     exclude_readonly: bool = False,
-    meta_override: Optional[type] = None,
-    model_config: Optional[ConfigDict] = None,
-    validators: Optional[dict[str, Any]] = None,
+    meta_override: type | None = None,
+    model_config: ConfigDict | None = None,
+    validators: dict[str, Any] | None = None,
     module: str = __name__,
 ) -> type[PydanticModel]:
     """

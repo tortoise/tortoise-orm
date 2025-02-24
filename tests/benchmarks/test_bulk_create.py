@@ -9,7 +9,8 @@ def test_bulk_create_few_fields(benchmark):
 
     data = [
         BenchmarkFewFields(
-            level=random.choice([10, 20, 30, 40, 50]), text=f"Insert from C, item {i}"  # nosec
+            level=random.choice([10, 20, 30, 40, 50]),  # nosec
+            text=f"Insert from C, item {i}",
         )
         for i in range(100)
     ]

@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import asyncio
 from collections.abc import Callable
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 import asyncpg
 from asyncpg.transaction import Transaction
@@ -33,8 +35,8 @@ class AsyncpgDBClient(BasePostgresClient):
     executor_class = AsyncpgExecutor
     schema_generator = AsyncpgSchemaGenerator
     connection_class = asyncpg.connection.Connection
-    _pool: Optional[asyncpg.Pool]
-    _connection: Optional[asyncpg.connection.Connection] = None
+    _pool: asyncpg.Pool | None
+    _connection: asyncpg.connection.Connection | None = None
 
     async def create_connection(self, with_db: bool) -> None:
         if self.schema:
@@ -99,11 +101,11 @@ class AsyncpgDBClient(BasePostgresClient):
             pass
         await self.close()
 
-    def _in_transaction(self) -> "TransactionContext":
+    def _in_transaction(self) -> TransactionContext:
         return TransactionContextPooled(TransactionWrapper(self), self._pool_init_lock)
 
     @translate_exceptions
-    async def execute_insert(self, query: str, values: list) -> Optional[asyncpg.Record]:
+    async def execute_insert(self, query: str, values: list) -> asyncpg.Record | None:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             # TODO: Cache prepared statement
@@ -125,9 +127,7 @@ class AsyncpgDBClient(BasePostgresClient):
                 await transaction.commit()
 
     @translate_exceptions
-    async def execute_query(
-        self, query: str, values: Optional[list] = None
-    ) -> tuple[int, list[dict]]:
+    async def execute_query(self, query: str, values: list | None = None) -> tuple[int, list[dict]]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             if values:
@@ -146,7 +146,7 @@ class AsyncpgDBClient(BasePostgresClient):
             return len(rows), rows
 
     @translate_exceptions
-    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> list[dict]:
+    async def execute_query_dict(self, query: str, values: list | None = None) -> list[dict]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             if values:
@@ -165,11 +165,11 @@ class TransactionWrapper(AsyncpgDBClient, TransactionalDBClient):
         self._lock = asyncio.Lock()
         self.log = connection.log
         self.connection_name = connection.connection_name
-        self.transaction: Optional[Transaction] = None
+        self.transaction: Transaction | None = None
         self._finalized = False
         self._parent: AsyncpgDBClient = connection
 
-    def _in_transaction(self) -> "TransactionContext":
+    def _in_transaction(self) -> TransactionContext:
         # since we need to store the transaction object for each transaction block,
         # we need to wrap the connection with its own TransactionWrapper
         return NestedTransactionContext(TransactionWrapper(self))

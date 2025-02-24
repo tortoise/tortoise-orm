@@ -6,75 +6,50 @@ Getting started
 
 Installation
 ===============
-First you have to install tortoise like this:
+The following table shows the available installation options for different databases (note that there are multiple options of clients for some databases):
 
-.. code-block:: bash
+.. list-table:: Available Installation Options
+   :header-rows: 1
+   :widths: 30 70
 
-    pip install tortoise-orm
+   * - Database
+     - Installation Command
+   * - SQLite
+     - ``pip install tortoise-orm``
+   * - PostgreSQL (psycopg)
+     - ``pip install tortoise-orm[psycopg]``
+   * - PostgreSQL (asyncpg)
+     - ``pip install tortoise-orm[asyncpg]``
+   * - MySQL (aiomysql)
+     - ``pip install tortoise-orm[aiomysql]``
+   * - MySQL (asyncmy)
+     - ``pip install tortoise-orm[asyncmy]``
+   * - MS SQL
+     - ``pip install tortoise-orm[asyncodbc]``
+   * - Oracle
+     - ``pip install tortoise-orm[asyncodbc]``
 
-..
 
-You can also install with your db driver:
-
-.. code-block:: bash
-
-    pip install tortoise-orm[asyncpg]
-
-..
-
-Or PsycoPG:
-
-.. code-block:: bash
-
-    pip install tortoise-orm[psycopg]
-
-..
-
-For MySQL:
-
-.. code-block:: bash
-
-    pip install tortoise-orm[asyncmy]
-
-..
-
-For Microsoft SQL Server/Oracle:
-
-.. code-block:: bash
-
-    pip install tortoise-orm[asyncodbc]
-
-..
-
-Apart from ``asyncpg`` and ``psycopg`` there is also support for ``sqlite`` through ``aiosqlite`` and
-``mysql`` through ``asyncmy``.
-You can easily implement more backends if there is appropriate ``asyncio`` driver for this db.
-
-Optional Accelerators
+Optional Dependencies
 ---------------------
-The following libraries can be used as accelerators:
+The following libraries can be used to improve performance:
 
 * `orjson <https://pypi.org/project/orjson/>`_: Automatically used if installed for JSON SerDes.
-* `uvloop <https://pypi.org/project/uvloop/>`_: Shown to improve performance, but needs to be set up.
-  Please look at ``uvloop`` documentation for more info.
-  If you use a framework, it may already use it.
+* `uvloop <https://pypi.org/project/uvloop/>`_: Shown to improve performance as an alternative to ``asyncio``.
 * `ciso8601 <https://pypi.org/project/ciso8601/>`_: Automatically used if installed.
   Not automatically installed on Windows due to often a lack of a C compiler. Default on Linux/CPython.
 
-You can install with all accelerators above:
+The following command will install all optional dependencies:
 
 .. code-block:: bash
 
     pip install tortoise-orm[accel]
-
 ..
 
 Tutorial
 ========
 
-Primary entity of tortoise is ``tortoise.models.Model``.
-You can start writing models like this:
-
+Define the models by inheriting from ``tortoise.models.Model``.
 
 .. code-block:: python3
 
@@ -87,115 +62,98 @@ You can start writing models like this:
         id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=255)
 
-        # Defining ``__str__`` is also optional, but gives you pretty
-        # represent of model in debugger and interpreter
-        def __str__(self):
-            return self.name
-
 
     class Event(Model):
         id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=255)
         # References to other models are defined in format
-        # "{app_name}.{model_name}" - where {app_name} is defined in tortoise config
+        # "{app_name}.{model_name}" - where {app_name} is defined in the tortoise config
         tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
         participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
-
-        def __str__(self):
-            return self.name
 
 
     class Team(Model):
         id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=255)
 
-        def __str__(self):
-            return self.name
-
 .. note::
    You can read more on defining models in :ref:`models`
 
-After you defined all your models, tortoise needs you to init them, in order to create backward relations between models and match your db client with appropriate models.
-
-You can do it like this:
+After defining the models, Tortoise ORM needs to be initialized to establish the relationships between models and connect to the database.
+The code below creates a connection to a SQLite DB database with the ``aiosqlite`` client. ``generate_schema`` sets up schema on an empty database.
+``generate_schema`` is for development purposes only, see :ref:`migration` for schema migration tools.
 
 .. code-block:: python3
 
-    from tortoise import Tortoise
+    from tortoise import Tortoise, run_async
 
-    async def init():
-        # Here we create a SQLite DB using file "db.sqlite3"
-        #  also specify the app name of "models"
-        #  which contain models from "app.models"
+    async def main():
+        # Here we connect to a SQLite DB file.
+        # also specify the app name of "models"
+        # which contain models from "app.models
         await Tortoise.init(
             db_url='sqlite://db.sqlite3',
             modules={'models': ['app.models']}
         )
-        # Generate the schema
         await Tortoise.generate_schemas()
 
+    run_async(main())
 
-Here we create a connection to a SQLite DB database with the default ``aiosqlite`` client and then we discover & initialise models.
 
-``generate_schema`` generates schema on empty database, you shouldn't run it on every app init, run it just once, maybe out of your main code.
+``run_async`` is a helper function to run simple Tortoise scripts. For production use, see :ref:`contrib_fastapi`, :ref:`contrib_sanic` and other integrations, as welll as check out :ref:`cleaningup`.
 
-If you are running this in a simple script, you can do:
-
-.. code-block:: python3
-
-    run_async(init())
-
-``run_async`` is a helper function to run simple async Tortoise scripts. If you are running Tortoise ORM as part of a service, please have a look at :ref:`cleaningup`
-
-After that you can start using your models:
+With the Tortoise initialized, the models are available for use:
 
 .. code-block:: python3
 
-    # Create instance by save
-    tournament = Tournament(name='New Tournament')
-    await tournament.save()
+    async def main():
+        await Tortoise.init(
+            db_url='sqlite://db.sqlite3',
+            modules={'models': ['app.models']}
+        )
+        await Tortoise.generate_schemas()
 
-    # Or by .create()
-    await Event.create(name='Without participants', tournament=tournament)
-    event = await Event.create(name='Test', tournament=tournament)
-    participants = []
-    for i in range(2):
-        team = await Team.create(name='Team {}'.format(i + 1))
-        participants.append(team)
+        # Creating an instance with .save()
+        tournament = Tournament(name='New Tournament')
+        await tournament.save()
 
-    # M2M Relationship management is quite straightforward
-    # (look for methods .remove(...) and .clear())
-    await event.participants.add(*participants)
+        # Or with .create()
+        await Event.create(name='Without participants', tournament=tournament)
+        event = await Event.create(name='Test', tournament=tournament)
+        participants = []
+        for i in range(2):
+            team = await Team.create(name='Team {}'.format(i + 1))
+            participants.append(team)
 
-    # You can query related entity just with async for
-    async for team in event.participants:
-        pass
+        # Many to Many Relationship management is quite straightforward
+        # (there are .remove(...) and .clear() too)
+        await event.participants.add(*participants)
 
-    # After making related query you can iterate with regular for,
-    # which can be extremely convenient for using with other packages,
-    # for example some kind of serializers with nested support
-    for team in event.participants:
-        pass
+        # Iterate over related entities with the async context manager
+        async for team in event.participants:
+            print(team.name)
 
+        # The related entities are cached and can be iterated in the synchronous way afterwards
+        for team in event.participants:
+            pass
 
-    # Or you can make preemptive call to fetch related objects,
-    # so you can work with related objects immediately
-    selected_events = await Event.filter(
-        participants=participants[0].id
-    ).prefetch_related('participants', 'tournament')
-    for event in selected_events:
-        print(event.tournament.name)
-        print([t.name for t in event.participants])
+        # Use prefetch_related to fetch related objects
+        selected_events = await Event.filter(
+            participants=participants[0].id
+        ).prefetch_related('participants', 'tournament')
+        for event in selected_events:
+            print(event.tournament.name)
+            print([t.name for t in event.participants])
 
-    # Tortoise ORM supports variable depth of prefetching related entities
-    # This will fetch all events for team and in those team tournament will be prefetched
-    await Team.all().prefetch_related('events__tournament')
+        # Prefetch multiple levels of related entities
+        await Team.all().prefetch_related('events__tournament')
 
-    # You can filter and order by related models too
-    await Tournament.filter(
-        events__name__in=['Test', 'Prod']
-    ).order_by('-events__participants__name').distinct()
+        # Filter and order by related models too
+        await Tournament.filter(
+            events__name__in=['Test', 'Prod']
+        ).order_by('-events__participants__name').distinct()
+
+    run_async(main())
 
 .. note::
-    You can read more examples (including transactions, several databases and a little more complex querying) in
-    :ref:`examples`
+    Find more examples (including transactions, using multiple databases and more complex querying) in :ref:`examples` and :ref:`query_api`.

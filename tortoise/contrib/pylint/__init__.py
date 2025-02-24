@@ -2,13 +2,17 @@
 Tortoise PyLint plugin
 """
 
+from __future__ import annotations
+
 from collections.abc import Iterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from astroid import MANAGER, inference_tip, nodes
 from astroid.exceptions import AstroidError
 from astroid.nodes import AnnAssign, Assign, ClassDef
-from pylint.lint import PyLinter
+
+if TYPE_CHECKING:
+    from pylint.lint import PyLinter
 
 MODELS: dict[str, ClassDef] = {}
 FUTURE_RELATIONS: dict[str, list] = {}

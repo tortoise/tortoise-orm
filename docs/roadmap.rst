@@ -2,29 +2,20 @@
 Roadmap
 =======
 
-Short-term
-==========
-
-Our short term goal is to ship the current implementation as MVP, just somewhat matured.
-
-For ``v1.0`` that involves:
-
-* Timezone support
-
 Mid-term
 ========
 
 Here we have all the features that is slightly further out, in no particular order:
 
 * Performance work:
-    * Sub queries
-    * Change to all-parametrized queries
+    * [done] Sub queries
+    * [done] Change to all-parametrized queries
     * Faster MySQL driver (possibly based on mysqlclient)
     * Consider using Cython to accelerate critical loops
 
 * Convenience/Ease-Of-Use work:
     * Make ``DELETE`` honour ``limit`` and ``offset``
-    * ``.filter(field=None)`` to work as expected
+    * [done] ``.filter(field=None)`` to work as expected
 
 * Expand in the ``init`` framework:
     * Ability to have Management Commands

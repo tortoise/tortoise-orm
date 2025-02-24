@@ -4,16 +4,13 @@ Tortoise ORM
 
 Tortoise ORM is an easy-to-use ``asyncio`` ORM *(Object Relational Mapper)* inspired by Django.
 
-Tortoise ORM was built with relations in mind and admiration for the excellent and popular Django ORM.
-It's engraved in it's design that you are working not with just tables, you work with relational data.
-
 .. note::
-   Tortoise ORM is young project and breaking changes are to be expected.
-   We keep a :ref:`changelog` and it will have possible breakage clearly documented.
+   Tortoise ORM is a young project and breaking changes are to be expected.
+   We keep a `Changelog <https://tortoise.github.io/CHANGELOG.html>`_ and it will have possible breakage clearly documented.
 
 Source & issue trackers are available at `<https://github.com/tortoise/tortoise-orm/>`_
 
-Tortoise ORM is supported on CPython >= 3.9 for SQLite, MySQL and PostgreSQL.
+Tortoise ORM supports CPython 3.9 and later for SQLite, MySQL, PostgreSQL, Microsoft SQL Server, and Oracle.
 
 Introduction
 ============
@@ -30,7 +27,7 @@ Hence we started Tortoise ORM.
 
 Tortoise ORM is designed to be functional, yet familiar, to ease the migration of developers wishing to switch to ``asyncio``.
 
-It also performs well when compared to other Python ORMs, trading places with Pony ORM:
+It also performs well when compared to other Python ORMs. In `our benchmarks <https://github.com/tortoise/orm-benchmarks>`_, where we measure different read and write operations (rows/sec, more is better), it's trading places with Pony ORM:
 
 .. image:: ORM_Perf.png
     :target: https://github.com/tortoise/orm-benchmarks
@@ -38,19 +35,19 @@ It also performs well when compared to other Python ORMs, trading places with Po
 How is an ORM useful?
 ---------------------
 
-When you build an application or service that uses a relational database, there is a point when you can't just get away with just using parametrized queries or even query builder, you just keep repeating yourself, writing slightly different code for each entity.
-Code has no idea about relations between data, so you end up concatenating your data almost manually.
-It is also easy to make a mistake in how you access your database, making it easy for SQL-injection attacks to occur.
-Your data rules are also distributed, increasing the complexity of managing your data, and even worse, is applied inconsistently.
+An Object-Relational Mapper (ORM) abstracts database interactions, allowing developers to work with databases using high-level, object-oriented code instead of raw SQL.
 
-An ORM (Object Relational Mapper) is designed to address these issues, by centralizing your data model and data rules, ensuring that your data is managed safely (providing immunity to SQL-injection) and keeps track of relationships so you don't have to.
+* Reduces boilerplate SQL, allowing faster development with cleaner, more readable code.
+* Helps prevent SQL injection by using parameterized queries.
+* Centralized schema and relationship definitions make code easier to manage and modify.
+* Handles schema changes through version-controlled migrations.
 
 Features
 ========
 
-Clean, familiar python interface
+Clean, familiar Python interface
 --------------------------------
-Define your models like so:
+Model definitions:
 
 .. code-block:: python3
 
@@ -61,40 +58,32 @@ Define your models like so:
         id = fields.IntField(primary_key=True)
         name = fields.TextField()
 
-Initialise your models and database like so:
+
+Operations on models, queries and complex aggregations:
 
 .. code-block:: python3
-
-    from tortoise import Tortoise, run_async
-
-    async def init():
-        # Here we create a SQLite DB using file "db.sqlite3"
-        #  also specify the app name of "models"
-        #  which contain models from "app.models"
-        await Tortoise.init(
-            db_url='sqlite://db.sqlite3',
-            modules={'models': ['app.models']}
-        )
-        # Generate the schema
-        await Tortoise.generate_schemas()
-
-    # run_async is a helper function to run simple async Tortoise scripts.
-    run_async(init())
-
-And use it like so:
-
-.. code-block:: python3
-
-    # Create instance by save
-    tournament = Tournament(name='New Tournament')
-    await tournament.save()
-
-    # Or by .create()
+    # Creating a record
     await Tournament.create(name='Another Tournament')
 
-    # Now search for a record
+    # Searching for a record
     tour = await Tournament.filter(name__contains='Another').first()
     print(tour.name)
+
+    # Count groups of records with a complex condition
+    await Tournament.annotate(
+        name_prefix=Case(
+            When(name__startswith="One", then="1"),
+            When(name__startswith="Two", then="2"),
+            default="0",
+        ),
+    ).annotate(
+        count=Count(F("name_prefix")),
+    ).group_by(
+        "name_prefix"
+    ).values("name_prefix", "count")
+
+
+See :ref:`getting_started` for a more detailed guide.
 
 
 Pluggable Database backends
@@ -111,16 +100,12 @@ And more
 
 Tortoise ORM supports the following features:
 
-* Designed to be used in an existing project:
-    * Testing framework uses existing Python Unittest framework, just requires
-      that ``initializer()`` and ``finalizer()`` gets called to set up and tear
-      down the test databases. (See :ref:`unittest`)
-    * ORM :ref:`init_app` configures entirely from provided parameters
 * Composable, Django-inspired :ref:`models`
 * Supports relations, such as ``ForeignKeyField`` and ``ManyToManyField``
 * Supports many standard :ref:`fields`
 * Comprehensive :ref:`query_api`
 * Transactions :ref:`transactions`
+* Supports tests frameworks, see :ref:`unittest`
 * :ref:`pylint`
 
-If you want to contribute check out issues, or just straightforwardly create PR
+If you want to contribute, check out issues first, and then create a PR.

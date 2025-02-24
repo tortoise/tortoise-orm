@@ -326,9 +326,7 @@ class TestRelations(test.TestCase):
         root = await DoubleFK.create(name="root", left=left_1st_lvl)
 
         retrieved_root = (
-            await DoubleFK.all()
-            .select_related("left__left__left", "right")
-            .get(id=getattr(root, "id"))
+            await DoubleFK.all().select_related("left__left__left", "right").get(id=root.pk)
         )
         self.assertIsNone(retrieved_root.right)
         assert retrieved_root.left is not None

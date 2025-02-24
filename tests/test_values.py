@@ -4,7 +4,7 @@ from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import In, NotEQ
 from tortoise.exceptions import FieldError
-from tortoise.expressions import Function
+from tortoise.expressions import Q, Case, Function, When
 from tortoise.functions import Length, Trim
 
 
@@ -214,3 +214,41 @@ class TestValues(test.TestCase):
             sql,
             'SELECT DATE_FORMAT("created",?) "date" FROM "tournament"',
         )
+
+    async def test_order_by_annotation_not_in_values(self):
+        await Tournament.create(name="2")
+        await Tournament.create(name="3")
+        await Tournament.create(name="1")
+
+        tournaments = (
+            await Tournament.annotate(
+                name_orderable=Case(
+                    When(Q(name="1"), then="a"),
+                    When(Q(name="2"), then="b"),
+                    When(Q(name="3"), then="c"),
+                    default="z",
+                )
+            )
+            .order_by("name_orderable")
+            .values("name")
+        )
+        self.assertEqual([t["name"] for t in tournaments], ["1", "2", "3"])
+
+    async def test_order_by_annotation_not_in_values_list(self):
+        await Tournament.create(name="2")
+        await Tournament.create(name="3")
+        await Tournament.create(name="1")
+
+        tournaments = (
+            await Tournament.annotate(
+                name_orderable=Case(
+                    When(Q(name="1"), then="a"),
+                    When(Q(name="2"), then="b"),
+                    When(Q(name="3"), then="c"),
+                    default="z",
+                )
+            )
+            .order_by("name_orderable")
+            .values_list("name")
+        )
+        self.assertEqual(tournaments, [("1",), ("2",), ("3",)])

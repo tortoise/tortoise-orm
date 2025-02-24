@@ -1,4 +1,6 @@
-from typing import TYPE_CHECKING, Any, Optional, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from tortoise import Model
@@ -55,8 +57,8 @@ class NoValuesFetched(OperationalError):
 class NotExistOrMultiple(OperationalError):
     TEMPLATE = ""
 
-    def __init__(self, model: "Union[type[Model], str]", *args) -> None:
-        self.model: "Optional[type[Model]]" = None
+    def __init__(self, model: type[Model] | str, *args) -> None:
+        self.model: type[Model] | None = None
         if isinstance(model, str):
             args = (model,) + args
         else:
@@ -83,8 +85,8 @@ class ObjectDoesNotExistError(OperationalError, KeyError):
     The DoesNotExist exception is raised when an item with the passed primary key does not exist
     """
 
-    def __init__(self, model: "type[Model]", pk_name: str, pk_val: Any) -> None:
-        self.model: "type[Model]" = model
+    def __init__(self, model: type[Model], pk_name: str, pk_val: Any) -> None:
+        self.model: type[Model] = model
         self.pk_name: str = pk_name
         self.pk_val: Any = pk_val
 

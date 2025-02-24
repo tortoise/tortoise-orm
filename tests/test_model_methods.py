@@ -122,6 +122,14 @@ class TestModelMethods(test.TestCase):
         self.assertEqual(n_mdl.name, "Test")
         self.assertEqual(n_mdl.desc, "Something")
 
+    async def test_save_partial_with_pk_update(self):
+        # Not allow to update pk field only
+        with self.assertRaisesRegex(OperationalError, "Can't update pk field"):
+            await self.mdl.save(update_fields=["id"])
+        # So does update pk field with others
+        with self.assertRaisesRegex(OperationalError, f"use `{self.cls.__name__}.create` instead"):
+            await self.mdl.save(update_fields=["id", "desc"])
+
     async def test_create(self):
         mdl = self.cls(name="Test2")
         self.assertIsNone(mdl.id)

@@ -1,11 +1,13 @@
-from typing import TYPE_CHECKING, Any, Optional, Union
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from tortoise.fields import Field
 from tortoise.fields import UUIDField as UUIDFieldBase
 
 if TYPE_CHECKING:  # pragma: nocoverage
-    from tortoise.models import Model  # noqa pylint: disable=unused-import
+    from tortoise.models import Model
 
 
 class GeometryField(Field):
@@ -38,7 +40,7 @@ class UUIDField(UUIDFieldBase):
             self.SQL_TYPE = "BINARY(16)"
         self._binary_compression = binary_compression
 
-    def to_db_value(self, value: Any, instance: "Union[type[Model], Model]") -> Optional[Union[str, bytes]]:  # type: ignore
+    def to_db_value(self, value: Any, instance: type[Model] | Model) -> str | bytes | None:  # type: ignore
         # Make sure that value is a UUIDv4
         # If not, raise an error
         # This is to prevent UUIDv1 or any other version from being stored in the database
@@ -48,7 +50,7 @@ class UUIDField(UUIDFieldBase):
             return value.bytes
         return value and str(value)
 
-    def to_python_value(self, value: Any) -> Optional[UUID]:
+    def to_python_value(self, value: Any) -> UUID | None:
         if value is None or isinstance(value, UUID):
             return value
         elif self._binary_compression and isinstance(value, bytes):

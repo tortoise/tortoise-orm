@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import time
 from collections.abc import Sequence
@@ -79,15 +81,15 @@ def escape_int(value: int, mapping=None) -> str:
 
 
 def escape_float(value: float, mapping=None) -> str:
-    return "%.15g" % value
+    return f"{value:.15g}"
 
 
 def escape_unicode(value: str, mapping=None) -> str:
-    return "'%s'" % _escape_unicode(value)
+    return f"'{_escape_unicode(value)}'"
 
 
 def escape_str(value: str, mapping=None) -> str:
-    return "'%s'" % escape_string(str(value), mapping)
+    return f"'{escape_string(str(value), mapping)}'"
 
 
 def escape_None(value: None, mapping=None) -> str:

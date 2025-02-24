@@ -15,7 +15,7 @@ class TestBadRelationReferenceErrors(test.SimpleTestCase):
 
     async def asyncTearDown(self) -> None:
         await Tortoise._reset_apps()
-        await super(TestBadRelationReferenceErrors, self).asyncTearDown()
+        await super().asyncTearDown()
 
     async def test_wrong_app_init(self):
         with self.assertRaisesRegex(ConfigurationError, "No app with name 'app' registered."):

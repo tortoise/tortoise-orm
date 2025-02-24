@@ -6,7 +6,7 @@ class TestCapabilities(test.TestCase):
     # pylint: disable=E1101
 
     async def asyncSetUp(self) -> None:
-        await super(TestCapabilities, self).asyncSetUp()
+        await super().asyncSetUp()
         self.db = connections.get("models")
         self.caps = self.db.capabilities
 

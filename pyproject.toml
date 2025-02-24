@@ -1,18 +1,18 @@
 [project]
 name = "tortoise-orm"
-version = "0.24.0"
+version = "0.24.1"
+description = "Easy async ORM for python, built with relations in mind"
 authors = [{name="Andrey Bondar", email="andrey@bondar.ru"}, {name="Nickolas Grigoriadis", email="nagrigoriadis@gmail.com"}, {name="long2ice", email="long2ice@gmail.com"}]
 license = {text="Apache-2.0"}
 readme = "README.rst"
-description = "Easy async ORM for python, built with relations in mind"
 keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio", "psycopg"]
 include = ["CHANGELOG.rst", "LICENSE", "README.rst"]
 # classifieres is dynamic because poetry will create Python classifiers automatically with value in `tool.poetry` section
 dynamic = [ "classifiers" ]
 requires-python = ">=3.9"
 dependencies = [
-    "pypika-tortoise (>=0.5.0,<1.0.0)",
-    "iso8601 (>=2.1.0,<3.0.0)",
+    "pypika-tortoise (>=0.5.0,<1.0.0); python_version < '4.0'",
+    "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
     "aiosqlite (>=0.16.0,<1.0.0)",
     "pytz",
 ]
@@ -25,9 +25,9 @@ accel = [
 ]
 asyncpg = ["asyncpg"]
 aiomysql = ["aiomysql"]
-asyncmy = ["asyncmy (>=0.2.8,<1.0.0)"]
+asyncmy = ["asyncmy (>=0.2.8,<1.0.0); python_version < '4.0'"]
 psycopg = ["psycopg[pool,binary] (>=3.0.12,<4.0.0)"]
-asyncodbc = ["asyncodbc (>=0.1.1,<1.0.0)"]
+asyncodbc = ["asyncodbc (>=0.1.1,<1.0.0); python_version < '4.0'"]
 
 [project.urls]
 homepage = "https://github.com/tortoise/tortoise-orm"
@@ -59,9 +59,6 @@ classifiers = [
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
 ]
-
-[tool.poetry.dependencies]
-python = ">=3.9,<4.0"
 
 [tool.poetry.group.dev.dependencies]
 # Linter tools
@@ -190,6 +187,7 @@ asyncio_default_fixture_loop_scope = "session"
 filterwarnings = [
     'ignore:`pk` is deprecated:DeprecationWarning',
     'ignore:`index` is deprecated:DeprecationWarning',
+    'ignore:Do not add pk field to `update_fields`!:RuntimeWarning',
 ]
 
 [tool.coverage.run]
@@ -203,6 +201,11 @@ show_missing = true
 line-length = 100
 [tool.ruff.lint]
 ignore = ["E501"]
+extend-select = [
+    "FA",     # https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
+    "UP",     # https://docs.astral.sh/ruff/rules/#pyupgrade-up
+    "RUF100", # https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
+]
 
 [tool.bandit]
 exclude_dirs = ["tests", 'examples/*/_tests.py', "conftest.py"]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
@@ -20,7 +21,7 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
     COLUMN_COMMENT_TEMPLATE = 'COMMENT ON COLUMN "{table}"."{column}" IS \'{comment}\';'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}'
 
-    def __init__(self, client: "BasePostgresClient") -> None:
+    def __init__(self, client: BasePostgresClient) -> None:
         super().__init__(client)
         self.comments_array: list[str] = []
 
@@ -71,8 +72,8 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
 
     def _get_index_sql(
         self,
-        model: "type[Model]",
-        field_names: list[str],
+        model: type[Model],
+        field_names: Sequence[str],
         safe: bool,
         index_name: str | None = None,
         index_type: str | None = None,

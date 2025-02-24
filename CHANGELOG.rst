@@ -6,29 +6,28 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.25
-====
-
-0.25.0 (unreleased)
-------
-Fixed
-^^^^^
-- Fixed asyncio "no current event loop" deprecation warning by replacing `asyncio.get_event_loop()` with modern event loop handling using `get_running_loop()` with fallback to `new_event_loop()` (#1865)
-
-Changed
-^^^^^^^
-- add benchmarks for `get_for_dialect` (#1862)
-
 0.24
 ====
+
+0.24.1
+------
+Added
+^^^^^
+- Implement __contains, __contained_by, __overlap and __len for ArrayField (#1877)
+
+Fixed
+^^^^^
+- Fix update pk field raises unfriendly error (#1873)
+- Using `.distinct()` with an annotation and `.order_by()` produces invalid SQL for PostgreSQL (#1886)
+
 
 0.24.0
 ------
 Fixed
 ^^^^^
+- `_get_dialects`: support properties (#1859)
 - Rename pypika to pypika_tortoise for fixing package name conflict (#1829)
 - Concurrent connection pool initialization (#1825)
-- `_get_dialects`: support properties (#1859)
 
 Changed
 ^^^^^^^
