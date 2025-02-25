@@ -4,7 +4,7 @@ from tests.testmodels import Event, Team, Tournament
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import In, NotEQ
 from tortoise.exceptions import FieldError
-from tortoise.expressions import Q, Case, Function, When
+from tortoise.expressions import Case, Function, Q, When
 from tortoise.functions import Length, Trim
 
 

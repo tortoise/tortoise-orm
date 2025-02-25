@@ -296,7 +296,7 @@ class BaseSchemaGenerator:
         return [val for val in list(dict.fromkeys(indexes)) if val]
 
     def _get_m2m_tables(
-        self, model: type[Model], table_name: str, safe: bool, models_tables: list[str]
+        self, model: type[Model], db_table: str, safe: bool, models_tables: list[str]
     ) -> list[str]:
         m2m_tables_for_create = []
         for m2m_field in model._meta.m2m_fields:
@@ -308,7 +308,7 @@ class BaseSchemaGenerator:
                 backward_fk = self._create_fk_string(
                     "",
                     backward_key,
-                    table_name,
+                    db_table,
                     model._meta.db_pk_column,
                     field_object.on_delete,
                     "",
@@ -327,6 +327,9 @@ class BaseSchemaGenerator:
             table_name = field_object.through
             backward_type = self._get_pk_field_sql_type(model._meta.pk)
             forward_type = self._get_pk_field_sql_type(field_object.related_model._meta.pk)
+            comment = ""
+            if desc := field_object.description:
+                comment = self._table_comment_generator(table=table_name, comment=desc)
             m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
                 exists=exists,
                 table_name=table_name,
@@ -337,13 +340,7 @@ class BaseSchemaGenerator:
                 forward_key=forward_key,
                 forward_type=forward_type,
                 extra=self._table_generate_extra(table=field_object.through),
-                comment=(
-                    self._table_comment_generator(
-                        table=field_object.through, comment=field_object.description
-                    )
-                    if field_object.description
-                    else ""
-                ),
+                comment=comment,
             )
             if not field_object.db_constraint:
                 m2m_create_string = m2m_create_string.replace(

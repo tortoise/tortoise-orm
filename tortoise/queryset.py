@@ -9,7 +9,7 @@ from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
 from pypika_tortoise.functions import Cast
 from pypika_tortoise.queries import QueryBuilder
-from pypika_tortoise.terms import Case, Field, Star, Term, ValueWrapper, PseudoColumn
+from pypika_tortoise.terms import Case, Field, PseudoColumn, Star, Term, ValueWrapper
 from typing_extensions import Literal, Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
