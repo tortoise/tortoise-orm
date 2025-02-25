@@ -53,20 +53,23 @@ On success it will be marked as unexpected success.
 _CONFIG: dict = {}
 _CONNECTIONS: dict = {}
 _LOOP: AbstractEventLoop = None  # type: ignore
-_MODULES: Iterable[str | ModuleType] = []
+_MODULES: Union[Iterable[str | ModuleType], dict[str, Iterable[Union[str, ModuleType]]]] = []
 _CONN_CONFIG: dict = {}
 
 
-def getDBConfig(app_label: str, modules: Iterable[str | ModuleType]) -> dict:
+def getDBConfig(app_label: str, modules: Union[Iterable[str | ModuleType], dict[str, Iterable[Union[str, ModuleType]]]]) -> dict:
     """
     DB Config factory, for use in testing.
 
-    :param app_label: Label of the app (must be distinct for multiple apps).
-    :param modules: List of modules to look for models in.
+    :param app_label: Default label of the app if modules is a list (must be distinct for multiple apps).
+    :param modules: List of modules to look for models in, or dictionary of apps and list of modules
     """
+
+    modules = {app_label: modules} if not isinstance(modules, dict) else modules
+
     return _generate_config(
         _TORTOISE_TEST_DB,
-        app_modules={app_label: modules},
+        app_modules=modules,
         testing=True,
         connection_label=app_label,
     )
@@ -104,7 +107,7 @@ async def truncate_all_models() -> None:
 
 
 def initializer(
-    modules: Iterable[str | ModuleType],
+    modules: Union[Iterable[str | ModuleType], dict[str, Iterable[Union[str, ModuleType]]]],
     db_url: str | None = None,
     app_label: str = "models",
     loop: AbstractEventLoop | None = None,
@@ -112,9 +115,9 @@ def initializer(
     """
     Sets up the DB for testing. Must be called as part of test environment setup.
 
-    :param modules: List of modules to look for models in.
+    :param modules: List of modules to look for models in, or a dict of app labels and module lists
     :param db_url: The db_url, defaults to ``sqlite://:memory``.
-    :param app_label: The name of the APP to initialise the modules in, defaults to "models"
+    :param app_label: The name of the APP to initialise the modules in if modules is a list, defaults to "models"
     :param loop: Optional event loop.
     """
     # pylint: disable=W0603
@@ -264,10 +267,10 @@ class IsolatedTestCase(SimpleTestCase):
     It will create and destroy a new DB instance for every test.
     This is obviously slow, but guarantees a fresh DB.
 
-    If you define a ``tortoise_test_modules`` list, it overrides the DB setup module for the tests.
+    If you define a ``tortoise_test_modules`` list or dict, it overrides the DB setup module for the tests.
     """
 
-    tortoise_test_modules: Iterable[str | ModuleType] = []
+    tortoise_test_modules: Union[Iterable[str | ModuleType], dict[str, Iterable[Union[str, ModuleType]]]] = []
 
     async def _setUpDB(self) -> None:
         await super()._setUpDB()
