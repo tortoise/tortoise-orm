@@ -9,6 +9,12 @@ Changelog
 0.24
 ====
 
+0.24.2
+------
+Added
+^^^^^
+- Allow mapping of modules for multiple apps to be provided to tortoise.contrib.test.initializer (#1895)
+
 0.24.1
 ------
 Added

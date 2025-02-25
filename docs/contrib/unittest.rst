@@ -39,6 +39,8 @@ To get ``test.TestCase`` to work as expected, you need to configure your test en
     initializer(['module.a', 'module.b.c'])
     # With optional db_url, app_label and loop parameters
     initializer(['module.a', 'module.b.c'], db_url='...', app_label="someapp", loop=loop)
+    # With multiple apps
+    initializer({'app1': ['app1.models'], 'app2': ['app2.models']})
     # Or env-var driven → See Green test runner section below.
     env_initializer()
 
