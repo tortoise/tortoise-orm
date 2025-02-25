@@ -1,5 +1,4 @@
-import shlex
-import subprocess
+import subprocess  # nosec
 import sys
 from pathlib import Path
 
@@ -39,17 +38,11 @@ def test_version():
     assert _read_version() == __version__
 
 
-def run_shell(cmd: str) -> int:
-    r = subprocess.run(shlex.split(cmd))
-    return r.returncode
-
-
 def test_added_by_poetry_v2(tmp_path: Path):
     tortoise_orm = Path(__file__).parent.resolve().parent
     with chdir(tmp_path):
         package = "foo"
-        exit_code = run_shell(f"poetry new {package}")
-        assert exit_code == 0
+        subprocess.run(["poetry", "new", package])  # nosec
         with chdir(package):
-            exit_code = run_shell(f"poetry add {tortoise_orm}")
-            assert exit_code == 0
+            r = subprocess.run(["poetry", "add", tortoise_orm])  # nosec
+            assert r.returncode == 0
