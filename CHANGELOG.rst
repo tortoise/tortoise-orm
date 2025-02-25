@@ -9,6 +9,13 @@ Changelog
 0.24
 ====
 
+0.24.2 (Unreleased)
+------
+
+Fixed
+^^^^^
+- Fix model with multi m2m fields generates wrong references name (#1897)
+
 0.24.1
 ------
 Added
