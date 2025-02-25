@@ -23,7 +23,7 @@ class Event(Model):
         "models.Tournament",
         related_name="events",
         description="FK to tournament",
-        on_delete=fields.RESTRICT
+        on_delete=fields.RESTRICT,
     )
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team",

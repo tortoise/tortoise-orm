@@ -9,7 +9,7 @@ from tests.testmodels import (
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotEQ
 from tortoise.exceptions import ConfigurationError, FieldError
-from tortoise.expressions import Q, Case, When
+from tortoise.expressions import Case, Q, When
 from tortoise.functions import Count, Sum
 
 

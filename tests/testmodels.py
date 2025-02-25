@@ -140,12 +140,16 @@ class ModelTestPydanticMetaBackwardRelations2(Model): ...
 class ModelTestPydanticMetaBackwardRelations3(Model):
     one: fields.ForeignKeyRelation[ModelTestPydanticMetaBackwardRelations1] = (
         fields.ForeignKeyField(
-            "models.ModelTestPydanticMetaBackwardRelations1", related_name="threes", on_delete=fields.RESTRICT
+            "models.ModelTestPydanticMetaBackwardRelations1",
+            related_name="threes",
+            on_delete=fields.RESTRICT,
         )
     )
     two: fields.ForeignKeyRelation[ModelTestPydanticMetaBackwardRelations2] = (
         fields.ForeignKeyField(
-            "models.ModelTestPydanticMetaBackwardRelations2", related_name="threes", on_delete=fields.RESTRICT
+            "models.ModelTestPydanticMetaBackwardRelations2",
+            related_name="threes",
+            on_delete=fields.RESTRICT,
         )
     )
 
@@ -368,7 +372,9 @@ class UUIDFields(Model):
 
 class MinRelation(Model):
     id = fields.IntField(primary_key=True)
-    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField("models.Tournament", on_delete=fields.RESTRICT)
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
+        "models.Tournament", on_delete=fields.RESTRICT
+    )
     participants: fields.ManyToManyRelation[Team] = fields.ManyToManyField("models.Team")
 
 
@@ -411,7 +417,9 @@ class UniqueTogetherFields(Model):
 class UniqueTogetherFieldsWithFK(Model):
     id = fields.IntField(primary_key=True)
     text = fields.CharField(max_length=64)
-    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField("models.Tournament", on_delete=fields.RESTRICT)
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
+        "models.Tournament", on_delete=fields.RESTRICT
+    )
 
     class Meta:
         unique_together = ("text", "tournament")
@@ -467,7 +475,10 @@ class UUIDFkRelatedSourceModel(Model):
     id = fields.UUIDField(primary_key=True, source_field="b")
     name = fields.CharField(max_length=50, null=True, source_field="c")
     model: fields.ForeignKeyRelation[UUIDPkSourceModel] = fields.ForeignKeyField(
-        "models.UUIDPkSourceModel", related_name="children", source_field="d", on_delete=fields.RESTRICT
+        "models.UUIDPkSourceModel",
+        related_name="children",
+        source_field="d",
+        on_delete=fields.RESTRICT,
     )
 
     class Meta:
@@ -482,7 +493,7 @@ class UUIDFkRelatedNullSourceModel(Model):
         related_name="children_null",
         source_field="k",
         null=True,
-        on_delete=fields.RESTRICT
+        on_delete=fields.RESTRICT,
     )
 
     class Meta:

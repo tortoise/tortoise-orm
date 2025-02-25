@@ -11,4 +11,6 @@ from tortoise.models import Model
 
 
 class One(Model):
-    tournament: fields.ForeignKeyRelation[Any] = fields.ForeignKeyField("moo", on_delete=fields.RESTRICT)
+    tournament: fields.ForeignKeyRelation[Any] = fields.ForeignKeyField(
+        "moo", on_delete=fields.RESTRICT
+    )
