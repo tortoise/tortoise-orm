@@ -478,8 +478,8 @@ def ForeignKeyField(
 
 def ForeignKeyField(
     model_name: str,
+    on_delete: OnDelete,
     related_name: str | None | Literal[False] = None,
-    on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     null: bool = False,
     **kwargs: Any,

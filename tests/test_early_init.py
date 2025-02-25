@@ -28,7 +28,7 @@ class Event(Model):
     name = fields.CharField(max_length=255)
     created_at = fields.DatetimeField(auto_now_add=True)
     tournament: fields.ForeignKeyNullableRelation[Tournament] = fields.ForeignKeyField(
-        "models.Tournament", related_name="events", null=True
+        "models.Tournament", related_name="events", null=True, on_delete=fields.RESTRICT
     )
 
     class Meta:
@@ -152,7 +152,7 @@ class TestBasic(test.SimpleTestCase):
                         "docstring": None,
                         "constraints": {},
                         "raw_field": None,
-                        "on_delete": "CASCADE",
+                        "on_delete": "RESTRICT",
                         "db_constraint": True,
                     }
                 ],
@@ -316,7 +316,7 @@ class TestBasic(test.SimpleTestCase):
                         "python_type": "models.Tournament",
                         "generated": False,
                         "nullable": True,
-                        "on_delete": "CASCADE",
+                        "on_delete": "RESTRICT",
                         "unique": False,
                         "indexed": False,
                         "default": None,

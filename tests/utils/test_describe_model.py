@@ -91,7 +91,7 @@ class TestDescribeModel(test.SimpleTestCase):
         )
 
     def test_describe_relfield_noninit_ser(self):
-        field = fields.ForeignKeyField("a.b")
+        field = fields.ForeignKeyField("a.b", on_delete=fields.RESTRICT)
         self.assertEqual(
             field.describe(serializable=True),
             {
@@ -100,7 +100,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "python_type": "None",
                 "generated": False,
                 "nullable": False,
-                "on_delete": "CASCADE",
+                "on_delete": "RESTRICT",
                 "unique": False,
                 "indexed": False,
                 "default": None,
@@ -113,7 +113,7 @@ class TestDescribeModel(test.SimpleTestCase):
         )
 
     def test_describe_relfield_noninit(self):
-        field = fields.ForeignKeyField("a.b")
+        field = fields.ForeignKeyField("a.b", on_delete=fields.RESTRICT)
         self.assertEqual(
             field.describe(serializable=False),
             {
@@ -122,7 +122,7 @@ class TestDescribeModel(test.SimpleTestCase):
                 "python_type": None,
                 "generated": False,
                 "nullable": False,
-                "on_delete": "CASCADE",
+                "on_delete": "RESTRICT",
                 "unique": False,
                 "indexed": False,
                 "default": None,
@@ -1277,7 +1277,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "indexed": False,
                         "name": "model",
                         "nullable": True,
-                        "on_delete": "CASCADE",
+                        "on_delete": "RESTRICT",
                         "python_type": "models.UUIDPkModel",
                         "raw_field": "model_id",
                         "unique": False,

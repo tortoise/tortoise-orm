@@ -23,6 +23,7 @@ class Event(Model):
         db_constraint=False,
         related_name="events",
         description="FK to tournament",
+        on_delete=fields.RESTRICT
     )
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team",
@@ -45,7 +46,7 @@ class Team(Model):
     name = fields.CharField(max_length=50, primary_key=True, description="The TEAM name (and PK)")
     key = fields.IntField()
     manager: fields.ForeignKeyNullableRelation["Team"] = fields.ForeignKeyField(
-        "models.Team", db_constraint=False, related_name="team_members", null=True
+        "models.Team", db_constraint=False, related_name="team_members", null=True, on_delete=fields.RESTRICT
     )
     talks_to: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team", db_constraint=False, related_name="gets_talked_to"

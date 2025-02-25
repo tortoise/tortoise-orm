@@ -20,7 +20,10 @@ class Event(Model):
     id = fields.BigIntField(primary_key=True, description="Event ID")
     name = fields.TextField()
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
-        "models.Tournament", related_name="events", description="FK to tournament"
+        "models.Tournament",
+        related_name="events",
+        description="FK to tournament",
+        on_delete=fields.RESTRICT
     )
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team",
@@ -41,10 +44,10 @@ class Event(Model):
 
 class TeamEvent(Model):
     team: fields.ForeignKeyRelation["Team"] = fields.ForeignKeyField(
-        "models.Team", related_name="teams"
+        "models.Team", related_name="teams", on_delete=fields.RESTRICT
     )
     event: fields.ForeignKeyRelation[Event] = fields.ForeignKeyField(
-        "models.Event", related_name="events"
+        "models.Event", related_name="events", on_delete=fields.RESTRICT
     )
     score = fields.IntField()
 
@@ -58,7 +61,7 @@ class Team(Model):
     name = fields.CharField(max_length=50, primary_key=True, description="The TEAM name (and PK)")
     key = fields.IntField()
     manager: fields.ForeignKeyNullableRelation["Team"] = fields.ForeignKeyField(
-        "models.Team", related_name="team_members", null=True
+        "models.Team", related_name="team_members", null=True, on_delete=fields.RESTRICT
     )
     talks_to: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team", related_name="gets_talked_to"
