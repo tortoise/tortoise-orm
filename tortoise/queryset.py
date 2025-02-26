@@ -9,7 +9,7 @@ from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
 from pypika_tortoise.functions import Cast
 from pypika_tortoise.queries import QueryBuilder
-from pypika_tortoise.terms import Case, Field, PseudoColumn, Star, Term, ValueWrapper
+from pypika_tortoise.terms import Case, Field, Star, Term, ValueWrapper
 from typing_extensions import Literal, Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
@@ -223,7 +223,7 @@ class AwaitableQuery(Generic[MODEL]):
                     # - Empty fields_for_select means that all columns and annotations are selected,
                     #   hence we can reference the annotation.
                     # - The annotation is in fields_for_select, hence we can reference it.
-                    term = PseudoColumn(field_name)
+                    term = Field(field_name)
                 else:
                     # The annotation is not in SELECT, resolve it
                     annotation = annotations[field_name]

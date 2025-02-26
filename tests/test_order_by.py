@@ -10,7 +10,7 @@ from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotEQ
 from tortoise.exceptions import ConfigurationError, FieldError
 from tortoise.expressions import Case, Q, When
-from tortoise.functions import Count, Sum
+from tortoise.functions import Count, Lower, Sum
 
 
 class TestOrderBy(test.TestCase):
@@ -95,6 +95,16 @@ class TestOrderBy(test.TestCase):
         )
         self.assertEqual([t.name for t in tournaments], ["1", "2"])
 
+    async def test_order_by_reserved_word_annotation(self):
+        await Tournament.create(name="1")
+        await Tournament.create(name="2")
+
+        reserved_words = ["order", "group", "limit", "offset", "where"]
+
+        for word in reserved_words:
+            tournaments = await Tournament.annotate(**{word: Lower("name")}).order_by(word)
+            self.assertEqual([t.name for t in tournaments], ["1", "2"])
+
     async def test_distinct_values_with_annotation(self):
         await Tournament.create(name="3")
         await Tournament.create(name="1")
@@ -115,7 +125,7 @@ class TestOrderBy(test.TestCase):
         )
         self.assertEqual([t["name"] for t in tournaments], ["1", "2", "3"])
 
-    async def test_distinct_all_withl_annotation(self):
+    async def test_distinct_all_with_annotation(self):
         await Tournament.create(name="3")
         await Tournament.create(name="1")
         await Tournament.create(name="2")
