@@ -15,7 +15,7 @@ class UUIDFkRelatedModel(Model):
     id = mysql_fields.UUIDField(primary_key=True)
     name = fields.CharField(max_length=50, null=True)
     model: fields.ForeignKeyRelation[UUIDPkModel] = fields.ForeignKeyField(
-        "models.UUIDPkModel", related_name="children"
+        "models.UUIDPkModel", related_name="children", on_delete=fields.RESTRICT
     )
 
 
@@ -23,7 +23,7 @@ class UUIDFkRelatedNullModel(Model):
     id = mysql_fields.UUIDField(primary_key=True)
     name = fields.CharField(max_length=50, null=True)
     model: fields.ForeignKeyNullableRelation[UUIDPkModel] = fields.ForeignKeyField(
-        "models.UUIDPkModel", related_name=False, null=True
+        "models.UUIDPkModel", related_name=False, null=True, on_delete=fields.RESTRICT
     )
     parent: fields.OneToOneNullableRelation[UUIDPkModel] = fields.OneToOneField(
         "models.UUIDPkModel", related_name=False, null=True, on_delete=fields.NO_ACTION
@@ -49,7 +49,10 @@ class UUIDFkRelatedSourceModel(Model):
     id = mysql_fields.UUIDField(primary_key=True, source_field="b")
     name = fields.CharField(max_length=50, null=True, source_field="c")
     model: fields.ForeignKeyRelation[UUIDPkSourceModel] = fields.ForeignKeyField(
-        "models.UUIDPkSourceModel", related_name="children", source_field="d"
+        "models.UUIDPkSourceModel",
+        related_name="children",
+        source_field="d",
+        on_delete=fields.RESTRICT,
     )
 
     class Meta:
@@ -60,7 +63,11 @@ class UUIDFkRelatedNullSourceModel(Model):
     id = mysql_fields.UUIDField(primary_key=True, source_field="i")
     name = fields.CharField(max_length=50, null=True, source_field="j")
     model: fields.ForeignKeyNullableRelation[UUIDPkSourceModel] = fields.ForeignKeyField(
-        "models.UUIDPkSourceModel", related_name="children_null", source_field="k", null=True
+        "models.UUIDPkSourceModel",
+        related_name="children_null",
+        source_field="k",
+        null=True,
+        on_delete=fields.RESTRICT,
     )
 
     class Meta:

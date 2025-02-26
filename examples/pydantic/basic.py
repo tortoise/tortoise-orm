@@ -23,7 +23,7 @@ class Event(Model):
     name = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
     tournament: fields.ForeignKeyNullableRelation[Tournament] = fields.ForeignKeyField(
-        "models.Tournament", related_name="events", null=True
+        "models.Tournament", related_name="events", null=True, on_delete=fields.RESTRICT
     )
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team", related_name="events", through="event_team"

@@ -9,7 +9,7 @@ class Author(Model):
 class Book(Model):
     name = fields.CharField(max_length=255)
     author: fields.ForeignKeyRelation[Author] = fields.ForeignKeyField(
-        "models.Author", related_name="books"
+        "models.Author", related_name="books", on_delete=fields.RESTRICT
     )
     rating = fields.FloatField()
 

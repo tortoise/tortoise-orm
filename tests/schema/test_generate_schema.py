@@ -9,7 +9,7 @@ from tortoise.utils import get_schema_sql
 
 
 class TestGenerateSchema(test.SimpleTestCase):
-    safe_schema_sql = """
+    safe_schema_sql = r"""
 CREATE TABLE IF NOT EXISTS "company" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" TEXT NOT NULL,
@@ -272,7 +272,7 @@ CREATE UNIQUE INDEX "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id"
         sql = get_schema_sql(connections.get("default"), safe=False)
         self.assertEqual(
             sql.strip(),
-            """
+            r"""
 CREATE TABLE "company" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" TEXT NOT NULL,

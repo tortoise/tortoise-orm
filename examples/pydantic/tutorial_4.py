@@ -67,7 +67,10 @@ class Event(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
 
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
-        "models.Tournament", related_name="events", description="The Tournament this happens in"
+        "models.Tournament",
+        related_name="events",
+        description="The Tournament this happens in",
+        on_delete=fields.RESTRICT,
     )
 
     class Meta:

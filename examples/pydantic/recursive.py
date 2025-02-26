@@ -12,7 +12,7 @@ class Employee(Model):
     name = fields.CharField(max_length=50)
 
     manager: fields.ForeignKeyNullableRelation["Employee"] = fields.ForeignKeyField(
-        "models.Employee", related_name="team_members", null=True
+        "models.Employee", related_name="team_members", null=True, on_delete=fields.RESTRICT
     )
     team_members: fields.ReverseRelation["Employee"]
 

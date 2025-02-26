@@ -6,8 +6,14 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.24
+0.26
 ====
+
+0.25 (unreleased)
+------
+Changed
+^^^^^^^
+- ForeignKeyField: The `on_delete` parameter is now mandatory. Users must now explicitly specify the desired deletion behavior (e.g., `on_delete=fields.RESTRICT`, `on_delete=fields.CASCADE`, etc.) (#1801)
 
 0.24.1
 ------
