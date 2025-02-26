@@ -277,6 +277,7 @@ PostgreSQL and SQLite also support ``iposix_regex``, which makes case insensive 
 
 
 .. code-block:: python3
+
     class DemoModel:
       demo_text = fields.TextField()
 
