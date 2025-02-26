@@ -15,6 +15,7 @@ Changelog
 Fixed
 ^^^^^
 - Fix model with multi m2m fields generates wrong references name (#1897)
+- Fix using reserved words in order_by (#1900)
 
 0.24.1
 ------
