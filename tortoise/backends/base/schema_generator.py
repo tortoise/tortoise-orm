@@ -324,15 +324,15 @@ class BaseSchemaGenerator:
             else:
                 backward_fk = forward_fk = ""
             exists = "IF NOT EXISTS " if safe else ""
-            table_name = field_object.through
+            through_table_name = field_object.through
             backward_type = self._get_pk_field_sql_type(model._meta.pk)
             forward_type = self._get_pk_field_sql_type(field_object.related_model._meta.pk)
             comment = ""
             if desc := field_object.description:
-                comment = self._table_comment_generator(table=table_name, comment=desc)
+                comment = self._table_comment_generator(table=through_table_name, comment=desc)
             m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
                 exists=exists,
-                table_name=table_name,
+                table_name=through_table_name,
                 backward_fk=backward_fk,
                 forward_fk=forward_fk,
                 backward_key=backward_key,
@@ -352,7 +352,7 @@ class BaseSchemaGenerator:
             m2m_create_string += self._post_table_hook()
             if field_object.create_unique_index:
                 unique_index_create_sql = self._get_unique_index_sql(
-                    exists, table_name, [backward_key, forward_key]
+                    exists, through_table_name, [backward_key, forward_key]
                 )
                 if unique_index_create_sql.endswith(";"):
                     m2m_create_string += "\n" + unique_index_create_sql
