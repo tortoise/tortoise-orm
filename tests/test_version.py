@@ -11,7 +11,10 @@ else:
     import contextlib
     import os
 
-    import tomlkit as tomllib
+    try:
+        import tomli as tomllib
+    except ImportError:
+        import tomlkit as tomllib  # type:ignore[no-redef]
 
     class chdir(contextlib.AbstractContextManager):  # Copied from source code of Python3.13
         """Non thread-safe context manager to change the current working directory."""
