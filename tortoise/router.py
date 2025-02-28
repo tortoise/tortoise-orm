@@ -30,10 +30,14 @@ class ConnectionRouter:
                     return chosen_db
 
     def _db_route(self, model: type[Model], action: str) -> BaseDBAsyncClient | None:
-        try:
-            return connections.get(self._router_func(model, action))
-        except ConfigurationError:
-            return None
+        conn_alias = self._router_func(model, action)
+        if conn_alias is not None:
+            try:
+                return connections.get(conn_alias)
+            except ConfigurationError:
+                return None
+            
+        return None
 
     def db_for_read(self, model: type[Model]) -> BaseDBAsyncClient | None:
         return self._db_route(model, "db_for_read")
