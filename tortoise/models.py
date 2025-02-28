@@ -1535,46 +1535,46 @@ class Model(metaclass=ModelMeta):
 
             Each field is specified as defined in :meth:`tortoise.fields.base.Field.describe`
         """
-        fields: dict[str, list[dict]] = {
-            "data_fields": [],
-            "fk_fields": [],
-            "backward_fk_fields": [],
-            "o2o_fields": [],
-            "backward_o2o_fields": [],
-            "m2m_fields": [],
-        }
-        meta = cls._meta
-        data_field_names = meta.fields - meta.fetch_fields
-        for name, field in meta.fields_map.items():
-            if name == meta.pk_attr:
-                continue
-            elif name in data_field_names:
-                key = "data_fields"
-            elif name in meta.fk_fields:
-                key = "fk_fields"
-            elif name in meta.backward_fk_fields:
-                key = "backward_fk_fields"
-            elif name in meta.o2o_fields:
-                key = "o2o_fields"
-            elif name in meta.backward_o2o_fields:
-                key = "backward_o2o_fields"
-            elif name in meta.m2m_fields:
-                key = "m2m_fields"
-            else:
-                continue
-            fields[key].append(field.describe(serializable))
-
         return {
-            "name": meta.full_name,
-            "app": meta.app,
-            "table": meta.db_table,
-            "abstract": meta.abstract,
-            "description": meta.table_description or None,
+            "name": cls._meta.full_name,
+            "app": cls._meta.app,
+            "table": cls._meta.db_table,
+            "abstract": cls._meta.abstract,
+            "description": cls._meta.table_description or None,
             "docstring": inspect.cleandoc(cls.__doc__ or "") or None,
-            "unique_together": meta.unique_together or [],
-            "indexes": [cls._describe_index(index, serializable) for index in meta.indexes],
-            "pk_field": meta.fields_map[meta.pk_attr].describe(serializable),
-            **fields,
+            "unique_together": cls._meta.unique_together or [],
+            "indexes": [cls._describe_index(index, serializable) for index in cls._meta.indexes],
+            "pk_field": cls._meta.fields_map[cls._meta.pk_attr].describe(serializable),
+            "data_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name != cls._meta.pk_attr and name in (cls._meta.fields - cls._meta.fetch_fields)
+            ],
+            "fk_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name in cls._meta.fk_fields
+            ],
+            "backward_fk_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name in cls._meta.backward_fk_fields
+            ],
+            "o2o_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name in cls._meta.o2o_fields
+            ],
+            "backward_o2o_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name in cls._meta.backward_o2o_fields
+            ],
+            "m2m_fields": [
+                field.describe(serializable)
+                for name, field in cls._meta.fields_map.items()
+                if name in cls._meta.m2m_fields
+            ],
         }
 
     def __await__(self: MODEL) -> Generator[Any, None, MODEL]:
