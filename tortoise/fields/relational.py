@@ -374,8 +374,8 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         desc["backward_key"] = self.backward_key
         desc["through"] = self.through
         desc["on_delete"] = str(self.on_delete)
+        desc["create_unique_index"] = self.create_unique_index
         desc["_generated"] = self._generated
-        # desc["create_unique_index"] = self.create_unique_index
         return desc
 
 
