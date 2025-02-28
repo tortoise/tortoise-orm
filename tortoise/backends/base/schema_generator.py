@@ -350,7 +350,7 @@ class BaseSchemaGenerator:
                     "",
                 )  # may have better way
             m2m_create_string += self._post_table_hook()
-            if field_object.create_unique_index:
+            if field_object.unique:
                 unique_index_create_sql = self._get_unique_index_sql(
                     exists, through_table_name, [backward_key, forward_key]
                 )
