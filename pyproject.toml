@@ -190,10 +190,6 @@ filterwarnings = [
     'ignore:Do not add pk field to `update_fields`!:RuntimeWarning',
 ]
 
-[tool.coverage.run]
-branch = true
-source = ["tortoise"]
-
 [tool.coverage.report]
 show_missing = true
 
