@@ -48,6 +48,7 @@ aiomysql = { version = "*", optional = true }
 asyncmy = { version = "^0.2.8", optional = true, allow-prereleases = true }
 psycopg = { extras = ["pool", "binary"], version = "^3.0.12", optional = true }
 asyncodbc = { version = "^0.1.1", optional = true }
+importlib-metadata = "^8.6.1"
 
 [tool.poetry.group.dev.dependencies]
 # Linter tools

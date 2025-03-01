@@ -4,6 +4,7 @@ Wrong reference. Two '.' in reference.
 """
 
 from tortoise import fields
+from tortoise.fields import CASCADE
 from tortoise.models import Model
 
 
@@ -13,5 +14,5 @@ class Tournament(Model):
 
 class Event(Model):
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
-        "models.app.Tournament", related_name="events"
+        "models.app.Tournament", related_name="events", on_delete=CASCADE
     )

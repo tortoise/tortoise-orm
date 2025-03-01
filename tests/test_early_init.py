@@ -1,6 +1,7 @@
 from tortoise import Tortoise, fields
 from tortoise.contrib import test
 from tortoise.contrib.pydantic import pydantic_model_creator
+from tortoise.fields import CASCADE
 from tortoise.models import Model
 
 
@@ -28,7 +29,7 @@ class Event(Model):
     name = fields.CharField(max_length=255)
     created_at = fields.DatetimeField(auto_now_add=True)
     tournament: fields.ForeignKeyNullableRelation[Tournament] = fields.ForeignKeyField(
-        "models.Tournament", related_name="events", null=True
+        "models.Tournament", related_name="events", null=True, on_delete=CASCADE
     )
 
     class Meta:

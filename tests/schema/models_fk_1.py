@@ -7,8 +7,9 @@ from __future__ import annotations
 from typing import Any
 
 from tortoise import fields
+from tortoise.fields import CASCADE
 from tortoise.models import Model
 
 
 class One(Model):
-    tournament: fields.ForeignKeyRelation[Any] = fields.ForeignKeyField("moo")
+    tournament: fields.ForeignKeyRelation[Any] = fields.ForeignKeyField("moo", on_delete=CASCADE)

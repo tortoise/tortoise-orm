@@ -14,7 +14,7 @@ from typing import (
 from pypika_tortoise import Table
 
 from tortoise.exceptions import ConfigurationError, NoValuesFetched, OperationalError
-from tortoise.fields.base import CASCADE, SET_NULL, Field, OnDelete
+from tortoise.fields.base import SET_NULL, Field, OnDelete
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
@@ -283,8 +283,8 @@ class ForeignKeyFieldInstance(RelationalField[MODEL]):
     def __init__(
         self,
         model_name: str,
+        on_delete: OnDelete,
         related_name: str | None | Literal[False] = None,
-        on_delete: OnDelete = CASCADE,
         **kwargs: Any,
     ) -> None:
         super().__init__(None, **kwargs)  # type: ignore
@@ -326,12 +326,12 @@ class OneToOneFieldInstance(ForeignKeyFieldInstance[MODEL]):
     def __init__(
         self,
         model_name: str,
+        on_delete: OnDelete,
         related_name: str | None | Literal[False] = None,
-        on_delete: OnDelete = CASCADE,
         **kwargs: Any,
     ) -> None:
         self.validate_model_name(model_name)
-        super().__init__(model_name, related_name, on_delete, unique=True, **kwargs)
+        super().__init__(model_name, on_delete, related_name, unique=True, **kwargs)
 
 
 class BackwardOneToOneRelation(BackwardFKRelation[MODEL]):
@@ -344,11 +344,11 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
     def __init__(
         self,
         model_name: str,
+        on_delete: OnDelete,
         through: str | None = None,
         forward_key: str | None = None,
         backward_key: str = "",
         related_name: str = "",
-        on_delete: OnDelete = CASCADE,
         field_type: type[MODEL] = None,  # type: ignore
         create_unique_index: bool = True,
         **kwargs: Any,
@@ -381,20 +381,20 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
 @overload
 def OneToOneField(
     model_name: str,
+    on_delete: OnDelete,
     related_name: str | None | Literal[False] = None,
-    on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     *,
     null: Literal[True],
     **kwargs: Any,
-) -> OneToOneNullableRelation[MODEL]: ...
+) -> "OneToOneNullableRelation[MODEL]": ...
 
 
 @overload
 def OneToOneField(
     model_name: str,
+    on_delete: OnDelete,
     related_name: str | None | Literal[False] = None,
-    on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     null: Literal[False] = False,
     **kwargs: Any,
@@ -403,8 +403,8 @@ def OneToOneField(
 
 def OneToOneField(
     model_name: str,
+    on_delete: OnDelete,
     related_name: str | None | Literal[False] = None,
-    on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     null: bool = False,
     **kwargs: Any,
@@ -449,15 +449,15 @@ def OneToOneField(
     """
 
     return OneToOneFieldInstance(
-        model_name, related_name, on_delete, db_constraint=db_constraint, null=null, **kwargs
+        model_name, on_delete, related_name, db_constraint=db_constraint, null=null, **kwargs
     )
 
 
 @overload
 def ForeignKeyField(
     model_name: str,
+    on_delete: OnDelete,
     related_name: str | None | Literal[False] = None,
-    on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     *,
     null: Literal[True],
@@ -468,8 +468,8 @@ def ForeignKeyField(
 @overload
 def ForeignKeyField(
     model_name: str,
+    on_delete: OnDelete,
     related_name: str | None | Literal[False] = None,
-    on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     null: Literal[False] = False,
     **kwargs: Any,
@@ -478,8 +478,8 @@ def ForeignKeyField(
 
 def ForeignKeyField(
     model_name: str,
+    on_delete: OnDelete,
     related_name: str | None | Literal[False] = None,
-    on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     null: bool = False,
     **kwargs: Any,
@@ -524,17 +524,17 @@ def ForeignKeyField(
     """
 
     return ForeignKeyFieldInstance(
-        model_name, related_name, on_delete, db_constraint=db_constraint, null=null, **kwargs
+        model_name, on_delete, related_name, db_constraint=db_constraint, null=null, **kwargs
     )
 
 
 def ManyToManyField(
     model_name: str,
+    on_delete: OnDelete,
     through: str | None = None,
     forward_key: str | None = None,
     backward_key: str = "",
     related_name: str = "",
-    on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     create_unique_index: bool = True,
     **kwargs: Any,
@@ -588,11 +588,11 @@ def ManyToManyField(
     """
 
     return ManyToManyFieldInstance(  # type: ignore
-        model_name,
-        through,
-        forward_key,
-        backward_key,
-        related_name,
+        model_name=model_name,
+        through=through,
+        forward_key=forward_key,
+        backward_key=backward_key,
+        related_name=related_name,
         on_delete=on_delete,
         db_constraint=db_constraint,
         create_unique_index=create_unique_index,
