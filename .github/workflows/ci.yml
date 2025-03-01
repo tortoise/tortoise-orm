@@ -69,7 +69,9 @@ jobs:
           ACCEPT_EULA=Y sudo apt-get install -y msodbcsql18
       - name: Run ci
         run: |
-          rm .coverage ".coverage.*"  # Remove previous testing report
+          if [[ -f .coverage ]]; then
+            rm ".coverage*"  # Remove previous testing report
+          fi
           make ci
       - name: Test FastAPI/Blacksheep Example
         run: |
