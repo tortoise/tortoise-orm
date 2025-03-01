@@ -590,7 +590,7 @@ def ManyToManyField(
         create_unique_index = kwargs.pop("create_unique_index")
         msg = "Parameter `create_unique_index` is deprecated! Use `unique` instead."
         if create_unique_index is False and unique is True:  # For backwards compatibility
-            warnings.warn(msg)
+            warnings.warn(msg, DeprecationWarning, stacklevel=2)
             unique = False
         elif create_unique_index is True and unique is False:  # Invalid usage
             raise ConfigurationError(msg)

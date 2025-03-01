@@ -1,6 +1,7 @@
 from tests import testmodels
 from tortoise.contrib import test
-from tortoise.exceptions import OperationalError
+from tortoise.exceptions import ConfigurationError, OperationalError
+from tortoise.fields import ManyToManyField
 
 
 class TestManyToManyField(test.TestCase):
@@ -95,3 +96,24 @@ class TestManyToManyField(test.TestCase):
             OperationalError, r"You should first call .save\(\) on <M2MOne>"
         ):
             await two.one.add(one)
+
+    async def test_create_unique_index(self):
+        message = "Parameter `create_unique_index` is deprecated! Use `unique` instead."
+        with self.assertWarnsRegex(DeprecationWarning, message):
+            ManyToManyField("models.Foo", create_unique_index=False)
+        with self.assertWarnsRegex(DeprecationWarning, message):
+            ManyToManyField("models.Foo", create_unique_index=False, unique=True)
+        with self.assertRaisesRegex(ConfigurationError, message):
+            ManyToManyField("models.Foo", create_unique_index=True, unique=False)
+        with self.assertRaisesRegex(ConfigurationError, message):
+            ManyToManyField(
+                "models.Group",
+                "user_group",
+                "user_id",
+                "group_id",
+                "users",
+                "CASCADE",
+                True,
+                False,
+                create_unique_index=True,
+            )
