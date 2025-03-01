@@ -77,7 +77,7 @@ jobs:
           DEST_FASTAPI: examples/fastapi
           DEST_BLACKSHEEP: examples/blacksheep
           PYTHONDEVMODE: 1
-          PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --tb=native -q"
+          PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
       - name: Upload Coverage
         run: |
           pip3 install --upgrade coveralls
