@@ -191,6 +191,7 @@ filterwarnings = [
 ]
 
 [tool.coverage.run]
+branch = true
 source = ["tortoise"]
 
 [tool.coverage.report]
