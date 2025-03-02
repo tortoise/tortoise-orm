@@ -351,11 +351,19 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         related_name: str = "",
         on_delete: OnDelete = CASCADE,
         field_type: type[MODEL] = None,  # type: ignore
+        unique: bool = True,
         **kwargs: Any,
     ) -> None:
         # TODO: rename through to through_table
         # TODO: add through to use a Model
-        super().__init__(field_type, **kwargs)
+        if "create_unique_index" in kwargs:
+            warnings.warn(
+                "Parameter `create_unique_index` is deprecated! Use `unique` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            unique = kwargs.pop("create_unique_index")
+        super().__init__(field_type, unique=unique, **kwargs)
         self.validate_model_name(model_name)
         self.model_name: str = model_name
         self.related_name: str = related_name
@@ -585,14 +593,6 @@ def ManyToManyField(
         Controls whether or not a unique index should be created in the database to speed up select queries.
         The default is True. If you want to allow repeat records, set this to False.
     """
-    if "create_unique_index" in kwargs:
-        warnings.warn(
-            "Parameter `create_unique_index` is deprecated! Use `unique` instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        unique = kwargs.pop("create_unique_index")
-
     return ManyToManyFieldInstance(  # type: ignore
         model_name,
         through,
