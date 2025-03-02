@@ -1,6 +1,6 @@
 from tests import testmodels
 from tortoise.contrib import test
-from tortoise.exceptions import ConfigurationError, OperationalError
+from tortoise.exceptions import OperationalError
 from tortoise.fields import ManyToManyField
 
 
@@ -100,20 +100,29 @@ class TestManyToManyField(test.TestCase):
     async def test_create_unique_index(self):
         message = "Parameter `create_unique_index` is deprecated! Use `unique` instead."
         with self.assertWarnsRegex(DeprecationWarning, message):
-            ManyToManyField("models.Foo", create_unique_index=False)
+            field = ManyToManyField("models.Foo", create_unique_index=False)
+        assert field.unique is False
         with self.assertWarnsRegex(DeprecationWarning, message):
-            ManyToManyField("models.Foo", create_unique_index=False, unique=True)
-        with self.assertRaisesRegex(ConfigurationError, message):
-            ManyToManyField("models.Foo", create_unique_index=True, unique=False)
-        with self.assertRaisesRegex(ConfigurationError, message):
-            ManyToManyField(
-                "models.Group",
-                "user_group",
-                "user_id",
-                "group_id",
-                "users",
-                "CASCADE",
-                True,
-                False,
-                create_unique_index=True,
-            )
+            field = ManyToManyField("models.Foo", create_unique_index=False, unique=True)
+        assert field.unique is False
+        with self.assertWarnsRegex(DeprecationWarning, message):
+            field = ManyToManyField("models.Foo", create_unique_index=True)
+        assert field.unique is True
+        with self.assertWarnsRegex(DeprecationWarning, message):
+            field = ManyToManyField("models.Foo", create_unique_index=True, unique=False)
+        assert field.unique is True
+        field = ManyToManyField(
+            "models.Group",
+        )
+        assert field.unique is True
+        field = ManyToManyField(
+            "models.Group",
+            "user_group",
+            "user_id",
+            "group_id",
+            "users",
+            "CASCADE",
+            True,
+            False,
+        )
+        assert field.unique is False
