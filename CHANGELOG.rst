@@ -9,6 +9,13 @@ Changelog
 0.24
 ====
 
+0.25.0 (Unreleased)
+------
+
+Changed
+^^^^^^^
+- on_delete is mandatory in all relations. (#1801))
+
 0.24.2 (Unreleased)
 ------
 

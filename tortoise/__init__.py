@@ -272,6 +272,7 @@ class Tortoise:
 
                     m2m_relation = ManyToManyFieldInstance(
                         f"{app_name}.{model_name}",
+                        m2m_object.on_delete,
                         m2m_object.through,
                         forward_key=m2m_object.backward_key,
                         backward_key=m2m_object.forward_key,

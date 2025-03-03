@@ -3,6 +3,7 @@ Testing Models for a bad/wrong relation reference
 """
 
 from tortoise import fields
+from tortoise.fields import CASCADE
 from tortoise.models import Model
 
 
@@ -12,5 +13,5 @@ class Tournament(Model):
 
 class Event(Model):
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
-        "app.Tournament", related_name="events"
+        "app.Tournament", related_name="events", on_delete=CASCADE
     )

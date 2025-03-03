@@ -4,6 +4,7 @@ Wrong reference. App missing.
 """
 
 from tortoise import fields
+from tortoise.fields import CASCADE
 from tortoise.models import Model
 
 
@@ -12,4 +13,6 @@ class Tournament(Model):
 
 
 class Event(Model):
-    tournament: fields.OneToOneRelation[Tournament] = fields.OneToOneField("Tournament")
+    tournament: fields.OneToOneRelation[Tournament] = fields.OneToOneField(
+        "Tournament", on_delete=CASCADE
+    )

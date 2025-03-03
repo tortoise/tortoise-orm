@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any
 
 from tortoise import fields
+from tortoise.fields import CASCADE
 from tortoise.models import Model
 
 
@@ -17,5 +18,5 @@ class Tournament(Model):
 
 class Event(Model):
     tournament: fields.ForeignKeyRelation[Any] = fields.ForeignKeyField(
-        "models.Tour", related_name="events"
+        "models.Tour", related_name="events", on_delete=CASCADE
     )

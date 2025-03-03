@@ -22,6 +22,7 @@ from tests.testmodels import (
 )
 from tortoise import Tortoise, fields
 from tortoise.contrib import test
+from tortoise.fields import CASCADE
 from tortoise.fields.relational import (
     BackwardFKRelation,
     ForeignKeyFieldInstance,
@@ -91,7 +92,7 @@ class TestDescribeModel(test.SimpleTestCase):
         )
 
     def test_describe_relfield_noninit_ser(self):
-        field = fields.ForeignKeyField("a.b")
+        field = fields.ForeignKeyField("a.b", on_delete=CASCADE)
         self.assertEqual(
             field.describe(serializable=True),
             {
@@ -113,7 +114,7 @@ class TestDescribeModel(test.SimpleTestCase):
         )
 
     def test_describe_relfield_noninit(self):
-        field = fields.ForeignKeyField("a.b")
+        field = fields.ForeignKeyField("a.b", on_delete=CASCADE)
         self.assertEqual(
             field.describe(serializable=False),
             {
@@ -361,7 +362,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "forward_key": "straightfields_rel_id",
                         "backward_key": "straightfields_id",
                         "through": "straightfields_straightfields",
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "db_constraint": True,
                         "_generated": True,
                     },
@@ -590,7 +591,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "forward_key": "straightfields_rel_id",
                         "backward_key": "straightfields_id",
                         "through": "straightfields_straightfields",
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "_generated": True,
                         "db_constraint": True,
                     },
@@ -819,7 +820,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "forward_key": "backward_sts",
                         "backward_key": "sts_forward",
                         "through": "sometable_self",
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "_generated": True,
                         "db_constraint": True,
                     },
@@ -1048,7 +1049,7 @@ class TestDescribeModel(test.SimpleTestCase):
                         "forward_key": "backward_sts",
                         "backward_key": "sts_forward",
                         "through": "sometable_self",
-                        "on_delete": "CASCADE",
+                        "on_delete": "NO ACTION",
                         "_generated": True,
                         "db_constraint": True,
                     },
