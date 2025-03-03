@@ -1,6 +1,6 @@
 checkfiles = tortoise/ examples/ tests/ conftest.py
 py_warn = PYTHONDEVMODE=1
-pytest_opts = -n auto --cov=tortoise --cov-append --tb=native -q
+pytest_opts = -n auto --cov=tortoise --cov-append --cov-branch --tb=native -q
 
 TORTOISE_MYSQL_PASS ?= 123456
 TORTOISE_POSTGRES_PASS ?= 123456
