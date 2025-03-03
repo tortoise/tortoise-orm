@@ -9,13 +9,18 @@ Changelog
 0.24
 ====
 
-0.24.2 (Unreleased)
+0.24.2
 ------
 
 Fixed
 ^^^^^
 - Fix model with multi m2m fields generates wrong references name (#1897)
 - Fix using reserved words in order_by (#1900)
+- Fix installing tortoise-orm with poetry 2 (#1885)
+
+Changed
+^^^^^^^
+- Use 'unique' instead of 'create_unique_index' for m2m field (#1903)
 
 0.24.1
 ------
