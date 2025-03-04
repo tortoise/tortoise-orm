@@ -87,17 +87,20 @@ def register_tortoise(
 
     if generate_schemas:
 
-        @app.listener("main_process_start")
-        async def init_orm_main(app, loop):  # pylint: disable=W0612
+        @app.main_process_start
+        async def init_orm_main(app):  # pylint: disable=W0612
             await tortoise_init()
             logger.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()
 
-    @app.listener("before_server_start")
-    async def init_orm(app, loop):  # pylint: disable=W0612
+    @app.before_server_start
+    async def init_orm(app):
         await tortoise_init()
+        if generate_schemas and getattr(app, "_test_manager", None):
+            # Running by sanic-testing
+            await Tortoise.generate_schemas()
 
-    @app.listener("after_server_stop")
-    async def close_orm(app, loop):  # pylint: disable=W0612
+    @app.after_server_stop
+    async def close_orm(app):  # pylint: disable=W0612
         await connections.close_all()
         logger.info("Tortoise-ORM shutdown")
