@@ -17,16 +17,16 @@ async def list_all(request):
     return response.json({"users": [str(user) for user in users]})
 
 
-@app.route("/user")
+@app.post("/user")
 async def add_user(request):
     user = await Users.create(name="New User")
     return response.json({"user": str(user)})
 
 
 register_tortoise(
-    app, db_url="sqlite://:memory:", modules={"models": ["models"]}, generate_schemas=True
+    app, db_url="sqlite://db.sqlite3", modules={"models": ["models"]}, generate_schemas=True
 )
 
 
 if __name__ == "__main__":
-    app.run(port=5000)
+    app.run(port=5000, debug=True)

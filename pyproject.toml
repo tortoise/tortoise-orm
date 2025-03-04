@@ -81,6 +81,7 @@ twine = "*"
 quart = "*"
 # Sample integration - Sanic
 sanic = "*"
+sanic-testing = "*"
 # Sample integration - Starlette
 starlette = "*"
 # Pydantic support
