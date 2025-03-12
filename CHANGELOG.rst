@@ -9,6 +9,12 @@ Changelog
 0.24
 ====
 
+0.24.3 (unreleased)
+------
+Changed
+^^^^^^^
+- Skip database selection if the router is not configured to improve performance (#1915)
+
 0.24.2
 ------
 
