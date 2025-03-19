@@ -1,6 +1,6 @@
 [project]
 name = "tortoise-orm"
-version = "0.24.1"
+version = "0.24.2"
 description = "Easy async ORM for python, built with relations in mind"
 authors = [{name="Andrey Bondar", email="andrey@bondar.ru"}, {name="Nickolas Grigoriadis", email="nagrigoriadis@gmail.com"}, {name="long2ice", email="long2ice@gmail.com"}]
 license = {text="Apache-2.0"}
