@@ -31,6 +31,7 @@ from tortoise.query_utils import (
     Prefetch,
     QueryModifier,
     TableCriterionTuple,
+    expand_field_expression,
     get_joins_for_related_field,
 )
 from tortoise.router import router
@@ -1017,45 +1018,31 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._db = _db if _db else queryset._db
         return queryset
 
-    def _join_table_with_select_related(
-        self,
-        model: type[Model],
-        table: Table,
-        field: str,
-        forwarded_fields: str,
-        path: Iterable[str | None],
-    ) -> QueryBuilder:
-        if field in model._meta.fields_db_projection and forwarded_fields:
-            raise FieldError(f'Field "{field}" for model "{model.__name__}" is not relation')
-
-        field_object = cast(RelationalField, model._meta.fields_map.get(field))
-        if not field_object:
-            raise FieldError(f'Unknown field "{field}" for model "{model.__name__}"')
-
-        table = self._join_table_by_field(table, field, field_object)
-        related_fields = field_object.related_model._meta.db_fields
-        append_item = (
-            field_object.related_model,
-            len(related_fields),
-            field,
-            model,
-            path,
-        )
-        if append_item not in self._select_related_idx:
-            self._select_related_idx.append(append_item)
-        for related_field in related_fields:
-            self.query = self.query.select(
-                table[related_field].as_(f"{table.get_table_name()}.{related_field}")
+    def _join_select_related(self, select_related: str) -> QueryBuilder:
+        fields = expand_field_expression(self.model, select_related)
+        model = self.model
+        table = self.model._meta.basetable
+        path: tuple[str | None, ...] = (None,)
+        for field in fields:
+            field = cast(RelationalField, field)
+            path = path + (field.model_field_name,)
+            table = self._join_table_by_field(table, field.model_field_name, field)
+            related_fields = field.related_model._meta.db_fields
+            append_item = (
+                field.related_model,
+                len(related_fields),
+                field.model_field_name,
+                model,
+                path,
             )
-        if forwarded_fields:
-            field, __, forwarded_fields_ = forwarded_fields.partition("__")
-            self.query = self._join_table_with_select_related(
-                model=field_object.related_model,
-                table=table,
-                field=field,
-                forwarded_fields=forwarded_fields_,
-                path=(*path, field),
-            )
+            model = field.related_model
+            if append_item not in self._select_related_idx:
+                self._select_related_idx.append(append_item)
+            for related_field in related_fields:
+                # TODO pass all fields
+                self.query = self.query.select(
+                    table[related_field].as_(f"{table.get_table_name()}.{related_field}")
+                )
         return self.query
 
     def _make_query(self) -> None:
@@ -1110,15 +1097,8 @@ class QuerySet(AwaitableQuery[MODEL]):
                 self._select_for_update_of,
             )
         if self._select_related:
-            for field in self._select_related:
-                field, __, forwarded_fields = field.partition("__")
-                self.query = self._join_table_with_select_related(
-                    model=self.model,
-                    table=self.model._meta.basetable,
-                    field=field,
-                    forwarded_fields=forwarded_fields,
-                    path=(None, field),
-                )
+            for select_related in self._select_related:
+                self.query = self._join_select_related(select_related)
         if self._force_indexes:
             self.query._force_indexes = []
             self.query = self.query.force_index(*self._force_indexes)
