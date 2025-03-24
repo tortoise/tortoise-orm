@@ -15,6 +15,7 @@ dependencies = [
     "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
     "aiosqlite (>=0.16.0,<1.0.0)",
     "pytz",
+    "nexios (>=2.2.4,<3.0.0)",
 ]
 
 [project.optional-dependencies]
