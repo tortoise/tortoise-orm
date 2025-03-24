@@ -1,5 +1,4 @@
 # main.py
-from flask import app
 from tortoise.contrib.nexios import register_tortoise
 from nexios import get_application
 from nexios.http import Request, Response
@@ -79,9 +78,9 @@ async def delete_task(req: Request, res: Response, task_id: int):
 
 
 register_tortoise(
-    app, 
-    db_url="sqlite://:memory:", 
-    modules={"models": ["models"]}, 
+    app,
+    db_url="sqlite://:memory:",
+    modules={"models": ["models"]},
     generate_schemas=True
 )
 

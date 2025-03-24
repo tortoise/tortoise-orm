@@ -1,4 +1,4 @@
-from __future__ import annotations                 
+from __future__ import annotations
 from collections.abc import Iterable
 from types import ModuleType
 from tortoise import Tortoise, connections
@@ -6,7 +6,6 @@ from tortoise.exceptions import DoesNotExist, IntegrityError
 from tortoise.log import logger
 from nexios import NexiosApp
 from .exception_handlers import not_found_exceptions_handler, integrityerror_exception_handler
-from tortoise.exceptions import DoesNotExist, IntegrityError
 def register_tortoise(
     app: NexiosApp,
     config: dict | None = None,
