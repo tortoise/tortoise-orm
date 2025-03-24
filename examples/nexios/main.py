@@ -5,7 +5,6 @@ from nexios import get_application
 from nexios.http import Request, Response
 from models import Task
 import uvicorn
-from typing import Final
 
 app = get_application()
 
