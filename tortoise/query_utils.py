@@ -79,17 +79,20 @@ def get_joins_for_related_field(
     return required_joins
 
 
-def expand_field_expression(rooot_model: type[Model], field_expression: str) -> Sequence[Field]:
-    field_names = field_expression.split("__")
+def expand_lookup_expression(root_model: type[Model], lookup_expression: str) -> Sequence[Field]:
+    field_names = lookup_expression.split("__")
     fields: list[Field | RelationalField] = []
-    model = rooot_model
+    model = root_model
     for field_name in field_names[:-1]:
         if field_name not in model._meta.fetch_fields:
-            raise FieldError(f"{field_expression} not resolvable")
+            raise FieldError(f"{lookup_expression} not resolvable")
         field = cast(RelationalField, model._meta.fields_map[field_name])
         fields.append(field)
         model = field.related_model
-    fields.append(model._meta.fields_map[field_names[-1]])
+    try:
+        fields.append(model._meta.fields_map[field_names[-1]])
+    except KeyError:
+        raise FieldError(f"{lookup_expression} not resolvable")
     return fields
 
 
@@ -102,7 +105,7 @@ def resolve_nested_field(
     converting the value.
     """
     joins = []
-    fields = expand_field_expression(model, field)
+    fields = expand_lookup_expression(model, field)
 
     for iter_field in fields[:-1]:
         related_field = cast(RelationalField, iter_field)
