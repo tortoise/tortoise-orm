@@ -1144,9 +1144,7 @@ class QuerySet(AwaitableQuery[MODEL]):
                 self.model,
                 (None,),
             )
-            # TODO: if isnot required?
-            if append_item not in self._select_related_idx:
-                self._select_related_idx.append(append_item)
+            self._select_related_idx.append(append_item)
         self.resolve_ordering(
             self.model,
             self.model._meta.basetable,
