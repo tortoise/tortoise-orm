@@ -626,6 +626,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         If no arguments are passed it will default to a tuple containing all fields
         in order of declaration.
         """
+        if self._fields_for_select:
+            raise ValueError(".values_list() cannot be used with .only()")
+
         fields_for_select_list = fields_ or [
             field for field in self.model._meta.fields_map if field in self.model._meta.db_fields
         ] + list(self._annotations.keys())
@@ -652,14 +655,19 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         Make QuerySet return dicts instead of objects.
 
-        If call after `.get()`, `.get_or_none()` or `.first()` return dict instead of object.
+        If called after `.get()`, `.get_or_none()` or `.first()`, returns a dict instead of an object.
 
-        Can pass names of fields to fetch, or as a ``field_name='name_in_dict'`` kwarg.
+        You can specify which fields to include by:
+        - Passing field names as positional arguments
+        - Using kwargs in the format `field_name='name_in_dict'` to customize the keys in the resulting dict
 
-        If no arguments are passed it will default to a dict containing all fields.
+        If no arguments are passed, it will default to a dict containing all fields.
 
         :raises FieldError: If duplicate key has been provided.
         """
+        if self._fields_for_select:
+            raise ValueError(".values() cannot be used with .only()")
+
         if args or kwargs:
             fields_for_select: dict[str, str] = {}
             for field in args:
