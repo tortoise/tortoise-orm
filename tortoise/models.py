@@ -1066,7 +1066,9 @@ class Model(metaclass=ModelMeta):
         if not self._saved_in_db:
             raise OperationalError("Can't refresh unpersisted record")
         db = using_db or self._choose_db()
-        qs = QuerySet(self.__class__).using_db(db).only(*(fields or []))
+        qs = QuerySet(self.__class__).using_db(db)
+        if fields:
+            qs = qs.only(*fields)
         obj = await qs.get(pk=self.pk)
 
         for field in fields or self._meta.db_fields:

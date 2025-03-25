@@ -1,6 +1,7 @@
 from tests.testmodels import DoubleFK, Event, SourceFields, StraightFields, Tournament
 from tortoise.contrib import test
-from tortoise.exceptions import IncompleteInstanceError
+from tortoise.functions import Count
+from tortoise.exceptions import FieldError, IncompleteInstanceError
 
 
 class TestOnlyStraight(test.TestCase):
@@ -171,3 +172,123 @@ class TestOnlyRelated(test.TestCase):
         self.assertEqual(len(ret), 2)
         self.assertEqual(ret[0].tournament.name, "New Tournament")
         self.assertEqual(ret[1].tournament.name, "New Tournament")
+
+
+class TestOnlyAdvanced(test.TestCase):
+    async def asyncSetUp(self) -> None:
+        await super().asyncSetUp()
+        self.tournament = await Tournament.create(name="Tournament A", desc="Description A")
+        self.event1 = await Event.create(name="Event 1", tournament=self.tournament)
+        self.event2 = await Event.create(name="Event 2", tournament=self.tournament)
+
+    async def test_exclude(self):
+        """Test .only() combined with .exclude()"""
+        events = await Event.filter(tournament=self.tournament).exclude(name="Event 2").only("name")
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].name, "Event 1")
+        with self.assertRaises(AttributeError):
+            _ = events[0].modified
+
+    async def test_limit(self):
+        """Test .only() combined with .limit()"""
+        events = await Event.all().only("name").limit(1)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].name, "Event 1")  # Assumes ordering by PK
+        with self.assertRaises(AttributeError):
+            _ = events[0].modified
+
+    async def test_distinct(self):
+        """Test .only() combined with .distinct()"""
+        # Create duplicate event names
+        await Event.create(name="Event 1", tournament=self.tournament)
+
+        events = await Event.all().only("name").distinct()
+        # Should only have 2 distinct event names
+        self.assertEqual(len(events), 2)
+        event_names = {e.name for e in events}
+        self.assertEqual(event_names, {"Event 1", "Event 2"})
+
+    async def test_values(self):
+        """Test .only() combined with .values()"""
+        with self.assertRaises(ValueError, msg="values() cannot be used with .only()"):
+            await Event.all().only("name").values("name")
+
+    async def test_pk_field(self):
+        """Test .only() with just the primary key field"""
+        tournament = await Tournament.first().only("id")
+        self.assertIsNotNone(tournament.id)
+        with self.assertRaises(AttributeError):
+            _ = tournament.name
+
+    async def test_empty(self):
+        """Test .only() with no fields (should raise an error)"""
+        with self.assertRaises(ValueError):
+            await Event.all().only()
+
+    async def test_annotate(self):
+        tournaments = await Tournament.annotate(event_count=Count("events")).only(
+            "name", "event_count"
+        )
+
+        self.assertEqual(tournaments[0].name, "Tournament A")
+        self.assertEqual(tournaments[0].event_count, 2)
+        with self.assertRaises(AttributeError):
+            _ = tournaments[0].desc
+
+    async def test_nonexistent_field(self):
+        """Test .only() with a field that doesn't exist"""
+        with self.assertRaises(FieldError):
+            await Event.all().only("nonexistent_field").all()
+
+    async def test_join_in_filter(self):
+        event = await Event.filter(name="Event 1").only("name").first()
+        self.assertEqual(event.name, "Event 1")
+        with self.assertRaises(AttributeError):
+            _ = event.tournament
+
+        event = await Event.filter(tournament__name="Tournament A").only("name").first()
+        self.assertEqual(event.name, "Event 1")
+        with self.assertRaises(AttributeError):
+            _ = event.tournament
+
+        event = (
+            await Event.filter(tournament__name="Tournament A")
+            .only("name", "tournament__name")
+            .first()
+        )
+        self.assertEqual(event.name, "Event 1")
+        self.assertEqual(event.tournament.name, "Tournament A")
+
+    async def test_join_in_order_by(self):
+        events = await Event.all().order_by("name").only("name")
+        self.assertEqual(events[0].name, "Event 1")
+        with self.assertRaises(AttributeError):
+            _ = events[0].tournament
+
+        events = await Event.all().order_by("tournament__name", "name").only("name")
+        self.assertEqual(events[0].name, "Event 1")
+        with self.assertRaises(AttributeError):
+            _ = events[0].tournament
+
+        events = (
+            await Event.all().order_by("tournament__name", "name").only("name", "tournament__name")
+        )
+        self.assertEqual(events[0].name, "Event 1")
+        self.assertEqual(events[0].tournament.name, "Tournament A")
+
+    async def test_select_related(self):
+        """Test .only() with .select_related() for basic functionality"""
+        event = (
+            await Event.filter(name="Event 1")
+            .select_related("tournament")
+            .only("name", "tournament__name")
+            .first()
+        )
+
+        self.assertEqual(event.name, "Event 1")
+        self.assertEqual(event.tournament.name, "Tournament A")
+
+        with self.assertRaises(AttributeError):
+            _ = event.id
+        with self.assertRaises(AttributeError):
+            _ = event.tournament.id

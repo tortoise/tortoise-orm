@@ -928,6 +928,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         * If you do a ``<model>.save(update_fields=[...])`` and one of the fields in ``update_fields`` was not in the ``.only(...)``,
           then ``IncompleteInstanceError`` as that field is not available to be updated.
         """
+        if not fields_for_select:
+            raise ValueError(".only() requires at least one field")
         queryset = self._clone()
         queryset._fields_for_select = fields_for_select
         return queryset
@@ -1036,6 +1038,11 @@ class QuerySet(AwaitableQuery[MODEL]):
             field = cast(RelationalField, field)
             path = path + (field.model_field_name,)
             table = self._join_table_by_field(table, field.model_field_name, field)
+
+            # do not select related fields if we are only selecting a subset of fields
+            if self._fields_for_select:
+                continue
+
             related_fields = field.related_model._meta.db_fields
             append_item = (
                 field.related_model,
@@ -1080,12 +1087,19 @@ class QuerySet(AwaitableQuery[MODEL]):
                     (None,),
                 )
             )
-            self.query = self.query.select(
-                *[
-                    table[self.model._meta.fields_db_projection[field]].as_(field)
-                    for field in data_fields
-                ]
-            )
+            try:
+                self.query = self.query.select(
+                    *[
+                        table[self.model._meta.fields_db_projection[field]].as_(field)
+                        for field in data_fields
+                        if field not in self._annotations
+                    ]
+                )
+            except KeyError as e:
+                raise FieldError(
+                    f'Unknown field "{e.args[0]}" for model "{self.model.__name__}"'
+                ) from e
+
         else:
             # even though no data fields are selected, we need to let the executor know
             # that an empty instance of the model has to be created
