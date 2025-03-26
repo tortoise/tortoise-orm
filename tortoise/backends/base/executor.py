@@ -117,6 +117,9 @@ class BaseExecutor:
                     if any((v for _, v in related_items)):
                         obj = model._init_from_db(**{k.split(".")[1]: v for k, v in related_items})
                     elif index == 0:
+                        # 0 signals that an empty "filler" object should be created in the case
+                        # where a field of related model is selected but model itself isn't,
+                        # e.g. .only("relatedmodel__field")
                         obj = model._init_from_db()
                     else:
                         obj = None
