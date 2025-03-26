@@ -6,14 +6,23 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.24
+0.25
 ====
 
-0.24.3 (unreleased)
+0.25.0 (unreleased)
 ------
 Changed
 ^^^^^^^
 - Skip database selection if the router is not configured to improve performance (#1915)
+- `.values()`, `.values_list()` and `.only()` cannot be used together (#1923)
+
+Added
+^^^^^
+- `.only` supports selecting related fields, e.g. `.only("related__field")` (#1923)
+
+
+0.24
+====
 
 0.24.2
 ------
