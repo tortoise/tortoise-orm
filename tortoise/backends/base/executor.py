@@ -114,7 +114,7 @@ class BaseExecutor:
                 for model, index, *__, full_path in self.select_related_idx[1:]:
                     (*path, attr) = full_path
                     related_items = row_items[current_idx : current_idx + index]
-                    if any((v for _, v in related_items)):
+                    if any(v for _, v in related_items):
                         obj = model._init_from_db(**{k.split(".")[1]: v for k, v in related_items})
                     elif index == 0:
                         # 0 signals that an empty "filler" object should be created in the case

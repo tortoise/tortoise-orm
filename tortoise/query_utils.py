@@ -89,6 +89,7 @@ def expand_lookup_expression(root_model: type[Model], lookup_expression: str) ->
         field = cast(RelationalField, model._meta.fields_map[field_name])
         fields.append(field)
         model = field.related_model
+    # the last field is not necessarily a RelationalField, so threting it differently
     try:
         fields.append(model._meta.fields_map[field_names[-1]])
     except KeyError:
