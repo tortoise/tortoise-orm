@@ -175,9 +175,14 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         through_table = Table(self.field.through)
         backward_key, forward_key = self.field.backward_key, self.field.forward_key
         backward_field, forward_field = through_table[backward_key], through_table[forward_key]
-        select_query = (
-            db.query_class.from_(through_table).where(backward_field == pk_b).select(forward_key)
-        )
+        if self.field.symmetrical:
+            select_query = (
+                db.query_class.from_(through_table).where((backward_field == pk_b) | (forward_field == pk_b)).select(forward_key)
+            )
+        else:
+            select_query = (
+                db.query_class.from_(through_table).where(backward_field == pk_b).select(forward_key)
+            )
         criterion = forward_field == pks_f[0] if len(pks_f) == 1 else forward_field.isin(pks_f)
         select_query = select_query.where(criterion)
 
@@ -192,7 +197,10 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         if pks_f_to_insert := set(pks_f) - already_existing_forward_pks:
             query = db.query_class.into(through_table).columns(forward_field, backward_field)
             for pk_f in pks_f_to_insert:
-                query = query.insert(pk_f, pk_b)
+                if self.field.symmetrical:
+                    query = query.insert(min(pk_f, pk_b), max(pk_f, pk_b))
+                else:
+                    query = query.insert(pk_f, pk_b)
             await db.execute_query(*query.get_parameterized_sql())
 
     async def clear(self, using_db: BaseDBAsyncClient | None = None) -> None:
@@ -219,20 +227,40 @@ class ManyToManyRelation(ReverseRelation[MODEL]):
         db = using_db or self.remote_model._meta.db
         through_table = Table(self.field.through)
         pk_formatting_func = type(self.instance)._meta.pk.to_db_value
-
-        condition = through_table[self.field.backward_key] == pk_formatting_func(
-            self.instance.pk, self.instance
-        )
+        if self.field.symmetrical:
+            condition = (through_table[self.field.backward_key] == pk_formatting_func(
+                 self.instance.pk, self.instance
+            )) | (through_table[self.field.forward_key] == pk_formatting_func(
+                 self.instance.pk, self.instance
+            ))
+        else:
+            condition = through_table[self.field.backward_key] == pk_formatting_func(
+                 self.instance.pk, self.instance
+            )
         if instances:
             related_pk_formatting_func = type(instances[0])._meta.pk.to_db_value
-            if len(instances) == 1:
-                condition &= through_table[self.field.forward_key] == related_pk_formatting_func(
-                    instances[0].pk, instances[0]
-                )
+            if self.field.symmetrical:
+                if len(instances) == 1:
+                    condition &= (through_table[self.field.forward_key] == related_pk_formatting_func(
+                        instances[0].pk, instances[0]
+                    )) | (through_table[self.field.backward_key] == related_pk_formatting_func(
+                        instances[0].pk, instances[0]
+                    ))
+                else:
+                    condition &= (through_table[self.field.forward_key].isin(
+                        [related_pk_formatting_func(i.pk, i) for i in instances]
+                    )) | (through_table[self.field.backward_key].isin(
+                        [related_pk_formatting_func(i.pk, i) for i in instances]
+                    ))
             else:
-                condition &= through_table[self.field.forward_key].isin(
-                    [related_pk_formatting_func(i.pk, i) for i in instances]
-                )
+                if len(instances) == 1:
+                    condition &= through_table[self.field.forward_key] == related_pk_formatting_func(
+                        instances[0].pk, instances[0]
+                    )
+                else:
+                    condition &= through_table[self.field.forward_key].isin(
+                        [related_pk_formatting_func(i.pk, i) for i in instances]
+                    )
         query = db.query_class.from_(through_table).where(condition).delete()
         await db.execute_query(*query.get_parameterized_sql())
 
@@ -352,6 +380,7 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         on_delete: OnDelete = CASCADE,
         field_type: type[MODEL] = None,  # type: ignore
         unique: bool = True,
+        symmetrical: bool = False,
         **kwargs: Any,
     ) -> None:
         # TODO: rename through to through_table
@@ -363,6 +392,8 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
                 stacklevel=2,
             )
             unique = kwargs.pop("create_unique_index")
+        if symmetrical:
+            unique = True
         super().__init__(field_type, unique=unique, **kwargs)
         self.validate_model_name(model_name)
         self.model_name: str = model_name
@@ -372,6 +403,7 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         self.through: str = through  # type: ignore
         self._generated: bool = False
         self.on_delete = on_delete
+        self.symmetrical = symmetrical
 
     def describe(self, serializable: bool) -> dict:
         desc = super().describe(serializable)
@@ -544,6 +576,7 @@ def ManyToManyField(
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
     unique: bool = True,
+    symmetrical: bool = False,
     **kwargs: Any,
 ) -> ManyToManyRelation[Any]:
     """
@@ -592,6 +625,10 @@ def ManyToManyField(
     ``unique``:
         Controls whether or not a unique index should be created in the database to speed up select queries.
         The default is True. If you want to allow repeat records, set this to False.
+    ``symmetrical``:
+        Only used in the definition of ManyToManyFields on self.
+        For example, if you want a ManyToMany relation for friends and you want the logic to be "if I am your friend,
+        then you are my friend", you would use a symmetrical relation.
     """
     return ManyToManyFieldInstance(  # type: ignore
         model_name,
@@ -602,6 +639,7 @@ def ManyToManyField(
         on_delete=on_delete,
         db_constraint=db_constraint,
         unique=unique,
+        symmetrical=symmetrical,
         **kwargs,
     )
 
