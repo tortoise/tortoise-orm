@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import AsyncGenerator, Generator, Iterator
 from typing import (
     TYPE_CHECKING,
@@ -350,12 +351,19 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         related_name: str = "",
         on_delete: OnDelete = CASCADE,
         field_type: type[MODEL] = None,  # type: ignore
-        create_unique_index: bool = True,
+        unique: bool = True,
         **kwargs: Any,
     ) -> None:
         # TODO: rename through to through_table
         # TODO: add through to use a Model
-        super().__init__(field_type, **kwargs)
+        if "create_unique_index" in kwargs:
+            warnings.warn(
+                "Parameter `create_unique_index` is deprecated! Use `unique` instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            unique = kwargs.pop("create_unique_index")
+        super().__init__(field_type, unique=unique, **kwargs)
         self.validate_model_name(model_name)
         self.model_name: str = model_name
         self.related_name: str = related_name
@@ -364,7 +372,6 @@ class ManyToManyFieldInstance(RelationalField[MODEL]):
         self.through: str = through  # type: ignore
         self._generated: bool = False
         self.on_delete = on_delete
-        self.create_unique_index = create_unique_index
 
     def describe(self, serializable: bool) -> dict:
         desc = super().describe(serializable)
@@ -536,7 +543,7 @@ def ManyToManyField(
     related_name: str = "",
     on_delete: OnDelete = CASCADE,
     db_constraint: bool = True,
-    create_unique_index: bool = True,
+    unique: bool = True,
     **kwargs: Any,
 ) -> ManyToManyRelation[Any]:
     """
@@ -582,11 +589,10 @@ def ManyToManyField(
                 Can only be set is field has a ``default`` set.
             ``field.NO_ACTION``:
                 Take no action.
-    ``create_unique_index``:
+    ``unique``:
         Controls whether or not a unique index should be created in the database to speed up select queries.
         The default is True. If you want to allow repeat records, set this to False.
     """
-
     return ManyToManyFieldInstance(  # type: ignore
         model_name,
         through,
@@ -595,7 +601,7 @@ def ManyToManyField(
         related_name,
         on_delete=on_delete,
         db_constraint=db_constraint,
-        create_unique_index=create_unique_index,
+        unique=unique,
         **kwargs,
     )
 

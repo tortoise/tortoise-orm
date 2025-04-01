@@ -217,6 +217,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS "uidx_teamevents_event_i_664dbc" ON "teamevent
         ):
             await self.init_for("tests.schema.models_m2m_1")
 
+    async def test_multi_m2m_fields_in_a_model(self):
+        await self.init_for("tests.schema.models_m2m_2")
+        sql = self.get_sql("CASCADE")
+        self.assertNotRegex(sql, r'REFERENCES [`"]three_one[`"]')
+        self.assertNotRegex(sql, r'REFERENCES [`"]three_two[`"]')
+        self.assertRegex(sql, r'REFERENCES [`"](one|two|three)[`"]')
+
     async def test_table_and_row_comment_generation(self):
         await self.init_for("tests.testmodels")
         sql = self.get_sql("comments")

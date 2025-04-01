@@ -296,7 +296,7 @@ class BaseSchemaGenerator:
         return [val for val in list(dict.fromkeys(indexes)) if val]
 
     def _get_m2m_tables(
-        self, model: type[Model], table_name: str, safe: bool, models_tables: list[str]
+        self, model: type[Model], db_table: str, safe: bool, models_tables: list[str]
     ) -> list[str]:
         m2m_tables_for_create = []
         for m2m_field in model._meta.m2m_fields:
@@ -308,7 +308,7 @@ class BaseSchemaGenerator:
                 backward_fk = self._create_fk_string(
                     "",
                     backward_key,
-                    table_name,
+                    db_table,
                     model._meta.db_pk_column,
                     field_object.on_delete,
                     "",
@@ -324,12 +324,15 @@ class BaseSchemaGenerator:
             else:
                 backward_fk = forward_fk = ""
             exists = "IF NOT EXISTS " if safe else ""
-            table_name = field_object.through
+            through_table_name = field_object.through
             backward_type = self._get_pk_field_sql_type(model._meta.pk)
             forward_type = self._get_pk_field_sql_type(field_object.related_model._meta.pk)
+            comment = ""
+            if desc := field_object.description:
+                comment = self._table_comment_generator(table=through_table_name, comment=desc)
             m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
                 exists=exists,
-                table_name=table_name,
+                table_name=through_table_name,
                 backward_fk=backward_fk,
                 forward_fk=forward_fk,
                 backward_key=backward_key,
@@ -337,13 +340,7 @@ class BaseSchemaGenerator:
                 forward_key=forward_key,
                 forward_type=forward_type,
                 extra=self._table_generate_extra(table=field_object.through),
-                comment=(
-                    self._table_comment_generator(
-                        table=field_object.through, comment=field_object.description
-                    )
-                    if field_object.description
-                    else ""
-                ),
+                comment=comment,
             )
             if not field_object.db_constraint:
                 m2m_create_string = m2m_create_string.replace(
@@ -353,9 +350,9 @@ class BaseSchemaGenerator:
                     "",
                 )  # may have better way
             m2m_create_string += self._post_table_hook()
-            if field_object.create_unique_index:
+            if field_object.unique:
                 unique_index_create_sql = self._get_unique_index_sql(
-                    exists, table_name, [backward_key, forward_key]
+                    exists, through_table_name, [backward_key, forward_key]
                 )
                 if unique_index_create_sql.endswith(";"):
                     m2m_create_string += "\n" + unique_index_create_sql

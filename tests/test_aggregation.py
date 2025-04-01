@@ -11,7 +11,7 @@ from tests.testmodels import (
 )
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import In
-from tortoise.exceptions import ConfigurationError
+from tortoise.exceptions import FieldError
 from tortoise.expressions import F, Q
 from tortoise.functions import Avg, Coalesce, Concat, Count, Lower, Max, Min, Sum, Trim
 
@@ -60,7 +60,7 @@ class TestAggregation(test.TestCase):
             event_with_annotation.tournament_id,
         )
 
-        with self.assertRaisesRegex(ConfigurationError, "name__id not resolvable"):
+        with self.assertRaisesRegex(FieldError, "name__id not resolvable"):
             await Event.all().annotate(tournament_test_id=Sum("name__id")).first()
 
     async def test_nested_aggregation_in_annotation(self):

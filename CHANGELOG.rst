@@ -6,14 +6,37 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.26
+0.25
 ====
 
-0.25 (unreleased)
+0.25.0 (unreleased)
 ------
 Changed
 ^^^^^^^
+- Skip database selection if the router is not configured to improve performance (#1915)
+- `.values()`, `.values_list()` and `.only()` cannot be used together (#1923)
 - ForeignKeyField: The `on_delete` parameter is now mandatory. Users must now explicitly specify the desired deletion behavior (e.g., `on_delete=fields.RESTRICT`, `on_delete=fields.CASCADE`, etc.) (#1801)
+
+Added
+^^^^^
+- `.only` supports selecting related fields, e.g. `.only("related__field")` (#1923)
+
+
+0.24
+====
+
+0.24.2
+------
+
+Fixed
+^^^^^
+- Fix model with multi m2m fields generates wrong references name (#1897)
+- Fix using reserved words in order_by (#1900)
+- Fix installing tortoise-orm with poetry 2 (#1885)
+
+Changed
+^^^^^^^
+- Use 'unique' instead of 'create_unique_index' for m2m field (#1903)
 
 0.24.1
 ------

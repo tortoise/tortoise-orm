@@ -36,9 +36,15 @@ class ConnectionRouter:
             return None
 
     def db_for_read(self, model: type[Model]) -> BaseDBAsyncClient | None:
+        if not self._routers:
+            return None
+
         return self._db_route(model, "db_for_read")
 
     def db_for_write(self, model: type[Model]) -> BaseDBAsyncClient | None:
+        if not self._routers:
+            return None
+
         return self._db_route(model, "db_for_write")
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 import types
 from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable
 from copy import copy
@@ -9,7 +10,7 @@ from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
 from pypika_tortoise.functions import Cast
 from pypika_tortoise.queries import QueryBuilder
-from pypika_tortoise.terms import Case, Field, PseudoColumn, Star, Term, ValueWrapper
+from pypika_tortoise.terms import Case, Field, Star, Term, ValueWrapper
 from typing_extensions import Literal, Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
@@ -31,6 +32,7 @@ from tortoise.query_utils import (
     Prefetch,
     QueryModifier,
     TableCriterionTuple,
+    expand_lookup_expression,
     get_joins_for_related_field,
 )
 from tortoise.router import router
@@ -223,7 +225,7 @@ class AwaitableQuery(Generic[MODEL]):
                     # - Empty fields_for_select means that all columns and annotations are selected,
                     #   hence we can reference the annotation.
                     # - The annotation is in fields_for_select, hence we can reference it.
-                    term = PseudoColumn(field_name)
+                    term = Field(field_name)
                 else:
                     # The annotation is not in SELECT, resolve it
                     annotation = annotations[field_name]
@@ -624,6 +626,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         If no arguments are passed it will default to a tuple containing all fields
         in order of declaration.
         """
+        if self._fields_for_select:
+            raise ValueError(".values_list() cannot be used with .only()")
+
         fields_for_select_list = fields_ or [
             field for field in self.model._meta.fields_map if field in self.model._meta.db_fields
         ] + list(self._annotations.keys())
@@ -650,14 +655,19 @@ class QuerySet(AwaitableQuery[MODEL]):
         """
         Make QuerySet return dicts instead of objects.
 
-        If call after `.get()`, `.get_or_none()` or `.first()` return dict instead of object.
+        If called after `.get()`, `.get_or_none()` or `.first()`, returns a dict instead of an object.
 
-        Can pass names of fields to fetch, or as a ``field_name='name_in_dict'`` kwarg.
+        You can specify which fields to include by:
+        - Passing field names as positional arguments
+        - Using kwargs in the format `field_name='name_in_dict'` to customize the keys in the resulting dict
 
-        If no arguments are passed it will default to a dict containing all fields.
+        If no arguments are passed, it will default to a dict containing all fields.
 
         :raises FieldError: If duplicate key has been provided.
         """
+        if self._fields_for_select:
+            raise ValueError(".values() cannot be used with .only()")
+
         if args or kwargs:
             fields_for_select: dict[str, str] = {}
             for field in args:
@@ -918,6 +928,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         * If you do a ``<model>.save(update_fields=[...])`` and one of the fields in ``update_fields`` was not in the ``.only(...)``,
           then ``IncompleteInstanceError`` as that field is not available to be updated.
         """
+        if not fields_for_select:
+            raise ValueError(".only() requires at least one field")
         queryset = self._clone()
         queryset._fields_for_select = fields_for_select
         return queryset
@@ -1017,46 +1029,123 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._db = _db if _db else queryset._db
         return queryset
 
-    def _join_table_with_select_related(
-        self,
-        model: type[Model],
-        table: Table,
-        field: str,
-        forwarded_fields: str,
-        path: Iterable[str | None],
-    ) -> QueryBuilder:
-        if field in model._meta.fields_db_projection and forwarded_fields:
-            raise FieldError(f'Field "{field}" for model "{model.__name__}" is not relation')
+    def _join_select_related(self, lookup_expression: str) -> tuple[type[Model], Table]:
+        fields = expand_lookup_expression(self.model, lookup_expression)
+        model = self.model
+        table = self.model._meta.basetable
+        path: tuple[str | None, ...] = (None,)
+        for field in fields:
+            field = cast(RelationalField, field)
+            path = path + (field.model_field_name,)
+            table = self._join_table_by_field(table, field.model_field_name, field)
 
-        field_object = cast(RelationalField, model._meta.fields_map.get(field))
-        if not field_object:
-            raise FieldError(f'Unknown field "{field}" for model "{model.__name__}"')
+            # do not select related fields if we are only selecting a subset of fields
+            if self._fields_for_select:
+                continue
 
-        table = self._join_table_by_field(table, field, field_object)
-        related_fields = field_object.related_model._meta.db_fields
-        append_item = (
-            field_object.related_model,
-            len(related_fields),
-            field,
-            model,
-            path,
-        )
-        if append_item not in self._select_related_idx:
-            self._select_related_idx.append(append_item)
-        for related_field in related_fields:
+            related_fields = field.related_model._meta.db_fields
+            append_item = (
+                field.related_model,
+                len(related_fields),
+                field.model_field_name,
+                model,
+                path,
+            )
+            model = field.related_model
+            if append_item not in self._select_related_idx:
+                self._select_related_idx.append(append_item)
             self.query = self.query.select(
-                table[related_field].as_(f"{table.get_table_name()}.{related_field}")
+                *[
+                    table[related_field].as_(f"{table.get_table_name()}.{related_field}")
+                    for related_field in related_fields
+                ]
             )
-        if forwarded_fields:
-            field, __, forwarded_fields_ = forwarded_fields.partition("__")
-            self.query = self._join_table_with_select_related(
-                model=field_object.related_model,
-                table=table,
-                field=field,
-                forwarded_fields=forwarded_fields_,
-                path=(*path, field),
+        return model, table
+
+    def _resolve_only(self, only_lookup_expressions: tuple[str, ...]) -> None:
+        # Group fields by fetch fields, e.g. ["a__b", "a__c"] -> {"a": ["b", "c"]}.
+        # The direct fields of the model are the ones that would have the key "".
+        fetch_to_fields = defaultdict(list)
+        # the order is important here, we need to process the shallowest fields first
+        # because we want to populate _select_related_idx with actual items that need to be
+        # selected, not "filler" items tha just tell the executor that an empty instance has
+        # to be created
+        for expression in sorted(only_lookup_expressions, key=lambda x: x.count("__")):
+            fetch_fields_lookup, __, field_name = expression.rpartition("__")
+            fetch_to_fields[fetch_fields_lookup].append(field_name)
+
+        # select direct model fields which would have the key "": {"": ["a", "b"]}
+        data_fields = fetch_to_fields.pop("", None)
+        if data_fields:
+            table = self.model._meta.basetable
+            self._select_related_idx.append(
+                (
+                    self.model,
+                    len(data_fields),
+                    table,
+                    self.model,
+                    (None,),
+                )
             )
-        return self.query
+            try:
+                self.query = self.query.select(
+                    *[
+                        table[self.model._meta.fields_db_projection[field]].as_(field)
+                        for field in data_fields
+                        if field not in self._annotations
+                    ]
+                )
+            except KeyError as e:
+                raise FieldError(
+                    f'Unknown field "{e.args[0]}" for model "{self.model.__name__}"'
+                ) from e
+
+        else:
+            # even though no data fields are selected, we need to let the executor know
+            # that an empty instance of the model has to be created
+            self._select_related_idx.append(
+                (
+                    self.model,
+                    0,
+                    self.model._meta.basetable,
+                    self.model,
+                    (None,),
+                )
+            )
+
+        # Select fields of related models, e.g. {"a": ["b", "c"]}
+        added_paths = set()
+        for fetch_fields_lookup, data_fields in fetch_to_fields.items():
+            fetch_fields = expand_lookup_expression(self.model, fetch_fields_lookup)
+            referring_model = model = self.model
+            table = self.model._meta.basetable
+            path: tuple[str | None, ...] = (None,)
+            for i, fetch_field in enumerate(fetch_fields):
+                field = cast(RelationalField, fetch_field)
+                path = path + (field.model_field_name,)
+                table = self._join_table_by_field(table, field.model_field_name, field)
+                referring_model = model
+                model = field.related_model
+
+                if path in added_paths:
+                    continue
+
+                self._select_related_idx.append(
+                    (
+                        model,
+                        # we need 0 items for letting know the executor that instances need to
+                        # be created even though no their fields are selected, e.g.
+                        # .only("a__b__field")
+                        len(data_fields) if i == len(fetch_fields) - 1 else 0,
+                        table,
+                        referring_model,
+                        path,
+                    )
+                )
+                added_paths.add(path)
+            self.query = self.query.select(
+                *[table[field].as_(f"{table.get_table_name()}.{field}") for field in data_fields]
+            )
 
     def _make_query(self) -> None:
         # clean tmp records first
@@ -1064,21 +1153,11 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._joined_tables = []
         table = self.model._meta.basetable
         if self._fields_for_select:
-            append_item = (
-                self.model,
-                len(self._fields_for_select),
-                table,
-                self.model,
-                (None,),
-            )
-            if append_item not in self._select_related_idx:
-                self._select_related_idx.append(append_item)
-            db_fields_for_select = [
-                table[self.model._meta.fields_db_projection[field]].as_(field)
-                for field in self._fields_for_select
-            ]
-            self.query = copy(self.model._meta.basequery).select(*db_fields_for_select)
+            # select .only() fields
+            self.query = self.model._meta.basequery.select()
+            self._resolve_only(self._fields_for_select)
         else:
+            # select all fields
             self.query = copy(self.model._meta.basequery_all_fields)  # type:ignore[assignment]
             append_item = (
                 self.model,
@@ -1087,8 +1166,7 @@ class QuerySet(AwaitableQuery[MODEL]):
                 self.model,
                 (None,),
             )
-            if append_item not in self._select_related_idx:
-                self._select_related_idx.append(append_item)
+            self._select_related_idx.append(append_item)
         self.resolve_ordering(
             self.model,
             self.model._meta.basetable,
@@ -1110,15 +1188,8 @@ class QuerySet(AwaitableQuery[MODEL]):
                 self._select_for_update_of,
             )
         if self._select_related:
-            for field in self._select_related:
-                field, __, forwarded_fields = field.partition("__")
-                self.query = self._join_table_with_select_related(
-                    model=self.model,
-                    table=self.model._meta.basetable,
-                    field=field,
-                    forwarded_fields=forwarded_fields,
-                    path=(None, field),
-                )
+            for select_related in self._select_related:
+                self._join_select_related(select_related)
         if self._force_indexes:
             self.query._force_indexes = []
             self.query = self.query.force_index(*self._force_indexes)
