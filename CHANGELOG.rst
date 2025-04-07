@@ -11,6 +11,10 @@ Changelog
 
 0.25.0 (unreleased)
 ------
+Fixed
+^^^^^
+- Fix `pydantic_model_creator` incompatibility with Pydantic 2.11 (#1925)
+
 Changed
 ^^^^^^^
 - Skip database selection if the router is not configured to improve performance (#1915)

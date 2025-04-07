@@ -8,9 +8,9 @@ from enum import Enum, IntEnum
 from hashlib import sha3_224
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, computed_field, create_model
 from pydantic import Field as PydanticField
-from pydantic import computed_field, create_model
+from pydantic.fields import ComputedFieldInfo
 
 from tortoise import (
     BackwardFKRelation,
@@ -384,13 +384,25 @@ class PydanticModelCreator:
                 return _MODEL_INDEX[self._hash]
 
         self._pconfig = self._initialize_pconfig()
-        self._properties["model_config"] = self._pconfig
-        model = create_model(
+        # Extract the computed fields
+        computed_fields = {}
+        common_fields = {}
+        for k, v in self._properties.items():
+            if isinstance(getattr(v, "decorator_info", None), ComputedFieldInfo):
+                computed_fields[k] = v
+            else:
+                common_fields[k] = v
+        base_model = type(
+            "BasePydanticModel",
+            (PydanticModel,),
+            {"model_config": self._pconfig, **computed_fields},
+        )
+        model: type[PydanticModel] = create_model(
             self._name,
-            __base__=PydanticModel,
+            __base__=base_model,
             __module__=self._module,
             __validators__=self._validators,
-            **self._properties,
+            **common_fields,
         )
         # Copy the Model docstring over
         model.__doc__ = _cleandoc(self._cls)
