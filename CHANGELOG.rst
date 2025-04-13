@@ -9,7 +9,7 @@ Changelog
 0.25
 ====
 
-0.25.0 (unreleased)
+0.25.0
 ------
 Changed
 ^^^^^^^
@@ -19,6 +19,10 @@ Changed
 Added
 ^^^^^
 - `.only` supports selecting related fields, e.g. `.only("related__field")` (#1923)
+
+Fixed
+^^^^^
+- Fix pydantic_model_creator incompatibility with Pydantic 2.11 (#1930)
 
 
 0.24
