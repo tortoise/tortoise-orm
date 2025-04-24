@@ -32,6 +32,8 @@ EXECUTOR_CACHE: dict[
     tuple[list, str, list, str, str, dict[str, str]],
 ] = {}
 
+CHUNK_SIZE = 2000
+
 
 class BaseExecutor:
     FILTER_FUNC_OVERRIDE: dict[Callable, Callable] = {}
@@ -105,7 +107,12 @@ class BaseExecutor:
     ) -> list:
         _, raw_results = await self.db.execute_query(sql, values)
         instance_list = []
-        for row in raw_results:
+        for row_idx, row in enumerate(raw_results):
+            if row_idx != 0 and row_idx % CHUNK_SIZE == 0:
+                # Forcibly yield to the event loop to avoid blocking the event loop
+                # when selecting a large number of rows
+                await asyncio.sleep(0)
+
             if self.select_related_idx:
                 _, current_idx, _, _, path = self.select_related_idx[0]
                 row_items = list(dict(row).items())
