@@ -9,6 +9,12 @@ Changelog
 0.25
 ====
 
+0.25.1 (unreleased)
+------------------
+Changed
+^^^^^
+- Force async task switch every 2000 rows when converting db objects to python objects to avoid blocking the event loop (#1939)
+
 0.25.0
 ------
 Fixed
@@ -23,10 +29,6 @@ Changed
 Added
 ^^^^^
 - `.only` supports selecting related fields, e.g. `.only("related__field")` (#1923)
-
-Fixed
-^^^^^
-- Fix pydantic_model_creator incompatibility with Pydantic 2.11 (#1930)
 
 
 0.24
