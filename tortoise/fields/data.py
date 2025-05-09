@@ -46,6 +46,7 @@ __all__ = (
     "SmallIntField",
     "TextField",
     "TimeDeltaField",
+    "TimeField",
     "UUIDField",
 )
 
