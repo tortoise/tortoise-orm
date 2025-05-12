@@ -15,6 +15,10 @@ Changed
 ^^^^^
 - Force async task switch every 2000 rows when converting db objects to python objects to avoid blocking the event loop (#1939)
 
+Added
+^^^^^
+- Add `no_key` parameter to `queryset.select_for_update`.
+
 0.25.0
 ------
 Fixed

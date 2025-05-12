@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections import defaultdict
 import types
+from collections import defaultdict
 from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable
 from copy import copy
 from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, cast, overload
@@ -326,6 +326,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         "_select_for_update_nowait",
         "_select_for_update_skip_locked",
         "_select_for_update_of",
+        "_select_for_update_no_key",
         "_select_related",
         "_select_related_idx",
         "_use_indexes",
@@ -351,6 +352,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         self._select_for_update_nowait: bool = False
         self._select_for_update_skip_locked: bool = False
         self._select_for_update_of: set[str] = set()
+        self._select_for_update_no_key: bool = False
         self._select_related: set[str] = set()
         self._select_related_idx: list[
             tuple[type[Model], int, Table | str, type[Model], Iterable[str | None]]
@@ -385,6 +387,7 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._select_for_update_nowait = self._select_for_update_nowait
         queryset._select_for_update_skip_locked = self._select_for_update_skip_locked
         queryset._select_for_update_of = self._select_for_update_of
+        queryset._select_for_update_no_key = self._select_for_update_no_key
         queryset._select_related = self._select_related
         queryset._select_related_idx = self._select_related_idx
         queryset._force_indexes = self._force_indexes
@@ -572,13 +575,30 @@ class QuerySet(AwaitableQuery[MODEL]):
         return queryset
 
     def select_for_update(
-        self, nowait: bool = False, skip_locked: bool = False, of: tuple[str, ...] = ()
+        self,
+        nowait: bool = False,
+        skip_locked: bool = False,
+        of: tuple[str, ...] = (),
+        no_key: bool = False,
     ) -> QuerySet[MODEL]:
         """
         Make QuerySet select for update.
 
         Returns a queryset that will lock rows until the end of the transaction,
         generating a SELECT ... FOR UPDATE SQL statement on supported databases.
+
+        :param nowait:
+            If `True`, raise an error if the lock cannot be obtained immediately.
+        :param skip_locked:
+            If `True`, skip rows that are already locked by other transactions instead of waiting.
+        :param of:
+            Specify the tables to lock when dealing with multiple related tables, e.g. when using `select_related`.
+            Provide a tuple of table names to indicate which tables' rows should be locked. By default, all fetched
+            rows are locked.
+        :param no_key:
+            If `True`, use the lower SELECT ... FOR NO KEY UPDATE lock strength on PostgreSQL to allow creating or
+            deleting rows in other tables that reference the locked rows via foreign keys. The parameter is ignored
+            on other backends.
         """
         if self.capabilities.support_for_update:
             queryset = self._clone()
@@ -586,6 +606,9 @@ class QuerySet(AwaitableQuery[MODEL]):
             queryset._select_for_update_nowait = nowait
             queryset._select_for_update_skip_locked = skip_locked
             queryset._select_for_update_of = set(of)
+            queryset._select_for_update_no_key = (
+                no_key and self.capabilities.support_for_no_key_update
+            )
             return queryset
         return self
 
@@ -1186,6 +1209,7 @@ class QuerySet(AwaitableQuery[MODEL]):
                 self._select_for_update_nowait,
                 self._select_for_update_skip_locked,
                 self._select_for_update_of,
+                self._select_for_update_no_key,
             )
         if self._select_related:
             for select_related in self._select_related:

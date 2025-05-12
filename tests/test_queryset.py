@@ -674,6 +674,7 @@ class TestQueryset(test.TestCase):
         sql2 = IntFields.filter(pk=1).only("id").select_for_update(nowait=True).sql()
         sql3 = IntFields.filter(pk=1).only("id").select_for_update(skip_locked=True).sql()
         sql4 = IntFields.filter(pk=1).only("id").select_for_update(of=("intfields",)).sql()
+        sql5 = IntFields.filter(pk=1).only("id").select_for_update(no_key=True).sql()
 
         dialect = self.db.schema_generator.DIALECT
         if dialect == "postgres":
@@ -694,6 +695,10 @@ class TestQueryset(test.TestCase):
                     sql4,
                     'SELECT "id" "id" FROM "intfields" WHERE "id"=%s FOR UPDATE OF "intfields"',
                 )
+                self.assertEqual(
+                    sql5,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=%s FOR NO KEY UPDATE',
+                )
             else:
                 self.assertEqual(
                     sql1,
@@ -711,6 +716,10 @@ class TestQueryset(test.TestCase):
                     sql4,
                     'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE OF "intfields"',
                 )
+                self.assertEqual(
+                    sql5,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR NO KEY UPDATE',
+                )
         elif dialect == "mysql":
             self.assertEqual(
                 sql1,
@@ -727,6 +736,10 @@ class TestQueryset(test.TestCase):
             self.assertEqual(
                 sql4,
                 "SELECT `id` `id` FROM `intfields` WHERE `id`=%s FOR UPDATE OF `intfields`",
+            )
+            self.assertEqual(
+                sql5,
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=%s FOR UPDATE",
             )
 
     async def test_select_related(self):

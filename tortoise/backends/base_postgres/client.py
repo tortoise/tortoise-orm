@@ -45,7 +45,10 @@ class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
     executor_class: type[BasePostgresExecutor] = BasePostgresExecutor
     schema_generator: type[BasePostgresSchemaGenerator] = BasePostgresSchemaGenerator
     capabilities = Capabilities(
-        "postgres", support_update_limit_order_by=False, support_for_posix_regex_queries=True
+        "postgres",
+        support_update_limit_order_by=False,
+        support_for_posix_regex_queries=True,
+        support_for_no_key_update=True,
     )
     connection_class: AsyncConnection | Connection | None = None
     loop: AbstractEventLoop | None = None

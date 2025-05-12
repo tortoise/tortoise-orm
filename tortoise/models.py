@@ -1147,6 +1147,7 @@ class Model(metaclass=ModelMeta):
         skip_locked: bool = False,
         of: tuple[str, ...] = (),
         using_db: BaseDBAsyncClient | None = None,
+        no_key: bool = False,
     ) -> QuerySet[Self]:
         """
         Make QuerySet select for update.
@@ -1154,7 +1155,9 @@ class Model(metaclass=ModelMeta):
         Returns a queryset that will lock rows until the end of the transaction,
         generating a SELECT ... FOR UPDATE SQL statement on supported databases.
         """
-        return cls._db_queryset(using_db, for_write=True).select_for_update(nowait, skip_locked, of)
+        return cls._db_queryset(using_db, for_write=True).select_for_update(
+            nowait, skip_locked, of, no_key=no_key
+        )
 
     @classmethod
     async def update_or_create(
