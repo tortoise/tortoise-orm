@@ -98,19 +98,19 @@ Define the models by inheriting from ``tortoise.models.Model``.
 
     class Tournament(Model):
         id = fields.IntField(primary_key=True)
-        name = fields.TextField()
+        name = fields.CharField(max_length=20)
 
 
     class Event(Model):
-        id = fields.IntField(primary_key=True)
+        id = fields.BigIntField(primary_key=True)
         name = fields.TextField()
-        tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
-        participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
+        tournament = fields.ForeignKeyField('models.Tournament', related_name='events', on_delete=fields.OnDelete.CASCADE)
+        participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team', on_delete=fields.OnDelete.SET_NULL)
 
 
     class Team(Model):
-        id = fields.IntField(primary_key=True)
-        name = fields.TextField()
+        id = fields.UUIDField(primary_key=True)
+        name = fields.CharField(max_length=20, unique=True)
 
 
 After defining the models, Tortoise ORM needs to be initialized to establish the relationships between models and connect to the database.
