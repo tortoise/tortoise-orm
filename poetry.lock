@@ -303,7 +303,7 @@ name = "asyncmy"
 version = "0.2.10"
 description = "A fast asyncio MySQL driver"
 optional = true
-python-versions = ">=3.8,<4.0"
+python-versions = "<4.0,>=3.8"
 groups = ["main"]
 markers = "python_version < \"4.0\" and extra == \"asyncmy\""
 files = [
@@ -1113,7 +1113,7 @@ name = "coveralls"
 version = "4.0.1"
 description = "Show coverage stats online via coveralls.io"
 optional = false
-python-versions = ">=3.8,<3.13"
+python-versions = "<3.13,>=3.8"
 groups = ["dev"]
 markers = "python_version <= \"3.11\""
 files = [
@@ -1185,7 +1185,7 @@ name = "cryptography"
 version = "45.0.2"
 description = "cryptography is a package which provides cryptographic recipes and primitives to Python developers."
 optional = false
-python-versions = ">=3.7, !=3.9.0, !=3.9.1"
+python-versions = "!=3.9.0,!=3.9.1,>=3.7"
 groups = ["dev"]
 markers = "platform_machine != \"ppc64le\" and platform_machine != \"s390x\" and sys_platform == \"linux\" and python_version >= \"3.11\""
 files = [
@@ -3027,15 +3027,15 @@ files = [
 
 [[package]]
 name = "pypika-tortoise"
-version = "0.5.0"
+version = "0.6.0"
 description = "Forked from pypika and streamline just for tortoise-orm"
 optional = false
-python-versions = ">=3.8,<4.0"
+python-versions = ">=3.9"
 groups = ["main"]
 markers = "python_version < \"4.0\""
 files = [
-    {file = "pypika_tortoise-0.5.0-py3-none-any.whl", hash = "sha256:dbdc47eb52ce17407b05ce9f8560ce93b856d7b28beb01971d956b017846691f"},
-    {file = "pypika_tortoise-0.5.0.tar.gz", hash = "sha256:ed0f56761868dc222c03e477578638590b972280b03c7c45cd93345b18b61f58"},
+    {file = "pypika_tortoise-0.6.0-py3-none-any.whl", hash = "sha256:cd097121bd8a89ec2209ff41caf4f389c18ebed628ffdeb35793e98f7ab16b5a"},
+    {file = "pypika_tortoise-0.6.0.tar.gz", hash = "sha256:3899e45b59b506c5b2a83232094437dc63bd8cccf754123f0b48f847931cdc8c"},
 ]
 
 [[package]]
@@ -3561,7 +3561,7 @@ name = "six"
 version = "1.17.0"
 description = "Python 2 and 3 compatibility utilities"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 groups = ["dev"]
 files = [
     {file = "six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274"},
@@ -3585,7 +3585,7 @@ name = "snowballstemmer"
 version = "3.0.1"
 description = "This package provides 32 stemmers for 30 languages generated from Snowball algorithms."
 optional = false
-python-versions = "!=3.0.*, !=3.1.*, !=3.2.*"
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*"
 groups = ["dev"]
 files = [
     {file = "snowballstemmer-3.0.1-py3-none-any.whl", hash = "sha256:6cd7b3897da8d6c9ffb968a6781fa6532dce9c3618a4b127d920dab764a19064"},
@@ -4492,4 +4492,4 @@ psycopg = ["psycopg"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9"
-content-hash = "9cbdbf0932c833c8f4f6e12984c4cab897854155c2eb354e4ed2153877d34c0c"
+content-hash = "be8881c15fd0b0a6a979882af966cb12d9a4ea85b8f284aaa848d42e7efb4655"
