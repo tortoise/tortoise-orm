@@ -17,17 +17,17 @@ The following table shows the available installation options for different datab
    * - SQLite
      - ``pip install tortoise-orm``
    * - PostgreSQL (psycopg)
-     - ``pip install tortoise-orm[psycopg]``
+     - ``pip install "tortoise-orm[psycopg]"``
    * - PostgreSQL (asyncpg)
-     - ``pip install tortoise-orm[asyncpg]``
+     - ``pip install "tortoise-orm[asyncpg]"``
    * - MySQL (aiomysql)
-     - ``pip install tortoise-orm[aiomysql]``
+     - ``pip install "tortoise-orm[aiomysql]"``
    * - MySQL (asyncmy)
-     - ``pip install tortoise-orm[asyncmy]``
+     - ``pip install "tortoise-orm[asyncmy]"``
    * - MS SQL
-     - ``pip install tortoise-orm[asyncodbc]``
+     - ``pip install "tortoise-orm[asyncodbc]"``
    * - Oracle
-     - ``pip install tortoise-orm[asyncodbc]``
+     - ``pip install "tortoise-orm[asyncodbc]"``
 
 
 Optional Dependencies
@@ -43,7 +43,7 @@ The following command will install all optional dependencies:
 
 .. code-block:: bash
 
-    pip install tortoise-orm[accel]
+    pip install "tortoise-orm[accel]"
 ..
 
 Tutorial
