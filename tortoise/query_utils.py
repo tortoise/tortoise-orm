@@ -1,11 +1,16 @@
 from __future__ import annotations
 
-from copy import copy
-from typing import TYPE_CHECKING, cast
+import operator
 from collections.abc import Sequence
+from copy import copy
+from typing import TYPE_CHECKING, Any, Callable, cast
 
 from pypika_tortoise import Table
-from pypika_tortoise.terms import Criterion, Term
+from pypika_tortoise.terms import (
+    Criterion,
+    JSONAttributeCriterion,
+    Term,
+)
 
 from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.base import Field
@@ -263,3 +268,27 @@ class Prefetch:
             queryset._prefetch_queries.setdefault(first_level_field, []).append(
                 (self.to_attr, self.queryset)
             )
+
+
+def get_json_filter_operator(
+    value: dict[str, Any], operator_keywords: dict[str, Callable[..., Criterion]]
+) -> tuple[list[str | int], Any, Callable[..., Criterion]]:
+    """
+    Extracts the key parts, filter value and operator from a JSON filter dictionary.
+    """
+    ((key, filter_value),) = value.items()
+    key_parts = [int(item) if item.isdigit() else str(item) for item in key.split("__")]
+    operator_ = (
+        operator_keywords[str(key_parts.pop(-1))]
+        if key_parts[-1] in operator_keywords
+        else operator.eq
+    )
+    return key_parts, filter_value, operator_
+
+
+def resolve_field_json_path(field_term: Term, key_parts: list[str | int]) -> Term:
+    """
+    Resolves a JSON path from a list of key parts, e.g. converting
+    (field, ['a', 'b', 'c']) to field->'a'->'b'->>'c'. Returns a pypika Term.
+    """
+    return JSONAttributeCriterion(field_term, key_parts)

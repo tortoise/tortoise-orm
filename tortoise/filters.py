@@ -393,19 +393,6 @@ def get_json_filter(field_name: str, source_field: str) -> dict[str, FilterInfoD
     }
 
 
-def get_json_filter_operator(
-    value: dict[str, Any], operator_keywords: dict[str, Callable[..., Criterion]]
-) -> tuple[list[str | int], Any, Callable[..., Criterion]]:
-    ((key, filter_value),) = value.items()
-    key_parts = [int(item) if item.isdigit() else str(item) for item in key.split("__")]
-    operator_ = (
-        operator_keywords[str(key_parts.pop(-1))]
-        if key_parts[-1] in operator_keywords
-        else operator.eq
-    )
-    return key_parts, filter_value, operator_
-
-
 def get_array_filter(
     field_name: str, source_field: str, field: ArrayField
 ) -> dict[str, FilterInfoDict]:

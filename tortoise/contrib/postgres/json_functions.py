@@ -23,7 +23,6 @@ from tortoise.filters import (
     extract_second_equal,
     extract_week_equal,
     extract_year_equal,
-    get_json_filter_operator,
     insensitive_contains,
     insensitive_ends_with,
     insensitive_exact,
@@ -35,6 +34,7 @@ from tortoise.filters import (
     not_null,
     starts_with,
 )
+from tortoise.query_utils import get_json_filter_operator, resolve_field_json_path
 
 
 def postgres_json_contains(field: Term, value: str) -> Criterion:
@@ -75,49 +75,10 @@ operator_keywords: dict[str, Callable[..., Criterion]] = {
 }
 
 
-def _get_json_path(key_parts: list[str | int]) -> Criterion:
-    """
-    Recursively build a JSON path from a list of key parts, e.g. ['a', 'b', 'c'] -> 'a'->'b'->>'c'
-    """
-    if len(key_parts) == 2:
-        left = key_parts.pop(0)
-        right = key_parts.pop(0)
-        return BasicCriterion(
-            JSONOperators.GET_TEXT_VALUE, _wrap_key_part(left), _wrap_key_part(right)
-        )
-
-    left = key_parts.pop(0)
-    return BasicCriterion(
-        JSONOperators.GET_JSON_VALUE, ValueWrapper(left), _get_json_path(key_parts)
-    )
-
-
-def _wrap_key_part(key_part: str | int) -> Term:
-    if isinstance(key_part, int):
-        # Letting Postgres know that the parameter is an integer, otherwise,
-        # it will fail with a type error.
-        return Cast(ValueWrapper(key_part), "int")
-    return ValueWrapper(key_part)
-
-
 def _create_json_criterion(
     key_parts: list[str | int], field_term: Term, operator_: Callable, value: Any
 ):
-    criteria: tuple[Criterion, str]
-    if len(key_parts) == 1:
-        criteria = (
-            BasicCriterion(
-                JSONOperators.GET_TEXT_VALUE,
-                field_term,
-                _wrap_key_part(key_parts.pop(0)),
-            ),
-            value,
-        )
-    else:
-        criteria = (
-            BasicCriterion(JSONOperators.GET_JSON_VALUE, field_term, _get_json_path(key_parts)),
-            value,
-        )
+    criteria: tuple[Term, str] = resolve_field_json_path(field_term, key_parts), value
 
     if operator_ in [
         extract_day_equal,

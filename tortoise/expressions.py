@@ -24,12 +24,14 @@ from pypika_tortoise.utils import format_alias_sql
 
 from tortoise.exceptions import FieldError, OperationalError
 from tortoise.fields.base import Field
+from tortoise.fields.data import JSONField
 from tortoise.fields.relational import RelationalField
 from tortoise.filters import FilterInfoDict
 from tortoise.query_utils import (
     QueryModifier,
     TableCriterionTuple,
     get_joins_for_related_field,
+    resolve_field_json_path,
     resolve_nested_field,
 )
 
@@ -113,9 +115,15 @@ class CombinedExpression(Expression):
 
 class F(Expression):
     """
-    An F() object represents a model field's value, its transformed value, or an annotated column.
-    It enables referencing and performing database operations on model field values directly in
-    the database, without needing to load them into Python memory.
+    F() can be used to reference a model field, field of a related model, annotation or
+    an attribute of a JSON field. It can be used in the following ways:
+
+    - as a field reference, e.g. F("id")
+    - as a related field reference, e.g. F("related_field__field") will return the value of the field
+    of the related model.
+    - as a JSON field reference, e.g. F("json_field__attribute") will return the value of the "attribute"
+    property of the JSON field value. The reference can be nested, e.g. F("json_field__attribute__subattribute")
+    - as a JSON field array element reference, e.g. F("json_field__0") will return the first element of the array.
 
     :param name: The name of the field to reference.
     """
@@ -124,13 +132,28 @@ class F(Expression):
         self.name = name
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
-        term: Term = PypikaField(self.name)
+        term: Term
         joins: list[TableCriterionTuple] = []
         output_field = None
-        if self.name.split("__")[0] in resolve_context.model._meta.fetch_fields:
+
+        main_name_part, __, rest_name_parts = self.name.partition("__")
+        if main_name_part in resolve_context.model._meta.fetch_fields:
             # field in the format of "related_field__field" or "related_field__another_rel_field__field"
             term, joins, output_field = resolve_nested_field(
                 resolve_context.model, resolve_context.table, self.name
+            )
+        elif (
+            rest_name_parts
+            and main_name_part in resolve_context.model._meta.fields_map
+            and isinstance(resolve_context.model._meta.fields_map[main_name_part], JSONField)
+        ):
+            # Accessing a JSON field, e.g. F("json_field__a__b")
+            key_parts = [
+                int(item) if item.isdigit() else str(item) for item in rest_name_parts.split("__")
+            ]
+            term = resolve_field_json_path(
+                PypikaField(resolve_context.model._meta.fields_db_projection[main_name_part]),
+                key_parts,
             )
         elif self.name in resolve_context.annotations:
             # reference to another annotation, e.g. M.annotate(f1=...).annotate(f2=F("f1")).values('field')
@@ -143,7 +166,7 @@ class F(Expression):
             # a regular model field, e.g. F("id")
             try:
                 meta = resolve_context.model._meta
-                term.name = meta.fields_db_projection[self.name]  # type:ignore[attr-defined]
+                term = PypikaField(meta.fields_db_projection[self.name])
 
                 if (output_field := meta.fields_map.get(self.name, None)) and (
                     func := output_field.get_for_dialect(
