@@ -209,8 +209,6 @@ class TestUpdate(test.TestCase):
         self.assertIs((await Tournament.get(pk=t2.pk)).name, "2")
         self.assertEqual(await Tournament.filter(name="1").count(), 1)
 
-    # tortoise-pypika does not translate ** to POWER in MSSQL
-    @test.requireCapability(dialect=NotEQ("mssql"))
     async def test_update_with_case_when_and_f(self):
         event1 = await IntFields.create(intnum=1)
         event2 = await IntFields.create(intnum=2)
