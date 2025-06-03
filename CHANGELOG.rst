@@ -14,7 +14,6 @@ Changelog
 Changed
 ^^^^^
 - Force async task switch every 2000 rows when converting db objects to python objects to avoid blocking the event loop (#1939)
-- Update installation commands to be zsh-friendly (#1958)
 
 Added
 ^^^^^
