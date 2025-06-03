@@ -2974,7 +2974,7 @@ develop = false
 type = "git"
 url = "https://github.com/henadzit/pypika-tortoise.git"
 reference = "feat/json-attr"
-resolved_reference = "e15caed79d781f35ddf7ff9db25dc175b33d71fa"
+resolved_reference = "d91e05784900308d9b2eb4f62857189517fdcd6b"
 
 [[package]]
 name = "pytest"

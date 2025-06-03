@@ -60,16 +60,19 @@ class TestF(test.TestCase):
         self.assertEqual(rmodded.connector, Connector.mod)
         self.assertEqual(rmodded.left.value, 2)
 
+    @test.requireCapability(support_json_attributes=True)
     async def test_values_with_json_field_attribute(self):
         await JSONFields.create(data='{"attribute": 1}')
         res = await JSONFields.annotate(attribute=F("data__attribute")).first()
         self.assertEqual(int(res.attribute), 1)
 
+    @test.requireCapability(support_json_attributes=True)
     async def test_values_with_json_field_attribute_of_attribute(self):
         await JSONFields.create(data='{"attribute": {"subattribute": "value"}}')
         res = await JSONFields.annotate(subattribute=F("data__attribute__subattribute")).first()
         self.assertEqual(res.subattribute, "value")
 
+    @test.requireCapability(support_json_attributes=True)
     async def test_values_with_json_field_str_array_element(self):
         await JSONFields.create(data='["a", "b", "c"]')
         res = await JSONFields.annotate(array_element=F("data__0")).first()
@@ -81,6 +84,7 @@ class TestF(test.TestCase):
         res = await JSONFields.annotate(array_element=F("data__3")).first()
         self.assertIsNone(res.array_element)
 
+    @test.requireCapability(support_json_attributes=True)
     async def test_values_with_json_field_array_attribute(self):
         await JSONFields.create(data='{"array": ["a", "b", "c"]}')
         res = await JSONFields.annotate(array_attribute=F("data__array__0")).first()
@@ -90,6 +94,7 @@ class TestF(test.TestCase):
         res = await JSONFields.annotate(array_attribute=F("data__array__2")).first()
         self.assertEqual(res.array_attribute, "c")
 
+    @test.requireCapability(support_json_attributes=True)
     async def test_values_with_json_field_int_array_element(self):
         """
         Among the supported dialects, only SQLite will return the correct type.
@@ -104,6 +109,7 @@ class TestF(test.TestCase):
         res = await JSONFields.annotate(array_element=F("data__3")).first()
         self.assertIsNone(res.array_element)
 
+    @test.requireCapability(support_json_attributes=True)
     async def test_filter_with_json_field_attribute(self):
         exp = await JSONFields.create(data='{"attribute": "a"}')
         res = (
@@ -115,6 +121,7 @@ class TestF(test.TestCase):
         )
         self.assertIsNone(res)
 
+    @test.requireCapability(support_json_attributes=True)
     async def test_filter_with_json_field_attribute_of_attribute(self):
         exp = await JSONFields.create(data='{"attribute": {"subattribute": "value"}}')
         res = (
@@ -124,6 +131,7 @@ class TestF(test.TestCase):
         )
         self.assertEqual(res.id, exp.id)
 
+    @test.requireCapability(support_json_attributes=True)
     async def test_filter_with_json_field_str_array_element(self):
         exp = await JSONFields.create(data='["a", "b", "c"]')
         res = (

@@ -26,7 +26,10 @@ class MSSQLClient(ODBCClient):
     schema_generator = MSSQLSchemaGenerator
     executor_class = MSSQLExecutor
     capabilities = Capabilities(
-        "mssql", support_update_limit_order_by=False, support_for_update=False
+        "mssql",
+        support_update_limit_order_by=False,
+        support_for_update=False,
+        support_json_attributes=True,
     )
 
     def __init__(
