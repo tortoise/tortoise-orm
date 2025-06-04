@@ -9,7 +9,7 @@ Changelog
 0.25
 ====
 
-0.25.1 (unreleased)
+0.25.1
 ------------------
 Changed
 ^^^^^
@@ -18,6 +18,7 @@ Changed
 Added
 ^^^^^
 - Add `no_key` parameter to `queryset.select_for_update`.
+- `F()` supports referencing JSONField attributes, e.g. `F("json_field__custom_field__nested_id")` (#1960)
 
 0.25.0
 ------
