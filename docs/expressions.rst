@@ -55,7 +55,7 @@ The NOT operation can be achieved using the negation operator (``~``):
 F Expression
 ============
 
-The ``F`` Expression represents a model field value and enables database operations on field values without loading them into Python memory. This is particularly useful for atomic operations.
+The ``F`` Expression represents a model field value and enables database operations on field values without loading them into Python memory.
 
 Example of using F expressions for balance updates (this is just an example and such updates are not recommended for use in financial applications):
 
@@ -88,6 +88,14 @@ F expressions can also be used in annotations:
 .. code-block:: python3
 
     data = await User.annotate(idp=F("id") + 1).values_list("id", "idp")
+
+F expressions can also be used to reference JSON properties and array elements:
+
+.. code-block:: python3
+
+    await User.annotate(attr=F("json_field__property")).values_list("id", "attr")
+    await User.annotate(attr=F("json_field__arrayproperty__0")).values_list("id", "attr")
+
 
 Subquery
 ========
