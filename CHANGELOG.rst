@@ -1,4 +1,5 @@
 .. _changelog:
+:no-search:
 
 =========
 Changelog
