@@ -531,9 +531,7 @@ class BaseExecutor:
                 relation_field = self.model._meta.fields_map[field_name]
                 related_model: type[Model] = relation_field.related_model  # type: ignore
                 related_query = related_model.all().using_db(self.db)
-                related_query.query = copy(
-                    related_query.model._meta.basequery
-                )  # type:ignore[assignment]
+                related_query.query = copy(related_query.model._meta.basequery)  # type:ignore[assignment]
             if forwarded_prefetches:
                 related_query = related_query.prefetch_related(*forwarded_prefetches)
             self._prefetch_queries.setdefault(field_name, []).append((to_attr, related_query))

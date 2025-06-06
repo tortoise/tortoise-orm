@@ -172,7 +172,7 @@ class Tortoise:
                 fk_object.to_field = related_model._meta.pk_attr
                 related_field = related_model._meta.pk
             key_fk_object = deepcopy(related_field)
-            fk_object.to_field_instance = related_field  # type:ignore[arg-type,call-overload]
+            fk_object.to_field_instance = related_field
             fk_object.field_type = fk_object.to_field_instance.field_type
 
             key_field = f"{field}_id"
@@ -215,7 +215,7 @@ class Tortoise:
                         description=fk_object.description,
                     )
                 )
-                fk_relation.to_field_instance = fk_object.to_field_instance  # type:ignore
+                fk_relation.to_field_instance = fk_object.to_field_instance
                 related_model._meta.add_field(backward_relation_name, fk_relation)
             if is_o2o and fk_object.pk:
                 model._meta.pk_attr = key_field
@@ -481,8 +481,8 @@ class Tortoise:
             if not modules:
                 raise ConfigurationError('You must specify "db_url" and "modules" together')
             config = generate_config(db_url, modules)
-        else:
-            assert config is not None  # To improve type hints
+        elif config is None:
+            raise ConfigurationError('You must specify "config" or "config_file" or "db_url"')
 
         try:
             connections_config = config["connections"]

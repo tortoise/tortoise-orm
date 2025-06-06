@@ -81,9 +81,7 @@ def register_tortoise(
 
     async def tortoise_init() -> None:
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
-        logger.info(
-            "Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps
-        )  # pylint: disable=W0212
+        logger.info("Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps)  # pylint: disable=W0212
 
     if generate_schemas:
 

@@ -11,7 +11,7 @@ include = ["CHANGELOG.rst", "LICENSE", "README.rst"]
 dynamic = [ "classifiers" ]
 requires-python = ">=3.9"
 dependencies = [
-    "pypika-tortoise (>=0.6.1,<1.0.0); python_version < '4.0'",
+    "pypika-tortoise (>=0.6.1,<1.0.0)",
     "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
     "aiosqlite (>=0.16.0,<1.0.0)",
     "pytz",
@@ -67,16 +67,15 @@ ruff = "*"
 darglint = "*"
 pylint = "*"
 bandit = "*"
-black = "*"
 codespell = "*"
-# Test tools
-coveralls = "*"
-pytest = "*"
-pytest-xdist = "*"
-pytest-cov = "*"
-pytest-codspeed = "*"
 # Pypi
 twine = "*"
+# mypy
+types-PyYAML = "*"
+types-pytz = "*"
+types-PyMySQL = "*"
+
+[tool.poetry.group.contrib.dependencies]
 # Sample integration - Quart
 quart = "*"
 # Sample integration - Sanic
@@ -95,10 +94,15 @@ aiohttp = "*"
 # BlackSheep support
 blacksheep = "^2.0.8"
 pytest-asyncio = ">=0.24.0"
-# mypy
-types-PyYAML = "*"
-types-pytz = "*"
-types-PyMySQL = "*"
+
+[tool.poetry.group.test.dependencies]
+# Test tools
+pytest = "*"
+pytest-xdist = "*"
+pytest-cov = "*"
+pytest-codspeed = "*"
+
+[tool.poetry.group.docs.dependencies]
 # Documentation tools
 sphinx-immaterial = "*"
 sphinx-copybutton = "*"
@@ -108,13 +112,6 @@ docutils = "*"
 [build-system]
 requires = ["poetry-core>=2.0.0"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.isort]
-profile = "black"
-
-[tool.black]
-line-length = 100
-target-version = ["py39", "py310", "py311", "py312", "py313"]
 
 [tool.mypy]
 pretty = true

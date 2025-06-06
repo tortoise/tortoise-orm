@@ -595,7 +595,9 @@ class ModelMeta(type):
         return attrs, pk_attr
 
     @staticmethod
-    def _dispatch_fields(attrs: dict, fields_db_projection: dict, is_abstract) -> tuple[
+    def _dispatch_fields(
+        attrs: dict, fields_db_projection: dict, is_abstract: bool
+    ) -> tuple[
         dict[str, Field],
         dict[str, FilterInfoDict],
         set[str],
@@ -656,7 +658,7 @@ class ModelMeta(type):
         meta.m2m_fields = m2m_fields
         meta.pk_attr = pk_attr
         if pk_field := fields_map.get(pk_attr):
-            meta.pk = pk_field  # type:ignore
+            meta.pk = pk_field
             if pk_field.source_field:
                 meta.db_pk_column = pk_field.source_field
             elif isinstance(pk_field, OneToOneFieldInstance):

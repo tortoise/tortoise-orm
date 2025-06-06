@@ -98,9 +98,7 @@ def _create_json_criterion(
         operator.lt,
         operator.le,
         between_and,
-    ] or type(
-        value
-    ) in (int, float, Decimal):
+    ] or type(value) in (int, float, Decimal):
         criteria = Cast(criteria[0], "numeric"), criteria[1]
 
     return operator_(*criteria)
