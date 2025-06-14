@@ -24,7 +24,6 @@ up:
 
 deps:
 	@poetry install -E asyncpg -E aiomysql -E accel -E psycopg -E asyncodbc
-	poetry run pip install "pypika-tortoise @ git+https://github.com/waketzheng/pypika-tortoise@fix-15-mssql-power-func"
 
 deps_with_asyncmy:
 	@poetry install -E asyncpg -E asyncmy -E accel -E psycopg -E asyncodbc
