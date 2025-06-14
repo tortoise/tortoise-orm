@@ -8,8 +8,9 @@ from enum import Enum, IntEnum
 from hashlib import sha3_224
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-from pydantic import ConfigDict, computed_field, create_model
+from pydantic import ConfigDict
 from pydantic import Field as PydanticField
+from pydantic import computed_field, create_model
 from pydantic.fields import ComputedFieldInfo
 
 from tortoise import (

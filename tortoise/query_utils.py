@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from copy import copy
 from typing import TYPE_CHECKING, cast
-from collections.abc import Sequence
 
 from pypika_tortoise import Table
 from pypika_tortoise.terms import Criterion, Term
