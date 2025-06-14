@@ -481,8 +481,8 @@ class Tortoise:
             if not modules:
                 raise ConfigurationError('You must specify "db_url" and "modules" together')
             config = generate_config(db_url, modules)
-        else:
-            assert config is not None  # To improve type hints
+        elif config is None:
+            raise ConfigurationError('You must specify "config" or "config_file" or "db_url"')
 
         try:
             connections_config = config["connections"]

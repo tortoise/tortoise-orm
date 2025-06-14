@@ -36,10 +36,10 @@ We have a ``Makefile`` that has the common operations listed, to get started jus
         up          Updates dev/test dependencies
         deps        Ensure dev/test dependencies are installed
         check       Checks that build is sane
-        lint        Reports all linter violations
         test        Runs all tests
         docs        Builds the documentation
         style       Auto-formats the code
+        lint        Auto-formats the code and check type hints
 
 So to run the tests you just need to run ``make test``, etc…
 
@@ -59,7 +59,7 @@ The code is structured in the following directories:
     Common DB Backend code
 ``tortoise/contrib/``:
     Anything that helps people use the project, such as Testing framework and linter plugins
-``tortoise/tests/``:
+``tests/``:
     The Tortoise test code
 
 

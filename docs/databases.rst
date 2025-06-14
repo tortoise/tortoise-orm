@@ -18,9 +18,7 @@ To use, please ensure that corresponding asyncio driver is installed.
 DB_URL
 ======
 
-Tortoise supports specifying Database configuration in a URL form.
-
-The form is:
+Tortoise supports specifying Database configuration in a URL form. The form is:
 
 :samp:`{DB_TYPE}://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DB_NAME}?{PARAM1}=value&{PARAM2}=value`
 

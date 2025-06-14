@@ -14,38 +14,39 @@ help:
 	@echo  "Targets:"
 	@echo  "    up      Updates dev/test dependencies"
 	@echo  "    deps    Ensure dev/test dependencies are installed"
-	@echo  "    check	Checks that build is sane"
-	@echo  "    test	Runs all tests"
-	@echo  "    docs 	Builds the documentation"
+	@echo  "    check   Checks that build is sane"
+	@echo  "    test    Runs all tests"
+	@echo  "    docs    Builds the documentation"
 	@echo  "    style   Auto-formats the code"
+	@echo  "    lint    Auto-formats the code and check type hints"
 
 up:
 	@poetry update
 
 deps:
-	@poetry install -E asyncpg -E aiomysql -E accel -E psycopg -E asyncodbc
+	@poetry install --all-groups -E asyncpg -E accel -E psycopg -E asyncodbc -E aiomysql
 
 deps_with_asyncmy:
-	@poetry install -E asyncpg -E asyncmy -E accel -E psycopg -E asyncodbc
+	@poetry install --all-groups -E asyncpg -E accel -E psycopg -E asyncodbc -E asyncmy
 
-check: deps build _check
+check: build _check
 _check:
-ifneq ($(shell which black),)
-	black --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
-endif
+	ruff format --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 	ruff check $(checkfiles)
 	mypy $(checkfiles)
 	#pylint -d C,W,R $(checkfiles)
 	#bandit -r $(checkfiles)make
 	twine check dist/*
 
-lint: deps build
-ifneq ($(shell which black),)
-	black $(checkfiles)
-endif
+style: deps _style
+_style:
+	ruff format $(checkfiles)
 	ruff check --fix $(checkfiles)
+
+lint: build _lint
+_lint:
+	$(MAKE) _style
 	mypy $(checkfiles)
-	#pylint $(checkfiles)
 	bandit -c pyproject.toml -r $(checkfiles)
 	twine check dist/*
 
@@ -93,11 +94,6 @@ ci: build _check _testall
 docs: deps
 	rm -fR ./build
 	sphinx-build -M html docs build
-
-style: deps _style
-_style:
-	isort -src $(checkfiles)
-	black $(checkfiles)
 
 build: deps
 	rm -fR dist/

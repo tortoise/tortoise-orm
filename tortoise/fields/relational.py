@@ -91,7 +91,7 @@ class ReverseRelation(Generic[MODEL]):
     def __await__(self) -> Generator[Any, None, list[MODEL]]:
         return self._query.__await__()
 
-    async def __aiter__(self) -> AsyncGenerator[Any, MODEL]:
+    async def __aiter__(self) -> AsyncGenerator[MODEL, None]:
         if not self._fetched:
             self._set_result_for_query(await self)
         for val in self.related_objects:

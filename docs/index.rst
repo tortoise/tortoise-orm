@@ -18,16 +18,9 @@ Introduction
 Why was Tortoise ORM built?
 ---------------------------
 
-Python has many existing and mature ORMs, unfortunately they are designed with an opposing paradigm of how I/O gets processed.
-``asyncio`` is relatively new technology that has a different concurrency model, and the largest change is regarding how I/O is handled.
+Tortoise ORM was built to provide a lightweight, async-native Object-Relational Mapper for Python with a familiar Django-like API.
 
-However, Tortoise ORM is not first attempt of building ``asyncio`` ORM, there are many cases of developers attempting to map synchronous python ORMs to the async world, initial attempts did not have a clean API.
-
-Hence we started Tortoise ORM.
-
-Tortoise ORM is designed to be functional, yet familiar, to ease the migration of developers wishing to switch to ``asyncio``.
-
-It also performs well when compared to other Python ORMs. In `our benchmarks <https://github.com/tortoise/orm-benchmarks>`_, where we measure different read and write operations (rows/sec, more is better), it's trading places with Pony ORM:
+Tortoise ORM performs well when compared to other Python ORMs. In `our benchmarks <https://github.com/tortoise/orm-benchmarks>`_, where we measure different read and write operations (rows/sec, more is better), it's trading places with Pony ORM:
 
 .. image:: ORM_Perf.png
     :target: https://github.com/tortoise/orm-benchmarks

@@ -595,7 +595,9 @@ class ModelMeta(type):
         return attrs, pk_attr
 
     @staticmethod
-    def _dispatch_fields(attrs: dict, fields_db_projection: dict, is_abstract) -> tuple[
+    def _dispatch_fields(
+        attrs: dict, fields_db_projection: dict, is_abstract: bool
+    ) -> tuple[
         dict[str, Field],
         dict[str, FilterInfoDict],
         set[str],

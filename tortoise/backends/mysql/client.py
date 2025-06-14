@@ -72,6 +72,7 @@ class MySQLClient(BaseDBAsyncClient):
         inline_comment=True,
         support_index_hint=True,
         support_for_posix_regex_queries=True,
+        support_json_attributes=True,
     )
 
     def __init__(
