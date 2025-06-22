@@ -1,7 +1,7 @@
 from tests.testmodels import DoubleFK, Event, SourceFields, StraightFields, Tournament
 from tortoise.contrib import test
-from tortoise.functions import Count
 from tortoise.exceptions import FieldError, IncompleteInstanceError
+from tortoise.functions import Count
 
 
 class TestOnlyStraight(test.TestCase):

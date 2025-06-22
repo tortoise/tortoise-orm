@@ -196,10 +196,14 @@ line-length = 100
 [tool.ruff.lint]
 ignore = ["E501"]
 extend-select = [
+    "I",      # https://docs.astral.sh/ruff/rules/#isort-i
     "FA",     # https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
     "UP",     # https://docs.astral.sh/ruff/rules/#pyupgrade-up
     "RUF100", # https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
 ]
+
+[tool.ruff.lint.isort]
+extra-standard-library = ["tomllib"]
 
 [tool.bandit]
 exclude_dirs = ["tests", 'examples/*/_tests.py', "conftest.py"]
