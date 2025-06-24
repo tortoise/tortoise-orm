@@ -37,6 +37,7 @@ def get_joins_for_related_field(
     related_table: Table = related_field.related_model._meta.basetable
     if isinstance(related_field, ManyToManyFieldInstance):
         through_table = Table(related_field.through)
+        related_table = related_table.as_(f"{table.get_table_name()}__{related_field_name}")
         required_joins.append(
             (
                 through_table,
