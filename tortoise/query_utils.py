@@ -125,6 +125,8 @@ def resolve_nested_field(
             related_table = related_table.as_(
                 f"{table.get_table_name()}__{iter_field.model_field_name}"
             )
+        if isinstance(related_field, ManyToManyFieldInstance):
+            related_table = related_table.as_(f"{table.get_table_name()}__{iter_field.model_field_name}")
         table = related_table
 
     last_field = fields[-1]
@@ -142,6 +144,10 @@ def resolve_nested_field(
                 related_table = related_table.as_(
                     f"{table.get_table_name()}__{related_field.model_field_name}"
                 )
+        if isinstance(related_field, ManyToManyFieldInstance):
+            related_table = related_table.as_(
+                f"{table.get_table_name()}__{related_field.model_field_name}"
+            )
 
         term = related_table[related_field_meta.db_pk_column]
     else:
