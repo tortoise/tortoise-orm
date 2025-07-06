@@ -373,15 +373,18 @@ class DatetimeField(Field[datetime.datetime], datetime.datetime):
             now = timezone.now()
             setattr(instance, self.model_field_name, now)
             return now  # type:ignore[return-value]
-        if value is not None:
-            if isinstance(value, datetime.datetime) and get_use_tz():
-                if timezone.is_naive(value):
-                    warnings.warn(
-                        f"DateTimeField {self.model_field_name} received a naive datetime ({value})"
-                        " while time zone support is active.",
-                        RuntimeWarning,
-                    )
-                    value = timezone.make_aware(value, "UTC")
+        if (
+            value is not None
+            and isinstance(value, datetime.datetime)
+            and get_use_tz()
+            and timezone.is_naive(value)
+        ):
+            warnings.warn(
+                f"DateTimeField {self.model_field_name} received a naive datetime ({value})"
+                " while time zone support is active.",
+                RuntimeWarning,
+            )
+            value = timezone.make_aware(value, "UTC")
         self.validate(value)
         return value
 
@@ -465,14 +468,13 @@ class TimeField(Field[datetime.time], datetime.time):
         if value is not None:
             if isinstance(value, datetime.timedelta):
                 return value
-            if get_use_tz():
-                if timezone.is_naive(value):
-                    warnings.warn(
-                        f"TimeField {self.model_field_name} received a naive time ({value})"
-                        " while time zone support is active.",
-                        RuntimeWarning,
-                    )
-                    value = value.replace(tzinfo=get_default_timezone())
+            if get_use_tz() and timezone.is_naive(value):
+                warnings.warn(
+                    f"TimeField {self.model_field_name} received a naive time ({value})"
+                    " while time zone support is active.",
+                    RuntimeWarning,
+                )
+                value = value.replace(tzinfo=get_default_timezone())
         self.validate(value)
         return value
 

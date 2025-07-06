@@ -1,15 +1,45 @@
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, cast
+
+from pypika_tortoise.enums import SqlTypes
+from pypika_tortoise.functions import Cast, Upper
+from pypika_tortoise.terms import (
+    Criterion,
+    Term,
+)
 
 from tortoise import Model
 from tortoise.backends.odbc.executor import ODBCExecutor
+from tortoise.filters import Like
 
 if TYPE_CHECKING:
     from .client import OracleClient  # pylint: disable=W0611
 
 
+def escape_backslash_except_wildcards(val: str) -> str:
+    # Replace \ with \\ if the backslash is not followed by % or _
+    return re.sub(r"\\(?![%_])", r"\\", val)
+
+
+def like(field: Term, value: str) -> Criterion:
+    return Like(
+        Cast(field, SqlTypes.VARCHAR),
+        field.wrap_constant(escape_backslash_except_wildcards(value)),
+    )
+
+
+def ilike(field: Term, value: str) -> Criterion:
+    return Like(
+        Upper(Cast(field, SqlTypes.VARCHAR)),
+        field.wrap_constant(Upper(escape_backslash_except_wildcards(value))),
+    )
+
+
 class OracleExecutor(ODBCExecutor):
+    FILTER_FUNC_OVERRIDE = {like: like, ilike: ilike}
+
     async def _process_insert_result(self, instance: Model, results: int) -> None:
         sql = "SELECT SEQUENCE_NAME FROM ALL_TAB_IDENTITY_COLS where TABLE_NAME = ? and OWNER = ?"
         db = cast("OracleClient", self.db)

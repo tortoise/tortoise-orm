@@ -131,10 +131,9 @@ class PsycopgClient(postgres_client.BasePostgresClient):
     @postgres_client.translate_exceptions
     async def execute_many(self, query: str, values: list) -> None:
         connection: psycopg.AsyncConnection
-        async with self.acquire_connection() as connection:
-            async with connection.cursor() as cursor:
-                self.log.debug("%s: %s", query, values)
-                await cursor.executemany(query, values)
+        async with self.acquire_connection() as connection, connection.cursor() as cursor:
+            self.log.debug("%s: %s", query, values)
+            await cursor.executemany(query, values)
 
     @postgres_client.translate_exceptions
     async def execute_query(

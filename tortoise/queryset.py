@@ -109,10 +109,7 @@ class AwaitableQuery(Generic[MODEL]):
         """
         if self._db:
             return self._db
-        if for_write:
-            db = router.db_for_write(self.model)
-        else:
-            db = router.db_for_read(self.model)
+        db = router.db_for_write(self.model) if for_write else router.db_for_read(self.model)
         return db or self.model._meta.db
 
     def _choose_db_if_not_chosen(self, for_write: bool = False) -> None:
@@ -705,8 +702,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         else:
             _fields = [
                 field
-                for field in self.model._meta.fields_map.keys()
-                if field in self.model._meta.fields_db_projection.keys()
+                for field in self.model._meta.fields_map
+                if field in self.model._meta.fields_db_projection
             ] + list(self._annotations.keys())
 
             fields_for_select = {field: field for field in _fields}
@@ -881,9 +878,10 @@ class QuerySet(AwaitableQuery[MODEL]):
             raise ValueError(
                 "ignore_conflicts and update_fields are mutually exclusive.",
             )
-        if not ignore_conflicts:
-            if (update_fields and not on_conflict) or (on_conflict and not update_fields):
-                raise ValueError("update_fields and on_conflict need set in same time.")
+        if not ignore_conflicts and (
+            (update_fields and not on_conflict) or (on_conflict and not update_fields)
+        ):
+            raise ValueError("update_fields and on_conflict need set in same time.")
         return BulkCreateQuery(
             db=self._db,
             model=self.model,
@@ -1016,7 +1014,7 @@ class QuerySet(AwaitableQuery[MODEL]):
                 raise FieldError(
                     f"Relation {first_level_field} for {self.model._meta.full_name} not found"
                 )
-            if first_level_field not in queryset._prefetch_map.keys():
+            if first_level_field not in queryset._prefetch_map:
                 queryset._prefetch_map[first_level_field] = set()
             if forwarded_prefetch:
                 queryset._prefetch_map[first_level_field].add(forwarded_prefetch)

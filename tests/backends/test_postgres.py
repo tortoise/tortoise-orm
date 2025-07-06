@@ -2,6 +2,7 @@
 Test some PostgreSQL-specific features
 """
 
+import contextlib
 import ssl
 
 from tests.testmodels import Tournament
@@ -82,10 +83,8 @@ class TestPostgreSQL(test.SimpleTestCase):
         ctx.verify_mode = ssl.CERT_NONE
 
         self.db_config["connections"]["models"]["credentials"]["ssl"] = ctx
-        try:
+        with contextlib.suppress(ConnectionError):
             await Tortoise.init(self.db_config, _create_db=True)
-        except ConnectionError:
-            pass
 
     async def test_application_name(self):
         self.db_config["connections"]["models"]["credentials"]["application_name"] = (

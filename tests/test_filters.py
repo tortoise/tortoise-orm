@@ -8,6 +8,8 @@ from tests.testmodels import (
     CharPkModel,
     DecimalFields,
 )
+from tortoise import connections
+from tortoise.backends.mysql.executor import escape_backslash_except_wildcards
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError
 from tortoise.fields.base import StrEnum
@@ -19,6 +21,23 @@ class MyEnum(str, Enum):
 
 class MyStrEnum(StrEnum):
     moo = "moo"
+
+
+def test_escape_backslash_except_wildcards():
+    values = ["\n", "\\_", "\\%", "\\_\\%", "\\__"]
+    assert [escape_backslash_except_wildcards(v) for v in values] == values
+    value = "\\n"
+    escaped = "\\" * 2 + "n"
+    assert escape_backslash_except_wildcards(value) == escaped
+    value = "\\\\n"
+    escaped = "\\" * 4 + "n"
+    assert escape_backslash_except_wildcards(value) == escaped
+    value = "_\\"
+    escaped = "_" + "\\" * 2
+    assert escape_backslash_except_wildcards(value) == escaped
+    value = "\\\\_"
+    escaped = "\\" * 2 + "\\_"
+    assert escape_backslash_except_wildcards(value) == escaped
 
 
 class TestCharFieldFilters(test.TestCase):
@@ -185,6 +204,182 @@ class TestCharFieldFilters(test.TestCase):
         self.assertEqual(
             await CharFields.all().order_by("char").values_list("char", flat=True),
             ["baa", "moo", "oink"],
+        )
+
+
+class TestCharFieldLikeFilters(test.TestCase):
+    model_cls = CharFields
+
+    async def asyncSetUp(self):
+        await super().asyncSetUp()
+        values1 = ["Like", "LIKE", "like", "lIke", "like1", "alike", "l*ke"]
+        values2 = ["L_ke", "l_ke", "l__e", "l%ke", "l%%e", "l\\ke", "L\\ke", "l\\\\e"]
+        values3 = ["L_%ke", "l_\\ke", "l\\_e", "l\\%e", "l%_ke", "l\\%e", "l\\_%_\\e"]
+        await self.model_cls.bulk_create(
+            [self.model_cls(char=i) for i in (*values1, *values2, *values3)]
+        )
+        self.db = connections.get("models")
+        dialect = self.db.schema_generator.DIALECT
+        if dialect == "sqlite":
+            await self.db.execute_script("PRAGMA case_sensitive_like=ON;")
+
+    async def test_like_percent(self):
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="like").values_list("char", flat=True)),
+            {"like"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="like%").values_list("char", flat=True)),
+            {"like", "like1"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="%like").values_list("char", flat=True)),
+            {"like", "alike"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="%like%").values_list("char", flat=True)),
+            {"like", "alike", "like1"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l%ke").values_list("char", flat=True)),
+            {"like", "lIke", "l*ke", "l_ke", "l%ke", "l\\ke", "l_\\ke", "l%_ke"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l%%ke").values_list("char", flat=True)),
+            {"like", "lIke", "l*ke", "l_ke", "l%ke", "l\\ke", "l_\\ke", "l%_ke"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l%ke%").values_list("char", flat=True)),
+            {"like", "lIke", "l*ke", "l_ke", "l%ke", "l\\ke", "l_\\ke", "l%_ke", "like1"},
+        )
+
+    async def test_like_underscore(self):
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="like_").values_list("char", flat=True)),
+            {"like1"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="_like").values_list("char", flat=True)),
+            {"alike"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="_like_").values_list("char", flat=True)),
+            set(),
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l_ke").values_list("char", flat=True)),
+            {
+                "like",
+                "lIke",
+                "l*ke",
+                "l_ke",
+                "l%ke",
+                "l\\ke",
+            },
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l__ke").values_list("char", flat=True)),
+            {"l_\\ke", "l%_ke"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l_ke_").values_list("char", flat=True)),
+            {"like1"},
+        )
+
+    async def test_like_backslash(self):
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l\\_\\ke").values_list("char", flat=True)),
+            {"l_\\ke"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l\\ke").values_list("char", flat=True)),
+            {"l\\ke"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l\\\\e").values_list("char", flat=True)),
+            {"l\\\\e"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l\\\\%e").values_list("char", flat=True)),
+            {"l\\%e"},
+        )
+        self.assertSetEqual(
+            set(
+                await CharFields.filter(char__like="l\\\\_\\%\\_\\e").values_list("char", flat=True)
+            ),
+            {"l\\_%_\\e"},
+        )
+
+    async def test_like_mix(self):
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l*ke").values_list("char", flat=True)),
+            {"l*ke"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="%like_").values_list("char", flat=True)),
+            {"like1"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="_like%").values_list("char", flat=True)),
+            {"alike"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="like_%").values_list("char", flat=True)),
+            {"like1"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l\\%").values_list("char", flat=True)),
+            set(),
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l_\\k%").values_list("char", flat=True)),
+            {"l_\\ke"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l%\\k_").values_list("char", flat=True)),
+            {"l\\ke", "l_\\ke"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l\\\\_%").values_list("char", flat=True)),
+            {"l\\_e", "l\\_%_\\e"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l\\\\__").values_list("char", flat=True)),
+            {"l\\_e"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="l\\\\_\\%%").values_list("char", flat=True)),
+            {"l\\_%_\\e"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="L\\_%").values_list("char", flat=True)),
+            {"L_%ke", "L_ke"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__like="L\\_\\%%").values_list("char", flat=True)),
+            {"L_%ke"},
+        )
+
+    async def test_ilike(self):
+        self.assertSetEqual(
+            set(await CharFields.filter(char__ilike="like").values_list("char", flat=True)),
+            {"like", "Like", "LIKE", "lIke"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__ilike="like%").values_list("char", flat=True)),
+            {"like", "like1", "Like", "LIKE", "lIke"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__ilike="l_ke").values_list("char", flat=True)),
+            {"LIKE", "Like", "like", "lIke", "l*ke", "l_ke", "l%ke", "l\\ke", "L\\ke", "L_ke"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__ilike="l\\ke").values_list("char", flat=True)),
+            {"l\\ke", "L\\ke"},
+        )
+        self.assertSetEqual(
+            set(await CharFields.filter(char__ilike="L\\_%").values_list("char", flat=True)),
+            {"L_%ke", "L_ke", "l_ke", "l_\\ke", "l__e"},
         )
 
 

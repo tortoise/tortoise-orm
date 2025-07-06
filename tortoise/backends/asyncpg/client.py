@@ -130,10 +130,7 @@ class AsyncpgDBClient(BasePostgresClient):
     async def execute_query(self, query: str, values: list | None = None) -> tuple[int, list[dict]]:
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
-            if values:
-                params = [query, *values]
-            else:
-                params = [query]
+            params = [query, *values] if values else [query]
             if query.startswith("UPDATE") or query.startswith("DELETE"):
                 res = await connection.execute(*params)
                 try:

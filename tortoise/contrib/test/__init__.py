@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import inspect
 import os as _os
 import sys
@@ -76,10 +77,8 @@ async def _init_db(config: dict) -> None:
     # Placing init outside the try block since it doesn't
     # establish connections to the DB eagerly.
     await Tortoise.init(config)
-    try:
+    with contextlib.suppress(DBConnectionError, OperationalError):  # pragma: nocoverage
         await Tortoise._drop_databases()
-    except (DBConnectionError, OperationalError):  # pragma: nocoverage
-        pass
 
     await Tortoise.init(config, _create_db=True)
     await Tortoise.generate_schemas(safe=False)

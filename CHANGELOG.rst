@@ -10,6 +10,13 @@ Changelog
 0.25
 ====
 
+0.25.2 (Unreleased)
+------
+
+Added
+^^^^^
+- Add `__like` and `__ilike` filters. (#421)
+
 0.25.1
 ------------------
 Changed

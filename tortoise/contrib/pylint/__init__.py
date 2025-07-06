@@ -4,6 +4,7 @@ Tortoise PyLint plugin
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Iterator
 from typing import TYPE_CHECKING, Any
 
@@ -131,10 +132,8 @@ def apply_type_shim(cls: ClassDef, _context: Any = None) -> Iterator[ClassDef]:
     base_nodes: list[ClassDef] = [cls]
 
     # Use the type inference standard
-    try:
+    with contextlib.suppress(AstroidError):
         base_nodes.extend(list(cls.getattr("field_type")[0].infer()))
-    except AstroidError:
-        pass
 
     return iter(base_nodes)
 

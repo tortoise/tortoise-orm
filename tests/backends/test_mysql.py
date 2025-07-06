@@ -2,6 +2,7 @@
 Test some mysql-specific features
 """
 
+import contextlib
 import ssl
 
 from tortoise import Tortoise
@@ -46,7 +47,5 @@ class TestMySQL(test.SimpleTestCase):
         ctx.verify_mode = ssl.CERT_NONE
 
         self.db_config["connections"]["models"]["credentials"]["ssl"] = ctx
-        try:
+        with contextlib.suppress(ConnectionError):
             await Tortoise.init(self.db_config, _create_db=True)
-        except ConnectionError:
-            pass

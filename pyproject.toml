@@ -138,36 +138,11 @@ show_error_context = true
 [[tool.mypy.overrides]]
 module = "tests.*"
 check_untyped_defs = false
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-warn_unreachable = false
 
 [[tool.mypy.overrides]]
 module = "examples.*"
 check_untyped_defs = false
 disallow_untyped_calls = false
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-
-[[tool.mypy.overrides]]
-module = "examples.fastapi.*"
-check_untyped_defs = true
-disallow_untyped_calls = true
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-
-[[tool.mypy.overrides]]
-module = "tortoise.contrib.test.*"
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-
-[[tool.mypy.overrides]]
-module = "tortoise.contrib.sanic.*"
-disallow_untyped_defs = false
-
-[[tool.mypy.overrides]]
-module = ["conftest", "tortoise.backends.base.client"]
-disallow_untyped_defs = false
 
 [tool.flake8]
 ignore = "E203,E501,W503,DAR101,DAR201,DAR402"
@@ -190,16 +165,27 @@ filterwarnings = [
 
 [tool.coverage.report]
 show_missing = true
+exclude_also = [
+    "if TYPE_CHECKING:"
+]
 
 [tool.ruff]
 line-length = 100
 [tool.ruff.lint]
 ignore = ["E501"]
 extend-select = [
+    "I",      # https://docs.astral.sh/ruff/rules/#isort-i
+    "SIM",    # https://docs.astral.sh/ruff/rules/#flake8-simplify-sim
     "FA",     # https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
     "UP",     # https://docs.astral.sh/ruff/rules/#pyupgrade-up
     "RUF100", # https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
 ]
+
+[tool.ruff.lint.isort]
+extra-standard-library = ["tomllib"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["SIM117"]
 
 [tool.bandit]
 exclude_dirs = ["tests", 'examples/*/_tests.py', "conftest.py"]

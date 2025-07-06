@@ -1,4 +1,5 @@
 import enum
+import re
 
 from pypika_tortoise import SqlContext, functions
 from pypika_tortoise.enums import SqlTypes
@@ -21,6 +22,7 @@ from tortoise.filters import (
     ValueWrapper,
     contains,
     ends_with,
+    ilike,
     insensitive_contains,
     insensitive_ends_with,
     insensitive_exact,
@@ -28,6 +30,7 @@ from tortoise.filters import (
     json_contained_by,
     json_contains,
     json_filter,
+    like,
     posix_regex,
     search,
     starts_with,
@@ -53,9 +56,35 @@ def escape_like(val: str) -> str:
     return val.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
+def escape_backslash_except_wildcards(val: str) -> str:
+    # Replace \ with \\\\ if the backslash is not followed by % or _
+    return re.sub(r"\\(?![%_])", "\\\\\\\\", val)
+
+
 def mysql_contains(field: Term, value: str) -> Criterion:
     return Like(
         functions.Cast(field, SqlTypes.CHAR), StrWrapper(f"%{escape_like(value)}%"), escape=""
+    )
+
+
+def mysql_like(field: Term, value: str) -> Criterion:
+    # For MySQL, when table was created with COLLATE of
+    # utf8_general_ci/utf8mb4_general_ci/utf8_unicode_ci,
+    # it is case insensitive;
+    # while COLLATE of utf8_bin/utf8mb4_bin is case sensitive.
+    # So we cast field as 'BINARY' to force case sensitive select.
+    return Like(
+        functions.Cast(field, SqlTypes.BINARY),
+        StrWrapper(escape_backslash_except_wildcards(value)),
+        escape="",
+    )
+
+
+def mysql_insensitive_like(field: Term, value: str) -> Criterion:
+    return Like(
+        functions.Upper(functions.Cast(field, SqlTypes.CHAR)),
+        functions.Upper(StrWrapper(escape_backslash_except_wildcards(value))),
+        escape="",
     )
 
 
@@ -112,6 +141,8 @@ def mysql_posix_regex(field: Term, value: str) -> BasicCriterion:
 class MySQLExecutor(BaseExecutor):
     FILTER_FUNC_OVERRIDE = {
         contains: mysql_contains,
+        like: mysql_like,
+        ilike: mysql_insensitive_like,
         starts_with: mysql_starts_with,
         ends_with: mysql_ends_with,
         insensitive_exact: mysql_insensitive_exact,

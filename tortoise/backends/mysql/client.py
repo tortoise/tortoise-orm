@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from collections.abc import Callable, Coroutine
 from functools import wraps
 from itertools import count
@@ -126,17 +127,14 @@ class MySQLClient(BaseDBAsyncClient):
             self._pool = await mysql.create_pool(password=self.password, **self._template)
 
             if isinstance(self._pool, mysql.Pool):
-                async with self.acquire_connection() as connection:
-                    async with connection.cursor() as cursor:
-                        if self.storage_engine:
-                            await cursor.execute(
-                                f"SET default_storage_engine='{self.storage_engine}';"
-                            )
-                            if self.storage_engine.lower() != "innodb":  # pragma: nobranch
-                                self.capabilities.__dict__["supports_transactions"] = False
-                        hours = timezone.now().utcoffset().seconds / 3600  # type: ignore
-                        tz = f"{int(hours):+d}:{int((hours % 1) * 60):02d}"
-                        await cursor.execute(f"SET time_zone='{tz}';")
+                async with self.acquire_connection() as connection, connection.cursor() as cursor:
+                    if self.storage_engine:
+                        await cursor.execute(f"SET default_storage_engine='{self.storage_engine}';")
+                        if self.storage_engine.lower() != "innodb":  # pragma: nobranch
+                            self.capabilities.__dict__["supports_transactions"] = False
+                    hours = timezone.now().utcoffset().seconds / 3600  # type: ignore
+                    tz = f"{int(hours):+d}:{int((hours % 1) * 60):02d}"
+                    await cursor.execute(f"SET time_zone='{tz}';")
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
         except errors.OperationalError:
             raise DBConnectionError(f"Can't connect to MySQL server: {self._template}")
@@ -164,10 +162,8 @@ class MySQLClient(BaseDBAsyncClient):
 
     async def db_delete(self) -> None:
         await self.create_connection(with_db=False)
-        try:
+        with contextlib.suppress(errors.DatabaseError):  # pragma: nocoverage
             await self.execute_script(f"DROP DATABASE {self.database}")
-        except errors.DatabaseError:  # pragma: nocoverage
-            pass
         await self.close()
 
     def acquire_connection(self) -> ConnectionWrapper | PoolConnectionWrapper:

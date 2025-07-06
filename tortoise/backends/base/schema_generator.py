@@ -371,21 +371,21 @@ class BaseSchemaGenerator:
         auto_now_add = getattr(field_object, "auto_now_add", False)
         auto_now = getattr(field_object, "auto_now", False)
         default = field_object.default
-        if default is not None or auto_now or auto_now_add:
-            if not callable(default) and not isinstance(
-                field_object, (UUIDField, TextField, JSONField)
-            ):
-                default = field_object.to_db_value(default, model)
-                try:
-                    return self._column_default_generator(
-                        table_name,
-                        column_name,
-                        self._escape_default_value(default),
-                        auto_now_add,
-                        auto_now,
-                    )
-                except NotImplementedError:
-                    pass
+        if (default is not None or auto_now or auto_now_add) and (
+            not callable(default)
+            and not isinstance(field_object, (UUIDField, TextField, JSONField))
+        ):
+            default = field_object.to_db_value(default, model)
+            try:
+                return self._column_default_generator(
+                    table_name,
+                    column_name,
+                    self._escape_default_value(default),
+                    auto_now_add,
+                    auto_now,
+                )
+            except NotImplementedError:
+                pass
         return ""
 
     def _get_table_sql(self, model: type[Model], safe: bool = True) -> dict:

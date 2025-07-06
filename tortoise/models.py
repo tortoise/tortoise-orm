@@ -569,19 +569,18 @@ class ModelMeta(type):
     def _parse_custom_pk(attrs: dict, pk_attr: str, name: str, is_abstract) -> tuple[dict, str]:
         custom_pk_present = False
         for key, value in attrs.items():
-            if isinstance(value, Field):
-                if value.pk:
-                    if custom_pk_present:
-                        raise ConfigurationError(
-                            f"Can't create model {name} with two primary keys,"
-                            " only single primary key is supported"
-                        )
-                    if value.generated and not value.allows_generated:
-                        raise ConfigurationError(
-                            f"Field '{key}' ({value.__class__.__name__}) can't be DB-generated"
-                        )
-                    custom_pk_present = True
-                    pk_attr = key
+            if isinstance(value, Field) and value.pk:
+                if custom_pk_present:
+                    raise ConfigurationError(
+                        f"Can't create model {name} with two primary keys,"
+                        " only single primary key is supported"
+                    )
+                if value.generated and not value.allows_generated:
+                    raise ConfigurationError(
+                        f"Field '{key}' ({value.__class__.__name__}) can't be DB-generated"
+                    )
+                custom_pk_present = True
+                pk_attr = key
 
         if not custom_pk_present and not is_abstract:
             if "id" not in attrs:
@@ -1084,10 +1083,7 @@ class Model(metaclass=ModelMeta):
         :param for_write: Whether this query for write.
         :return: BaseDBAsyncClient:
         """
-        if for_write:
-            db = router.db_for_write(cls)
-        else:
-            db = router.db_for_read(cls)
+        db = router.db_for_write(cls) if for_write else router.db_for_read(cls)
         return db or cls._meta.db
 
     @classmethod

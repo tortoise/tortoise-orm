@@ -2,6 +2,8 @@
 This example demonstrates how you can use transactions with tortoise
 """
 
+import contextlib
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.exceptions import OperationalError
 from tortoise.models import Model
@@ -43,10 +45,8 @@ async def run():
         print(saved_event.name)
         raise OperationalError()
 
-    try:
+    with contextlib.suppress(OperationalError):
         await bound_to_fall()
-    except OperationalError:
-        pass
     saved_event = await Event.filter(name="Updated name").first()
     print(saved_event)
 

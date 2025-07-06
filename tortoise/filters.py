@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import operator
+import re
 from collections.abc import Callable, Iterable, Sequence
 from functools import partial
 from typing import TYPE_CHECKING, Any, TypedDict
@@ -46,6 +47,11 @@ class Like(BasicCriterion):
 
 def escape_like(val: str) -> str:
     return val.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def escape_backslash_except_wildcards(val: str) -> str:
+    # Replace \ with \\ if the backslash is not followed by % or _
+    return re.sub(r"\\(?![%_])", r"\\\\", val)
 
 
 ##############################################################################
@@ -139,6 +145,19 @@ def not_null(field: Term, value: Any) -> Criterion:
 
 def contains(field: Term, value: str) -> Criterion:
     return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"%{escape_like(value)}%"))
+
+
+def like(field: Term, value: str) -> Criterion:
+    return Like(
+        Cast(field, SqlTypes.VARCHAR), field.wrap_constant(escape_backslash_except_wildcards(value))
+    )
+
+
+def ilike(field: Term, value: str) -> Criterion:
+    return Like(
+        Upper(Cast(field, SqlTypes.VARCHAR)),
+        field.wrap_constant(Upper(escape_backslash_except_wildcards(value))),
+    )
 
 
 def search(field: Term, value: str) -> Any:
@@ -524,6 +543,18 @@ def get_filters_for_field(
             "source_field": source_field,
             "operator": between_and,
             "value_encoder": list_encoder,
+        },
+        f"{field_name}__like": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": like,
+            "value_encoder": string_encoder,
+        },
+        f"{field_name}__ilike": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": ilike,
+            "value_encoder": string_encoder,
         },
         f"{field_name}__contains": {
             "field": actual_field_name,

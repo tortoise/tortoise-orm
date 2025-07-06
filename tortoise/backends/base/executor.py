@@ -149,7 +149,7 @@ class BaseExecutor:
         self, include_generated: bool = False
     ) -> tuple[list[str], list[str]]:
         regular_columns = []
-        for column in self.model._meta.fields_db_projection.keys():
+        for column in self.model._meta.fields_db_projection:
             field_object = self.model._meta.fields_map[column]
             if include_generated or not field_object.generated:
                 regular_columns.append(column)
@@ -250,7 +250,7 @@ class BaseExecutor:
             db_column = self.model._meta.fields_db_projection[field]
             field_object = self.model._meta.fields_map[field]
             if not field_object.pk:
-                if field not in expressions.keys():
+                if field not in expressions:
                     query = query.set(db_column, self.parameter(parameter_idx))
                     parameter_idx += 1
                 else:
@@ -572,7 +572,7 @@ class BaseExecutor:
                     f"relation {first_level_field} for {self.model._meta.db_table} not found"
                 )
 
-            if first_level_field not in self.prefetch_map.keys():
+            if first_level_field not in self.prefetch_map:
                 self.prefetch_map[first_level_field] = set()
 
             if forwarded_prefetch:
