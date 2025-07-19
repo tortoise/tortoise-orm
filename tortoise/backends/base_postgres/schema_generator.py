@@ -13,10 +13,10 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 class BasePostgresSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "postgres"
-    INDEX_CREATE_TEMPLATE = (
-        'CREATE INDEX {exists}"{index_name}" ON "{table_name}" {index_type}({fields}){extra};'
+    INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON {table_name} {index_type}({fields}){extra};'
+    UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace(
+        "INDEX", "UNIQUE INDEX"
     )
-    UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace("INDEX", "UNIQUE INDEX")
     TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE \"{table}\" IS '{comment}';"
     COLUMN_COMMENT_TEMPLATE = 'COMMENT ON COLUMN "{table}"."{column}" IS \'{comment}\';'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}'
@@ -70,6 +70,20 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
             return default
         return encoders.get(type(default))(default)  # type: ignore
 
+    def _get_create_schema_sql(self, schema: str, safe: bool = True) -> str:
+        """Generate CREATE SCHEMA SQL for PostgreSQL."""
+        if safe:
+            return f'CREATE SCHEMA IF NOT EXISTS "{schema}";'
+        return f'CREATE SCHEMA "{schema}";'
+
+    def _get_schemas_to_create(self) -> set[str]:
+        """Get all unique schemas that need to be created."""
+        schemas = set()
+        for model in self._get_models_to_create():
+            if model._meta.schema:
+                schemas.add(model._meta.schema)
+        return schemas
+
     def _get_index_sql(
         self,
         model: type[Model],
@@ -83,5 +97,31 @@ class BasePostgresSchemaGenerator(BaseSchemaGenerator):
             index_type = f"USING {index_type}"
 
         return super()._get_index_sql(
-            model, field_names, safe, index_name=index_name, index_type=index_type, extra=extra
+            model,
+            field_names,
+            safe,
+            index_name=index_name,
+            index_type=index_type,
+            extra=extra,
         )
+
+    def get_create_schema_sql(self, safe: bool = True) -> str:
+        """Generate complete schema creation SQL including schemas and tables."""
+        # Get all schemas that need to be created
+        schemas_to_create = self._get_schemas_to_create()
+
+        # Generate CREATE SCHEMA statements
+        schema_creation_sqls = []
+        for schema in schemas_to_create:
+            schema_creation_sqls.append(self._get_create_schema_sql(schema, safe))
+
+        # Generate table creation SQL (from parent class)
+        table_creation_sql = super().get_create_schema_sql(safe)
+
+        # Combine schema and table creation
+        all_sqls = (
+            schema_creation_sqls + [table_creation_sql]
+            if table_creation_sql
+            else schema_creation_sqls
+        )
+        return "\n".join(all_sqls)
