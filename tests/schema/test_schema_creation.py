@@ -19,10 +19,10 @@ class TestPostgresSchemaCreation(test.TestCase):
 
         mock_client = MockClient()
         generator = BasePostgresSchemaGenerator(mock_client)
-        
+
         # Test schema creation SQL generation
         schema_sql = generator._get_create_schema_sql("pgdev", safe=True)
         self.assertEqual(schema_sql, 'CREATE SCHEMA IF NOT EXISTS "pgdev";')
-        
+
         schema_sql_unsafe = generator._get_create_schema_sql("pgdev", safe=False)
         self.assertEqual(schema_sql_unsafe, 'CREATE SCHEMA "pgdev";')
