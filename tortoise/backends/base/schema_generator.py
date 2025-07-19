@@ -28,7 +28,9 @@ class BaseSchemaGenerator:
         "CREATE TABLE {exists}{table_name} ({fields}){extra}{comment};"
     )
     FIELD_TEMPLATE = '"{name}" {type}{nullable}{unique}{primary}{default}{comment}'
-    INDEX_CREATE_TEMPLATE = 'CREATE {index_type}INDEX {exists}"{index_name}" ON {table_name} ({fields}){extra};'
+    INDEX_CREATE_TEMPLATE = (
+        'CREATE {index_type}INDEX {exists}"{index_name}" ON {table_name} ({fields}){extra};'
+    )
     UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace(
         "INDEX", "UNIQUE INDEX"
     )
@@ -180,7 +182,8 @@ class BaseSchemaGenerator:
     def _get_fk_name(
         self, from_table: str, from_field: str, to_table: str, to_field: str
     ) -> str:
-        # NOTE: for compatibility, index name should not be longer than 30 characters (Oracle limit).
+        # NOTE: for compatibility, index name should not be longer than 30 characters
+        # (Oracle limit).
         # That's why we slice some of the strings here.
         hashed = self._make_hash(from_table, from_field, to_table, to_field, length=8)
         return f"fk_{from_table[:8]}_{to_table[:8]}_{hashed}"

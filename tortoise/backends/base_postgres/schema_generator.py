@@ -13,7 +13,9 @@ if TYPE_CHECKING:  # pragma: nocoverage
 
 class BasePostgresSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "postgres"
-    INDEX_CREATE_TEMPLATE = 'CREATE INDEX {exists}"{index_name}" ON {table_name} {index_type}({fields}){extra};'
+    INDEX_CREATE_TEMPLATE = (
+        'CREATE INDEX {exists}"{index_name}" ON {table_name} {index_type}({fields}){extra};'
+    )
     UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace(
         "INDEX", "UNIQUE INDEX"
     )
