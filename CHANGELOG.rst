@@ -21,6 +21,10 @@ Added
 - Add `no_key` parameter to `queryset.select_for_update`.
 - `F()` supports referencing JSONField attributes, e.g. `F("json_field__custom_field__nested_id")` (#1960)
 
+Fixed
+^^^^^
+- Fix PostgreSQL schema creation for non-default schemas - automatically create schemas if they don't exist (#1671)
+
 0.25.0
 ------
 Fixed
