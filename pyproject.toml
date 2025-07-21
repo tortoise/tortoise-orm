@@ -30,9 +30,9 @@ psycopg = ["psycopg[pool,binary] (>=3.0.12,<4.0.0)"]
 asyncodbc = ["asyncodbc (>=0.1.1,<1.0.0); python_version < '4.0'"]
 
 [project.urls]
+documentation = "https://tortoise.github.io"
 homepage = "https://github.com/tortoise/tortoise-orm"
 repository = "https://github.com/tortoise/tortoise-orm.git"
-documentation = "https://tortoise-orm.readthedocs.io"
 
 [tool.poetry]
 requires-poetry = ">=2.0"

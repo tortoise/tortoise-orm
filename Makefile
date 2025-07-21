@@ -29,14 +29,18 @@ deps:
 deps_with_asyncmy:
 	@poetry install --all-groups -E asyncpg -E accel -E psycopg -E asyncodbc -E asyncmy
 
+typehints: build _typehints
+_typehints:
+	mypy $(checkfiles)
+	bandit -r $(checkfiles)make
+	twine check dist/*
+
 check: build _check
 _check:
 	ruff format --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 	ruff check $(checkfiles)
-	mypy $(checkfiles)
 	#pylint -d C,W,R $(checkfiles)
-	#bandit -r $(checkfiles)make
-	twine check dist/*
+	$(MAKE) _typehints
 
 style: deps _style
 _style:
@@ -46,9 +50,7 @@ _style:
 lint: build _lint
 _lint:
 	$(MAKE) _style
-	mypy $(checkfiles)
-	bandit -c pyproject.toml -r $(checkfiles)
-	twine check dist/*
+	$(MAKE) _typehints
 
 test: deps
 	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: pytest $(pytest_opts)
@@ -89,7 +91,7 @@ _testall: test_sqlite test_postgres_asyncpg test_postgres_psycopg test_mysql_myi
 
 testall: deps _testall
 
-ci: build _check _testall
+ci: check _testall
 
 docs: deps
 	rm -fR ./build
@@ -99,5 +101,5 @@ build: deps
 	rm -fR dist/
 	poetry build
 
-publish: deps build
+publish: deps _build
 	twine upload dist/*
