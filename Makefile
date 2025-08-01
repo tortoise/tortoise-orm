@@ -34,7 +34,7 @@ _check:
 	ruff format --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
 	ruff check $(checkfiles)
 	#pylint -d C,W,R $(checkfiles)
-	$(MAKE) _typehints
+	$(MAKE) _codeqc
 
 style: deps _style
 _style:
@@ -44,10 +44,10 @@ _style:
 lint: build _lint
 _lint:
 	$(MAKE) _style
-	$(MAKE) _typehints
+	$(MAKE) _codeqc
 
-typehints: build _typehints
-_typehints:
+codeqc: build _typehints
+_codeqc:
 	mypy $(checkfiles)
 	bandit -c pyproject.toml -r $(checkfiles)
 	twine check dist/*
