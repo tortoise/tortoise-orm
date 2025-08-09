@@ -124,3 +124,42 @@ class TestConnectionParams(test.SimpleTestCase):
                 )
         except ImportError:
             self.skipTest("psycopg not installed")
+
+    async def test_dameng_connection_params(self):
+        with patch(
+            "tortoise.backends.dameng.client.dmPython.connect", new=AsyncMock()
+        ) as dm_connect:
+            await connections._init(
+                {
+                    "models": {
+                        "engine": "tortoise.backends.dameng",
+                        "credentials": {
+                            "database": "DAMENG",
+                            "host": "127.0.0.1",
+                            "password": "SYSDBA",
+                            "port": 5236,
+                            "user": "SYSDBA",
+                            "charset": "utf8",
+                        },
+                    }
+                },
+                False,
+            )
+            
+            # Mock the pool creation
+            with patch("tortoise.backends.dameng.pool.DmConnectionPool") as pool_mock:
+                pool_instance = AsyncMock()
+                pool_mock.return_value = pool_instance
+                
+                await connections.get("models").create_connection(with_db=True)
+                
+                pool_mock.assert_called_once_with(
+                    host="127.0.0.1",
+                    port=5236,
+                    user="SYSDBA",
+                    password="SYSDBA",
+                    database="DAMENG",
+                    charset="utf8",
+                    minsize=1,
+                    maxsize=5,
+                )

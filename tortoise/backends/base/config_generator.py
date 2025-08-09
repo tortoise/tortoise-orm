@@ -15,6 +15,7 @@ urlparse.uses_netloc.append("sqlite")
 urlparse.uses_netloc.append("mysql")
 urlparse.uses_netloc.append("oracle")
 urlparse.uses_netloc.append("mssql")
+urlparse.uses_netloc.append("dm")
 DB_LOOKUP: dict[str, dict[str, Any]] = {
     "psycopg": {
         "engine": "tortoise.backends.psycopg",
@@ -122,6 +123,24 @@ DB_LOOKUP: dict[str, dict[str, Any]] = {
             "maxsize": int,
             "echo": bool,
             "pool_recycle": int,
+        },
+    },
+    "dm": {
+        "engine": "tortoise.backends.dameng",
+        "vmap": {
+            "path": "database",
+            "hostname": "host",
+            "port": "port",
+            "username": "user",
+            "password": "password",
+        },
+        "defaults": {"port": 5236, "charset": "utf8"},
+        "cast": {
+            "pool_min_size": int,
+            "pool_max_size": int,
+            "pool_max_idle_time": int,
+            "pool_acquire_timeout": int,
+            "connect_timeout": int,
         },
     },
 }

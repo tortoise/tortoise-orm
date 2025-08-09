@@ -5,7 +5,7 @@ description = "Easy async ORM for python, built with relations in mind"
 authors = [{name="Andrey Bondar", email="andrey@bondar.ru"}, {name="Nickolas Grigoriadis", email="nagrigoriadis@gmail.com"}, {name="long2ice", email="long2ice@gmail.com"}]
 license = {text="Apache-2.0"}
 readme = "README.rst"
-keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio", "psycopg"]
+keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio", "psycopg", "dameng", "dmpython"]
 include = ["CHANGELOG.rst", "LICENSE", "README.rst"]
 # classifieres is dynamic because poetry will create Python classifiers automatically with value in `tool.poetry` section
 dynamic = [ "classifiers" ]
@@ -15,6 +15,8 @@ dependencies = [
     "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
     "aiosqlite (>=0.16.0,<1.0.0)",
     "pytz",
+    "dmpython>=2.5.22",
+    "pydantic>=2.11.7",
 ]
 
 [project.optional-dependencies]
@@ -28,6 +30,7 @@ aiomysql = ["aiomysql"]
 asyncmy = ["asyncmy (>=0.2.8,<1.0.0); python_version < '4.0'"]
 psycopg = ["psycopg[pool,binary] (>=3.0.12,<4.0.0)"]
 asyncodbc = ["asyncodbc (>=0.1.1,<1.0.0); python_version < '4.0'"]
+dameng = ["dmPython (>=2.5.22,<3.0.0)"]
 
 [project.urls]
 documentation = "https://tortoise.github.io"
@@ -112,6 +115,14 @@ docutils = "*"
 [build-system]
 requires = ["poetry-core>=2.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pypika>=0.48.9",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "pytest-cov>=6.2.1",
+]
 
 [tool.mypy]
 pretty = true

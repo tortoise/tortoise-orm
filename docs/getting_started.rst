@@ -28,6 +28,8 @@ The following table shows the available installation options for different datab
      - ``pip install "tortoise-orm[asyncodbc]"``
    * - Oracle
      - ``pip install "tortoise-orm[asyncodbc]"``
+   * - Dameng
+     - ``pip install "tortoise-orm[dameng]"``
 
 
 Optional Dependencies
