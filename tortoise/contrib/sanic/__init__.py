@@ -1,21 +1,49 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from types import ModuleType
+from typing import Dict, Optional, Union
 
-from sanic import Sanic  # pylint: disable=E0401
+from sanic import Sanic, Request, HTTPResponse  # pylint: disable=E0401
+from sanic.response import json
 
 from tortoise import Tortoise, connections
+from tortoise.exceptions import DoesNotExist, IntegrityError
 from tortoise.log import logger
+
+
+def tortoise_exception_handlers() -> Dict[type[Exception], Callable]:
+    """Create exception handlers for Tortoise ORM exceptions.
+    
+    Returns:
+        Dictionary mapping exception types to handler functions
+    """
+    async def doesnotexist_exception_handler(request: Request, exc: DoesNotExist) -> HTTPResponse:
+        return json({"detail": str(exc)}, status=404)
+    
+    async def integrityerror_exception_handler(request: Request, exc: IntegrityError) -> HTTPResponse:
+        return json(
+            {"detail": [{"loc": [], "msg": str(exc), "type": "IntegrityError"}]}, 
+            status=422
+        )
+    
+    return {
+        DoesNotExist: doesnotexist_exception_handler,
+        IntegrityError: integrityerror_exception_handler,
+    }
 
 
 def register_tortoise(
     app: Sanic,
-    config: dict | None = None,
-    config_file: str | None = None,
-    db_url: str | None = None,
-    modules: dict[str, Iterable[str | ModuleType]] | None = None,
+    config: Optional[Dict] = None,
+    config_file: Optional[str] = None,
+    db_url: Optional[str] = None,
+    modules: Optional[Dict[str, Iterable[Union[str, ModuleType]]]] = None,
     generate_schemas: bool = False,
+    add_exception_handlers: bool = False,
+    use_tz: bool = False,
+    timezone: str = "UTC",
+    _create_db: bool = False,
 ) -> None:
     """
     Registers ``before_server_start`` and ``after_server_stop`` hooks to set-up and tear-down
@@ -72,6 +100,15 @@ def register_tortoise(
     generate_schemas:
         True to generate schema immediately. Only useful for dev environments
         or SQLite ``:memory:`` databases
+    add_exception_handlers:
+        True to add some automatic exception handlers for ``DoesNotExist`` & ``IntegrityError``.
+        This is not recommended for production systems as it may leak data.
+    use_tz:
+        A boolean that specifies if datetime will be timezone-aware by default or not.
+    timezone:
+        Timezone to use, default is UTC.
+    _create_db:
+        If True, tries to create database automatically.
 
     Raises
     ------
@@ -80,7 +117,15 @@ def register_tortoise(
     """
 
     async def tortoise_init() -> None:
-        await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
+        await Tortoise.init(
+            config=config, 
+            config_file=config_file, 
+            db_url=db_url, 
+            modules=modules,
+            use_tz=use_tz,
+            timezone=timezone,
+            _create_db=_create_db,
+        )
         logger.info("Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps)  # pylint: disable=W0212
 
     if generate_schemas:
@@ -102,3 +147,7 @@ def register_tortoise(
     async def close_orm(app):  # pylint: disable=W0612
         await connections.close_all()
         logger.info("Tortoise-ORM shutdown")
+    
+    if add_exception_handlers:
+        for exc_type, handler in tortoise_exception_handlers().items():
+            app.error_handler.add(exc_type, handler)

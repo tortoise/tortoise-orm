@@ -38,6 +38,7 @@ Here we have all the features that is slightly further out, in no particular ord
 * Extra DB support
     * CockroachDB
     * Firebird
+    * [done] Dameng
 
 * Enhanced test support
     * ``hypothesis`` strategy builder

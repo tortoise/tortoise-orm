@@ -10,6 +10,7 @@ Tortoise currently supports the following databases:
 * PostgreSQL >= 9.4 (using ``asyncpg`` or ``psycopg``)
 * MySQL/MariaDB (using ``asyncmy`` or ``aiomysql``)
 * Microsoft SQL Server (using ``asyncodbc``)
+* Dameng (using ``dameng``)
 
 To use, please ensure that corresponding asyncio driver is installed.
 
@@ -47,6 +48,8 @@ The supported ``DB_TYPE``:
     Typically in the form of :samp:`mysql://myuser:mypass@db.host:3306/somedb`
 ``mssql``:
     Typically in the form of :samp:`mssql://myuser:mypass@db.host:1433/somedb?driver=the odbc driver`
+``dm``:
+    Typically in the form of :samp:`dm://SYSDBA:password@db.host:5236/somedb`
 
 Capabilities
 ============
@@ -211,6 +214,55 @@ Encoding in Oracle:
 ============
 
 If you get ``???`` values in Varchar fields instead of your actual text (russian/chinese/etc), then set ``NLS_LANG`` variable in your client environment to support UTF8. For example, `"American_America.UTF8"`.
+
+
+Dameng
+======
+
+Dameng is a Chinese enterprise database system. Tortoise ORM provides native support for Dameng through the ``dameng`` driver.
+
+DB URL is typically in the form of :samp:`dm://SYSDBA:password@db.host:5236/somedb`
+
+Required Parameters
+-------------------
+
+``user``:
+    Username to connect with (default is ``SYSDBA``).
+``password``:
+    Password for username.
+``host``:
+    Network host that database is available at.
+``port``:
+    Network port that database is available at. (defaults to ``5236``)
+``database``:
+    Database to use.
+
+Optional parameters:
+--------------------
+
+``charset`` (defaults to ``utf8``):
+    Character set to use.
+``connect_timeout`` (defaults to ``10``):
+    Connection timeout in seconds.
+``pool_min_size`` (defaults to ``1``):
+    Minimum connection pool size.
+``pool_max_size`` (defaults to ``10``):
+    Maximum connection pool size.
+``pool_max_idle_time`` (defaults to ``300``):
+    Maximum idle time for connections in seconds.
+``pool_acquire_timeout`` (defaults to ``30``):
+    Timeout for acquiring a connection from the pool in seconds.
+
+Connection Pool Features:
+------------------------
+
+The Dameng backend includes an enterprise-grade connection pool with:
+
+* Automatic connection health checks
+* Connection reuse and recycling
+* Idle timeout management
+* Automatic recovery from connection failures
+* Thread-safe operations using ThreadPoolExecutor
 
 
 Passing in custom SSL Certificates
