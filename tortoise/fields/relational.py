@@ -127,6 +127,38 @@ class ReverseRelation(Generic[MODEL]):
         """
         return self._query.offset(offset)
 
+    async def create(self, using_db: BaseDBAsyncClient | None = None, **kwargs: Any) -> MODEL:
+        """
+        Create a related record in the DB and returns the object, automatically setting the
+        foreign key relationship to the parent instance.
+
+        .. code-block:: python3
+
+            tournament = await Tournament.create(name="...")
+            event = await tournament.events.create(...)
+
+        Equivalent to:
+
+        .. code-block:: python3
+
+            tournament = await Tournament.create(name="...")
+            event = await Event.create(tournament=tournament, ...)
+
+        :param using_db: Specific DB connection to use instead of default bound.
+        :param kwargs: Model parameters for the new object.
+        :raises OperationalError: If parent instance is not saved to the database.
+        """
+        if not self.instance._saved_in_db:
+            raise OperationalError(
+                "This objects hasn't been instanced, call .save() before calling related queries"
+            )
+
+        # Inject foreign key relationship automatically
+        kwargs[self.relation_field] = getattr(self.instance, self.from_field)
+
+        # Call remote model's create method
+        return await self.remote_model.create(using_db=using_db, **kwargs)
+
     def _set_result_for_query(self, sequence: list[MODEL], attr: str | None = None) -> None:
         self._fetched = True
         self.related_objects = sequence

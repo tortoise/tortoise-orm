@@ -18,7 +18,7 @@ from tests.testmodels import (
 )
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotIn
-from tortoise.exceptions import FieldError, NoValuesFetched
+from tortoise.exceptions import FieldError, NoValuesFetched, OperationalError
 from tortoise.functions import Count, Trim
 
 
@@ -479,3 +479,25 @@ class TestDoubleFK(test.TestCase):
         self.assertEqual(await obj.nodes.all(), [])
         await obj.nodes.add(node)
         self.assertEqual(await obj.nodes.all(), [node])
+
+    async def test_reverse_relation_create_fk(self):
+        tournament = await Tournament.create(name="Test Tournament")
+        self.assertEqual(await tournament.events.all(), [])
+
+        event = await tournament.events.create(name="Test Event")
+
+        await tournament.fetch_related("events")
+
+        self.assertEqual(len(tournament.events), 1)
+        self.assertEqual(event.name, "Test Event")
+        self.assertEqual(event.tournament_id, tournament.id)
+        self.assertEqual(tournament.events[0].event_id, event.event_id)
+
+    async def test_reverse_relation_create_fk_errors_for_unsaved_instance(self):
+        tournament = Tournament(name="Unsaved Tournament")
+
+        # Should raise OperationalError since tournament isn't saved
+        with self.assertRaises(OperationalError) as cm:
+            await tournament.events.create(name="Test Event")
+
+        self.assertIn("hasn't been instanced", str(cm.exception))

@@ -7,6 +7,15 @@ Changelog
 
 .. rst-class:: emphasize-children
 
+0.26
+====
+
+0.26.0 (unreleased)
+------------------- 
+Added
+^^^^^
+- Add `create()` method to reverse ForeignKey relations, enabling `parent.children.create()` syntax
+
 0.25
 ====
 
