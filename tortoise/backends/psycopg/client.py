@@ -134,7 +134,7 @@ class PsycopgClient(postgres_client.BasePostgresClient):
         connection: psycopg.AsyncConnection
         async with self.acquire_connection() as connection:
             async with connection.cursor() as cursor:
-                self.log.debug("%s: %s", query, values)
+                self.log.debug("%s", query)
                 await cursor.executemany(query, values)
 
     @postgres_client.translate_exceptions
@@ -148,7 +148,7 @@ class PsycopgClient(postgres_client.BasePostgresClient):
         async with self.acquire_connection() as connection:
             cursor: psycopg.AsyncCursor | psycopg.AsyncServerCursor
             async with connection.cursor(row_factory=row_factory) as cursor:
-                self.log.debug("%s: %s", query, values)
+                self.log.debug("%s", query)
                 await cursor.execute(query, values)
 
                 rowcount = int(cursor.rowcount or cursor.rownumber or 0)

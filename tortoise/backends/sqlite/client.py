@@ -127,13 +127,13 @@ class SqliteClient(BaseDBAsyncClient):
     @translate_exceptions
     async def execute_insert(self, query: str, values: list) -> int:
         async with self.acquire_connection() as connection:
-            self.log.debug("%s: %s", query, values)
+            self.log.debug("%s", query)
             return (await connection.execute_insert(query, values))[0]
 
     @translate_exceptions
     async def execute_many(self, query: str, values: list[list]) -> None:
         async with self.acquire_connection() as connection:
-            self.log.debug("%s: %s", query, values)
+            self.log.debug("%s", query)
             # This code is only ever called in AUTOCOMMIT mode
             await connection.execute("BEGIN")
             try:
@@ -150,7 +150,7 @@ class SqliteClient(BaseDBAsyncClient):
     ) -> tuple[int, Sequence[dict]]:
         query = query.replace("\x00", "'||CHAR(0)||'")
         async with self.acquire_connection() as connection:
-            self.log.debug("%s: %s", query, values)
+            self.log.debug("%s", query)
             start = connection.total_changes
             rows = await connection.execute_fetchall(query, values)
             return (connection.total_changes - start) or len(rows), rows
@@ -159,7 +159,7 @@ class SqliteClient(BaseDBAsyncClient):
     async def execute_query_dict(self, query: str, values: list | None = None) -> list[dict]:
         query = query.replace("\x00", "'||CHAR(0)||'")
         async with self.acquire_connection() as connection:
-            self.log.debug("%s: %s", query, values)
+            self.log.debug("%s", query)
             return list(map(dict, await connection.execute_fetchall(query, values)))
 
     @translate_exceptions
@@ -229,7 +229,7 @@ class SqliteTransactionWrapper(SqliteClient, TransactionalDBClient):
     @translate_exceptions
     async def execute_many(self, query: str, values: list[list]) -> None:
         async with self.acquire_connection() as connection:
-            self.log.debug("%s: %s", query, values)
+            self.log.debug("%s", query)
             # Already within transaction, so ideal for performance
             await connection.executemany(query, values)
 
