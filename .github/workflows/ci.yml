@@ -78,7 +78,9 @@ jobs:
           PYTHONDEVMODE: 1
           PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
       - name: Upload Coverage
-        run: uvx coveralls --service=github
+        run: |
+          pip3 install --upgrade coveralls
+          coveralls --service=github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
