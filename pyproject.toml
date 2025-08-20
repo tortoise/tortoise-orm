@@ -5,7 +5,6 @@ authors = [{name="Andrey Bondar", email="andrey@bondar.ru"}, {name="Nickolas Gri
 license = {text="Apache-2.0"}
 readme = "README.rst"
 keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio", "psycopg"]
-include = ["CHANGELOG.rst", "LICENSE", "README.rst"]
 dynamic = [ "version" ]
 requires-python = ">=3.9"
 dependencies = [
@@ -116,6 +115,10 @@ build-backend = "pdm.backend"
 
 [tool.pdm]
 version = {source="file", path="tortoise/__init__.py"}
+
+[tool.pdm.build]
+excludes = ["./**/.git", "./**/.*_cache"]
+include = ["CHANGELOG.rst", "LICENSE", "README.rst"]
 
 [tool.mypy]
 pretty = true

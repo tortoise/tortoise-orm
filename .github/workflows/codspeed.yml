@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          # 3.12 is the minimum reqquired version for profiling enabled
+          # 3.12 is the minimum required version for profiling enabled
           python-version: "3.12"
 
       - uses: astral-sh/setup-uv@v6
