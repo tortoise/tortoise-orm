@@ -419,3 +419,113 @@ class TestConfigGenerator(test.SimpleTestCase):
                 },
             },
         )
+
+    def test_dameng_basic(self):
+        res = expand_db_url("dm://SYSDBA:SYSDBA@127.0.0.1:5236/DAMENG")
+        self.assertEqual(
+            res,
+            {
+                "engine": "tortoise.backends.dameng",
+                "credentials": {
+                    "database": "DAMENG",
+                    "host": "127.0.0.1",
+                    "password": "SYSDBA",
+                    "port": 5236,
+                    "user": "SYSDBA",
+                    "charset": "utf8",
+                },
+            },
+        )
+
+    def test_dameng_encoded_password(self):
+        res = expand_db_url("dm://SYSDBA:kx%25jj5%2Fg@127.0.0.1:5236/DAMENG")
+        self.assertEqual(
+            res,
+            {
+                "engine": "tortoise.backends.dameng",
+                "credentials": {
+                    "database": "DAMENG",
+                    "host": "127.0.0.1",
+                    "password": "kx%jj5/g",
+                    "port": 5236,
+                    "user": "SYSDBA",
+                    "charset": "utf8",
+                },
+            },
+        )
+
+    def test_dameng_no_db(self):
+        res = expand_db_url("dm://SYSDBA:SYSDBA@127.0.0.1:5236")
+        self.assertEqual(
+            res,
+            {
+                "engine": "tortoise.backends.dameng",
+                "credentials": {
+                    "database": None,
+                    "host": "127.0.0.1",
+                    "password": "SYSDBA",
+                    "port": 5236,
+                    "user": "SYSDBA",
+                    "charset": "utf8",
+                },
+            },
+        )
+
+    def test_dameng_no_port(self):
+        res = expand_db_url("dm://SYSDBA:SYSDBA@127.0.0.1/DAMENG")
+        self.assertEqual(
+            res,
+            {
+                "engine": "tortoise.backends.dameng",
+                "credentials": {
+                    "database": "DAMENG",
+                    "host": "127.0.0.1",
+                    "password": "SYSDBA",
+                    "port": 5236,
+                    "user": "SYSDBA",
+                    "charset": "utf8",
+                },
+            },
+        )
+
+    def test_dameng_nonint_port(self):
+        with self.assertRaises(ConfigurationError):
+            expand_db_url("dm://SYSDBA:SYSDBA@127.0.0.1:moo/DAMENG")
+
+    def test_dameng_testing(self):
+        res = expand_db_url(r"dm://SYSDBA:SYSDBA@127.0.0.1:5236/test_\{\}", testing=True)
+        database = res["credentials"]["database"]
+        self.assertIn("test_", database)
+        self.assertNotEqual("test_{}", database)
+        self.assertEqual(
+            res,
+            {
+                "engine": "tortoise.backends.dameng",
+                "credentials": {
+                    "database": database,
+                    "host": "127.0.0.1",
+                    "password": "SYSDBA",
+                    "port": 5236,
+                    "user": "SYSDBA",
+                    "charset": "utf8",
+                },
+            },
+        )
+
+    def test_dameng_params(self):
+        res = expand_db_url("dm://SYSDBA:SYSDBA@127.0.0.1:5236/DAMENG?charset=gbk&maxsize=10")
+        self.assertEqual(
+            res,
+            {
+                "engine": "tortoise.backends.dameng",
+                "credentials": {
+                    "database": "DAMENG",
+                    "host": "127.0.0.1",
+                    "password": "SYSDBA",
+                    "port": 5236,
+                    "user": "SYSDBA",
+                    "charset": "gbk",
+                    "maxsize": "10",
+                },
+            },
+        )

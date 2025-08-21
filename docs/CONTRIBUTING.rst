@@ -54,7 +54,7 @@ The code is structured in the following directories:
 ``tortoise/fields/``:
     The Fields are defined here.
 ``tortoise/backends/``:
-    DB Backends, such as ``sqlite``, ``asyncpg``, ``psycopg`` & ``mysql``
+    DB Backends, such as ``sqlite``, ``asyncpg``, ``psycopg``, ``mysql`` & ``dameng``
 ``tortoise/backends/base/``:
     Common DB Backend code
 ``tortoise/contrib/``:
@@ -113,7 +113,8 @@ Different types of tests
 - ``make test_postgres_psycopg``: Runs the psycopg tests on the postgres database
 - ``make test_mysql_myisam``: Runs the tests on the mysql database using the ``MYISAM`` storage engine (no transactions)
 - ``make test_mysql``: Runs the tests on the mysql database
-- ``make testall``: runs the tests on all 4 database types: sqlite (in memory), postgresql, MySQL-MyISAM and MySQL-InnoDB
+- ``make test_dameng``: Runs the tests on the dameng database
+- ``make testall``: runs the tests on all 5 database types: sqlite (in memory), postgresql, MySQL-MyISAM, MySQL-InnoDB and Dameng
 - ``green``: runs the same tests as ``make test``, ensures the green plugin works
 
 

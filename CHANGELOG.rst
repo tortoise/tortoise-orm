@@ -19,6 +19,16 @@ Added
 0.25
 ====
 
+0.25.2
+------
+Added
+^^^^^
+- Add Dameng database backend support with `dm://` URL scheme
+- Add enterprise-grade connection pool for Dameng with health checks and connection reuse
+- Add complete type mapping between Tortoise ORM and Dameng database types
+- Add parameter conversion from `:1` format to `?` format for Dameng compatibility
+- Enhance Sanic contrib module with exception handlers and timezone support
+
 0.25.1
 ------------------
 Changed
