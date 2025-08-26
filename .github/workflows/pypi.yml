@@ -11,12 +11,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.9'
-      - name: Install and configure Poetry
-        run: |
-          pip install -U pip poetry
-          poetry config virtualenvs.create false
-      - name: Install requirements
-        run: make deps
+      - uses: astral-sh/setup-uv@v6
       - name: Build dists
         run: make build
       - name: Pypi Publish

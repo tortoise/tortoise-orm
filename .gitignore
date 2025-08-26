@@ -110,3 +110,6 @@ ENV/
 
 # macos
 .DS_Store
+
+# pdm
+.pdm-python
