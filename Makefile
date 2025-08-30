@@ -42,11 +42,9 @@ _style:
 	ruff check --fix $(checkfiles)
 
 lint: build _lint
-_lint:
-	$(MAKE) _style
-	$(MAKE) _codeqc
+_lint: _style _codeqc
 
-codeqc: build _typehints
+codeqc: build _codeqc
 _codeqc:
 	mypy $(checkfiles)
 	bandit -c pyproject.toml -r $(checkfiles)
@@ -101,5 +99,5 @@ build: deps
 	rm -fR dist/
 	uv build
 
-publish: deps _build
+publish: build
 	twine upload dist/*

@@ -81,13 +81,13 @@ The following table shows the available installation options for different datab
 Quick Tutorial
 --------------
 
-Define the models by inheriting from ``tortoise.models.Model``.
+Define the models by inheriting from ``tortoise.Model``.
 
 
 .. code-block:: python3
 
-    from tortoise.models import Model
-    from tortoise import fields
+    from tortoise import Model, fields
+    from tortoise.fields import OnDelete
 
     class Tournament(Model):
         id = fields.IntField(primary_key=True)
@@ -97,8 +97,8 @@ Define the models by inheriting from ``tortoise.models.Model``.
     class Event(Model):
         id = fields.BigIntField(primary_key=True)
         name = fields.TextField()
-        tournament = fields.ForeignKeyField('models.Tournament', related_name='events', on_delete=fields.OnDelete.CASCADE)
-        participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team', on_delete=fields.OnDelete.SET_NULL)
+        tournament = fields.ForeignKeyField('models.Tournament', related_name='events', on_delete=OnDelete.CASCADE)
+        participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team', on_delete=OnDelete.SET_NULL)
 
 
     class Team(Model):
