@@ -14,12 +14,10 @@ from pypika_tortoise.functions import AggregateFunction, DistinctOptionFunction
 from pypika_tortoise.terms import (
     ArithmeticExpression,
     Criterion,
-)
-from pypika_tortoise.terms import Function as PypikaFunction
-from pypika_tortoise.terms import (
     Term,
     ValueWrapper,
 )
+from pypika_tortoise.terms import Function as PypikaFunction
 from pypika_tortoise.utils import format_alias_sql
 
 from tortoise.exceptions import FieldError, OperationalError

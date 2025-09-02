@@ -115,7 +115,6 @@ Different types of tests
 - ``make test_mysql``: Runs the tests on the mysql database
 - ``make testall``: runs the tests on all 4 database types: sqlite (in memory), postgresql, MySQL-MyISAM and MySQL-InnoDB
 - ``green``: runs the same tests as ``make test``, ensures the green plugin works
-- ``nose2 --plugin tortoise.contrib.test.nose2 --db-module tests.testmodels --db-url sqlite://:memory: ``: same test as ``make test`` , ensures the nose2 plugin works
 
 
 Things to be aware of when running the test suite
@@ -123,7 +122,7 @@ Things to be aware of when running the test suite
 - Some tests always run regardless of what test suite you are running (the connection tests for mysql and postgres for example, you don't need a database running as it doesn't actually connect though)
 - Some tests use hardcoded databases (usually sqlite) for testing, regardless of what DB url you specified.
 - The postgres driver does not work under Pypy so those tests will be skipped if you are running under pypy
-- You can run only specific tests by running `` py.test <testfiles>`` or ``green -s 1 <testfile>``
+- You can run only specific tests by running ``pytest <testfiles>`` or ``green -s 1 <testfile>``
 - If you want a peek under the hood of test that hang to debug try running them with ``green -s 1 -vv -d -a <test>``
     - ``-s 1`` means it only runs one test at a time
     - ``-vv`` very verbose output

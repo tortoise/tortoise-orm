@@ -5,9 +5,8 @@ import operator
 from typing import Any
 
 from pypika_tortoise.functions import Cast
-from pypika_tortoise.terms import Criterion
+from pypika_tortoise.terms import Criterion, Term, ValueWrapper
 from pypika_tortoise.terms import Function as PypikaFunction
-from pypika_tortoise.terms import Term, ValueWrapper
 
 from tortoise.filters import not_equal
 from tortoise.query_utils import get_json_filter_operator

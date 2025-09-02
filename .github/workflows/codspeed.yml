@@ -17,19 +17,16 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          # 3.12 is the minimum reqquired version for profiling enabled
+          # 3.12 is the minimum required version for profiling enabled
           python-version: "3.12"
 
-      - name: Install and configure Poetry
-        run: |
-          pip install -U pip poetry
-          poetry config virtualenvs.create false
+      - uses: astral-sh/setup-uv@v6
 
-      - name: Install dependencies
+      - name: Build dists
         run: make build
 
       - name: Run benchmarks
         uses: CodSpeedHQ/action@v3
         with:
           token: ${{ secrets.CODSPEED_TOKEN }}
-          run: pytest tests/benchmarks --codspeed
+          run: uv run pytest tests/benchmarks --codspeed
