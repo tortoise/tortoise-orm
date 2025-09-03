@@ -1598,9 +1598,7 @@ class FieldSelectQuery(AwaitableQuery):
                 field=field,
                 forwarded_fields=forwarded_fields,
             )
-            field = related_table[related_db_field].as_(
-                f"{related_table.get_table_name()}__{field_name}"
-            )
+            field = related_table[related_db_field]
             group_bys.append(field)
         return group_bys
 

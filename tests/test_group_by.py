@@ -1,5 +1,6 @@
 from tests.testmodels import Author, Book, Event, Team, Tournament
 from tortoise.contrib import test
+from tortoise.expressions import Subquery
 from tortoise.functions import Avg, Count, Sum, Upper
 
 
@@ -317,3 +318,16 @@ class TestGroupBy(test.TestCase):
     async def test_group_by_id_with_nested_filter(self):
         ret = await Book.filter(author__name="author1").group_by("id").values_list("id")
         self.assertEqual(set(ret), {(book.id,) for book in self.books1})
+
+    async def test_subquery_group_by_no_alias(self):
+        query = Author.annotate(
+            book_name=Subquery(Book.all().group_by("name").order_by("name").limit(1).values("name"))
+        )
+
+        sql = query.sql()
+
+        self.assertIn('GROUP BY "name"', sql)
+        self.assertNotIn('GROUP BY "name" "', sql)
+
+        result = await query.values("name", "book_name")
+        self.assertIsInstance(result, list)
