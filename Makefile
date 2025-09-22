@@ -21,13 +21,13 @@ help:
 	@echo  "    lint    Auto-formats the code and check type hints"
 
 up:
-	@poetry update
+	@uv lock --upgrade
 
 deps:
-	@poetry install --all-groups -E asyncpg -E accel -E psycopg -E asyncodbc -E aiomysql
+	@uv sync --all-groups --extra asyncpg --extra accel --extra psycopg --extra asyncodbc --extra aiomysql $(options)
 
 deps_with_asyncmy:
-	@poetry install --all-groups -E asyncpg -E accel -E psycopg -E asyncodbc -E asyncmy
+	@uv sync --all-groups --extra asyncpg --extra accel --extra psycopg --extra asyncodbc --extra asyncmy $(options)
 
 check: build _check
 _check:
@@ -99,7 +99,7 @@ docs: deps
 
 build: deps
 	rm -fR dist/
-	poetry build
+	uv build
 
 publish: deps _build
 	twine upload dist/*

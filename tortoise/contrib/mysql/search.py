@@ -5,9 +5,8 @@ from typing import Any
 
 from pypika_tortoise import SqlContext
 from pypika_tortoise.enums import Comparator
-from pypika_tortoise.terms import BasicCriterion
+from pypika_tortoise.terms import BasicCriterion, Term
 from pypika_tortoise.terms import Function as PypikaFunction
-from pypika_tortoise.terms import Term
 
 
 class Comp(Comparator):

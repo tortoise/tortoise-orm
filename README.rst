@@ -152,6 +152,9 @@ With the Tortoise initialized, the models are available for use:
             team = await Team.create(name='Team {}'.format(i + 1))
             participants.append(team)
 
+        # One to Many (ForeignKey) relations support creating related objects
+        another_event = await tournament.events.create(name='Another Event')
+
         # Many to Many Relationship management is quite straightforward
         # (there are .remove(...) and .clear() too)
         await event.participants.add(*participants)

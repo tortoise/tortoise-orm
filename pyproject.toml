@@ -1,20 +1,37 @@
 [project]
 name = "tortoise-orm"
-version = "0.25.1"
 description = "Easy async ORM for python, built with relations in mind"
 authors = [{name="Andrey Bondar", email="andrey@bondar.ru"}, {name="Nickolas Grigoriadis", email="nagrigoriadis@gmail.com"}, {name="long2ice", email="long2ice@gmail.com"}]
 license = {text="Apache-2.0"}
 readme = "README.rst"
 keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio", "psycopg"]
-include = ["CHANGELOG.rst", "LICENSE", "README.rst"]
-# classifieres is dynamic because poetry will create Python classifiers automatically with value in `tool.poetry` section
-dynamic = [ "classifiers" ]
+dynamic = [ "version" ]
 requires-python = ">=3.9"
 dependencies = [
     "pypika-tortoise (>=0.6.1,<1.0.0)",
     "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
     "aiosqlite (>=0.16.0,<1.0.0)",
     "pytz",
+]
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+    "Programming Language :: PL/SQL",
+    "Framework :: AsyncIO",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Database",
+    "Operating System :: POSIX",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
 ]
 
 [project.optional-dependencies]
@@ -39,79 +56,69 @@ requires-poetry = ">=2.0"
 packages = [
     { include = "tortoise" }
 ]
-classifiers = [
-    "License :: OSI Approved :: Apache Software License",
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: Implementation :: CPython",
-    "Programming Language :: Python :: Implementation :: PyPy",
-    "Programming Language :: PL/SQL",
-    "Framework :: AsyncIO",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: Database",
-    "Operating System :: POSIX",
-    "Operating System :: MacOS :: MacOS X",
-    "Operating System :: Microsoft :: Windows",
+version = "0.0.0"
+
+[dependency-groups]
+dev = [
+    # Linter tools
+    "mypy",
+    "ruff",
+    "darglint",
+    "pylint",
+    "bandit",
+    "codespell",
+    # Pypi
+    "twine",
+    # mypy
+    "types-PyYAML",
+    "types-pytz",
+    "types-PyMySQL",
+]
+contrib=[
+    # Sample integration - Quart
+    "quart",
+    # Sample integration - Sanic
+    "sanic",
+    "sanic-testing",
+    # Sample integration - Starlette
+    "starlette",
+    # Pydantic support
+    "pydantic >=2.0,!=2.7.0",
+    # FastAPI support
+    "fastapi >=0.115.0",
+    "asgi_lifespan",
+    "httpx",
+    # Aiohttp support
+    "aiohttp",
+    # BlackSheep support
+    "blacksheep>=2.0.8",
+    "pytest-asyncio>=0.24.0",
+]
+test = [
+    # Test tools
+    "pytest",
+    "pytest-xdist",
+    "pytest-cov",
+    "pytest-codspeed",
+]
+docs = [
+    # Documentation tools
+    "sphinx-immaterial",
+    "sphinx-copybutton",
+    "Pygments",
+    "docutils",
 ]
 
-[tool.poetry.group.dev.dependencies]
-# Linter tools
-mypy = "*"
-ruff = "*"
-darglint = "*"
-pylint = "*"
-bandit = "*"
-codespell = "*"
-# Pypi
-twine = "*"
-# mypy
-types-PyYAML = "*"
-types-pytz = "*"
-types-PyMySQL = "*"
-
-[tool.poetry.group.contrib.dependencies]
-# Sample integration - Quart
-quart = "*"
-# Sample integration - Sanic
-sanic = "*"
-sanic-testing = "*"
-# Sample integration - Starlette
-starlette = "*"
-# Pydantic support
-pydantic = "^2.0,!=2.7.0"
-# FastAPI support
-fastapi = "^0.115.0"
-asgi_lifespan = "*"
-httpx = "*"
-# Aiohttp support
-aiohttp = "*"
-# BlackSheep support
-blacksheep = "^2.0.8"
-pytest-asyncio = ">=0.24.0"
-
-[tool.poetry.group.test.dependencies]
-# Test tools
-pytest = "*"
-pytest-xdist = "*"
-pytest-cov = "*"
-pytest-codspeed = "*"
-
-[tool.poetry.group.docs.dependencies]
-# Documentation tools
-sphinx-immaterial = "*"
-sphinx-copybutton = "*"
-Pygments = "*"
-docutils = "*"
-
 [build-system]
-requires = ["poetry-core>=2.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.pdm]
+version = {source="file", path="tortoise/__init__.py"}
+
+[tool.pdm.build]
+excludes = ["./**/.git", "./**/.*_cache"]
+include = ["CHANGELOG.rst", "LICENSE", "README.rst"]
 
 [tool.mypy]
 pretty = true
@@ -196,10 +203,14 @@ line-length = 100
 [tool.ruff.lint]
 ignore = ["E501"]
 extend-select = [
+    "I",      # https://docs.astral.sh/ruff/rules/#isort-i
     "FA",     # https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
     "UP",     # https://docs.astral.sh/ruff/rules/#pyupgrade-up
     "RUF100", # https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
 ]
+
+[tool.ruff.lint.isort]
+extra-standard-library = ["tomllib"]
 
 [tool.bandit]
 exclude_dirs = ["tests", 'examples/*/_tests.py', "conftest.py"]

@@ -50,6 +50,15 @@ The related objects can be filtered:
 
 which will return you a QuerySet object with predefined filter.
 
+You can also create related objects directly through the reverse ForeignKey relation:
+
+.. code-block:: python3
+
+    # Create a related object automatically setting the foreign key
+    new_event = await team.events.create(name='New Event')
+    # Equivalent to:
+    # new_event = await Event.create(name='New Event', team=team)
+
 QuerySet
 ========
 
