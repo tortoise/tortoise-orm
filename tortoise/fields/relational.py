@@ -320,8 +320,8 @@ class ForeignKeyFieldInstance(RelationalField[MODEL]):
         on_delete: OnDelete = CASCADE,
         **kwargs: Any,
     ) -> None:
-        super().__init__(None, **kwargs)  # type: ignore
         self.validate_model_name(model_name)
+        super().__init__(None, **kwargs)  # type: ignore
         self.model_name = model_name
         self.related_name = related_name
         if on_delete not in set(OnDelete):
@@ -363,7 +363,6 @@ class OneToOneFieldInstance(ForeignKeyFieldInstance[MODEL]):
         on_delete: OnDelete = CASCADE,
         **kwargs: Any,
     ) -> None:
-        self.validate_model_name(model_name)
         super().__init__(model_name, related_name, on_delete, unique=True, **kwargs)
 
 
