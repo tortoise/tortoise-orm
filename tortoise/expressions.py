@@ -387,6 +387,7 @@ class Q:
         else:
             filter_info = model._meta.get_filter(key)
 
+        field_object = None
         if "table" in filter_info:
             # join the table
             join = (
@@ -405,7 +406,12 @@ class Q:
                 else field_object.to_db_value(value, model)
             )
         op = filter_info["operator"]
-        criterion = op(table[filter_info.get("source_field", filter_info["field"])], value)
+        term: Term = table[filter_info.get("source_field", filter_info["field"])]
+        if func := field_object and field_object.get_for_dialect(
+            model._meta.db.capabilities.dialect, "function_cast"
+        ):
+            term = func(field_object, term)
+        criterion = op(term, value)
         return criterion, join
 
     def _resolve_regular_kwarg(
