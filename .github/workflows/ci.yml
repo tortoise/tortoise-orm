@@ -66,8 +66,6 @@ jobs:
           sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
       - name: Run ci
         run: uv run make ci
-        env:
-          TORTOISE_GTID_KEEP_OFF: 1
       - name: Test FastAPI/Blacksheep Example
         run: |
           PYTHONPATH=$DEST_FASTAPI uv run pytest $PYTEST_ARGS $DEST_FASTAPI/_tests.py
