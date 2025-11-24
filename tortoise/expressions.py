@@ -407,10 +407,12 @@ class Q:
             )
         op = filter_info["operator"]
         term: Term = table[filter_info.get("source_field", filter_info["field"])]
-        if func := field_object and field_object.get_for_dialect(
-            model._meta.db.capabilities.dialect, "function_cast"
-        ):
-            term = func(field_object, term)
+        if field_object is not None:
+            func = field_object.get_for_dialect(
+                model._meta.db.capabilities.dialect, "function_cast"
+            )
+            if func is not None:
+                term = func(field_object, term)
         criterion = op(term, value)
         return criterion, join
 
