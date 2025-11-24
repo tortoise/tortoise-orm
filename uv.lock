@@ -490,7 +490,7 @@ wheels = [
 
 [[package]]
 name = "bandit"
-version = "1.9.1"
+version = "1.9.2"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -503,9 +503,9 @@ dependencies = [
     { name = "rich", marker = "python_full_version >= '3.10'" },
     { name = "stevedore", version = "5.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/80/d5/82fc87a82ad9536215c1b5693bbb675439f6f2d0c2fca74b2df2cb9db925/bandit-1.9.1.tar.gz", hash = "sha256:6dbafd1a51e276e065404f06980d624bad142344daeac3b085121fcfd117b7cf" }
+sdist = { url = "https://files.pythonhosted.org/packages/cf/72/f704a97aac430aeb704fa16435dfa24fbeaf087d46724d0965eb1f756a2c/bandit-1.9.2.tar.gz", hash = "sha256:32410415cd93bf9c8b91972159d5cf1e7f063a9146d70345641cd3877de348ce" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/7f/82/249a7710242b7a05f7f4245a0da3cdd4042e4377f5d00059619fa2b941f3/bandit-1.9.1-py3-none-any.whl", hash = "sha256:0a1f34c04f067ee28985b7854edaa659c9299bd71e1b7e18236e46cccc79720b" },
+    { url = "https://files.pythonhosted.org/packages/55/1a/5b0320642cca53a473e79c7d273071b5a9a8578f9e370b74da5daa2768d7/bandit-1.9.2-py3-none-any.whl", hash = "sha256:bda8d68610fc33a6e10b7a8f1d61d92c8f6c004051d5e946406be1fb1b16a868" },
 ]
 
 [[package]]
@@ -1222,11 +1222,11 @@ wheels = [
 
 [[package]]
 name = "essentials"
-version = "1.1.8"
+version = "1.1.9"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5a/57/6e44c3a20d28fa381ccae3f588e16c54a627f3a61a008ddb1567c6f01891/essentials-1.1.8.tar.gz", hash = "sha256:e042e0b33d385cfc26e1f0cc189fce5570d0959a1983438a557e7963a87b5638" }
+sdist = { url = "https://files.pythonhosted.org/packages/b6/ff/587c8789abad9c76ef2a5bf613c6d7922a0d09879e3eda1864d108f11b75/essentials-1.1.9.tar.gz", hash = "sha256:7fbea3a518cbeafe5374fb7e2ea2c15a109e8a7fd1eaab62ae87cbd1b3b1e8d0" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/05/05/4db7e55b464d557634626d61ee0a0ba11467509befd4022bccfacef4a98e/essentials-1.1.8-py2.py3-none-any.whl", hash = "sha256:ae94a2a3992d490494e9c48430338a1adf0eb8c0079381dd9a759a3279054fc4" },
+    { url = "https://files.pythonhosted.org/packages/50/8b/68aa342fa78931429ea09e6dc8d9ffa46fa36cfb0cf423e612d22365a9c2/essentials-1.1.9-py2.py3-none-any.whl", hash = "sha256:71ef161e0e27ef77cd6f5fc05e0b8688a575fcab870c01c95940f832e321dfbb" },
 ]
 
 [[package]]
@@ -1847,7 +1847,7 @@ dependencies = [
     { name = "jeepney", marker = "sys_platform == 'linux'" },
     { name = "pywin32-ctypes", marker = "sys_platform == 'win32'" },
     { name = "secretstorage", version = "3.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' and sys_platform == 'linux'" },
-    { name = "secretstorage", version = "3.4.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' and sys_platform == 'linux'" },
+    { name = "secretstorage", version = "3.5.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' and sys_platform == 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/43/4b/674af6ef2f97d56f0ab5153bf0bfa28ccb6c3ed4d1babf4305449668807b/keyring-25.7.0.tar.gz", hash = "sha256:fe01bd85eb3f8fb3dd0405defdeac9a5b4f6f0439edbb3149577f244a2e8245b" }
 wheels = [
@@ -3374,7 +3374,7 @@ wheels = [
 
 [[package]]
 name = "secretstorage"
-version = "3.4.1"
+version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -3385,9 +3385,9 @@ dependencies = [
     { name = "cryptography", marker = "python_full_version >= '3.10'" },
     { name = "jeepney", marker = "python_full_version >= '3.10'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/32/8a/ed6747b1cc723c81f526d4c12c1b1d43d07190e1e8258dbf934392fc850e/secretstorage-3.4.1.tar.gz", hash = "sha256:a799acf5be9fb93db609ebaa4ab6e8f1f3ed5ae640e0fa732bfea59e9c3b50e8" }
+sdist = { url = "https://files.pythonhosted.org/packages/1c/03/e834bcd866f2f8a49a85eaff47340affa3bfa391ee9912a952a1faa68c7b/secretstorage-3.5.0.tar.gz", hash = "sha256:f04b8e4689cbce351744d5537bf6b1329c6fc68f91fa666f60a380edddcd11be" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b0/6d/24ebb101484f1911a6be6695b76ce43219caa110ebbe07d8c3a5f3106cca/secretstorage-3.4.1-py3-none-any.whl", hash = "sha256:c55d57b4da3de568d8c3af89dad244ab24c35ca1da8625fc1b550edf005ebc41" },
+    { url = "https://files.pythonhosted.org/packages/b7/46/f5af3402b579fd5e11573ce652019a67074317e18c1935cc0b4ba9b35552/secretstorage-3.5.0-py3-none-any.whl", hash = "sha256:0ce65888c0725fcb2c5bc0fdb8e5438eece02c523557ea40ce0703c266248137" },
 ]
 
 [[package]]
@@ -3482,7 +3482,7 @@ wheels = [
 
 [[package]]
 name = "sphinx"
-version = "8.3.0"
+version = "8.2.3"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -3507,9 +3507,9 @@ dependencies = [
     { name = "sphinxcontrib-qthelp", marker = "python_full_version >= '3.11'" },
     { name = "sphinxcontrib-serializinghtml", marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e5/8d/012c6d6f0e9a3e70ddf68dec54f08c51e36cb64e81d70c77ed2d096a042c/sphinx-8.3.0.tar.gz", hash = "sha256:3bad4314a7fa72ce92344eaaa14c42ddf3177ee6a79c227e4ff8ae07d416f584" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/ad/4360e50ed56cb483667b8e6dadf2d3fda62359593faabbe749a27c4eaca6/sphinx-8.2.3.tar.gz", hash = "sha256:398ad29dee7f63a75888314e9424d40f52ce5a6a87ae88e7071e80af296ec348" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2f/72/9a437a9dc5393c0eabba447bdb6233a7b02bb23e84975f17ad9a9ca86677/sphinx-8.3.0-py3-none-any.whl", hash = "sha256:bd8fcf35ab2c4240b01c74a411c948350a3aebd6aa175579363754ed380d350a" },
+    { url = "https://files.pythonhosted.org/packages/31/53/136e9eca6e0b9dc0e1962e2c908fbea2e5ac000c2a2fbd9a35797958c48b/sphinx-8.2.3-py3-none-any.whl", hash = "sha256:4405915165f13521d875a8c29c8970800a0141c14cc5416a38feca4ea5d9b9c3" },
 ]
 
 [[package]]
@@ -3519,7 +3519,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "sphinx", version = "7.4.7", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "sphinx", version = "8.1.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
-    { name = "sphinx", version = "8.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "sphinx", version = "8.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fc/2b/a964715e7f5295f77509e59309959f4125122d648f86b4fe7d70ca1d882c/sphinx-copybutton-0.5.2.tar.gz", hash = "sha256:4cf17c82fb9646d1bc9ca92ac280813a3b605d8c421225fd9913154103ee1fbd" }
 wheels = [
@@ -3563,7 +3563,7 @@ dependencies = [
     { name = "pydantic-extra-types", marker = "python_full_version >= '3.10'" },
     { name = "requests", marker = "python_full_version >= '3.10'" },
     { name = "sphinx", version = "8.1.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
-    { name = "sphinx", version = "8.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "sphinx", version = "8.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "typing-extensions", marker = "python_full_version >= '3.10'" },
 ]
 wheels = [
@@ -3806,7 +3806,7 @@ contrib = [
 ]
 dev = [
     { name = "bandit", version = "1.8.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
-    { name = "bandit", version = "1.9.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
+    { name = "bandit", version = "1.9.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "codespell" },
     { name = "mypy" },
     { name = "pylint", version = "3.3.9", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
