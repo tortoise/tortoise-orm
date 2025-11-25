@@ -46,7 +46,7 @@ _lint:
 	$(MAKE) _style
 	$(MAKE) _codeqc
 
-codeqc: build _typehints
+codeqc: build _codeqc
 _codeqc:
 	mypy $(checkfiles)
 	bandit -c pyproject.toml -r $(checkfiles)
