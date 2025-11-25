@@ -16,6 +16,10 @@ Added
 ^^^^^
 - Add `create()` method to reverse ForeignKey relations, enabling `parent.children.create()` syntax
 
+Fixed
+^^^^^
+- Fix sqlite decimal filter error with `__gt` (#2020)
+
 0.25
 ====
 
