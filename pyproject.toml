@@ -8,10 +8,10 @@ keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg"
 dynamic = [ "version" ]
 requires-python = ">=3.9"
 dependencies = [
+    "pypika-tortoise (>=0.6.3,<1.0.0)",
     "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
     "aiosqlite (>=0.16.0,<1.0.0)",
     "pytz",
-    "pypika-tortoise",
 ]
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
@@ -213,6 +213,3 @@ extra-standard-library = ["tomllib"]
 
 [tool.bandit]
 exclude_dirs = ["tests", 'examples/*/_tests.py', "conftest.py"]
-
-[tool.uv.sources]
-pypika-tortoise = { git = "https://github.com/tortoise/pypika-tortoise.git", rev = "do-not-add-alias-in-groupby" }
