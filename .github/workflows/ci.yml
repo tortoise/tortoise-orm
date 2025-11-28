@@ -77,10 +77,16 @@ jobs:
           DEST_SANIC: examples/sanic
           PYTHONDEVMODE: 1
           PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
+      - name: Test poetry add
+        run: |
+          uv run --no-sync pytest $PYTEST_ARGS tests/test_version.py::test_added_by_poetry_v2
+        env:
+          TORTOISE_TEST_POETRY_ADD: 1
+          PYTHONDEVMODE: 1
+          PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
       - name: Upload Coverage
         run: |
-          pip3 install --upgrade coveralls
-          coveralls --service=github
+          uvx coveralls --service=github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: ${{ matrix.python-version }}

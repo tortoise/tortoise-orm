@@ -51,13 +51,6 @@ documentation = "https://tortoise.github.io"
 homepage = "https://github.com/tortoise/tortoise-orm"
 repository = "https://github.com/tortoise/tortoise-orm.git"
 
-[tool.poetry]
-requires-poetry = ">=2.0"
-packages = [
-    { include = "tortoise" }
-]
-version = "0.0.0"
-
 [dependency-groups]
 dev = [
     # Linter tools
