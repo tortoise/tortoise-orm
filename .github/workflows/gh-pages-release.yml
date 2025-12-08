@@ -13,7 +13,7 @@ jobs:
           python-version: "3.9"
       - uses: astral-sh/setup-uv@v6
       - name: Build docs
-        run: uv run make docs
+        run: make docs
       - name: Deploy release docs
         uses: peaceiris/actions-gh-pages@v3
         with:

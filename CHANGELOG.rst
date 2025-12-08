@@ -7,21 +7,20 @@ Changelog
 
 .. rst-class:: emphasize-children
 
-0.26
+0.25
 ====
 
-0.26.0 (unreleased)
+0.25.2 (unreleased)
 ------------------- 
+Fixed
+^^^^^
+- Fix grouping by in subqueries (#2021)
+- Fix sqlite decimal filter error with `__gt` (#2019)
+
 Added
 ^^^^^
 - Add `create()` method to reverse ForeignKey relations, enabling `parent.children.create()` syntax
 
-Fixed
-^^^^^
-- Fix sqlite decimal filter error with `__gt` (#2020)
-
-0.25
-====
 
 0.25.1
 ------------------
