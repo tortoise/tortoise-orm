@@ -7,19 +7,32 @@ Changelog
 
 .. rst-class:: emphasize-children
 
+0.26
+====
+
+0.26.0 (unreleased)
+-------------------
+
 0.25
 ====
 
-0.25.2 (unreleased)
-------------------- 
+0.25.2
+------
 Fixed
 ^^^^^
 - Fix grouping by in subqueries (#2021)
 - Fix sqlite decimal filter error with `__gt` (#2019)
 
+Changed
+^^^^^
+- Official support python3.14 (#2026)
+- Migrate from poetry to uv (#1987)
+- Reorder imports by ruff (#1966)
+- Migrate lint tool from isort+black to ruff (#1963)
+
 Added
 ^^^^^
-- Add `create()` method to reverse ForeignKey relations, enabling `parent.children.create()` syntax
+- Add `create()` method to reverse ForeignKey relations, enabling `parent.children.create()` syntax (#1991)
 
 
 0.25.1
