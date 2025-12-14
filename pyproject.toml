@@ -12,6 +12,8 @@ dependencies = [
     "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
     "aiosqlite (>=0.16.0,<1.0.0)",
     "pytz",
+    # Typing support for older Python
+    "typing_extensions (>= 4.1.0)",
 ]
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
