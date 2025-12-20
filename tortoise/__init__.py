@@ -648,7 +648,7 @@ def run_async(coro: Coroutine) -> None:
         portal.call(main)
 
 
-__version__ = "0.25.2"
+__version__ = "0.25.3"
 
 __all__ = [
     "Model",
