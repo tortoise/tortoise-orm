@@ -12,9 +12,6 @@ Changelog
 
 0.26.0 (unreleased)
 -------------------
-Fixed
-^^^^^
-- Fix exception when creating aiosqlite connections on aiosqlite==0.22.0 (#2035)
 
 Changed
 ^^^^^
@@ -22,6 +19,13 @@ Changed
 
 0.25
 ====
+
+0.25.3
+------
+Fixed
+^^^^^
+- Fix exception when creating aiosqlite connections on aiosqlite==0.22.0 (#2035)
+- Fix implicit anyio dependency introduced, but not declared (#2045)
 
 0.25.2
 ------
