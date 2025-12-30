@@ -22,7 +22,10 @@ class Event(Model):
     id = fields.BigIntField(primary_key=True, description="Event ID")
     name = fields.TextField()
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
-        "models.Tournament", related_name="events", description="FK to tournament"
+        "models.Tournament",
+        related_name="events",
+        description="FK to tournament",
+        on_delete=fields.RESTRICT,
     )
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team",
@@ -45,7 +48,7 @@ class Team(Model):
     name = fields.CharField(max_length=50, primary_key=True, description="The TEAM name (and PK)")
     key = fields.IntField()
     manager: fields.ForeignKeyNullableRelation["Team"] = fields.ForeignKeyField(
-        "models.Team", related_name="team_members", null=True
+        "models.Team", related_name="team_members", null=True, on_delete=fields.RESTRICT
     )
     talks_to: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team", related_name="gets_talked_to"
@@ -88,7 +91,11 @@ class SourceFields(Model):
     chars = fields.CharField(max_length=255, source_field="some_chars_table", db_index=True)
 
     fk: fields.ForeignKeyNullableRelation["SourceFields"] = fields.ForeignKeyField(
-        "models.SourceFields", related_name="team_members", null=True, source_field="fk_sometable"
+        "models.SourceFields",
+        related_name="team_members",
+        null=True,
+        source_field="fk_sometable",
+        on_delete=fields.RESTRICT,
     )
 
     rel_to: fields.ManyToManyRelation["SourceFields"] = fields.ManyToManyField(
@@ -116,9 +123,7 @@ class Employee(Model):
     id = fields.IntField(primary_key=True)
     name = fields.TextField()
     company: fields.ForeignKeyRelation[Company] = fields.ForeignKeyField(
-        "models.Company",
-        related_name="employees",
-        to_field="uuid",
+        "models.Company", related_name="employees", to_field="uuid", on_delete=fields.RESTRICT
     )
 
 

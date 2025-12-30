@@ -23,7 +23,7 @@ class Student(Model):
     id = fields.IntField(primary_key=True)
     name = fields.TextField()
     school: fields.ForeignKeyRelation[School] = fields.ForeignKeyField(
-        "models.School", related_name="students", to_field="id"
+        "models.School", related_name="students", to_field="id", on_delete=fields.RESTRICT
     )
 
 

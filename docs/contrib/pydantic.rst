@@ -293,7 +293,7 @@ We define our models with a relationship:
         created_at = fields.DatetimeField(auto_now_add=True)
 
         tournament = fields.ForeignKeyField(
-            "models.Tournament", related_name="events", description="The Tournament this happens in"
+            "models.Tournament", related_name="events", description="The Tournament this happens in", on_delete=fields.RESTRICT
         )
 
 Next we create our `Pydantic Model <https://docs.pydantic.dev/latest/concepts/models/>`__ using ``pydantic_model_creator``:
@@ -573,7 +573,7 @@ Let's add some methods that calculate data, and tell the creators to use them:
         created_at = fields.DatetimeField(auto_now_add=True)
 
         tournament = fields.ForeignKeyField(
-            "models.Tournament", related_name="events", description="The Tournament this happens in"
+            "models.Tournament", related_name="events", description="The Tournament this happens in", on_delete=fields.RESTRICT
         )
 
         class Meta:

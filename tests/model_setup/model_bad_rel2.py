@@ -17,5 +17,5 @@ class Tournament(Model):
 
 class Event(Model):
     tournament: fields.ForeignKeyRelation[Any] = fields.ForeignKeyField(
-        "models.Tour", related_name="events"
+        "models.Tour", related_name="events", on_delete=fields.RESTRICT
     )

@@ -63,6 +63,7 @@ Changed
 ^^^^^^^
 - Skip database selection if the router is not configured to improve performance (#1915)
 - `.values()`, `.values_list()` and `.only()` cannot be used together (#1923)
+- ForeignKeyField: The `on_delete` parameter is now mandatory. Users must now explicitly specify the desired deletion behavior (e.g., `on_delete=fields.RESTRICT`, `on_delete=fields.CASCADE`, etc.) (#1801)
 
 Added
 ^^^^^

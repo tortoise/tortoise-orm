@@ -53,7 +53,7 @@ class Author(Model):
 class Book(Model):
     name = fields.CharField(max_length=255)
     author: fields.ForeignKeyRelation[Author] = fields.ForeignKeyField(
-        "models.Author", related_name="books"
+        "models.Author", related_name="books", on_delete=fields.RESTRICT
     )
     rating = fields.FloatField()
     subject = fields.CharField(max_length=255, null=True)
@@ -62,7 +62,7 @@ class Book(Model):
 class BookNoConstraint(Model):
     name = fields.CharField(max_length=255)
     author: fields.ForeignKeyRelation[Author] = fields.ForeignKeyField(
-        "models.Author", db_constraint=False
+        "models.Author", db_constraint=False, on_delete=fields.RESTRICT
     )
     rating = fields.FloatField()
 
@@ -107,10 +107,10 @@ class Event(Model):
     name = fields.TextField()
     #: What tournaments is a happenin'
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
-        "models.Tournament", related_name="events"
+        "models.Tournament", related_name="events", on_delete=fields.RESTRICT
     )
     reporter: fields.ForeignKeyNullableRelation[Reporter] = fields.ForeignKeyField(
-        "models.Reporter", null=True
+        "models.Reporter", null=True, on_delete=fields.RESTRICT
     )
     participants: fields.ManyToManyRelation[Team] = fields.ManyToManyField(
         "models.Team",
@@ -140,12 +140,16 @@ class ModelTestPydanticMetaBackwardRelations2(Model): ...
 class ModelTestPydanticMetaBackwardRelations3(Model):
     one: fields.ForeignKeyRelation[ModelTestPydanticMetaBackwardRelations1] = (
         fields.ForeignKeyField(
-            "models.ModelTestPydanticMetaBackwardRelations1", related_name="threes"
+            "models.ModelTestPydanticMetaBackwardRelations1",
+            related_name="threes",
+            on_delete=fields.RESTRICT,
         )
     )
     two: fields.ForeignKeyRelation[ModelTestPydanticMetaBackwardRelations2] = (
         fields.ForeignKeyField(
-            "models.ModelTestPydanticMetaBackwardRelations2", related_name="threes"
+            "models.ModelTestPydanticMetaBackwardRelations2",
+            related_name="threes",
+            on_delete=fields.RESTRICT,
         )
     )
 
@@ -156,7 +160,7 @@ class Node(Model):
 
 class Tree(Model):
     parent: fields.ForeignKeyRelation[Node] = fields.ForeignKeyField(
-        "models.Node", related_name="parent_trees"
+        "models.Node", related_name="parent_trees", on_delete=fields.RESTRICT
     )
     child: fields.ForeignKeyRelation[Node] = fields.ForeignKeyField(
         "models.Node", related_name="children_trees", on_delete=NO_ACTION
@@ -368,7 +372,9 @@ class UUIDFields(Model):
 
 class MinRelation(Model):
     id = fields.IntField(primary_key=True)
-    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField("models.Tournament")
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
+        "models.Tournament", on_delete=fields.RESTRICT
+    )
     participants: fields.ManyToManyRelation[Team] = fields.ManyToManyField("models.Team")
 
 
@@ -411,7 +417,9 @@ class UniqueTogetherFields(Model):
 class UniqueTogetherFieldsWithFK(Model):
     id = fields.IntField(primary_key=True)
     text = fields.CharField(max_length=64)
-    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField("models.Tournament")
+    tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
+        "models.Tournament", on_delete=fields.RESTRICT
+    )
 
     class Meta:
         unique_together = ("text", "tournament")
@@ -433,7 +441,7 @@ class UUIDFkRelatedModel(Model):
     id = fields.UUIDField(primary_key=True)
     name = fields.CharField(max_length=50, null=True)
     model: fields.ForeignKeyRelation[UUIDPkModel] = fields.ForeignKeyField(
-        "models.UUIDPkModel", related_name="children"
+        "models.UUIDPkModel", related_name="children", on_delete=fields.RESTRICT
     )
 
 
@@ -441,7 +449,7 @@ class UUIDFkRelatedNullModel(Model):
     id = fields.UUIDField(primary_key=True)
     name = fields.CharField(max_length=50, null=True)
     model: fields.ForeignKeyNullableRelation[UUIDPkModel] = fields.ForeignKeyField(
-        "models.UUIDPkModel", related_name=False, null=True
+        "models.UUIDPkModel", related_name=False, null=True, on_delete=fields.RESTRICT
     )
     parent: fields.OneToOneNullableRelation[UUIDPkModel] = fields.OneToOneField(
         "models.UUIDPkModel", related_name=False, null=True, on_delete=NO_ACTION
@@ -467,7 +475,10 @@ class UUIDFkRelatedSourceModel(Model):
     id = fields.UUIDField(primary_key=True, source_field="b")
     name = fields.CharField(max_length=50, null=True, source_field="c")
     model: fields.ForeignKeyRelation[UUIDPkSourceModel] = fields.ForeignKeyField(
-        "models.UUIDPkSourceModel", related_name="children", source_field="d"
+        "models.UUIDPkSourceModel",
+        related_name="children",
+        source_field="d",
+        on_delete=fields.RESTRICT,
     )
 
     class Meta:
@@ -482,6 +493,7 @@ class UUIDFkRelatedNullSourceModel(Model):
         related_name="children_null",
         source_field="k",
         null=True,
+        on_delete=fields.RESTRICT,
     )
 
     class Meta:
@@ -508,7 +520,7 @@ class CharPkModel(Model):
 
 class CharFkRelatedModel(Model):
     model: fields.ForeignKeyRelation[CharPkModel] = fields.ForeignKeyField(
-        "models.CharPkModel", related_name="children"
+        "models.CharPkModel", related_name="children", on_delete=fields.RESTRICT
     )
 
 
@@ -774,7 +786,7 @@ class DefaultOrdered(Model):
 
 class FKToDefaultOrdered(Model):
     link: fields.ForeignKeyRelation[DefaultOrdered] = fields.ForeignKeyField(
-        "models.DefaultOrdered", related_name="related"
+        "models.DefaultOrdered", related_name="related", on_delete=fields.RESTRICT
     )
     value = fields.IntField()
 
@@ -813,7 +825,7 @@ class Student(Model):
     id = fields.IntField(primary_key=True)
     name = fields.TextField()
     school: fields.ForeignKeyRelation[School] = fields.ForeignKeyField(
-        "models.School", related_name="students", to_field="id"
+        "models.School", related_name="students", to_field="id", on_delete=fields.RESTRICT
     )
 
 
@@ -938,7 +950,7 @@ class Single(Model):
 
     id = fields.IntField(primary_key=True)
     extra: fields.ForeignKeyNullableRelation[Extra] = fields.ForeignKeyField(
-        "models.Extra", related_name="singles", null=True
+        "models.Extra", related_name="singles", null=True, on_delete=fields.RESTRICT
     )
 
 
@@ -949,7 +961,7 @@ class Pair(Model):
 
     id = fields.IntField(primary_key=True)
     left: fields.ForeignKeyNullableRelation[Single] = fields.ForeignKeyField(
-        "models.Single", related_name="lefts", null=True
+        "models.Single", related_name="lefts", null=True, on_delete=fields.RESTRICT
     )
     right: fields.ForeignKeyNullableRelation[Single] = fields.ForeignKeyField(
         "models.Single", related_name="rights", null=True, on_delete=NO_ACTION

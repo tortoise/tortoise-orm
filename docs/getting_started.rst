@@ -68,7 +68,7 @@ Define the models by inheriting from ``tortoise.models.Model``.
         name = fields.CharField(max_length=255)
         # References to other models are defined in format
         # "{app_name}.{model_name}" - where {app_name} is defined in the tortoise config
-        tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
+        tournament = fields.ForeignKeyField('models.Tournament', related_name='events', on_delete=fields.RESTRICT)
         participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
 
 

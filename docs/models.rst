@@ -31,7 +31,7 @@ With that start describing the models
     class Event(Model):
         id = fields.IntField(primary_key=True)
         name = fields.TextField()
-        tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
+        tournament = fields.ForeignKeyField('models.Tournament', related_name='events', on_delete=fields.RESTRICT)
         participants = fields.ManyToManyField('models.Team', related_name='events', through='event_team')
         modified = fields.DatetimeField(auto_now=True)
         prize = fields.DecimalField(max_digits=10, decimal_places=2, null=True)
@@ -249,14 +249,14 @@ The ``Meta`` class
 
 .. code-block:: python3
 
-    tournament = fields.ForeignKeyField('models.Tournament', related_name='events')
+    tournament = fields.ForeignKeyField('models.Tournament', related_name='events', on_delete=fields.RESTRICT)
     participants = fields.ManyToManyField('models.Team', related_name='events')
     modified = fields.DatetimeField(auto_now=True)
     prize = fields.DecimalField(max_digits=10, decimal_places=2, null=True)
 
 In event model we got some more fields, that could be interesting for us.
 
-``fields.ForeignKeyField('models.Tournament', related_name='events')``
+``fields.ForeignKeyField('models.Tournament', related_name='events', on_delete=fields.RESTRICT)``
     Here we create foreign key reference to tournament. We create it by referring to model by it's literal, consisting of app name and model name. ``models`` is default app name, but you can change it in ``class Meta`` with ``app = 'other'``.
 ``related_name``
     Is keyword argument, that defines field for related query on referenced models, so with that you could fetch all tournaments's events with like this:
@@ -355,6 +355,93 @@ To get the Reverse-FK, e.g. an `event.tournament` we currently only support the 
     await event.fetch_related('tournament')
     tournament = event.tournament
 
+.. _on-delete:
+
+ForeignKeyField: The on_delete Parameter
+----------------------------------------
+
+The ``on_delete`` parameter is a **mandatory** argument for the :class:`~tortoise.fields.ForeignKeyField`.  It specifies the behavior when a referenced object is deleted.  Previously, ``on_delete`` defaulted to ``CASCADE``, but this behavior has been removed to prevent accidental data loss.  You *must* now explicitly specify the desired behavior.
+
+Here are the possible values for ``on_delete``:
+
+*   **``fields.CASCADE``**:  When the referenced object is deleted, also delete the objects that have references to it.  **WARNING:** This can lead to data loss if not used carefully.  Consider the implications before using ``CASCADE``.
+
+    .. code-block:: python3
+
+        from tortoise import fields
+        from tortoise.models import Model
+
+        class Parent(Model):
+            id = fields.IntField(primary_key=True)
+
+        class Child(Model):
+            id = fields.IntField(primary_key=True)
+            parent = fields.ForeignKeyField("models.Parent", on_delete=fields.CASCADE)
+            # When a Parent object is deleted, all related Child objects will also be deleted.
+
+*   **``fields.RESTRICT``**:  Prevent deletion of the referenced object if it is referenced by any other objects.  This is the **recommended** option for most cases, as it prevents accidental data loss.  Attempting to delete a referenced object will raise a ``tortoise.exceptions.IntegrityError``.
+
+    .. code-block:: python3
+
+        from tortoise import fields
+        from tortoise.models import Model
+
+        class Parent(Model):
+            id = fields.IntField(primary_key=True)
+
+        class Child(Model):
+            id = fields.IntField(primary_key=True)
+            parent = fields.ForeignKeyField("models.Parent", on_delete=fields.RESTRICT)
+            # Attempting to delete a Parent object that has related Child objects will raise an error.
+
+*   **``fields.SET_NULL``**:  When the referenced object is deleted, set the foreign key field to ``NULL``.  This option is only valid if the ``ForeignKeyField`` has ``null=True``.
+
+    .. code-block:: python3
+
+        from tortoise import fields
+        from tortoise.models import Model
+
+        class Parent(Model):
+            id = fields.IntField(primary_key=True)
+
+        class Child(Model):
+            id = fields.IntField(primary_key=True)
+            parent = fields.ForeignKeyField("models.Parent", on_delete=fields.SET_NULL, null=True)
+            # When a Parent object is deleted, the 'parent' field in related Child objects will be set to NULL.
+
+*   **``fields.SET_DEFAULT``**:  When the referenced object is deleted, set the foreign key field to its default value.  This option is only valid if the ``ForeignKeyField`` has a ``default`` value specified.
+
+    .. code-block:: python3
+
+        from tortoise import fields
+        from tortoise.models import Model
+
+        class Parent(Model):
+            id = fields.IntField(primary_key=True)
+
+        class Child(Model):
+            id = fields.IntField(primary_key=True)
+            parent = fields.ForeignKeyField("models.Parent", on_delete=fields.SET_DEFAULT, default=1)
+            # When a Parent object is deleted, the 'parent' field in related Child objects will be set to its default value (1 in this case).
+
+*   **``fields.NO_ACTION``**:  Take no action on the database when the referenced object is deleted.  This means that the database will enforce referential integrity, and you will get an error if you try to delete a referenced object. This option is rarely used and its behavior may depend on the specific database backend.  It is generally recommended to use ``RESTRICT`` instead.
+
+    .. code-block:: python3
+
+        from tortoise import fields
+        from tortoise.models import Model
+
+        class Parent(Model):
+            id = fields.IntField(primary_key=True)
+
+        class Child(Model):
+            id = fields.IntField(primary_key=True)
+            parent = fields.ForeignKeyField("models.Parent", on_delete=fields.NO_ACTION)
+            # Attempting to delete a Parent object that has related Child objects will raise a database error.
+
+**Choosing the Right ``on_delete`` Value:**
+
+The best ``on_delete`` value depends on your specific application and the relationship between your models.  In most cases, ``RESTRICT`` is the safest and most appropriate option.  Consider the implications of each option carefully before making a decision.  Always prioritize data integrity and avoid accidental data loss.
 
 ``ManyToManyField``
 -------------------
@@ -426,7 +513,7 @@ all models including fields for the relations between models.
         id = fields.IntField(primary_key=True)
         name = fields.CharField(max_length=255)
         tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
-            "models.Tournament", related_name="events"
+            "models.Tournament", related_name="events", on_delete=fields.RESTRICT
         )
         participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
             "models.Team", related_name="events", through="event_team"
