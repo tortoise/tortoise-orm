@@ -12,6 +12,9 @@ Changelog
 
 0.26.0 (unreleased)
 -------------------
+Fixed
+^^^^^
+- Fix ``AttributeError`` when using ``tortoise-orm`` with Nuitka-compiled Python code (#2053)
 
 0.25
 ====
