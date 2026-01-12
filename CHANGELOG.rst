@@ -12,6 +12,17 @@ Changelog
 
 0.26.0 (unreleased)
 -------------------
+Fixed
+^^^^^
+- Fix ``AttributeError`` when using ``tortoise-orm`` with Nuitka-compiled Python code (#2053)
+
+Changed
+^^^^^
+- feat: foreignkey to model type (#2027)
+
+Removed
+^^^^^^^
+- Remove `iso8601` because it's not active for a long time. (#2024)
 
 0.25
 ====

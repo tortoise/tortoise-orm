@@ -66,6 +66,7 @@ Contributors
 * Frederic Aoustin ``@fraoustin``
 * Ludwig Hähne ``@pankrat``
 * Christian Tanul ``@scriptogre``
+* Qian Chen ``@shkey``
 
 Special Thanks
 ==============
