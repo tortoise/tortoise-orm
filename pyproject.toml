@@ -31,6 +31,7 @@ classifiers = [
     "Framework :: AsyncIO",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Database",
+    "Typing :: Typed",
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
@@ -119,7 +120,7 @@ build-backend = "pdm.backend"
 version = {source="file", path="tortoise/__init__.py"}
 
 [tool.pdm.build]
-excludes = ["./**/.git", "./**/.*_cache"]
+excludes = ["./**/.git", "./**/.*_cache", "examples"]
 include = ["CHANGELOG.rst", "LICENSE", "README.rst"]
 
 [tool.mypy]

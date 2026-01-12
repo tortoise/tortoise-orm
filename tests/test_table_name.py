@@ -36,3 +36,7 @@ class TestTableNameGenerator(SimpleTestCase):
 
     async def test_custom_table_name_precedence(self):
         self.assertEqual(CustomTable._meta.db_table, "my_custom_table")
+
+    async def _tearDownDB(self) -> None:
+        # Explicitly close aiosqlite connection to fix ResourceWarning
+        await Tortoise.get_connection("default").close()
