@@ -2,8 +2,6 @@
 This is the testing Models
 """
 
-from __future__ import annotations
-
 import binascii
 import datetime
 import os
@@ -52,9 +50,7 @@ class Author(Model):
 
 class Book(Model):
     name = fields.CharField(max_length=255)
-    author: fields.ForeignKeyRelation[Author] = fields.ForeignKeyField(
-        "models.Author", related_name="books"
-    )
+    author: fields.ForeignKeyRelation[Author] = fields.ForeignKeyField(Author, related_name="books")
     rating = fields.FloatField()
     subject = fields.CharField(max_length=255, null=True)
 
@@ -73,9 +69,9 @@ class Tournament(Model):
     desc = fields.TextField(null=True)
     created = fields.DatetimeField(auto_now_add=True, db_index=True)
 
-    events: fields.ReverseRelation[Event]
-    minrelations: fields.ReverseRelation[MinRelation]
-    uniquetogetherfieldswithfks: fields.ReverseRelation[UniqueTogetherFieldsWithFK]
+    events: fields.ReverseRelation["Event"]
+    minrelations: fields.ReverseRelation["MinRelation"]
+    uniquetogetherfieldswithfks: fields.ReverseRelation["UniqueTogetherFieldsWithFK"]
 
     class PydanticMeta:
         exclude = ("minrelations", "uniquetogetherfieldswithfks")
@@ -90,7 +86,7 @@ class Reporter(Model):
     id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
-    events: fields.ReverseRelation[Event]
+    events: fields.ReverseRelation["Event"]
 
     class Meta:
         table = "re_port_er"
@@ -107,12 +103,12 @@ class Event(Model):
     name = fields.TextField()
     #: What tournaments is a happenin'
     tournament: fields.ForeignKeyRelation[Tournament] = fields.ForeignKeyField(
-        "models.Tournament", related_name="events"
+        to="models.Tournament", related_name="events"
     )
     reporter: fields.ForeignKeyNullableRelation[Reporter] = fields.ForeignKeyField(
-        "models.Reporter", null=True
+        to=Reporter, null=True
     )
-    participants: fields.ManyToManyRelation[Team] = fields.ManyToManyField(
+    participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team",
         related_name="events",
         through="event_team",
@@ -212,7 +208,7 @@ class Team(Model):
     name = fields.TextField()
 
     events: fields.ManyToManyRelation[Event]
-    minrelation_through: fields.ManyToManyRelation[MinRelation]
+    minrelation_through: fields.ManyToManyRelation["MinRelation"]
     alias = fields.IntField(null=True)
 
     class Meta:
@@ -230,7 +226,7 @@ class EventTwo(Model):
     name = fields.TextField()
     tournament_id = fields.IntField()
     # Here we make link to events.Team, not models.Team
-    participants: fields.ManyToManyRelation[TeamTwo] = fields.ManyToManyField("events.TeamTwo")
+    participants: fields.ManyToManyRelation["TeamTwo"] = fields.ManyToManyField("events.TeamTwo")
 
     class Meta:
         app = "events"
@@ -333,7 +329,7 @@ class FloatFields(Model):
     floatnum_null = fields.FloatField(null=True)
 
 
-def raise_if_not_dict_or_list(value: dict | list):
+def raise_if_not_dict_or_list(value: Union[dict, list]):  # NOQA:FA100
     if not isinstance(value, (dict, list)):
         raise ValidationError("Value must be a dict or list.")
 
@@ -375,7 +371,7 @@ class MinRelation(Model):
 class M2MOne(Model):
     id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=255, null=True)
-    two: fields.ManyToManyRelation[M2MTwo] = fields.ManyToManyField(
+    two: fields.ManyToManyRelation["M2MTwo"] = fields.ManyToManyField(
         "models.M2MTwo", related_name="one"
     )
 
@@ -424,9 +420,9 @@ class ImplicitPkModel(Model):
 class UUIDPkModel(Model):
     id = fields.UUIDField(primary_key=True)
 
-    children: fields.ReverseRelation[UUIDFkRelatedModel]
-    children_null: fields.ReverseRelation[UUIDFkRelatedNullModel]
-    peers: fields.ManyToManyRelation[UUIDM2MRelatedModel]
+    children: fields.ReverseRelation["UUIDFkRelatedModel"]
+    children_null: fields.ReverseRelation["UUIDFkRelatedNullModel"]
+    peers: fields.ManyToManyRelation["UUIDM2MRelatedModel"]
 
 
 class UUIDFkRelatedModel(Model):
@@ -557,15 +553,15 @@ class CommentModel(Model):
 class Employee(Model):
     name = fields.CharField(max_length=50)
 
-    manager: fields.ForeignKeyNullableRelation[Employee] = fields.ForeignKeyField(
+    manager: fields.ForeignKeyNullableRelation["Employee"] = fields.ForeignKeyField(
         "models.Employee", related_name="team_members", null=True, on_delete=NO_ACTION
     )
-    team_members: fields.ReverseRelation[Employee]
+    team_members: fields.ReverseRelation["Employee"]
 
-    talks_to: fields.ManyToManyRelation[Employee] = fields.ManyToManyField(
+    talks_to: fields.ManyToManyRelation["Employee"] = fields.ManyToManyField(
         "models.Employee", related_name="gets_talked_to", on_delete=NO_ACTION
     )
-    gets_talked_to: fields.ManyToManyRelation[Employee]
+    gets_talked_to: fields.ManyToManyRelation["Employee"]
 
     def __str__(self):
         return self.name
@@ -652,16 +648,16 @@ class StraightFields(Model):
     blip = fields.CharField(max_length=50, default="BLIP")
     nullable = fields.CharField(max_length=50, null=True)
 
-    fk: fields.ForeignKeyNullableRelation[StraightFields] = fields.ForeignKeyField(
+    fk: fields.ForeignKeyNullableRelation["StraightFields"] = fields.ForeignKeyField(
         "models.StraightFields",
         related_name="fkrev",
         null=True,
         description="Tree!",
         on_delete=NO_ACTION,
     )
-    fkrev: fields.ReverseRelation[StraightFields]
+    fkrev: fields.ReverseRelation["StraightFields"]
 
-    o2o: fields.OneToOneNullableRelation[StraightFields] = fields.OneToOneField(
+    o2o: fields.OneToOneNullableRelation["StraightFields"] = fields.OneToOneField(
         "models.StraightFields",
         related_name="o2o_rev",
         null=True,
@@ -670,13 +666,13 @@ class StraightFields(Model):
     )
     o2o_rev: fields.Field
 
-    rel_to: fields.ManyToManyRelation[StraightFields] = fields.ManyToManyField(
+    rel_to: fields.ManyToManyRelation["StraightFields"] = fields.ManyToManyField(
         "models.StraightFields",
         related_name="rel_from",
         description="M2M to myself",
         on_delete=fields.NO_ACTION,
     )
-    rel_from: fields.ManyToManyRelation[StraightFields]
+    rel_from: fields.ManyToManyRelation["StraightFields"]
 
     class Meta:
         unique_together = [["chars", "blip"]]
@@ -700,7 +696,7 @@ class SourceFields(Model):
     blip = fields.CharField(max_length=50, default="BLIP", source_field="da_blip")
     nullable = fields.CharField(max_length=50, null=True, source_field="some_nullable")
 
-    fk: fields.ForeignKeyNullableRelation[SourceFields] = fields.ForeignKeyField(
+    fk: fields.ForeignKeyNullableRelation["SourceFields"] = fields.ForeignKeyField(
         "models.SourceFields",
         related_name="fkrev",
         null=True,
@@ -708,9 +704,9 @@ class SourceFields(Model):
         description="Tree!",
         on_delete=NO_ACTION,
     )
-    fkrev: fields.ReverseRelation[SourceFields]
+    fkrev: fields.ReverseRelation["SourceFields"]
 
-    o2o: fields.OneToOneNullableRelation[SourceFields] = fields.OneToOneField(
+    o2o: fields.OneToOneNullableRelation["SourceFields"] = fields.OneToOneField(
         "models.SourceFields",
         related_name="o2o_rev",
         null=True,
@@ -720,7 +716,7 @@ class SourceFields(Model):
     )
     o2o_rev: fields.Field
 
-    rel_to: fields.ManyToManyRelation[SourceFields] = fields.ManyToManyField(
+    rel_to: fields.ManyToManyRelation["SourceFields"] = fields.ManyToManyField(
         "models.SourceFields",
         related_name="rel_from",
         through="sometable_self",
@@ -729,7 +725,7 @@ class SourceFields(Model):
         description="M2M to myself",
         on_delete=fields.NO_ACTION,
     )
-    rel_from: fields.ManyToManyRelation[SourceFields]
+    rel_from: fields.ManyToManyRelation["SourceFields"]
 
     class Meta:
         table = "sometable"
@@ -756,10 +752,10 @@ class EnumFields(Model):
 
 class DoubleFK(Model):
     name = fields.CharField(max_length=50)
-    left: fields.ForeignKeyNullableRelation[DoubleFK] = fields.ForeignKeyField(
+    left: fields.ForeignKeyNullableRelation["DoubleFK"] = fields.ForeignKeyField(
         "models.DoubleFK", null=True, related_name="left_rel", on_delete=NO_ACTION
     )
-    right: fields.ForeignKeyNullableRelation[DoubleFK] = fields.ForeignKeyField(
+    right: fields.ForeignKeyNullableRelation["DoubleFK"] = fields.ForeignKeyField(
         "models.DoubleFK", null=True, related_name="right_rel", on_delete=NO_ACTION
     )
 
@@ -805,8 +801,8 @@ class School(Model):
     name = fields.TextField()
     id = fields.IntField(unique=True)
 
-    students: fields.ReverseRelation[Student]
-    principal: fields.ReverseRelation[Principal]
+    students: fields.ReverseRelation["Student"]
+    principal: fields.ReverseRelation["Principal"]
 
 
 class Student(Model):

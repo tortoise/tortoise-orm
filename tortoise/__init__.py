@@ -154,8 +154,12 @@ class Tortoise:
             fk_object = cast(
                 "OneToOneFieldInstance | ForeignKeyFieldInstance", model._meta.fields_map[field]
             )
-            related_app_name, related_model_name = split_reference(fk_object.model_name)
-            related_model = get_related_model(related_app_name, related_model_name)
+            reference = fk_object.model_name
+            if not isinstance(reference, str):
+                related_model: type[Model] = reference
+            else:
+                related_app_name, related_model_name = split_reference(reference)
+                related_model = get_related_model(related_app_name, related_model_name)
 
             if to_field := fk_object.to_field:
                 related_field = related_model._meta.fields_map.get(to_field)
@@ -248,8 +252,11 @@ class Tortoise:
                         m2m_object.backward_key = backward_key
 
                     reference = m2m_object.model_name
-                    related_app_name, related_model_name = split_reference(reference)
-                    related_model = get_related_model(related_app_name, related_model_name)
+                    if not isinstance(reference, str):
+                        related_model: type[Model] = reference
+                    else:
+                        related_app_name, related_model_name = split_reference(reference)
+                        related_model = get_related_model(related_app_name, related_model_name)
 
                     m2m_object.related_model = related_model
 
