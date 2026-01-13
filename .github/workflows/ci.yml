@@ -89,6 +89,23 @@ jobs:
           COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
           COVERALLS_PARALLEL: true
 
+  windowsSupport:
+    name: Check Windows Support for accel extra dependency
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: 3.9
+      - uses: astral-sh/setup-uv@v7
+      - name: Install accel extra
+        run: |
+          uv pip install -e ".[accel]"
+      - name: Check ciso8601
+        run: |
+          uv run --no-sync python examples/basic.py
+
   coveralls:
     name: Finish Coveralls
     needs: test
