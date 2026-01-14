@@ -5,7 +5,6 @@ from time import sleep
 from unittest.mock import patch
 
 import pytz
-from iso8601 import ParseError
 
 from tests import testmodels
 from tortoise import Model, fields, timezone
@@ -316,7 +315,7 @@ class TestDateFields(TestEmpty):
         obj0 = await self.model.create(date="2020-08-17")
         obj1 = await self.model.get(date="2020-08-17")
         self.assertEqual(obj0.date, obj1.date)
-        with self.assertRaises((ParseError, ValueError)):
+        with self.assertRaises(ValueError):
             await self.model.create(date="2020-08-xx")
         await self.model.filter(date="2020-08-17").update(date="2020-08-18")
         obj2 = await self.model.get(date="2020-08-18")

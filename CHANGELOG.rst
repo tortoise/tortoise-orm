@@ -20,6 +20,10 @@ Changed
 ^^^^^
 - feat: foreignkey to model type (#2027)
 
+Removed
+^^^^^^^
+- Remove `iso8601` because it's not active for a long time. (#2024)
+
 0.25
 ====
 

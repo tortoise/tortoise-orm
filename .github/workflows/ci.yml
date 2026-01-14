@@ -77,6 +77,10 @@ jobs:
           DEST_SANIC: examples/sanic
           PYTHONDEVMODE: 1
           PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
+      - name: Test not ciso8601
+        run: |
+          uv pip uninstall ciso8601
+          uv run --no-sync make test_sqlite
       - name: Upload Coverage
         run: |
           uvx coveralls --service=github
@@ -84,6 +88,23 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
           COVERALLS_PARALLEL: true
+
+  windowsSupport:
+    name: Check Windows Support for accel extra dependency
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: 3.9
+      - uses: astral-sh/setup-uv@v7
+      - name: Install accel extra
+        run: |
+          uv pip install -e ".[accel]"
+      - name: Check ciso8601
+        run: |
+          uv run --no-sync python examples/basic.py
 
   coveralls:
     name: Finish Coveralls

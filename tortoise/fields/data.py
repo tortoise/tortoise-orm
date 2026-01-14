@@ -23,9 +23,8 @@ from tortoise.validators import MaxLengthValidator
 try:
     from ciso8601 import parse_datetime
 except ImportError:  # pragma: nocoverage
-    from iso8601 import parse_date
+    from tortoise.utils import parse_datetime
 
-    parse_datetime = functools.partial(parse_date, default_timezone=None)
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
