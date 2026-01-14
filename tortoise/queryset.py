@@ -4,14 +4,13 @@ import types
 from collections import defaultdict
 from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable
 from copy import copy
-from typing import TYPE_CHECKING, Any, Generic, Optional, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, Optional, Protocol, TypeVar, cast, overload
 
 from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
 from pypika_tortoise.functions import Cast
 from pypika_tortoise.queries import QueryBuilder
 from pypika_tortoise.terms import Case, Field, Star, Term, ValueWrapper
-from typing_extensions import Literal, Protocol
 
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
 from tortoise.exceptions import (

@@ -15,6 +15,7 @@ Changelog
 Fixed
 ^^^^^
 - Fix ``AttributeError`` when using ``tortoise-orm`` with Nuitka-compiled Python code (#2053)
+- Fix 'Self' in python standard library typing.py, but tortoise/model.py required it in 'typing_extensions' (#2051)
 
 Changed
 ^^^^^

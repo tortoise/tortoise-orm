@@ -77,7 +77,12 @@ jobs:
           DEST_SANIC: examples/sanic
           PYTHONDEVMODE: 1
           PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
-      - name: Test not ciso8601
+      - name: Test No typing-extensions
+        if: matrix.python-version == 'py3.11'
+        run: |
+          uv pip uninstall typing-extensions
+          uv run --no-sync python examples/basic.py
+      - name: Test No ciso8601
         run: |
           uv pip uninstall ciso8601
           uv run --no-sync make test_sqlite

@@ -3,14 +3,14 @@ from __future__ import annotations
 import asyncio
 import inspect
 import re
+import sys
 from collections.abc import Awaitable, Callable, Generator, Iterable
 from copy import copy, deepcopy
 from functools import partial
-from typing import Any, TypedDict, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypedDict, TypeVar, cast
 
 from pypika_tortoise import Order, Query, Table
 from pypika_tortoise.terms import Term
-from typing_extensions import Self
 
 from tortoise import connections
 from tortoise.backends.base.client import BaseDBAsyncClient
@@ -53,6 +53,12 @@ from tortoise.queryset import (
 from tortoise.router import router
 from tortoise.signals import Signals
 from tortoise.transactions import in_transaction
+
+if TYPE_CHECKING:
+    if sys.version_info >= (3, 11):
+        from typing import Self
+    else:
+        from typing_extensions import Self
 
 MODEL = TypeVar("MODEL", bound="Model")
 EMPTY = object()
