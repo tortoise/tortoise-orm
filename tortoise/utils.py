@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import datetime
 import re
 import sys
@@ -107,6 +108,9 @@ ISO8601_REGEX = re.compile(
 
 
 def parse_datetime(datetime_string: str) -> datetime.datetime:
+    datetime_string = datetime_string.upper()
+    with contextlib.suppress(ValueError):
+        return datetime.datetime.fromisoformat(datetime_string)
     if not (m := ISO8601_REGEX.match(datetime_string)):
         raise ValueError(f"Unable to parse date string {datetime_string!r}")
     # Drop any Nones from the regex matches
@@ -114,7 +118,7 @@ def parse_datetime(datetime_string: str) -> datetime.datetime:
     groups: dict[str, str] = {k: v for k, v in m.groupdict().items() if v is not None}
     zone = None
     if tz := groups.get("timezone", None):
-        if tz.upper() == "Z":
+        if tz == "Z":
             zone = datetime.timezone.utc
         else:
             sign = groups.get("tz_sign", None)
