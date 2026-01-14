@@ -106,6 +106,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - name: Install accel extra
         run: |
+          uv venv --python 3.9
           uv pip install -e ".[accel]"
       - name: Check ciso8601
         run: |
