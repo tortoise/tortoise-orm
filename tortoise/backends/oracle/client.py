@@ -5,6 +5,11 @@ from typing import TYPE_CHECKING, Any, SupportsInt, cast
 
 import pyodbc
 import pytz
+
+try:
+    from ciso8601 import parse_datetime
+except ImportError:  # pragma: nocoverage
+    from tortoise.utils import parse_datetime
 from pypika_tortoise import OracleQuery
 
 from tortoise.backends.base.client import (
@@ -21,7 +26,6 @@ from tortoise.backends.odbc.client import (
 )
 from tortoise.backends.oracle.executor import OracleExecutor
 from tortoise.backends.oracle.schema_generator import OracleSchemaGenerator
-from tortoise.fields.data import parse_datetime
 
 if TYPE_CHECKING:  # pragma: nocoverage
     import asyncodbc  # pylint: disable=W0611

@@ -417,7 +417,7 @@ class DateField(Field[datetime.date], datetime.date):
         if value is not None and not isinstance(value, datetime.date):
             value = parse_datetime(value).date()
         self.validate(value)
-        return value
+        return value  # type: ignore[return-value]
 
 
 class TimeField(Field[datetime.time], datetime.time):
