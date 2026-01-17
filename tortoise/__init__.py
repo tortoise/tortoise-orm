@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import importlib
 import json
 import logging
@@ -12,6 +11,7 @@ from inspect import isclass
 from types import ModuleType
 from typing import Any, cast
 
+from anyio import from_thread
 from pypika_tortoise import Query, Table
 
 from tortoise.backends.base.client import BaseDBAsyncClient
@@ -154,8 +154,12 @@ class Tortoise:
             fk_object = cast(
                 "OneToOneFieldInstance | ForeignKeyFieldInstance", model._meta.fields_map[field]
             )
-            related_app_name, related_model_name = split_reference(fk_object.model_name)
-            related_model = get_related_model(related_app_name, related_model_name)
+            reference = fk_object.model_name
+            if not isinstance(reference, str):
+                related_model: type[Model] = reference
+            else:
+                related_app_name, related_model_name = split_reference(reference)
+                related_model = get_related_model(related_app_name, related_model_name)
 
             if to_field := fk_object.to_field:
                 related_field = related_model._meta.fields_map.get(to_field)
@@ -248,8 +252,11 @@ class Tortoise:
                         m2m_object.backward_key = backward_key
 
                     reference = m2m_object.model_name
-                    related_app_name, related_model_name = split_reference(reference)
-                    related_model = get_related_model(related_app_name, related_model_name)
+                    if not isinstance(reference, str):
+                        related_model: type[Model] = reference
+                    else:
+                        related_app_name, related_model_name = split_reference(reference)
+                        related_model = get_related_model(related_app_name, related_model_name)
 
                     m2m_object.related_model = related_model
 
@@ -637,14 +644,18 @@ def run_async(coro: Coroutine) -> None:
 
         run_async(do_stuff())
     """
-    loop = asyncio.get_event_loop()
-    try:
-        loop.run_until_complete(coro)
-    finally:
-        loop.run_until_complete(connections.close_all(discard=True))
+
+    async def main() -> None:
+        try:
+            await coro
+        finally:
+            await connections.close_all(discard=True)
+
+    with from_thread.start_blocking_portal() as portal:
+        portal.call(main)
 
 
-__version__ = "0.25.1"
+__version__ = "0.25.3"
 
 __all__ = [
     "Model",

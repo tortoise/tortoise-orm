@@ -8,8 +8,9 @@ from tortoise.contrib.test import init_memory_sqlite
 class TestDecorator(test.TestCase):
     @test.requireCapability(dialect="sqlite")
     async def test_script_with_init_memory_sqlite(self) -> None:
-        r = subprocess.run(["python", "examples/basic.py"], capture_output=True)  # nosec
-        output = r.stdout.decode()
+        r = subprocess.run(["python", "examples/basic.py"], capture_output=True, text=True)  # nosec
+        assert not r.stderr
+        output = r.stdout
         s = "[{'id': 1, 'name': 'Updated name'}, {'id': 2, 'name': 'Test 2'}]"
         self.assertIn(s, output)
 

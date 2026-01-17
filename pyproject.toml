@@ -8,10 +8,12 @@ keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg"
 dynamic = [ "version" ]
 requires-python = ">=3.9"
 dependencies = [
-    "pypika-tortoise (>=0.6.1,<1.0.0)",
+    "pypika-tortoise (>=0.6.3,<1.0.0)",
     "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
     "aiosqlite (>=0.16.0,<1.0.0)",
+    "anyio",
     "pytz",
+    "typing-extensions (>= 4.1.0); python_version < '3.11'",
 ]
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
@@ -23,12 +25,14 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Programming Language :: PL/SQL",
     "Framework :: AsyncIO",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Database",
+    "Typing :: Typed",
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
@@ -110,7 +114,7 @@ build-backend = "pdm.backend"
 version = {source="file", path="tortoise/__init__.py"}
 
 [tool.pdm.build]
-excludes = ["./**/.git", "./**/.*_cache"]
+excludes = ["./**/.git", "./**/.*_cache", "examples"]
 include = ["CHANGELOG.rst", "LICENSE", "README.rst"]
 
 [tool.mypy]

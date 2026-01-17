@@ -45,19 +45,19 @@ jobs:
       TORTOISE_MSSQL_DRIVER: ODBC Driver 18 for SQL Server
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v7
       - name: Install ODBC driver
         run: |
           curl -sSL -O https://packages.microsoft.com/config/ubuntu/$(grep VERSION_ID /etc/os-release | cut -d '"' -f 2)/packages-microsoft-prod.deb
@@ -65,12 +65,12 @@ jobs:
           sudo apt-get update
           sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
       - name: Run ci
-        run: uv run make ci
+        run: make ci
       - name: Test FastAPI/Blacksheep Example
         run: |
-          PYTHONPATH=$DEST_FASTAPI uv run pytest $PYTEST_ARGS $DEST_FASTAPI/_tests.py
-          PYTHONPATH=$DEST_BLACKSHEEP uv run pytest $PYTEST_ARGS $DEST_BLACKSHEEP/_tests.py
-          PYTHONPATH=$DEST_SANIC uv run pytest $PYTEST_ARGS $DEST_SANIC/_tests.py
+          PYTHONPATH=$DEST_FASTAPI uv run --frozen pytest $PYTEST_ARGS $DEST_FASTAPI/_tests.py
+          PYTHONPATH=$DEST_BLACKSHEEP uv run --frozen pytest $PYTEST_ARGS $DEST_BLACKSHEEP/_tests.py
+          PYTHONPATH=$DEST_SANIC uv run --frozen pytest $PYTEST_ARGS $DEST_SANIC/_tests.py
         env:
           DEST_FASTAPI: examples/fastapi
           DEST_BLACKSHEEP: examples/blacksheep
@@ -84,6 +84,11 @@ jobs:
           TORTOISE_TEST_POETRY_ADD: 1
           PYTHONDEVMODE: 1
           PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
+      - name: Test No typing-extensions
+        if: matrix.python-version == 'py3.11'
+        run: |
+          uv pip uninstall typing-extensions
+          uv run --no-sync python examples/basic.py
       - name: Upload Coverage
         run: |
           uvx coveralls --service=github

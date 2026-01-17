@@ -6,11 +6,10 @@ import os as _os
 import sys
 import typing
 import unittest
-from asyncio.events import AbstractEventLoop
 from collections.abc import Callable, Coroutine, Iterable
 from functools import partial, wraps
 from types import ModuleType
-from typing import Any, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, TypeVar, Union, cast
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 
 from tortoise import Model, Tortoise, connections
@@ -21,6 +20,9 @@ if sys.version_info >= (3, 10):
     from typing import ParamSpec
 else:
     from typing_extensions import ParamSpec
+
+if TYPE_CHECKING:
+    from asyncio.events import AbstractEventLoop
 
 
 __all__ = (

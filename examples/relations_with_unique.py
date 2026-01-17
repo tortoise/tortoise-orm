@@ -23,7 +23,7 @@ class Student(Model):
     id = fields.IntField(primary_key=True)
     name = fields.TextField()
     school: fields.ForeignKeyRelation[School] = fields.ForeignKeyField(
-        "models.School", related_name="students", to_field="id"
+        School, related_name="students", to_field="id"
     )
 
 
@@ -31,7 +31,7 @@ class Principal(Model):
     id = fields.IntField(primary_key=True)
     name = fields.TextField()
     school: fields.OneToOneRelation[School] = fields.OneToOneField(
-        "models.School", on_delete=fields.OnDelete.CASCADE, related_name="principal", to_field="id"
+        School, on_delete=fields.OnDelete.CASCADE, related_name="principal", to_field="id"
     )
 
 

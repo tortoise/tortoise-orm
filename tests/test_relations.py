@@ -1,3 +1,5 @@
+import subprocess  # nosec
+
 from tests.testmodels import (
     Address,
     Author,
@@ -501,3 +503,12 @@ class TestDoubleFK(test.TestCase):
             await tournament.events.create(name="Test Event")
 
         self.assertIn("hasn't been instanced", str(cm.exception))
+
+    @test.requireCapability(dialect="sqlite")
+    async def test_recursive(self) -> None:
+        file = "examples/relations_recursive.py"
+        r = subprocess.run(["python", file], capture_output=True, text=True)  # nosec
+        assert not r.stderr
+        output = r.stdout
+        s = "2.1. Second H2 (to: ) (from: 2.2. Third H2, Loose, 1.1. First H2)"
+        self.assertIn(s, output)

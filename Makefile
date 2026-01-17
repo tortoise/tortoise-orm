@@ -21,25 +21,25 @@ help:
 	@echo  "    lint    Auto-formats the code and check type hints"
 
 up:
-	@uv lock --upgrade
+	uv lock --upgrade
 
 deps:
-	@uv sync --all-groups --extra asyncpg --extra accel --extra psycopg --extra asyncodbc --extra aiomysql $(options)
+	uv sync --frozen --all-groups --extra asyncpg --extra accel --extra psycopg --extra asyncodbc --extra aiomysql $(options)
 
 deps_with_asyncmy:
-	@uv sync --all-groups --extra asyncpg --extra accel --extra psycopg --extra asyncodbc --extra asyncmy $(options)
+	uv sync --frozen --all-groups --extra asyncpg --extra accel --extra psycopg --extra asyncodbc --extra asyncmy $(options)
 
 check: build _check
 _check:
-	ruff format --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
-	ruff check $(checkfiles)
+	uv run --frozen ruff format --check $(checkfiles) || (echo "Please run 'make style' to auto-fix style issues" && false)
+	uv run --frozen ruff check $(checkfiles)
 	#pylint -d C,W,R $(checkfiles)
 	$(MAKE) _codeqc
 
 style: deps _style
 _style:
-	ruff format $(checkfiles)
-	ruff check --fix $(checkfiles)
+	uv run --frozen ruff format $(checkfiles)
+	uv run --frozen ruff check --fix $(checkfiles)
 
 lint: build _lint
 _lint:
@@ -48,30 +48,30 @@ _lint:
 
 codeqc: build _codeqc
 _codeqc:
-	mypy $(checkfiles)
-	bandit -c pyproject.toml -r $(checkfiles)
-	twine check dist/*
+	uv run --frozen mypy $(checkfiles)
+	uv run --frozen bandit -c pyproject.toml -r $(checkfiles)
+	uv run --frozen twine check dist/*
 
 test: deps
-	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: pytest $(pytest_opts)
+	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: uv run --frozen pytest $(pytest_opts)
 
 test_sqlite:
-	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: pytest --cov-report= $(pytest_opts)
+	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: uv run --frozen pytest --cov-report= $(pytest_opts)
 
 test_sqlite_regexp:
-	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory:?install_regexp_functions=True pytest --cov-report= $(pytest_opts)
+	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory:?install_regexp_functions=True uv run --frozen pytest --cov-report= $(pytest_opts)
 
 test_postgres_asyncpg:
-	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="asyncpg://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" pytest $(pytest_opts) --cov-report=
+	uv run --frozen python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="asyncpg://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" uv run --frozen pytest $(pytest_opts) --cov-report=
 
 test_postgres_psycopg:
-	python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="psycopg://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" pytest $(pytest_opts) --cov-report=
+	uv run --frozen python -V | grep PyPy || $(py_warn) TORTOISE_TEST_DB="psycopg://postgres:$(TORTOISE_POSTGRES_PASS)@127.0.0.1:5432/test_\{\}" uv run --frozen pytest $(pytest_opts) --cov-report=
 
 test_mysql_myisam:
-	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}?storage_engine=MYISAM" pytest $(pytest_opts) --cov-report=
+	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}?storage_engine=MYISAM" uv run --frozen pytest $(pytest_opts) --cov-report=
 
 test_mysql:
-	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}" pytest $(pytest_opts) --cov-report=
+	$(py_warn) TORTOISE_TEST_DB="mysql://root:$(TORTOISE_MYSQL_PASS)@127.0.0.1:3306/test_\{\}" uv run --frozen pytest $(pytest_opts) --cov-report=
 
 test_mysql_asyncmy:
 	$(MAKE) deps_with_asyncmy
@@ -80,14 +80,14 @@ test_mysql_asyncmy:
 	$(MAKE) deps
 
 test_mssql:
-	$(py_warn) TORTOISE_TEST_DB="mssql://sa:$(TORTOISE_MSSQL_PASS)@127.0.0.1:1433/test_\{\}?driver=$(TORTOISE_MSSQL_DRIVER)&TrustServerCertificate=YES" pytest $(pytest_opts) --cov-report=
+	$(py_warn) TORTOISE_TEST_DB="mssql://sa:$(TORTOISE_MSSQL_PASS)@127.0.0.1:1433/test_\{\}?driver=$(TORTOISE_MSSQL_DRIVER)&TrustServerCertificate=YES" uv run --frozen pytest $(pytest_opts) --cov-report=
 
 test_oracle:
-	$(py_warn) TORTOISE_TEST_DB="oracle://SYSTEM:$(TORTOISE_ORACLE_PASS)@127.0.0.1:1521/test_\{\}?driver=$(TORTOISE_ORACLE_DRIVER)" pytest $(pytest_opts) --cov-report=
+	$(py_warn) TORTOISE_TEST_DB="oracle://SYSTEM:$(TORTOISE_ORACLE_PASS)@127.0.0.1:1521/test_\{\}?driver=$(TORTOISE_ORACLE_DRIVER)" uv run --frozen pytest $(pytest_opts) --cov-report=
 
 _testall: test_sqlite test_postgres_asyncpg test_postgres_psycopg test_mysql_myisam test_mysql test_mysql_asyncmy test_mssql
 
-	coverage report
+	uv run --frozen coverage report
 
 testall: deps _testall
 
@@ -95,11 +95,11 @@ ci: check _testall
 
 docs: deps
 	rm -fR ./build
-	sphinx-build -M html docs build
+	uv run --frozen sphinx-build -M html docs build
 
 build: deps
 	rm -fR dist/
 	uv build
 
 publish: deps _build
-	twine upload dist/*
+	uv run --frozen twine upload dist/*
