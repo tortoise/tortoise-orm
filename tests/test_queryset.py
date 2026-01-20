@@ -24,7 +24,6 @@ from tortoise.exceptions import (
 from tortoise.expressions import F, RawSQL, Subquery
 from tortoise.functions import Avg, Length
 
-
 # TODO: Test the many exceptions in QuerySet
 # TODO: .filter(intnum_null=None) does not work as expected
 
@@ -861,8 +860,7 @@ class TestQueryset(test.TestCase):
         reporter3 = await Reporter.create(name="33333")
 
         subquery = (
-            Reporter
-            .annotate(name_length=Length("name"))
+            Reporter.annotate(name_length=Length("name"))
             .filter(name_length__gt=3)
             .order_by("id")
             .values_list("id", flat=True)
