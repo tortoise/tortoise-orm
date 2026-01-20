@@ -22,7 +22,7 @@ from tortoise.exceptions import (
     ParamsError,
 )
 from tortoise.expressions import F, RawSQL, Subquery
-from tortoise.functions import Avg, Length
+from tortoise.functions import Avg
 
 # TODO: Test the many exceptions in QuerySet
 # TODO: .filter(intnum_null=None) does not work as expected
