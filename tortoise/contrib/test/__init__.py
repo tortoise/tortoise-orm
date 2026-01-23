@@ -88,7 +88,7 @@ async def _init_db(config: dict) -> None:
 
 
 def _restore_default() -> None:
-    Tortoise.apps = {}
+    Tortoise.apps = None
     connections._get_storage().update(_CONNECTIONS.copy())
     connections._db_config = _CONN_CONFIG.copy()
     Tortoise._init_apps(_CONFIG["apps"])
@@ -97,12 +97,13 @@ def _restore_default() -> None:
 
 async def truncate_all_models() -> None:
     # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys
-    for app in Tortoise.apps.values():
-        for model in app.values():
-            quote_char = model._meta.db.query_class.SQL_CONTEXT.quote_char
-            await model._meta.db.execute_script(
-                f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"  # nosec
-            )
+    if not Tortoise.apps:
+        raise ValueError("apps are not loaded")
+    for model in Tortoise.apps.get_models_iterable():
+        quote_char = model._meta.db.query_class.SQL_CONTEXT.quote_char
+        await model._meta.db.execute_script(
+            f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"  # nosec
+        )
 
 
 def initializer(
@@ -142,7 +143,7 @@ def initializer(
     _CONN_CONFIG = connections.db_config.copy()
     connections._clear_storage()
     connections.db_config.clear()
-    Tortoise.apps = {}
+    Tortoise.apps = None
     Tortoise._inited = False
 
 
@@ -233,7 +234,7 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self) -> None:
         await self._tearDownDB()
         self._reset_conn_state()
-        Tortoise.apps = {}
+        Tortoise.apps = None
         Tortoise._inited = False
 
     def assertListSortEqual(

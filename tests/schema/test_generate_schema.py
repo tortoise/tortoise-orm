@@ -95,7 +95,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS "uidx_teamevents_event_i_664dbc" ON "teamevent
     async def asyncSetUp(self):
         await super().asyncSetUp()
         try:
-            Tortoise.apps = {}
+            Tortoise.apps = None
             Tortoise._inited = False
         except ConfigurationError:
             pass

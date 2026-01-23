@@ -9,7 +9,7 @@ class TestInitErrors(test.SimpleTestCase):
     async def asyncSetUp(self):
         await super().asyncSetUp()
         try:
-            Tortoise.apps = {}
+            Tortoise.apps = None
             Tortoise._inited = False
         except ConfigurationError:
             pass
