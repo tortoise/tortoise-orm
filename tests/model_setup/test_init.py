@@ -1,6 +1,7 @@
 import os
 
 from tortoise import Tortoise, connections
+from tortoise.config import AppConfig, ConnectionConfig, TortoiseConfig
 from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 
@@ -28,6 +29,26 @@ class TestInitErrors(test.SimpleTestCase):
                     "models": {"models": ["tests.testmodels"], "default_connection": "default"}
                 },
             }
+        )
+        self.assertIn("models", Tortoise.apps)
+        self.assertIsNotNone(connections.get("default"))
+
+    async def test_dataclass_init(self):
+        await Tortoise.init(
+            config=TortoiseConfig(
+                connections={
+                    "default": ConnectionConfig(
+                        engine="tortoise.backends.sqlite",
+                        credentials={"file_path": ":memory:"},
+                    )
+                },
+                apps={
+                    "models": AppConfig(
+                        models=["tests.testmodels"],
+                        default_connection="default",
+                    )
+                },
+            )
         )
         self.assertIn("models", Tortoise.apps)
         self.assertIsNotNone(connections.get("default"))

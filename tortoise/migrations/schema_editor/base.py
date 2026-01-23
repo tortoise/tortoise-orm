@@ -413,13 +413,13 @@ class BaseSchemaEditor:
 
     async def _alter_field(self, model: Type[Model], old_field: Field, new_field: Field) -> None:
         actions: List[str] = []
+        old_db_field = old_field.source_field or old_field.model_field_name
+        new_db_field = new_field.source_field or new_field.model_field_name
         if old_field.null != new_field.null:
             if new_field.null:
-                changes = self.ALTER_FIELD_NULL_TEMPLATE.format(column=old_field.source_field)
+                changes = self.ALTER_FIELD_NULL_TEMPLATE.format(column=old_db_field)
             else:
-                changes = self.ALTER_FIELD_NOT_NULL_TEMPLATE.format(
-                    column=new_field.source_field
-                )
+                changes = self.ALTER_FIELD_NOT_NULL_TEMPLATE.format(column=new_db_field)
 
             actions.append(self.ALTER_FIELD_TEMPLATE.format(table=model._meta.db_table, changes=changes))
 
@@ -435,12 +435,12 @@ class BaseSchemaEditor:
             # TODO description management
             pass
 
-        if old_field.source_field != new_field.source_field:
+        if old_db_field != new_db_field:
             actions.append(
                 self.RENAME_FIELD_TEMPLATE.format(
                     table=model._meta.db_table,
-                    old_column=old_field.source_field,
-                    new_column=new_field.source_field,
+                    old_column=old_db_field,
+                    new_column=new_db_field,
                 )
             )
 
@@ -483,9 +483,9 @@ class BaseSchemaEditor:
         if isinstance(field, ForeignKeyFieldInstance):
             field = model._meta.fields_map[field.source_field]
             # TODO Drop constraints as they can block field drop
-
+        db_field = model._meta.fields_db_projection.get(
+            field.model_field_name, field.source_field or field.model_field_name
+        )
         await self.client.execute_script(
-            self.DELETE_FIELD_TEMPLATE.format(
-                table=model._meta.db_table, column=field.source_field
-            )
+            self.DELETE_FIELD_TEMPLATE.format(table=model._meta.db_table, column=db_field)
         )

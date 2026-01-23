@@ -14,6 +14,7 @@ from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
 from tortoise.connection import connections
 from tortoise.apps import Apps
+from tortoise.config import TortoiseConfig
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields.relational import (
     BackwardFKRelation,
@@ -183,7 +184,7 @@ class Tortoise:
     @classmethod
     async def init(
         cls,
-        config: dict[str, Any] | None = None,
+        config: dict[str, Any] | TortoiseConfig | None = None,
         config_file: str | None = None,
         _create_db: bool = False,
         db_url: str | None = None,
@@ -202,7 +203,7 @@ class Tortoise:
         and ``(db_url, modules)``.
 
         :param config:
-            Dict containing config:
+            Dict containing config or ``TortoiseConfig``:
 
             .. admonition:: Example
 
@@ -275,6 +276,17 @@ class Tortoise:
             config = generate_config(db_url, modules)
         elif config is None:
             raise ConfigurationError('You must specify "config" or "config_file" or "db_url"')
+        elif isinstance(config, TortoiseConfig):
+            config = config.to_dict()
+        else:
+            try:
+                TortoiseConfig.from_dict(config)
+            except ConfigurationError as exc:
+                warnings.warn(
+                    f"Config validation warning: {exc}",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
 
         try:
             connections_config = config["connections"]
@@ -449,6 +461,7 @@ __all__ = [
     "Model",
     "Tortoise",
     "BaseDBAsyncClient",
+    "TortoiseConfig",
     "__version__",
     "connections",
 ]
