@@ -64,6 +64,8 @@ class ModelState(BaseEntityState):
 
             if isinstance(field, ManyToManyFieldInstance) and field._generated:
                 continue
+            if getattr(field, "reference", None) is not None:
+                continue
 
             fields[name] = deepcopy(field)
 

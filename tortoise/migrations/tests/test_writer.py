@@ -61,11 +61,11 @@ def test_writer_format_create_model_basic(tmp_path: Path, monkeypatch) -> None:
     ]
     expected = textwrap.dedent(
         """\
-        from tortoise.migrations import Migration
+        from tortoise import migrations
         from tortoise.migrations import operations as ops
         from tortoise import fields
 
-        class Migration(Migration):
+        class Migration(migrations.Migration):
             operations = [
                 ops.CreateModel(
                     name='Widget',
@@ -91,11 +91,11 @@ def test_writer_format_rename_and_alter(tmp_path: Path, monkeypatch) -> None:
     ]
     expected = textwrap.dedent(
         """\
-        from tortoise.migrations import Migration
+        from tortoise import migrations
         from tortoise.migrations import operations as ops
         from tortoise import fields
 
-        class Migration(Migration):
+        class Migration(migrations.Migration):
             operations = [
                 ops.RenameField(
                     model_name='Widget',
@@ -140,13 +140,13 @@ def test_writer_format_options_indexes_constraints(tmp_path: Path, monkeypatch) 
     ]
     expected = textwrap.dedent(
         """\
-        from tortoise.migrations import Migration
+        from tortoise import migrations
         from tortoise.migrations import operations as ops
         from tortoise import fields
         from tortoise.indexes import Index, PartialIndex
         from tortoise.migrations.constraints import UniqueConstraint
 
-        class Migration(Migration):
+        class Migration(migrations.Migration):
             operations = [
                 ops.CreateModel(
                     name='Widget',
@@ -169,6 +169,148 @@ def test_writer_format_options_indexes_constraints(tmp_path: Path, monkeypatch) 
         """
     )
     _write_migration(tmp_path, monkeypatch, "0003_options", operations, expected)
+
+
+def test_writer_renders_fk_field(tmp_path: Path, monkeypatch) -> None:
+    operations = [
+        CreateModel(
+            name="Author",
+            fields=[("id", fields.IntField(primary_key=True))],
+        ),
+        CreateModel(
+            name="Post",
+            fields=[
+                ("id", fields.IntField(primary_key=True)),
+                ("author", fields.ForeignKeyField("app.Author", related_name="posts")),
+            ],
+        ),
+    ]
+    expected = textwrap.dedent(
+        """\
+        from tortoise import migrations
+        from tortoise.migrations import operations as ops
+        from tortoise.fields.base import OnDelete
+        from tortoise import fields
+
+        class Migration(migrations.Migration):
+            operations = [
+                ops.CreateModel(
+                    name='Author',
+                    fields=[
+                        ('id', fields.IntField(generated=True, primary_key=True, unique=True, db_index=True)),
+                    ],
+                ),
+                ops.CreateModel(
+                    name='Post',
+                    fields=[
+                        ('id', fields.IntField(generated=True, primary_key=True, unique=True, db_index=True)),
+                        ('author', fields.ForeignKeyField('app.Author', db_constraint=True, related_name='posts', on_delete=OnDelete.CASCADE)),
+                    ],
+                ),
+            ]
+        """
+    )
+    _write_migration(tmp_path, monkeypatch, "0004_fk", operations, expected)
+
+
+def test_writer_excludes_fk_source_field(tmp_path: Path, monkeypatch) -> None:
+    operations = [
+        CreateModel(
+            name="Post",
+            fields=[
+                ("id", fields.IntField(primary_key=True)),
+                ("author", fields.ForeignKeyField("app.Author", related_name="posts")),
+                ("author_id", fields.IntField(source_field="author_id")),
+            ],
+        )
+    ]
+    expected = textwrap.dedent(
+        """\
+        from tortoise import migrations
+        from tortoise.migrations import operations as ops
+        from tortoise.fields.base import OnDelete
+        from tortoise import fields
+
+        class Migration(migrations.Migration):
+            operations = [
+                ops.CreateModel(
+                    name='Post',
+                    fields=[
+                        ('id', fields.IntField(generated=True, primary_key=True, unique=True, db_index=True)),
+                        ('author', fields.ForeignKeyField('app.Author', db_constraint=True, related_name='posts', on_delete=OnDelete.CASCADE)),
+                    ],
+                ),
+            ]
+        """
+    )
+    _write_migration(tmp_path, monkeypatch, "0005_fk_source", operations, expected)
+
+
+def test_writer_serializes_on_delete_enum(tmp_path: Path, monkeypatch) -> None:
+    operations = [
+        CreateModel(
+            name="Post",
+            fields=[
+                ("id", fields.IntField(primary_key=True)),
+                (
+                    "author",
+                    fields.ForeignKeyField(
+                        "app.Author",
+                        related_name="posts",
+                        on_delete=fields.OnDelete.SET_NULL,
+                        null=True,
+                    ),
+                ),
+            ],
+        )
+    ]
+    expected = textwrap.dedent(
+        """\
+        from tortoise import migrations
+        from tortoise.migrations import operations as ops
+        from tortoise.fields.base import OnDelete
+        from tortoise import fields
+
+        class Migration(migrations.Migration):
+            operations = [
+                ops.CreateModel(
+                    name='Post',
+                    fields=[
+                        ('id', fields.IntField(generated=True, primary_key=True, unique=True, db_index=True)),
+                        ('author', fields.ForeignKeyField('app.Author', null=True, db_constraint=True, related_name='posts', on_delete=OnDelete.SET_NULL)),
+                    ],
+                ),
+            ]
+        """
+    )
+    _write_migration(tmp_path, monkeypatch, "0006_enum", operations, expected)
+
+
+def test_writer_skips_missing_db_index(tmp_path: Path, monkeypatch) -> None:
+    operations = [
+        CreateModel(
+            name="Message",
+            fields=[("body", fields.TextField())],
+        )
+    ]
+    expected = textwrap.dedent(
+        """\
+        from tortoise import migrations
+        from tortoise.migrations import operations as ops
+        from tortoise import fields
+
+        class Migration(migrations.Migration):
+            operations = [
+                ops.CreateModel(
+                    name='Message',
+                    fields=[
+                        ('body', fields.TextField(unique=False)),
+                    ],
+                ),
+            ]
+        """
+    )
+    _write_migration(tmp_path, monkeypatch, "0007_textfield", operations, expected)
 
 
 def test_writer_rejects_lambda_default(tmp_path: Path, monkeypatch) -> None:

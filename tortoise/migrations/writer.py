@@ -112,6 +112,14 @@ def _resolve_import(value: Any) -> tuple[str, str, bool]:
 
 
 def render_value(value: Any, imports: ImportManager) -> str:
+    if isinstance(value, Enum):
+        enum_cls = value.__class__
+        module_name, name, use_module = _resolve_import(enum_cls)
+        if use_module:
+            imports.add_module(module_name)
+            return f"{name}.{value.name}"
+        imports.add_from(module_name, name)
+        return f"{name}.{value.name}"
     if value is None or isinstance(value, (bool, int, float, str)):
         return repr(value)
     if isinstance(value, bytes):
@@ -175,20 +183,16 @@ def render_value(value: Any, imports: ImportManager) -> str:
             return name
         imports.add_from(module_name, name)
         return name
-    if isinstance(value, Enum):
-        enum_cls = value.__class__
-        module_name, name, use_module = _resolve_import(enum_cls)
-        if use_module:
-            imports.add_module(module_name)
-            return f"{name}.{value.name}"
-        imports.add_from(module_name, name)
-        return f"{name}.{value.name}"
     return repr(value)
 
 
 def _render_call(path: str, args: list[Any], kwargs: dict[str, Any], imports: ImportManager) -> str:
     if path.startswith("tortoise.fields."):
         class_name = path.rsplit(".", 1)[1]
+        if path.startswith("tortoise.fields.relational.") and class_name.endswith("FieldInstance"):
+            class_name = class_name.replace("FieldInstance", "Field")
+            if "model_name" in kwargs:
+                args = [kwargs.pop("model_name")] + list(args)
         imports.add_fields_alias()
         callee = f"fields.{class_name}"
     elif path.startswith("tortoise.indexes."):
@@ -249,29 +253,27 @@ class MigrationWriter:
             operations.extend(self._format_operation(operation, imports, indent=" " * 8))
 
         lines: List[str] = [
-            "from tortoise.migrations import Migration",
+            "from tortoise import migrations",
             "from tortoise.migrations import operations as ops",
         ]
         extra_imports = imports.render()
         if extra_imports:
             lines.extend(extra_imports)
-        lines.extend(
-            [
-                "",
-                "class Migration(Migration):",
-            ]
-        )
+        lines.extend(["", "class Migration(migrations.Migration):"])
+        blocks: list[list[str]] = []
         if self.dependencies:
-            lines.append(f"    dependencies = {self.dependencies!r}")
+            blocks.append([f"    dependencies = {self.dependencies!r}"])
         if self.run_before:
-            lines.append(f"    run_before = {self.run_before!r}")
+            blocks.append([f"    run_before = {self.run_before!r}"])
         if self.replaces:
-            lines.append(f"    replaces = {self.replaces!r}")
+            blocks.append([f"    replaces = {self.replaces!r}"])
         if self.initial is not None:
-            lines.append(f"    initial = {self.initial!r}")
-        lines.append("    operations = [")
-        lines.extend(operations)
-        lines.append("    ]")
+            blocks.append([f"    initial = {self.initial!r}"])
+        blocks.append(["    operations = [", *operations, "    ]"])
+        for idx, block in enumerate(blocks):
+            lines.extend(block)
+            if idx < len(blocks) - 1:
+                lines.append("")
         lines.append("")
         return "\n".join(lines)
 
@@ -417,8 +419,15 @@ class MigrationWriter:
     def _format_create_model(
         self, operation: CreateModel, imports: ImportManager, *, indent: str
     ) -> list[str]:
+        source_fields = {
+            field.source_field
+            for _, field in operation.fields
+            if hasattr(field, "source_field") and field.source_field
+        }
         field_lines = []
         for name, field in operation.fields:
+            if name in source_fields:
+                continue
             field_expr = self._render_field(field, imports)
             field_lines.append(f"{indent}        ({name!r}, {field_expr}),")
         fields_block = [f"{indent}    fields=["] + field_lines + [f"{indent}    ],"]

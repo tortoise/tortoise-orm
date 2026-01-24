@@ -34,8 +34,17 @@ RELATION_FIELDS = (ForeignKeyFieldInstance, OneToOneFieldInstance, ManyToManyFie
 
 def _field_signature(field: "Field") -> Dict[str, object]:
     desc = field.describe(serializable=True)
+    if getattr(field, "source_field", None) is None:
+        desc.pop("db_column", None)
     for key in ("name", "docstring", "default", "python_type"):
         desc.pop(key, None)
+    return desc
+
+
+def _field_signature_for_rename(field: "Field") -> Dict[str, object]:
+    desc = _field_signature(field)
+    desc.pop("source_field", None)
+    desc.pop("db_column", None)
     return desc
 
 
@@ -261,9 +270,9 @@ class StateFieldDiff:
         removed_fields = set(old_fields) - set(new_fields)
 
         for new_name in sorted(added_fields):
-            new_sig = _field_signature(new_fields[new_name])
+            new_sig = _field_signature_for_rename(new_fields[new_name])
             for old_name in sorted(removed_fields):
-                if new_sig == _field_signature(old_fields[old_name]):
+                if new_sig == _field_signature_for_rename(old_fields[old_name]):
                     operations.append(
                         RenameField(
                             model_name=self.new_state.name,

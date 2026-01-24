@@ -11,8 +11,11 @@ dependencies = [
     "pypika-tortoise (>=0.6.3,<1.0.0)",
     "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
     "aiosqlite (>=0.16.0,<1.0.0)",
+    "asyncclick (>=8.1.7,<9.0.0)",
     "anyio",
+    "ptpython",
     "pytz",
+    "tomlkit (>=0.11.4,<1.0.0); python_version < '3.11'",
     "typing-extensions (>= 4.1.0); python_version < '3.11'",
 ]
 classifiers = [
@@ -44,6 +47,7 @@ accel = [
     "uvloop; sys_platform != 'win32' and implementation_name == 'cpython'",
     "orjson",
 ]
+cli = []
 asyncpg = ["asyncpg"]
 aiomysql = ["aiomysql"]
 asyncmy = ["asyncmy (>=0.2.8,<1.0.0); python_version < '4.0'"]
@@ -54,6 +58,9 @@ asyncodbc = ["asyncodbc (>=0.1.1,<1.0.0); python_version < '4.0'"]
 documentation = "https://tortoise.github.io"
 homepage = "https://github.com/tortoise/tortoise-orm"
 repository = "https://github.com/tortoise/tortoise-orm.git"
+
+[project.scripts]
+tortoise = "tortoise.cli:main"
 
 [tool.poetry]
 requires-poetry = ">=2.0"
@@ -104,6 +111,7 @@ test = [
     "pytest-xdist",
     "pytest-cov",
     "pytest-codspeed",
+    "pytest-asyncio",
 ]
 docs = [
     # Documentation tools

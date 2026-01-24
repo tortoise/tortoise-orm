@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, Tuple, Type, cast
+from typing import Any, Dict, List, Optional, Tuple, Type, cast, TYPE_CHECKING
 
 from tortoise import BaseDBAsyncClient, Model
 from tortoise.fields import Field
@@ -15,6 +15,13 @@ from tortoise.migrations.exceptions import IncompatibleStateError
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.migrations.schema_generator.state import ModelState, State
 from tortoise.indexes import Index
+
+if TYPE_CHECKING:
+    from tortoise.fields.relational import ManyToManyRelation
+
+    FieldLike = Field | ManyToManyRelation[Any]
+else:
+    FieldLike = Field
 
 DIRECT_RELATION_FIELDS = (
     ForeignKeyFieldInstance,
@@ -102,7 +109,7 @@ class CreateModel(TortoiseOperation):
     def __init__(
         self,
         name: str,
-        fields: List[Tuple[str, Field]],
+        fields: List[Tuple[str, FieldLike]],
         options: Dict[str, Any] | None = None,
         bases: List[str] | None = None,
     ) -> None:
@@ -174,6 +181,8 @@ class RenameModel(TortoiseOperation):
         model_state_to_change = state.models.pop((app_label, self.old_name), None)
         if not model_state_to_change:
             raise IncompatibleStateError()
+
+        state.apps.unregister_model(app_label, self.old_name)
 
         old_table = model_state_to_change.table
         model_state_to_change.name = self.new_name
@@ -329,7 +338,7 @@ class AlterModelOptions(TortoiseOperation):
 
 
 class AddField(TortoiseOperation):
-    def __init__(self, model_name: str, name: str, field: Field) -> None:
+    def __init__(self, model_name: str, name: str, field: FieldLike) -> None:
         self.model_name = model_name
         self.name = name
         self.field = field
@@ -421,7 +430,7 @@ class RemoveField(TortoiseOperation):
         await state_editor.add_field(model, self.name)
 
 class AlterField(TortoiseOperation):
-    def __init__(self, model_name: str, name: str, field: Field) -> None:
+    def __init__(self, model_name: str, name: str, field: FieldLike) -> None:
         self.model_name = model_name
         self.name = name
         self.field = field
@@ -465,7 +474,7 @@ class AlterField(TortoiseOperation):
             return
         old_model = old_state.apps.get_model(f"{app_label}.{self.model_name}")
         new_model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
-        await state_editor.alter_field(new_model, old_model, self.name)
+        await state_editor.alter_field(old_model, new_model, self.name)
 
 class RenameField(TortoiseOperation):
     def __init__(self, model_name: str, old_name: str, new_name: str) -> None:

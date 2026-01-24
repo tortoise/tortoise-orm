@@ -8,14 +8,16 @@ from tortoise.migrations.operations import (
     AddConstraint,
     AddField,
     AddIndex,
+    AlterField,
     CreateModel,
     DeleteModel,
     RemoveIndex,
     RenameIndex,
 )
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
-from tortoise.migrations.schema_generator.state import State
+from tortoise.migrations.schema_generator.state import ModelState, State
 from tortoise.migrations.schema_generator.state_apps import StateApps
+from tortoise.models import Model
 
 
 class FakeClient:
@@ -33,6 +35,30 @@ class TestSchemaEditor(BaseSchemaEditor):
 
     def _get_column_comment_sql(self, table: str, column: str, comment: str) -> str:
         return ""
+
+
+def make_model(
+    model_name: str,
+    *,
+    meta_options: dict | None = None,
+    **model_fields: fields.Field,
+):
+    attrs = dict(model_fields)
+    options = {"app": "models", "table": "widget"}
+    if meta_options:
+        options.update(meta_options)
+    attrs["Meta"] = type("Meta", (), options)
+    return type(model_name, (Model,), attrs)
+
+
+def build_state(app_label: str, model: type) -> State:
+    apps = StateApps()
+    state = State(models={}, apps=apps)
+    model_state = ModelState.make_from_model(app_label, model)
+    state.models[(app_label, model.__name__)] = model_state
+    model_clone = model_state.render(apps)
+    apps.register_model(app_label, model_clone)
+    return state
 
 
 @pytest.mark.asyncio
@@ -166,3 +192,30 @@ async def test_add_constraint_operation_runs_sql() -> None:
 
     assert client.executed
     assert 'ALTER TABLE "widget" ADD CONSTRAINT "uniq_widget_id" UNIQUE ("id")' in client.executed[0]
+
+
+@pytest.mark.asyncio
+async def test_alter_field_backward_renames_columns() -> None:
+    client = FakeClient()
+    editor = TestSchemaEditor(client)
+
+    OldWidget = make_model(
+        "Widget",
+        id=fields.IntField(pk=True),
+        body=fields.TextField(),
+    )
+    NewWidget = make_model(
+        "Widget",
+        id=fields.IntField(pk=True),
+        body=fields.TextField(source_field="content"),
+    )
+
+    old_state = build_state("models", NewWidget)
+    new_state = build_state("models", OldWidget)
+
+    op = AlterField(model_name="Widget", name="body", field=fields.TextField())
+
+    await op.database_backward("models", old_state, new_state, state_editor=editor)
+
+    assert client.executed
+    assert 'RENAME COLUMN "content" TO "body"' in client.executed[0]

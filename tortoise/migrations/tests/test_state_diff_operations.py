@@ -1,3 +1,5 @@
+import pytest
+
 from tortoise import fields
 from tortoise.indexes import Index
 from tortoise.migrations.constraints import UniqueConstraint
@@ -44,6 +46,12 @@ def make_model(
     return type(model_name, (Model,), attrs)
 
 
+def make_text_field(source_field: str | None) -> fields.TextField:
+    if source_field is None:
+        return fields.TextField()
+    return fields.TextField(source_field=source_field)
+
+
 def test_generate_create_and_delete_model() -> None:
     Widget = make_model("Widget", "widget", id=fields.IntField(pk=True), name=fields.TextField())
 
@@ -87,6 +95,44 @@ def test_generate_field_ops() -> None:
     operations = OperationGenerator(old_state, new_state).generate()
     assert any(isinstance(op, RenameField) for op in operations)
     assert any(isinstance(op, AddField) for op in operations)
+
+
+@pytest.mark.parametrize(
+    ("old_name", "new_name", "old_source", "new_source", "expect_rename", "expect_alter"),
+    [
+        ("title", "title", None, None, False, False),
+        ("title", "title", None, "legacy_title", False, True),
+        ("title", "headline", None, None, True, False),
+        ("title", "headline", None, "title", True, False),
+    ],
+)
+def test_generate_rename_field_source_field_matrix(
+    old_name: str,
+    new_name: str,
+    old_source: str | None,
+    new_source: str | None,
+    expect_rename: bool,
+    expect_alter: bool,
+) -> None:
+    OldWidget = make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        **{old_name: make_text_field(old_source)},
+    )
+    NewWidget = make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        **{new_name: make_text_field(new_source)},
+    )
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert any(isinstance(op, RenameField) for op in operations) is expect_rename
+    assert any(isinstance(op, AlterField) for op in operations) is expect_alter
 
 
 def test_generate_alter_field() -> None:

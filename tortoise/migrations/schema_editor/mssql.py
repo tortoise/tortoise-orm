@@ -144,3 +144,46 @@ class MSSQLSchemaEditor(BaseSchemaEditor):
                 table=model._meta.db_table, name=self._constraint_name_for_model(model, constraint)
             )
         )
+
+    async def remove_field(self, model: type[Model], field) -> None:
+        if isinstance(field, ManyToManyFieldInstance):
+            await self.client.execute_script(
+                self.DELETE_TABLE_TEMPLATE.format(table=field.through)
+            )
+            return
+
+        db_field = model._meta.fields_db_projection.get(
+            field.model_field_name, field.source_field or field.model_field_name
+        )
+
+        cleanup_sql = f"""
+DECLARE @sql NVARCHAR(MAX) = N'';
+SELECT @sql += N'ALTER TABLE [' + t.name + '] DROP CONSTRAINT [' + kc.name + '];'
+FROM sys.key_constraints kc
+JOIN sys.tables t ON kc.parent_object_id = t.object_id
+JOIN sys.index_columns ic ON kc.parent_object_id = ic.object_id AND kc.unique_index_id = ic.index_id
+JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+WHERE t.name = '{model._meta.db_table}' AND c.name = '{db_field}';
+EXEC sp_executesql @sql;
+
+SET @sql = N'';
+SELECT @sql += N'DROP INDEX [' + i.name + '] ON [' + t.name + '];'
+FROM sys.indexes i
+JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
+JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
+JOIN sys.tables t ON i.object_id = t.object_id
+WHERE t.name = '{model._meta.db_table}' AND c.name = '{db_field}' AND i.is_unique = 1 AND i.is_primary_key = 0;
+EXEC sp_executesql @sql;
+
+SET @sql = N'';
+SELECT @sql += N'ALTER TABLE [' + t.name + '] DROP CONSTRAINT [' + dc.name + '];'
+FROM sys.default_constraints dc
+JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
+JOIN sys.tables t ON dc.parent_object_id = t.object_id
+WHERE t.name = '{model._meta.db_table}' AND c.name = '{db_field}';
+EXEC sp_executesql @sql;
+"""
+        await self.client.execute_script(cleanup_sql)
+        await self.client.execute_script(
+            self.DELETE_FIELD_TEMPLATE.format(table=model._meta.db_table, column=db_field)
+        )

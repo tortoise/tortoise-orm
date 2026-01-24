@@ -128,6 +128,15 @@ class MigrationGraph:
         ]
         return sorted(nodes)
 
+    def root_nodes(self, app_label: str | None = None) -> list[MigrationKey]:
+        nodes = [
+            node.key
+            for node in self.node_map.values()
+            if not node.parents
+            and (app_label is None or node.key.app_label == app_label)
+        ]
+        return sorted(nodes)
+
     def forwards_plan(self, target: MigrationKey) -> list[MigrationKey]:
         if target not in self.nodes:
             raise ValueError(f"Unknown migration target {target}")

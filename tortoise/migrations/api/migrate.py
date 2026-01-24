@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+import inspect
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from tortoise import Tortoise, connections
 from tortoise.config import TortoiseConfig
-from tortoise.migrations.executor import MigrationExecutor, MigrationTarget
+from tortoise.migrations.executor import MigrationExecutor, MigrationTarget, PlanStep
 
 
 async def migrate(
@@ -16,6 +17,7 @@ async def migrate(
     target: str | None = None,
     fake: bool = False,
     dry_run: bool = False,
+    reporter: Callable[[str, list[PlanStep], bool, bool], object] | None = None,
 ) -> None:
     """Run migrations for configured apps."""
     if isinstance(config, TortoiseConfig):
@@ -44,6 +46,11 @@ async def migrate(
         connection = connections.get(connection_name)
         executor = MigrationExecutor(connection, subset)
         executor_targets = [t for t in targets if t.app_label in subset]
+        if reporter is not None:
+            plan = await executor.plan(executor_targets if executor_targets else None)
+            result = reporter(connection_name, plan, fake, dry_run)
+            if inspect.isawaitable(result):
+                await result
         await executor.migrate(
             executor_targets if executor_targets else None,
             fake=fake,

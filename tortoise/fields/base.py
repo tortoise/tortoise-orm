@@ -494,7 +494,9 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
                 continue
             if name in kwargs:
                 continue
-            value = getattr(self, name, None)
+            if not hasattr(self, name):
+                continue
+            value = getattr(self, name)
             if name == "model_name" and value is not None:
                 if not isinstance(value, str) and hasattr(value, "_meta"):
                     value = f"{value._meta.app}.{value.__name__}"

@@ -6,38 +6,31 @@ from tortoise.migrations.schema_generator.state import State
 from tortoise.migrations.schema_generator.state_apps import StateApps
 
 
+@pytest.fixture(scope="session", autouse=True)
+def initialize_tests():
+    # TODO merge these tests in main tests directory
+    return None
+
+
 @pytest.fixture
 def empty_state() -> State:
     return State(models={}, apps=StateApps())
 
 
 @pytest.fixture
-def state_with_model() -> State:
-    state = State(models={}, apps=StateApps())
-    operation = CreateModel(
-        name="TestModel",
-        fields=[("id", fields.IntField(pk=True))],
+def state_with_model(empty_state: State) -> State:
+    CreateModel(name="TestModel", fields=[("id", fields.IntField(pk=True))]).state_forward(
+        "models", empty_state
     )
-
-    operation.state_forward("models", state)
-    return state
+    return empty_state
 
 
 @pytest.fixture
-def state_with_two_models(state_with_model):
-    operation = CreateModel(
-        name="TestModel2",
-        fields=[("id", fields.IntField(pk=True)), ("counter", fields.IntField())],
+def state_with_two_models(empty_state: State) -> State:
+    CreateModel(name="TestModel", fields=[("id", fields.IntField(pk=True))]).state_forward(
+        "models", empty_state
     )
-    operation.state_forward("models", state_with_model)
-    return state_with_model
-
-
-@pytest.fixture
-def state_with_two_related_models(state_with_model):
-    operation = CreateModel(
-        name="TestModel2",
-        fields=[("id", fields.IntField(pk=True)), ("ref", fields.IntField())],
+    CreateModel(name="TestModel2", fields=[("id", fields.IntField(pk=True))]).state_forward(
+        "models", empty_state
     )
-    operation.state_forward("models", state_with_model)
-    return state_with_model
+    return empty_state

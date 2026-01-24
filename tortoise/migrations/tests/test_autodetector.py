@@ -30,10 +30,11 @@ def _write_migration(
     module_path = _prepare_migration_package(tmp_path, app_label)
     migrations_dir = tmp_path / app_label / "migrations"
     content = [
-        "from tortoise.migrations import Migration",
+        "from tortoise import migrations",
         "",
-        "class Migration(Migration):",
+        "class Migration(migrations.Migration):",
         f"    dependencies = {dependencies or []!r}",
+        "",
         "    operations = []",
         "",
     ]
@@ -51,12 +52,13 @@ def _write_migration_with_ops(
     module_path = _prepare_migration_package(tmp_path, app_label)
     migrations_dir = tmp_path / app_label / "migrations"
     content = [
-        "from tortoise.migrations import Migration",
+        "from tortoise import migrations",
         "from tortoise.migrations import operations as ops",
         "from tortoise import fields",
         "",
-        "class Migration(Migration):",
+        "class Migration(migrations.Migration):",
         f"    dependencies = {dependencies or []!r}",
+        "",
         "    operations = [",
         *operations_source,
         "    ]",

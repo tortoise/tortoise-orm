@@ -425,12 +425,12 @@ class BaseSchemaEditor:
 
     async def add_field(self, model: Type[Model], field_name: str) -> None:
         field = model._meta.fields_map[field_name]
-        db_field = model._meta.fields_db_projection[field_name]
         if isinstance(field, ManyToManyFieldInstance):
             table_string = self._get_m2m_table_definition(model, field)
             if table_string:
                 await self.client.execute_script(table_string)
             return
+        db_field = model._meta.fields_db_projection[field_name]
 
         if isinstance(field, ForeignKeyFieldInstance):
             field_definition = self._get_fk_field_definition(model, field.source_field)

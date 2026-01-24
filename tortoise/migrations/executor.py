@@ -152,11 +152,11 @@ class MigrationExecutor:
                     plan.extend(self._forward_plan(leaf_target, applied, graph))
                 continue
             if target.name == "__first__":
-                for leaf in graph.leaf_nodes(target.app_label):
-                    leaf_target = MigrationTarget(app_label=leaf.app_label, name=leaf.name)
+                for root in graph.root_nodes(target.app_label):
+                    root_target = MigrationTarget(app_label=root.app_label, name=root.name)
                     plan.extend(
                         self._backward_plan(
-                            leaf_target, applied, graph, include_target=True
+                            root_target, applied, graph, include_target=True
                         )
                     )
                 continue

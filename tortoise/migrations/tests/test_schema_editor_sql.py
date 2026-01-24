@@ -3,6 +3,7 @@ import pytest
 from tortoise import fields
 from tortoise.backends.base.client import Capabilities
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
+from tortoise.migrations.schema_generator.state_apps import StateApps
 from tortoise.models import Model
 
 
@@ -30,6 +31,13 @@ class Widget(Model):
     class Meta:
         table = "widget"
         app = "models"
+
+
+def init_apps(*models: type[Model]) -> None:
+    apps = StateApps()
+    for model in models:
+        apps.register_model("models", model)
+    apps._init_relations()
 
 
 @pytest.mark.asyncio
@@ -68,3 +76,32 @@ async def test_remove_field_generates_drop_column_sql() -> None:
 
     assert len(client.executed) == 1
     assert client.executed[0] == 'ALTER TABLE "widget" DROP COLUMN "name" CASCADE'
+
+
+@pytest.mark.asyncio
+async def test_add_field_m2m_generates_table_sql() -> None:
+    class Tag(Model):
+        id = fields.IntField(pk=True)
+        name = fields.TextField()
+
+        class Meta:
+            table = "tag"
+            app = "models"
+
+    class WidgetWithTags(Model):
+        id = fields.IntField(pk=True)
+        tags = fields.ManyToManyField("models.Tag", related_name="widgets")
+
+        class Meta:
+            table = "widget"
+            app = "models"
+
+    init_apps(Tag, WidgetWithTags)
+
+    client = FakeClient()
+    editor = TestSchemaEditor(client)
+
+    await editor.add_field(WidgetWithTags, "tags")
+
+    assert client.executed
+    assert 'CREATE TABLE "widget_tag"' in client.executed[0]

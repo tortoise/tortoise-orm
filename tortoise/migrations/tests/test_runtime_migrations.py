@@ -41,10 +41,11 @@ def _write_migrations(
     (migrations_dir / "__init__.py").write_text("", encoding="ascii")
     for name, dependencies in migrations:
         content = [
-            "from tortoise.migrations import Migration",
+            "from tortoise import migrations",
             "",
-            "class Migration(Migration):",
+            "class Migration(migrations.Migration):",
             f"    dependencies = {dependencies!r}",
+            "",
             "    operations = []",
             "",
         ]
@@ -158,8 +159,8 @@ async def test_executor_plan_forward_and_backward(
     connection = FakeConnection(applied=applied)
     executor = MigrationExecutor(connection, apps_config)
     steps = await executor.plan([MigrationTarget(app_label="app", name="__first__")])
-    assert [step.backward for step in steps] == [True]
-    assert [step.migration.name for step in steps] == ["0002_second"]
+    assert [step.backward for step in steps] == [True, True]
+    assert [step.migration.name for step in steps] == ["0002_second", "0001_initial"]
 
 
 @pytest.mark.asyncio

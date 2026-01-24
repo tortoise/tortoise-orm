@@ -1,65 +1,120 @@
 .. _cli:
 
 ===========
-TortoiseCLI
+Tortoise CLI
 ===========
 
-This document describes how to use `tortoise-cli`, a cli tool for tortoise-orm, build on top of click and ptpython.
+This document describes the built-in Tortoise CLI, built on top of asyncclick and ptpython.
 
-You can see `https://github.com/tortoise/tortoise-cli <https://github.com/tortoise/tortoise-cli>`_ for more details.
+Installation
+============
 
+.. code-block:: shell
+
+    pip install tortoise-orm[cli]
 
 Quick Start
 ===========
 
 .. code-block:: shell
 
-    > tortoise-cli -h                                                                                                                                                                 23:59:38
-    Usage: tortoise-cli [OPTIONS] COMMAND [ARGS]...
+    > tortoise -h
+    Usage: tortoise [OPTIONS] COMMAND [ARGS]...
 
     Options:
-      -V, --version      Show the version and exit.
-      -c, --config TEXT  TortoiseORM config dictionary path, like settings.TORTOISE_ORM
-      -h, --help         Show this message and exit.
+      -V, --version        Show the version and exit.
+      -c, --config TEXT    TortoiseORM config dictionary path, like settings.TORTOISE_ORM
+      --config-file TEXT   Path to a JSON/YAML config file for TortoiseORM
+      -h, --help           Show this message and exit.
 
     Commands:
-      shell  Start an interactive shell.
+      downgrade  Unapply migrations.
+      heads      List migration heads on disk.
+      history    List applied migrations from the database.
+      init       Create migrations packages for configured apps.
+      makemigrations  Create new migrations from model changes.
+      migrate    Apply migrations.
+      shell      Start an interactive shell.
+      upgrade    Apply migrations (alias for migrate).
 
 Usage
 =====
 
-First, you need make a TortoiseORM config object, assuming that in `settings.py`.
+Define a TortoiseORM config object, for example in ``settings.py``:
 
-.. code-block:: shell
+.. code-block:: python
 
     TORTOISE_ORM = {
         "connections": {
             "default": "sqlite://:memory:",
         },
         "apps": {
-            "models": {"models": ["examples.models"], "default_connection": "default"},
+            "models": {
+                "models": ["examples.models"],
+                "default_connection": "default",
+                "migrations": "examples.migrations",
+            },
         },
     }
 
+You can also set it in ``pyproject.toml``:
+
+.. code-block:: toml
+
+    [tool.tortoise]
+    tortoise_orm = "settings.TORTOISE_ORM"
 
 Interactive shell
 =================
 
-Then you can start an interactive shell for TortoiseORM.
-
 .. code-block:: shell
 
-    tortoise-cli -c settings.TORTOISE_ORM shell
+    tortoise -c settings.TORTOISE_ORM shell
 
-
-Or you can set config by set environment variable.
+Or set it in the environment and run:
 
 .. code-block:: shell
 
     export TORTOISE_ORM=settings.TORTOISE_ORM
+    tortoise shell
 
-Then just run:
+Migrations
+==========
+
+Initialize migrations package (creates ``migrations/__init__.py``):
 
 .. code-block:: shell
 
-    tortoise-cli shell
+    tortoise init
+
+Create new migrations (autodetect changes):
+
+.. code-block:: shell
+
+    tortoise makemigrations
+
+Apply migrations (latest for all apps):
+
+.. code-block:: shell
+
+    tortoise migrate
+
+Apply migrations for a specific app:
+
+.. code-block:: shell
+
+    tortoise migrate models
+
+Apply/rollback to a specific migration:
+
+.. code-block:: shell
+
+    tortoise migrate models 0002_add_field
+    tortoise downgrade models 0001_initial
+
+Inspect applied migrations and heads:
+
+.. code-block:: shell
+
+    tortoise history
+    tortoise heads

@@ -12,6 +12,18 @@ class MigrationRecorder:
         self.connection = connection
         self.table_name = table_name
         self.model = self._make_model(table_name)
+        if connection is None:
+            self._dialect = ""
+        else:
+            capabilities = getattr(connection, "capabilities", None)
+            self._dialect = getattr(capabilities, "dialect", "")
+
+    def _quote(self, name: str) -> str:
+        if self._dialect == "mysql":
+            return f"`{name}`"
+        if self._dialect == "mssql":
+            return f"[{name}]"
+        return f'"{name}"'
 
     def _make_model(self, table_name: str) -> type[Model]:
         class MigrationRecord(Model):
@@ -34,6 +46,13 @@ class MigrationRecorder:
             statement = statement.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS", 1)
             await schema_editor.client.execute_script(statement)
             return
+        if schema_editor.DIALECT == "mssql":
+            statement = (
+                f"IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = '{self.table_name}')\n"
+                f"BEGIN\n{statement}\nEND"
+            )
+            await schema_editor.client.execute_script(statement)
+            return
         try:
             await schema_editor.client.execute_script(statement)
         except Exception as exc:  # pragma: nocoverage - best effort for non-IF-NOT-EXISTS backends
@@ -44,8 +63,9 @@ class MigrationRecorder:
 
     async def applied_migrations(self) -> list[MigrationKey]:
         query = (
-            f'SELECT "app", "name" FROM "{self.table_name}" '
-            'ORDER BY "app", "name"'
+            f"SELECT {self._quote('app')}, {self._quote('name')} "
+            f"FROM {self._quote(self.table_name)} "
+            f"ORDER BY {self._quote('applied_at')}, {self._quote('app')}, {self._quote('name')}"
         )
         try:
             _, rows = await self.connection.execute_query(query)
@@ -56,15 +76,17 @@ class MigrationRecorder:
     async def record_applied(self, app: str, name: str) -> None:
         applied_at = datetime.now(timezone.utc).isoformat()
         query = (
-            f'INSERT INTO "{self.table_name}" ("app", "name", "applied_at") '
+            f"INSERT INTO {self._quote(self.table_name)} "
+            f"({self._quote('app')}, {self._quote('name')}, {self._quote('applied_at')}) "
             f"VALUES ('{self._escape(app)}', '{self._escape(name)}', '{applied_at}')"
         )
         await self.connection.execute_script(query)
 
     async def record_unapplied(self, app: str, name: str) -> None:
         query = (
-            f'DELETE FROM "{self.table_name}" '
-            f"WHERE \"app\" = '{self._escape(app)}' AND \"name\" = '{self._escape(name)}'"
+            f"DELETE FROM {self._quote(self.table_name)} "
+            f"WHERE {self._quote('app')} = '{self._escape(app)}' "
+            f"AND {self._quote('name')} = '{self._escape(name)}'"
         )
         await self.connection.execute_script(query)
 
