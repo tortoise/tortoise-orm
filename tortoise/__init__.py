@@ -156,8 +156,15 @@ class Tortoise:
         return cls.apps.init_app(label, model_paths, _init_relations=_init_relations)
 
     @classmethod
-    def _init_apps(cls, apps_config: dict[str, dict[str, Any]]) -> None:
-        cls.apps = Apps(apps_config, connections, cls.table_name_generator)
+    def _init_apps(
+        cls, apps_config: dict[str, dict[str, Any]], *, validate_connections: bool = True
+    ) -> None:
+        cls.apps = Apps(
+            apps_config,
+            connections,
+            cls.table_name_generator,
+            validate_connections=validate_connections,
+        )
 
     @classmethod
     def _get_config_from_config_file(cls, config_file: str) -> dict:
@@ -193,6 +200,7 @@ class Tortoise:
         timezone: str = "UTC",
         routers: list[str | type] | None = None,
         table_name_generator: Callable[[type[Model]], str] | None = None,
+        init_connections: bool = True,
     ) -> None:
         """
         Sets up Tortoise-ORM: loads apps and models, configures database connections but does not
@@ -258,6 +266,9 @@ class Tortoise:
             A callable that generates table names. The model class will be passed as its argument.
             If not provided, Tortoise will use the lowercase model name as the table name.
             Example: ``lambda cls: f"prefix_{cls.__name__.lower()}"``
+        :param init_connections:
+            When ``False``, skips initializing connection clients while still loading apps
+            and validating connection names against the config.
 
         :raises ConfigurationError: For any configuration error
         """
@@ -313,8 +324,13 @@ class Tortoise:
             )
 
         cls._init_timezone(use_tz, timezone)
-        await connections._init(connections_config, _create_db)
-        cls._init_apps(apps_config)
+        if not init_connections and _create_db:
+            raise ConfigurationError("init_connections=False cannot be used with _create_db=True")
+        if init_connections:
+            await connections._init(connections_config, _create_db)
+        else:
+            connections._init_config(connections_config)
+        cls._init_apps(apps_config, validate_connections=init_connections)
         cls._init_routers(routers)
 
         cls._inited = True

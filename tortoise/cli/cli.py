@@ -262,7 +262,7 @@ async def init(ctx: click.Context, app_labels: tuple[str, ...]) -> None:
 async def shell(ctx: click.Context) -> None:
     config = _normalized_config(_load_config(ctx))
     async with aclose_tortoise():
-        await Tortoise.init(config=config)
+        await Tortoise.init(config=config, init_connections=False)
         with contextlib.suppress(EOFError, ValueError):
             await embed(
                 globals=globals(),

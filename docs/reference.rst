@@ -20,6 +20,7 @@ Reference
    exceptions
    signals
    migration
+   migrations_integration
    validators
    logging
    router

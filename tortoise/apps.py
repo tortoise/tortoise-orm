@@ -30,11 +30,14 @@ class Apps:
         config: dict[str, dict[str, Any]] | None,
         connections: ConnectionHandler,
         table_name_generator: Callable[[type[Model]], str] | None = None,
+        *,
+        validate_connections: bool = True,
     ) -> None:
         self.apps: dict[str, dict[str, type[Model]]] = {}
         self._config = config or {}
         self._connections = connections
         self._table_name_generator = table_name_generator
+        self._validate_connections = validate_connections
         if self._config:
             self._load_from_config()
 
@@ -86,19 +89,28 @@ class Apps:
 
     def _load_from_config(self) -> None:
         for name, info in self._config.items():
-            try:
-                self._connections.get(info.get("default_connection", "default"))
-            except KeyError:
-                raise ConfigurationError(
-                    'Unknown connection "{}" for app "{}"'.format(
-                        info.get("default_connection", "default"), name
+            default_connection = info.get("default_connection", "default")
+            if self._validate_connections:
+                try:
+                    self._connections.get(default_connection)
+                except KeyError:
+                    raise ConfigurationError(
+                        'Unknown connection "{}" for app "{}"'.format(
+                            default_connection, name
+                        )
                     )
-                )
+            else:
+                if default_connection not in self._connections.db_config:
+                    raise ConfigurationError(
+                        'Unknown connection "{}" for app "{}"'.format(
+                            default_connection, name
+                        )
+                    )
 
             self.init_app(name, info["models"], _init_relations=False)
 
             for model in self.apps[name].values():
-                model._meta.default_connection = info.get("default_connection", "default")
+                model._meta.default_connection = default_connection
 
         self._init_relations()
         self._build_initial_querysets()

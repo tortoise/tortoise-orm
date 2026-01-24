@@ -25,7 +25,7 @@ async def plan(
     if not config:
         raise ValueError("plan requires a config or config_file")
 
-    await Tortoise.init(config=config)
+    await Tortoise.init(config=config, init_connections=False)
 
     configured_apps = config.get("apps", {})
     selected_apps = list(app_labels) if app_labels else list(configured_apps.keys())

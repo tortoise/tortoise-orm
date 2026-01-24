@@ -1,4 +1,5 @@
 import os
+from unittest.mock import patch
 
 from tortoise import Tortoise, connections
 from tortoise.config import AppConfig, ConnectionConfig, TortoiseConfig
@@ -217,6 +218,44 @@ class TestInitErrors(test.SimpleTestCase):
                     },
                 }
             )
+
+    async def test_init_connections_false(self):
+        config = {
+            "connections": {
+                "default": {
+                    "engine": "tortoise.backends.sqlite",
+                    "credentials": {"file_path": ":memory:"},
+                }
+            },
+            "apps": {
+                "models": {"models": ["tests.testmodels"], "default_connection": "default"}
+            },
+        }
+        with patch("tortoise.connections._init") as mocked_init, patch(
+            "tortoise.connections.get"
+        ) as mocked_get:
+            await Tortoise.init(config=config, init_connections=False)
+            mocked_init.assert_not_called()
+            mocked_get.assert_not_called()
+        self.assertIn("models", Tortoise.apps)
+        self.assertEqual(connections.db_config, config["connections"])
+
+    async def test_init_connections_false_with_create_db(self):
+        config = {
+            "connections": {
+                "default": {
+                    "engine": "tortoise.backends.sqlite",
+                    "credentials": {"file_path": ":memory:"},
+                }
+            },
+            "apps": {
+                "models": {"models": ["tests.testmodels"], "default_connection": "default"}
+            },
+        }
+        with self.assertRaisesRegex(
+            ConfigurationError, "init_connections=False cannot be used with _create_db=True"
+        ):
+            await Tortoise.init(config=config, _create_db=True, init_connections=False)
 
     async def test_url_without_modules(self):
         with self.assertRaisesRegex(
