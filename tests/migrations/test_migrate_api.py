@@ -1,5 +1,6 @@
 import pytest
 
+from tortoise import Tortoise
 from tortoise.config import AppConfig, ConnectionConfig, TortoiseConfig
 from tortoise.migrations.api import migrate
 
@@ -15,4 +16,7 @@ async def test_migrate_accepts_dataclass_config() -> None:
         },
         apps={"models": AppConfig(models=["tests.testmodels"], default_connection="default")},
     )
-    await migrate(config=config)
+    try:
+        await migrate(config=config)
+    finally:
+        await Tortoise.close_connections()

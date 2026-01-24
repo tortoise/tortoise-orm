@@ -127,7 +127,9 @@ def test_writer_format_options_indexes_constraints(tmp_path: Path, monkeypatch) 
                 "unique_together": (("name",),),
                 "indexes": [
                     Index(fields=("name",), name="idx_widget_name"),
-                    PartialIndex(fields=("status",), name="idx_widget_status", condition={"active": True}),
+                    PartialIndex(
+                        fields=("status",), name="idx_widget_status", condition={"active": True}
+                    ),
                 ],
                 "constraints": [
                     UniqueConstraint(fields=("name", "status"), name="uniq_widget_name_status"),
@@ -135,9 +137,7 @@ def test_writer_format_options_indexes_constraints(tmp_path: Path, monkeypatch) 
             },
         ),
         AddIndex("Widget", Index(fields=("name",), name="idx_widget_name")),
-        AddConstraint(
-            "Widget", UniqueConstraint(fields=("name",), name="uniq_widget_name")
-        ),
+        AddConstraint("Widget", UniqueConstraint(fields=("name",), name="uniq_widget_name")),
     ]
     expected = textwrap.dedent(
         """\
@@ -343,9 +343,7 @@ def test_writer_allows_partial_default(tmp_path: Path, monkeypatch) -> None:
         AlterField(
             model_name="Widget",
             name="name",
-            field=fields.CharField(
-                max_length=120, default=functools.partial(_default_value)
-            ),
+            field=fields.CharField(max_length=120, default=functools.partial(_default_value)),
         )
     ]
     module_path = _prepare_migration_package(tmp_path, "app")
@@ -365,9 +363,7 @@ def test_writer_rejects_partial_lambda(tmp_path: Path, monkeypatch) -> None:
         AlterField(
             model_name="Widget",
             name="name",
-            field=fields.CharField(
-                max_length=120, default=functools.partial(lambda: "x")
-            ),
+            field=fields.CharField(max_length=120, default=functools.partial(lambda: "x")),
         )
     ]
     module_path = _prepare_migration_package(tmp_path, "app")
@@ -390,9 +386,7 @@ def test_writer_rejects_local_function_default(tmp_path: Path, monkeypatch) -> N
         AlterField(
             model_name="Widget",
             name="name",
-            field=fields.CharField(
-                max_length=120, default=_local_default
-            ),
+            field=fields.CharField(max_length=120, default=_local_default),
         )
     ]
     module_path = _prepare_migration_package(tmp_path, "app")
@@ -416,14 +410,12 @@ def _runpython_reverse(apps, schema_editor) -> None:
 
 
 def test_writer_format_runpython(tmp_path: Path, monkeypatch) -> None:
-    operations = [
-        RunPython(_runpython_forward, reverse_code=_runpython_reverse, atomic=False)
-    ]
+    operations = [RunPython(_runpython_forward, reverse_code=_runpython_reverse, atomic=False)]
     expected = textwrap.dedent(
         """\
         from tortoise import migrations
         from tortoise.migrations import operations as ops
-        from tortoise.migrations.tests.test_writer import _runpython_forward, _runpython_reverse
+        from tests.migrations.test_writer import _runpython_forward, _runpython_reverse
 
         class Migration(migrations.Migration):
             operations = [

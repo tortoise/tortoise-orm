@@ -1,19 +1,12 @@
+from __future__ import annotations
+
 import pytest
 
+from tests.utils.fake_client import FakeClient
 from tortoise import fields
-from tortoise.backends.base.client import Capabilities
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.migrations.schema_generator.state_apps import StateApps
 from tortoise.models import Model
-
-
-class FakeClient:
-    def __init__(self) -> None:
-        self.capabilities = Capabilities("sql")
-        self.executed: list[str] = []
-
-    async def execute_script(self, query: str) -> None:
-        self.executed.append(query)
 
 
 class TestSchemaEditor(BaseSchemaEditor):
@@ -42,7 +35,7 @@ def init_apps(*models: type[Model]) -> None:
 
 @pytest.mark.asyncio
 async def test_create_model_generates_table_sql() -> None:
-    client = FakeClient()
+    client = FakeClient("sql")
     editor = TestSchemaEditor(client)
 
     await editor.create_model(Widget)
@@ -56,7 +49,7 @@ async def test_create_model_generates_table_sql() -> None:
 
 @pytest.mark.asyncio
 async def test_add_field_generates_add_column_sql() -> None:
-    client = FakeClient()
+    client = FakeClient("sql")
     editor = TestSchemaEditor(client)
 
     await editor.add_field(Widget, "name")
@@ -69,7 +62,7 @@ async def test_add_field_generates_add_column_sql() -> None:
 
 @pytest.mark.asyncio
 async def test_remove_field_generates_drop_column_sql() -> None:
-    client = FakeClient()
+    client = FakeClient("sql")
     editor = TestSchemaEditor(client)
 
     await editor.remove_field(Widget, Widget._meta.fields_map["name"])
@@ -98,7 +91,7 @@ async def test_add_field_m2m_generates_table_sql() -> None:
 
     init_apps(Tag, WidgetWithTags)
 
-    client = FakeClient()
+    client = FakeClient("sql")
     editor = TestSchemaEditor(client)
 
     await editor.add_field(WidgetWithTags, "tags")

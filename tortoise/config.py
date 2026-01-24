@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Mapping
+from typing import Any
 
 from tortoise.exceptions import ConfigurationError
 
@@ -45,7 +46,7 @@ class ConnectionConfig:
         return {"engine": self.engine, "credentials": self.credentials}
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "ConnectionConfig":
+    def from_dict(cls, data: Mapping[str, Any]) -> ConnectionConfig:
         if not isinstance(data, Mapping):
             raise ConfigurationError("ConnectionConfig must be created from a mapping")
         credentials = data.get("credentials", {})
@@ -79,7 +80,7 @@ class AppConfig:
         return data
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "AppConfig":
+    def from_dict(cls, data: Mapping[str, Any]) -> AppConfig:
         if not isinstance(data, Mapping):
             raise ConfigurationError("AppConfig must be created from a mapping")
         if "models" not in data:
@@ -107,7 +108,9 @@ class TortoiseConfig:
             if not isinstance(name, str) or not name:
                 raise ConfigurationError("Connection names must be non-empty strings")
             if not isinstance(conn, (ConnectionConfig, DBUrlConfig)):
-                raise ConfigurationError("Connection values must be ConnectionConfig or DBUrlConfig")
+                raise ConfigurationError(
+                    "Connection values must be ConnectionConfig or DBUrlConfig"
+                )
 
         if not isinstance(self.apps, dict) or not self.apps:
             raise ConfigurationError("TortoiseConfig.apps must be a non-empty dict")
@@ -150,7 +153,7 @@ class TortoiseConfig:
         return config
 
     @classmethod
-    def from_dict(cls, data: Mapping[str, Any]) -> "TortoiseConfig":
+    def from_dict(cls, data: Mapping[str, Any]) -> TortoiseConfig:
         if not isinstance(data, Mapping):
             raise ConfigurationError("TortoiseConfig must be created from a mapping")
 

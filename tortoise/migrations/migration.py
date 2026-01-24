@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List
-
 from tortoise.migrations.operations import Operation
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.migrations.schema_generator.state import State
@@ -9,10 +7,10 @@ from tortoise.transactions import in_transaction
 
 
 class Migration:
-    operations: List[Operation] = []
-    dependencies: List[tuple[str, str]] = []
-    run_before: List[tuple[str, str]] = []
-    replaces: List[tuple[str, str]] = []
+    operations: list[Operation] = []
+    dependencies: list[tuple[str, str]] = []
+    run_before: list[tuple[str, str]] = []
+    replaces: list[tuple[str, str]] = []
     initial: bool | None = None
     atomic: bool = True
 
@@ -43,8 +41,7 @@ class Migration:
         schema_editor: BaseSchemaEditor | None = None,
     ) -> State:
         supports_transactions = (
-            schema_editor is not None
-            and schema_editor.client.capabilities.supports_transactions
+            schema_editor is not None and schema_editor.client.capabilities.supports_transactions
         )
         for operation in self.operations:
             old_state = state.clone()
@@ -64,10 +61,9 @@ class Migration:
         schema_editor: BaseSchemaEditor | None = None,
     ) -> State:
         supports_transactions = (
-            schema_editor is not None
-            and schema_editor.client.capabilities.supports_transactions
+            schema_editor is not None and schema_editor.client.capabilities.supports_transactions
         )
-        to_run: List[tuple[Operation, State, State]] = []
+        to_run: list[tuple[Operation, State, State]] = []
         new_state = state
         for operation in self.operations:
             if not getattr(operation, "reversible", True):
@@ -100,9 +96,7 @@ class Migration:
                     self.app_label, old_state, new_state, schema_editor
                 )
         else:
-            await operation.database_forward(
-                self.app_label, old_state, new_state, schema_editor
-            )
+            await operation.database_forward(self.app_label, old_state, new_state, schema_editor)
 
     async def _run_database_backward(
         self,
@@ -119,6 +113,4 @@ class Migration:
                     self.app_label, old_state, new_state, schema_editor
                 )
         else:
-            await operation.database_backward(
-                self.app_label, old_state, new_state, schema_editor
-            )
+            await operation.database_backward(self.app_label, old_state, new_state, schema_editor)

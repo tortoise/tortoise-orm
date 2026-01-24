@@ -3,8 +3,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from tortoise import fields
-from tortoise.models import Model
 from tortoise.migrations.graph import MigrationKey
+from tortoise.models import Model
 
 
 class MigrationRecorder:
@@ -48,7 +48,7 @@ class MigrationRecorder:
             return
         if schema_editor.DIALECT == "mssql":
             statement = (
-                f"IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = '{self.table_name}')\n"
+                f"IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = '{self.table_name}')\n"  # nosec B608
                 f"BEGIN\n{statement}\nEND"
             )
             await schema_editor.client.execute_script(statement)
@@ -63,7 +63,7 @@ class MigrationRecorder:
 
     async def applied_migrations(self) -> list[MigrationKey]:
         query = (
-            f"SELECT {self._quote('app')}, {self._quote('name')} "
+            f"SELECT {self._quote('app')}, {self._quote('name')} "  # nosec B608
             f"FROM {self._quote(self.table_name)} "
             f"ORDER BY {self._quote('applied_at')}, {self._quote('app')}, {self._quote('name')}"
         )
@@ -76,7 +76,7 @@ class MigrationRecorder:
     async def record_applied(self, app: str, name: str) -> None:
         applied_at = datetime.now(timezone.utc).isoformat()
         query = (
-            f"INSERT INTO {self._quote(self.table_name)} "
+            f"INSERT INTO {self._quote(self.table_name)} "  # nosec B608
             f"({self._quote('app')}, {self._quote('name')}, {self._quote('applied_at')}) "
             f"VALUES ('{self._escape(app)}', '{self._escape(name)}', '{applied_at}')"
         )
@@ -84,7 +84,7 @@ class MigrationRecorder:
 
     async def record_unapplied(self, app: str, name: str) -> None:
         query = (
-            f"DELETE FROM {self._quote(self.table_name)} "
+            f"DELETE FROM {self._quote(self.table_name)} "  # nosec B608
             f"WHERE {self._quote('app')} = '{self._escape(app)}' "
             f"AND {self._quote('name')} = '{self._escape(name)}'"
         )

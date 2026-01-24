@@ -1,7 +1,12 @@
+from __future__ import annotations
+
+from typing import Any
+
 import pytest
 
+from tests.utils.fake_client import FakeClient
 from tortoise import fields
-from tortoise.backends.base.client import Capabilities
+from tortoise.fields.base import Field
 from tortoise.indexes import Index
 from tortoise.migrations.constraints import UniqueConstraint
 from tortoise.migrations.operations import (
@@ -22,15 +27,6 @@ from tortoise.migrations.schema_generator.state_apps import StateApps
 from tortoise.models import Model
 
 
-class FakeClient:
-    def __init__(self) -> None:
-        self.capabilities = Capabilities("sql")
-        self.executed: list[str] = []
-
-    async def execute_script(self, query: str) -> None:
-        self.executed.append(query)
-
-
 class TestSchemaEditor(BaseSchemaEditor):
     def _get_table_comment_sql(self, table: str, comment: str) -> str:
         return ""
@@ -42,11 +38,11 @@ class TestSchemaEditor(BaseSchemaEditor):
 def make_model(
     model_name: str,
     *,
-    meta_options: dict | None = None,
-    **model_fields: fields.Field,
-):
-    attrs = dict(model_fields)
-    options = {"app": "models", "table": "widget"}
+    meta_options: dict[str, Any] | None = None,
+    **model_fields: Field,
+) -> type[Model]:
+    attrs: dict[str, Any] = dict(model_fields)
+    options: dict[str, Any] = {"app": "models", "table": "widget"}
     if meta_options:
         options.update(meta_options)
     attrs["Meta"] = type("Meta", (), options)
@@ -65,7 +61,7 @@ def build_state(app_label: str, model: type) -> State:
 
 @pytest.mark.asyncio
 async def test_create_model_operation_runs_sql() -> None:
-    client = FakeClient()
+    client = FakeClient("sql")
     editor = TestSchemaEditor(client)
     state = State(models={}, apps=StateApps())
 
@@ -82,7 +78,7 @@ async def test_create_model_operation_runs_sql() -> None:
 
 @pytest.mark.asyncio
 async def test_add_field_operation_runs_sql() -> None:
-    client = FakeClient()
+    client = FakeClient("sql")
     editor = TestSchemaEditor(client)
     state = State(models={}, apps=StateApps())
     CreateModel(name="Widget", fields=[("id", fields.IntField(pk=True))]).state_forward(
@@ -99,7 +95,7 @@ async def test_add_field_operation_runs_sql() -> None:
 
 @pytest.mark.asyncio
 async def test_delete_model_operation_runs_sql() -> None:
-    client = FakeClient()
+    client = FakeClient("sql")
     editor = TestSchemaEditor(client)
     state = State(models={}, apps=StateApps())
     CreateModel(name="Widget", fields=[("id", fields.IntField(pk=True))]).state_forward(
@@ -116,7 +112,7 @@ async def test_delete_model_operation_runs_sql() -> None:
 
 @pytest.mark.asyncio
 async def test_add_index_operation_runs_sql() -> None:
-    client = FakeClient()
+    client = FakeClient("sql")
     editor = TestSchemaEditor(client)
     state = State(models={}, apps=StateApps())
     CreateModel(name="Widget", fields=[("id", fields.IntField(pk=True))]).state_forward(
@@ -136,7 +132,7 @@ async def test_add_index_operation_runs_sql() -> None:
 
 @pytest.mark.asyncio
 async def test_remove_index_operation_runs_sql() -> None:
-    client = FakeClient()
+    client = FakeClient("sql")
     editor = TestSchemaEditor(client)
     state = State(models={}, apps=StateApps())
     CreateModel(name="Widget", fields=[("id", fields.IntField(pk=True))]).state_forward(
@@ -157,7 +153,7 @@ async def test_remove_index_operation_runs_sql() -> None:
 
 @pytest.mark.asyncio
 async def test_rename_index_operation_runs_sql() -> None:
-    client = FakeClient()
+    client = FakeClient("sql")
     editor = TestSchemaEditor(client)
     state = State(models={}, apps=StateApps())
     CreateModel(name="Widget", fields=[("id", fields.IntField(pk=True))]).state_forward(
@@ -178,7 +174,7 @@ async def test_rename_index_operation_runs_sql() -> None:
 
 @pytest.mark.asyncio
 async def test_add_constraint_operation_runs_sql() -> None:
-    client = FakeClient()
+    client = FakeClient("sql")
     editor = TestSchemaEditor(client)
     state = State(models={}, apps=StateApps())
     CreateModel(name="Widget", fields=[("id", fields.IntField(pk=True))]).state_forward(
@@ -193,12 +189,14 @@ async def test_add_constraint_operation_runs_sql() -> None:
     await op.run("models", state, dry_run=False, state_editor=editor)
 
     assert client.executed
-    assert 'ALTER TABLE "widget" ADD CONSTRAINT "uniq_widget_id" UNIQUE ("id")' in client.executed[0]
+    assert (
+        'ALTER TABLE "widget" ADD CONSTRAINT "uniq_widget_id" UNIQUE ("id")' in client.executed[0]
+    )
 
 
 @pytest.mark.asyncio
 async def test_alter_field_backward_renames_columns() -> None:
-    client = FakeClient()
+    client = FakeClient("sql")
     editor = TestSchemaEditor(client)
 
     OldWidget = make_model(
@@ -226,7 +224,7 @@ async def test_alter_field_backward_renames_columns() -> None:
 @pytest.mark.asyncio
 async def test_run_python_operation_runs_callable() -> None:
     calls: list[tuple[StateApps, BaseSchemaEditor]] = []
-    client = FakeClient()
+    client = FakeClient("sql")
     editor = TestSchemaEditor(client)
     model = make_model("Widget", id=fields.IntField(pk=True))
     state = build_state("models", model)
@@ -247,7 +245,7 @@ async def test_run_python_operation_runs_callable() -> None:
 
 @pytest.mark.asyncio
 async def test_rename_constraint_backward_runs_sql() -> None:
-    client = FakeClient()
+    client = FakeClient("sql")
     editor = TestSchemaEditor(client)
     model = make_model("Widget", id=fields.IntField(pk=True))
     state = build_state("models", model)

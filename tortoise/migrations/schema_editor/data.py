@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Set, Type
 
 from tortoise.models import Model
 
@@ -9,7 +8,7 @@ from tortoise.models import Model
 @dataclass
 class ModelSqlData:
     table: str
-    model: Type[Model]
+    model: type[Model]
     table_sql: str
-    references: Set[str]
-    m2m_tables_sql: List[str]
+    references: set[str]
+    m2m_tables_sql: list[str]

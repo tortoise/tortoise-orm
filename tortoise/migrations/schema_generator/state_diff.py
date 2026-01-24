@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import Dict, Iterable, List, TYPE_CHECKING
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from tortoise.fields.relational import (
     ForeignKeyFieldInstance,
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
 RELATION_FIELDS = (ForeignKeyFieldInstance, OneToOneFieldInstance, ManyToManyFieldInstance)
 
 
-def _field_signature(field: "Field") -> Dict[str, object]:
+def _field_signature(field: Field) -> dict[str, object]:
     desc = field.describe(serializable=True)
     if getattr(field, "source_field", None) is None:
         desc.pop("db_column", None)
@@ -41,14 +42,14 @@ def _field_signature(field: "Field") -> Dict[str, object]:
     return desc
 
 
-def _field_signature_for_rename(field: "Field") -> Dict[str, object]:
+def _field_signature_for_rename(field: Field) -> dict[str, object]:
     desc = _field_signature(field)
     desc.pop("source_field", None)
     desc.pop("db_column", None)
     return desc
 
 
-def _model_options_for_compare(options: Dict[str, object]) -> Dict[str, object]:
+def _model_options_for_compare(options: dict[str, object]) -> dict[str, object]:
     return {
         key: value
         for key, value in options.items()
@@ -56,17 +57,11 @@ def _model_options_for_compare(options: Dict[str, object]) -> Dict[str, object]:
     }
 
 
-def _base_signature(bases: Iterable[type]) -> List[str]:
-    base_names = []
-    for base in bases:
-        if isinstance(base, str):
-            base_names.append(base)
-        else:
-            base_names.append(f"{base.__module__}.{base.__name__}")
-    return base_names
+def _base_signature(bases: Iterable[type]) -> list[str]:
+    return [f"{base.__module__}.{base.__name__}" for base in bases]
 
 
-def _model_signature(model_state: "ModelState") -> Dict[str, object]:
+def _model_signature(model_state: ModelState) -> dict[str, object]:
     fields = {
         name: _field_signature(field)
         for name, field in model_state.fields.items()
@@ -82,15 +77,15 @@ def _model_signature(model_state: "ModelState") -> Dict[str, object]:
 
 
 class StateModelDiff:
-    def __init__(self, old_state: "ModelState", new_state: "ModelState") -> None:
+    def __init__(self, old_state: ModelState, new_state: ModelState) -> None:
         self.old_state = old_state
         self.new_state = new_state
 
-    def generate_operations(self) -> List[TortoiseOperation]:
+    def generate_operations(self) -> list[TortoiseOperation]:
         if self.old_state == self.new_state:
             return []
 
-        operations: List[TortoiseOperation] = []
+        operations: list[TortoiseOperation] = []
         operations.extend(self._generate_index_operations())
         operations.extend(self._generate_constraint_operations())
         old_options = _model_options_for_compare(self.old_state.options)
@@ -107,10 +102,10 @@ class StateModelDiff:
         return operations
 
     def _normalize_indexes(self, value: object) -> list[tuple[Index, bool]]:
-        if not value:
+        if not value or not isinstance(value, Iterable):
             return []
         indexes = []
-        raw = list(value) if isinstance(value, tuple) else list(value)
+        raw = list(value)
         for item in raw:
             if isinstance(item, Index):
                 indexes.append((item, True))
@@ -177,21 +172,25 @@ class StateModelDiff:
         return operations
 
     def _normalize_unique_together(self, value: object) -> list[tuple[str, ...]]:
-        if not value:
+        if not value or not isinstance(value, Iterable):
             return []
-        raw = list(value) if isinstance(value, tuple) else list(value)
+        raw = list(value)
         return [tuple(fields) for fields in raw]
 
     def _normalize_constraints(self, value: object) -> list[UniqueConstraint]:
-        if not value:
+        if not value or not isinstance(value, Iterable):
             return []
-        raw = list(value) if isinstance(value, tuple) else list(value)
+        raw = list(value)
         return [constraint for constraint in raw if isinstance(constraint, UniqueConstraint)]
 
     def _generate_constraint_operations(self) -> list[TortoiseOperation]:
         operations: list[TortoiseOperation] = []
-        old_unique = self._normalize_unique_together(self.old_state.options.get("unique_together", ()))
-        new_unique = self._normalize_unique_together(self.new_state.options.get("unique_together", ()))
+        old_unique = self._normalize_unique_together(
+            self.old_state.options.get("unique_together", ())
+        )
+        new_unique = self._normalize_unique_together(
+            self.new_state.options.get("unique_together", ())
+        )
 
         for fields in old_unique:
             if fields not in new_unique:
@@ -214,12 +213,25 @@ class StateModelDiff:
         old_constraints = self._normalize_constraints(self.old_state.options.get("constraints", ()))
         new_constraints = self._normalize_constraints(self.new_state.options.get("constraints", ()))
 
-        old_by_fields = {tuple(constraint.fields): constraint for constraint in old_constraints if constraint.name}
-        new_by_fields = {tuple(constraint.fields): constraint for constraint in new_constraints if constraint.name}
+        old_by_fields = {
+            tuple(constraint.fields): constraint
+            for constraint in old_constraints
+            if constraint.name
+        }
+        new_by_fields = {
+            tuple(constraint.fields): constraint
+            for constraint in new_constraints
+            if constraint.name
+        }
 
         for fields, new_constraint in new_by_fields.items():
             old_constraint = old_by_fields.get(fields)
-            if old_constraint and old_constraint.name != new_constraint.name:
+            if (
+                old_constraint
+                and old_constraint.name is not None
+                and new_constraint.name is not None
+                and old_constraint.name != new_constraint.name
+            ):
                 operations.append(
                     RenameConstraint(
                         model_name=self.new_state.name,
@@ -230,7 +242,9 @@ class StateModelDiff:
 
         for constraint in old_constraints:
             if constraint.name and any(
-                op for op in operations if isinstance(op, RenameConstraint) and op.old_name == constraint.name
+                op
+                for op in operations
+                if isinstance(op, RenameConstraint) and op.old_name == constraint.name
             ):
                 continue
             if constraint not in new_constraints:
@@ -243,7 +257,9 @@ class StateModelDiff:
 
         for constraint in new_constraints:
             if constraint.name and any(
-                op for op in operations if isinstance(op, RenameConstraint) and op.new_name == constraint.name
+                op
+                for op in operations
+                if isinstance(op, RenameConstraint) and op.new_name == constraint.name
             ):
                 continue
             if constraint not in old_constraints:
@@ -258,12 +274,12 @@ class StateModelDiff:
 
 
 class StateFieldDiff:
-    def __init__(self, old_state: "ModelState", new_state: "ModelState") -> None:
+    def __init__(self, old_state: ModelState, new_state: ModelState) -> None:
         self.old_state = old_state
         self.new_state = new_state
 
-    def generate_operations(self) -> List[TortoiseOperation]:
-        operations: List[TortoiseOperation] = []
+    def generate_operations(self) -> list[TortoiseOperation]:
+        operations: list[TortoiseOperation] = []
         old_fields = self.old_state.fields
         new_fields = self.new_state.fields
         added_fields = set(new_fields) - set(old_fields)

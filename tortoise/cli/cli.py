@@ -22,7 +22,6 @@ from tortoise.migrations.loader import MigrationLoader
 from tortoise.migrations.recorder import MigrationRecorder
 from tortoise.migrations.writer import MigrationWriter, format_migration_name
 
-
 if platform.system() == "Windows":
     # Remove when prompt-toolkit/ptpython#582 is fixed.
     from asyncio import get_event_loop_policy
@@ -50,7 +49,7 @@ async def aclose_tortoise() -> AsyncGenerator[None]:
 
 class _NoopRecorder(MigrationRecorder):
     def __init__(self) -> None:
-        super().__init__(connection=None)  # type: ignore[arg-type]
+        super().__init__(connection=None)
 
     async def applied_migrations(self) -> list[MigrationKey]:
         return []
@@ -97,7 +96,7 @@ def _select_apps(
 
 
 def _group_apps_by_connection(
-    apps_config: dict[str, dict[str, Any]]
+    apps_config: dict[str, dict[str, Any]],
 ) -> dict[str, dict[str, dict[str, Any]]]:
     apps_by_connection: dict[str, dict[str, dict[str, Any]]] = {}
     for label, app_config in apps_config.items():
@@ -142,7 +141,12 @@ def _ensure_migrations_package(app_label: str, app_config: dict[str, Any]) -> tu
     if hasattr(parent_module, "__path__"):
         parent_path = Path(next(iter(parent_module.__path__)))
     else:
-        parent_path = Path(parent_module.__file__).parent
+        module_file = getattr(parent_module, "__file__", None)
+        if not module_file:
+            raise click.ClickException(
+                f"Cannot resolve filesystem path for module {parent_module_name}"
+            )
+        parent_path = Path(module_file).parent
 
     package_path = parent_path / package_name
     package_path.mkdir(parents=True, exist_ok=True)
@@ -301,15 +305,13 @@ async def makemigrations(
             new_state = autodetector._current_state()
             writers = []
             for label, app_config in apps_config.items():
-                migrations_module = app_config.get("migrations")
-                if not migrations_module:
+                migrations_module_name = app_config.get("migrations")
+                if not isinstance(migrations_module_name, str):
                     continue
                 dependencies = sorted(
                     [(key.app_label, key.name) for key in autodetector._leaf_nodes(label)]
                 )
-                migration_name, initial = autodetector._migration_name(
-                    label, old_state, new_state
-                )
+                migration_name, initial = autodetector._migration_name(label, old_state, new_state)
                 writers.append(
                     MigrationWriter(
                         migration_name,
@@ -317,7 +319,7 @@ async def makemigrations(
                         [],
                         dependencies=dependencies,
                         initial=initial,
-                        migrations_module=migrations_module,
+                        migrations_module=migrations_module_name,
                     )
                 )
         else:

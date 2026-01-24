@@ -1,4 +1,12 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from tortoise import fields, models
+
+if TYPE_CHECKING:
+    from ..catalog.models import Product
+    from ..orders.models import Order
 
 
 class Team(models.Model):
@@ -18,12 +26,12 @@ class User(models.Model):
         related_name="members",
         null=True,
     )
-    favorite_product: fields.ForeignKeyNullableRelation["Product"] = fields.ForeignKeyField(
+    favorite_product: fields.ForeignKeyNullableRelation[Product] = fields.ForeignKeyField(
         "catalog.Product",
         related_name="fans",
         null=True,
     )
-    last_order: fields.ForeignKeyNullableRelation["Order"] = fields.ForeignKeyField(
+    last_order: fields.ForeignKeyNullableRelation[Order] = fields.ForeignKeyField(
         "orders.Order",
         related_name="customers_last_order",
         null=True,

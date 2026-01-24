@@ -10,11 +10,12 @@ from types import ModuleType
 from typing import Any
 
 from anyio import from_thread
+
+from tortoise.apps import Apps
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
-from tortoise.connection import connections
-from tortoise.apps import Apps
 from tortoise.config import TortoiseConfig
+from tortoise.connection import connections
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields.relational import (
     BackwardFKRelation,
@@ -114,7 +115,6 @@ class Tortoise:
             return
         cls.apps._init_relations()
 
-    @classmethod
     @classmethod
     def init_models(
         cls,
@@ -393,6 +393,7 @@ class Tortoise:
     async def _reset_apps(cls) -> None:
         if not cls.apps:
             return
+
         for model in cls.apps.get_models_iterable():
             if isinstance(model, ModelMeta):
                 model._meta.default_connection = None
@@ -473,8 +474,14 @@ def run_async(coro: Coroutine) -> None:
 
 __version__ = "0.25.3"
 
+
 __all__ = [
+    "BackwardFKRelation",
+    "BackwardOneToOneRelation",
     "Model",
+    "ForeignKeyFieldInstance",
+    "ManyToManyFieldInstance",
+    "OneToOneFieldInstance",
     "Tortoise",
     "BaseDBAsyncClient",
     "TortoiseConfig",

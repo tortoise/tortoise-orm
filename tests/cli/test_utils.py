@@ -42,6 +42,7 @@ def test_get_tortoise_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.syspath_prepend(str(tmp_path))
     importlib.invalidate_caches()
     import sys
+
     sys.modules.pop("cli_app", None)
     sys.modules.pop("cli_app.migrations", None)
 
@@ -70,7 +71,9 @@ def test_infer_migrations_module() -> None:
     assert utils.infer_migrations_module(None) is None
 
 
-def test_normalize_apps_config_infers_migrations(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_normalize_apps_config_infers_migrations(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     app_dir = tmp_path / "cli_app"
     app_dir.mkdir()
     (app_dir / "__init__.py").write_text("", encoding="utf-8")
@@ -82,6 +85,7 @@ def test_normalize_apps_config_infers_migrations(tmp_path: Path, monkeypatch: py
     monkeypatch.syspath_prepend(str(tmp_path))
     importlib.invalidate_caches()
     import sys
+
     sys.modules.pop("cli_app_no_migrations", None)
     sys.modules.pop("cli_app_no_migrations.migrations", None)
     apps = {
@@ -94,7 +98,9 @@ def test_normalize_apps_config_infers_migrations(tmp_path: Path, monkeypatch: py
     assert normalized["app"]["migrations"] == "cli_app.migrations"
 
 
-def test_normalize_apps_config_skips_missing_module(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_normalize_apps_config_skips_missing_module(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     app_dir = tmp_path / "cli_app_no_migrations"
     app_dir.mkdir()
     (app_dir / "__init__.py").write_text("", encoding="utf-8")

@@ -1,6 +1,12 @@
+from __future__ import annotations
+
+from collections.abc import Mapping
+from typing import Any
+
 import pytest
 
 from tortoise import fields
+from tortoise.fields.base import Field
 from tortoise.indexes import Index
 from tortoise.migrations.constraints import UniqueConstraint
 from tortoise.migrations.operations import (
@@ -10,8 +16,8 @@ from tortoise.migrations.operations import (
     AlterField,
     CreateModel,
     DeleteModel,
-    RemoveIndex,
     RemoveConstraint,
+    RemoveIndex,
     RenameConstraint,
     RenameField,
     RenameIndex,
@@ -33,12 +39,12 @@ def build_state(app_label: str, *models: type[Model]) -> State:
 def make_model(
     model_name: str,
     table: str,
-    *,
-    meta_options: dict | None = None,
-    **model_fields: fields.Field,
+    meta_options: Mapping[str, Any] | None = None,
+    /,
+    **model_fields: Field,
 ) -> type[Model]:
-    attrs = dict(model_fields)
-    options = {"app": "models", "table": table}
+    attrs: dict[str, Any] = dict(model_fields)
+    options: dict[str, Any] = {"app": "models", "table": table}
     if meta_options:
         options.update(meta_options)
     meta = type("Meta", (), options)
@@ -68,8 +74,12 @@ def test_generate_create_and_delete_model() -> None:
 
 
 def test_generate_rename_model_heuristic() -> None:
-    OldWidget = make_model("OldWidget", "widget", id=fields.IntField(pk=True), name=fields.TextField())
-    NewWidget = make_model("NewWidget", "widget", id=fields.IntField(pk=True), name=fields.TextField())
+    OldWidget = make_model(
+        "OldWidget", "widget", id=fields.IntField(pk=True), name=fields.TextField()
+    )
+    NewWidget = make_model(
+        "NewWidget", "widget", id=fields.IntField(pk=True), name=fields.TextField()
+    )
 
     old_state = build_state("models", OldWidget)
     new_state = build_state("models", NewWidget)
@@ -153,9 +163,9 @@ def test_generate_add_remove_index() -> None:
     NewWidget = make_model(
         "Widget",
         "widget",
+        {"indexes": (("name",),)},
         id=fields.IntField(pk=True),
         name=fields.TextField(),
-        meta_options={"indexes": (("name",),)},
     )
 
     old_state = build_state("models", OldWidget)
@@ -172,16 +182,16 @@ def test_generate_rename_index_explicit() -> None:
     OldWidget = make_model(
         "Widget",
         "widget",
+        {"indexes": (Index(fields=("name",), name="idx_old"),)},
         id=fields.IntField(pk=True),
         name=fields.TextField(),
-        meta_options={"indexes": (Index(fields=("name",), name="idx_old"),)},
     )
     NewWidget = make_model(
         "Widget",
         "widget",
+        {"indexes": (Index(fields=("name",), name="idx_new"),)},
         id=fields.IntField(pk=True),
         name=fields.TextField(),
-        meta_options={"indexes": (Index(fields=("name",), name="idx_new"),)},
     )
 
     old_state = build_state("models", OldWidget)
@@ -195,18 +205,18 @@ def test_generate_unique_together_constraints() -> None:
     OldWidget = make_model(
         "Widget",
         "widget",
+        {"unique_together": (("name", "age"),)},
         id=fields.IntField(pk=True),
         name=fields.TextField(),
         age=fields.IntField(),
-        meta_options={"unique_together": (("name", "age"),)},
     )
     NewWidget = make_model(
         "Widget",
         "widget",
+        {"unique_together": (("name",),)},
         id=fields.IntField(pk=True),
         name=fields.TextField(),
         age=fields.IntField(),
-        meta_options={"unique_together": (("name",),)},
     )
 
     old_state = build_state("models", OldWidget)

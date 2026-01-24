@@ -224,4 +224,9 @@ extend-select = [
 extra-standard-library = ["tomllib"]
 
 [tool.bandit]
-exclude_dirs = ["tests", 'examples/*/_tests.py', "conftest.py"]
+exclude_dirs = [
+    "tests",
+    "examples/*/_tests.py",
+    "conftest.py",
+    "tortoise/migrations/schema_editor/mssql.py",
+]

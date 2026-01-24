@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from copy import deepcopy
 import inspect
-from typing import Any, Dict, List, Optional, Tuple, Type, cast, TYPE_CHECKING
+from copy import deepcopy
+from typing import TYPE_CHECKING, Any, cast
 
 from tortoise import BaseDBAsyncClient, Model
 from tortoise.fields import Field
@@ -11,17 +11,17 @@ from tortoise.fields.relational import (
     ManyToManyFieldInstance,
     OneToOneFieldInstance,
 )
+from tortoise.indexes import Index
 from tortoise.migrations.constraints import UniqueConstraint
 from tortoise.migrations.exceptions import IncompatibleStateError
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.migrations.schema_generator.state import ModelState, State
 from tortoise.migrations.schema_generator.state_apps import StateApps
-from tortoise.indexes import Index
 
 if TYPE_CHECKING:
     from tortoise.fields.relational import ManyToManyRelation
 
-    FieldLike = Field | ManyToManyRelation[Any]
+    FieldLike = Field | ManyToManyRelation[Any] | None
 else:
     FieldLike = Field
 
@@ -35,7 +35,7 @@ DIRECT_RELATION_FIELDS = (
 class Operation:
     reversible = True
     reduces_to_sql = True
-    atomic = False
+    atomic: bool | None = False
 
     async def run(
         self,
@@ -46,9 +46,30 @@ class Operation:
     ) -> None:
         raise NotImplementedError()
 
+    def state_forward(self, app_label: str, state: State) -> None:
+        raise NotImplementedError()
+
+    async def database_forward(
+        self,
+        app_label: str,
+        old_state: State,
+        new_state: State,
+        state_editor: BaseSchemaEditor | None = None,
+    ) -> None:
+        raise NotImplementedError()
+
+    async def database_backward(
+        self,
+        app_label: str,
+        old_state: State,
+        new_state: State,
+        state_editor: BaseSchemaEditor | None = None,
+    ) -> None:
+        raise NotImplementedError()
+
 
 class SQLOperation(Operation):
-    def __init__(self, query: str, values: List[Any]):
+    def __init__(self, query: str, values: list[Any]):
         self.query = query
         self.values = values
 
@@ -111,24 +132,24 @@ class CreateModel(TortoiseOperation):
     def __init__(
         self,
         name: str,
-        fields: List[Tuple[str, FieldLike]],
-        options: Dict[str, Any] | None = None,
-        bases: List[str] | None = None,
+        fields: list[tuple[str, FieldLike]],
+        options: dict[str, Any] | None = None,
+        bases: list[str] | None = None,
     ) -> None:
         self.options = options
         self.fields = fields
         self.name = name
         self.bases = bases
-        self._model: Optional[Type[Model]] = None
+        self._model: type[Model] | None = None
 
     @property
-    def model(self) -> Type[Model]:
+    def model(self) -> type[Model]:
         if not self._model:
             meta_class = type("Meta", (), self.options or {})
 
-            attributes = dict(self.fields)
+            attributes: dict[str, Any] = dict(self.fields)
             attributes["Meta"] = meta_class
-            self._model = cast(Type[Model], type(self.name, (Model,), attributes))
+            self._model = cast(type[Model], type(self.name, (Model,), attributes))
 
         return self._model
 
@@ -209,9 +230,7 @@ class RenameModel(TortoiseOperation):
                     continue
 
                 if field.model_name == old_model_reference:
-                    new_field = cast(
-                        Field, cast(Any, deepcopy(field))
-                    )
+                    new_field = deepcopy(field)
                     new_field.model_name = new_model_reference
                     model_state.fields[field_name] = new_field
 
@@ -310,7 +329,7 @@ class DeleteModel(TortoiseOperation):
 
 
 class AlterModelOptions(TortoiseOperation):
-    def __init__(self, name: str, options: Dict[str, Any]):
+    def __init__(self, name: str, options: dict[str, Any]):
         self.name = name
         self.options = options
 
@@ -386,6 +405,7 @@ class AddField(TortoiseOperation):
         field = model._meta.fields_map[self.name]
         await state_editor.remove_field(model, field)
 
+
 class RemoveField(TortoiseOperation):
     def __init__(self, model_name: str, name: str) -> None:
         self.model_name = model_name
@@ -430,6 +450,7 @@ class RemoveField(TortoiseOperation):
             return
         model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
         await state_editor.add_field(model, self.name)
+
 
 class AlterField(TortoiseOperation):
     def __init__(self, model_name: str, name: str, field: FieldLike) -> None:
@@ -478,6 +499,7 @@ class AlterField(TortoiseOperation):
         new_model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
         await state_editor.alter_field(old_model, new_model, self.name)
 
+
 class RenameField(TortoiseOperation):
     def __init__(self, model_name: str, old_name: str, new_name: str) -> None:
         self.model_name = model_name
@@ -498,7 +520,7 @@ class RenameField(TortoiseOperation):
                 f"Field {self.old_name} is not present on model {app_label}.{self.model_name}"
             )
 
-        model_state.fields[self.new_name] = cast(Field, deepcopy(field))
+        model_state.fields[self.new_name] = deepcopy(field)
         models_to_reload = {(app_label, self.model_name)}
         if isinstance(field, DIRECT_RELATION_FIELDS):
             models_to_reload.add(state.apps.split_reference(field.model_name))
@@ -573,7 +595,7 @@ def _set_option_list(model_state: ModelState, key: str, values: list) -> None:
 
 
 class AddIndex(TortoiseOperation):
-    def __init__(self, model_name: str, index: "Index") -> None:
+    def __init__(self, model_name: str, index: Index) -> None:
         self.model_name = model_name
         self.index = index
 
@@ -610,14 +632,16 @@ class AddIndex(TortoiseOperation):
 
 
 class RemoveIndex(TortoiseOperation):
-    def __init__(self, model_name: str, name: str | None = None, fields: list[str] | None = None) -> None:
+    def __init__(
+        self, model_name: str, name: str | None = None, fields: list[str] | None = None
+    ) -> None:
         if not name and not fields:
             raise ValueError("RemoveIndex requires name or fields.")
         self.model_name = model_name
         self.name = name
         self.fields = fields
 
-    def _find_index(self, model_state: ModelState) -> "Index":
+    def _find_index(self, model_state: ModelState) -> Index:
         indexes = _get_option_list(model_state, "indexes")
         if self.name:
             for index in indexes:
@@ -704,9 +728,7 @@ class RenameIndex(TortoiseOperation):
         for index in indexes:
             if isinstance(index, Index) and index.name == self.old_name:
                 indexes.remove(index)
-                indexes.append(
-                    Index(fields=tuple(index.field_names), name=self.new_name)
-                )
+                indexes.append(Index(fields=tuple(index.field_names), name=self.new_name))
                 break
         else:
             raise IncompatibleStateError(
@@ -715,7 +737,7 @@ class RenameIndex(TortoiseOperation):
         _set_option_list(model_state, "indexes", indexes)
         state.reload_model(app_label, self.model_name)
 
-    def _resolve_old_index(self, model_state: ModelState) -> "Index":
+    def _resolve_old_index(self, model_state: ModelState) -> Index:
         if self.old_name:
             for index in _get_option_list(model_state, "indexes"):
                 if isinstance(index, Index) and index.name == self.old_name:
@@ -724,7 +746,7 @@ class RenameIndex(TortoiseOperation):
             return Index(fields=tuple(self.old_fields), name=self.old_name)
         raise IncompatibleStateError()
 
-    def _resolve_new_index(self, model_state: ModelState) -> "Index":
+    def _resolve_new_index(self, model_state: ModelState) -> Index:
         for index in _get_option_list(model_state, "indexes"):
             if isinstance(index, Index) and index.name == self.new_name:
                 return index
@@ -881,9 +903,7 @@ class RenameConstraint(TortoiseOperation):
         for constraint in constraints:
             if isinstance(constraint, UniqueConstraint) and constraint.name == self.old_name:
                 constraints.remove(constraint)
-                constraints.append(
-                    UniqueConstraint(fields=constraint.fields, name=self.new_name)
-                )
+                constraints.append(UniqueConstraint(fields=constraint.fields, name=self.new_name))
                 _set_option_list(model_state, "constraints", constraints)
                 state.reload_model(app_label, self.model_name)
                 return
@@ -937,10 +957,7 @@ class RunPython(TortoiseOperation):
         self.code = code
         self.reverse_code = reverse_code
         self.atomic = atomic
-
-    @property
-    def reversible(self) -> bool:
-        return self.reverse_code is not None
+        self.reversible = reverse_code is not None
 
     def state_forward(self, app_label: str, state: State) -> None:
         return None

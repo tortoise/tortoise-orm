@@ -58,9 +58,7 @@ async def migrate(
         )
 
 
-def _parse_targets(
-    target: str | None, app_labels: Sequence[str]
-) -> list[MigrationTarget]:
+def _parse_targets(target: str | None, app_labels: Sequence[str]) -> list[MigrationTarget]:
     if not target:
         return [MigrationTarget(app_label=label, name="__latest__") for label in app_labels]
     if "." in target:

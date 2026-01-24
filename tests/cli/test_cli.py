@@ -4,13 +4,14 @@ import datetime as dt
 import importlib
 import sys
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from asyncclick.testing import CliRunner
 
 from tortoise.cli import cli as cli_module
-from tortoise.migrations.graph import MigrationKey
 from tortoise.migrations.autodetector import MigrationAutodetector
+from tortoise.migrations.graph import MigrationKey
 from tortoise.migrations.writer import MigrationWriter
 
 
@@ -45,7 +46,9 @@ def _write_settings(tmp_path: Path, content: str, module_name: str) -> str:
 
 
 @pytest.mark.asyncio
-async def test_init_creates_migrations_package(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_init_creates_migrations_package(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _write_package(tmp_path, "cli_app")
     module_name = _write_settings(
         tmp_path,
@@ -63,9 +66,7 @@ TORTOISE_ORM = {
     importlib.invalidate_caches()
 
     runner = CliRunner()
-    result = await runner.invoke(
-        cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "init"]
-    )
+    result = await runner.invoke(cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "init"])
     assert result.exit_code == 0
 
     migrations_path = tmp_path / "cli_app" / "migrations"
@@ -75,7 +76,9 @@ TORTOISE_ORM = {
 
 
 @pytest.mark.asyncio
-async def test_init_top_level_migrations_package(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_init_top_level_migrations_package(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _write_package(tmp_path, "cli_app")
     module_name = _write_settings(
         tmp_path,
@@ -98,9 +101,7 @@ TORTOISE_ORM = {
     importlib.invalidate_caches()
 
     runner = CliRunner()
-    result = await runner.invoke(
-        cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "init"]
-    )
+    result = await runner.invoke(cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "init"])
     assert result.exit_code == 0
 
     migrations_path = tmp_path / "migrations"
@@ -127,7 +128,7 @@ TORTOISE_ORM = {
     monkeypatch.syspath_prepend(str(tmp_path))
     importlib.invalidate_caches()
 
-    called: dict[str, object] = {}
+    called: dict[str, Any] = {}
 
     async def fake_migrate(**kwargs) -> None:
         called.update(kwargs)
@@ -145,7 +146,9 @@ TORTOISE_ORM = {
 
 
 @pytest.mark.asyncio
-async def test_migrate_accepts_dotted_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_migrate_accepts_dotted_target(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _write_package(tmp_path, "cli_app")
     module_name = _write_settings(
         tmp_path,
@@ -284,7 +287,8 @@ TORTOISE_ORM = {
     assert result.exit_code == 0
     assert called["target"] == "orders.__first__"
     assert called["app_labels"] is None
-    assert set(called["config"]["apps"].keys()) == {"accounts", "orders"}
+    called_config = cast(dict[str, Any], called["config"])
+    assert set(called_config["apps"].keys()) == {"accounts", "orders"}
 
 
 @pytest.mark.asyncio
@@ -321,9 +325,7 @@ TORTOISE_ORM = {
     monkeypatch.setattr(cli_module.connections, "get", lambda _name: object())
 
     runner = CliRunner()
-    result = await runner.invoke(
-        cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "history"]
-    )
+    result = await runner.invoke(cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "history"])
     assert result.exit_code == 0
     assert "Connection: default" in result.output
     assert "app:" in result.output
@@ -370,9 +372,7 @@ TORTOISE_ORM = {
     importlib.import_module("cli_other.migrations")
 
     runner = CliRunner()
-    result = await runner.invoke(
-        cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "heads"]
-    )
+    result = await runner.invoke(cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "heads"])
     assert result.exit_code == 0
     assert "Connection: default" in result.output
     assert "app:" in result.output
@@ -383,7 +383,9 @@ TORTOISE_ORM = {
 
 
 @pytest.mark.asyncio
-async def test_downgrade_requires_app_label(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_downgrade_requires_app_label(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     module_name = _write_settings(
         tmp_path,
         """
@@ -406,7 +408,9 @@ TORTOISE_ORM = {
 
 
 @pytest.mark.asyncio
-async def test_downgrade_accepts_dotted_target(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_downgrade_accepts_dotted_target(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     _write_package(tmp_path, "cli_app")
     module_name = _write_settings(
         tmp_path,
@@ -483,7 +487,8 @@ TORTOISE_ORM = {
 
     runner = CliRunner()
     result = await runner.invoke(
-        cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "makemigrations", "--name", "add blog"]
+        cli_module.cli,
+        ["-c", f"{module_name}.TORTOISE_ORM", "makemigrations", "--name", "add blog"],
     )
     assert result.exit_code == 0
 

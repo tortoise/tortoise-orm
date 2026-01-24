@@ -42,9 +42,7 @@ class Apps:
             self._load_from_config()
 
     @staticmethod
-    def _discover_models(
-        models_path: ModuleType | str, app_label: str
-    ) -> list[type[Model]]:
+    def _discover_models(models_path: ModuleType | str, app_label: str) -> list[type[Model]]:
         if isinstance(models_path, ModuleType):
             module = models_path
         else:
@@ -95,16 +93,12 @@ class Apps:
                     self._connections.get(default_connection)
                 except KeyError:
                     raise ConfigurationError(
-                        'Unknown connection "{}" for app "{}"'.format(
-                            default_connection, name
-                        )
+                        f'Unknown connection "{default_connection}" for app "{name}"'
                     )
             else:
                 if default_connection not in self._connections.db_config:
                     raise ConfigurationError(
-                        'Unknown connection "{}" for app "{}"'.format(
-                            default_connection, name
-                        )
+                        f'Unknown connection "{default_connection}" for app "{name}"'
                     )
 
             self.init_app(name, info["models"], _init_relations=False)
@@ -113,7 +107,8 @@ class Apps:
                 model._meta.default_connection = default_connection
 
         self._init_relations()
-        self._build_initial_querysets()
+        if self._validate_connections:
+            self._build_initial_querysets()
 
     def _build_initial_querysets(self) -> None:
         for app in self.apps.values():

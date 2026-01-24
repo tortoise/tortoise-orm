@@ -1,18 +1,11 @@
+from __future__ import annotations
+
 import pytest
 
+from tests.utils.fake_client import FakeClient
 from tortoise import fields
-from tortoise.backends.base.client import Capabilities
 from tortoise.migrations.schema_editor.mssql import MSSQLSchemaEditor
 from tortoise.models import Model
-
-
-class FakeClient:
-    def __init__(self) -> None:
-        self.capabilities = Capabilities("mssql")
-        self.executed: list[str] = []
-
-    async def execute_script(self, query: str) -> None:
-        self.executed.append(query)
 
 
 class Widget(Model):
@@ -26,7 +19,7 @@ class Widget(Model):
 
 @pytest.mark.asyncio
 async def test_mssql_remove_field_drops_dependencies() -> None:
-    client = FakeClient()
+    client = FakeClient("mssql")
     editor = MSSQLSchemaEditor(client)
 
     await editor.remove_field(Widget, Widget._meta.fields_map["slug"])

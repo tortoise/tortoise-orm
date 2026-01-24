@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import total_ordering
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from tortoise.migrations.migration import Migration
 
 
 @dataclass(frozen=True, order=True)
@@ -17,8 +21,8 @@ class MigrationKey:
 class Node:
     def __init__(self, key: MigrationKey):
         self.key = key
-        self.children: set["Node"] = set()
-        self.parents: set["Node"] = set()
+        self.children: set[Node] = set()
+        self.parents: set[Node] = set()
 
     def __eq__(self, other: object) -> bool:
         if isinstance(other, Node):
@@ -40,14 +44,12 @@ class Node:
         return str(self.key)
 
     def __repr__(self) -> str:
-        return (
-            f"<{self.__class__.__name__}: ({self.key.app_label!r}, {self.key.name!r})>"
-        )
+        return f"<{self.__class__.__name__}: ({self.key.app_label!r}, {self.key.name!r})>"
 
-    def add_child(self, child: "Node") -> None:
+    def add_child(self, child: Node) -> None:
         self.children.add(child)
 
-    def add_parent(self, parent: "Node") -> None:
+    def add_parent(self, parent: Node) -> None:
         self.parents.add(parent)
 
 
@@ -64,18 +66,16 @@ class DummyNode(Node):
 class MigrationGraph:
     def __init__(self) -> None:
         self.node_map: dict[MigrationKey, Node] = {}
-        self.nodes: dict[MigrationKey, object | None] = {}
+        self.nodes: dict[MigrationKey, Migration | None] = {}
 
-    def add_node(self, key: MigrationKey, migration: object) -> None:
+    def add_node(self, key: MigrationKey, migration: Migration) -> None:
         if key in self.node_map:
             raise ValueError(f"Duplicate migration node {key}")
         node = Node(key)
         self.node_map[key] = node
         self.nodes[key] = migration
 
-    def add_dummy_node(
-        self, key: MigrationKey, origin: MigrationKey, error_message: str
-    ) -> None:
+    def add_dummy_node(self, key: MigrationKey, origin: MigrationKey, error_message: str) -> None:
         node = DummyNode(key, origin, error_message)
         self.node_map[key] = node
         self.nodes[key] = None
@@ -114,8 +114,7 @@ class MigrationGraph:
         nodes = [
             node.key
             for node in self.node_map.values()
-            if not node.parents
-            and (app_label is None or node.key.app_label == app_label)
+            if not node.parents and (app_label is None or node.key.app_label == app_label)
         ]
         return sorted(nodes)
 
@@ -123,17 +122,7 @@ class MigrationGraph:
         nodes = [
             node.key
             for node in self.node_map.values()
-            if not node.children
-            and (app_label is None or node.key.app_label == app_label)
-        ]
-        return sorted(nodes)
-
-    def root_nodes(self, app_label: str | None = None) -> list[MigrationKey]:
-        nodes = [
-            node.key
-            for node in self.node_map.values()
-            if not node.parents
-            and (app_label is None or node.key.app_label == app_label)
+            if not node.children and (app_label is None or node.key.app_label == app_label)
         ]
         return sorted(nodes)
 

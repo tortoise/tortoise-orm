@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 from tortoise import connections, fields
+from tortoise.fields.relational import ForeignKeyFieldInstance
 from tortoise.migrations.operations import CreateModel
-from tortoise.migrations.schema_generator.state import State
+from tortoise.migrations.schema_generator.state import ModelState, State
 from tortoise.migrations.schema_generator.state_apps import StateApps
-from tortoise.migrations.schema_generator.state import ModelState
 from tortoise.models import Model
 
 
@@ -17,7 +19,9 @@ def test_model_state_skips_fk_reference_fields() -> None:
 
     class Post(Model):
         id = fields.IntField(pk=True)
-        author = fields.ForeignKeyField("blog.Author", related_name="posts")
+        author: ForeignKeyFieldInstance[Any] = fields.ForeignKeyField(
+            "blog.Author", related_name="posts"
+        )
 
         class Meta:
             app = "blog"
@@ -64,7 +68,7 @@ def test_state_apps_builds_relations_before_querysets() -> None:
         ).state_forward("blog", state)
 
         post_model = state.apps.get_model("blog.Post")
-        author_field = post_model._meta.fields_map["author"]
+        author_field = cast(ForeignKeyFieldInstance, post_model._meta.fields_map["author"])
         assert author_field.to_field_instance is not None
     finally:
         connections._clear_storage()

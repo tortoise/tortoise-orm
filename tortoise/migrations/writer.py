@@ -6,11 +6,13 @@ import importlib
 import inspect
 import re
 import uuid
+from collections.abc import Iterable
+from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from decimal import Decimal
 from enum import Enum
-from dataclasses import dataclass, field as dataclass_field
 from pathlib import Path
-from typing import Any, Iterable, List
+from typing import Any
 
 from pypika_tortoise.context import DEFAULT_SQL_CONTEXT
 
@@ -88,8 +90,8 @@ class ImportManager:
         if self.uses_fields_module:
             lines.append("from tortoise import fields")
         if self.uses_indexes:
-            names = ", ".join(sorted(self.uses_indexes))
-            lines.append(f"from tortoise.indexes import {names}")
+            index_names = ", ".join(sorted(self.uses_indexes))
+            lines.append(f"from tortoise.indexes import {index_names}")
         if self.uses_constraints:
             lines.append("from tortoise.migrations.constraints import UniqueConstraint")
         return lines
@@ -156,13 +158,17 @@ def render_value(value: Any, imports: ImportManager) -> str:
     if isinstance(value, functools.partial):
         func = value.func
         if getattr(func, "__name__", "") == "<lambda>":
-            raise ValueError("Cannot serialize lambda inside functools.partial; use a module-level function.")
+            raise ValueError(
+                "Cannot serialize lambda inside functools.partial; use a module-level function."
+            )
         if hasattr(func, "__qualname__") and "<locals>" in func.__qualname__:
             raise ValueError(f"Cannot serialize partial with local function: {func!r}")
         args = ", ".join(render_value(arg, imports) for arg in value.args)
-        kwargs = ", ".join(
-            f"{key}={render_value(val, imports)}" for key, val in value.keywords.items()
-        ) if value.keywords else ""
+        kwargs = (
+            ", ".join(f"{key}={render_value(val, imports)}" for key, val in value.keywords.items())
+            if value.keywords
+            else ""
+        )
         parts = ", ".join(part for part in (args, kwargs) if part)
         module_name, name, use_module = _resolve_import(func)
         if use_module:
@@ -209,9 +215,7 @@ def _render_call(path: str, args: list[Any], kwargs: dict[str, Any], imports: Im
         callee = name
 
     rendered_args = [render_value(arg, imports) for arg in args]
-    rendered_kwargs = [
-        f"{key}={render_value(val, imports)}" for key, val in kwargs.items()
-    ]
+    rendered_kwargs = [f"{key}={render_value(val, imports)}" for key, val in kwargs.items()]
     return f"{callee}({', '.join(rendered_args + rendered_kwargs)})"
 
 
@@ -253,7 +257,7 @@ class MigrationWriter:
         for operation in self.operations:
             operations.extend(self._format_operation(operation, imports, indent=" " * 8))
 
-        lines: List[str] = [
+        lines: list[str] = [
             "from tortoise import migrations",
             "from tortoise.migrations import operations as ops",
         ]
@@ -411,20 +415,18 @@ class MigrationWriter:
         path, args, kwargs = constraint.deconstruct()
         return _render_call(path, args, kwargs, imports)
 
-    def _render_model_options(
-        self, options: dict[str, Any], imports: ImportManager
-    ) -> str:
+    def _render_model_options(self, options: dict[str, Any], imports: ImportManager) -> str:
         rendered: dict[str, str] = {}
         for key, value in options.items():
             if key == "indexes":
-                rendered[key] = "[" + ", ".join(
-                    self._render_index(item, imports) for item in value
-                ) + "]"
+                rendered[key] = (
+                    "[" + ", ".join(self._render_index(item, imports) for item in value) + "]"
+                )
                 continue
             if key == "constraints":
-                rendered[key] = "[" + ", ".join(
-                    self._render_constraint(item, imports) for item in value
-                ) + "]"
+                rendered[key] = (
+                    "[" + ", ".join(self._render_constraint(item, imports) for item in value) + "]"
+                )
                 continue
             rendered[key] = render_value(value, imports)
         inner = ", ".join(f"{key!r}: {val}" for key, val in rendered.items())
@@ -436,10 +438,12 @@ class MigrationWriter:
         source_fields = {
             field.source_field
             for _, field in operation.fields
-            if hasattr(field, "source_field") and field.source_field
+            if field is not None and hasattr(field, "source_field") and field.source_field
         }
         field_lines = []
         for name, field in operation.fields:
+            if field is None:
+                continue
             if name in source_fields:
                 continue
             field_expr = self._render_field(field, imports)

@@ -227,13 +227,12 @@ class TestInitErrors(test.SimpleTestCase):
                     "credentials": {"file_path": ":memory:"},
                 }
             },
-            "apps": {
-                "models": {"models": ["tests.testmodels"], "default_connection": "default"}
-            },
+            "apps": {"models": {"models": ["tests.testmodels"], "default_connection": "default"}},
         }
-        with patch("tortoise.connections._init") as mocked_init, patch(
-            "tortoise.connections.get"
-        ) as mocked_get:
+        with (
+            patch("tortoise.connections._init") as mocked_init,
+            patch("tortoise.connections.get") as mocked_get,
+        ):
             await Tortoise.init(config=config, init_connections=False)
             mocked_init.assert_not_called()
             mocked_get.assert_not_called()
@@ -248,9 +247,7 @@ class TestInitErrors(test.SimpleTestCase):
                     "credentials": {"file_path": ":memory:"},
                 }
             },
-            "apps": {
-                "models": {"models": ["tests.testmodels"], "default_connection": "default"}
-            },
+            "apps": {"models": {"models": ["tests.testmodels"], "default_connection": "default"}},
         }
         with self.assertRaisesRegex(
             ConfigurationError, "init_connections=False cannot be used with _create_db=True"

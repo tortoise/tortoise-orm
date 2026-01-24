@@ -28,9 +28,7 @@ class MSSQLSchemaEditor(BaseSchemaEditor):
     DELETE_TABLE_TEMPLATE = "DROP TABLE [{table}]"
     ADD_FIELD_TEMPLATE = "ALTER TABLE [{table}] ADD {definition}"
     ALTER_FIELD_TEMPLATE = "ALTER TABLE [{table}] {changes}"
-    RENAME_FIELD_TEMPLATE = (
-        "EXEC sp_rename '{table}.{old_column}', '{new_column}', 'COLUMN'"
-    )
+    RENAME_FIELD_TEMPLATE = "EXEC sp_rename '{table}.{old_column}', '{new_column}', 'COLUMN'"
     DELETE_FIELD_TEMPLATE = "ALTER TABLE [{table}] DROP COLUMN [{column}]"
     DROP_INDEX_TEMPLATE = "DROP INDEX [{name}] ON [{table}]"
     RENAME_INDEX_TEMPLATE = "EXEC sp_rename '{table}.{old_name}', '{new_name}', 'INDEX'"
@@ -40,7 +38,8 @@ class MSSQLSchemaEditor(BaseSchemaEditor):
         super().__init__(connection)
         self._foreign_keys: list[str] = []
 
-    def quote(self, val: str) -> str:
+    @staticmethod
+    def quote(val: str) -> str:
         return f"[{val}]"
 
     def _get_table_comment_sql(self, table: str, comment: str) -> str:
@@ -76,9 +75,7 @@ class MSSQLSchemaEditor(BaseSchemaEditor):
         self._foreign_keys.clear()
         return extra
 
-    def _format_m2m_fk(
-        self, table: str, column: str, target_table: str, target_field: str
-    ) -> str:
+    def _format_m2m_fk(self, table: str, column: str, target_table: str, target_field: str) -> str:
         return self.FK_TEMPLATE.format(
             constraint="",
             db_column=column,
@@ -147,9 +144,7 @@ class MSSQLSchemaEditor(BaseSchemaEditor):
 
     async def remove_field(self, model: type[Model], field) -> None:
         if isinstance(field, ManyToManyFieldInstance):
-            await self.client.execute_script(
-                self.DELETE_TABLE_TEMPLATE.format(table=field.through)
-            )
+            await self.client.execute_script(self.DELETE_TABLE_TEMPLATE.format(table=field.through))
             return
 
         db_field = model._meta.fields_db_projection.get(

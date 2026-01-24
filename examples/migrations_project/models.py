@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from tortoise import fields, models
 
 
@@ -16,9 +18,13 @@ class Post(models.Model):
     body = fields.TextField(source_field="content")
     excerpt = fields.TextField(null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
-    author = fields.ForeignKeyField("blog.Author", related_name="posts")
-    categories = fields.ManyToManyField("blog.Category", related_name="posts")
-    tags = fields.ManyToManyField("blog.Tag", related_name="posts")
+    author: fields.ForeignKeyRelation[Author] = fields.ForeignKeyField(
+        "blog.Author", related_name="posts"
+    )
+    categories: fields.ManyToManyRelation[Category] = fields.ManyToManyField(
+        "blog.Category", related_name="posts"
+    )
+    tags: fields.ManyToManyRelation[Tag] = fields.ManyToManyField("blog.Tag", related_name="posts")
 
     def __str__(self) -> str:
         return self.title
@@ -26,7 +32,9 @@ class Post(models.Model):
 
 class Comment(models.Model):
     id = fields.IntField(pk=True)
-    post = fields.ForeignKeyField("blog.Post", related_name="comments")
+    post: fields.ForeignKeyRelation[Post] = fields.ForeignKeyField(
+        "blog.Post", related_name="comments"
+    )
     content = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
 

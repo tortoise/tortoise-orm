@@ -69,6 +69,21 @@ class MSSQLClient(ODBCClient):
                 await cursor.execute("SELECT @@IDENTITY;")
                 return (await cursor.fetchone())[0]
 
+    async def db_delete(self) -> None:
+        if not self.database:
+            return
+        await self.create_connection(with_db=False)
+        database = self.database
+        sql = (
+            f"IF DB_ID(N'{database}') IS NOT NULL "
+            "BEGIN "
+            f"ALTER DATABASE [{database}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; "
+            f"DROP DATABASE [{database}]; "
+            "END"
+        )
+        await self.execute_script(sql)
+        await self.close()
+
 
 def _gen_savepoint_name(_c=count()) -> str:
     return f"tortoise_savepoint_{next(_c)}"

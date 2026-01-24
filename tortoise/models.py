@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING, Any, TypedDict, TypeVar, cast
 from pypika_tortoise import Order, Query, Table
 from pypika_tortoise.terms import Term
 
-from tortoise import connections
 from tortoise.backends.base.client import BaseDBAsyncClient
+from tortoise.connection import connections
 from tortoise.exceptions import (
     ConfigurationError,
     DoesNotExist,

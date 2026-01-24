@@ -99,22 +99,16 @@ class MigrationLoader:
                     return self.graph.root_nodes(key.app_label)[0]
                 return self.graph.leaf_nodes(key.app_label)[0]
             except IndexError as exc:
-                raise ValueError(
-                    f"Dependency on app with no migrations: {key.app_label}"
-                ) from exc
+                raise ValueError(f"Dependency on app with no migrations: {key.app_label}") from exc
         raise ValueError(f"Dependency on unknown app: {key.app_label}")
 
-    def _add_internal_dependencies(
-        self, key: MigrationKey, migration: Migration
-    ) -> None:
+    def _add_internal_dependencies(self, key: MigrationKey, migration: Migration) -> None:
         for parent in migration.dependencies:
             parent_key = MigrationKey(app_label=parent[0], name=parent[1])
             if parent_key.app_label == key.app_label and parent_key.name != "__first__":
                 self.graph.add_dependency(key, key, parent_key, skip_validation=True)
 
-    def _add_external_dependencies(
-        self, key: MigrationKey, migration: Migration
-    ) -> None:
+    def _add_external_dependencies(self, key: MigrationKey, migration: Migration) -> None:
         for parent in migration.dependencies:
             parent_key = MigrationKey(app_label=parent[0], name=parent[1])
             if key.app_label == parent_key.app_label:

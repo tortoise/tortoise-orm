@@ -40,9 +40,7 @@ class OracleSchemaEditor(BaseSchemaEditor):
         return table
 
     def _get_table_comment_sql(self, table: str, comment: str) -> str:
-        sql = self.TABLE_COMMENT_TEMPLATE.format(
-            table=table, comment=self._escape_comment(comment)
-        )
+        sql = self.TABLE_COMMENT_TEMPLATE.format(table=table, comment=self._escape_comment(comment))
         self.comments_array.append(sql)
         return ""
 
@@ -75,9 +73,7 @@ class OracleSchemaEditor(BaseSchemaEditor):
         _ = (constraint_name, db_field, table, field, on_delete, comment)
         return ""
 
-    def _format_m2m_fk(
-        self, table: str, column: str, target_table: str, target_field: str
-    ) -> str:
+    def _format_m2m_fk(self, table: str, column: str, target_table: str, target_field: str) -> str:
         return self.FK_TEMPLATE.format(
             constraint="",
             db_column=column,

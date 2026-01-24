@@ -4,9 +4,10 @@ import importlib
 import importlib.util
 import os
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Iterable
+from typing import Any
 
 from asyncclick import BadOptionUsage, ClickException, Context
 

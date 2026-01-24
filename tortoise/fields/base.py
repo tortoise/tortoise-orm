@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import sys
 import inspect
+import sys
 import warnings
 from collections.abc import Callable
 from enum import Enum

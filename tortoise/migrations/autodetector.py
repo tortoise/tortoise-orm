@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime as dt
 import re
 from collections.abc import Callable
-from typing import Iterable
 
 from tortoise.apps import Apps
 from tortoise.fields.relational import (
@@ -18,8 +17,7 @@ from tortoise.migrations.recorder import MigrationRecorder
 from tortoise.migrations.schema_generator.operation_generator import OperationGenerator
 from tortoise.migrations.schema_generator.state import ModelState, State
 from tortoise.migrations.schema_generator.state_apps import StateApps
-from tortoise.migrations.writer import migrations_module_path
-from tortoise.migrations.writer import MigrationWriter
+from tortoise.migrations.writer import MigrationWriter, migrations_module_path
 
 RELATION_FIELDS = (ForeignKeyFieldInstance, OneToOneFieldInstance, ManyToManyFieldInstance)
 MIGRATION_NUMBER_RE = re.compile(r"^(\d{4})_")
@@ -27,7 +25,7 @@ MIGRATION_NUMBER_RE = re.compile(r"^(\d{4})_")
 
 class _NoopRecorder(MigrationRecorder):
     def __init__(self) -> None:
-        super().__init__(connection=None)  # type: ignore[arg-type]
+        super().__init__(connection=None)
 
     async def applied_migrations(self) -> list[MigrationKey]:
         return []
@@ -58,9 +56,7 @@ class MigrationAutodetector:
             migrations_module = config.get("migrations")
             if not migrations_module:
                 continue
-            operations = OperationGenerator(old_state, new_state).generate(
-                app_labels=[app_label]
-            )
+            operations = OperationGenerator(old_state, new_state).generate(app_labels=[app_label])
             if not operations:
                 continue
             dependencies = self._dependencies_for_app(app_label, new_state)
@@ -128,7 +124,10 @@ class MigrationAutodetector:
                 if isinstance(model_name, str):
                     related_app, _ = model_name.split(".", 1)
                 else:
-                    related_app = model_name._meta.app
+                    related_app_label = model_name._meta.app
+                    if related_app_label is None:
+                        continue
+                    related_app = related_app_label
                 if related_app == app_label:
                     continue
                 if not self.apps_config.get(related_app, {}).get("migrations"):
@@ -150,10 +149,7 @@ class MigrationAutodetector:
             return disk_nodes
         names = self._disk_migration_names(app_label)
         if names:
-            return [
-                MigrationKey(app_label=app_label, name=name)
-                for name in names
-            ]
+            return [MigrationKey(app_label=app_label, name=name) for name in names]
         return []
 
     def _disk_migration_names(self, app_label: str) -> list[str]:
@@ -174,7 +170,9 @@ class MigrationAutodetector:
             names.append(name)
         return sorted(names)
 
-    def _migration_name(self, app_label: str, old_state: State, new_state: State) -> tuple[str, bool]:
+    def _migration_name(
+        self, app_label: str, old_state: State, new_state: State
+    ) -> tuple[str, bool]:
         new_has_models = any(key[0] == app_label for key in new_state.models)
         has_migrations = any(key.app_label == app_label for key in self.loader.graph.nodes)
         if not has_migrations and new_has_models:

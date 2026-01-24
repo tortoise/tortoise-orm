@@ -27,9 +27,7 @@ class BasePostgresSchemaEditor(BaseSchemaEditor):
         return table
 
     def _get_table_comment_sql(self, table: str, comment: str) -> str:
-        sql = self.TABLE_COMMENT_TEMPLATE.format(
-            table=table, comment=self._escape_comment(comment)
-        )
+        sql = self.TABLE_COMMENT_TEMPLATE.format(table=table, comment=self._escape_comment(comment))
         self.comments_array.append(sql)
         return ""
 
@@ -60,7 +58,12 @@ class BasePostgresSchemaEditor(BaseSchemaEditor):
         if index_type:
             index_type = f"USING {index_type}"
         return super()._get_index_sql(
-            model, field_names, safe, index_name=index_name, index_type=index_type, extra=extra
+            model,
+            list(field_names),
+            safe,
+            index_name=index_name,
+            index_type=index_type,
+            extra=extra,
         )
 
     def _get_unique_index_sql(self, table_name: str, field_names: list[str]) -> str:

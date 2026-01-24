@@ -1,23 +1,22 @@
 from __future__ import annotations
 
 import inspect
+from collections.abc import Iterable
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List, Set, Tuple, Type, cast
+from typing import Any, cast
 
 from tortoise.fields.base import Field
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance, RelationalField
-from tortoise.models import Model
 from tortoise.migrations.schema_generator.state_apps import StateApps
+from tortoise.models import Model
 
 
 @dataclass
 class BaseEntityState:
     @classmethod
-    def from_dict(cls, env) -> "BaseEntityState":
-        return cls(
-            **{k: v for k, v in env.items() if k in inspect.signature(cls).parameters}
-        )
+    def from_dict(cls, env) -> BaseEntityState:
+        return cls(**{k: v for k, v in env.items() if k in inspect.signature(cls).parameters})
 
 
 @dataclass
@@ -27,12 +26,12 @@ class ModelState(BaseEntityState):
     table: str
     abstract: bool
     description: str
-    options: Dict[str, Any]
-    bases: Tuple[type, ...]
+    options: dict[str, Any]
+    bases: tuple[type, ...]
     pk_field_name: str
-    fields: Dict[str, Field]
+    fields: dict[str, Field]
 
-    def clone(self) -> "ModelState":
+    def clone(self) -> ModelState:
         return self.__class__(
             name=self.name,
             app=self.app,
@@ -45,18 +44,18 @@ class ModelState(BaseEntityState):
             fields={name: deepcopy(field) for name, field in self.fields.items()},
         )
 
-    def render(self, apps: StateApps) -> Type[Model]:
+    def render(self, apps: StateApps) -> type[Model]:
         meta_class = type("Meta", (), self.options)
 
-        attrs = {name: deepcopy(field) for name, field in self.fields.items()}
+        attrs: dict[str, Any] = {name: deepcopy(field) for name, field in self.fields.items()}
         attrs["Meta"] = meta_class
 
         model = type(self.name, self.bases, attrs)
-        return cast(Type[Model], model)
+        return cast(type[Model], model)
 
     @classmethod
-    def make_from_model(cls, app_label: str, model: Type[Model]) -> "ModelState":
-        fields: Dict[str, Field] = {}
+    def make_from_model(cls, app_label: str, model: type[Model]) -> ModelState:
+        fields: dict[str, Field] = {}
 
         for name, field in model._meta.fields_map.items():
             if isinstance(field, BackwardFKRelation):
@@ -69,7 +68,7 @@ class ModelState(BaseEntityState):
 
             fields[name] = deepcopy(field)
 
-        options: Dict[str, Any] = {}
+        options: dict[str, Any] = {}
         if model._meta.abstract:
             options["abstract"] = model._meta.abstract
         if model._meta.db_table:
@@ -100,7 +99,7 @@ class ModelState(BaseEntityState):
         )
 
 
-def get_related_models(model: Type[Model]) -> List[Type[Model]]:
+def get_related_models(model: type[Model]) -> list[type[Model]]:
     related_models = [
         subclass for subclass in model.__subclasses__() if issubclass(subclass, Model)
     ]
@@ -112,34 +111,41 @@ def get_related_models(model: Type[Model]) -> List[Type[Model]]:
     return related_models
 
 
-def get_related_model_tuples(model: Type[Model]) -> Set[Tuple[str, str]]:
-    return {(m._meta.app, m.__name__) for m in get_related_models(model)}
+def _require_app_label(model: type[Model]) -> str:
+    app_label = model._meta.app
+    if app_label is None:
+        raise ValueError(f"Model {model} is not registered in any app")
+    return app_label
 
 
-def get_related_models_recursive(model: Type[Model]) -> Set[Tuple[str, str]]:
-    seen: Set[Tuple[str, str]] = set()
+def get_related_model_tuples(model: type[Model]) -> set[tuple[str, str]]:
+    return {(_require_app_label(m), m.__name__) for m in get_related_models(model)}
+
+
+def get_related_models_recursive(model: type[Model]) -> set[tuple[str, str]]:
+    seen: set[tuple[str, str]] = set()
     rel_models = get_related_models(model)
 
     for rel_model in rel_models:
-        model_tuple = (rel_model._meta.app, rel_model.__name__)
+        model_tuple = (_require_app_label(rel_model), rel_model.__name__)
         if model_tuple in seen:
             continue
         seen.add(model_tuple)
         rel_models += get_related_models(rel_model)
 
-    return seen - {(model._meta.app, model.__name__)}
+    return seen - {(_require_app_label(model), model.__name__)}
 
 
 @dataclass
 class State:
-    models: Dict[Tuple[str, str], ModelState]
+    models: dict[tuple[str, str], ModelState]
     apps: StateApps
 
-    def _find_related_models(self, app_label: str, model_name: str) -> Set[Tuple[str, str]]:
+    def _find_related_models(self, app_label: str, model_name: str) -> set[tuple[str, str]]:
         try:
             model = self.apps.get_model(f"{app_label}.{model_name}")
         except KeyError:
-            related_models: Set[Tuple[str, str]] = set()
+            related_models: set[tuple[str, str]] = set()
         else:
             related_models = get_related_models_recursive(model)
 
@@ -147,7 +153,7 @@ class State:
 
         return related_models
 
-    def _reload(self, models_to_reload: Set[Tuple[str, str]]) -> None:
+    def _reload(self, models_to_reload: set[tuple[str, str]]) -> None:
         for app_label, model_name in models_to_reload:
             self.apps.unregister_model(app_label, model_name)
             model_state = self.models[(app_label, model_name)]
@@ -165,8 +171,8 @@ class State:
         related_models = self._find_related_models(app_label, model_name)
         self._reload(related_models)
 
-    def reload_models(self, model_tuples: Iterable[Tuple[str, str]]) -> None:
-        related_models: Set[Tuple[str, str]] = set()
+    def reload_models(self, model_tuples: Iterable[tuple[str, str]]) -> None:
+        related_models: set[tuple[str, str]] = set()
 
         for app_label, model_name in model_tuples:
             model_state = self.models.get((app_label, model_name))
@@ -177,6 +183,6 @@ class State:
 
         self._reload(related_models)
 
-    def clone(self) -> "State":
+    def clone(self) -> State:
         models = {key: model.clone() for key, model in self.models.items()}
         return self.__class__(models=models, apps=self.apps.clone())

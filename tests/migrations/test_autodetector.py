@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import datetime as dt
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from tortoise import fields
+from tortoise.fields.base import Field
 from tortoise.migrations.autodetector import MigrationAutodetector
 from tortoise.migrations.operations import CreateModel, RenameField, RenameModel
 from tortoise.migrations.schema_generator.state_apps import StateApps
@@ -68,17 +70,17 @@ def _write_migration_with_ops(
     return module_path
 
 
-def _make_model(
-    name: str, app_label: str, **model_fields: fields.Field
-) -> type[Model]:
-    attrs = dict(model_fields)
+def _make_model(name: str, app_label: str, **model_fields: Field) -> type[Model]:
+    attrs: dict[str, Any] = dict(model_fields)
     meta = type("Meta", (), {"app": app_label, "table": name.lower()})
     attrs["Meta"] = meta
     return type(name, (Model,), attrs)
 
 
 @pytest.mark.asyncio
-async def test_autodetector_initial_migration(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_autodetector_initial_migration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     module_path = _prepare_migration_package(tmp_path, "autoapp_init")
     monkeypatch.syspath_prepend(str(tmp_path))
 
@@ -201,9 +203,7 @@ async def test_autodetector_multi_leaf_dependencies(
 
 
 @pytest.mark.asyncio
-async def test_autodetector_model_rename(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_autodetector_model_rename(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     module_path = _write_migration_with_ops(
         tmp_path,
         "renameapp",
@@ -212,7 +212,7 @@ async def test_autodetector_model_rename(
             "        ops.CreateModel(",
             "            name='OldWidget',",
             "            fields=[",
-                "                ('id', fields.IntField(generated=True, primary_key=True, unique=True, db_index=True)),",
+            "                ('id', fields.IntField(generated=True, primary_key=True, unique=True, db_index=True)),",
             "                ('name', fields.CharField(max_length=100)),",
             "            ],",
             "        ),",
@@ -248,9 +248,7 @@ async def test_autodetector_model_rename(
 
 
 @pytest.mark.asyncio
-async def test_autodetector_field_rename(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+async def test_autodetector_field_rename(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     module_path = _write_migration_with_ops(
         tmp_path,
         "renamefield",

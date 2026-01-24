@@ -57,9 +57,7 @@ class MigrationExecutor:
 
         state_cache: State | None = None
         for step in plan:
-            key = MigrationKey(
-                app_label=step.migration.app_label, name=step.migration.name
-            )
+            key = MigrationKey(app_label=step.migration.app_label, name=step.migration.name)
             if step.backward:
                 state_before = await self._project_state(applied, upto=key)
                 if not fake:
@@ -81,9 +79,7 @@ class MigrationExecutor:
                     await self.recorder.record_applied(key.app_label, key.name)
                 applied.add(key)
 
-    async def plan(
-        self, targets: Iterable[MigrationTarget] | None = None
-    ) -> list[PlanStep]:
+    async def plan(self, targets: Iterable[MigrationTarget] | None = None) -> list[PlanStep]:
         await self.loader.build_graph()
         applied = set(await self.recorder.applied_migrations())
         return self._migration_plan(targets, applied, self.loader.graph)
@@ -121,6 +117,8 @@ class MigrationExecutor:
             if upto and key == upto:
                 break
             migration = self.loader.graph.nodes[key]
+            if migration is None:
+                raise ValueError(f"Missing migration for {key}")
             await migration.apply(state, dry_run=True, schema_editor=None)
         return state
 
@@ -145,10 +143,14 @@ class MigrationExecutor:
         graph: MigrationGraph,
     ) -> list[PlanStep]:
         plan: list[PlanStep] = []
-        target_list = list(targets) if targets is not None else [
-            MigrationTarget(app_label=key.app_label, name=key.name)
-            for key in graph.leaf_nodes()
-        ]
+        target_list = (
+            list(targets)
+            if targets is not None
+            else [
+                MigrationTarget(app_label=key.app_label, name=key.name)
+                for key in graph.leaf_nodes()
+            ]
+        )
         for target in target_list:
             if target.name == "__latest__":
                 for leaf in graph.leaf_nodes(target.app_label):
@@ -159,9 +161,7 @@ class MigrationExecutor:
                 for root in graph.root_nodes(target.app_label):
                     root_target = MigrationTarget(app_label=root.app_label, name=root.name)
                     plan.extend(
-                        self._backward_plan(
-                            root_target, applied, graph, include_target=True
-                        )
+                        self._backward_plan(root_target, applied, graph, include_target=True)
                     )
                 continue
             key = MigrationKey(app_label=target.app_label, name=target.name)
@@ -180,9 +180,7 @@ class MigrationExecutor:
         graph: MigrationGraph,
     ) -> list[PlanStep]:
         plan: list[PlanStep] = []
-        for key in graph.forwards_plan(
-            MigrationKey(app_label=target.app_label, name=target.name)
-        ):
+        for key in graph.forwards_plan(MigrationKey(app_label=target.app_label, name=target.name)):
             if key in applied:
                 continue
             migration = graph.nodes[key]
@@ -216,9 +214,7 @@ class MigrationExecutor:
         deduped: list[PlanStep] = []
         seen: dict[MigrationKey, bool] = {}
         for step in plan:
-            key = MigrationKey(
-                app_label=step.migration.app_label, name=step.migration.name
-            )
+            key = MigrationKey(app_label=step.migration.app_label, name=step.migration.name)
             if key in seen:
                 if seen[key] != step.backward:
                     raise ValueError(f"Conflicting migration directions for {key}")

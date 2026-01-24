@@ -1,19 +1,12 @@
+from __future__ import annotations
+
 import pytest
 
+from tests.utils.fake_client import FakeClient
 from tortoise import fields
-from tortoise.backends.base.client import Capabilities
 from tortoise.migrations.constraints import UniqueConstraint
 from tortoise.migrations.schema_editor.sqlite import SqliteSchemaEditor
 from tortoise.models import Model
-
-
-class FakeClient:
-    def __init__(self) -> None:
-        self.capabilities = Capabilities("sqlite")
-        self.executed: list[str] = []
-
-    async def execute_script(self, query: str) -> None:
-        self.executed.append(query)
 
 
 class Widget(Model):
@@ -27,7 +20,7 @@ class Widget(Model):
 
 @pytest.mark.asyncio
 async def test_sqlite_add_field_unique_uses_index() -> None:
-    client = FakeClient()
+    client = FakeClient("sqlite")
     editor = SqliteSchemaEditor(client)
 
     await editor.add_field(Widget, "slug")
@@ -43,7 +36,7 @@ async def test_sqlite_add_field_unique_uses_index() -> None:
 
 @pytest.mark.asyncio
 async def test_sqlite_constraint_name_used_for_drop() -> None:
-    client = FakeClient()
+    client = FakeClient("sqlite")
     editor = SqliteSchemaEditor(client)
 
     constraint = UniqueConstraint(fields=("slug",))

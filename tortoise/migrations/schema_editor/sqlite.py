@@ -97,9 +97,7 @@ class SqliteSchemaEditor(BaseSchemaEditor):
             unique_field = field.unique and not field.pk
 
         await self.client.execute_script(
-            self.ADD_FIELD_TEMPLATE.format(
-                table=model._meta.db_table, definition=field_definition
-            )
+            self.ADD_FIELD_TEMPLATE.format(table=model._meta.db_table, definition=field_definition)
         )
 
         if unique_field:

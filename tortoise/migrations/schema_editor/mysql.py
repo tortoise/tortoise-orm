@@ -29,9 +29,7 @@ class MySQLSchemaEditor(BaseSchemaEditor):
     DELETE_TABLE_TEMPLATE = "DROP TABLE `{table}`"
     ADD_FIELD_TEMPLATE = "ALTER TABLE `{table}` ADD COLUMN {definition}"
     ALTER_FIELD_TEMPLATE = "ALTER TABLE `{table}` {changes}"
-    RENAME_FIELD_TEMPLATE = (
-        "ALTER TABLE `{table}` RENAME COLUMN `{old_column}` TO `{new_column}`"
-    )
+    RENAME_FIELD_TEMPLATE = "ALTER TABLE `{table}` RENAME COLUMN `{old_column}` TO `{new_column}`"
     DELETE_FIELD_TEMPLATE = "ALTER TABLE `{table}` DROP COLUMN `{column}`"
     DROP_INDEX_TEMPLATE = "DROP INDEX `{name}` ON `{table}`"
     RENAME_INDEX_TEMPLATE = "ALTER TABLE `{table}` RENAME INDEX `{old_name}` TO `{new_name}`"
@@ -42,7 +40,8 @@ class MySQLSchemaEditor(BaseSchemaEditor):
         self._field_indexes: list[str] = []
         self._foreign_keys: list[str] = []
 
-    def quote(self, val: str) -> str:
+    @staticmethod
+    def quote(val: str) -> str:
         return f"`{val}`"
 
     def _table_generate_extra(self, table: str) -> str:
@@ -102,9 +101,7 @@ class MySQLSchemaEditor(BaseSchemaEditor):
         self._field_indexes.append(index_sql)
         return ""
 
-    def _format_m2m_fk(
-        self, table: str, column: str, target_table: str, target_field: str
-    ) -> str:
+    def _format_m2m_fk(self, table: str, column: str, target_table: str, target_field: str) -> str:
         return self.FK_TEMPLATE.format(
             constraint="",
             db_column=column,
@@ -152,9 +149,7 @@ class MySQLSchemaEditor(BaseSchemaEditor):
             backward_fk=backward_fk,
             forward_fk=forward_fk,
             extra=self._table_generate_extra(table=field.through),
-            comment=self._get_table_comment_sql(
-                table=field.through, comment=field.description
-            )
+            comment=self._get_table_comment_sql(table=field.through, comment=field.description)
             if field.description
             else "",
         )
@@ -175,9 +170,7 @@ class MySQLSchemaEditor(BaseSchemaEditor):
         return m2m_create_string
 
     async def add_constraint(self, model, constraint) -> None:
-        unique_index_sql = self._get_unique_index_sql(
-            model._meta.db_table, list(constraint.fields)
-        )
+        unique_index_sql = self._get_unique_index_sql(model._meta.db_table, list(constraint.fields))
         await self.client.execute_script(unique_index_sql)
 
     async def remove_constraint(self, model, constraint) -> None:

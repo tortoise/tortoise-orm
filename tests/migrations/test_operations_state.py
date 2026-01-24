@@ -1,4 +1,6 @@
-from typing import Type, Union, cast
+from __future__ import annotations
+
+from typing import cast
 
 import pytest
 
@@ -106,7 +108,7 @@ def test_add_model_two_simple_models_fields_in_two_apps(empty_state: State):
 )
 def test_add_model_two_simple_models_fields_in_one_app_with_fk(
     empty_state: State,
-    field_class: Type[RelationalField],
+    field_class: type[ForeignKeyFieldInstance | OneToOneFieldInstance | ManyToManyFieldInstance],
     second_app: str,
     models_in_second_app: int,
 ):
@@ -130,7 +132,10 @@ def test_add_model_two_simple_models_fields_in_one_app_with_fk(
     assert len(state.apps.apps[second_app]) == models_in_second_app
 
     model2 = state.apps.get_model(f"{second_app}.TestModel2")
-    fk_field = model2._meta.fields_map["reference"]
+    fk_field = cast(
+        ForeignKeyFieldInstance | OneToOneFieldInstance | ManyToManyFieldInstance,
+        model2._meta.fields_map["reference"],
+    )
     assert isinstance(fk_field, field_class)
     assert fk_field.related_model.__name__ == "TestModel"
 
@@ -159,9 +164,7 @@ def test_simple_rename(state_with_model: State):
 )
 def test_rename_with_fk(
     state_with_model: State,
-    field_class: Type[
-        Union[ForeignKeyFieldInstance, OneToOneFieldInstance, ManyToManyFieldInstance]
-    ],
+    field_class: type[ForeignKeyFieldInstance | OneToOneFieldInstance | ManyToManyFieldInstance],
     second_app: str,
 ):
     state = state_with_model
@@ -178,7 +181,11 @@ def test_rename_with_fk(
     operation.state_forward("models", state)
 
     model_state = state.models[(second_app, "TestModel2")]
-    field = cast(field_class, model_state.fields["reference"])
+    field = cast(
+        ForeignKeyFieldInstance | OneToOneFieldInstance | ManyToManyFieldInstance,
+        model_state.fields["reference"],
+    )
+    assert isinstance(field, field_class)
     assert field.model_name == "models.NewName"
 
 
@@ -239,11 +246,9 @@ def test_add_field(state_with_model: State):
 )
 def test_add_field_relational(
     state_with_two_models: State,
-    field_class: Type[
-        Union[ForeignKeyFieldInstance, OneToOneFieldInstance, ManyToManyFieldInstance]
-    ],
-    backward_field_class: Type[
-        Union[BackwardFKRelation, BackwardOneToOneRelation, ManyToManyFieldInstance]
+    field_class: type[ForeignKeyFieldInstance | OneToOneFieldInstance | ManyToManyFieldInstance],
+    backward_field_class: type[
+        BackwardFKRelation | BackwardOneToOneRelation | ManyToManyFieldInstance
     ],
 ):
     state = state_with_two_models
@@ -256,13 +261,16 @@ def test_add_field_relational(
     operation.state_forward("models", state)
 
     model_state = state.models["models", "TestModel2"]
-    field = model_state.fields["ref"]
+    field = cast(
+        ForeignKeyFieldInstance | OneToOneFieldInstance | ManyToManyFieldInstance,
+        model_state.fields["ref"],
+    )
     assert isinstance(field, field_class)
     assert field.model_name == "models.TestModel"
 
     model = state.apps.get_model("models.TestModel")
     model2 = state.apps.get_model("models.TestModel2")
-    field_on_model = model2._meta.fields_map["ref"]
+    field_on_model = cast(RelationalField, model2._meta.fields_map["ref"])
     assert field_on_model.related_model == model
 
     backward_field = model._meta.fields_map["child"]
@@ -289,9 +297,7 @@ def test_remove_field(state_with_model: State):
 )
 def test_remove_field_relational(
     state_with_two_models: State,
-    field_class: Type[
-        Union[ForeignKeyFieldInstance, OneToOneFieldInstance, ManyToManyFieldInstance]
-    ],
+    field_class: type[ForeignKeyFieldInstance | OneToOneFieldInstance | ManyToManyFieldInstance],
 ):
     state = state_with_two_models
 

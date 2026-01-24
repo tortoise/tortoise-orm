@@ -1,7 +1,7 @@
 """Vendored migrations package (experimental)."""
 
-from tortoise.migrations.migration import Migration  # noqa: F401
-from tortoise.migrations.operations import (  # noqa: F401
+from tortoise.migrations.migration import Migration
+from tortoise.migrations.operations import (
     AddField,
     AlterField,
     AlterModelOptions,
