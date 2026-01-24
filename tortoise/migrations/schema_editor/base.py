@@ -430,11 +430,12 @@ class BaseSchemaEditor:
             if table_string:
                 await self.client.execute_script(table_string)
             return
-        db_field = model._meta.fields_db_projection[field_name]
 
         if isinstance(field, ForeignKeyFieldInstance):
-            field_definition = self._get_fk_field_definition(model, field.source_field)
+            key_field_name = field.source_field or field_name
+            field_definition = self._get_fk_field_definition(model, key_field_name)
         else:
+            db_field = model._meta.fields_db_projection[field_name]
             comment = (
                 self._get_column_comment_sql(
                     table=model._meta.db_table, column=db_field, comment=field.description

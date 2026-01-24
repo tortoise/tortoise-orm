@@ -42,8 +42,20 @@ class MSSQLClient(ODBCClient):
         driver: str,
         **kwargs: Any,
     ) -> None:
+        encrypt = kwargs.pop("encrypt", kwargs.pop("Encrypt", None))
+        trust_cert = kwargs.pop(
+            "trust_server_certificate", kwargs.pop("TrustServerCertificate", None)
+        )
+        extra_params = kwargs.pop("extra_params", kwargs.pop("ExtraParams", None))
         super().__init__(**kwargs)
-        self.dsn = f"DRIVER={driver};SERVER={host},{port};UID={user};PWD={password};"
+        dsn = f"DRIVER={driver};SERVER={host},{port};UID={user};PWD={password};"
+        if encrypt is not None:
+            dsn += f"Encrypt={encrypt};"
+        if trust_cert is not None:
+            dsn += f"TrustServerCertificate={trust_cert};"
+        if extra_params:
+            dsn += extra_params if extra_params.endswith(";") else f"{extra_params};"
+        self.dsn = dsn
 
     def _in_transaction(self) -> TransactionContext:
         return TransactionContextPooled(TransactionWrapper(self), self._pool_init_lock)

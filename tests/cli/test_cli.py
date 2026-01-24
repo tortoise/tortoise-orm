@@ -109,6 +109,7 @@ TORTOISE_ORM = {
 
 @pytest.mark.asyncio
 async def test_migrate_passes_target(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _write_package(tmp_path, "cli_app")
     module_name = _write_settings(
         tmp_path,
         """
@@ -138,7 +139,7 @@ TORTOISE_ORM = {
     )
     assert result.exit_code == 0
     assert called["target"] == "app.0001_initial"
-    assert called["app_labels"] == ["app"]
+    assert called["app_labels"] is None
 
 
 @pytest.mark.asyncio
@@ -173,7 +174,7 @@ TORTOISE_ORM = {
     )
     assert result.exit_code == 0
     assert called["target"] == "app.0001_initial"
-    assert called["app_labels"] == ["app"]
+    assert called["app_labels"] is None
 
 
 @pytest.mark.asyncio
@@ -206,8 +207,8 @@ TORTOISE_ORM = {
         ["-c", f"{module_name}.TORTOISE_ORM", "upgrade", "app"],
     )
     assert result.exit_code == 0
-    assert called["app_labels"] == ["app"]
-    assert called["target"] is None
+    assert called["app_labels"] is None
+    assert called["target"] == "app.__latest__"
 
 
 @pytest.mark.asyncio
@@ -241,7 +242,47 @@ TORTOISE_ORM = {
     )
     assert result.exit_code == 0
     assert called["target"] == "app.__first__"
-    assert called["app_labels"] == ["app"]
+    assert called["app_labels"] is None
+
+
+@pytest.mark.asyncio
+async def test_downgrade_keeps_full_config_for_dependencies(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _write_package(tmp_path, "cli_accounts")
+    _write_package(tmp_path, "cli_orders")
+    module_name = _write_settings(
+        tmp_path,
+        """
+TORTOISE_ORM = {
+    "connections": {"default": "sqlite://:memory:"},
+    "apps": {
+        "accounts": {"models": ["cli_accounts.models"], "default_connection": "default"},
+        "orders": {"models": ["cli_orders.models"], "default_connection": "default"},
+    },
+}
+""".lstrip(),
+        f"cli_settings_{tmp_path.name}",
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    importlib.invalidate_caches()
+
+    called: dict[str, object] = {}
+
+    async def fake_migrate(**kwargs) -> None:
+        called.update(kwargs)
+
+    monkeypatch.setattr(cli_module, "migrate_api", fake_migrate)
+
+    runner = CliRunner()
+    result = await runner.invoke(
+        cli_module.cli,
+        ["-c", f"{module_name}.TORTOISE_ORM", "downgrade", "orders"],
+    )
+    assert result.exit_code == 0
+    assert called["target"] == "orders.__first__"
+    assert called["app_labels"] is None
+    assert set(called["config"]["apps"].keys()) == {"accounts", "orders"}
 
 
 @pytest.mark.asyncio
@@ -394,7 +435,7 @@ TORTOISE_ORM = {
     )
     assert result.exit_code == 0
     assert called["target"] == "app.0001_initial"
-    assert called["app_labels"] == ["app"]
+    assert called["app_labels"] is None
 
 
 @pytest.mark.asyncio

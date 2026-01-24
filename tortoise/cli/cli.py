@@ -327,19 +327,20 @@ async def _run_migrate(
         app_label, migration = app_label.split(".", 1)
 
     config = _normalized_config(_load_config(ctx))
-    apps_config = _select_apps(config.get("apps", {}), [app_label] if app_label else None)
-    config["apps"] = apps_config
 
     target = target_override
-    if target is None and migration:
-        if not app_label:
-            raise click.UsageError("MIGRATION requires APP_LABEL")
-        target = f"{app_label}.{migration}"
+    if target is None:
+        if app_label and not migration:
+            target = f"{app_label}.__latest__"
+        elif migration:
+            if not app_label:
+                raise click.UsageError("MIGRATION requires APP_LABEL")
+            target = f"{app_label}.{migration}"
 
     async with aclose_tortoise():
         await migrate_api(
             config=config,
-            app_labels=[app_label] if app_label else None,
+            app_labels=None,
             target=target,
             fake=fake,
             dry_run=dry_run,

@@ -36,10 +36,10 @@ class SqliteSchemaEditor(BaseSchemaEditor):
             if table_string:
                 await self.client.execute_script(table_string)
             return
-        db_field = model._meta.fields_db_projection[field_name]
-
         if isinstance(field, ForeignKeyFieldInstance):
-            key_field = model._meta.fields_map[field.source_field]
+            key_field_name = field.source_field or field_name
+            db_field = model._meta.fields_db_projection.get(key_field_name, key_field_name)
+            key_field = model._meta.fields_map[key_field_name]
             fk_field = cast(ForeignKeyFieldInstance, key_field.reference)
             comment = (
                 self._get_column_comment_sql(
@@ -77,6 +77,7 @@ class SqliteSchemaEditor(BaseSchemaEditor):
             )
             unique_field = key_field.unique and not key_field.pk
         else:
+            db_field = model._meta.fields_db_projection[field_name]
             comment = (
                 self._get_column_comment_sql(
                     table=model._meta.db_table, column=db_field, comment=field.description
