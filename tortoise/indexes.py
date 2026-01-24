@@ -51,6 +51,16 @@ class Index:
             "extra": self.extra,
         }
 
+    def deconstruct(self) -> tuple[str, list[Any], dict[str, Any]]:
+        path = f"{self.__class__.__module__}.{self.__class__.__name__}"
+        args = list(self.expressions)
+        kwargs: dict[str, Any] = {}
+        if self.fields:
+            kwargs["fields"] = list(self.fields)
+        if self.name:
+            kwargs["name"] = self.name
+        return path, args, kwargs
+
     def index_name(self, schema_generator: BaseSchemaGenerator, model: type[Model]) -> str:
         # This function is required by aerich
         return self.name or schema_generator._get_index_name("idx", model, self.field_names)
@@ -105,8 +115,15 @@ class PartialIndex(Index):
         condition: dict | None = None,
     ) -> None:
         super().__init__(*expressions, fields=fields, name=name)
+        self.condition = condition
         if condition:
             cond = " WHERE "
             items = [f"{k} = {ValueWrapper(v)}" for k, v in condition.items()]
             cond += " AND ".join(items)
             self.extra = cond
+
+    def deconstruct(self) -> tuple[str, list[Any], dict[str, Any]]:
+        path, args, kwargs = super().deconstruct()
+        if self.condition:
+            kwargs["condition"] = self.condition
+        return path, args, kwargs
