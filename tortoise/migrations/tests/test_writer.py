@@ -15,6 +15,7 @@ from tortoise.migrations.operations import (
     AlterField,
     CreateModel,
     RenameField,
+    RunPython,
 )
 from tortoise.migrations.writer import MigrationWriter
 
@@ -404,3 +405,34 @@ def test_writer_rejects_local_function_default(tmp_path: Path, monkeypatch) -> N
     )
     with pytest.raises(ValueError, match="local function"):
         writer.as_string()
+
+
+def _runpython_forward(apps, schema_editor) -> None:
+    _ = (apps, schema_editor)
+
+
+def _runpython_reverse(apps, schema_editor) -> None:
+    _ = (apps, schema_editor)
+
+
+def test_writer_format_runpython(tmp_path: Path, monkeypatch) -> None:
+    operations = [
+        RunPython(_runpython_forward, reverse_code=_runpython_reverse, atomic=False)
+    ]
+    expected = textwrap.dedent(
+        """\
+        from tortoise import migrations
+        from tortoise.migrations import operations as ops
+        from tortoise.migrations.tests.test_writer import _runpython_forward, _runpython_reverse
+
+        class Migration(migrations.Migration):
+            operations = [
+                ops.RunPython(
+                    code=_runpython_forward,
+                    reverse_code=_runpython_reverse,
+                    atomic=False,
+                ),
+            ]
+        """
+    )
+    _write_migration(tmp_path, monkeypatch, "0008_runpython", operations, expected)

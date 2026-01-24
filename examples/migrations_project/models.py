@@ -14,6 +14,7 @@ class Post(models.Model):
     title = fields.CharField(max_length=300)
     slug = fields.CharField(max_length=220, unique=True)
     body = fields.TextField(source_field="content")
+    excerpt = fields.TextField(null=True)
     created_at = fields.DatetimeField(auto_now_add=True)
     author = fields.ForeignKeyField("blog.Author", related_name="posts")
     categories = fields.ManyToManyField("blog.Category", related_name="posts")

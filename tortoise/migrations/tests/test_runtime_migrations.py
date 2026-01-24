@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+import importlib
 
 import pytest
 
+from tortoise import connections
 from tortoise.backends.base.client import Capabilities
 from tortoise.migrations.executor import MigrationExecutor, MigrationTarget
 from tortoise.migrations.graph import MigrationGraph, MigrationKey
@@ -52,6 +54,101 @@ def _write_migrations(
         (migrations_dir / f"{name}.py").write_text(
             "\n".join(content), encoding="ascii"
         )
+    return f"{app_label}.migrations"
+
+
+def _write_runpython_migrations(tmp_path: Path, app_label: str) -> str:
+    package_dir = tmp_path / app_label
+    migrations_dir = package_dir / "migrations"
+    migrations_dir.mkdir(parents=True)
+    (package_dir / "__init__.py").write_text("", encoding="ascii")
+    (migrations_dir / "__init__.py").write_text("", encoding="ascii")
+
+    (migrations_dir / "0001_initial.py").write_text(
+        "\n".join(
+            [
+                "from tortoise import migrations",
+                "from tortoise import fields",
+                "from tortoise.migrations import operations as ops",
+                "",
+                "class Migration(migrations.Migration):",
+                "    dependencies = []",
+                "",
+                "    operations = [",
+                "        ops.CreateModel(",
+                "            name='Post',",
+                "            fields=[",
+                "                ('id', fields.IntField(pk=True)),",
+                "                ('title', fields.CharField(max_length=200)),",
+                "                ('summary', fields.TextField(null=True)),",
+                "            ],",
+                "        ),",
+                "    ]",
+                "",
+            ]
+        ),
+        encoding="ascii",
+    )
+
+    (migrations_dir / "0002_runpython.py").write_text(
+        "\n".join(
+            [
+                "from tortoise import migrations",
+                "from tortoise.expressions import F",
+                "from tortoise.migrations import operations as ops",
+                "",
+                "CALLS = []",
+                "",
+                "",
+                "async def populate_summary(apps, schema_editor) -> None:",
+                "    CALLS.append('forward')",
+                "    Post = apps.get_model('blog.Post')",
+                "    await Post.filter(summary=None).update(summary=F('title'))",
+                "",
+                "",
+                "async def reset_summary(apps, schema_editor) -> None:",
+                "    CALLS.append('reverse')",
+                "    Post = apps.get_model('blog.Post')",
+                "    await Post.all().update(summary=None)",
+                "",
+                "",
+                "class Migration(migrations.Migration):",
+                "    dependencies = [('blog', '0001_initial')]",
+                "",
+                "    operations = [",
+                "        ops.RunPython(",
+                "            code=populate_summary,",
+                "            reverse_code=reset_summary,",
+                "        ),",
+                "    ]",
+                "",
+            ]
+        ),
+        encoding="ascii",
+    )
+
+    (migrations_dir / "0003_rename_excerpt.py").write_text(
+        "\n".join(
+            [
+                "from tortoise import migrations",
+                "from tortoise.migrations import operations as ops",
+                "",
+                "class Migration(migrations.Migration):",
+                "    dependencies = [('blog', '0002_runpython')]",
+                "",
+                "    operations = [",
+                "        ops.RenameField(",
+                "            model_name='Post',",
+                "            old_name='summary',",
+                "            new_name='excerpt',",
+                "        ),",
+                "    ]",
+                "",
+            ]
+        ),
+        encoding="ascii",
+    )
+
     return f"{app_label}.migrations"
 
 
@@ -265,3 +362,50 @@ async def test_executor_plan_ordering(tmp_path: Path, monkeypatch: pytest.Monkey
     steps = await executor.plan([MigrationTarget(app_label="app", name="__latest__")])
 
     assert [step.migration.name for step in steps] == ["0001_initial", "0002_second"]
+
+
+@pytest.mark.asyncio
+async def test_runpython_historical_models_survive_schema_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module_path = _write_runpython_migrations(tmp_path, "blog")
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    old_config = connections._db_config
+    old_create_db = connections._create_db
+    connections._clear_storage()
+    connections._init_config(
+        {
+            "default": {
+                "engine": "tortoise.backends.sqlite",
+                "credentials": {"file_path": str(tmp_path / "runpython.sqlite3")},
+            }
+        }
+    )
+    connection = None
+    try:
+        apps_config = {
+            "blog": {
+                "models": [],
+                "default_connection": "default",
+                "migrations": module_path,
+            }
+        }
+        connection = connections.get("default")
+        executor = MigrationExecutor(connection, apps_config)
+
+        await executor.migrate()
+        module = importlib.import_module(f"{module_path}.0002_runpython")
+        assert module.CALLS == ["forward"]
+
+        await executor.migrate([MigrationTarget(app_label="blog", name="0001_initial")])
+        assert module.CALLS == ["forward", "reverse"]
+
+        await executor.migrate([MigrationTarget(app_label="blog", name="__latest__")])
+        assert module.CALLS == ["forward", "reverse", "forward"]
+    finally:
+        if connection is not None:
+            await connection.close()
+        connections._clear_storage()
+        connections._db_config = old_config
+        connections._create_db = old_create_db

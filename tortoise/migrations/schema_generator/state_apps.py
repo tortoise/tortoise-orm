@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Type
+from typing import Type, cast
+
+from pypika_tortoise import Query, Table
 
 from tortoise.apps import Apps
 from tortoise.connection import connections
@@ -8,8 +10,9 @@ from tortoise.models import Model
 
 
 class StateApps(Apps):
-    def __init__(self) -> None:
+    def __init__(self, default_connections: dict[str, str] | None = None) -> None:
         super().__init__({}, connections)
+        self._default_connections = default_connections or {}
 
     def register_model(self, app_label: str, model: Type[Model]) -> None:
         if app_label not in self.apps:
@@ -22,6 +25,23 @@ class StateApps(Apps):
 
         self.apps[app_label][model.__name__] = model
         model._meta.app = app_label
+        if app_label in self._default_connections:
+            model._meta.default_connection = self._default_connections[app_label]
+
+    def _build_initial_querysets(self) -> None:
+        for app in self.apps.values():
+            for model in app.values():
+                if model._meta.default_connection is None:
+                    continue
+                model._meta.finalise_model()
+                model._meta.basetable = Table(
+                    name=model._meta.db_table, schema=model._meta.schema
+                )
+                basequery = model._meta.db.query_class.from_(model._meta.basetable)
+                model._meta.basequery = cast(Query, basequery)
+                model._meta.basequery_all_fields = cast(
+                    Query, basequery.select(*model._meta.db_fields)
+                )
 
     def unregister_model(self, app_label: str, model_name: str) -> None:
         try:
@@ -47,10 +67,12 @@ class StateApps(Apps):
     def clone(self) -> "StateApps":
         from tortoise.migrations.schema_generator.state import ModelState
 
-        state_apps = self.__class__()
+        state_apps = self.__class__(default_connections=dict(self._default_connections))
         for app_label, app in self.apps.items():
             for model in app.values():
                 model_clone = ModelState.make_from_model(app_label, model).render(state_apps)
                 state_apps.register_model(app_label, model_clone)
 
+        state_apps._init_relations()
+        state_apps._build_initial_querysets()
         return state_apps

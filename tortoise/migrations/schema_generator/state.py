@@ -155,6 +155,7 @@ class State:
             self.apps.register_model(app_label, model)
 
         self.apps._init_relations()
+        self.apps._build_initial_querysets()
 
     def reload_model(self, app_label: str, model_name: str) -> None:
         model_state = self.models.get((app_label, model_name))

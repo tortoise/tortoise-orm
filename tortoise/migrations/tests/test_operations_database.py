@@ -12,7 +12,9 @@ from tortoise.migrations.operations import (
     CreateModel,
     DeleteModel,
     RemoveIndex,
+    RenameConstraint,
     RenameIndex,
+    RunPython,
 )
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.migrations.schema_generator.state import ModelState, State
@@ -219,3 +221,40 @@ async def test_alter_field_backward_renames_columns() -> None:
 
     assert client.executed
     assert 'RENAME COLUMN "content" TO "body"' in client.executed[0]
+
+
+@pytest.mark.asyncio
+async def test_run_python_operation_runs_callable() -> None:
+    calls: list[tuple[StateApps, BaseSchemaEditor]] = []
+    client = FakeClient()
+    editor = TestSchemaEditor(client)
+    model = make_model("Widget", id=fields.IntField(pk=True))
+    state = build_state("models", model)
+
+    def forward(apps: StateApps, schema_editor: BaseSchemaEditor) -> None:
+        apps.get_model("models.Widget")
+        calls.append((apps, schema_editor))
+
+    op = RunPython(forward)
+
+    await op.run("models", state, dry_run=False, state_editor=editor)
+
+    assert len(calls) == 1
+    apps, schema_editor = calls[0]
+    assert schema_editor is editor
+    apps.get_model("models.Widget")
+
+
+@pytest.mark.asyncio
+async def test_rename_constraint_backward_runs_sql() -> None:
+    client = FakeClient()
+    editor = TestSchemaEditor(client)
+    model = make_model("Widget", id=fields.IntField(pk=True))
+    state = build_state("models", model)
+
+    op = RenameConstraint(model_name="Widget", old_name="uniq_old", new_name="uniq_new")
+
+    await op.database_backward("models", state, state, state_editor=editor)
+
+    assert client.executed
+    assert 'RENAME CONSTRAINT "uniq_new" TO "uniq_old"' in client.executed[0]

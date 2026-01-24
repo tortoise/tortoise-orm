@@ -110,7 +110,11 @@ class MigrationExecutor:
     async def _project_state(
         self, applied: set[MigrationKey], *, upto: MigrationKey | None = None
     ) -> State:
-        state = State(models={}, apps=StateApps())
+        default_connections = {
+            label: config.get("default_connection", "default")
+            for label, config in self.loader.apps_config.items()
+        }
+        state = State(models={}, apps=StateApps(default_connections=default_connections))
         for key in self._full_plan():
             if key not in applied:
                 continue

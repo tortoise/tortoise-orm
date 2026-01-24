@@ -20,7 +20,7 @@ from tortoise.migrations.executor import PlanStep
 from tortoise.migrations.graph import MigrationKey
 from tortoise.migrations.loader import MigrationLoader
 from tortoise.migrations.recorder import MigrationRecorder
-from tortoise.migrations.writer import format_migration_name
+from tortoise.migrations.writer import MigrationWriter, format_migration_name
 
 
 if platform.system() == "Windows":
@@ -275,11 +275,14 @@ async def shell(ctx: click.Context) -> None:
 
 @cli.command(help="Create new migrations from model changes.")
 @click.argument("app_labels", nargs=-1)
+@click.option("--empty", is_flag=True, help="Create an empty migration.")
 @click.option("-n", "--name", help="Use this name for the migration file.")
 @click.pass_context
 async def makemigrations(
-    ctx: click.Context, app_labels: tuple[str, ...], name: str | None
+    ctx: click.Context, app_labels: tuple[str, ...], empty: bool, name: str | None
 ) -> None:
+    if empty and not app_labels:
+        raise click.UsageError("--empty requires at least one APP_LABEL", ctx=ctx)
     config = _normalized_config(_load_config(ctx))
     apps_config = _select_apps(config.get("apps", {}), app_labels or None)
     for label, app_config in apps_config.items():
@@ -292,7 +295,33 @@ async def makemigrations(
         if not Tortoise.apps:
             raise click.ClickException("Tortoise apps are not initialized")
         autodetector = MigrationAutodetector(Tortoise.apps, apps_config)
-        writers = await autodetector.changes()
+        if empty:
+            await autodetector.loader.build_graph()
+            old_state = await autodetector._project_state()
+            new_state = autodetector._current_state()
+            writers = []
+            for label, app_config in apps_config.items():
+                migrations_module = app_config.get("migrations")
+                if not migrations_module:
+                    continue
+                dependencies = sorted(
+                    [(key.app_label, key.name) for key in autodetector._leaf_nodes(label)]
+                )
+                migration_name, initial = autodetector._migration_name(
+                    label, old_state, new_state
+                )
+                writers.append(
+                    MigrationWriter(
+                        migration_name,
+                        label,
+                        [],
+                        dependencies=dependencies,
+                        initial=initial,
+                        migrations_module=migrations_module,
+                    )
+                )
+        else:
+            writers = await autodetector.changes()
 
     if not writers:
         click.secho("No changes detected", fg="yellow")

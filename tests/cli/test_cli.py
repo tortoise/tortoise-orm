@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime as dt
 import importlib
 import sys
 from pathlib import Path
@@ -9,6 +10,7 @@ from asyncclick.testing import CliRunner
 
 from tortoise.cli import cli as cli_module
 from tortoise.migrations.graph import MigrationKey
+from tortoise.migrations.autodetector import MigrationAutodetector
 from tortoise.migrations.writer import MigrationWriter
 
 
@@ -529,3 +531,141 @@ TORTOISE_ORM = {
     )
     assert result.exit_code == 0
     assert "No changes detected" in result.output
+
+
+@pytest.mark.asyncio
+async def test_makemigrations_empty_requires_app_label(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_package(tmp_path, "cli_app")
+    module_name = _write_settings(
+        tmp_path,
+        """
+TORTOISE_ORM = {
+    "connections": {"default": "sqlite://:memory:"},
+    "apps": {
+        "app": {"models": ["cli_app.models"], "default_connection": "default"},
+    },
+}
+""".lstrip(),
+        f"cli_settings_{tmp_path.name}",
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    importlib.invalidate_caches()
+
+    runner = CliRunner()
+    result = await runner.invoke(
+        cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "makemigrations", "--empty"]
+    )
+    assert result.exit_code != 0
+    assert "--empty requires at least one APP_LABEL" in result.output
+
+
+@pytest.mark.asyncio
+async def test_makemigrations_empty_writes_dependencies(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pkg = _write_package(tmp_path, "cli_app")
+    _write_migrations(pkg, ["0001_initial", "0002_second"])
+    module_name = _write_settings(
+        tmp_path,
+        """
+TORTOISE_ORM = {
+    "connections": {"default": "sqlite://:memory:"},
+    "apps": {
+        "app": {
+            "models": ["cli_app.models"],
+            "default_connection": "default",
+            "migrations": "cli_app.migrations",
+        },
+    },
+}
+""".lstrip(),
+        f"cli_settings_{tmp_path.name}",
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    importlib.invalidate_caches()
+    sys.modules.pop("cli_app", None)
+    sys.modules.pop("cli_app.migrations", None)
+
+    async def fake_init(**_kwargs) -> None:
+        return None
+
+    class FixedAutodetector(MigrationAutodetector):
+        def __init__(self, apps, apps_config, **_kwargs) -> None:
+            super().__init__(apps, apps_config, now=lambda: dt.datetime(2024, 1, 2, 3, 4))
+
+    monkeypatch.setattr(cli_module.Tortoise, "init", fake_init)
+    monkeypatch.setattr(cli_module.Tortoise, "apps", {"app": {}}, raising=False)
+    monkeypatch.setattr(cli_module, "MigrationAutodetector", FixedAutodetector)
+
+    runner = CliRunner()
+    result = await runner.invoke(
+        cli_module.cli,
+        ["-c", f"{module_name}.TORTOISE_ORM", "makemigrations", "--empty", "app"],
+    )
+    assert result.exit_code == 0
+
+    migrations_path = tmp_path / "cli_app" / "migrations"
+    migration_file = migrations_path / "0003_auto_20240102_0304.py"
+    assert migration_file.exists()
+    content = migration_file.read_text(encoding="utf-8")
+    assert "operations = [" in content
+    assert "dependencies = [('app', '0001_initial'), ('app', '0002_second')]" in content
+
+
+@pytest.mark.asyncio
+async def test_makemigrations_empty_respects_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    pkg = _write_package(tmp_path, "cli_app")
+    _write_migrations(pkg, ["0001_initial", "0002_second"])
+    module_name = _write_settings(
+        tmp_path,
+        """
+TORTOISE_ORM = {
+    "connections": {"default": "sqlite://:memory:"},
+    "apps": {
+        "app": {
+            "models": ["cli_app.models"],
+            "default_connection": "default",
+            "migrations": "cli_app.migrations",
+        },
+    },
+}
+""".lstrip(),
+        f"cli_settings_{tmp_path.name}",
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+    importlib.invalidate_caches()
+    sys.modules.pop("cli_app", None)
+    sys.modules.pop("cli_app.migrations", None)
+
+    async def fake_init(**_kwargs) -> None:
+        return None
+
+    class FixedAutodetector(MigrationAutodetector):
+        def __init__(self, apps, apps_config, **_kwargs) -> None:
+            super().__init__(apps, apps_config, now=lambda: dt.datetime(2024, 1, 2, 3, 4))
+
+    monkeypatch.setattr(cli_module.Tortoise, "init", fake_init)
+    monkeypatch.setattr(cli_module.Tortoise, "apps", {"app": {}}, raising=False)
+    monkeypatch.setattr(cli_module, "MigrationAutodetector", FixedAutodetector)
+
+    runner = CliRunner()
+    result = await runner.invoke(
+        cli_module.cli,
+        [
+            "-c",
+            f"{module_name}.TORTOISE_ORM",
+            "makemigrations",
+            "--empty",
+            "--name",
+            "manual",
+            "app",
+        ],
+    )
+    assert result.exit_code == 0
+
+    migrations_path = tmp_path / "cli_app" / "migrations"
+    assert (migrations_path / "0003_manual.py").exists()

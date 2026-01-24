@@ -11,6 +11,7 @@ from tortoise.migrations.operations import (  # noqa: F401
     RemoveField,
     RenameField,
     RenameModel,
+    RunPython,
     SQLOperation,
     TortoiseOperation,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "RemoveField",
     "RenameField",
     "RenameModel",
+    "RunPython",
     "SQLOperation",
     "TortoiseOperation",
 ]

@@ -31,6 +31,7 @@ from tortoise.migrations.operations import (
     RenameField,
     RenameIndex,
     RenameModel,
+    RunPython,
     SQLOperation,
 )
 
@@ -383,6 +384,19 @@ class MigrationWriter:
                 f"{indent}    values={values_expr},",
                 f"{indent}),",
             ]
+        if isinstance(operation, RunPython):
+            code_expr = render_value(operation.code, imports)
+            lines = [
+                f"{indent}ops.RunPython(",
+                f"{indent}    code={code_expr},",
+            ]
+            if operation.reverse_code is not None:
+                reverse_expr = render_value(operation.reverse_code, imports)
+                lines.append(f"{indent}    reverse_code={reverse_expr},")
+            if operation.atomic is not None:
+                lines.append(f"{indent}    atomic={operation.atomic!r},")
+            lines.append(f"{indent}),")
+            return lines
         raise ValueError(f"Unsupported operation type: {type(operation)!r}")
 
     def _render_field(self, field: Any, imports: ImportManager) -> str:
