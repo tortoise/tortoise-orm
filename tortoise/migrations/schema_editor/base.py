@@ -6,7 +6,9 @@ from typing import List, Optional, Type, cast
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.fields.base import Field
 from tortoise.fields.relational import ForeignKeyFieldInstance, ManyToManyFieldInstance
+from tortoise.indexes import Index
 from tortoise.models import Model
+from tortoise.migrations.constraints import UniqueConstraint
 from tortoise.migrations.schema_editor.data import ModelSqlData
 
 
@@ -14,7 +16,8 @@ class BaseSchemaEditor:
     DIALECT = "sql"
     TABLE_CREATE_TEMPLATE = 'CREATE TABLE "{table_name}" ({fields}){extra}{comment};'
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{comment}'
-    INDEX_CREATE_TEMPLATE = 'CREATE INDEX "{index_name}" ON "{table_name}" ({fields});'
+    INDEX_CREATE_TEMPLATE = 'CREATE INDEX "{index_name}" ON "{table_name}" ({fields}){extra};'
+    UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace("INDEX", "UNIQUE INDEX")
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{index_name}" UNIQUE ({fields})'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}{comment}'
     FK_TEMPLATE = ' REFERENCES "{table}" ("{field}") ON DELETE {on_delete}{comment}'
@@ -41,6 +44,10 @@ class BaseSchemaEditor:
 
     DELETE_CONSTRAINT_TEMPLATE = 'ALTER TABLE "{table}" DROP CONSTRAINT "{name}"'
     DELETE_FK_TEMPLATE = DELETE_CONSTRAINT_TEMPLATE
+    ADD_CONSTRAINT_TEMPLATE = 'ALTER TABLE "{table}" ADD {constraint}'
+    DROP_INDEX_TEMPLATE = 'DROP INDEX "{name}"'
+    RENAME_INDEX_TEMPLATE = 'ALTER INDEX "{old_name}" RENAME TO "{new_name}"'
+    RENAME_CONSTRAINT_TEMPLATE = 'ALTER TABLE "{table}" RENAME CONSTRAINT "{old_name}" TO "{new_name}"'
 
     def __init__(self, connection: BaseDBAsyncClient) -> None:
         self.client = connection
@@ -96,6 +103,21 @@ class BaseSchemaEditor:
             comment=comment,
         )
 
+    @classmethod
+    def _get_escape_translation_table(cls) -> List[str]:
+        _escape_table = [chr(x) for x in range(128)]
+        _escape_table[0] = "\\0"
+        _escape_table[ord("\\")] = "\\\\"
+        _escape_table[ord("\n")] = "\\n"
+        _escape_table[ord("\r")] = "\\r"
+        _escape_table[ord("\032")] = "\\Z"
+        _escape_table[ord('"')] = '\\"'
+        _escape_table[ord("'")] = "\\'"
+        return _escape_table
+
+    def _escape_comment(self, comment: str) -> str:
+        return comment.translate(self._get_escape_translation_table())
+
     @staticmethod
     def _make_hash(*args: str, length: int) -> str:
         return sha256(";".join(args).encode("utf-8")).hexdigest()[:length]
@@ -122,6 +144,14 @@ class BaseSchemaEditor:
         )
         return index_name
 
+    def _generate_index_name_for_table(self, prefix: str, table_name: str, field_names: List[str]) -> str:
+        return "{}_{}_{}_{}".format(
+            prefix,
+            table_name[:11],
+            field_names[0][:7],
+            self._make_hash(table_name, *field_names, length=6),
+        )
+
     @staticmethod
     def quote(val: str) -> str:
         return f'"{val}"'
@@ -132,11 +162,32 @@ class BaseSchemaEditor:
             fields=", ".join([self.quote(f) for f in field_names]),
         )
 
-    def _get_index_sql(self, model: Type[Model], field_names: List[str]) -> str:
+    def _get_unique_constraint_name(self, model: Type[Model], field_names: List[str]) -> str:
+        return self._generate_index_name("uid", model, field_names)
+
+    def _get_index_sql(
+        self,
+        model: Type[Model],
+        field_names: List[str],
+        safe: bool = False,
+        index_name: str | None = None,
+        index_type: str | None = None,
+        extra: str | None = None,
+    ) -> str:
         return self.INDEX_CREATE_TEMPLATE.format(
-            index_name=self._generate_index_name("idx", model, field_names),
+            index_name=index_name or self._generate_index_name("idx", model, field_names),
             table_name=model._meta.db_table,
             fields=", ".join([self.quote(f) for f in field_names]),
+            index_type=f"{index_type} " if index_type else "",
+            extra=f"{extra}" if extra else "",
+        )
+
+    def _get_unique_index_sql(self, table_name: str, field_names: List[str]) -> str:
+        return self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
+            index_name=self._generate_index_name_for_table("uidx", table_name, field_names),
+            table_name=table_name,
+            fields=", ".join([self.quote(f) for f in field_names]),
+            extra="",
         )
 
     def _get_inner_statements(self) -> List[str]:
@@ -168,6 +219,19 @@ class BaseSchemaEditor:
             else "",
         )
         m2m_create_string += self._post_table_hook()
+        if field.unique:
+            unique_index_sql = self._get_unique_index_sql(
+                field.through, [field.backward_key, field.forward_key]
+            )
+            if unique_index_sql.endswith(";"):
+                m2m_create_string += "\n" + unique_index_sql
+            else:
+                lines = m2m_create_string.splitlines()
+                if len(lines) > 1:
+                    lines[-2] += ","
+                    indent = "    "
+                    lines.insert(-1, indent + unique_index_sql)
+                    m2m_create_string = "\n".join(lines)
         return m2m_create_string
 
     def _get_fk_field_definition(self, model: Type[Model], key_field_name: str) -> str:
@@ -271,11 +335,21 @@ class BaseSchemaEditor:
         _indexes = [self._get_index_sql(model, [field_name]) for field_name in fields_with_index]
 
         if model._meta.indexes:
-            for indexes_list in model._meta.indexes:
+            for index in model._meta.indexes:
+                if isinstance(index, Index):
+                    index_sql = self._get_index_sql(
+                        model,
+                        index.field_names,
+                        index_name=index.name,
+                        index_type=index.INDEX_TYPE,
+                        extra=index.extra,
+                    )
+                    if index_sql:
+                        _indexes.append(index_sql)
+                    continue
+
                 indexes_to_create: List[str] = []
-                if hasattr(indexes_list, "fields"):
-                    indexes_list = indexes_list.fields
-                for field in indexes_list:
+                for field in index:
                     field_object = model._meta.fields_map[field]
                     indexes_to_create.append(field_object.source_field or field)
 
@@ -306,7 +380,11 @@ class BaseSchemaEditor:
         table_create_string += self._post_table_hook()
 
         for m2m_field in model._meta.m2m_fields:
-            m2m_create_string = self._get_m2m_table_definition(model, m2m_field)
+            if isinstance(m2m_field, str):
+                m2m_field_obj = cast(ManyToManyFieldInstance, model._meta.fields_map[m2m_field])
+            else:
+                m2m_field_obj = m2m_field
+            m2m_create_string = self._get_m2m_table_definition(model, m2m_field_obj)
             if m2m_create_string:
                 m2m_tables_for_create.append(m2m_create_string)
 
@@ -424,12 +502,18 @@ class BaseSchemaEditor:
             actions.append(self.ALTER_FIELD_TEMPLATE.format(table=model._meta.db_table, changes=changes))
 
         if old_field.index != new_field.index:
-            # TODO Index management
-            pass
+            index = Index(fields=(new_db_field,))
+            if new_field.index:
+                await self.add_index(model, index)
+            else:
+                await self.remove_index(model, index)
 
         if old_field.unique != new_field.unique:
-            # TODO Index management
-            pass
+            constraint = UniqueConstraint(fields=(new_db_field,))
+            if new_field.unique:
+                await self.add_constraint(model, constraint)
+            else:
+                await self.remove_constraint(model, constraint)
 
         if old_field.description != new_field.description:
             # TODO description management
@@ -489,3 +573,84 @@ class BaseSchemaEditor:
         await self.client.execute_script(
             self.DELETE_FIELD_TEMPLATE.format(table=model._meta.db_table, column=db_field)
         )
+
+    def _index_name_for_model(self, model: Type[Model], index: Index) -> str:
+        if index.name:
+            return index.name
+        return self._generate_index_name("idx", model, list(index.field_names))
+
+    def _constraint_name_for_model(
+        self, model: Type[Model], constraint: UniqueConstraint
+    ) -> str:
+        if constraint.name:
+            return constraint.name
+        return self._get_unique_constraint_name(model, list(constraint.fields))
+
+    async def add_index(self, model: Type[Model], index: Index) -> None:
+        index_sql = self._get_index_sql(
+            model,
+            list(index.field_names),
+            index_name=self._index_name_for_model(model, index),
+            index_type=index.INDEX_TYPE,
+            extra=index.extra,
+        )
+        if index_sql:
+            await self.client.execute_script(index_sql)
+
+    async def remove_index(self, model: Type[Model], index: Index) -> None:
+        index_name = self._index_name_for_model(model, index)
+        await self.client.execute_script(
+            self.DROP_INDEX_TEMPLATE.format(name=index_name, table=model._meta.db_table)
+        )
+
+    async def rename_index(self, model: Type[Model], old_index: Index, new_index: Index) -> None:
+        old_name = self._index_name_for_model(model, old_index)
+        new_name = self._index_name_for_model(model, new_index)
+        if old_name == new_name:
+            return
+        if self.RENAME_INDEX_TEMPLATE:
+            await self.client.execute_script(
+                self.RENAME_INDEX_TEMPLATE.format(
+                    table=model._meta.db_table, old_name=old_name, new_name=new_name
+                )
+            )
+            return
+        await self.remove_index(model, old_index)
+        await self.add_index(model, new_index)
+
+    async def add_constraint(self, model: Type[Model], constraint: UniqueConstraint) -> None:
+        constraint_name = self._constraint_name_for_model(model, constraint)
+        constraint_sql = self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(
+            index_name=constraint_name,
+            fields=", ".join([self.quote(f) for f in constraint.fields]),
+        )
+        await self.client.execute_script(
+            self.ADD_CONSTRAINT_TEMPLATE.format(
+                table=model._meta.db_table, constraint=constraint_sql
+            )
+        )
+
+    async def remove_constraint(self, model: Type[Model], constraint: UniqueConstraint) -> None:
+        constraint_name = self._constraint_name_for_model(model, constraint)
+        await self.client.execute_script(
+            self.DELETE_CONSTRAINT_TEMPLATE.format(
+                table=model._meta.db_table, name=constraint_name
+            )
+        )
+
+    async def rename_constraint(
+        self, model: Type[Model], old_constraint: UniqueConstraint, new_constraint: UniqueConstraint
+    ) -> None:
+        old_name = self._constraint_name_for_model(model, old_constraint)
+        new_name = self._constraint_name_for_model(model, new_constraint)
+        if old_name == new_name:
+            return
+        if self.RENAME_CONSTRAINT_TEMPLATE:
+            await self.client.execute_script(
+                self.RENAME_CONSTRAINT_TEMPLATE.format(
+                    table=model._meta.db_table, old_name=old_name, new_name=new_name
+                )
+            )
+            return
+        await self.remove_constraint(model, old_constraint)
+        await self.add_constraint(model, new_constraint)

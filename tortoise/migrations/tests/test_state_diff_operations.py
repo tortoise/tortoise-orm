@@ -1,0 +1,188 @@
+from tortoise import fields
+from tortoise.indexes import Index
+from tortoise.migrations.constraints import UniqueConstraint
+from tortoise.migrations.operations import (
+    AddConstraint,
+    AddField,
+    AddIndex,
+    AlterField,
+    CreateModel,
+    DeleteModel,
+    RemoveIndex,
+    RemoveConstraint,
+    RenameConstraint,
+    RenameField,
+    RenameIndex,
+    RenameModel,
+)
+from tortoise.migrations.schema_generator.operation_generator import OperationGenerator
+from tortoise.migrations.schema_generator.state import ModelState, State
+from tortoise.migrations.schema_generator.state_apps import StateApps
+from tortoise.models import Model
+
+
+def build_state(app_label: str, *models: type[Model]) -> State:
+    state = State(models={}, apps=StateApps())
+    for model in models:
+        state.models[(app_label, model.__name__)] = ModelState.make_from_model(app_label, model)
+    return state
+
+
+def make_model(
+    model_name: str,
+    table: str,
+    *,
+    meta_options: dict | None = None,
+    **model_fields: fields.Field,
+) -> type[Model]:
+    attrs = dict(model_fields)
+    options = {"app": "models", "table": table}
+    if meta_options:
+        options.update(meta_options)
+    meta = type("Meta", (), options)
+    attrs["Meta"] = meta
+    return type(model_name, (Model,), attrs)
+
+
+def test_generate_create_and_delete_model() -> None:
+    Widget = make_model("Widget", "widget", id=fields.IntField(pk=True), name=fields.TextField())
+
+    old_state = build_state("models")
+    new_state = build_state("models", Widget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 1
+    assert isinstance(operations[0], CreateModel)
+
+    operations = OperationGenerator(new_state, old_state).generate()
+    assert len(operations) == 1
+    assert isinstance(operations[0], DeleteModel)
+
+
+def test_generate_rename_model_heuristic() -> None:
+    OldWidget = make_model("OldWidget", "widget", id=fields.IntField(pk=True), name=fields.TextField())
+    NewWidget = make_model("NewWidget", "widget", id=fields.IntField(pk=True), name=fields.TextField())
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert len(operations) == 1
+    assert isinstance(operations[0], RenameModel)
+
+
+def test_generate_field_ops() -> None:
+    OldWidget = make_model("Widget", "widget", id=fields.IntField(pk=True), name=fields.TextField())
+    NewWidget = make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        title=fields.TextField(source_field="name"),
+        age=fields.IntField(),
+    )
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert any(isinstance(op, RenameField) for op in operations)
+    assert any(isinstance(op, AddField) for op in operations)
+
+
+def test_generate_alter_field() -> None:
+    OldWidget = make_model("Widget", "widget", id=fields.IntField(pk=True), name=fields.TextField())
+    NewWidget = make_model(
+        "Widget", "widget", id=fields.IntField(pk=True), name=fields.TextField(null=True)
+    )
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert any(isinstance(op, AlterField) for op in operations)
+
+
+def test_generate_add_remove_index() -> None:
+    OldWidget = make_model("Widget", "widget", id=fields.IntField(pk=True), name=fields.TextField())
+    NewWidget = make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        name=fields.TextField(),
+        meta_options={"indexes": (("name",),)},
+    )
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert any(isinstance(op, AddIndex) for op in operations)
+
+    operations = OperationGenerator(new_state, old_state).generate()
+    assert any(isinstance(op, RemoveIndex) for op in operations)
+
+
+def test_generate_rename_index_explicit() -> None:
+    OldWidget = make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        name=fields.TextField(),
+        meta_options={"indexes": (Index(fields=("name",), name="idx_old"),)},
+    )
+    NewWidget = make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        name=fields.TextField(),
+        meta_options={"indexes": (Index(fields=("name",), name="idx_new"),)},
+    )
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert any(isinstance(op, RenameIndex) for op in operations)
+
+
+def test_generate_unique_together_constraints() -> None:
+    OldWidget = make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        name=fields.TextField(),
+        age=fields.IntField(),
+        meta_options={"unique_together": (("name", "age"),)},
+    )
+    NewWidget = make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        name=fields.TextField(),
+        age=fields.IntField(),
+        meta_options={"unique_together": (("name",),)},
+    )
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert any(isinstance(op, RemoveConstraint) for op in operations)
+    assert any(isinstance(op, AddConstraint) for op in operations)
+
+
+def test_generate_rename_constraint_explicit() -> None:
+    Widget = make_model("Widget", "widget", id=fields.IntField(pk=True), name=fields.TextField())
+
+    old_state = build_state("models", Widget)
+    new_state = build_state("models", Widget)
+
+    old_state.models[("models", "Widget")].options["constraints"] = (
+        UniqueConstraint(fields=("name",), name="uq_old"),
+    )
+    new_state.models[("models", "Widget")].options["constraints"] = (
+        UniqueConstraint(fields=("name",), name="uq_new"),
+    )
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert any(isinstance(op, RenameConstraint) for op in operations)
