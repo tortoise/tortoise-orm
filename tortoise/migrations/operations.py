@@ -24,6 +24,10 @@ DIRECT_RELATION_FIELDS = (
 
 
 class Operation:
+    reversible = True
+    reduces_to_sql = True
+    atomic = False
+
     async def run(
         self,
         app_label: str,
@@ -490,6 +494,56 @@ class RenameField(TortoiseOperation):
 
         state.reload_models(models_to_reload)
 
+    async def database_forward(
+        self,
+        app_label: str,
+        old_state: State,
+        new_state: State,
+        state_editor: BaseSchemaEditor | None = None,
+    ) -> None:
+        if not state_editor:
+            return
+        old_model = old_state.apps.get_model(f"{app_label}.{self.model_name}")
+        new_model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
+        old_field = old_model._meta.fields_map[self.old_name]
+        new_field = new_model._meta.fields_map[self.new_name]
+        old_db_field = old_field.source_field or old_field.model_field_name
+        new_db_field = new_field.source_field or new_field.model_field_name
+        if old_db_field == new_db_field:
+            return
+        await state_editor.client.execute_script(
+            state_editor.RENAME_FIELD_TEMPLATE.format(
+                table=new_model._meta.db_table,
+                old_column=old_db_field,
+                new_column=new_db_field,
+            )
+        )
+
+    async def database_backward(
+        self,
+        app_label: str,
+        old_state: State,
+        new_state: State,
+        state_editor: BaseSchemaEditor | None = None,
+    ) -> None:
+        if not state_editor:
+            return
+        old_model = old_state.apps.get_model(f"{app_label}.{self.model_name}")
+        new_model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
+        old_field = old_model._meta.fields_map[self.new_name]
+        new_field = new_model._meta.fields_map[self.old_name]
+        old_db_field = old_field.source_field or old_field.model_field_name
+        new_db_field = new_field.source_field or new_field.model_field_name
+        if old_db_field == new_db_field:
+            return
+        await state_editor.client.execute_script(
+            state_editor.RENAME_FIELD_TEMPLATE.format(
+                table=new_model._meta.db_table,
+                old_column=old_db_field,
+                new_column=new_db_field,
+            )
+        )
+
 
 def _get_option_list(model_state: ModelState, key: str) -> list:
     value = model_state.options.get(key)
@@ -853,53 +907,3 @@ class RenameConstraint(TortoiseOperation):
         old_constraint = UniqueConstraint(fields=(), name=self.new_name)
         new_constraint = UniqueConstraint(fields=(), name=self.old_name)
         await state_editor.rename_constraint(model, old_constraint, new_constraint)
-
-    async def database_forward(
-        self,
-        app_label: str,
-        old_state: State,
-        new_state: State,
-        state_editor: BaseSchemaEditor | None = None,
-    ) -> None:
-        if not state_editor:
-            return
-        old_model = old_state.apps.get_model(f"{app_label}.{self.model_name}")
-        new_model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
-        old_field = old_model._meta.fields_map[self.old_name]
-        new_field = new_model._meta.fields_map[self.new_name]
-        old_db_field = old_field.source_field or old_field.model_field_name
-        new_db_field = new_field.source_field or new_field.model_field_name
-        if old_db_field == new_db_field:
-            return
-        await state_editor.client.execute_script(
-            state_editor.RENAME_FIELD_TEMPLATE.format(
-                table=new_model._meta.db_table,
-                old_column=old_db_field,
-                new_column=new_db_field,
-            )
-        )
-
-    async def database_backward(
-        self,
-        app_label: str,
-        old_state: State,
-        new_state: State,
-        state_editor: BaseSchemaEditor | None = None,
-    ) -> None:
-        if not state_editor:
-            return
-        old_model = old_state.apps.get_model(f"{app_label}.{self.model_name}")
-        new_model = new_state.apps.get_model(f"{app_label}.{self.model_name}")
-        old_field = old_model._meta.fields_map[self.new_name]
-        new_field = new_model._meta.fields_map[self.old_name]
-        old_db_field = old_field.source_field or old_field.model_field_name
-        new_db_field = new_field.source_field or new_field.model_field_name
-        if old_db_field == new_db_field:
-            return
-        await state_editor.client.execute_script(
-            state_editor.RENAME_FIELD_TEMPLATE.format(
-                table=new_model._meta.db_table,
-                old_column=old_db_field,
-                new_column=new_db_field,
-            )
-        )

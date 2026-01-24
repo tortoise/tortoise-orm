@@ -5,25 +5,25 @@ from typing import Any
 
 from tortoise import Tortoise, connections
 from tortoise.config import TortoiseConfig
-from tortoise.migrations.executor import MigrationExecutor, MigrationTarget
+from tortoise.migrations.executor import MigrationExecutor, MigrationTarget, PlanStep
 
 
-async def migrate(
+async def plan(
     *,
     config: dict[str, Any] | TortoiseConfig | None = None,
     config_file: str | None = None,
     app_labels: Sequence[str] | None = None,
     target: str | None = None,
-    fake: bool = False,
-    dry_run: bool = False,
-) -> None:
-    """Run migrations for configured apps."""
+) -> list[str]:
+    """
+    Print an ordered migration plan and return the formatted lines.
+    """
     if isinstance(config, TortoiseConfig):
         config = config.to_dict()
     if config_file:
         config = Tortoise._get_config_from_config_file(config_file)
     if not config:
-        raise ValueError("migrate requires a config or config_file")
+        raise ValueError("plan requires a config or config_file")
 
     await Tortoise.init(config=config)
 
@@ -40,15 +40,25 @@ async def migrate(
         apps_by_connection.setdefault(connection_name, {})[label] = app_config
 
     targets = _parse_targets(target, selected_apps)
+    output: list[str] = []
     for connection_name, subset in apps_by_connection.items():
         connection = connections.get(connection_name)
         executor = MigrationExecutor(connection, subset)
         executor_targets = [t for t in targets if t.app_label in subset]
-        await executor.migrate(
-            executor_targets if executor_targets else None,
-            fake=fake,
-            dry_run=dry_run,
-        )
+        steps = await executor.plan(executor_targets if executor_targets else None)
+        output.extend(_format_steps(steps, connection_name))
+
+    for line in output:
+        print(line)
+    return output
+
+
+def _format_steps(steps: list[PlanStep], connection_name: str) -> list[str]:
+    lines = [f"# Connection: {connection_name}"]
+    for step in steps:
+        prefix = "-" if step.backward else "+"
+        lines.append(f"{prefix} {step.migration.app_label}.{step.migration.name}")
+    return lines
 
 
 def _parse_targets(
