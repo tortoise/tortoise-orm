@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, Union, cast
 
 from typing_extensions import TypeAlias
 
@@ -21,9 +21,10 @@ from tortoise.migrations.schema_generator.state import ModelState, State
 from tortoise.migrations.schema_generator.state_apps import StateApps
 
 if TYPE_CHECKING:
+    from tortoise.fields.base import Field as BaseField
     from tortoise.fields.relational import ManyToManyRelation
 
-    FieldLike: TypeAlias = Field[Any] | ManyToManyRelation[Any] | None
+    FieldLike: TypeAlias = Union[BaseField[Any], ManyToManyRelation[Any], None]
 else:
     FieldLike = Field
 

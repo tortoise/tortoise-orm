@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import Any, Union, cast
 
 import pytest
 
@@ -24,6 +24,12 @@ from tortoise.migrations.operations import (
     RenameModel,
 )
 from tortoise.migrations.schema_generator.state import State
+
+RelationalFieldInstance = Union[
+    ForeignKeyFieldInstance[Any],
+    OneToOneFieldInstance[Any],
+    ManyToManyFieldInstance[Any],
+]
 
 
 def test_add_model_only_id(empty_state: State):
@@ -132,10 +138,7 @@ def test_add_model_two_simple_models_fields_in_one_app_with_fk(
     assert len(state.apps.apps[second_app]) == models_in_second_app
 
     model2 = state.apps.get_model(f"{second_app}.TestModel2")
-    fk_field = cast(
-        ForeignKeyFieldInstance | OneToOneFieldInstance | ManyToManyFieldInstance,
-        model2._meta.fields_map["reference"],
-    )
+    fk_field = cast(RelationalFieldInstance, model2._meta.fields_map["reference"])
     assert isinstance(fk_field, field_class)
     assert fk_field.related_model.__name__ == "TestModel"
 
@@ -181,10 +184,7 @@ def test_rename_with_fk(
     operation.state_forward("models", state)
 
     model_state = state.models[(second_app, "TestModel2")]
-    field = cast(
-        ForeignKeyFieldInstance | OneToOneFieldInstance | ManyToManyFieldInstance,
-        model_state.fields["reference"],
-    )
+    field = cast(RelationalFieldInstance, model_state.fields["reference"])
     assert isinstance(field, field_class)
     assert field.model_name == "models.NewName"
 
@@ -261,10 +261,7 @@ def test_add_field_relational(
     operation.state_forward("models", state)
 
     model_state = state.models["models", "TestModel2"]
-    field = cast(
-        ForeignKeyFieldInstance | OneToOneFieldInstance | ManyToManyFieldInstance,
-        model_state.fields["ref"],
-    )
+    field = cast(RelationalFieldInstance, model_state.fields["ref"])
     assert isinstance(field, field_class)
     assert field.model_name == "models.TestModel"
 
