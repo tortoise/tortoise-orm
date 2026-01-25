@@ -4,6 +4,8 @@ import inspect
 from copy import deepcopy
 from typing import TYPE_CHECKING, Any, cast
 
+from typing_extensions import TypeAlias
+
 from tortoise import BaseDBAsyncClient, Model
 from tortoise.fields import Field
 from tortoise.fields.relational import (
@@ -21,7 +23,7 @@ from tortoise.migrations.schema_generator.state_apps import StateApps
 if TYPE_CHECKING:
     from tortoise.fields.relational import ManyToManyRelation
 
-    FieldLike = Field | ManyToManyRelation[Any] | None
+    FieldLike: TypeAlias = Field[Any] | ManyToManyRelation[Any] | None
 else:
     FieldLike = Field
 
