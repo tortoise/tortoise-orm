@@ -128,6 +128,7 @@ def _ensure_migrations_package(app_label: str, app_config: dict[str, Any]) -> tu
             init_path = package_path / "__init__.py"
             if not init_path.exists():
                 init_path.write_text("", encoding="utf-8")
+            importlib.invalidate_caches()
         return migrations_module, package_path
 
     parent_module_name, package_name = migrations_module.rsplit(".", 1)
@@ -153,6 +154,7 @@ def _ensure_migrations_package(app_label: str, app_config: dict[str, Any]) -> tu
     init_path = package_path / "__init__.py"
     if not init_path.exists():
         init_path.write_text("", encoding="utf-8")
+    importlib.invalidate_caches()
     return migrations_module, package_path
 
 
