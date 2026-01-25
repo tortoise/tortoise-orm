@@ -108,7 +108,8 @@ Define the models by inheriting from ``tortoise.models.Model``.
 
 After defining the models, Tortoise ORM needs to be initialized to establish the relationships between models and connect to the database.
 The code below creates a connection to a SQLite DB database with the ``aiosqlite`` client. ``generate_schema`` sets up schema on an empty database.
-``generate_schema`` is for development purposes only, check out ``aerich`` or other migration tools for production use.
+``generate_schema`` is for development purposes only; use the built-in
+migrations for production use.
 
 .. code-block:: python3
 
@@ -189,10 +190,12 @@ With the Tortoise initialized, the models are available for use:
 Learn more at the `documentation site <https://tortoise.github.io>`_
 
 
-Migration
-=========
+Migrations
+==========
 
-Tortoise ORM uses `Aerich <https://github.com/tortoise/aerich>`_ as its database migration tool, see more detail at its `docs <https://github.com/tortoise/aerich>`_.
+Tortoise ORM ships with built-in migrations and a CLI. See the
+`migrations documentation <https://tortoise.github.io/migration.html>`_ for
+setup, commands, and examples.
 
 Contributing
 ============

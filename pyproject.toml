@@ -47,7 +47,6 @@ accel = [
     "uvloop; sys_platform != 'win32' and implementation_name == 'cpython'",
     "orjson",
 ]
-cli = []
 asyncpg = ["asyncpg"]
 aiomysql = ["aiomysql"]
 asyncmy = ["asyncmy (>=0.2.8,<1.0.0); python_version < '4.0'"]
