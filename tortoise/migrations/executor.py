@@ -47,6 +47,7 @@ class MigrationExecutor:
         *,
         fake: bool = False,
         dry_run: bool = False,
+        direction: str = "both",
     ) -> None:
         await self.loader.build_graph()
         schema_editor = self._schema_editor()
@@ -54,6 +55,7 @@ class MigrationExecutor:
 
         applied = set(await self.recorder.applied_migrations())
         plan = self._migration_plan(targets, applied, self.loader.graph)
+        self._validate_plan_direction(plan, direction)
 
         state_cache: State | None = None
         for step in plan:
@@ -222,3 +224,14 @@ class MigrationExecutor:
             seen[key] = step.backward
             deduped.append(step)
         return deduped
+
+    @staticmethod
+    def _validate_plan_direction(plan: list[PlanStep], direction: str) -> None:
+        if direction == "both":
+            return
+        if direction not in {"forward", "backward"}:
+            raise ValueError(f"Unknown migration direction {direction!r}")
+        if direction == "forward" and any(step.backward for step in plan):
+            raise ValueError("Backward migrations are not allowed in this mode")
+        if direction == "backward" and any(not step.backward for step in plan):
+            raise ValueError("Forward migrations are not allowed in this mode")

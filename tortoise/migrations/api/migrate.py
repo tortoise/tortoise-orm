@@ -17,6 +17,7 @@ async def migrate(
     target: str | None = None,
     fake: bool = False,
     dry_run: bool = False,
+    direction: str = "both",
     reporter: Callable[[str, list[PlanStep], bool, bool], object] | None = None,
 ) -> None:
     """Run migrations for configured apps."""
@@ -55,6 +56,7 @@ async def migrate(
             executor_targets if executor_targets else None,
             fake=fake,
             dry_run=dry_run,
+            direction=direction,
         )
 
 

@@ -355,6 +355,7 @@ async def _run_migrate(
     fake: bool,
     dry_run: bool,
     target_override: str | None = None,
+    direction: str = "both",
 ) -> None:
     if app_label and not migration and "." in app_label:
         app_label, migration = app_label.split(".", 1)
@@ -377,6 +378,7 @@ async def _run_migrate(
             target=target,
             fake=fake,
             dry_run=dry_run,
+            direction=direction,
             reporter=_emit_migration_plan,
         )
 
@@ -410,7 +412,14 @@ async def upgrade(
     fake: bool,
     dry_run: bool,
 ) -> None:
-    await _run_migrate(ctx, app_label, migration, fake=fake, dry_run=dry_run)
+    await _run_migrate(
+        ctx,
+        app_label,
+        migration,
+        fake=fake,
+        dry_run=dry_run,
+        direction="forward",
+    )
 
 
 @cli.command(help="Unapply migrations.")
@@ -439,6 +448,7 @@ async def downgrade(
         fake=fake,
         dry_run=dry_run,
         target_override=target,
+        direction="backward",
     )
 
 

@@ -260,6 +260,64 @@ async def test_executor_plan_forward_and_backward(
 
 
 @pytest.mark.asyncio
+async def test_executor_blocks_backward_when_forward_only(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module_path = _write_migrations(
+        tmp_path,
+        "app",
+        [
+            ("0001_initial", []),
+            ("0002_second", [("app", "0001_initial")]),
+        ],
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    apps_config = {
+        "app": {"models": [], "default_connection": "default", "migrations": module_path}
+    }
+    applied = [
+        MigrationKey(app_label="app", name="0001_initial"),
+        MigrationKey(app_label="app", name="0002_second"),
+    ]
+    connection = FakeConnection(applied=applied)
+    executor = MigrationExecutor(cast(BaseDBAsyncClient, connection), apps_config)
+
+    with pytest.raises(ValueError, match="Backward migrations are not allowed"):
+        await executor.migrate(
+            [MigrationTarget(app_label="app", name="0001_initial")],
+            direction="forward",
+        )
+
+
+@pytest.mark.asyncio
+async def test_executor_blocks_forward_when_backward_only(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    module_path = _write_migrations(
+        tmp_path,
+        "app",
+        [
+            ("0001_initial", []),
+            ("0002_second", [("app", "0001_initial")]),
+        ],
+    )
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    apps_config = {
+        "app": {"models": [], "default_connection": "default", "migrations": module_path}
+    }
+    connection = FakeConnection()
+    executor = MigrationExecutor(cast(BaseDBAsyncClient, connection), apps_config)
+
+    with pytest.raises(ValueError, match="Forward migrations are not allowed"):
+        await executor.migrate(
+            [MigrationTarget(app_label="app", name="0001_initial")],
+            direction="backward",
+        )
+
+
+@pytest.mark.asyncio
 async def test_executor_plan_cross_app_dependency(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

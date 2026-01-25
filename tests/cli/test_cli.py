@@ -142,6 +142,7 @@ TORTOISE_ORM = {
     )
     assert result.exit_code == 0
     assert called["target"] == "app.0001_initial"
+    assert called["direction"] == "both"
     assert called["app_labels"] is None
 
 
@@ -179,6 +180,7 @@ TORTOISE_ORM = {
     )
     assert result.exit_code == 0
     assert called["target"] == "app.0001_initial"
+    assert called["direction"] == "both"
     assert called["app_labels"] is None
 
 
@@ -214,6 +216,7 @@ TORTOISE_ORM = {
     assert result.exit_code == 0
     assert called["app_labels"] is None
     assert called["target"] == "app.__latest__"
+    assert called["direction"] == "forward"
 
 
 @pytest.mark.asyncio
@@ -247,6 +250,7 @@ TORTOISE_ORM = {
     )
     assert result.exit_code == 0
     assert called["target"] == "app.__first__"
+    assert called["direction"] == "backward"
     assert called["app_labels"] is None
 
 
@@ -286,6 +290,7 @@ TORTOISE_ORM = {
     )
     assert result.exit_code == 0
     assert called["target"] == "orders.__first__"
+    assert called["direction"] == "backward"
     assert called["app_labels"] is None
     called_config = cast(dict[str, Any], called["config"])
     assert set(called_config["apps"].keys()) == {"accounts", "orders"}
@@ -441,6 +446,7 @@ TORTOISE_ORM = {
     )
     assert result.exit_code == 0
     assert called["target"] == "app.0001_initial"
+    assert called["direction"] == "backward"
     assert called["app_labels"] is None
 
 
