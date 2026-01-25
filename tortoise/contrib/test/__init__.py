@@ -224,6 +224,9 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
         loop.run_until_complete(self._asyncioCallsQueue.join())  # type: ignore
 
     async def asyncSetUp(self) -> None:
+        self._reset_conn_state()
+        Tortoise.apps = None
+        Tortoise._inited = False
         await self._setUpDB()
 
     def _reset_conn_state(self) -> None:
