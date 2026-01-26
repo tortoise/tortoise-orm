@@ -430,8 +430,7 @@ async def heads(ctx: CLIContext, app_labels: tuple[str, ...]) -> None:
         _emit_heads(loader, connection_name, subset)
 
 
-def _build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="tortoise")
+def _add_global_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "-c",
         "--config",
@@ -442,17 +441,22 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Path to a JSON/YAML config file for TortoiseORM",
     )
     parser.add_argument("-V", "--version", action="version", version=__version__)
-    subparsers = parser.add_subparsers(dest="command", required=True)
 
+
+def _add_init_parser(subparsers: argparse._SubParsersAction) -> None:
     init_parser = subparsers.add_parser(
         "init", help="Create migrations packages for configured apps."
     )
     init_parser.add_argument("app_labels", nargs="*")
     init_parser.set_defaults(func=_run_init)
 
+
+def _add_shell_parser(subparsers: argparse._SubParsersAction) -> None:
     shell_parser = subparsers.add_parser("shell", help="Start an interactive shell.")
     shell_parser.set_defaults(func=_run_shell)
 
+
+def _add_makemigrations_parser(subparsers: argparse._SubParsersAction) -> None:
     makemigrations_parser = subparsers.add_parser(
         "makemigrations", help="Create new migrations from model changes."
     )
@@ -463,6 +467,8 @@ def _build_parser() -> argparse.ArgumentParser:
     makemigrations_parser.add_argument("-n", "--name", help="Use this name for the migration file.")
     makemigrations_parser.set_defaults(func=_run_makemigrations)
 
+
+def _add_migrate_parser(subparsers: argparse._SubParsersAction) -> None:
     migrate_parser = subparsers.add_parser("migrate", help="Apply migrations.")
     migrate_parser.add_argument("app_label", nargs="?")
     migrate_parser.add_argument("migration", nargs="?")
@@ -474,6 +480,8 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     migrate_parser.set_defaults(func=_run_migrate_cmd)
 
+
+def _add_upgrade_parser(subparsers: argparse._SubParsersAction) -> None:
     upgrade_parser = subparsers.add_parser("upgrade", help="Apply migrations (alias for migrate).")
     upgrade_parser.add_argument("app_label", nargs="?")
     upgrade_parser.add_argument("migration", nargs="?")
@@ -485,6 +493,8 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     upgrade_parser.set_defaults(func=_run_upgrade)
 
+
+def _add_downgrade_parser(subparsers: argparse._SubParsersAction) -> None:
     downgrade_parser = subparsers.add_parser("downgrade", help="Unapply migrations.")
     downgrade_parser.add_argument("app_label")
     downgrade_parser.add_argument("migration", nargs="?")
@@ -496,15 +506,34 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     downgrade_parser.set_defaults(func=_run_downgrade)
 
+
+def _add_history_parser(subparsers: argparse._SubParsersAction) -> None:
     history_parser = subparsers.add_parser(
         "history", help="List applied migrations from the database."
     )
     history_parser.add_argument("app_labels", nargs="*")
     history_parser.set_defaults(func=_run_history)
 
+
+def _add_heads_parser(subparsers: argparse._SubParsersAction) -> None:
     heads_parser = subparsers.add_parser("heads", help="List migration heads on disk.")
     heads_parser.add_argument("app_labels", nargs="*")
     heads_parser.set_defaults(func=_run_heads)
+
+
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="tortoise")
+    _add_global_options(parser)
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    _add_init_parser(subparsers)
+    _add_shell_parser(subparsers)
+    _add_makemigrations_parser(subparsers)
+    _add_migrate_parser(subparsers)
+    _add_upgrade_parser(subparsers)
+    _add_downgrade_parser(subparsers)
+    _add_history_parser(subparsers)
+    _add_heads_parser(subparsers)
 
     return parser
 
