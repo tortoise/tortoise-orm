@@ -30,4 +30,4 @@ You can also invoke the CLI via Python if needed:
 
 .. code-block:: shell
 
-    python3 -m tortoise.cli.cli -c examples.migrations_project.settings.TORTOISE_ORM migrate
+    python3 -m tortoise -c examples.migrations_project.settings.TORTOISE_ORM migrate
