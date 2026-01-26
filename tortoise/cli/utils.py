@@ -9,12 +9,18 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-from asyncclick import BadOptionUsage, ClickException, Context
-
 if sys.version_info >= (3, 11):
     import tomllib
 else:
     import tomlkit as tomllib
+
+
+class CLIError(Exception):
+    pass
+
+
+class CLIUsageError(CLIError):
+    pass
 
 
 def tortoise_orm_config(file: str = "pyproject.toml") -> str:
@@ -30,11 +36,10 @@ def tortoise_orm_config(file: str = "pyproject.toml") -> str:
     return config
 
 
-def get_tortoise_config(ctx: Context, config: str) -> dict[str, Any]:
+def get_tortoise_config(config: str) -> dict[str, Any]:
     """
     Get tortoise config from module path.
 
-    :param ctx: click context
     :param config: module path + var name, e.g. "settings.TORTOISE_ORM"
     """
     splits = config.split(".")
@@ -44,15 +49,11 @@ def get_tortoise_config(ctx: Context, config: str) -> dict[str, Any]:
     try:
         config_module = importlib.import_module(config_path)
     except ModuleNotFoundError as exc:
-        raise ClickException(f"Error while importing configuration module: {exc}") from None
+        raise CLIError(f"Error while importing configuration module: {exc}") from None
 
     config_value = getattr(config_module, tortoise_config, None)
     if not config_value:
-        raise BadOptionUsage(
-            option_name="--config",
-            message=f'Can\'t get "{tortoise_config}" from module "{config_module}"',
-            ctx=ctx,
-        )
+        raise CLIUsageError(f'Can\'t get "{tortoise_config}" from module "{config_module}"')
     return config_value
 
 

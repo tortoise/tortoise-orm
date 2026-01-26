@@ -3,7 +3,6 @@ from pathlib import Path
 from types import ModuleType
 
 import pytest
-from asyncclick import BadOptionUsage, ClickException, Command, Context
 
 from tortoise.cli import utils
 
@@ -46,20 +45,19 @@ def test_get_tortoise_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     sys.modules.pop("cli_app", None)
     sys.modules.pop("cli_app.migrations", None)
 
-    ctx = Context(Command("shell"))
-    assert utils.get_tortoise_config(ctx, f"{module_name}.TORTOISE_ORM") == {
+    assert utils.get_tortoise_config(f"{module_name}.TORTOISE_ORM") == {
         "connections": {},
         "apps": {},
     }
 
     with pytest.raises(
-        ClickException,
+        utils.CLIError,
         match="Error while importing configuration module: No module named 'missing'",
     ):
-        utils.get_tortoise_config(ctx, "missing.TORTOISE_ORM")
+        utils.get_tortoise_config("missing.TORTOISE_ORM")
 
-    with pytest.raises(BadOptionUsage):
-        utils.get_tortoise_config(ctx, f"{module_name}.MISSING")
+    with pytest.raises(utils.CLIUsageError):
+        utils.get_tortoise_config(f"{module_name}.MISSING")
 
 
 def test_infer_migrations_module() -> None:

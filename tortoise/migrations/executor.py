@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from dataclasses import dataclass
 
@@ -40,6 +41,7 @@ class MigrationExecutor:
         self.recorder = MigrationRecorder(connection)
         self.loader = MigrationLoader(apps_config, self.recorder, load=False)
         self._full_plan_cache: list[MigrationKey] | None = None
+        self._logger = logging.getLogger(__name__)
 
     async def migrate(
         self,
@@ -49,20 +51,35 @@ class MigrationExecutor:
         dry_run: bool = False,
         direction: str = "both",
     ) -> None:
+        self._logger.debug("Building migration graph")
         await self.loader.build_graph()
+
         schema_editor = self._schema_editor()
+        self._logger.debug("Ensuring migration schema")
         await self.recorder.ensure_schema(schema_editor)
 
+        self._logger.debug("Loading applied migrations")
         applied = set(await self.recorder.applied_migrations())
+
+        self._logger.debug("Building migration plan")
         plan = self._migration_plan(targets, applied, self.loader.graph)
         self._validate_plan_direction(plan, direction)
+
+        state_cache_by_key: dict[MigrationKey, State] | None = None
+        if any(step.backward for step in plan):
+            self._logger.debug("Building rollback state cache")
+            state_cache_by_key = await self._project_state_cache(applied)
 
         state_cache: State | None = None
         for step in plan:
             key = MigrationKey(app_label=step.migration.app_label, name=step.migration.name)
             if step.backward:
-                state_before = await self._project_state(applied, upto=key)
+                if state_cache_by_key is not None:
+                    state_before = state_cache_by_key[key]
+                else:
+                    state_before = await self._project_state(applied, upto=key)
                 if not fake:
+                    self._logger.debug("Rolling back %s.%s", key.app_label, key.name)
                     await step.migration.unapply(
                         state_before, dry_run=dry_run, schema_editor=schema_editor
                     )
@@ -74,6 +91,7 @@ class MigrationExecutor:
                 if state_cache is None:
                     state_cache = await self._project_state(applied)
                 if not fake:
+                    self._logger.debug("Applying %s.%s", key.app_label, key.name)
                     await step.migration.apply(
                         state_cache, dry_run=dry_run, schema_editor=schema_editor
                     )
@@ -123,6 +141,23 @@ class MigrationExecutor:
                 raise ValueError(f"Missing migration for {key}")
             await migration.apply(state, dry_run=True, schema_editor=None)
         return state
+
+    async def _project_state_cache(self, applied: set[MigrationKey]) -> dict[MigrationKey, State]:
+        default_connections = {
+            label: config.get("default_connection", "default")
+            for label, config in self.loader.apps_config.items()
+        }
+        state = State(models={}, apps=StateApps(default_connections=default_connections))
+        cache: dict[MigrationKey, State] = {}
+        for key in self._full_plan():
+            if key not in applied:
+                continue
+            cache[key] = state.clone()
+            migration = self.loader.graph.nodes[key]
+            if migration is None:
+                raise ValueError(f"Missing migration for {key}")
+            await migration.apply(state, dry_run=True, schema_editor=None)
+        return cache
 
     def _full_plan(self) -> list[MigrationKey]:
         if self._full_plan_cache is not None:

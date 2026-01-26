@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import contextlib
 import datetime as dt
 import importlib
+import io
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, cast
 
 import pytest
-from asyncclick.testing import CliRunner
 
 from tortoise.cli import cli as cli_module
 from tortoise.migrations.autodetector import MigrationAutodetector
@@ -45,6 +47,14 @@ def _write_settings(tmp_path: Path, content: str, module_name: str) -> str:
     return module_name
 
 
+async def _run_cli(args: list[str]) -> SimpleNamespace:
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        exit_code = await cli_module.run_cli_async(args)
+    return SimpleNamespace(exit_code=exit_code, output=stdout.getvalue() + stderr.getvalue())
+
+
 @pytest.mark.asyncio
 async def test_init_creates_migrations_package(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -65,8 +75,7 @@ TORTOISE_ORM = {
     monkeypatch.syspath_prepend(str(tmp_path))
     importlib.invalidate_caches()
 
-    runner = CliRunner()
-    result = await runner.invoke(cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "init"])
+    result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "init"])
     assert result.exit_code == 0
 
     migrations_path = tmp_path / "cli_app" / "migrations"
@@ -100,8 +109,7 @@ TORTOISE_ORM = {
     monkeypatch.syspath_prepend(str(tmp_path))
     importlib.invalidate_caches()
 
-    runner = CliRunner()
-    result = await runner.invoke(cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "init"])
+    result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "init"])
     assert result.exit_code == 0
 
     migrations_path = tmp_path / "migrations"
@@ -135,11 +143,7 @@ TORTOISE_ORM = {
 
     monkeypatch.setattr(cli_module, "migrate_api", fake_migrate)
 
-    runner = CliRunner()
-    result = await runner.invoke(
-        cli_module.cli,
-        ["-c", f"{module_name}.TORTOISE_ORM", "migrate", "app", "0001_initial"],
-    )
+    result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "migrate", "app", "0001_initial"])
     assert result.exit_code == 0
     assert called["target"] == "app.0001_initial"
     assert called["direction"] == "both"
@@ -173,11 +177,7 @@ TORTOISE_ORM = {
 
     monkeypatch.setattr(cli_module, "migrate_api", fake_migrate)
 
-    runner = CliRunner()
-    result = await runner.invoke(
-        cli_module.cli,
-        ["-c", f"{module_name}.TORTOISE_ORM", "migrate", "app.0001_initial"],
-    )
+    result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "migrate", "app.0001_initial"])
     assert result.exit_code == 0
     assert called["target"] == "app.0001_initial"
     assert called["direction"] == "both"
@@ -208,11 +208,7 @@ TORTOISE_ORM = {
 
     monkeypatch.setattr(cli_module, "migrate_api", fake_migrate)
 
-    runner = CliRunner()
-    result = await runner.invoke(
-        cli_module.cli,
-        ["-c", f"{module_name}.TORTOISE_ORM", "upgrade", "app"],
-    )
+    result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "upgrade", "app"])
     assert result.exit_code == 0
     assert called["app_labels"] is None
     assert called["target"] == "app.__latest__"
@@ -243,11 +239,7 @@ TORTOISE_ORM = {
 
     monkeypatch.setattr(cli_module, "migrate_api", fake_migrate)
 
-    runner = CliRunner()
-    result = await runner.invoke(
-        cli_module.cli,
-        ["-c", f"{module_name}.TORTOISE_ORM", "downgrade", "app"],
-    )
+    result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "downgrade", "app"])
     assert result.exit_code == 0
     assert called["target"] == "app.__first__"
     assert called["direction"] == "backward"
@@ -283,11 +275,7 @@ TORTOISE_ORM = {
 
     monkeypatch.setattr(cli_module, "migrate_api", fake_migrate)
 
-    runner = CliRunner()
-    result = await runner.invoke(
-        cli_module.cli,
-        ["-c", f"{module_name}.TORTOISE_ORM", "downgrade", "orders"],
-    )
+    result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "downgrade", "orders"])
     assert result.exit_code == 0
     assert called["target"] == "orders.__first__"
     assert called["direction"] == "backward"
@@ -329,8 +317,7 @@ TORTOISE_ORM = {
     monkeypatch.setattr(cli_module.MigrationRecorder, "applied_migrations", fake_applied)
     monkeypatch.setattr(cli_module.connections, "get", lambda _name: object())
 
-    runner = CliRunner()
-    result = await runner.invoke(cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "history"])
+    result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "history"])
     assert result.exit_code == 0
     assert "Connection: default" in result.output
     assert "app:" in result.output
@@ -376,8 +363,7 @@ TORTOISE_ORM = {
     importlib.import_module("cli_app.migrations")
     importlib.import_module("cli_other.migrations")
 
-    runner = CliRunner()
-    result = await runner.invoke(cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "heads"])
+    result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "heads"])
     assert result.exit_code == 0
     assert "Connection: default" in result.output
     assert "app:" in result.output
@@ -406,10 +392,9 @@ TORTOISE_ORM = {
     monkeypatch.syspath_prepend(str(tmp_path))
     importlib.invalidate_caches()
 
-    runner = CliRunner()
-    result = await runner.invoke(cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "downgrade"])
+    result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "downgrade"])
     assert result.exit_code != 0
-    assert "Missing argument" in result.output
+    assert "required: app_label" in result.output
 
 
 @pytest.mark.asyncio
@@ -439,11 +424,7 @@ TORTOISE_ORM = {
 
     monkeypatch.setattr(cli_module, "migrate_api", fake_migrate)
 
-    runner = CliRunner()
-    result = await runner.invoke(
-        cli_module.cli,
-        ["-c", f"{module_name}.TORTOISE_ORM", "downgrade", "app.0001_initial"],
-    )
+    result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "downgrade", "app.0001_initial"])
     assert result.exit_code == 0
     assert called["target"] == "app.0001_initial"
     assert called["direction"] == "backward"
@@ -491,10 +472,8 @@ TORTOISE_ORM = {
     monkeypatch.setattr(cli_module.Tortoise, "apps", object(), raising=False)
     monkeypatch.setattr(cli_module, "MigrationAutodetector", FakeAutodetector)
 
-    runner = CliRunner()
-    result = await runner.invoke(
-        cli_module.cli,
-        ["-c", f"{module_name}.TORTOISE_ORM", "makemigrations", "--name", "add blog"],
+    result = await _run_cli(
+        ["-c", f"{module_name}.TORTOISE_ORM", "makemigrations", "--name", "add blog"]
     )
     assert result.exit_code == 0
 
@@ -536,10 +515,7 @@ TORTOISE_ORM = {
     monkeypatch.setattr(cli_module.Tortoise, "apps", object(), raising=False)
     monkeypatch.setattr(cli_module, "MigrationAutodetector", FakeAutodetector)
 
-    runner = CliRunner()
-    result = await runner.invoke(
-        cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "makemigrations"]
-    )
+    result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "makemigrations"])
     assert result.exit_code == 0
     assert "No changes detected" in result.output
 
@@ -564,10 +540,7 @@ TORTOISE_ORM = {
     monkeypatch.syspath_prepend(str(tmp_path))
     importlib.invalidate_caches()
 
-    runner = CliRunner()
-    result = await runner.invoke(
-        cli_module.cli, ["-c", f"{module_name}.TORTOISE_ORM", "makemigrations", "--empty"]
-    )
+    result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "makemigrations", "--empty"])
     assert result.exit_code != 0
     assert "--empty requires at least one APP_LABEL" in result.output
 
@@ -610,10 +583,8 @@ TORTOISE_ORM = {
     monkeypatch.setattr(cli_module.Tortoise, "apps", {"app": {}}, raising=False)
     monkeypatch.setattr(cli_module, "MigrationAutodetector", FixedAutodetector)
 
-    runner = CliRunner()
-    result = await runner.invoke(
-        cli_module.cli,
-        ["-c", f"{module_name}.TORTOISE_ORM", "makemigrations", "--empty", "app"],
+    result = await _run_cli(
+        ["-c", f"{module_name}.TORTOISE_ORM", "makemigrations", "--empty", "app"]
     )
     assert result.exit_code == 0
 
@@ -663,9 +634,7 @@ TORTOISE_ORM = {
     monkeypatch.setattr(cli_module.Tortoise, "apps", {"app": {}}, raising=False)
     monkeypatch.setattr(cli_module, "MigrationAutodetector", FixedAutodetector)
 
-    runner = CliRunner()
-    result = await runner.invoke(
-        cli_module.cli,
+    result = await _run_cli(
         [
             "-c",
             f"{module_name}.TORTOISE_ORM",
@@ -674,7 +643,7 @@ TORTOISE_ORM = {
             "--name",
             "manual",
             "app",
-        ],
+        ]
     )
     assert result.exit_code == 0
 

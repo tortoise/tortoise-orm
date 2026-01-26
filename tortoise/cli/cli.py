@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import argparse
+import asyncio
 import contextlib
 import importlib
 import importlib.util
@@ -9,7 +11,6 @@ from collections.abc import AsyncGenerator, Iterable
 from pathlib import Path
 from typing import Any
 
-import asyncclick as click
 from ptpython.repl import embed
 
 from tortoise import Tortoise, __version__, connections
@@ -58,19 +59,18 @@ class _NoopRecorder(MigrationRecorder):
         return None
 
 
-def _load_config(ctx: click.Context) -> dict[str, Any]:
-    config_value = ctx.obj.get("config")
-    config_file = ctx.obj.get("config_file")
+def _load_config(ctx: CLIContext) -> dict[str, Any]:
+    config_value = ctx.config
+    config_file = ctx.config_file
     if config_file:
         return Tortoise._get_config_from_config_file(config_file)
     if not config_value:
         config_value = utils.tortoise_orm_config()
     if not config_value:
-        raise click.UsageError(
+        raise utils.CLIUsageError(
             "You must specify TORTOISE_ORM in option or env, or pyproject.toml [tool.tortoise]",
-            ctx=ctx,
         )
-    return utils.get_tortoise_config(ctx, config_value)
+    return utils.get_tortoise_config(config_value)
 
 
 def _normalized_config(config: dict[str, Any]) -> dict[str, Any]:
@@ -84,13 +84,13 @@ def _select_apps(
     apps_config: dict[str, dict[str, Any]], app_labels: Iterable[str] | None
 ) -> dict[str, dict[str, Any]]:
     if not apps_config:
-        raise click.ClickException("No apps configured in TORTOISE_ORM")
+        raise utils.CLIError("No apps configured in TORTOISE_ORM")
     if not app_labels:
         return apps_config
     selected: dict[str, dict[str, Any]] = {}
     for label in app_labels:
         if label not in apps_config:
-            raise click.UsageError(f"Unknown app label {label}")
+            raise utils.CLIUsageError(f"Unknown app label {label}")
         selected[label] = apps_config[label]
     return selected
 
@@ -110,7 +110,7 @@ def _ensure_migrations_package(app_label: str, app_config: dict[str, Any]) -> tu
     if not migrations_module:
         migrations_module = utils.infer_migrations_module(app_config.get("models"))
     if not migrations_module:
-        raise click.ClickException(
+        raise utils.CLIError(
             f"Cannot infer migrations module for app {app_label}; set apps.{app_label}.migrations"
         )
 
@@ -119,7 +119,7 @@ def _ensure_migrations_package(app_label: str, app_config: dict[str, Any]) -> tu
         if spec and spec.submodule_search_locations:
             package_path = Path(next(iter(spec.submodule_search_locations)))
         elif spec and spec.origin and spec.origin != "built-in":
-            raise click.ClickException(
+            raise utils.CLIError(
                 f"Migrations module {migrations_module} exists but is not a package"
             )
         else:
@@ -135,7 +135,7 @@ def _ensure_migrations_package(app_label: str, app_config: dict[str, Any]) -> tu
     try:
         parent_module = importlib.import_module(parent_module_name)
     except ModuleNotFoundError as exc:
-        raise click.ClickException(
+        raise utils.CLIError(
             f"Cannot import parent module {parent_module_name} for app {app_label}: {exc}"
         ) from None
 
@@ -144,9 +144,7 @@ def _ensure_migrations_package(app_label: str, app_config: dict[str, Any]) -> tu
     else:
         module_file = getattr(parent_module, "__file__", None)
         if not module_file:
-            raise click.ClickException(
-                f"Cannot resolve filesystem path for module {parent_module_name}"
-            )
+            raise utils.CLIError(f"Cannot resolve filesystem path for module {parent_module_name}")
         parent_path = Path(module_file).parent
 
     package_path = parent_path / package_name
@@ -159,11 +157,11 @@ def _ensure_migrations_package(app_label: str, app_config: dict[str, Any]) -> tu
 
 
 def _echo_connection_header(connection_name: str, *, suffix: str = "") -> None:
-    click.secho(f"Connection: {connection_name}{suffix}", fg="cyan", bold=True)
+    print(f"Connection: {connection_name}{suffix}")
 
 
 def _echo_app_header(app_label: str) -> None:
-    click.secho(f"  {app_label}:", fg="yellow", bold=True)
+    print(f"  {app_label}:")
 
 
 def _emit_history(
@@ -180,10 +178,10 @@ def _emit_history(
         _echo_app_header(app_label)
         names = by_app[app_label]
         if not names:
-            click.secho("    (no applied migrations)", fg="bright_black")
+            print("    (no applied migrations)")
             continue
         for name in names:
-            click.secho(f"    - {app_label} {name}", fg="green")
+            print(f"    - {app_label} {name}")
 
 
 def _emit_heads(
@@ -196,10 +194,10 @@ def _emit_heads(
         _echo_app_header(app_label)
         keys = list(loader.graph.leaf_nodes(app_label))
         if not keys:
-            click.secho("    (no heads)", fg="bright_black")
+            print("    (no heads)")
             continue
         for key in keys:
-            click.secho(f"    - {app_label}.{key.name}", fg="blue")
+            print(f"    - {app_label}.{key.name}")
 
 
 def _emit_migration_plan(
@@ -216,7 +214,7 @@ def _emit_migration_plan(
     suffix = f" ({', '.join(suffixes)})" if suffixes else ""
     _echo_connection_header(connection_name, suffix=suffix)
     if not plan:
-        click.secho("  No migrations to apply", fg="bright_black")
+        print("  No migrations to apply")
         return
     applied = 0
     rolled_back = 0
@@ -224,51 +222,31 @@ def _emit_migration_plan(
         label = f"{step.migration.app_label}.{step.migration.name}"
         if step.backward:
             rolled_back += 1
-            click.secho(f"  ROLLBACK  {label}", fg="red")
+            print(f"  ROLLBACK  {label}")
         else:
             applied += 1
-            click.secho(f"  APPLY     {label}", fg="green")
-    click.secho(
-        f"  Plan: {applied} apply, {rolled_back} rollback",
-        fg="cyan",
-    )
+            print(f"  APPLY     {label}")
+    print(f"  Plan: {applied} apply, {rolled_back} rollback")
 
 
-@click.group(context_settings={"help_option_names": ["-h", "--help"]})
-@click.version_option(__version__, "-V", "--version")
-@click.option(
-    "-c",
-    "--config",
-    help="TortoiseORM config dictionary path, like settings.TORTOISE_ORM",
-)
-@click.option(
-    "--config-file",
-    help="Path to a JSON/YAML config file for TortoiseORM",
-)
-@click.pass_context
-async def cli(ctx: click.Context, config: str | None, config_file: str | None) -> None:
-    ctx.ensure_object(dict)
-    ctx.obj["config"] = config
-    ctx.obj["config_file"] = config_file
+class CLIContext:
+    def __init__(self, config: str | None, config_file: str | None) -> None:
+        self.config = config
+        self.config_file = config_file
 
 
-@cli.command(help="Create migrations packages for configured apps.")
-@click.argument("app_labels", nargs=-1)
-@click.pass_context
-async def init(ctx: click.Context, app_labels: tuple[str, ...]) -> None:
+async def init(ctx: CLIContext, app_labels: tuple[str, ...]) -> None:
     config = _normalized_config(_load_config(ctx))
     apps_config = _select_apps(config.get("apps", {}), app_labels or None)
     for label, app_config in apps_config.items():
         module, path = _ensure_migrations_package(label, app_config)
-        click.echo(f"{label}: {module} -> {path}")
+        print(f"{label}: {module} -> {path}")
 
 
-@cli.command(help="Start an interactive shell.")
-@click.pass_context
-async def shell(ctx: click.Context) -> None:
+async def shell(ctx: CLIContext) -> None:
     config = _normalized_config(_load_config(ctx))
     async with aclose_tortoise():
-        await Tortoise.init(config=config, init_connections=False)
+        await Tortoise.init(config=config)
         with contextlib.suppress(EOFError, ValueError):
             await embed(
                 globals=globals(),
@@ -279,16 +257,11 @@ async def shell(ctx: click.Context) -> None:
             )
 
 
-@cli.command(help="Create new migrations from model changes.")
-@click.argument("app_labels", nargs=-1)
-@click.option("--empty", is_flag=True, help="Create an empty migration.")
-@click.option("-n", "--name", help="Use this name for the migration file.")
-@click.pass_context
 async def makemigrations(
-    ctx: click.Context, app_labels: tuple[str, ...], empty: bool, name: str | None
+    ctx: CLIContext, app_labels: tuple[str, ...], empty: bool, name: str | None
 ) -> None:
     if empty and not app_labels:
-        raise click.UsageError("--empty requires at least one APP_LABEL", ctx=ctx)
+        raise utils.CLIUsageError("--empty requires at least one APP_LABEL")
     config = _normalized_config(_load_config(ctx))
     apps_config = _select_apps(config.get("apps", {}), app_labels or None)
     for label, app_config in apps_config.items():
@@ -299,7 +272,7 @@ async def makemigrations(
     async with aclose_tortoise():
         await Tortoise.init(config=config)
         if not Tortoise.apps:
-            raise click.ClickException("Tortoise apps are not initialized")
+            raise utils.CLIError("Tortoise apps are not initialized")
         autodetector = MigrationAutodetector(Tortoise.apps, apps_config)
         if empty:
             await autodetector.loader.build_graph()
@@ -328,7 +301,7 @@ async def makemigrations(
             writers = await autodetector.changes()
 
     if not writers:
-        click.secho("No changes detected", fg="yellow")
+        print("No changes detected")
         return
 
     for writer in writers:
@@ -339,16 +312,12 @@ async def makemigrations(
                 number = 1
             writer.name = format_migration_name(number, name)
         path = writer.write()
-        click.secho(
-            f"Created {writer.app_label}.{writer.name}",
-            fg="green",
-            bold=True,
-        )
-        click.secho(f"  {path}", fg="blue")
+        print(f"Created {writer.app_label}.{writer.name}")
+        print(f"  {path}")
 
 
 async def _run_migrate(
-    ctx: click.Context,
+    ctx: CLIContext,
     app_label: str | None,
     migration: str | None,
     *,
@@ -368,7 +337,7 @@ async def _run_migrate(
             target = f"{app_label}.__latest__"
         elif migration:
             if not app_label:
-                raise click.UsageError("MIGRATION requires APP_LABEL")
+                raise utils.CLIUsageError("MIGRATION requires APP_LABEL")
             target = f"{app_label}.{migration}"
 
     async with aclose_tortoise():
@@ -383,14 +352,8 @@ async def _run_migrate(
         )
 
 
-@cli.command(help="Apply migrations.")
-@click.argument("app_label", required=False)
-@click.argument("migration", required=False)
-@click.option("--fake", is_flag=True, help="Record migrations without executing SQL.")
-@click.option("--dry-run", is_flag=True, help="Show what would run without changing DB state.")
-@click.pass_context
 async def migrate(
-    ctx: click.Context,
+    ctx: CLIContext,
     app_label: str | None,
     migration: str | None,
     fake: bool,
@@ -399,14 +362,8 @@ async def migrate(
     await _run_migrate(ctx, app_label, migration, fake=fake, dry_run=dry_run)
 
 
-@cli.command(help="Apply migrations (alias for migrate).")
-@click.argument("app_label", required=False)
-@click.argument("migration", required=False)
-@click.option("--fake", is_flag=True, help="Record migrations without executing SQL.")
-@click.option("--dry-run", is_flag=True, help="Show what would run without changing DB state.")
-@click.pass_context
 async def upgrade(
-    ctx: click.Context,
+    ctx: CLIContext,
     app_label: str | None,
     migration: str | None,
     fake: bool,
@@ -422,14 +379,8 @@ async def upgrade(
     )
 
 
-@cli.command(help="Unapply migrations.")
-@click.argument("app_label", required=True)
-@click.argument("migration", required=False)
-@click.option("--fake", is_flag=True, help="Record migrations without executing SQL.")
-@click.option("--dry-run", is_flag=True, help="Show what would run without changing DB state.")
-@click.pass_context
 async def downgrade(
-    ctx: click.Context,
+    ctx: CLIContext,
     app_label: str,
     migration: str | None,
     fake: bool,
@@ -452,10 +403,7 @@ async def downgrade(
     )
 
 
-@cli.command(help="List applied migrations from the database.")
-@click.argument("app_labels", nargs=-1)
-@click.pass_context
-async def history(ctx: click.Context, app_labels: tuple[str, ...]) -> None:
+async def history(ctx: CLIContext, app_labels: tuple[str, ...]) -> None:
     config = _normalized_config(_load_config(ctx))
     apps_config = _select_apps(config.get("apps", {}), app_labels or None)
     config["apps"] = apps_config
@@ -469,10 +417,7 @@ async def history(ctx: click.Context, app_labels: tuple[str, ...]) -> None:
             _emit_history(applied, connection_name, subset)
 
 
-@cli.command(help="List migration heads on disk.")
-@click.argument("app_labels", nargs=-1)
-@click.pass_context
-async def heads(ctx: click.Context, app_labels: tuple[str, ...]) -> None:
+async def heads(ctx: CLIContext, app_labels: tuple[str, ...]) -> None:
     config = _normalized_config(_load_config(ctx))
     apps_config = _select_apps(config.get("apps", {}), app_labels or None)
     config["apps"] = apps_config
@@ -485,10 +430,140 @@ async def heads(ctx: click.Context, app_labels: tuple[str, ...]) -> None:
         _emit_heads(loader, connection_name, subset)
 
 
+def _build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="tortoise")
+    parser.add_argument(
+        "-c",
+        "--config",
+        help="TortoiseORM config dictionary path, like settings.TORTOISE_ORM",
+    )
+    parser.add_argument(
+        "--config-file",
+        help="Path to a JSON/YAML config file for TortoiseORM",
+    )
+    parser.add_argument("-V", "--version", action="version", version=__version__)
+    subparsers = parser.add_subparsers(dest="command", required=True)
+
+    init_parser = subparsers.add_parser(
+        "init", help="Create migrations packages for configured apps."
+    )
+    init_parser.add_argument("app_labels", nargs="*")
+    init_parser.set_defaults(func=_run_init)
+
+    shell_parser = subparsers.add_parser("shell", help="Start an interactive shell.")
+    shell_parser.set_defaults(func=_run_shell)
+
+    makemigrations_parser = subparsers.add_parser(
+        "makemigrations", help="Create new migrations from model changes."
+    )
+    makemigrations_parser.add_argument("app_labels", nargs="*")
+    makemigrations_parser.add_argument(
+        "--empty", action="store_true", help="Create an empty migration."
+    )
+    makemigrations_parser.add_argument("-n", "--name", help="Use this name for the migration file.")
+    makemigrations_parser.set_defaults(func=_run_makemigrations)
+
+    migrate_parser = subparsers.add_parser("migrate", help="Apply migrations.")
+    migrate_parser.add_argument("app_label", nargs="?")
+    migrate_parser.add_argument("migration", nargs="?")
+    migrate_parser.add_argument(
+        "--fake", action="store_true", help="Record migrations without executing SQL."
+    )
+    migrate_parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would run without changing DB state."
+    )
+    migrate_parser.set_defaults(func=_run_migrate_cmd)
+
+    upgrade_parser = subparsers.add_parser("upgrade", help="Apply migrations (alias for migrate).")
+    upgrade_parser.add_argument("app_label", nargs="?")
+    upgrade_parser.add_argument("migration", nargs="?")
+    upgrade_parser.add_argument(
+        "--fake", action="store_true", help="Record migrations without executing SQL."
+    )
+    upgrade_parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would run without changing DB state."
+    )
+    upgrade_parser.set_defaults(func=_run_upgrade)
+
+    downgrade_parser = subparsers.add_parser("downgrade", help="Unapply migrations.")
+    downgrade_parser.add_argument("app_label")
+    downgrade_parser.add_argument("migration", nargs="?")
+    downgrade_parser.add_argument(
+        "--fake", action="store_true", help="Record migrations without executing SQL."
+    )
+    downgrade_parser.add_argument(
+        "--dry-run", action="store_true", help="Show what would run without changing DB state."
+    )
+    downgrade_parser.set_defaults(func=_run_downgrade)
+
+    history_parser = subparsers.add_parser(
+        "history", help="List applied migrations from the database."
+    )
+    history_parser.add_argument("app_labels", nargs="*")
+    history_parser.set_defaults(func=_run_history)
+
+    heads_parser = subparsers.add_parser("heads", help="List migration heads on disk.")
+    heads_parser.add_argument("app_labels", nargs="*")
+    heads_parser.set_defaults(func=_run_heads)
+
+    return parser
+
+
+async def _run_init(ctx: CLIContext, args: argparse.Namespace) -> None:
+    await init(ctx, tuple(args.app_labels))
+
+
+async def _run_shell(ctx: CLIContext, _args: argparse.Namespace) -> None:
+    await shell(ctx)
+
+
+async def _run_makemigrations(ctx: CLIContext, args: argparse.Namespace) -> None:
+    await makemigrations(ctx, tuple(args.app_labels), args.empty, args.name)
+
+
+async def _run_migrate_cmd(ctx: CLIContext, args: argparse.Namespace) -> None:
+    await migrate(ctx, args.app_label, args.migration, args.fake, args.dry_run)
+
+
+async def _run_upgrade(ctx: CLIContext, args: argparse.Namespace) -> None:
+    await upgrade(ctx, args.app_label, args.migration, args.fake, args.dry_run)
+
+
+async def _run_downgrade(ctx: CLIContext, args: argparse.Namespace) -> None:
+    await downgrade(ctx, args.app_label, args.migration, args.fake, args.dry_run)
+
+
+async def _run_history(ctx: CLIContext, args: argparse.Namespace) -> None:
+    await history(ctx, tuple(args.app_labels))
+
+
+async def _run_heads(ctx: CLIContext, args: argparse.Namespace) -> None:
+    await heads(ctx, tuple(args.app_labels))
+
+
+async def run_cli_async(argv: list[str] | None = None) -> int:
+    parser = _build_parser()
+    try:
+        args = parser.parse_args(argv)
+    except SystemExit as exc:
+        return exc.code if isinstance(exc.code, int) else 1
+
+    ctx = CLIContext(config=args.config, config_file=args.config_file)
+    try:
+        await args.func(ctx, args)
+    except utils.CLIUsageError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+    except utils.CLIError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    return 0
+
+
 def main() -> None:
     if sys.path[0] != ".":
         sys.path.insert(0, ".")
-    cli()
+    raise SystemExit(asyncio.run(run_cli_async()))
 
 
 if __name__ == "__main__":
