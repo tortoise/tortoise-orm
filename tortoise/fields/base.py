@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import inspect
+import operator
 import sys
 import warnings
 from collections.abc import Callable
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, Union, overload
+from functools import reduce
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
 from pypika_tortoise.terms import Term
 
@@ -48,7 +50,8 @@ class _FieldMeta(type):
             # Instantiate class with only the 1st base class (should be Field)
             cls = type.__new__(mcs, name, (bases[0],), attrs)
             # All other base classes are our meta types, we store them in class attributes
-            cls.field_type = bases[1] if len(bases) == 2 else Union[bases[1:]]  # type: ignore
+            field_type = bases[1] if len(bases) == 2 else reduce(operator.or_, bases[1:])
+            setattr(cls, "field_type", field_type)
             return cls
         return type.__new__(mcs, name, bases, attrs)
 

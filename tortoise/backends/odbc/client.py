@@ -4,7 +4,7 @@ import asyncio
 from abc import ABC
 from collections.abc import Callable, Coroutine
 from functools import wraps
-from typing import Any, TypeVar, Union
+from typing import Any, TypeVar
 
 import asyncodbc
 import pyodbc
@@ -27,9 +27,9 @@ from tortoise.exceptions import (
 
 T = TypeVar("T")
 FuncType = Callable[..., Coroutine[None, None, T]]
-ConnWrapperType = Union[
-    ConnectionWrapper[asyncodbc.Connection], PoolConnectionWrapper[asyncodbc.Connection]
-]
+ConnWrapperType = (
+    ConnectionWrapper[asyncodbc.Connection] | PoolConnectionWrapper[asyncodbc.Connection]
+)
 
 
 def translate_exceptions(func: FuncType) -> FuncType:

@@ -6,7 +6,7 @@ license = {text="Apache-2.0"}
 readme = "README.rst"
 keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio", "psycopg"]
 dynamic = [ "version" ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "pypika-tortoise (>=0.6.3,<1.0.0)",
     "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
@@ -22,7 +22,6 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -101,7 +100,6 @@ contrib=[
     # BlackSheep support
     "blacksheep>=2.0.8",
     "pytest-asyncio>=0.24.0",
-    "pyjwt (>=2.10.1,<3.0.0); python_version < '3.10'",
 ]
 test = [
     # Test tools

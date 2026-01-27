@@ -9,7 +9,6 @@ import re
 import uuid
 from decimal import Decimal
 from enum import Enum, IntEnum
-from typing import Union
 
 import pytz
 from pydantic import BaseModel, ConfigDict
@@ -329,7 +328,7 @@ class FloatFields(Model):
     floatnum_null = fields.FloatField(null=True)
 
 
-def raise_if_not_dict_or_list(value: Union[dict, list]):  # NOQA:FA100
+def raise_if_not_dict_or_list(value: dict | list):
     if not isinstance(value, (dict, list)):
         raise ValidationError("Value must be a dict or list.")
 
@@ -341,13 +340,11 @@ class JSONFields(Model):
 
     id = fields.IntField(primary_key=True)
     data = fields.JSONField()  # type: ignore # Test cases where generics are not provided
-    data_null = fields.JSONField[Union[dict, list]](null=True)
+    data_null = fields.JSONField[dict | list](null=True)
     data_default = fields.JSONField[dict](default={"a": 1})
 
     # From Python 3.10 onwards, validator can be defined with staticmethod
-    data_validate = fields.JSONField[Union[dict, list]](
-        null=True, validators=[raise_if_not_dict_or_list]
-    )
+    data_validate = fields.JSONField[dict | list](null=True, validators=[raise_if_not_dict_or_list])
 
     # Test cases where generics are provided and the type is a pydantic base model
     data_pydantic = fields.JSONField[TestSchemaForJSONField](

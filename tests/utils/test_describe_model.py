@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import json
-import sys
 import uuid
-from typing import Union
 
 from tests.testmodels import (
     Event,
@@ -30,14 +28,9 @@ from tortoise.fields.relational import (
     OneToOneFieldInstance,
 )
 
-if sys.version_info >= (3, 14):
 
-    def union_annotation(x: str, y: str) -> str:
-        return f"{x} | {y}"
-else:
-
-    def union_annotation(x: str, y: str) -> str:
-        return f"Union[{x}, {y}]"
+def union_annotation(x: str, y: str) -> str:
+    return f"{x} | {y}"
 
 
 UNION_DICT_LIST = union_annotation("dict", "list")
@@ -1518,7 +1511,7 @@ class TestDescribeModel(test.SimpleTestCase):
                             "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
-                        "python_type": Union[dict, list],
+                        "python_type": dict | list,
                         "generated": False,
                         "nullable": False,
                         "unique": False,
@@ -1538,7 +1531,7 @@ class TestDescribeModel(test.SimpleTestCase):
                             "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
-                        "python_type": Union[dict, list],
+                        "python_type": dict | list,
                         "generated": False,
                         "nullable": True,
                         "unique": False,
@@ -1558,7 +1551,7 @@ class TestDescribeModel(test.SimpleTestCase):
                             "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
-                        "python_type": Union[dict, list],
+                        "python_type": dict | list,
                         "generated": False,
                         "nullable": False,
                         "unique": False,
@@ -1578,7 +1571,7 @@ class TestDescribeModel(test.SimpleTestCase):
                             "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
-                        "python_type": Union[dict, list],
+                        "python_type": dict | list,
                         "generated": False,
                         "nullable": True,
                         "unique": False,

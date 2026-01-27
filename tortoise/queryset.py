@@ -4,7 +4,7 @@ import types
 from collections import defaultdict
 from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable
 from copy import copy
-from typing import TYPE_CHECKING, Any, Generic, Literal, Optional, Protocol, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast, overload
 
 from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
@@ -471,7 +471,7 @@ class QuerySet(AwaitableQuery[MODEL]):
     def _as_single(self) -> QuerySetSingle[MODEL | None]:
         self._single = True
         self._limit = 1
-        return cast(QuerySetSingle[Optional[MODEL]], self)
+        return cast(QuerySetSingle[MODEL | None], self)
 
     def latest(self, *orderings: str) -> QuerySetSingle[MODEL | None]:
         """

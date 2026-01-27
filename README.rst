@@ -26,7 +26,7 @@ You can find the docs at `Documentation <https://tortoise.github.io>`_
    Tortoise ORM is a young project and breaking changes are to be expected.
    We keep a `Changelog <https://tortoise.github.io/CHANGELOG.html>`_ and it will have possible breakage clearly documented.
 
-Tortoise ORM supports CPython 3.9 and later for SQLite, MySQL, PostgreSQL, Microsoft SQL Server, and Oracle.
+Tortoise ORM supports CPython 3.10 and later for SQLite, MySQL, PostgreSQL, Microsoft SQL Server, and Oracle.
 
 Why was Tortoise ORM built?
 ---------------------------

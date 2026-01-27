@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Union, cast
+from typing import Any, cast
 
 import pytest
 
@@ -25,11 +25,9 @@ from tortoise.migrations.operations import (
 )
 from tortoise.migrations.schema_generator.state import State
 
-RelationalFieldInstance = Union[
-    ForeignKeyFieldInstance[Any],
-    OneToOneFieldInstance[Any],
-    ManyToManyFieldInstance[Any],
-]
+RelationalFieldInstance = (
+    ForeignKeyFieldInstance[Any] | OneToOneFieldInstance[Any] | ManyToManyFieldInstance[Any]
+)
 
 
 def test_add_model_only_id(empty_state: State):

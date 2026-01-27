@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import AsyncGenerator, Generator, Iterator
-from typing import TYPE_CHECKING, Any, Generic, Literal, Optional, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, TypeVar, overload
 
 from pypika_tortoise import Table
 
@@ -647,7 +647,7 @@ def ManyToManyField(
     )
 
 
-OneToOneNullableRelation = Optional[OneToOneFieldInstance[MODEL]]
+OneToOneNullableRelation = OneToOneFieldInstance[MODEL] | None
 """
 Type hint for the result of accessing the :func:`.OneToOneField` field in the model
 when obtained model can be nullable.
@@ -658,7 +658,7 @@ OneToOneRelation = OneToOneFieldInstance[MODEL]
 Type hint for the result of accessing the :func:`.OneToOneField` field in the model.
 """
 
-ForeignKeyNullableRelation = Optional[ForeignKeyFieldInstance[MODEL]]
+ForeignKeyNullableRelation = ForeignKeyFieldInstance[MODEL] | None
 """
 Type hint for the result of accessing the :func:`.ForeignKeyField` field in the model
 when obtained model can be nullable.

@@ -3,23 +3,17 @@ from __future__ import annotations
 import asyncio
 import inspect
 import os as _os
-import sys
 import typing
 import unittest
 from collections.abc import Callable, Coroutine, Iterable
 from functools import partial, wraps
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 
 from tortoise import Model, Tortoise, connections
 from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise.exceptions import DBConnectionError, OperationalError
-
-if sys.version_info >= (3, 10):
-    from typing import ParamSpec
-else:
-    from typing_extensions import ParamSpec
 
 if TYPE_CHECKING:
     from asyncio.events import AbstractEventLoop
@@ -410,7 +404,7 @@ T = TypeVar("T")
 P = ParamSpec("P")
 AsyncFunc = Callable[P, Coroutine[None, None, T]]
 AsyncFuncDeco = Callable[..., AsyncFunc]
-ModulesConfigType = Union[str, list[str]]
+ModulesConfigType = str | list[str]
 MEMORY_SQLITE = "sqlite://:memory:"
 
 
