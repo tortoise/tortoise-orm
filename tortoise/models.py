@@ -500,6 +500,8 @@ class ModelMeta(type):
         fields_map, filters, fk_fields, m2m_fields, o2o_fields = cls._dispatch_fields(
             attrs, fields_db_projection, is_abstract
         )
+        if name != "Model":
+            cls._check_field_name_conflicts(fields_map, name)
 
         # Clean the class attributes
         for slot in fields_map:
@@ -645,6 +647,18 @@ class ModelMeta(type):
         return (fields_map, filters, fk_fields, m2m_fields, o2o_fields)
 
     @staticmethod
+    def _check_field_name_conflicts(fields_map: dict[str, Field], name: str) -> None:
+        reserved_names = {key for key in Model.__dict__ if not key.startswith("__")}
+        reserved_names.update(key for key in ModelMeta.__dict__ if not key.startswith("__"))
+        conflicts = sorted(set(fields_map).intersection(reserved_names))
+        if conflicts:
+            conflict_list = ", ".join(conflicts)
+            raise ConfigurationError(
+                f"Model {name} has field name(s) that conflict with default Model attributes: "
+                f"{conflict_list}"
+            )
+
+    @staticmethod
     def build_meta(
         meta_class: Model.Meta,
         fields_map: dict[str, Field],
@@ -757,6 +771,11 @@ class Model(metaclass=ModelMeta):
                 )
 
         return passed_fields
+
+    @classmethod
+    def get_table(cls) -> Table:
+        """Return a PyPika table for this model."""
+        return Table(name=cls._meta.db_table, schema=cls._meta.schema)
 
     @classmethod
     def _init_from_db(cls: type[MODEL], **kwargs: Any) -> MODEL:
