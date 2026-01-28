@@ -12,6 +12,7 @@ from tests.utils.fake_client import FakeClient
 from tortoise import fields
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
+from tortoise.contrib.postgres.fields import TSVectorField
 from tortoise.fields.relational import ForeignKeyFieldInstance, ManyToManyRelation
 from tortoise.indexes import Index, PartialIndex
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
@@ -207,3 +208,35 @@ def test_schema_editor_matches_schema_generator(
     generator_statements = schema_generator_sql(generator_cls, client, model, models)
 
     assert editor_statements == generator_statements
+
+
+def test_schema_editor_matches_schema_generator_for_generated_column() -> None:
+    class SearchDocument(Model):
+        id = fields.IntField(pk=True)
+        title = fields.TextField()
+        body = fields.TextField(null=True)
+        search_vector = TSVectorField(
+            source_fields=("title", "body"),
+            config="english",
+            weights=("A", "B"),
+        )
+
+        class Meta:
+            app = "models"
+            table = "search_document"
+
+    init_apps(SearchDocument)
+    client = FakeClient(dialect="postgres", inline_comment=False)
+    editor = BasePostgresSchemaEditor(client)
+    generator_cls = load_schema_generator(
+        BASE_DIR / "tortoise" / "backends" / "base_postgres" / "schema_generator.py",
+        "BasePostgresSchemaGenerator",
+    )
+
+    editor_statements = schema_editor_sql(editor, SearchDocument)
+    generator_statements = schema_generator_sql(
+        generator_cls, client, SearchDocument, (SearchDocument,)
+    )
+
+    assert editor_statements == generator_statements
+    assert any("GENERATED ALWAYS AS" in stmt for stmt in editor_statements)

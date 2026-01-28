@@ -1,10 +1,16 @@
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
 from tests.utils.fake_client import FakeClient
 from tortoise import fields
+from tortoise.contrib.postgres.fields import TSVectorField
+from tortoise.contrib.postgres.indexes import GinIndex
+from tortoise.indexes import Index
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
+from tortoise.migrations.schema_editor.base_postgres import BasePostgresSchemaEditor
 from tortoise.migrations.schema_generator.state_apps import StateApps
 from tortoise.models import Model
 
@@ -98,3 +104,125 @@ async def test_add_field_m2m_generates_table_sql() -> None:
 
     assert client.executed
     assert 'CREATE TABLE "widget_tag"' in client.executed[0]
+
+
+@pytest.mark.asyncio
+async def test_create_model_generates_generated_column_sql() -> None:
+    class SearchDocument(Model):
+        id = fields.IntField(pk=True)
+        title = fields.TextField()
+        body = fields.TextField(null=True)
+        search_vector = TSVectorField(
+            source_fields=("title", "body"),
+            config="english",
+            weights=("A", "B"),
+        )
+
+        class Meta:
+            table = "search_document"
+            app = "models"
+
+    client = FakeClient("postgres", inline_comment=False)
+    editor = BasePostgresSchemaEditor(client)
+
+    await editor.create_model(SearchDocument)
+
+    assert client.executed
+    sql = client.executed[0]
+    assert 'CREATE TABLE "search_document"' in sql
+    assert (
+        "\"search_vector\" TSVECTOR GENERATED ALWAYS AS (SETWEIGHT(TO_TSVECTOR('english',"
+        "COALESCE(\"title\", '')),'A') || SETWEIGHT(TO_TSVECTOR('english',"
+        "COALESCE(\"body\", '')),'B')) STORED"
+    ) in sql
+
+
+@pytest.mark.asyncio
+async def test_add_field_generates_generated_column_sql() -> None:
+    class SearchDocument(Model):
+        id = fields.IntField(pk=True)
+        title = fields.TextField()
+        body = fields.TextField(null=True)
+        search_vector = TSVectorField(
+            source_fields=("title", "body"),
+            config="english",
+            weights=("A", "B"),
+        )
+
+        class Meta:
+            table = "search_document"
+            app = "models"
+
+    client = FakeClient("postgres", inline_comment=False)
+    editor = BasePostgresSchemaEditor(client)
+
+    await editor.add_field(SearchDocument, "search_vector")
+
+    assert client.executed
+    sql = client.executed[0]
+    assert 'ALTER TABLE "search_document" ADD COLUMN' in sql
+    assert (
+        "\"search_vector\" TSVECTOR GENERATED ALWAYS AS (SETWEIGHT(TO_TSVECTOR('english',"
+        "COALESCE(\"title\", '')),'A') || SETWEIGHT(TO_TSVECTOR('english',"
+        "COALESCE(\"body\", '')),'B')) STORED"
+    ) in sql
+
+
+@pytest.mark.asyncio
+async def test_add_index_generates_gin_tsvector_sql() -> None:
+    class SearchDocument(Model):
+        id = fields.IntField(pk=True)
+        search_vector = TSVectorField()
+
+        class Meta:
+            table = "search_document"
+            app = "models"
+            indexes = [GinIndex(fields=("search_vector",))]
+
+    client = FakeClient("postgres", inline_comment=False)
+    editor = BasePostgresSchemaEditor(client)
+
+    index = cast(Index, SearchDocument._meta.indexes[0])
+    await editor.add_index(SearchDocument, index)
+
+    assert client.executed
+    expected_name = editor._generate_index_name("idx", SearchDocument, ["search_vector"])
+    assert (
+        f'CREATE INDEX "{expected_name}" ON "search_document" USING GIN ("search_vector");'
+    ) == client.executed[0]
+
+
+@pytest.mark.asyncio
+async def test_alter_generated_field_raises() -> None:
+    class OldSearchDocument(Model):
+        id = fields.IntField(pk=True)
+        title = fields.TextField()
+        body = fields.TextField(null=True)
+        search_vector = TSVectorField(
+            source_fields=("title",),
+            config="english",
+        )
+
+        class Meta:
+            table = "search_document"
+            app = "models"
+
+    class NewSearchDocument(Model):
+        id = fields.IntField(pk=True)
+        title = fields.TextField()
+        body = fields.TextField(null=True)
+        search_vector = TSVectorField(
+            source_fields=("title", "body"),
+            config="english",
+        )
+
+        class Meta:
+            table = "search_document"
+            app = "models"
+
+    client = FakeClient("postgres", inline_comment=False)
+    editor = BasePostgresSchemaEditor(client)
+
+    with pytest.raises(ValueError):
+        await editor.alter_field(OldSearchDocument, NewSearchDocument, "search_vector")
+    assert not client.executed

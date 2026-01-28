@@ -278,6 +278,83 @@ class StateFieldDiff:
         self.old_state = old_state
         self.new_state = new_state
 
+    @staticmethod
+    def _normalize_indexes(value: object) -> list[Index]:
+        if not value or not isinstance(value, Iterable):
+            return []
+        indexes = []
+        for item in list(value):
+            if isinstance(item, Index):
+                indexes.append(item)
+            else:
+                indexes.append(Index(fields=tuple(item)))
+        return indexes
+
+    @staticmethod
+    def _index_signature(index: Index) -> tuple:
+        return (tuple(index.field_names), index.INDEX_TYPE, index.extra)
+
+    @staticmethod
+    def _normalize_unique_together(value: object) -> list[tuple[str, ...]]:
+        if not value or not isinstance(value, Iterable):
+            return []
+        return [tuple(fields) for fields in list(value)]
+
+    @staticmethod
+    def _normalize_constraints(value: object) -> list[UniqueConstraint]:
+        if not value or not isinstance(value, Iterable):
+            return []
+        return [
+            constraint for constraint in list(value) if isinstance(constraint, UniqueConstraint)
+        ]
+
+    def _generated_field_recreate_ops(
+        self, field_name: str, field: Field
+    ) -> list[TortoiseOperation]:
+        operations: list[TortoiseOperation] = []
+        if getattr(field, "index", False):
+            operations.append(
+                AddIndex(model_name=self.new_state.name, index=Index(fields=(field_name,)))
+            )
+
+        old_indexes = self._normalize_indexes(self.old_state.options.get("indexes", ()))
+        new_indexes = self._normalize_indexes(self.new_state.options.get("indexes", ()))
+        old_index_sigs = {self._index_signature(index) for index in old_indexes}
+        for index in new_indexes:
+            if self._index_signature(index) not in old_index_sigs:
+                continue
+            if index.fields and field_name in index.fields:
+                operations.append(AddIndex(model_name=self.new_state.name, index=index))
+
+        old_unique = set(
+            self._normalize_unique_together(self.old_state.options.get("unique_together", ()))
+        )
+        new_unique = set(
+            self._normalize_unique_together(self.new_state.options.get("unique_together", ()))
+        )
+        for fields in new_unique & old_unique:
+            if field_name not in fields:
+                continue
+            operations.append(
+                AddConstraint(
+                    model_name=self.new_state.name,
+                    constraint=UniqueConstraint(fields=tuple(fields)),
+                )
+            )
+
+        old_constraints = self._normalize_constraints(self.old_state.options.get("constraints", ()))
+        new_constraints = self._normalize_constraints(self.new_state.options.get("constraints", ()))
+        old_constraints_set = set(old_constraints)
+        for constraint in new_constraints:
+            if constraint not in old_constraints_set:
+                continue
+            if field_name in constraint.fields:
+                operations.append(
+                    AddConstraint(model_name=self.new_state.name, constraint=constraint)
+                )
+
+        return operations
+
     def generate_operations(self) -> list[TortoiseOperation]:
         operations: list[TortoiseOperation] = []
         old_fields = self.old_state.fields
@@ -304,9 +381,18 @@ class StateFieldDiff:
             old_sig = _field_signature(old_fields[name])
             new_sig = _field_signature(new_fields[name])
             if old_sig != new_sig:
-                operations.append(
-                    AlterField(model_name=self.new_state.name, name=name, field=new_fields[name])
-                )
+                old_field = old_fields[name]
+                new_field = new_fields[name]
+                if old_field.generated or new_field.generated:
+                    operations.append(RemoveField(model_name=self.new_state.name, name=name))
+                    operations.append(
+                        AddField(model_name=self.new_state.name, name=name, field=new_field)
+                    )
+                    operations.extend(self._generated_field_recreate_ops(name, new_field))
+                else:
+                    operations.append(
+                        AlterField(model_name=self.new_state.name, name=name, field=new_field)
+                    )
 
         for name in sorted(added_fields):
             operations.append(

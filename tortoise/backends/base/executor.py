@@ -23,6 +23,7 @@ from tortoise.utils import chunk
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
+    from tortoise.filters import FilterInfoDict
     from tortoise.models import Model
     from tortoise.query_utils import Prefetch
     from tortoise.queryset import QuerySet
@@ -249,6 +250,10 @@ class BaseExecutor:
         for field in update_fields or self.model._meta.fields_db_projection.keys():
             db_column = self.model._meta.fields_db_projection[field]
             field_object = self.model._meta.fields_map[field]
+            if field_object.generated:
+                if update_fields:
+                    raise OperationalError(f"Can't update generated field {field}")
+                continue
             if not field_object.pk:
                 if field not in expressions.keys():
                     query = query.set(db_column, self.parameter(parameter_idx))
@@ -287,6 +292,10 @@ class BaseExecutor:
                     raise OperationalError(
                         f"Can't update pk field, use `{self.model.__name__}.create` instead."
                     )
+                continue
+            if field_obj.generated:
+                if update_fields:
+                    raise OperationalError(f"Can't update generated field {field}")
                 continue
             instance_field = getattr(instance, field)
             if isinstance(instance_field, Expression):
@@ -582,5 +591,7 @@ class BaseExecutor:
         return instance_list
 
     @classmethod
-    def get_overridden_filter_func(cls, filter_func: Callable) -> Callable | None:
+    def get_overridden_filter_func(
+        cls, filter_func: Callable, filter_info: FilterInfoDict | None = None
+    ) -> Callable | None:
         return cls.FILTER_FUNC_OVERRIDE.get(filter_func)

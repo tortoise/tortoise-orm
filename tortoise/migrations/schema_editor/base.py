@@ -142,6 +142,16 @@ class BaseSchemaEditor:
     def quote(val: str) -> str:
         return f'"{val}"'
 
+    @staticmethod
+    def _is_index_expression(field: str) -> bool:
+        return any(token in field for token in ("(", ")", " ", '"', ".", ":"))
+
+    def _format_index_fields(self, field_names: list[str]) -> str:
+        return ", ".join(
+            field if self._is_index_expression(field) else self.quote(field)
+            for field in field_names
+        )
+
     def _get_unique_constraint_sql(self, model: type[Model], field_names: list[str]) -> str:
         return self.UNIQUE_CONSTRAINT_CREATE_TEMPLATE.format(
             index_name=self._generate_index_name("uid", model, field_names),
@@ -163,7 +173,7 @@ class BaseSchemaEditor:
         return self.INDEX_CREATE_TEMPLATE.format(
             index_name=index_name or self._generate_index_name("idx", model, field_names),
             table_name=model._meta.db_table,
-            fields=", ".join([self.quote(f) for f in field_names]),
+            fields=self._format_index_fields(field_names),
             index_type=f"{index_type} " if index_type else "",
             extra=f"{extra}" if extra else "",
         )
@@ -283,6 +293,21 @@ class BaseSchemaEditor:
                             comment=comment,
                         )
                     )
+                    continue
+            if field_object.generated and not field_object.pk:
+                generated_sql = field_object.get_for_dialect(self.DIALECT, "GENERATED_SQL")
+                if generated_sql:
+                    field_creation_string = self._get_field_sql(
+                        db_field=db_field,
+                        field_type=f"{field_object.get_for_dialect(self.DIALECT, 'SQL_TYPE')} {generated_sql}",
+                        nullable=field_object.null,
+                        unique=field_object.unique,
+                        is_pk=False,
+                        comment=comment,
+                    )
+                    in_table_definitions.append(field_creation_string)
+                    if field_object.index and not field_object.pk:
+                        fields_with_index.append(db_field)
                     continue
 
             if hasattr(field_object, "reference") and field_object.reference:
@@ -421,9 +446,18 @@ class BaseSchemaEditor:
                 else ""
             )
 
+            if field.generated and not field.pk:
+                generated_sql = field.get_for_dialect(self.DIALECT, "GENERATED_SQL")
+            else:
+                generated_sql = None
+
+            field_type = field.get_for_dialect(self.DIALECT, "SQL_TYPE")
+            if generated_sql:
+                field_type = f"{field_type} {generated_sql}"
+
             field_definition = self._get_field_sql(
                 db_field=db_field,
-                field_type=field.get_for_dialect(self.DIALECT, "SQL_TYPE"),
+                field_type=field_type,
                 nullable=field.null,
                 unique=field.unique,
                 is_pk=field.pk,
@@ -465,10 +499,37 @@ class BaseSchemaEditor:
                 )
             )
 
+    async def _alter_generated_field(
+        self, model: type[Model], old_field: Field, new_field: Field
+    ) -> bool:
+        if old_field.pk or new_field.pk:
+            return False
+
+        old_generated_sql = (
+            old_field.get_for_dialect(self.DIALECT, "GENERATED_SQL")
+            if old_field.generated
+            else None
+        )
+        new_generated_sql = (
+            new_field.get_for_dialect(self.DIALECT, "GENERATED_SQL")
+            if new_field.generated
+            else None
+        )
+        if old_generated_sql == new_generated_sql:
+            return False
+        if old_field.generated or new_field.generated:
+            raise ValueError(
+                f"Modifying generated fields is not supported - the field {new_field} "
+                "must be removed and re-added with the new definition."
+            )
+        return False
+
     async def _alter_field(self, model: type[Model], old_field: Field, new_field: Field) -> None:
         actions: list[str] = []
         old_db_field = old_field.source_field or old_field.model_field_name
         new_db_field = new_field.source_field or new_field.model_field_name
+        if await self._alter_generated_field(model, old_field, new_field):
+            return
         if old_field.null != new_field.null:
             if new_field.null:
                 changes = self.ALTER_FIELD_NULL_TEMPLATE.format(column=old_db_field)
@@ -555,6 +616,7 @@ class BaseSchemaEditor:
     def _index_name_for_model(self, model: type[Model], index: Index) -> str:
         if index.name:
             return index.name
+        index.resolve_expressions(model)
         return self._generate_index_name("idx", model, list(index.field_names))
 
     def _constraint_name_for_model(self, model: type[Model], constraint: UniqueConstraint) -> str:
@@ -563,6 +625,7 @@ class BaseSchemaEditor:
         return self._get_unique_constraint_name(model, list(constraint.fields))
 
     async def add_index(self, model: type[Model], index: Index) -> None:
+        index.resolve_expressions(model)
         index_sql = self._get_index_sql(
             model,
             list(index.field_names),
