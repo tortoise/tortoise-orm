@@ -141,8 +141,10 @@ class TestQueryApi(SimpleTestCase):
 class TestQueryApiRowsAffected(test.TestCase):
     async def asyncSetUp(self) -> None:
         await super().asyncSetUp()
-        await Tournament.create(id=1, name="alpha")
-        await Tournament.create(id=2, name="beta")
+        alpha = await Tournament.create(name="alpha")
+        beta = await Tournament.create(name="beta")
+        self._alpha_id = alpha.id
+        self._beta_id = beta.id
 
     def _is_asyncpg(self) -> bool:
         return "tortoise.backends.asyncpg" in type(self._db).__module__
@@ -197,7 +199,7 @@ class TestQueryApiRowsAffected(test.TestCase):
 
     async def test_rows_affected_update(self) -> None:
         table = Tournament.get_table()
-        query = Query.update(table).set(table.name, "gamma").where(table.id == 1)
+        query = Query.update(table).set(table.name, "gamma").where(table.id == self._alpha_id)
 
         result: QueryResult[dict] = await execute_pypika(query)
 
@@ -206,7 +208,7 @@ class TestQueryApiRowsAffected(test.TestCase):
 
     async def test_rows_affected_delete(self) -> None:
         table = Tournament.get_table()
-        query = Query.from_(table).delete().where(table.id == 2)
+        query = Query.from_(table).delete().where(table.id == self._beta_id)
 
         result: QueryResult[dict] = await execute_pypika(query)
 
