@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Generic, TypeVar, cast, overload
 
 from pypika_tortoise.queries import QueryBuilder
+from pypika_tortoise.terms import Parameterizer
 
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.connection import connections
@@ -12,6 +13,8 @@ from tortoise.exceptions import ParamsError
 if TYPE_CHECKING:
     from pydantic import BaseModel as PydanticBaseModel
     from pydantic import TypeAdapter as PydanticTypeAdapter
+
+    from tortoise.backends.psycopg.client import PsycopgClient
 
 try:
     from pydantic import BaseModel as PydanticBaseModel
@@ -24,6 +27,12 @@ except Exception:  # pragma: nocoverage
     _PydanticBaseModel = None
     _PydanticTypeAdapter = None
     _PYDANTIC_AVAILABLE = False
+
+_PsycopgClient: type[PsycopgClient] | None
+try:
+    from tortoise.backends.psycopg.client import PsycopgClient as _PsycopgClient
+except Exception:  # pragma: nocoverage
+    _PsycopgClient = None
 
 SchemaT = TypeVar("SchemaT")
 
@@ -86,13 +95,20 @@ async def execute_pypika(
             "You are running with multiple databases, so you should specify"
             f" connection_name: {list(connections.db_config)}"
         )
-    sql, params = query.get_parameterized_sql(db.query_class.SQL_CONTEXT)
+    sql, params = query.get_parameterized_sql(_get_sql_context(db))
     rows, rows_affected = await db.execute_query_dict_with_affected(sql, params)
 
     if schema is not None:
         rows = _validate_rows(rows, schema)
 
     return QueryResult(rows=rows, rows_affected=rows_affected)
+
+
+def _get_sql_context(db: BaseDBAsyncClient):
+    ctx = db.query_class.SQL_CONTEXT
+    if _PsycopgClient is not None and isinstance(db, _PsycopgClient) and ctx.parameterizer is None:
+        ctx = ctx.copy(parameterizer=Parameterizer(placeholder_factory=lambda _: "%s"))
+    return ctx
 
 
 def _validate_rows(rows: list[dict], schema: type[SchemaT] | Any) -> list[SchemaT]:

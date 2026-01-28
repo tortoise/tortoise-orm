@@ -4,7 +4,9 @@ from typing import TypedDict, Union, cast
 
 from pydantic import BaseModel, TypeAdapter, ValidationError
 from pypika_tortoise import Query, Table
+from pypika_tortoise.context import SqlContext
 from pypika_tortoise.queries import QueryBuilder
+from pypika_tortoise.terms import Parameterizer
 from typing_extensions import assert_type
 
 from tests.testmodels import Tournament
@@ -158,6 +160,12 @@ class TestQueryApiRowsAffected(test.TestCase):
         table = Tournament.get_table()
         return Query.from_(table).select(table.id, table.name).orderby(table.id)
 
+    def _sql_context(self) -> SqlContext:
+        ctx = self._db.query_class.SQL_CONTEXT
+        if self._is_psycopg() and ctx.parameterizer is None:
+            ctx = ctx.copy(parameterizer=Parameterizer(placeholder_factory=lambda _: "%s"))
+        return ctx
+
     @test.requireCapability(dialect="sqlite")
     async def test_rows_affected_select_sqlite(self) -> None:
         result: QueryResult[dict] = await execute_pypika(self._select_query())
@@ -180,7 +188,7 @@ class TestQueryApiRowsAffected(test.TestCase):
             self.skipTest("mysql/odbc/psycopg only")
 
         query: QueryBuilder = self._select_query()
-        sql, params = query.get_parameterized_sql(self._db.query_class.SQL_CONTEXT)
+        sql, params = query.get_parameterized_sql(self._sql_context())
         raw_rowcount, _ = await self._db.execute_query(sql, params)
         result: QueryResult[dict] = await execute_pypika(query)
 
