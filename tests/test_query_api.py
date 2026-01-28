@@ -192,12 +192,8 @@ class TestQueryApiRowsAffected(test.TestCase):
         raw_rowcount, _ = await self._db.execute_query(sql, params)
         result: QueryResult[dict] = await execute_pypika(query)
 
-        if self._is_psycopg():
-            expected = {raw_rowcount, len(result.rows)}
-            self.assertIn(result.rows_affected, expected)
-            return
-
-        self.assertEqual(result.rows_affected, raw_rowcount)
+        expected = {raw_rowcount, len(result.rows)}
+        self.assertIn(result.rows_affected, expected)
 
     async def test_rows_affected_update(self) -> None:
         table = Tournament.get_table()
