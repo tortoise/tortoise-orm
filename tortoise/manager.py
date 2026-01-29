@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Any
+
 from tortoise.queryset import QuerySet
 
 
@@ -14,5 +18,5 @@ class Manager:
     def get_queryset(self) -> QuerySet:
         return QuerySet(self._model)
 
-    def __getattr__(self, item):
+    def __getattr__(self, item: str) -> Any:
         return getattr(self.get_queryset(), item)

@@ -8,7 +8,7 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
 
@@ -19,11 +19,11 @@ class Tournament(Model):
 
 
 class Event(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
     tournament: fields.ForeignKeyNullableRelation[Tournament] = fields.ForeignKeyField(
-        "models.Tournament", related_name="events", null=True
+        Tournament, related_name="events", null=True
     )
     participants: fields.ManyToManyRelation["Team"] = fields.ManyToManyField(
         "models.Team", related_name="events", through="event_team"
@@ -40,7 +40,7 @@ class Address(Model):
     created_at = fields.DatetimeField(auto_now_add=True)
 
     event: fields.OneToOneRelation[Event] = fields.OneToOneField(
-        "models.Event", on_delete=fields.OnDelete.CASCADE, related_name="address", pk=True
+        Event, on_delete=fields.OnDelete.CASCADE, related_name="address", primary_key=True
     )
 
     class Meta:
@@ -48,7 +48,7 @@ class Address(Model):
 
 
 class Team(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
     created_at = fields.DatetimeField(auto_now_add=True)
 

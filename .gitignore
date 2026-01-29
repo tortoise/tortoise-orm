@@ -53,6 +53,7 @@ coverage.xml
 .hypothesis/
 .vscode/
 examples/*.sqlite3
+examples/*/*.sqlite3*
 
 # Translations
 *.mo
@@ -107,3 +108,8 @@ ENV/
 # MyPy caches
 .mypy_cache/
 
+# macos
+.DS_Store
+
+# pdm
+.pdm-python

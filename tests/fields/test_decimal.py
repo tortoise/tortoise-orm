@@ -12,7 +12,7 @@ class TestDecimalFields(test.TestCase):
     def test_max_digits_empty(self):
         with self.assertRaisesRegex(
             TypeError,
-            "missing 2 required positional arguments: 'max_digits' and" " 'decimal_places'",
+            "missing 2 required positional arguments: 'max_digits' and 'decimal_places'",
         ):
             fields.DecimalField()  # pylint: disable=E1120
 
@@ -52,11 +52,29 @@ class TestDecimalFields(test.TestCase):
         self.assertEqual(obj.decimal_nodec, 19)
         self.assertEqual(obj.decimal_null, None)
 
-    async def test_f_expression(self):
+    async def test_filter(self):
+        obj0 = await testmodels.DecimalFields.create(decimal=Decimal("1.23456"), decimal_nodec=18.7)
+        obj = await testmodels.DecimalFields.filter(decimal=Decimal("1.2346")).first()
+        self.assertEqual(obj, obj0)
+        obj = (
+            await testmodels.DecimalFields.annotate(d=F("decimal"))
+            .filter(d=Decimal("1.2346"))
+            .first()
+        )
+        self.assertEqual(obj, obj0)
+        objs = await testmodels.DecimalFields.filter(decimal_nodec__gt=2).all()
+        self.assertIn(obj, objs)
+        objs = await testmodels.DecimalFields.filter(decimal_nodec__lt=100).all()
+        self.assertIn(obj, objs)
+
+    async def test_f_expression_update(self):
         obj0 = await testmodels.DecimalFields.create(decimal=Decimal("1.23456"), decimal_nodec=18.7)
         await obj0.filter(id=obj0.id).update(decimal=F("decimal") + Decimal("1"))
         obj1 = await testmodels.DecimalFields.get(id=obj0.id)
         self.assertEqual(obj1.decimal, Decimal("2.2346"))
+        await obj0.filter(id=obj0.id).update(decimal=Decimal("1") - F("decimal"))
+        obj1 = await testmodels.DecimalFields.get(id=obj0.id)
+        self.assertEqual(obj1.decimal, Decimal("-1.2346"))
 
     async def test_values(self):
         obj0 = await testmodels.DecimalFields.create(decimal=Decimal("1.23456"), decimal_nodec=18.7)
@@ -155,25 +173,31 @@ class TestDecimalFields(test.TestCase):
             FieldError,
             "There is no non-virtual field not_exist on Model DecimalFields",
         ):
-            await testmodels.DecimalFields.all().annotate(sum_decimal=Sum(F("not_exist"))).values(
-                "sum_decimal"
+            await (
+                testmodels.DecimalFields.all()
+                .annotate(sum_decimal=Sum(F("not_exist")))
+                .values("sum_decimal")
             )
 
     async def test_aggregate_sum_different_field_type_at_right_with_f_expression(self):
         with self.assertRaisesRegex(
             FieldError, "Cannot use arithmetic expression between different field type"
         ):
-            await testmodels.DecimalFields.all().annotate(
-                sum_decimal=Sum(F("decimal") + F("id"))
-            ).values("sum_decimal")
+            await (
+                testmodels.DecimalFields.all()
+                .annotate(sum_decimal=Sum(F("decimal") + F("id")))
+                .values("sum_decimal")
+            )
 
     async def test_aggregate_sum_different_field_type_at_left_with_f_expression(self):
         with self.assertRaisesRegex(
             FieldError, "Cannot use arithmetic expression between different field type"
         ):
-            await testmodels.DecimalFields.all().annotate(
-                sum_decimal=Sum(F("id") + F("decimal"))
-            ).values("sum_decimal")
+            await (
+                testmodels.DecimalFields.all()
+                .annotate(sum_decimal=Sum(F("id") + F("decimal")))
+                .values("sum_decimal")
+            )
 
     async def test_aggregate_avg(self):
         await testmodels.DecimalFields.create(decimal=Decimal("0"), decimal_nodec=1)

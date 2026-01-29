@@ -7,5 +7,5 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
-    id2 = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
+    id2 = fields.IntField(primary_key=True)

@@ -88,9 +88,9 @@ class TestPostgreSQL(test.SimpleTestCase):
             pass
 
     async def test_application_name(self):
-        self.db_config["connections"]["models"]["credentials"][
-            "application_name"
-        ] = "mytest_application"
+        self.db_config["connections"]["models"]["credentials"]["application_name"] = (
+            "mytest_application"
+        )
         await Tortoise.init(self.db_config, _create_db=True)
 
         conn = connections.get("models")

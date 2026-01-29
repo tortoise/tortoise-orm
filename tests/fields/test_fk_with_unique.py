@@ -104,7 +104,7 @@ class TestForeignKeyFieldWithUnique(test.TestCase):
         school = await testmodels.School.create(id=1024, name="School1")
         with self.assertRaisesRegex(
             NoValuesFetched,
-            "No values were fetched for this relation," " first use .fetch_related()",
+            "No values were fetched for this relation, first use .fetch_related()",
         ):
             "a" in school.students  # pylint: disable=W0104
 
@@ -112,7 +112,7 @@ class TestForeignKeyFieldWithUnique(test.TestCase):
         school = await testmodels.School.create(id=1024, name="School1")
         with self.assertRaisesRegex(
             NoValuesFetched,
-            "No values were fetched for this relation," " first use .fetch_related()",
+            "No values were fetched for this relation, first use .fetch_related()",
         ):
             for _ in school.students:
                 pass
@@ -121,7 +121,7 @@ class TestForeignKeyFieldWithUnique(test.TestCase):
         school = await testmodels.School.create(id=1024, name="School1")
         with self.assertRaisesRegex(
             NoValuesFetched,
-            "No values were fetched for this relation," " first use .fetch_related()",
+            "No values were fetched for this relation, first use .fetch_related()",
         ):
             len(school.students)
 
@@ -129,7 +129,7 @@ class TestForeignKeyFieldWithUnique(test.TestCase):
         school = await testmodels.School.create(id=1024, name="School1")
         with self.assertRaisesRegex(
             NoValuesFetched,
-            "No values were fetched for this relation," " first use .fetch_related()",
+            "No values were fetched for this relation, first use .fetch_related()",
         ):
             bool(school.students)
 
@@ -137,7 +137,7 @@ class TestForeignKeyFieldWithUnique(test.TestCase):
         school = await testmodels.School.create(id=1024, name="School1")
         with self.assertRaisesRegex(
             NoValuesFetched,
-            "No values were fetched for this relation," " first use .fetch_related()",
+            "No values were fetched for this relation, first use .fetch_related()",
         ):
             school.students[0]  # pylint: disable=W0104
 

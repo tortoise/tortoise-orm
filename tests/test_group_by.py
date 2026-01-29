@@ -1,17 +1,20 @@
-from tests.testmodels import Author, Book
+from tests.testmodels import Author, Book, Event, Team, Tournament
 from tortoise.contrib import test
+from tortoise.expressions import Subquery
 from tortoise.functions import Avg, Count, Sum, Upper
 
 
 class TestGroupBy(test.TestCase):
     async def asyncSetUp(self) -> None:
-        await super(TestGroupBy, self).asyncSetUp()
+        await super().asyncSetUp()
         self.a1 = await Author.create(name="author1")
         self.a2 = await Author.create(name="author2")
-        for i in range(10):
-            await Book.create(name=f"book{i}", author=self.a1, rating=i)
-        for i in range(5):
-            await Book.create(name=f"book{i}", author=self.a2, rating=i)
+        self.books1 = [
+            await Book.create(name=f"book{i}", author=self.a1, rating=i) for i in range(10)
+        ]
+        self.books2 = [
+            await Book.create(name=f"book{i}", author=self.a2, rating=i) for i in range(5)
+        ]
 
     async def test_count_group_by(self):
         ret = (
@@ -232,3 +235,97 @@ class TestGroupBy(test.TestCase):
             [{"upper_name": "AUTHOR1", "count": 10}, {"upper_name": "AUTHOR2", "count": 5}],
             sorted_key="upper_name",
         )
+
+    async def test_group_by_requiring_nested_joins(self):
+        tournament_first = await Tournament.create(name="Tournament 1", desc="d1")
+        tournament_second = await Tournament.create(name="Tournament 2", desc="d2")
+
+        event_first = await Event.create(name="1", tournament=tournament_first)
+        event_second = await Event.create(name="2", tournament=tournament_first)
+        event_third = await Event.create(name="3", tournament=tournament_second)
+
+        team_first = await Team.create(name="First", alias=2)
+        team_second = await Team.create(name="Second", alias=4)
+        team_third = await Team.create(name="Third", alias=5)
+
+        await team_first.events.add(event_first)
+        await team_second.events.add(event_second)
+        await team_third.events.add(event_third)
+
+        ret = (
+            await Tournament.annotate(avg=Avg("events__participants__alias"))
+            .group_by("desc")
+            .order_by("desc")
+            .values("desc", "avg")
+        )
+        self.assertEqual(ret, [{"avg": 3, "desc": "d1"}, {"avg": 5, "desc": "d2"}])
+
+    async def test_group_by_ambigious_column(self):
+        tournament_first = await Tournament.create(name="Tournament 1")
+        tournament_second = await Tournament.create(name="Tournament 2")
+
+        await Event.create(name="1", tournament=tournament_first)
+        await Event.create(name="2", tournament=tournament_first)
+        await Event.create(name="3", tournament=tournament_second)
+
+        base_query = (
+            Tournament.annotate(event_count=Count("events")).group_by("name").order_by("name")
+        )
+        ret = await base_query.values("name", "event_count")
+        self.assertEqual(
+            ret,
+            [
+                {"event_count": 2, "name": "Tournament 1"},
+                {"event_count": 1, "name": "Tournament 2"},
+            ],
+        )
+
+        ret = await base_query.values_list("name", "event_count")
+        self.assertEqual(
+            ret,
+            [("Tournament 1", 2), ("Tournament 2", 1)],
+        )
+
+    async def test_group_by_nested_column(self):
+        tournament_first = await Tournament.create(name="A")
+        tournament_second = await Tournament.create(name="B")
+
+        await Event.create(name="1", tournament=tournament_first)
+        await Event.create(name="2", tournament=tournament_first)
+        await Event.create(name="3", tournament=tournament_first)
+        await Event.create(name="4", tournament=tournament_second)
+
+        base_query = (
+            Event.annotate(count=Count("event_id"))
+            .group_by("tournament__name")
+            .order_by("-tournament__name")
+        )
+        ret = await base_query.values("tournament__name", "count")
+        self.assertEqual(
+            ret,
+            [
+                {"count": 1, "tournament__name": "B"},
+                {"count": 3, "tournament__name": "A"},
+            ],
+        )
+
+        ret = await base_query.values_list("tournament__name", "count")
+        self.assertEqual(
+            ret,
+            [("B", 1), ("A", 3)],
+        )
+
+    async def test_group_by_id_with_nested_filter(self):
+        ret = await Book.filter(author__name="author1").group_by("id").values_list("id")
+        self.assertEqual(set(ret), {(book.id,) for book in self.books1})
+
+    async def test_select_subquery_with_group_by(self):
+        subquery = Subquery(
+            Book.all().group_by("rating").order_by("-rating").limit(1).values("rating")
+        )
+        ret = (
+            await Author.annotate(top_rating=subquery)
+            .order_by("id")
+            .values_list("name", "top_rating")
+        )
+        self.assertEqual(ret, [(self.a1.name, 9.0), (self.a2.name, 9.0)])

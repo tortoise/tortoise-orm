@@ -1,17 +1,20 @@
-import asyncio
+from __future__ import annotations
+
 import importlib
 import json
+import logging
 import os
 import warnings
-from copy import deepcopy
-from inspect import isclass
+from collections.abc import Callable, Coroutine, Iterable
 from types import ModuleType
-from typing import Coroutine, Dict, Iterable, List, Optional, Tuple, Type, Union, cast
+from typing import Any
 
-from pypika import Table
+from anyio import from_thread
 
+from tortoise.apps import Apps
 from tortoise.backends.base.client import BaseDBAsyncClient
 from tortoise.backends.base.config_generator import expand_db_url, generate_config
+from tortoise.config import TortoiseConfig
 from tortoise.connection import connections
 from tortoise.exceptions import ConfigurationError
 from tortoise.fields.relational import (
@@ -21,14 +24,15 @@ from tortoise.fields.relational import (
     ManyToManyFieldInstance,
     OneToOneFieldInstance,
 )
-from tortoise.filters import get_m2m_filters
 from tortoise.log import logger
 from tortoise.models import Model, ModelMeta
+from tortoise.timezone import _reset_timezone_cache
 from tortoise.utils import generate_schema_for_client
 
 
 class Tortoise:
-    apps: Dict[str, Dict[str, Type["Model"]]] = {}
+    apps: Apps | None = None
+    table_name_generator: Callable[[type[Model]], str] | None = None
     _inited: bool = False
 
     @classmethod
@@ -46,8 +50,8 @@ class Tortoise:
 
     @classmethod
     def describe_model(
-        cls, model: Type["Model"], serializable: bool = True
-    ) -> dict:  # pragma: nocoverage
+        cls, model: type[Model], serializable: bool = True
+    ) -> dict[str, Any]:  # pragma: nocoverage
         """
         Describes the given list of models or ALL registered models.
 
@@ -72,8 +76,8 @@ class Tortoise:
 
     @classmethod
     def describe_models(
-        cls, models: Optional[List[Type["Model"]]] = None, serializable: bool = True
-    ) -> Dict[str, dict]:
+        cls, models: list[type[Model]] | None = None, serializable: bool = True
+    ) -> dict[str, dict[str, Any]]:
         """
         Describes the given list of models or ALL registered models.
 
@@ -98,9 +102,8 @@ class Tortoise:
 
         if not models:
             models = []
-            for app in cls.apps.values():
-                for model in app.values():
-                    models.append(model)
+            if cls.apps:
+                models = list(cls.apps.get_models_iterable())
 
         return {
             f"{model._meta.app}.{model.__name__}": model.describe(serializable) for model in models
@@ -108,273 +111,14 @@ class Tortoise:
 
     @classmethod
     def _init_relations(cls) -> None:
-        def get_related_model(related_app_name: str, related_model_name: str) -> Type["Model"]:
-            """
-            Test, if app and model really exist. Throws a ConfigurationError with a hopefully
-            helpful message. If successful, returns the requested model.
-
-            :raises ConfigurationError: If no such app exists.
-            """
-            try:
-                return cls.apps[related_app_name][related_model_name]
-            except KeyError:
-                if related_app_name not in cls.apps:
-                    raise ConfigurationError(
-                        f"No app with name '{related_app_name}' registered."
-                        f" Please check your model names in ForeignKeyFields"
-                        f" and configurations."
-                    )
-                raise ConfigurationError(
-                    f"No model with name '{related_model_name}' registered in"
-                    f" app '{related_app_name}'."
-                )
-
-        def split_reference(reference: str) -> Tuple[str, str]:
-            """
-            Test, if reference follow the official naming conventions. Throws a
-            ConfigurationError with a hopefully helpful message. If successful,
-            returns the app and the model name.
-
-            :raises ConfigurationError: If no model reference is invalid.
-            """
-            items = reference.split(".")
-            if len(items) != 2:  # pragma: nocoverage
-                raise ConfigurationError(
-                    (
-                        "'%s' is not a valid model reference Bad Reference."
-                        " Should be something like <appname>.<modelname>."
-                    )
-                    % reference
-                )
-
-            return (items[0], items[1])
-
-        for app_name, app in cls.apps.items():
-            for model_name, model in app.items():
-                if model._meta._inited:
-                    continue
-                model._meta._inited = True
-                if not model._meta.db_table:
-                    model._meta.db_table = model.__name__.lower()
-
-                # TODO: refactor to share logic between FK & O2O
-                for field in sorted(model._meta.fk_fields):
-                    fk_object = cast(ForeignKeyFieldInstance, model._meta.fields_map[field])
-                    reference = fk_object.model_name
-                    related_app_name, related_model_name = split_reference(reference)
-                    related_model = get_related_model(related_app_name, related_model_name)
-
-                    if fk_object.to_field:
-                        related_field = related_model._meta.fields_map.get(fk_object.to_field, None)
-                        if related_field:
-                            if related_field.unique:
-                                key_fk_object = deepcopy(related_field)
-                                fk_object.to_field_instance = related_field  # type: ignore
-                            else:
-                                raise ConfigurationError(
-                                    f'field "{fk_object.to_field}" in model'
-                                    f' "{related_model_name}" is not unique'
-                                )
-                        else:
-                            raise ConfigurationError(
-                                f'there is no field named "{fk_object.to_field}"'
-                                f' in model "{related_model_name}"'
-                            )
-                    else:
-                        key_fk_object = deepcopy(related_model._meta.pk)
-                        fk_object.to_field_instance = related_model._meta.pk  # type: ignore
-                        fk_object.to_field = related_model._meta.pk_attr
-                    fk_object.field_type = fk_object.to_field_instance.field_type
-                    key_field = f"{field}_id"
-                    key_fk_object.pk = False
-                    key_fk_object.unique = False
-                    key_fk_object.index = fk_object.index
-                    key_fk_object.default = fk_object.default
-                    key_fk_object.null = fk_object.null
-                    key_fk_object.generated = fk_object.generated
-                    key_fk_object.reference = fk_object
-                    key_fk_object.description = fk_object.description
-                    if fk_object.source_field:
-                        key_fk_object.source_field = fk_object.source_field
-                    else:
-                        key_fk_object.source_field = key_field
-                    model._meta.add_field(key_field, key_fk_object)
-
-                    fk_object.related_model = related_model
-                    fk_object.source_field = key_field
-                    backward_relation_name = fk_object.related_name
-                    if backward_relation_name is not False:
-                        if not backward_relation_name:
-                            backward_relation_name = f"{model._meta.db_table}s"
-                        if backward_relation_name in related_model._meta.fields:
-                            raise ConfigurationError(
-                                f'backward relation "{backward_relation_name}" duplicates in'
-                                f" model {related_model_name}"
-                            )
-                        fk_relation = BackwardFKRelation(
-                            model,
-                            f"{field}_id",
-                            key_fk_object.source_field,
-                            fk_object.null,
-                            fk_object.description,
-                        )
-                        fk_relation.to_field_instance = fk_object.to_field_instance  # type: ignore
-                        related_model._meta.add_field(backward_relation_name, fk_relation)
-
-                for field in model._meta.o2o_fields:
-                    o2o_object = cast(OneToOneFieldInstance, model._meta.fields_map[field])
-                    reference = o2o_object.model_name
-                    related_app_name, related_model_name = split_reference(reference)
-                    related_model = get_related_model(related_app_name, related_model_name)
-
-                    if o2o_object.to_field:
-                        related_field = related_model._meta.fields_map.get(
-                            o2o_object.to_field, None
-                        )
-                        if related_field:
-                            if related_field.unique:
-                                key_o2o_object = deepcopy(related_field)
-                                o2o_object.to_field_instance = related_field  # type: ignore
-                            else:
-                                raise ConfigurationError(
-                                    f'field "{o2o_object.to_field}" in model'
-                                    f' "{related_model_name}" is not unique'
-                                )
-                        else:
-                            raise ConfigurationError(
-                                f'there is no field named "{o2o_object.to_field}"'
-                                f' in model "{related_model_name}"'
-                            )
-                    else:
-                        key_o2o_object = deepcopy(related_model._meta.pk)
-                        o2o_object.to_field_instance = related_model._meta.pk  # type: ignore
-                        o2o_object.to_field = related_model._meta.pk_attr
-
-                    o2o_object.field_type = o2o_object.to_field_instance.field_type
-
-                    key_field = f"{field}_id"
-                    key_o2o_object.pk = o2o_object.pk
-                    key_o2o_object.index = o2o_object.index
-                    key_o2o_object.default = o2o_object.default
-                    key_o2o_object.null = o2o_object.null
-                    key_o2o_object.unique = o2o_object.unique
-                    key_o2o_object.generated = o2o_object.generated
-                    key_o2o_object.reference = o2o_object
-                    key_o2o_object.description = o2o_object.description
-                    if o2o_object.source_field:
-                        key_o2o_object.source_field = o2o_object.source_field
-                    else:
-                        key_o2o_object.source_field = key_field
-                    model._meta.add_field(key_field, key_o2o_object)
-
-                    o2o_object.related_model = related_model
-                    o2o_object.source_field = key_field
-                    backward_relation_name = o2o_object.related_name
-                    if backward_relation_name is not False:
-                        if not backward_relation_name:
-                            backward_relation_name = f"{model._meta.db_table}"
-                        if backward_relation_name in related_model._meta.fields:
-                            raise ConfigurationError(
-                                f'backward relation "{backward_relation_name}" duplicates in'
-                                f" model {related_model_name}"
-                            )
-                        o2o_relation = BackwardOneToOneRelation(
-                            model,
-                            f"{field}_id",
-                            key_o2o_object.source_field,
-                            null=True,
-                            description=o2o_object.description,
-                        )
-                        o2o_relation.to_field_instance = o2o_object.to_field_instance  # type: ignore
-                        related_model._meta.add_field(backward_relation_name, o2o_relation)
-
-                    if o2o_object.pk:
-                        model._meta.pk_attr = key_field
-
-                for field in list(model._meta.m2m_fields):
-                    m2m_object = cast(ManyToManyFieldInstance, model._meta.fields_map[field])
-                    if m2m_object._generated:
-                        continue
-
-                    backward_key = m2m_object.backward_key
-                    if not backward_key:
-                        backward_key = f"{model._meta.db_table}_id"
-                        if backward_key == m2m_object.forward_key:
-                            backward_key = f"{model._meta.db_table}_rel_id"
-                        m2m_object.backward_key = backward_key
-
-                    reference = m2m_object.model_name
-                    related_app_name, related_model_name = split_reference(reference)
-                    related_model = get_related_model(related_app_name, related_model_name)
-
-                    m2m_object.related_model = related_model
-
-                    backward_relation_name = m2m_object.related_name
-                    if not backward_relation_name:
-                        backward_relation_name = m2m_object.related_name = (
-                            f"{model._meta.db_table}s"
-                        )
-                    if backward_relation_name in related_model._meta.fields:
-                        raise ConfigurationError(
-                            f'backward relation "{backward_relation_name}" duplicates in'
-                            f" model {related_model_name}"
-                        )
-
-                    if not m2m_object.through:
-                        related_model_table_name = (
-                            related_model._meta.db_table
-                            if related_model._meta.db_table
-                            else related_model.__name__.lower()
-                        )
-
-                        m2m_object.through = f"{model._meta.db_table}_{related_model_table_name}"
-
-                    m2m_relation = ManyToManyFieldInstance(
-                        f"{app_name}.{model_name}",
-                        m2m_object.through,
-                        forward_key=m2m_object.backward_key,
-                        backward_key=m2m_object.forward_key,
-                        related_name=field,
-                        field_type=model,
-                        description=m2m_object.description,
-                    )
-                    m2m_relation._generated = True
-                    model._meta.filters.update(get_m2m_filters(field, m2m_object))
-                    related_model._meta.add_field(backward_relation_name, m2m_relation)
-
-    @classmethod
-    def _discover_models(
-        cls, models_path: Union[ModuleType, str], app_label: str
-    ) -> List[Type["Model"]]:
-        if isinstance(models_path, ModuleType):
-            module = models_path
-        else:
-            try:
-                module = importlib.import_module(models_path)
-            except ImportError:
-                raise ConfigurationError(f'Module "{models_path}" not found')
-        discovered_models = []
-        possible_models = getattr(module, "__models__", None)
-        try:
-            possible_models = [*possible_models]  # type:ignore
-        except TypeError:
-            possible_models = None
-        if not possible_models:
-            possible_models = [getattr(module, attr_name) for attr_name in dir(module)]
-        for attr in possible_models:
-            if isclass(attr) and issubclass(attr, Model) and not attr._meta.abstract:
-                if attr._meta.app and attr._meta.app != app_label:
-                    continue
-                attr._meta.app = app_label
-                discovered_models.append(attr)
-        if not discovered_models:
-            warnings.warn(f'Module "{models_path}" has no models', RuntimeWarning, stacklevel=4)
-        return discovered_models
+        if not cls.apps:
+            return
+        cls.apps._init_relations()
 
     @classmethod
     def init_models(
         cls,
-        models_paths: Iterable[Union[ModuleType, str]],
+        models_paths: Iterable[ModuleType | str],
         app_label: str,
         _init_relations: bool = True,
     ) -> None:
@@ -390,35 +134,37 @@ class Tortoise:
 
         :raises ConfigurationError: If models are invalid.
         """
-        app_models: List[Type[Model]] = []
-        for models_path in models_paths:
-            app_models += cls._discover_models(models_path, app_label)
-
-        cls.apps[app_label] = {model.__name__: model for model in app_models}
-
-        if _init_relations:
-            cls._init_relations()
+        cls.init_app(app_label, models_paths, _init_relations=_init_relations)
 
     @classmethod
-    def _init_apps(cls, apps_config: dict) -> None:
-        for name, info in apps_config.items():
-            try:
-                connections.get(info.get("default_connection", "default"))
-            except KeyError:
-                raise ConfigurationError(
-                    'Unknown connection "{}" for app "{}"'.format(
-                        info.get("default_connection", "default"), name
-                    )
-                )
+    def init_app(
+        cls,
+        label: str,
+        model_paths: Iterable[ModuleType | str],
+        _init_relations: bool = True,
+    ) -> dict[str, type[Model]]:
+        """
+        Early initialization of Tortoise ORM Models for a single app.
 
-            cls.init_models(info["models"], name, _init_relations=False)
+        :param label: The app label, e.g. 'models'
+        :param model_paths: Models paths to initialize
+        :param _init_relations: Whether to init relations or not
+        """
+        if not cls.apps:
+            cls.apps = Apps({}, connections, cls.table_name_generator)
+        cls.apps._table_name_generator = cls.table_name_generator
+        return cls.apps.init_app(label, model_paths, _init_relations=_init_relations)
 
-            for model in cls.apps[name].values():
-                model._meta.default_connection = info.get("default_connection", "default")
-
-        cls._init_relations()
-
-        cls._build_initial_querysets()
+    @classmethod
+    def _init_apps(
+        cls, apps_config: dict[str, dict[str, Any]], *, validate_connections: bool = True
+    ) -> None:
+        cls.apps = Apps(
+            apps_config,
+            connections,
+            cls.table_name_generator,
+            validate_connections=validate_connections,
+        )
 
     @classmethod
     def _get_config_from_config_file(cls, config_file: str) -> dict:
@@ -426,10 +172,10 @@ class Tortoise:
         if extension in (".yml", ".yaml"):
             import yaml  # pylint: disable=C0415
 
-            with open(config_file, "r") as f:
+            with open(config_file) as f:
                 config = yaml.safe_load(f)
         elif extension == ".json":
-            with open(config_file, "r") as f:
+            with open(config_file) as f:
                 config = json.load(f)
         else:
             raise ConfigurationError(
@@ -439,35 +185,33 @@ class Tortoise:
 
     @classmethod
     def _build_initial_querysets(cls) -> None:
-        for app in cls.apps.values():
-            for model in app.values():
-                model._meta.finalise_model()
-                model._meta.basetable = Table(name=model._meta.db_table, schema=model._meta.schema)
-                model._meta.basequery = model._meta.db.query_class.from_(model._meta.basetable)
-                model._meta.basequery_all_fields = model._meta.basequery.select(
-                    *model._meta.db_fields
-                )
+        if cls.apps:
+            cls.apps._build_initial_querysets()
 
     @classmethod
     async def init(
         cls,
-        config: Optional[dict] = None,
-        config_file: Optional[str] = None,
+        config: dict[str, Any] | TortoiseConfig | None = None,
+        config_file: str | None = None,
         _create_db: bool = False,
-        db_url: Optional[str] = None,
-        modules: Optional[Dict[str, Iterable[Union[str, ModuleType]]]] = None,
+        db_url: str | None = None,
+        modules: dict[str, Iterable[str | ModuleType]] | None = None,
         use_tz: bool = False,
         timezone: str = "UTC",
-        routers: Optional[List[Union[str, Type]]] = None,
+        routers: list[str | type] | None = None,
+        table_name_generator: Callable[[type[Model]], str] | None = None,
+        init_connections: bool = True,
     ) -> None:
         """
-        Sets up Tortoise-ORM.
+        Sets up Tortoise-ORM: loads apps and models, configures database connections but does not
+        connect to the database yet. The actual connection or connection pool is established
+        lazily on first query execution.
 
         You can configure using only one of ``config``, ``config_file``
         and ``(db_url, modules)``.
 
         :param config:
-            Dict containing config:
+            Dict containing config or ``TortoiseConfig``:
 
             .. admonition:: Example
 
@@ -518,6 +262,13 @@ class Tortoise:
             Timezone to use, default is UTC.
         :param routers:
             A list of db routers str path or module.
+        :param table_name_generator:
+            A callable that generates table names. The model class will be passed as its argument.
+            If not provided, Tortoise will use the lowercase model name as the table name.
+            Example: ``lambda cls: f"prefix_{cls.__name__.lower()}"``
+        :param init_connections:
+            When ``False``, skips initializing connection clients while still loading apps
+            and validating connection names against the config.
 
         :raises ConfigurationError: For any configuration error
         """
@@ -530,33 +281,68 @@ class Tortoise:
 
         if config_file:
             config = cls._get_config_from_config_file(config_file)
-
-        if db_url:
+        elif db_url:
             if not modules:
                 raise ConfigurationError('You must specify "db_url" and "modules" together')
             config = generate_config(db_url, modules)
+        elif config is None:
+            raise ConfigurationError('You must specify "config" or "config_file" or "db_url"')
+        elif isinstance(config, TortoiseConfig):
+            config = config.to_dict()
+        else:
+            try:
+                TortoiseConfig.from_dict(config)
+            except ConfigurationError as exc:
+                warnings.warn(
+                    f"Config validation warning: {exc}",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
 
         try:
-            connections_config = config["connections"]  # type: ignore
+            connections_config = config["connections"]
         except KeyError:
             raise ConfigurationError('Config must define "connections" section')
 
         try:
-            apps_config = config["apps"]  # type: ignore
+            apps_config = config["apps"]
         except KeyError:
             raise ConfigurationError('Config must define "apps" section')
 
-        use_tz = config.get("use_tz", use_tz)  # type: ignore
-        timezone = config.get("timezone", timezone)  # type: ignore
-        routers = config.get("routers", routers)  # type: ignore
+        use_tz = config.get("use_tz", use_tz)
+        timezone = config.get("timezone", timezone)
+        routers = config.get("routers", routers)
 
-        # Mask passwords in logs output
+        cls.table_name_generator = table_name_generator
+
+        if logger.isEnabledFor(logging.DEBUG):
+            str_connection_config = cls.star_password(connections_config)
+            logger.debug(
+                "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
+                str_connection_config,
+                str(apps_config),
+            )
+
+        cls._init_timezone(use_tz, timezone)
+        if not init_connections and _create_db:
+            raise ConfigurationError("init_connections=False cannot be used with _create_db=True")
+        if init_connections:
+            await connections._init(connections_config, _create_db)
+        else:
+            connections._init_config(connections_config)
+        cls._init_apps(apps_config, validate_connections=init_connections)
+        cls._init_routers(routers)
+
+        cls._inited = True
+
+    @staticmethod
+    def star_password(connections_config) -> str:
+        # Mask passwords to hide sensitive information in logs output
         passwords = []
         for name, info in connections_config.items():
             if isinstance(info, str):
                 info = expand_db_url(info)
-            password = info.get("credentials", {}).get("password")
-            if password:
+            if password := info.get("credentials", {}).get("password"):
                 passwords.append(password)
 
         str_connection_config = str(connections_config)
@@ -564,24 +350,12 @@ class Tortoise:
             str_connection_config = str_connection_config.replace(
                 password,
                 # Show one third of the password at beginning (may be better for debugging purposes)
-                f"{password[0:len(password) // 3]}***",
+                f"{password[0 : len(password) // 3]}***",
             )
-
-        logger.debug(
-            "Tortoise-ORM startup\n    connections: %s\n    apps: %s",
-            str_connection_config,
-            str(apps_config),
-        )
-
-        cls._init_timezone(use_tz, timezone)
-        await connections._init(connections_config, _create_db)
-        cls._init_apps(apps_config)
-        cls._init_routers(routers)
-
-        cls._inited = True
+        return str_connection_config
 
     @classmethod
-    def _init_routers(cls, routers: Optional[List[Union[str, type]]] = None):
+    def _init_routers(cls, routers: list[str | type] | None = None) -> None:
         from tortoise.router import router
 
         routers = routers or []
@@ -617,11 +391,14 @@ class Tortoise:
 
     @classmethod
     async def _reset_apps(cls) -> None:
-        for app in cls.apps.values():
-            for model in app.values():
-                if isinstance(model, ModelMeta):
-                    model._meta.default_connection = None
+        if not cls.apps:
+            return
+
+        for model in cls.apps.get_models_iterable():
+            if isinstance(model, ModelMeta):
+                model._meta.default_connection = None
         cls.apps.clear()
+        cls.apps = None
 
     @classmethod
     async def generate_schemas(cls, safe: bool = True) -> None:
@@ -662,6 +439,7 @@ class Tortoise:
     def _init_timezone(cls, use_tz: bool, timezone: str) -> None:
         os.environ["USE_TZ"] = str(use_tz)
         os.environ["TIMEZONE"] = timezone
+        _reset_timezone_cache()
 
 
 def run_async(coro: Coroutine) -> None:
@@ -683,19 +461,30 @@ def run_async(coro: Coroutine) -> None:
 
         run_async(do_stuff())
     """
-    loop = asyncio.get_event_loop()
-    try:
-        loop.run_until_complete(coro)
-    finally:
-        loop.run_until_complete(connections.close_all(discard=True))
+
+    async def main() -> None:
+        try:
+            await coro
+        finally:
+            await connections.close_all(discard=True)
+
+    with from_thread.start_blocking_portal() as portal:
+        portal.call(main)
 
 
-__version__ = "0.20.0"
+__version__ = "0.25.3"
+
 
 __all__ = [
+    "BackwardFKRelation",
+    "BackwardOneToOneRelation",
     "Model",
+    "ForeignKeyFieldInstance",
+    "ManyToManyFieldInstance",
+    "OneToOneFieldInstance",
     "Tortoise",
     "BaseDBAsyncClient",
+    "TortoiseConfig",
     "__version__",
     "connections",
 ]

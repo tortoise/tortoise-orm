@@ -10,7 +10,7 @@ from tests.testmodels import (
 )
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotEQ
-from tortoise.expressions import F, Q
+from tortoise.expressions import Case, F, Q, When
 from tortoise.functions import Coalesce, Count, Length, Lower, Max, Trim, Upper
 
 
@@ -419,3 +419,90 @@ class TestFiltering(test.TestCase):
         await Event.create(name="Test", tournament_id=tournament.id)
         event_tournaments = await Event.all().values_list("tournament__name")
         self.assertEqual(event_tournaments[0][0], tournament.name)
+
+    async def test_annotation_in_case_when(self):
+        await Tournament.create(name="Tournament")
+        await Tournament.create(name="NEW Tournament")
+        tournaments = (
+            await Tournament.annotate(name_lower=Lower("name"))
+            .annotate(
+                is_tournament=Case(When(Q(name_lower="tournament"), then="yes"), default="no")
+            )
+            .filter(is_tournament="yes")
+        )
+        self.assertEqual(len(tournaments), 1)
+        self.assertEqual(tournaments[0].name, "Tournament")
+        self.assertEqual(tournaments[0].name_lower, "tournament")
+        self.assertEqual(tournaments[0].is_tournament, "yes")
+
+    async def test_f_annotation_filter(self):
+        event = await IntFields.create(intnum=1)
+
+        ret_events = await IntFields.annotate(intnum_plus_1=F("intnum") + 1).filter(intnum_plus_1=2)
+        self.assertEqual(ret_events, [event])
+
+    async def test_f_annotation_custom_filter(self):
+        event = await IntFields.create(intnum=1)
+
+        base_query = IntFields.annotate(intnum_plus_1=F("intnum") + 1)
+
+        ret_events = await base_query.filter(intnum_plus_1__gt=1)
+        self.assertEqual(ret_events, [event])
+
+        ret_events = await base_query.filter(intnum_plus_1__lt=3)
+        self.assertEqual(ret_events, [event])
+
+        ret_events = await base_query.filter(Q(intnum_plus_1__gt=1) & Q(intnum_plus_1__lt=3))
+        self.assertEqual(ret_events, [event])
+
+        ret_events = await base_query.filter(intnum_plus_1__isnull=True)
+        self.assertEqual(ret_events, [])
+
+    async def test_f_annotation_join(self):
+        tournament_a = await Tournament.create(name="A")
+        tournament_b = await Tournament.create(name="B")
+        await Tournament.create(name="C")
+        event_a = await Event.create(name="A", tournament=tournament_a)
+        await Event.create(name="B", tournament=tournament_b)
+
+        events = (
+            await Event.all()
+            .annotate(tournament_name=F("tournament__name"))
+            .filter(tournament_name="A")
+        )
+        self.assertEqual(events, [event_a])
+
+    async def test_f_annotation_custom_filter_requiring_join(self):
+        tournament_a = await Tournament.create(name="A")
+        tournament_b = await Tournament.create(name="B")
+        await Tournament.create(name="C")
+        await Event.create(name="A", tournament=tournament_a)
+        event_b = await Event.create(name="B", tournament=tournament_b)
+
+        events = (
+            await Event.all()
+            .annotate(tournament_name=F("tournament__name"))
+            .filter(tournament_name__gt="A")
+        )
+        self.assertEqual(events, [event_b])
+
+    async def test_f_annotation_custom_filter_requiring_nested_joins(self):
+        tournament = await Tournament.create(name="Tournament")
+
+        second_tournament = await Tournament.create(name="Tournament 2")
+
+        event_first = await Event.create(name="1", tournament=tournament)
+        event_second = await Event.create(name="2", tournament=second_tournament)
+        await Event.create(name="3", tournament=tournament)
+        await Event.create(name="4", tournament=second_tournament)
+
+        team_first = await Team.create(name="First")
+        team_second = await Team.create(name="Second")
+
+        await team_first.events.add(event_first)
+        await event_second.participants.add(team_second)
+
+        res = await Tournament.annotate(pname=F("events__participants__name")).filter(
+            pname__startswith="Fir"
+        )
+        self.assertEqual(res, [tournament])

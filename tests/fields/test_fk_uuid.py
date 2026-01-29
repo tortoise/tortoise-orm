@@ -112,7 +112,7 @@ class TestForeignKeyUUIDField(test.TestCase):
         tour = await self.UUIDPkModel.create()
         with self.assertRaisesRegex(
             NoValuesFetched,
-            "No values were fetched for this relation," " first use .fetch_related()",
+            "No values were fetched for this relation, first use .fetch_related()",
         ):
             "a" in tour.children  # pylint: disable=W0104
 
@@ -120,7 +120,7 @@ class TestForeignKeyUUIDField(test.TestCase):
         tour = await self.UUIDPkModel.create()
         with self.assertRaisesRegex(
             NoValuesFetched,
-            "No values were fetched for this relation," " first use .fetch_related()",
+            "No values were fetched for this relation, first use .fetch_related()",
         ):
             for _ in tour.children:
                 pass
@@ -129,7 +129,7 @@ class TestForeignKeyUUIDField(test.TestCase):
         tour = await self.UUIDPkModel.create()
         with self.assertRaisesRegex(
             NoValuesFetched,
-            "No values were fetched for this relation," " first use .fetch_related()",
+            "No values were fetched for this relation, first use .fetch_related()",
         ):
             len(tour.children)
 
@@ -137,7 +137,7 @@ class TestForeignKeyUUIDField(test.TestCase):
         tour = await self.UUIDPkModel.create()
         with self.assertRaisesRegex(
             NoValuesFetched,
-            "No values were fetched for this relation," " first use .fetch_related()",
+            "No values were fetched for this relation, first use .fetch_related()",
         ):
             bool(tour.children)
 
@@ -145,7 +145,7 @@ class TestForeignKeyUUIDField(test.TestCase):
         tour = await self.UUIDPkModel.create()
         with self.assertRaisesRegex(
             NoValuesFetched,
-            "No values were fetched for this relation," " first use .fetch_related()",
+            "No values were fetched for this relation, first use .fetch_related()",
         ):
             tour.children[0]  # pylint: disable=W0104
 

@@ -1,8 +1,18 @@
-from tests.testmodels import Author, Book, Event, MinRelation, Team, Tournament
+from decimal import Decimal
+
+from tests.testmodels import (
+    Author,
+    Book,
+    Event,
+    MinRelation,
+    Team,
+    Tournament,
+    ValidatorModel,
+)
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import In
-from tortoise.exceptions import ConfigurationError
-from tortoise.expressions import Q
+from tortoise.exceptions import FieldError
+from tortoise.expressions import F, Q
 from tortoise.functions import Avg, Coalesce, Concat, Count, Lower, Max, Min, Sum, Trim
 
 
@@ -50,7 +60,7 @@ class TestAggregation(test.TestCase):
             event_with_annotation.tournament_id,
         )
 
-        with self.assertRaisesRegex(ConfigurationError, "name__id not resolvable"):
+        with self.assertRaisesRegex(FieldError, "name__id not resolvable"):
             await Event.all().annotate(tournament_test_id=Sum("name__id")).first()
 
     async def test_nested_aggregation_in_annotation(self):
@@ -236,3 +246,68 @@ class TestAggregation(test.TestCase):
 
         res = await query.count()
         assert res == 2
+
+    async def test_where_and_having(self):
+        author = await Author.create(name="1")
+        await Book.create(name="First!", author=author, rating=4)
+        await Book.create(name="Second!", author=author, rating=3)
+        await Book.create(name="Third!", author=author, rating=3)
+
+        query = Book.exclude(name="First!").annotate(avg_rating=Avg("rating")).values("avg_rating")
+        result = await query
+        assert len(result) == 1
+        assert result[0]["avg_rating"] == 3
+
+    async def test_count_without_matching(self) -> None:
+        await Tournament.create(name="Test")
+
+        query = Tournament.annotate(events_count=Count("events")).filter(events_count__gt=0).count()
+        result = await query
+        assert result == 0
+
+    async def test_int_sum_on_models_with_validators(self) -> None:
+        await ValidatorModel.create(max_value=2)
+        await ValidatorModel.create(max_value=2)
+
+        query = ValidatorModel.annotate(sum=Sum("max_value")).values("sum")
+        result = await query
+        self.assertEqual(result, [{"sum": 4}])
+
+    async def test_int_sum_math_on_models_with_validators(self) -> None:
+        await ValidatorModel.create(max_value=4)
+        await ValidatorModel.create(max_value=4)
+
+        query = ValidatorModel.annotate(sum=Sum(F("max_value") * F("max_value"))).values("sum")
+        result = await query
+        self.assertEqual(result, [{"sum": 32}])
+
+    async def test_decimal_sum_on_models_with_validators(self) -> None:
+        await ValidatorModel.create(min_value_decimal=2.0)
+
+        query = ValidatorModel.annotate(sum=Sum("min_value_decimal")).values("sum")
+        result = await query
+        self.assertEqual(result, [{"sum": Decimal("2.0")}])
+
+    async def test_decimal_sum_with_math_on_models_with_validators(self) -> None:
+        await ValidatorModel.create(min_value_decimal=2.0)
+
+        query = ValidatorModel.annotate(
+            sum=Sum(F("min_value_decimal") - F("min_value_decimal") * F("min_value_decimal"))
+        ).values("sum")
+        result = await query
+        self.assertEqual(result, [{"sum": Decimal("-2.0")}])
+
+    async def test_function_requiring_nested_joins(self):
+        tournament = await Tournament.create(name="Tournament")
+
+        event_first = await Event.create(name="1", tournament=tournament)
+        event_second = await Event.create(name="2", tournament=tournament)
+
+        team_first = await Team.create(name="First", alias=2)
+        team_second = await Team.create(name="Second", alias=10)
+
+        await team_first.events.add(event_first)
+        await event_second.participants.add(team_second)
+
+        res = await Tournament.annotate(avg=Avg("events__participants__alias")).values("avg")
+        self.assertEqual(res, [{"avg": 6}])

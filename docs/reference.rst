@@ -12,6 +12,7 @@ Reference
    timezone
    schema
    query
+   direct_queries
    manager
    functions
    expressions

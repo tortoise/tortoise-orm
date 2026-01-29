@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from enum import Enum, IntEnum
-from typing import Any, Type
+from typing import Any
 
 from tortoise import ConfigurationError
 from tortoise.fields import CharField, IntField
@@ -13,7 +15,7 @@ class EnumField(CharField):
 
     __slots__ = ("enum_type",)
 
-    def __init__(self, enum_type: Type[Enum], **kwargs):
+    def __init__(self, enum_type: type[Enum], **kwargs):
         super().__init__(128, **kwargs)
         if not issubclass(enum_type, Enum):
             raise ConfigurationError(f"{enum_type} is not a subclass of Enum!")
@@ -31,8 +33,6 @@ class EnumField(CharField):
         return value.value
 
     def to_python_value(self, value):
-        self.validate(value)
-
         if value is None or isinstance(value, self.enum_type):
             return value
 
@@ -50,7 +50,7 @@ class IntEnumField(IntField):
 
     __slots__ = ("enum_type",)
 
-    def __init__(self, enum_type: Type[IntEnum], **kwargs):
+    def __init__(self, enum_type: type[IntEnum], **kwargs):
         super().__init__(**kwargs)
         if not issubclass(enum_type, IntEnum):
             raise ConfigurationError(f"{enum_type} is not a subclass of IntEnum!")
@@ -67,8 +67,6 @@ class IntEnumField(IntField):
         return value.value
 
     def to_python_value(self, value: Any) -> Any:
-        self.validate(value)
-
         if value is None or isinstance(value, self.enum_type):
             return value
 

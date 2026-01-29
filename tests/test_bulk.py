@@ -73,28 +73,34 @@ class TestBulk(test.TruncationTestCase):
 
     @test.requireCapability(dialect=NotEQ("mssql"))
     async def test_bulk_create_mix_specified(self):
+        predefined_start = 40000
+        predefined_end = 40150
+        undefined_count = 100
+
         await UniqueName.bulk_create(
-            [UniqueName(id=id_) for id_ in range(1000, 1100)] + [UniqueName() for _ in range(100)]
+            [UniqueName(id=id_) for id_ in range(predefined_start, predefined_end)]
+            + [UniqueName() for _ in range(undefined_count)]
         )
 
         all_ = await UniqueName.all().order_by("id").values("id", "name")
-        assert len(all_) == 200
+        predefined_count = predefined_end - predefined_start
+        assert len(all_) == (predefined_count + undefined_count)
 
-        if all_[0]["id"] == 1000:
-            assert sorted(all_[:100], key=lambda x: x["id"]) == [
-                {"id": id_, "name": None} for id_ in range(1000, 1100)
+        if all_[0]["id"] == predefined_start:
+            assert sorted(all_[:predefined_count], key=lambda x: x["id"]) == [
+                {"id": id_, "name": None} for id_ in range(predefined_start, predefined_end)
             ]
-            inc = all_[100]["id"]
-            assert sorted(all_[100:], key=lambda x: x["id"]) == [
-                {"id": val + inc, "name": None} for val in range(100)
+            inc = all_[predefined_count]["id"]
+            assert sorted(all_[predefined_count:], key=lambda x: x["id"]) == [
+                {"id": val + inc, "name": None} for val in range(undefined_count)
             ]
         else:
             inc = all_[0]["id"]
-            assert sorted(all_[:100], key=lambda x: x["id"]) == [
-                {"id": val + inc, "name": None} for val in range(100)
+            assert sorted(all_[:undefined_count], key=lambda x: x["id"]) == [
+                {"id": val + inc, "name": None} for val in range(undefined_count)
             ]
-            assert sorted(all_[100:], key=lambda x: x["id"]) == [
-                {"id": id_, "name": None} for id_ in range(1000, 1100)
+            assert sorted(all_[undefined_count:], key=lambda x: x["id"]) == [
+                {"id": id_, "name": None} for id_ in range(predefined_start, predefined_end)
             ]
 
     async def test_bulk_create_uuidpk(self):
@@ -108,7 +114,7 @@ class TestBulk(test.TruncationTestCase):
     async def test_bulk_create_in_transaction(self):
         async with in_transaction():
             await UniqueName.bulk_create([UniqueName() for _ in range(1000)])
-        all_ = await UniqueName.all().values("id", "name")
+        all_ = await UniqueName.all().order_by("id").values("id", "name")
         inc = all_[0]["id"]
         self.assertEqual(all_, [{"id": val + inc, "name": None} for val in range(1000)])
 

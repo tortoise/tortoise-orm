@@ -1,10 +1,13 @@
+from __future__ import annotations
+
+import functools
 import os
 from datetime import datetime, time, tzinfo
-from typing import Optional, Union
 
 import pytz
 
 
+@functools.cache
 def get_use_tz() -> bool:
     """
     Get use_tz from env set in Tortoise config.
@@ -12,6 +15,7 @@ def get_use_tz() -> bool:
     return os.environ.get("USE_TZ") == "True"
 
 
+@functools.cache
 def get_timezone() -> str:
     """
     Get timezone from env set in Tortoise config.
@@ -29,6 +33,7 @@ def now() -> datetime:
         return datetime.now(get_default_timezone())
 
 
+@functools.cache
 def get_default_timezone() -> tzinfo:
     """
     Return the default time zone as a tzinfo instance.
@@ -38,7 +43,14 @@ def get_default_timezone() -> tzinfo:
     return pytz.timezone(get_timezone())
 
 
-def localtime(value: Optional[datetime] = None, timezone: Optional[str] = None) -> datetime:
+def _reset_timezone_cache() -> None:
+    """Reset timezone cache. For internal use only."""
+    get_default_timezone.cache_clear()
+    get_use_tz.cache_clear()
+    get_timezone.cache_clear()
+
+
+def localtime(value: datetime | None = None, timezone: str | None = None) -> datetime:
     """
     Convert an aware datetime.datetime to local time.
 
@@ -58,7 +70,7 @@ def localtime(value: Optional[datetime] = None, timezone: Optional[str] = None) 
     return value.astimezone(tz)
 
 
-def is_aware(value: Union[datetime, time]) -> bool:
+def is_aware(value: datetime | time) -> bool:
     """
     Determine if a given datetime.datetime or datetime.time is aware.
 
@@ -71,7 +83,7 @@ def is_aware(value: Union[datetime, time]) -> bool:
     return value.utcoffset() is not None
 
 
-def is_naive(value: Union[datetime, time]) -> bool:
+def is_naive(value: datetime | time) -> bool:
     """
     Determine if a given datetime.datetime or datetime.time is naive.
 
@@ -85,7 +97,7 @@ def is_naive(value: Union[datetime, time]) -> bool:
 
 
 def make_aware(
-    value: datetime, timezone: Optional[str] = None, is_dst: Optional[bool] = None
+    value: datetime, timezone: str | None = None, is_dst: bool | None = None
 ) -> datetime:
     """
     Make a naive datetime.datetime in a given time zone aware.
@@ -96,12 +108,12 @@ def make_aware(
     if hasattr(tz, "localize"):
         return tz.localize(value, is_dst=is_dst)
     if is_aware(value):
-        raise ValueError("make_aware expects a naive datetime, got %s" % value)
+        raise ValueError(f"make_aware expects a naive datetime, got {value}")
     # This may be wrong around DST changes!
     return value.replace(tzinfo=tz)
 
 
-def make_naive(value: datetime, timezone: Optional[str] = None) -> datetime:
+def make_naive(value: datetime, timezone: str | None = None) -> datetime:
     """
     Make an aware datetime.datetime naive in a given time zone.
 

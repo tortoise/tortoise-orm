@@ -1,24 +1,26 @@
-from typing import TYPE_CHECKING, Optional, Tuple, Type
+from __future__ import annotations
 
-from pypika.terms import Term, ValueWrapper
+from typing import TYPE_CHECKING, Any
+
+from pypika_tortoise.context import DEFAULT_SQL_CONTEXT
+from pypika_tortoise.terms import Term, ValueWrapper
+
+from tortoise.exceptions import ConfigurationError
 
 if TYPE_CHECKING:
-    from tortoise import Model
     from tortoise.backends.base.schema_generator import BaseSchemaGenerator
+    from tortoise.models import Model
 
 
 class Index:
     INDEX_TYPE = ""
-    INDEX_CREATE_TEMPLATE = (
-        "CREATE{index_type}INDEX {index_name} ON {table_name} ({fields}){extra};"
-    )
 
     def __init__(
         self,
         *expressions: Term,
-        fields: Optional[Tuple[str, ...]] = None,
-        name: Optional[str] = None,
-    ):
+        fields: tuple[str, ...] | list[str] | None = None,
+        name: str | None = None,
+    ) -> None:
         """
         All kinds of index parent class, default is BTreeIndex.
 
@@ -29,55 +31,99 @@ class Index:
         """
         self.fields = list(fields or [])
         if not expressions and not fields:
-            raise ValueError("At least one field or expression is required to define an " "index.")
+            raise ConfigurationError(
+                "At least one field or expression is required to define an index."
+            )
         if expressions and fields:
-            raise ValueError(
+            raise ConfigurationError(
                 "Index.fields and expressions are mutually exclusive.",
             )
         self.name = name
         self.expressions = expressions
         self.extra = ""
 
-    def get_sql(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]", safe: bool):
-        if self.fields:
-            return self.INDEX_CREATE_TEMPLATE.format(
-                exists="IF NOT EXISTS " if safe else "",
-                index_name=schema_generator.quote(
-                    self.name or schema_generator._generate_index_name("idx", model, self.fields)
-                ),
-                index_type=f" {self.INDEX_TYPE} ",
-                table_name=schema_generator.quote(model._meta.db_table),
-                fields=", ".join(schema_generator.quote(f) for f in self.fields),
-                extra=self.extra,
-            )
+    def describe(self) -> dict:
+        return {
+            "fields": self.fields,
+            "expressions": [str(expression) for expression in self.expressions],
+            "name": self.name,
+            "type": self.INDEX_TYPE,
+            "extra": self.extra,
+        }
 
-        expressions = [f"({expression.get_sql()})" for expression in self.expressions]
-        return self.INDEX_CREATE_TEMPLATE.format(
-            exists="IF NOT EXISTS " if safe else "",
-            index_name=self.index_name(schema_generator, model),
-            index_type=f" {self.INDEX_TYPE} ",
-            table_name=schema_generator.quote(model._meta.db_table),
-            fields=", ".join(expressions),
+    def deconstruct(self) -> tuple[str, list[Any], dict[str, Any]]:
+        path = f"{self.__class__.__module__}.{self.__class__.__name__}"
+        args = list(self.expressions)
+        kwargs: dict[str, Any] = {}
+        if self.fields:
+            kwargs["fields"] = list(self.fields)
+        if self.name:
+            kwargs["name"] = self.name
+        return path, args, kwargs
+
+    def index_name(self, schema_generator: BaseSchemaGenerator, model: type[Model]) -> str:
+        # This function is required by aerich
+        return self.name or schema_generator._get_index_name("idx", model, self.field_names)
+
+    def get_sql(self, schema_generator: BaseSchemaGenerator, model: type[Model], safe: bool) -> str:
+        # This function is required by aerich
+        return schema_generator._get_index_sql(
+            model,
+            self.field_names,
+            safe,
+            index_name=self.name,
+            index_type=self.INDEX_TYPE,
             extra=self.extra,
         )
 
-    def index_name(self, schema_generator: "BaseSchemaGenerator", model: "Type[Model]"):
-        return self.name or schema_generator._generate_index_name("idx", model, self.fields)
+    @property
+    def field_names(self) -> list[str]:
+        if self.fields:
+            return list(self.fields)
+        elif self.expressions:
+            return [
+                f"({expression.get_sql(DEFAULT_SQL_CONTEXT)})" for expression in self.expressions
+            ]
+        else:
+            raise ConfigurationError(
+                "At least one field or expression is required to define an index."
+            )
+
+    def __repr__(self) -> str:
+        argument = ""
+        if self.expressions:
+            argument += ", ".join(map(str, self.expressions))
+        if fields := self.fields:
+            argument += f"{fields=}"
+        if name := self.name:
+            argument += f", {name=}"
+        return self.__class__.__name__ + "(" + argument + ")"
+
+    def __hash__(self) -> int:
+        return hash((tuple(self.fields), self.name, tuple(self.expressions)))
+
+    def __eq__(self, other: Any) -> bool:
+        return type(self) is type(other) and self.__dict__ == other.__dict__
 
 
 class PartialIndex(Index):
     def __init__(
         self,
         *expressions: Term,
-        fields: Optional[Tuple[str, ...]] = None,
-        name: Optional[str] = None,
-        condition: Optional[dict] = None,
-    ):
+        fields: tuple[str, ...] | list[str] | None = None,
+        name: str | None = None,
+        condition: dict | None = None,
+    ) -> None:
         super().__init__(*expressions, fields=fields, name=name)
+        self.condition = condition
         if condition:
             cond = " WHERE "
-            items = []
-            for k, v in condition.items():
-                items.append(f"{k} = {ValueWrapper(v)}")
+            items = [f"{k} = {ValueWrapper(v)}" for k, v in condition.items()]
             cond += " AND ".join(items)
             self.extra = cond
+
+    def deconstruct(self) -> tuple[str, list[Any], dict[str, Any]]:
+        path, args, kwargs = super().deconstruct()
+        if self.condition:
+            kwargs["condition"] = self.condition
+        return path, args, kwargs

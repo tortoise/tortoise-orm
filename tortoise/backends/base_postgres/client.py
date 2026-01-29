@@ -1,18 +1,13 @@
-import abc
-from functools import wraps
-from typing import (
-    Any,
-    Callable,
-    List,
-    Optional,
-    SupportsInt,
-    Tuple,
-    Type,
-    TypeVar,
-    Union,
-)
+from __future__ import annotations
 
-from pypika import PostgreSQLQuery
+import abc
+import asyncio
+from asyncio.events import AbstractEventLoop
+from collections.abc import Callable, Coroutine
+from functools import wraps
+from typing import TYPE_CHECKING, Any, SupportsInt, TypeVar
+
+from pypika_tortoise import PostgreSQLQuery
 
 from tortoise.backends.base.client import (
     BaseDBAsyncClient,
@@ -24,16 +19,20 @@ from tortoise.backends.base.client import (
 from tortoise.backends.base_postgres.executor import BasePostgresExecutor
 from tortoise.backends.base_postgres.schema_generator import BasePostgresSchemaGenerator
 
-FuncType = Callable[..., Any]
-F = TypeVar("F", bound=FuncType)
+if TYPE_CHECKING:
+    from asyncpg.connection import Connection
+    from psycopg import AsyncConnection
+
+T = TypeVar("T")
+FuncType = Callable[..., Coroutine[None, None, T]]
 
 
-def translate_exceptions(func: F) -> F:
+def translate_exceptions(func: FuncType) -> FuncType:
     @wraps(func)
-    async def _translate_exceptions(self, *args, **kwargs):
+    async def _translate_exceptions(self, *args, **kwargs) -> T:
         return await self._translate_exceptions(func, *args, **kwargs)
 
-    return _translate_exceptions  # type: ignore
+    return _translate_exceptions
 
 
 class BasePostgresPool:
@@ -42,21 +41,27 @@ class BasePostgresPool:
 
 class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
     DSN_TEMPLATE = "postgres://{user}:{password}@{host}:{port}/{database}"
-    query_class: Type[PostgreSQLQuery] = PostgreSQLQuery
-    executor_class: Type[BasePostgresExecutor] = BasePostgresExecutor
-    schema_generator: Type[BasePostgresSchemaGenerator] = BasePostgresSchemaGenerator
-    capabilities = Capabilities("postgres", support_update_limit_order_by=False)
-    connection_class = None
-    loop = None
-    _pool: Optional[Any] = None
-    _connection: Optional[Any] = None
+    query_class: type[PostgreSQLQuery] = PostgreSQLQuery
+    executor_class: type[BasePostgresExecutor] = BasePostgresExecutor
+    schema_generator: type[BasePostgresSchemaGenerator] = BasePostgresSchemaGenerator
+    capabilities = Capabilities(
+        "postgres",
+        support_update_limit_order_by=False,
+        support_for_posix_regex_queries=True,
+        support_for_no_key_update=True,
+        support_json_attributes=True,
+    )
+    connection_class: AsyncConnection | Connection | None = None
+    loop: AbstractEventLoop | None = None
+    _pool: Any | None = None
+    _connection: Any | None = None
 
     def __init__(
         self,
-        user: Optional[str] = None,
-        password: Optional[str] = None,
-        database: Optional[str] = None,
-        host: Optional[str] = None,
+        user: str | None = None,
+        password: str | None = None,
+        database: str | None = None,
+        host: str | None = None,
         port: SupportsInt = 5432,
         **kwargs: Any,
     ) -> None:
@@ -83,6 +88,7 @@ class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
         self._template: dict = {}
         self._pool = None
         self._connection = None
+        self._pool_init_lock = asyncio.Lock()
 
     @abc.abstractmethod
     async def create_connection(self, with_db: bool) -> None:
@@ -120,15 +126,15 @@ class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
         finally:
             await self.close()
 
-    def acquire_connection(self) -> Union["ConnectionWrapper", "PoolConnectionWrapper"]:
-        return PoolConnectionWrapper(self._pool)
+    def acquire_connection(self) -> ConnectionWrapper | PoolConnectionWrapper:
+        return PoolConnectionWrapper(self, self._pool_init_lock)
 
     @abc.abstractmethod
-    def _in_transaction(self) -> "TransactionContext":
+    def _in_transaction(self) -> TransactionContext:
         raise NotImplementedError("_in_transaction is not implemented")
 
     @abc.abstractmethod
-    async def execute_insert(self, query: str, values: list) -> Optional[Any]:
+    async def execute_insert(self, query: str, values: list) -> Any | None:
         raise NotImplementedError("execute_insert is not implemented")
 
     @abc.abstractmethod
@@ -136,13 +142,11 @@ class BasePostgresClient(BaseDBAsyncClient, abc.ABC):
         raise NotImplementedError("execute_many is not implemented")
 
     @abc.abstractmethod
-    async def execute_query(
-        self, query: str, values: Optional[list] = None
-    ) -> Tuple[int, List[dict]]:
+    async def execute_query(self, query: str, values: list | None = None) -> tuple[int, list[dict]]:
         raise NotImplementedError("execute_query is not implemented")
 
     @abc.abstractmethod
-    async def execute_query_dict(self, query: str, values: Optional[list] = None) -> List[dict]:
+    async def execute_query_dict(self, query: str, values: list | None = None) -> list[dict]:
         raise NotImplementedError("execute_query_dict is not implemented")
 
     @translate_exceptions

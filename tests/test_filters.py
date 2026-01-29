@@ -1,4 +1,5 @@
 from decimal import Decimal
+from enum import Enum
 
 from tests.testmodels import (
     BooleanFields,
@@ -9,6 +10,15 @@ from tests.testmodels import (
 )
 from tortoise.contrib import test
 from tortoise.exceptions import FieldError
+from tortoise.fields.base import StrEnum
+
+
+class MyEnum(str, Enum):
+    moo = "moo"
+
+
+class MyStrEnum(StrEnum):
+    moo = "moo"
 
 
 class TestCharFieldFilters(test.TestCase):
@@ -27,6 +37,14 @@ class TestCharFieldFilters(test.TestCase):
     async def test_equal(self):
         self.assertEqual(
             set(await CharFields.filter(char="moo").values_list("char", flat=True)), {"moo"}
+        )
+
+    async def test_enum(self):
+        self.assertEqual(
+            set(await CharFields.filter(char=MyEnum.moo).values_list("char", flat=True)), {"moo"}
+        )
+        self.assertEqual(
+            set(await CharFields.filter(char=MyStrEnum.moo).values_list("char", flat=True)), {"moo"}
         )
 
     async def test_not(self):
@@ -250,6 +268,14 @@ class TestDecimalFieldFilters(test.TestCase):
             [Decimal("1.2345")],
         )
 
+    async def test_in(self):
+        self.assertEqual(
+            await DecimalFields.filter(
+                decimal__in=[Decimal("1.2345"), Decimal("1000")]
+            ).values_list("decimal", flat=True),
+            [Decimal("1.2345")],
+        )
+
 
 class TestCharFkFieldFilters(test.TestCase):
     async def asyncSetUp(self):
@@ -307,19 +333,17 @@ class TestCharFkFieldFilters(test.TestCase):
             set(await CharPkModel.filter(children__isnull=True).values_list("id", flat=True)),
             {"2001"},
         )
-        self.assertSetEqual(
-            set(await CharPkModel.filter(children__isnull=False).values_list("id", flat=True)),
-            {
-                "17",
-                "17",
-                "12",
-            },  # TODO: [4/7/2021 by Mykola] Not sure if this is an expected behavior
+        self.assertEqual(
+            await CharPkModel.filter(children__isnull=False)
+            .order_by("id")
+            .values_list("id", flat=True),
+            ["12", "17", "17"],
         )
 
     async def test_not_isnull(self):
         self.assertSetEqual(
             set(await CharPkModel.filter(children__not_isnull=True).values_list("id", flat=True)),
-            {"17", "17", "12"},
+            {"17", "12"},
         )
         self.assertSetEqual(
             set(await CharPkModel.filter(children__not_isnull=False).values_list("id", flat=True)),

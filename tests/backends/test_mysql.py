@@ -29,11 +29,15 @@ class TestMySQL(test.SimpleTestCase):
     async def test_ssl_true(self):
         self.db_config["connections"]["models"]["credentials"]["ssl"] = True
         try:
-            await Tortoise.init(self.db_config, _create_db=True)
-        except (ConnectionError, ssl.SSLError):
+            import asyncmy  # noqa pylint: disable=unused-import
+
+            # setting read_timeout for asyncmy. Otherwise, it will hang forever.
+            self.db_config["connections"]["models"]["credentials"]["read_timeout"] = 1
+        except ImportError:
             pass
-        else:
-            self.assertFalse(True, "Expected ConnectionError or SSLError")
+
+        with self.assertRaises(ConnectionError):
+            await Tortoise.init(self.db_config, _create_db=True)
 
     async def test_ssl_custom(self):
         # Expect connectionerror or pass

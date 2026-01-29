@@ -3,10 +3,5 @@
     "version": "https://tortoise.github.io",
     "title": "latest",
     "aliases": []
-  },
-  {
-    "version": "https://tortoise.github.io/0.19.1",
-    "title": "0.19.1",
-    "aliases": []
   }
 ]

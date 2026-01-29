@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import logging
+from collections.abc import Iterable
 from types import ModuleType
-from typing import Dict, Iterable, Optional, Union
 
 from quart import Quart  # pylint: disable=E0401
 
@@ -11,10 +13,10 @@ from tortoise.log import logger
 
 def register_tortoise(
     app: Quart,
-    config: Optional[dict] = None,
-    config_file: Optional[str] = None,
-    db_url: Optional[str] = None,
-    modules: Optional[Dict[str, Iterable[Union[str, ModuleType]]]] = None,
+    config: dict | None = None,
+    config_file: str | None = None,
+    db_url: str | None = None,
+    modules: dict[str, Iterable[str | ModuleType]] | None = None,
     generate_schemas: bool = False,
 ) -> None:
     """

@@ -7,4 +7,4 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
-    val = fields.CharField(max_length=50, pk=True, generated=True)
+    val = fields.CharField(max_length=50, primary_key=True, generated=True)

@@ -62,7 +62,6 @@ __all__ = [
     "IntField",
     "JSONField",
     "SmallIntField",
-    "SmallIntField",
     "TextField",
     "TimeDeltaField",
     "UUIDField",

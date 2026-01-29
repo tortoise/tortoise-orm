@@ -1,13 +1,9 @@
-import tortoise
 from tortoise import fields, models
 from tortoise.contrib.pydantic import pydantic_model_creator
 
-if tortoise.__version__ >= "0.20":
-    raise RuntimeError("blacksheep not support pydantic V2, use tortoise-orm<0.20 instead!")
-
 
 class Users(models.Model):
-    id = fields.UUIDField(pk=True)
+    id = fields.UUIDField(primary_key=True)
     username = fields.CharField(max_length=63)
 
     def __str__(self) -> str:
