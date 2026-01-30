@@ -271,7 +271,8 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
     def _reset_conn_state(self) -> None:
         # clearing the storage and db config
         connections._clear_storage()
-        connections.db_config.clear()
+        if connections._db_config is not None:
+            connections._db_config.clear()
 
     async def asyncTearDown(self) -> None:
         await self._tearDownDB()
