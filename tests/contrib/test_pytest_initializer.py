@@ -23,7 +23,7 @@ from tortoise import Tortoise
 from tortoise.contrib.test import create_db
 
 
-def is_xdist_worker():
+def is_xdist_worker() -> bool:
     """Check if we're running as an xdist worker."""
     return os.environ.get("PYTEST_XDIST_WORKER") is not None
 
