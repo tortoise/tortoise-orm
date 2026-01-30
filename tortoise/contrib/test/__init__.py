@@ -36,6 +36,7 @@ __all__ = (
     "skipIf",
     "skipUnless",
     "init_memory_sqlite",
+    "create_db",
 )
 _TORTOISE_TEST_DB = "sqlite://:memory:"
 # pylint: disable=W0201
@@ -132,13 +133,19 @@ def initializer(
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
     _LOOP = loop
+    # Reset any existing state to avoid event loop conflicts when initializer() is called
+    # multiple times (e.g., session fixture + function fixture)
+    connections._clear_storage()
+    connections._db_config = None
+    Tortoise.apps = None
+    Tortoise._inited = False
     loop.run_until_complete(_init_db(_CONFIG))
     _CONNECTIONS = connections._copy_storage()
     _CONN_CONFIG = connections.db_config.copy()
-    connections._clear_storage()
-    connections.db_config.clear()
-    Tortoise.apps = None
-    Tortoise._inited = False
+    # NOTE: We intentionally do NOT clear connections here after initialization.
+    # This allows pytest fixtures to use the DB immediately after initializer().
+    # The test case classes (SimpleTestCase, etc.) handle their own state management
+    # in asyncSetUp/asyncTearDown.
 
 
 def finalizer() -> None:
@@ -148,6 +155,9 @@ def finalizer() -> None:
     _restore_default()
     loop = _LOOP
     loop.run_until_complete(Tortoise._drop_databases())
+    # Reset to clean state
+    connections._db_config = None
+    Tortoise._inited = False
 
 
 def env_initializer() -> None:  # pragma: nocoverage
@@ -171,6 +181,41 @@ def env_initializer() -> None:  # pragma: nocoverage
     if not modules:  # pragma: nocoverage
         raise Exception("TORTOISE_TEST_MODULES envvar not defined")
     initializer(modules, db_url=db_url, app_label=app_label)
+
+
+async def create_db(
+    modules: Iterable[str | ModuleType],
+    db_url: str = "sqlite://:memory:",
+    app_label: str = "models",
+) -> None:
+    """
+    Async function to set up the DB for testing. Can be used in pytest-asyncio fixtures.
+
+    This is the async equivalent of :func:`initializer` for use with pytest-asyncio.
+
+    :param modules: List of modules to look for models in.
+    :param db_url: The db_url, defaults to ``sqlite://:memory``.
+    :param app_label: The name of the APP to initialise the modules in, defaults to "models"
+
+    Usage with pytest-asyncio::
+
+        import pytest
+        from tortoise.contrib.test import create_db
+
+        @pytest.fixture
+        async def db():
+            await create_db(["myapp.models"], db_url="sqlite://:memory:")
+            yield
+            await Tortoise._drop_databases()
+
+    """
+    config = _generate_config(
+        db_url,
+        app_modules={app_label: modules},
+        testing=True,
+        connection_label=app_label,
+    )
+    await _init_db(config)
 
 
 class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
