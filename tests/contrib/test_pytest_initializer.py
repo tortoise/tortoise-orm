@@ -29,11 +29,17 @@ def is_xdist_worker() -> bool:
     return os.environ.get("PYTEST_XDIST_WORKER") is not None
 
 
-# Skip the entire module if running in xdist parallel mode
-pytestmark = pytest.mark.skipif(
-    is_xdist_worker(),
-    reason="These tests use create_db which resets global state; run separately with -n0",
-)
+@pytest.fixture(autouse=True)
+def skip_in_xdist():
+    """
+    Skip tests when running with pytest-xdist.
+
+    This fixture is evaluated at test runtime (not import time), ensuring
+    tests are properly skipped on xdist workers. The create_db/drop_databases
+    calls reset global Tortoise state which interferes with other tests.
+    """
+    if is_xdist_worker():
+        pytest.skip("Skipping in xdist mode - run separately with -n0")
 
 
 @pytest.mark.asyncio
