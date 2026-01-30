@@ -102,6 +102,66 @@ Run the initializer and finalizer in your ``conftest.py`` file:
         request.addfinalizer(finalizer)
 
 
+Pytest-asyncio
+--------------
+
+For users of ``pytest-asyncio``, Tortoise ORM provides the ``create_db`` async function
+that can be used directly in async fixtures. This is the recommended approach for
+pytest-asyncio users as it provides more flexibility.
+
+Basic usage with ``create_db``:
+
+.. code-block:: python3
+
+    import pytest
+    import pytest_asyncio
+    from tortoise import Tortoise
+    from tortoise.contrib.test import create_db
+
+    @pytest_asyncio.fixture
+    async def db():
+        await create_db(["myapp.models"], db_url="sqlite://:memory:", app_label="models")
+        yield
+        await Tortoise._drop_databases()
+
+    @pytest.mark.asyncio
+    async def test_something(db):
+        from myapp.models import MyModel
+        # Database is ready to use
+        item = await MyModel.create(name="test")
+        assert item.id is not None
+
+You can also pre-populate the database with test data in the fixture:
+
+.. code-block:: python3
+
+    import pytest
+    import pytest_asyncio
+    from tortoise import Tortoise
+    from tortoise.contrib.test import create_db
+
+    @pytest_asyncio.fixture
+    async def db_with_data():
+        await create_db(["myapp.models"], db_url="sqlite://:memory:", app_label="models")
+
+        # Pre-populate with test data
+        from myapp.models import User
+        await User.create(username="admin", email="admin@example.com")
+        await User.create(username="user1", email="user1@example.com")
+
+        yield
+
+        await Tortoise._drop_databases()
+
+    @pytest.mark.asyncio
+    async def test_users_exist(db_with_data):
+        from myapp.models import User
+        users = await User.all()
+        assert len(users) == 2
+
+See the ``examples/pytest`` directory for a complete example project.
+
+
 Nose2
 -----
 
