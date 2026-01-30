@@ -9,8 +9,10 @@ making the database unusable until _restore_default() was called.
 This broke pytest fixtures that expected the DB to be ready after initializer().
 
 NOTE: These tests are skipped when running with pytest-xdist in parallel mode
-because they use create_db which resets global state and interferes with other tests.
-Run them separately with: pytest tests/contrib/test_pytest_initializer.py -n0
+AND in-memory SQLite, because in-memory SQLite creates a new DB per connection,
+so create_db/drop_databases interferes with other tests on the same worker.
+For persistent DBs (postgres, mysql, file-based sqlite), tests run normally.
+For in-memory SQLite, run separately with: pytest tests/contrib/test_pytest_initializer.py -n0
 """
 
 import os
@@ -28,10 +30,36 @@ def is_xdist_worker() -> bool:
     return os.environ.get("PYTEST_XDIST_WORKER") is not None
 
 
-# Skip the entire module if running in xdist parallel mode
+def get_test_db_url() -> str:
+    """Get the test database URL from environment."""
+    return os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
+
+
+def is_memory_sqlite() -> bool:
+    """Check if we're using in-memory SQLite."""
+    return ":memory:" in get_test_db_url()
+
+
+def is_sqlite() -> bool:
+    """Check if we're using SQLite (any variant)."""
+    return get_test_db_url().startswith("sqlite:")
+
+
+def should_skip_initializer_tests() -> bool:
+    """
+    Skip these tests when running with xdist AND in-memory sqlite.
+
+    The issue is that in-memory sqlite creates a new DB per connection,
+    so create_db/drop_databases interferes with other tests on the same worker.
+    For persistent DBs (postgres, mysql, file-sqlite), this isn't an issue.
+    """
+    return is_xdist_worker() and is_memory_sqlite()
+
+
+# Skip only when running with xdist AND in-memory sqlite
 pytestmark = pytest.mark.skipif(
-    is_xdist_worker(),
-    reason="These tests use create_db which resets global state; run separately with -n0",
+    should_skip_initializer_tests(),
+    reason="These tests use create_db which resets global state; with in-memory sqlite run separately with -n0",
 )
 
 
@@ -41,7 +69,7 @@ class TestAsyncCreateDb:
 
     async def test_create_db_initializes_properly(self):
         """Test that create_db properly initializes the database."""
-        await create_db(["tests.testmodels"], db_url="sqlite://:memory:", app_label="models")
+        await create_db(["tests.testmodels"], db_url=get_test_db_url(), app_label="models")
         try:
             assert Tortoise._inited is True
             assert Tortoise.apps is not None
@@ -56,7 +84,7 @@ class TestAsyncCreateDb:
 
     async def test_create_db_allows_model_operations(self):
         """Test that after create_db, we can perform model operations."""
-        await create_db(["tests.testmodels"], db_url="sqlite://:memory:", app_label="models")
+        await create_db(["tests.testmodels"], db_url=get_test_db_url(), app_label="models")
         try:
             from tests.testmodels import Tournament
 
@@ -84,6 +112,7 @@ class TestAsyncCreateDb:
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(not is_sqlite(), reason="File-based SQLite test only runs with SQLite")
 class TestFileBasedSqliteAsync:
     """Test with file-based SQLite database (async tests)."""
 
@@ -124,7 +153,7 @@ async def db_fixture():
 
     This is the recommended pattern for pytest-asyncio users.
     """
-    await create_db(["tests.testmodels"], db_url="sqlite://:memory:", app_label="models")
+    await create_db(["tests.testmodels"], db_url=get_test_db_url(), app_label="models")
     yield
     await Tortoise._drop_databases()
 
@@ -191,7 +220,7 @@ async def db_fixture_with_data():
 
     This pattern is useful when multiple tests need the same initial data.
     """
-    await create_db(["tests.testmodels"], db_url="sqlite://:memory:", app_label="models")
+    await create_db(["tests.testmodels"], db_url=get_test_db_url(), app_label="models")
 
     # Pre-populate with test data
     from tests.testmodels import Tournament
