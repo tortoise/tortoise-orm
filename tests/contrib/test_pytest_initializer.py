@@ -9,10 +9,9 @@ making the database unusable until _restore_default() was called.
 This broke pytest fixtures that expected the DB to be ready after initializer().
 
 NOTE: These tests are skipped when running with pytest-xdist in parallel mode
-AND in-memory SQLite, because in-memory SQLite creates a new DB per connection,
-so create_db/drop_databases interferes with other tests on the same worker.
-For persistent DBs (postgres, mysql, file-based sqlite), tests run normally.
-For in-memory SQLite, run separately with: pytest tests/contrib/test_pytest_initializer.py -n0
+because create_db/drop_databases resets global Tortoise state (including event loop
+bindings on connections), which interferes with other tests on the same worker.
+Run them separately with: pytest tests/contrib/test_pytest_initializer.py -n0
 """
 
 import os
@@ -35,31 +34,16 @@ def get_test_db_url() -> str:
     return os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
 
 
-def is_memory_sqlite() -> bool:
-    """Check if we're using in-memory SQLite."""
-    return ":memory:" in get_test_db_url()
-
-
 def is_sqlite() -> bool:
     """Check if we're using SQLite (any variant)."""
     return get_test_db_url().startswith("sqlite:")
 
 
-def should_skip_initializer_tests() -> bool:
-    """
-    Skip these tests when running with xdist AND in-memory sqlite.
-
-    The issue is that in-memory sqlite creates a new DB per connection,
-    so create_db/drop_databases interferes with other tests on the same worker.
-    For persistent DBs (postgres, mysql, file-sqlite), this isn't an issue.
-    """
-    return is_xdist_worker() and is_memory_sqlite()
-
-
-# Skip only when running with xdist AND in-memory sqlite
+# Skip when running with xdist - create_db/drop_databases resets global state
+# (including event loop bindings) which interferes with other tests on same worker
 pytestmark = pytest.mark.skipif(
-    should_skip_initializer_tests(),
-    reason="These tests use create_db which resets global state; with in-memory sqlite run separately with -n0",
+    is_xdist_worker(),
+    reason="These tests use create_db which resets global state; run separately with -n0",
 )
 
 

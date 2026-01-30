@@ -66,6 +66,13 @@ jobs:
           sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
       - name: Run ci
         run: make ci
+      - name: Run pytest initializer tests (no parallelism)
+        run: |
+          TORTOISE_TEST_DB="sqlite://:memory:" uv run --frozen pytest tests/contrib/test_pytest_initializer.py -n0 -v --cov=tortoise --cov-append --cov-branch --tb=native
+          TORTOISE_TEST_DB="asyncpg://postgres:$TORTOISE_POSTGRES_PASS@127.0.0.1:5432/test_{}" uv run --frozen pytest tests/contrib/test_pytest_initializer.py -n0 -v --cov=tortoise --cov-append --cov-branch --tb=native
+          TORTOISE_TEST_DB="psycopg://postgres:$TORTOISE_POSTGRES_PASS@127.0.0.1:5432/test_{}" uv run --frozen pytest tests/contrib/test_pytest_initializer.py -n0 -v --cov=tortoise --cov-append --cov-branch --tb=native
+          TORTOISE_TEST_DB="mysql://root:$TORTOISE_MYSQL_PASS@127.0.0.1:3306/test_{}" uv run --frozen pytest tests/contrib/test_pytest_initializer.py -n0 -v --cov=tortoise --cov-append --cov-branch --tb=native
+          TORTOISE_TEST_DB="mssql://sa:$TORTOISE_MSSQL_PASS@127.0.0.1:1433/test_{}?driver=$TORTOISE_MSSQL_DRIVER&TrustServerCertificate=YES" uv run --frozen pytest tests/contrib/test_pytest_initializer.py -n0 -v --cov=tortoise --cov-append --cov-branch --tb=native
       - name: Test FastAPI/Blacksheep Example
         run: |
           PYTHONPATH=$DEST_FASTAPI uv run --frozen pytest $PYTEST_ARGS $DEST_FASTAPI/_tests.py
