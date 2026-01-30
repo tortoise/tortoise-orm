@@ -84,7 +84,7 @@ class AwaitableQuery(Generic[MODEL]):
         "model",
         "_joined_tables",
         "_db",
-        "capabilities",
+        "_capabilities",
         "_annotations",
         "_custom_filters",
         "_q_objects",
@@ -95,10 +95,20 @@ class AwaitableQuery(Generic[MODEL]):
         self.model: type[MODEL] = model
         self.query: QueryBuilder = QUERY
         self._db: BaseDBAsyncClient = None  # type: ignore
-        self.capabilities: Capabilities = model._meta.db.capabilities
+        self._capabilities: Capabilities | None = None
         self._annotations: dict[str, Expression | Term] = {}
         self._custom_filters: dict[str, FilterInfoDict] = {}
         self._q_objects: list[Q] = []
+
+    @property
+    def capabilities(self) -> Capabilities:
+        if self._capabilities is None:
+            self._capabilities = self.model._meta.db.capabilities
+        return self._capabilities
+
+    @capabilities.setter
+    def capabilities(self, value: Capabilities) -> None:
+        self._capabilities = value
 
     def _choose_db(self, for_write: bool = False) -> BaseDBAsyncClient:
         """

@@ -10,6 +10,7 @@ Table Of Contents
    reference
    examples
    contrib
+   migration_guide
    CHANGELOG
    roadmap
    CONTRIBUTING

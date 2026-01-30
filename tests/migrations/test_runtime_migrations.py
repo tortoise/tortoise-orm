@@ -6,8 +6,8 @@ from typing import cast
 
 import pytest
 
-from tortoise import connections
 from tortoise.backends.base.client import BaseDBAsyncClient, Capabilities
+from tortoise.context import TortoiseContext
 from tortoise.migrations.executor import MigrationExecutor, MigrationTarget
 from tortoise.migrations.graph import MigrationGraph, MigrationKey
 from tortoise.migrations.loader import MigrationLoader
@@ -428,19 +428,15 @@ async def test_runpython_historical_models_survive_schema_change(
     module_path = _write_runpython_migrations(tmp_path, "blog")
     monkeypatch.syspath_prepend(str(tmp_path))
 
-    old_config = connections._db_config
-    old_create_db = connections._create_db
-    connections._clear_storage()
-    connections._init_config(
-        {
-            "default": {
-                "engine": "tortoise.backends.sqlite",
-                "credentials": {"file_path": str(tmp_path / "runpython.sqlite3")},
+    async with TortoiseContext() as ctx:
+        ctx.connections._init_config(
+            {
+                "default": {
+                    "engine": "tortoise.backends.sqlite",
+                    "credentials": {"file_path": str(tmp_path / "runpython.sqlite3")},
+                }
             }
-        }
-    )
-    connection = None
-    try:
+        )
         apps_config = {
             "blog": {
                 "models": [],
@@ -448,7 +444,7 @@ async def test_runpython_historical_models_survive_schema_change(
                 "migrations": module_path,
             }
         }
-        connection = connections.get("default")
+        connection = ctx.connections.get("default")
         executor = MigrationExecutor(connection, apps_config)
 
         await executor.migrate()
@@ -460,9 +456,5 @@ async def test_runpython_historical_models_survive_schema_change(
 
         await executor.migrate([MigrationTarget(app_label="blog", name="__latest__")])
         assert module.CALLS == ["forward", "reverse", "forward"]
-    finally:
-        if connection is not None:
-            await connection.close()
-        connections._clear_storage()
-        connections._db_config = old_config
-        connections._create_db = old_create_db
+
+        await connection.close()

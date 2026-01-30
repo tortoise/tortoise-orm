@@ -12,15 +12,46 @@ Changelog
 
 0.26.0 (unreleased)
 -------------------
+
+.. warning::
+
+    This release contains **breaking changes** as part of the context-first architecture migration.
+    Please read the :ref:`migration_guide` before upgrading.
+
+Breaking Changes
+^^^^^^^^^^^^^^^^
+- **Context-first architecture**: All ORM state now lives in ``TortoiseContext`` instances
+- **Removed** legacy test classes: ``test.TestCase``, ``test.IsolatedTestCase``, ``test.TruncationTestCase``, ``test.SimpleTestCase``
+- **Removed** legacy test helpers: ``initializer()``, ``finalizer()``, ``env_initializer()``, ``getDBConfig()``
+- **Changed** ``Tortoise.init()`` now returns ``TortoiseContext`` (previously returned ``None``)
+- **Changed** Multiple separate ``asyncio.run()`` calls in sequence require explicit context management due to ContextVar scoping (uncommon pattern, see migration guide). The typical single ``asyncio.run(main())`` pattern continues to work unchanged.
+
+Added
+^^^^^
+- ``TortoiseContext`` - explicit context manager for ORM state
+- ``tortoise_test_context()`` - modern pytest fixture helper for test isolation
+- ``get_connection(alias)`` - function to get connection by alias from current context
+- ``get_connections()`` - function to get the ConnectionHandler from current context
+- ``Tortoise.close_connections()`` - class method to close all connections
+- ``Tortoise.get_apps()`` - explicit method version of ``Tortoise.apps`` property
+- ``Tortoise.is_inited()`` - explicit method version of ``Tortoise._inited`` property
+
+Changed
+^^^^^^^
+- Framework integrations (FastAPI, Starlette, Sanic, etc.) now use ``Tortoise.close_connections()`` internally
+- ``ConnectionHandler`` now uses instance-based ContextVar storage (each context has isolated connections)
+- ``Tortoise.apps`` and ``Tortoise._inited`` now use ``classproperty`` descriptor (no metaclass)
+- feat: foreignkey to model type (#2027)
+
+Deprecated
+^^^^^^^^^^
+- ``from tortoise import connections`` - use ``get_connection()`` / ``get_connections()`` functions instead (still works but deprecated)
+
 Fixed
 ^^^^^
 - Fix ``AttributeError`` when using ``tortoise-orm`` with Nuitka-compiled Python code (#2053)
 - Fix 'Self' in python standard library typing.py, but tortoise/model.py required it in 'typing_extensions' (#2051)
 - Fix annotations being selected in ValuesListQuery despite not specified in `.values_list` fields list (#2059)
-
-Changed
-^^^^^
-- feat: foreignkey to model type (#2027)
 
 0.25
 ====

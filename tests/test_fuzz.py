@@ -1,3 +1,5 @@
+import pytest
+
 from tests.testmodels import CharFields
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotEQ
@@ -15,9 +17,9 @@ DODGY_STRINGS = [
     "''",
     "\\_",
     "\\\\_",
-    "‘a",
-    "a’",
-    "‘a’",
+    "'a",
+    "a'",
+    "'a'",
     "a/a",
     "a\\a",
     "0x39",
@@ -101,51 +103,54 @@ DODGY_STRINGS = [
 ]
 
 
-class TestFuzz(test.TestCase):
-    @test.requireCapability(dialect=NotEQ("mssql"))
-    async def test_char_fuzz(self):
-        for char in DODGY_STRINGS:
-            # print(repr(char))
-            if "\x00" in char and self._db.capabilities.dialect in ["postgres"]:
-                # PostgreSQL doesn't support null values as text. Ever. So skip these.
-                continue
+@pytest.mark.asyncio
+@test.requireCapability(dialect=NotEQ("mssql"))
+async def test_char_fuzz(db):
+    """Test character field handling with various dodgy/edge-case strings."""
+    conn = db.db()
 
-            # Create
-            obj1 = await CharFields.create(char=char)
+    for char in DODGY_STRINGS:
+        # print(repr(char))
+        if "\x00" in char and conn.capabilities.dialect in ["postgres"]:
+            # PostgreSQL doesn't support null values as text. Ever. So skip these.
+            continue
 
-            # Get-by-pk, and confirm that reading is correct
-            obj2 = await CharFields.get(pk=obj1.pk)
-            self.assertEqual(char, obj2.char)
+        # Create
+        obj1 = await CharFields.create(char=char)
 
-            # Update data using a queryset, confirm that update is correct
-            await CharFields.filter(pk=obj1.pk).update(char="a")
-            await CharFields.filter(pk=obj1.pk).update(char=char)
-            obj3 = await CharFields.get(pk=obj1.pk)
-            self.assertEqual(char, obj3.char)
+        # Get-by-pk, and confirm that reading is correct
+        obj2 = await CharFields.get(pk=obj1.pk)
+        assert char == obj2.char
 
-            # Filter by value in queryset, and confirm that it fetched the right one
-            obj4 = await CharFields.get(pk=obj1.pk, char=char)
-            self.assertEqual(obj1.pk, obj4.pk)
-            self.assertEqual(char, obj4.char)
+        # Update data using a queryset, confirm that update is correct
+        await CharFields.filter(pk=obj1.pk).update(char="a")
+        await CharFields.filter(pk=obj1.pk).update(char=char)
+        obj3 = await CharFields.get(pk=obj1.pk)
+        assert char == obj3.char
 
-            # LIKE statements are not strict, so require all of these to match
-            obj5 = await CharFields.get(
-                pk=obj1.pk,
-                char__startswith=char,
-                char__endswith=char,
-                char__contains=char,
-                char__istartswith=char,
-                char__iendswith=char,
-                char__icontains=char,
-            )
-            self.assertEqual(obj1.pk, obj5.pk)
-            self.assertEqual(char, obj5.char)
+        # Filter by value in queryset, and confirm that it fetched the right one
+        obj4 = await CharFields.get(pk=obj1.pk, char=char)
+        assert obj1.pk == obj4.pk
+        assert char == obj4.char
 
-            # Filter by a function
-            obj6 = (
-                await CharFields.annotate(upper_char=Upper("char"))
-                .filter(id=obj1.pk, upper_char=Upper("char"))
-                .first()
-            )
-            self.assertEqual(obj1.pk, obj6.pk)
-            self.assertEqual(char, obj6.char)
+        # LIKE statements are not strict, so require all of these to match
+        obj5 = await CharFields.get(
+            pk=obj1.pk,
+            char__startswith=char,
+            char__endswith=char,
+            char__contains=char,
+            char__istartswith=char,
+            char__iendswith=char,
+            char__icontains=char,
+        )
+        assert obj1.pk == obj5.pk
+        assert char == obj5.char
+
+        # Filter by a function
+        obj6 = (
+            await CharFields.annotate(upper_char=Upper("char"))
+            .filter(id=obj1.pk, upper_char=Upper("char"))
+            .first()
+        )
+        assert obj1.pk == obj6.pk
+        assert char == obj6.char

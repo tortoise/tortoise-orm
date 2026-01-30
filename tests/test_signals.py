@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import pytest
+import pytest_asyncio
+
 from tests.testmodels import Signals
 from tortoise import BaseDBAsyncClient
-from tortoise.contrib import test
 from tortoise.signals import post_delete, post_save, pre_delete, pre_save
 
 
@@ -40,43 +42,60 @@ async def signal_post_delete(
     await Signals.filter(name="test4").update(name="test_post-delete")
 
 
-class TestSignals(test.TestCase):
-    async def asyncSetUp(self):
-        await super().asyncSetUp()
-        self.signal_save = await Signals.create(name="signal_save")
-        self.signal_delete = await Signals.create(name="signal_delete")
+@pytest_asyncio.fixture
+async def signals_data(db):
+    """Set up test data for signal tests."""
+    signal_save = await Signals.create(name="signal_save")
+    signal_delete = await Signals.create(name="signal_delete")
 
-        self.signal1 = await Signals.create(name="test1")
-        self.signal2 = await Signals.create(name="test2")
-        self.signal3 = await Signals.create(name="test3")
-        self.signal4 = await Signals.create(name="test4")
-        self.signal5 = await Signals.create(name="test5")
-        self.signal6 = await Signals.create(name="test6")
+    signal1 = await Signals.create(name="test1")
+    signal2 = await Signals.create(name="test2")
+    signal3 = await Signals.create(name="test3")
+    signal4 = await Signals.create(name="test4")
+    signal5 = await Signals.create(name="test5")
+    signal6 = await Signals.create(name="test6")
 
-    async def test_create(self):
-        await Signals.create(name="test-create")
-        signal5 = await Signals.get(pk=self.signal5.pk)
-        signal6 = await Signals.get(pk=self.signal6.pk)
-        self.assertEqual(signal5.name, "test_pre-save")
-        self.assertEqual(signal6.name, "test_post-save")
+    return {
+        "signal_save": signal_save,
+        "signal_delete": signal_delete,
+        "signal1": signal1,
+        "signal2": signal2,
+        "signal3": signal3,
+        "signal4": signal4,
+        "signal5": signal5,
+        "signal6": signal6,
+    }
 
-    async def test_save(self):
-        signal_save = await Signals.get(pk=self.signal_save.pk)
-        signal_save.name = "test-save"
-        await signal_save.save()
 
-        signal1 = await Signals.get(pk=self.signal1.pk)
-        signal2 = await Signals.get(pk=self.signal2.pk)
+@pytest.mark.asyncio
+async def test_create(signals_data):
+    await Signals.create(name="test-create")
+    signal5 = await Signals.get(pk=signals_data["signal5"].pk)
+    signal6 = await Signals.get(pk=signals_data["signal6"].pk)
+    assert signal5.name == "test_pre-save"
+    assert signal6.name == "test_post-save"
 
-        self.assertEqual(signal1.name, "test_pre-save")
-        self.assertEqual(signal2.name, "test_post-save")
 
-    async def test_delete(self):
-        signal_delete = await Signals.get(pk=self.signal_delete.pk)
-        await signal_delete.delete()
+@pytest.mark.asyncio
+async def test_save(signals_data):
+    signal_save = await Signals.get(pk=signals_data["signal_save"].pk)
+    signal_save.name = "test-save"
+    await signal_save.save()
 
-        signal3 = await Signals.get(pk=self.signal3.pk)
-        signal4 = await Signals.get(pk=self.signal4.pk)
+    signal1 = await Signals.get(pk=signals_data["signal1"].pk)
+    signal2 = await Signals.get(pk=signals_data["signal2"].pk)
 
-        self.assertEqual(signal3.name, "test_pre-delete")
-        self.assertEqual(signal4.name, "test_post-delete")
+    assert signal1.name == "test_pre-save"
+    assert signal2.name == "test_post-save"
+
+
+@pytest.mark.asyncio
+async def test_delete(signals_data):
+    signal_delete = await Signals.get(pk=signals_data["signal_delete"].pk)
+    await signal_delete.delete()
+
+    signal3 = await Signals.get(pk=signals_data["signal3"].pk)
+    signal4 = await Signals.get(pk=signals_data["signal4"].pk)
+
+    assert signal3.name == "test_pre-delete"
+    assert signal4.name == "test_post-delete"

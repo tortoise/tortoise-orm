@@ -101,6 +101,8 @@ test = [
     "pytest-cov",
     "pytest-codspeed",
     "pytest-asyncio",
+    "cryptography>=46.0.3",
+    "aiomysql>=0.3.2",
 ]
 docs = [
     # Documentation tools
@@ -189,6 +191,7 @@ docstring_style = "sphinx"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
 filterwarnings = [
     'ignore:`pk` is deprecated:DeprecationWarning',
     'ignore:`index` is deprecated:DeprecationWarning',
@@ -216,6 +219,7 @@ extra-standard-library = ["tomllib"]
 exclude_dirs = [
     "tests",
     "examples/*/_tests.py",
+    "examples/pytest",
     "conftest.py",
     "tortoise/migrations/schema_editor/mssql.py",
     "examples/postgres_full_text_search.py",

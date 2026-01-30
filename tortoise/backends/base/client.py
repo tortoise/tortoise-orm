@@ -9,7 +9,7 @@ from pypika_tortoise import Query
 
 from tortoise.backends.base.executor import BaseExecutor
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
-from tortoise.connection import connections
+from tortoise.connection import get_connections
 from tortoise.exceptions import TransactionManagementError
 from tortoise.log import db_client_logger
 
@@ -316,10 +316,12 @@ class TransactionContextPooled(TransactionContext):
 
     async def __aenter__(self) -> TransactionalDBClient:
         await self.ensure_connection()
-        # Set the context variable so the current task is always seeing a
-        # TransactionWrapper conneciton.
-        self.token = connections.set(self.connection_name, self.client)
+        # Acquire connection first to avoid race condition where concurrent tasks
+        # see the wrapper via the context before it has a connection.
         self.client._connection = await self.client._parent._pool.acquire()
+        # Set the context variable so the current task is always seeing a
+        # TransactionWrapper connection.
+        self.token = get_connections().set(self.connection_name, self.client)
         await self.client.begin()
         return self.client
 
@@ -335,7 +337,7 @@ class TransactionContextPooled(TransactionContext):
         finally:
             if self.client._parent._pool:
                 await self.client._parent._pool.release(self.client._connection)
-            connections.reset(self.token)
+            get_connections().reset(self.token)
 
 
 class NestedTransactionContext(TransactionContext):

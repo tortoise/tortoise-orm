@@ -14,12 +14,11 @@ from tests.testmodels import (
     Team,
     Tournament,
 )
-from tortoise.contrib.test import _restore_default, truncate_all_models
+from tortoise.contrib.test import truncate_all_models
 
 
 @pytest.fixture(scope="function", autouse=True)
 def setup_database():
-    _restore_default()
     yield
     asyncio.get_event_loop().run_until_complete(truncate_all_models())
 

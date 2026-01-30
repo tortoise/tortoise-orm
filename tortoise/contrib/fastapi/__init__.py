@@ -7,7 +7,8 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from types import ModuleType
 from typing import TYPE_CHECKING
 
-from tortoise import Tortoise, connections
+from tortoise import Tortoise
+from tortoise.connection import get_connections
 from tortoise.exceptions import DoesNotExist, IntegrityError
 from tortoise.log import logger
 
@@ -160,14 +161,14 @@ class RegisterTortoise(AbstractAsyncContextManager):
             timezone=self.timezone,
             _create_db=self._create_db,
         )
-        logger.info("Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps)
+        logger.info("Tortoise-ORM started, %s, %s", get_connections()._get_storage(), Tortoise.apps)
         if self.generate_schemas:
             logger.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()
 
     @staticmethod
     async def close_orm() -> None:  # pylint: disable=W0612
-        await connections.close_all()
+        await Tortoise.close_connections()
         logger.info("Tortoise-ORM shutdown")
 
     def __call__(self, *args, **kwargs) -> Self:

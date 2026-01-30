@@ -2,51 +2,88 @@
 Test some mysql-specific features
 """
 
+import copy
+import os
 import ssl
 
-from tortoise import Tortoise
-from tortoise.contrib import test
+import pytest
+
+from tortoise.backends.base.config_generator import generate_config
+from tortoise.context import TortoiseContext
 
 
-class TestMySQL(test.SimpleTestCase):
-    async def asyncSetUp(self):
-        if Tortoise._inited:
-            await self._tearDownDB()
-        self.db_config = test.getDBConfig(app_label="models", modules=["tests.testmodels"])
-        if self.db_config["connections"]["models"]["engine"] != "tortoise.backends.mysql":
-            raise test.SkipTest("MySQL only")
+def _get_db_config():
+    """Get database config and check if it's MySQL."""
+    db_url = os.getenv("TORTOISE_TEST_DB", "sqlite://:memory:")
+    db_config = generate_config(
+        db_url,
+        app_modules={"models": ["tests.testmodels"]},
+        connection_label="models",
+        testing=True,
+    )
+    engine = db_config["connections"]["models"]["engine"]
+    is_mysql = engine == "tortoise.backends.mysql"
+    return db_config, is_mysql
 
-    async def asyncTearDown(self) -> None:
-        if Tortoise._inited:
-            await Tortoise._drop_databases()
-        await super().asyncTearDown()
 
-    async def test_bad_charset(self):
-        self.db_config["connections"]["models"]["credentials"]["charset"] = "terrible"
-        with self.assertRaisesRegex(ConnectionError, "Unknown charset"):
-            await Tortoise.init(self.db_config, _create_db=True)
+@pytest.mark.asyncio
+async def test_bad_charset():
+    """Test that invalid charset raises ConnectionError."""
+    base_config, is_mysql = _get_db_config()
+    if not is_mysql:
+        pytest.skip("MySQL only")
 
-    async def test_ssl_true(self):
-        self.db_config["connections"]["models"]["credentials"]["ssl"] = True
+    # Deep copy to avoid modifying shared config
+    db_config = copy.deepcopy(base_config)
+    db_config["connections"]["models"]["credentials"]["charset"] = "terrible"
+
+    async with TortoiseContext() as ctx:
+        with pytest.raises(ConnectionError, match="Unknown charset"):
+            await ctx.init(db_config, _create_db=True)
+
+
+@pytest.mark.asyncio
+async def test_ssl_true():
+    """Test that SSL=True with no cert raises ConnectionError."""
+    base_config, is_mysql = _get_db_config()
+    if not is_mysql:
+        pytest.skip("MySQL only")
+
+    # Deep copy to avoid modifying shared config
+    db_config = copy.deepcopy(base_config)
+    db_config["connections"]["models"]["credentials"]["ssl"] = True
+    try:
+        import asyncmy  # noqa pylint: disable=unused-import
+
+        # setting read_timeout for asyncmy. Otherwise, it will hang forever.
+        db_config["connections"]["models"]["credentials"]["read_timeout"] = 1
+    except ImportError:
+        pass
+
+    async with TortoiseContext() as ctx:
+        with pytest.raises(ConnectionError):
+            await ctx.init(db_config, _create_db=True)
+
+
+@pytest.mark.asyncio
+async def test_ssl_custom():
+    """Test SSL with custom context (may pass or fail depending on server)."""
+    base_config, is_mysql = _get_db_config()
+    if not is_mysql:
+        pytest.skip("MySQL only")
+
+    # Deep copy to avoid modifying shared config
+    db_config = copy.deepcopy(base_config)
+
+    # Expect connectionerror or pass
+    ssl_ctx = ssl.create_default_context()
+    ssl_ctx.check_hostname = False
+    ssl_ctx.verify_mode = ssl.CERT_NONE
+
+    db_config["connections"]["models"]["credentials"]["ssl"] = ssl_ctx
+
+    async with TortoiseContext() as ctx:
         try:
-            import asyncmy  # noqa pylint: disable=unused-import
-
-            # setting read_timeout for asyncmy. Otherwise, it will hang forever.
-            self.db_config["connections"]["models"]["credentials"]["read_timeout"] = 1
-        except ImportError:
-            pass
-
-        with self.assertRaises(ConnectionError):
-            await Tortoise.init(self.db_config, _create_db=True)
-
-    async def test_ssl_custom(self):
-        # Expect connectionerror or pass
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
-
-        self.db_config["connections"]["models"]["credentials"]["ssl"] = ctx
-        try:
-            await Tortoise.init(self.db_config, _create_db=True)
+            await ctx.init(db_config, _create_db=True)
         except ConnectionError:
             pass

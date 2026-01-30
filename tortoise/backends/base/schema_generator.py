@@ -485,11 +485,20 @@ class BaseSchemaGenerator:
 
     def _get_models_to_create(self) -> list[type[Model]]:
         from tortoise import Tortoise
+        from tortoise.context import get_current_context
+
+        # Check for active TortoiseContext first
+        ctx = get_current_context()
+        if ctx is not None and ctx._inited and ctx.apps is not None:
+            apps = ctx.apps
+        else:
+            # Fall back to global Tortoise.apps
+            apps = Tortoise.apps
 
         models_to_create: list[type[Model]] = []
-        if not Tortoise.apps:
+        if not apps:
             return models_to_create
-        for model in Tortoise.apps.get_models_iterable():
+        for model in apps.get_models_iterable():
             if model._meta.db == self.client:
                 model._check()
                 models_to_create.append(model)

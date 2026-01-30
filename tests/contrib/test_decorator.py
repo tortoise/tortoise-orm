@@ -1,75 +1,93 @@
+import os
 import subprocess  # nosec
+import sys
 from unittest.mock import AsyncMock, patch
 
-from tortoise.contrib import test
-from tortoise.contrib.test import init_memory_sqlite
+import pytest
+
+from tortoise.contrib.test import init_memory_sqlite, requireCapability
 
 
-class TestDecorator(test.TestCase):
-    @test.requireCapability(dialect="sqlite")
-    async def test_script_with_init_memory_sqlite(self) -> None:
-        r = subprocess.run(["python", "examples/basic.py"], capture_output=True, text=True)  # nosec
-        assert not r.stderr
-        output = r.stdout
-        s = "[{'id': 1, 'name': 'Updated name'}, {'id': 2, 'name': 'Test 2'}]"
-        self.assertIn(s, output)
+@pytest.mark.asyncio
+@requireCapability(dialect="sqlite")
+async def test_basic_example_script(db) -> None:
+    """Test that the basic example script runs successfully."""
+    # Set PYTHONPATH to use local source instead of installed package
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.getcwd()
+    r = subprocess.run(  # nosec
+        [sys.executable, "examples/basic.py"], capture_output=True, text=True, env=env
+    )
+    assert not r.stderr, f"Script had errors: {r.stderr}"
+    output = r.stdout
+    s = "[{'id': 1, 'name': 'Updated name'}, {'id': 2, 'name': 'Test 2'}]"
+    assert s in output
 
-    @test.requireCapability(dialect="sqlite")
-    @patch("tortoise.Tortoise.init")
-    @patch("tortoise.Tortoise.generate_schemas")
-    async def test_init_memory_sqlite(
-        self,
-        mocked_generate: AsyncMock,
-        mocked_init: AsyncMock,
-    ) -> None:
-        @init_memory_sqlite
-        async def run():
-            return "foo"
 
-        res = await run()
-        self.assertEqual(res, "foo")
-        mocked_init.assert_awaited_once()
-        mocked_init.assert_called_once_with(
-            db_url="sqlite://:memory:", modules={"models": ["__main__"]}
-        )
-        mocked_generate.assert_awaited_once()
+@pytest.mark.asyncio
+@requireCapability(dialect="sqlite")
+@patch("tortoise.Tortoise.init")
+@patch("tortoise.Tortoise.generate_schemas")
+async def test_init_memory_sqlite_decorator(
+    mocked_generate: AsyncMock,
+    mocked_init: AsyncMock,
+    db,
+) -> None:
+    """Test init_memory_sqlite as decorator without parentheses."""
 
-    @test.requireCapability(dialect="sqlite")
-    @patch("tortoise.Tortoise.init")
-    @patch("tortoise.Tortoise.generate_schemas")
-    async def test_init_memory_sqlite_with_models(
-        self,
-        mocked_generate: AsyncMock,
-        mocked_init: AsyncMock,
-    ) -> None:
-        @init_memory_sqlite(["app.models"])
-        async def run():
-            return "foo"
+    @init_memory_sqlite
+    async def run():
+        return "result"
 
-        res = await run()
-        self.assertEqual(res, "foo")
-        mocked_init.assert_awaited_once()
-        mocked_init.assert_called_once_with(
-            db_url="sqlite://:memory:", modules={"models": ["app.models"]}
-        )
-        mocked_generate.assert_awaited_once()
+    result = await run()
+    assert result == "result"
+    mocked_init.assert_awaited_once_with(
+        db_url="sqlite://:memory:", modules={"models": ["__main__"]}
+    )
+    mocked_generate.assert_awaited_once()
 
-    @test.requireCapability(dialect="sqlite")
-    @patch("tortoise.Tortoise.init")
-    @patch("tortoise.Tortoise.generate_schemas")
-    async def test_init_memory_sqlite_model_str(
-        self,
-        mocked_generate: AsyncMock,
-        mocked_init: AsyncMock,
-    ) -> None:
-        @init_memory_sqlite("app.models")
-        async def run():
-            return "foo"
 
-        res = await run()
-        self.assertEqual(res, "foo")
-        mocked_init.assert_awaited_once()
-        mocked_init.assert_called_once_with(
-            db_url="sqlite://:memory:", modules={"models": ["app.models"]}
-        )
-        mocked_generate.assert_awaited_once()
+@pytest.mark.asyncio
+@requireCapability(dialect="sqlite")
+@patch("tortoise.Tortoise.init")
+@patch("tortoise.Tortoise.generate_schemas")
+async def test_init_memory_sqlite_decorator_with_models_list(
+    mocked_generate: AsyncMock,
+    mocked_init: AsyncMock,
+    db,
+) -> None:
+    """Test init_memory_sqlite as decorator with models list."""
+
+    @init_memory_sqlite(["app.models"])
+    async def run():
+        return "result"
+
+    result = await run()
+    assert result == "result"
+    mocked_init.assert_awaited_once_with(
+        db_url="sqlite://:memory:", modules={"models": ["app.models"]}
+    )
+    mocked_generate.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@requireCapability(dialect="sqlite")
+@patch("tortoise.Tortoise.init")
+@patch("tortoise.Tortoise.generate_schemas")
+async def test_init_memory_sqlite_decorator_with_models_string(
+    mocked_generate: AsyncMock,
+    mocked_init: AsyncMock,
+    db,
+) -> None:
+    """Test init_memory_sqlite as decorator with models string."""
+
+    @init_memory_sqlite("app.models")
+    async def run():
+        return "result"
+
+    result = await run()
+    assert result == "result"
+    mocked_init.assert_awaited_once_with(
+        db_url="sqlite://:memory:", modules={"models": ["app.models"]}
+    )
+    mocked_generate.assert_awaited_once()

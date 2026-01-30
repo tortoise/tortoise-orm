@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from tortoise import connections, fields
+from tortoise import fields
+from tortoise.context import TortoiseContext
 from tortoise.fields.relational import ForeignKeyFieldInstance
 from tortoise.migrations.operations import CreateModel
 from tortoise.migrations.schema_generator.state import ModelState, State
@@ -42,18 +43,15 @@ def test_field_signature_ignores_implicit_db_column() -> None:
 
 
 def test_state_apps_builds_relations_before_querysets() -> None:
-    old_config = connections._db_config
-    old_create_db = connections._create_db
-    connections._clear_storage()
-    connections._init_config(
-        {
-            "default": {
-                "engine": "tortoise.backends.sqlite",
-                "credentials": {"file_path": ":memory:"},
+    with TortoiseContext() as ctx:
+        ctx.connections._init_config(
+            {
+                "default": {
+                    "engine": "tortoise.backends.sqlite",
+                    "credentials": {"file_path": ":memory:"},
+                }
             }
-        }
-    )
-    try:
+        )
         state = State(models={}, apps=StateApps(default_connections={"blog": "default"}))
         CreateModel(
             name="Author",
@@ -70,7 +68,3 @@ def test_state_apps_builds_relations_before_querysets() -> None:
         post_model = state.apps.get_model("blog.Post")
         author_field = cast(ForeignKeyFieldInstance, post_model._meta.fields_map["author"])
         assert author_field.to_field_instance is not None
-    finally:
-        connections._clear_storage()
-        connections._db_config = old_config
-        connections._create_db = old_create_db
