@@ -28,7 +28,9 @@ class Post(Model):
     id = fields.IntField(primary_key=True)
     title = fields.CharField(max_length=255)
     content = fields.TextField()
-    author = fields.ForeignKeyField("models.User", related_name="posts")
+    author: fields.ForeignKeyRelation[User] = fields.ForeignKeyField(
+        "models.User", related_name="posts"
+    )
     created_at = fields.DatetimeField(auto_now_add=True)
     updated_at = fields.DatetimeField(auto_now=True)
 
