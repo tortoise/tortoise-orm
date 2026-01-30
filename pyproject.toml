@@ -1,11 +1,11 @@
 [project]
 name = "tortoise-orm"
 description = "Easy async ORM for python, built with relations in mind"
-authors = [{name="Andrey Bondar", email="andrey@bondar.ru"}, {name="Nickolas Grigoriadis", email="nagrigoriadis@gmail.com"}, {name="long2ice", email="long2ice@gmail.com"}]
-license = {text="Apache-2.0"}
+authors = [{ name = "Andrey Bondar", email = "andrey@bondar.ru" }, { name = "Nickolas Grigoriadis", email = "nagrigoriadis@gmail.com" }, { name = "long2ice", email = "long2ice@gmail.com" }]
+license = { text = "Apache-2.0" }
 readme = "README.rst"
 keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio", "psycopg"]
-dynamic = [ "version" ]
+dynamic = ["version"]
 requires-python = ">=3.10"
 dependencies = [
     "pypika-tortoise (>=0.6.3,<1.0.0)",
@@ -81,7 +81,7 @@ dev = [
     "types-pytz",
     "types-PyMySQL",
 ]
-contrib=[
+contrib = [
     # Sample integration - Quart
     "quart",
     # Sample integration - Sanic
@@ -122,7 +122,7 @@ requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
 [tool.pdm]
-version = {source="file", path="tortoise/__init__.py"}
+version = { source = "file", path = "tortoise/__init__.py" }
 
 [tool.pdm.build]
 excludes = ["./**/.git", "./**/.*_cache", "examples"]
@@ -210,9 +210,9 @@ line-length = 100
 [tool.ruff.lint]
 ignore = ["E501"]
 extend-select = [
-    "I",      # https://docs.astral.sh/ruff/rules/#isort-i
-    "FA",     # https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
-    "UP",     # https://docs.astral.sh/ruff/rules/#pyupgrade-up
+    "I", # https://docs.astral.sh/ruff/rules/#isort-i
+    "FA", # https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
+    "UP", # https://docs.astral.sh/ruff/rules/#pyupgrade-up
     "RUF100", # https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
 ]
 
@@ -223,6 +223,7 @@ extra-standard-library = ["tomllib"]
 exclude_dirs = [
     "tests",
     "examples/*/_tests.py",
+    "examples/pytest",
     "conftest.py",
     "tortoise/migrations/schema_editor/mssql.py",
 ]
