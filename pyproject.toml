@@ -196,6 +196,7 @@ docstring_style = "sphinx"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "session"
+testpaths = ["tests"]
 filterwarnings = [
     'ignore:`pk` is deprecated:DeprecationWarning',
     'ignore:`index` is deprecated:DeprecationWarning',
