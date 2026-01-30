@@ -20,26 +20,16 @@ import tempfile
 import pytest
 import pytest_asyncio
 
+# Module-level skip for xdist workers - this is evaluated when the worker imports the module
+# Unlike pytestmark, this happens on each worker process where PYTEST_XDIST_WORKER is set
+if os.environ.get("PYTEST_XDIST_WORKER") is not None:
+    pytest.skip(
+        "Skipping test_pytest_initializer module in xdist worker - run separately with -n0",
+        allow_module_level=True,
+    )
+
 from tortoise import Tortoise
 from tortoise.contrib.test import create_db
-
-
-def is_xdist_worker() -> bool:
-    """Check if we're running as an xdist worker."""
-    return os.environ.get("PYTEST_XDIST_WORKER") is not None
-
-
-@pytest.fixture(autouse=True)
-def skip_in_xdist():
-    """
-    Skip tests when running with pytest-xdist.
-
-    This fixture is evaluated at test runtime (not import time), ensuring
-    tests are properly skipped on xdist workers. The create_db/drop_databases
-    calls reset global Tortoise state which interferes with other tests.
-    """
-    if is_xdist_worker():
-        pytest.skip("Skipping in xdist mode - run separately with -n0")
 
 
 @pytest.mark.asyncio
