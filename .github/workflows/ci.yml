@@ -66,9 +66,10 @@ jobs:
           sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
       - name: Run ci
         run: make ci
-      - name: Test Pytest Example
+      - name: Test Pytest Initializer and Example
         run: |
-          uv run --frozen pytest examples/pytest/test_models.py -v --cov=tortoise --cov-append --cov-branch --tb=native
+          TORTOISE_TEST_DB="sqlite://:memory:" uv run --frozen pytest tests/contrib/test_pytest_initializer.py -n0 -v --cov=tortoise --cov-append --cov-branch --tb=native
+          TORTOISE_TEST_DB="sqlite://:memory:" uv run --frozen pytest examples/pytest/test_models.py -v --cov=tortoise --cov-append --cov-branch --tb=native
       - name: Test FastAPI/Blacksheep Example
         run: |
           PYTHONPATH=$DEST_FASTAPI uv run --frozen pytest $PYTEST_ARGS $DEST_FASTAPI/_tests.py

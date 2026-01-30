@@ -29,18 +29,7 @@ def is_xdist_worker() -> bool:
     return os.environ.get("PYTEST_XDIST_WORKER") is not None
 
 
-def get_test_db_url() -> str:
-    """Get the test database URL from environment."""
-    return os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
-
-
-def is_sqlite() -> bool:
-    """Check if we're using SQLite (any variant)."""
-    return get_test_db_url().startswith("sqlite:")
-
-
-# Skip when running with xdist - create_db/drop_databases resets global state
-# (including event loop bindings) which interferes with other tests on same worker
+# Skip the entire module if running in xdist parallel mode
 pytestmark = pytest.mark.skipif(
     is_xdist_worker(),
     reason="These tests use create_db which resets global state; run separately with -n0",
@@ -53,7 +42,7 @@ class TestAsyncCreateDb:
 
     async def test_create_db_initializes_properly(self):
         """Test that create_db properly initializes the database."""
-        await create_db(["tests.testmodels"], db_url=get_test_db_url(), app_label="models")
+        await create_db(["tests.testmodels"], db_url="sqlite://:memory:", app_label="models")
         try:
             assert Tortoise._inited is True
             assert Tortoise.apps is not None
@@ -68,7 +57,7 @@ class TestAsyncCreateDb:
 
     async def test_create_db_allows_model_operations(self):
         """Test that after create_db, we can perform model operations."""
-        await create_db(["tests.testmodels"], db_url=get_test_db_url(), app_label="models")
+        await create_db(["tests.testmodels"], db_url="sqlite://:memory:", app_label="models")
         try:
             from tests.testmodels import Tournament
 
@@ -96,7 +85,6 @@ class TestAsyncCreateDb:
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(not is_sqlite(), reason="File-based SQLite test only runs with SQLite")
 class TestFileBasedSqliteAsync:
     """Test with file-based SQLite database (async tests)."""
 
@@ -137,7 +125,7 @@ async def db_fixture():
 
     This is the recommended pattern for pytest-asyncio users.
     """
-    await create_db(["tests.testmodels"], db_url=get_test_db_url(), app_label="models")
+    await create_db(["tests.testmodels"], db_url="sqlite://:memory:", app_label="models")
     yield
     await Tortoise._drop_databases()
 
@@ -204,7 +192,7 @@ async def db_fixture_with_data():
 
     This pattern is useful when multiple tests need the same initial data.
     """
-    await create_db(["tests.testmodels"], db_url=get_test_db_url(), app_label="models")
+    await create_db(["tests.testmodels"], db_url="sqlite://:memory:", app_label="models")
 
     # Pre-populate with test data
     from tests.testmodels import Tournament
