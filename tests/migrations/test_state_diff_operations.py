@@ -6,6 +6,8 @@ from typing import Any
 import pytest
 
 from tortoise import fields
+from tortoise.contrib.postgres.fields import TSVectorField
+from tortoise.contrib.postgres.indexes import GinIndex
 from tortoise.fields.base import Field
 from tortoise.indexes import Index
 from tortoise.migrations.constraints import UniqueConstraint
@@ -17,6 +19,7 @@ from tortoise.migrations.operations import (
     CreateModel,
     DeleteModel,
     RemoveConstraint,
+    RemoveField,
     RemoveIndex,
     RenameConstraint,
     RenameField,
@@ -156,6 +159,67 @@ def test_generate_alter_field() -> None:
 
     operations = OperationGenerator(old_state, new_state).generate()
     assert any(isinstance(op, AlterField) for op in operations)
+
+
+def test_generate_alter_field_when_generated_sql_changes() -> None:
+    OldWidget = make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        title=fields.TextField(),
+        body=fields.TextField(),
+        search_vector=TSVectorField(source_fields=("title",), config="english"),
+    )
+    NewWidget = make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        title=fields.TextField(),
+        body=fields.TextField(),
+        search_vector=TSVectorField(source_fields=("title", "body"), config="english"),
+    )
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert any(isinstance(op, RemoveField) for op in operations)
+    assert any(isinstance(op, AddField) for op in operations)
+
+
+def test_generate_recreate_generated_field_restores_indexes_constraints() -> None:
+    OldWidget = make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        title=fields.TextField(),
+        body=fields.TextField(),
+        search_vector=TSVectorField(source_fields=("title",), config="english", index=True),
+    )
+    NewWidget = make_model(
+        "Widget",
+        "widget",
+        id=fields.IntField(pk=True),
+        title=fields.TextField(),
+        body=fields.TextField(),
+        search_vector=TSVectorField(source_fields=("title", "body"), config="english", index=True),
+    )
+    OldWidget._meta.indexes = (GinIndex(fields=("search_vector",)),)
+    OldWidget._meta.unique_together = (("title", "search_vector"),)
+    NewWidget._meta.indexes = (GinIndex(fields=("search_vector",)),)
+    NewWidget._meta.unique_together = (("title", "search_vector"),)
+
+    old_state = build_state("models", OldWidget)
+    new_state = build_state("models", NewWidget)
+
+    operations = OperationGenerator(old_state, new_state).generate()
+    assert any(isinstance(op, RemoveField) for op in operations)
+    assert any(isinstance(op, AddField) for op in operations)
+    assert any(isinstance(op, AddIndex) and op.index.INDEX_TYPE == "GIN" for op in operations)
+    assert any(
+        isinstance(op, AddConstraint) and op.constraint.fields == ("title", "search_vector")
+        for op in operations
+    )
 
 
 def test_generate_add_remove_index() -> None:

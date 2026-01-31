@@ -9,6 +9,7 @@ from tortoise.contrib.postgres.indexes import (
     PostgreSQLIndex,
     SpGistIndex,
 )
+from tortoise.contrib.postgres.search import SearchVector
 
 
 class Index(Model):
@@ -19,6 +20,8 @@ class Index(Model):
     sp_gist = fields.CharField(max_length=200)
     hash = fields.CharField(max_length=200)
     partial = fields.CharField(max_length=200)
+    title = fields.TextField()
+    body = fields.TextField()
 
     class Meta:
         indexes = [
@@ -29,4 +32,5 @@ class Index(Model):
             SpGistIndex(fields=("sp_gist",)),
             HashIndex(fields=("hash",)),
             PostgreSQLIndex(fields=("partial",), condition={"id": 1}),
+            GinIndex(SearchVector("title", "body", config="english")),
         ]

@@ -1294,6 +1294,8 @@ class UpdateQuery(AwaitableQuery):
                 raise FieldError(f"Unknown keyword argument {key} for model {self.model}")
             if field_object.pk:
                 raise IntegrityError(f"Field {key} is PK and can not be updated")
+            if field_object.generated:
+                raise IntegrityError(f"Field {key} is generated and can not be updated")
             if isinstance(field_object, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
                 self.model._validate_relation_type(key, value)
                 fk_field: str = field_object.source_field  # type: ignore

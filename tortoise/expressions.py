@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import operator
-from collections.abc import Iterator
 from dataclasses import dataclass
 from dataclasses import field as dataclass_field
 from enum import Enum
@@ -365,7 +364,7 @@ class Q:
         operator = having_info["operator"]
         overridden_operator = (
             resolve_context.model._meta.db.executor_class.get_overridden_filter_func(
-                filter_func=operator
+                filter_func=operator, filter_info=having_info
             )
         )
         if overridden_operator:
@@ -537,7 +536,7 @@ class Function(Expression):
     populate_field_object = False
 
     def __init__(
-        self, field: str | F | CombinedExpression | Function, *default_values: Any
+        self, field: str | F | CombinedExpression | Function | Term, *default_values: Any
     ) -> None:
         self.field = field
         self.field_object: Field | None = None
@@ -554,12 +553,16 @@ class Function(Expression):
             self.field_object = output_field
         return ResolveResult(term=term, joins=joins, output_field=output_field)
 
-    def _resolve_default_values(self, resolve_context: ResolveContext) -> Iterator[Any]:
-        for default_value in self.default_values:
-            if isinstance(default_value, Function):
-                yield default_value.resolve(resolve_context).term
-            else:
-                yield default_value
+    def _resolve_argument(
+        self, resolve_context: ResolveContext, value: Any, *, treat_str_as_field: bool
+    ) -> ResolveResult:
+        if isinstance(value, Expression):
+            return value.resolve(resolve_context)
+        if isinstance(value, Term):
+            return ResolveResult(term=value)
+        if isinstance(value, str) and treat_str_as_field:
+            return self._resolve_nested_field(resolve_context, value)
+        return ResolveResult(term=value)
 
     def resolve(self, resolve_context: ResolveContext) -> ResolveResult:
         """
@@ -571,17 +574,20 @@ class Function(Expression):
         :return: Dict with keys ``"joins"`` and ``"fields"``
         """
 
-        default_values = self._resolve_default_values(resolve_context)
-
-        function_arg = (
-            self._resolve_nested_field(resolve_context, self.field)
-            if isinstance(self.field, str)
-            else self.field.resolve(resolve_context)
-        )
-        term = self._get_function_field(function_arg.term, *default_values)
+        function_arg = self._resolve_argument(resolve_context, self.field, treat_str_as_field=True)
+        resolved_defaults = [
+            self._resolve_argument(resolve_context, value, treat_str_as_field=False)
+            for value in self.default_values
+        ]
+        default_terms = [value.term for value in resolved_defaults]
+        term = self._get_function_field(function_arg.term, *default_terms)
+        joins = function_arg.joins
+        for value in resolved_defaults:
+            if value.joins:
+                joins = list(set(joins + value.joins))
         res = ResolveResult(
             term=term,
-            joins=function_arg.joins,
+            joins=joins,
             output_field=function_arg.output_field,  # type:ignore[call-overload]
         )
 

@@ -140,6 +140,16 @@ class BaseSchemaGenerator:
         return f'"{val}"'
 
     @staticmethod
+    def _is_index_expression(field: str) -> bool:
+        return any(token in field for token in ("(", ")", " ", '"', ".", ":"))
+
+    def _format_index_fields(self, field_names: Sequence[str]) -> str:
+        return ", ".join(
+            field if self._is_index_expression(field) else self.quote(field)
+            for field in field_names
+        )
+
+    @staticmethod
     def _make_hash(*args: str, length: int) -> str:
         # Hash a set of string values and get a digest of the given length.
         return sha256(";".join(args).encode("utf-8")).hexdigest()[:length]
@@ -176,7 +186,7 @@ class BaseSchemaGenerator:
             index_name=index_name or self._get_index_name("idx", model, field_names),
             index_type=f"{index_type} " if index_type else "",
             table_name=model._meta.db_table,
-            fields=", ".join([self.quote(f) for f in field_names]),
+            fields=self._format_index_fields(field_names),
             extra=f"{extra}" if extra else "",
         )
 
@@ -404,6 +414,21 @@ class BaseSchemaGenerator:
             if create_pk_field := self._get_pk_create_sql(field_object, column_name, comment):
                 fields_to_create.append(create_pk_field)
                 continue
+            if field_object.generated and not field_object.pk:
+                generated_sql = field_object.get_for_dialect(self.DIALECT, "GENERATED_SQL")
+                if generated_sql:
+                    field_type = field_object.get_for_dialect(self.DIALECT, "SQL_TYPE")
+                    field_creation_string = self._create_string(
+                        db_column=column_name,
+                        field_type=f"{field_type} {generated_sql}",
+                        nullable=" NOT NULL" if not field_object.null else "",
+                        unique=" UNIQUE" if field_object.unique else "",
+                        is_primary_key=False,
+                        comment=comment,
+                        default="",
+                    )
+                    fields_to_create.append(field_creation_string)
+                    continue
 
             field_creation_string, related_table_name = self._get_field_sql_and_related_table(
                 field_object, table_name, column_name, default, comment

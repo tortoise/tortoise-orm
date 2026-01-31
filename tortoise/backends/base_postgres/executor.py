@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import Sequence
-from typing import cast
+from collections.abc import Callable, Sequence
+from functools import partial
+from typing import TYPE_CHECKING, cast
 
 from pypika_tortoise.dialects import PostgreSQLQueryBuilder
-from pypika_tortoise.terms import Term
+from pypika_tortoise.terms import Term, ValueWrapper
 
 from tortoise import Model
 from tortoise.backends.base.executor import BaseExecutor
@@ -15,6 +16,7 @@ from tortoise.contrib.postgres.array_functions import (
     postgres_array_length,
     postgres_array_overlap,
 )
+from tortoise.contrib.postgres.functions import PlainToTsQuery
 from tortoise.contrib.postgres.json_functions import (
     postgres_json_contained_by,
     postgres_json_contains,
@@ -38,16 +40,21 @@ from tortoise.filters import (
     search,
 )
 
+if TYPE_CHECKING:  # pragma: nocoverage
+    from tortoise.filters import FilterInfoDict
 
-def postgres_search(field: Term, value: Term) -> SearchCriterion:
-    return SearchCriterion(field, expr=value)
+
+def postgres_search(
+    field: Term, value: Term | str, field_is_vector: bool = False
+) -> SearchCriterion:
+    query = value if isinstance(value, Term) else PlainToTsQuery(ValueWrapper(value))
+    return SearchCriterion(field, expr=query, vectorize=not field_is_vector)
 
 
 class BasePostgresExecutor(BaseExecutor):
     EXPLAIN_PREFIX = "EXPLAIN (FORMAT JSON, VERBOSE)"
     DB_NATIVE = BaseExecutor.DB_NATIVE | {bool, uuid.UUID}
     FILTER_FUNC_OVERRIDE = {
-        search: postgres_search,
         array_contains: postgres_array_contains,
         array_contained_by: postgres_array_contained_by,
         array_overlap: postgres_array_overlap,
@@ -58,6 +65,15 @@ class BasePostgresExecutor(BaseExecutor):
         insensitive_posix_regex: postgres_insensitive_posix_regex,
         array_length: postgres_array_length,
     }
+
+    @classmethod
+    def get_overridden_filter_func(
+        cls, filter_func: Callable, filter_info: FilterInfoDict | None = None
+    ) -> Callable | None:
+        if filter_func is search:
+            field_is_vector = bool(filter_info and filter_info.get("is_tsvector"))
+            return partial(postgres_search, field_is_vector=field_is_vector)
+        return super().get_overridden_filter_func(filter_func, filter_info)
 
     def _prepare_insert_statement(
         self, columns: Sequence[str], has_generated: bool = True, ignore_conflicts: bool = False

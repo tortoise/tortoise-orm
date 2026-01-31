@@ -309,6 +309,12 @@ class MetaInfo:
         self._generate_filters()
         self._generate_lazy_fk_m2m_fields()
         self._generate_db_fields()
+        self._resolve_index_expressions()
+
+    def _resolve_index_expressions(self) -> None:
+        for index in self.indexes:
+            if isinstance(index, Index):
+                index.resolve_expressions(self._model)
 
     def finalise_fields(self) -> None:
         self.db_fields = set(self.fields_db_projection.values())
@@ -472,7 +478,9 @@ class MetaInfo:
     def _generate_filters(self) -> None:
         get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
         for key, filter_info in self._filters.items():
-            overridden_operator = get_overridden_filter_func(filter_func=filter_info["operator"])
+            overridden_operator = get_overridden_filter_func(
+                filter_func=filter_info["operator"], filter_info=filter_info
+            )
             if overridden_operator:
                 filter_info = copy(filter_info)
                 filter_info["operator"] = overridden_operator

@@ -37,4 +37,47 @@ Search
 
 Postgres full text search.
 
+Full text search uses ``TSVECTOR`` data and PostgreSQL search functions. Tortoise provides
+field support, expression helpers, and ranking/headline utilities similar to Django.
+
+Generated TSVECTOR columns require PostgreSQL 12+.
+
+.. code-block:: python3
+
+    from tortoise import fields, models
+    from tortoise.contrib.postgres.fields import TSVectorField
+    from tortoise.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
+
+    class Article(models.Model):
+        title = fields.CharField(max_length=200)
+        body = fields.TextField()
+        search = TSVectorField(
+            source_fields=("title", "body"),
+            config="english",
+            weights=("A", "B"),
+            stored=True,
+        )
+
+    query = SearchQuery("postgres", search_type="websearch", config="english")
+    vector = SearchVector("title", "body", config="english")
+    rank = SearchRank(vector, query, normalization=32)
+    results = (
+        await Article.annotate(rank=rank)
+        .filter(search__search=query)
+        .order_by("-rank")
+    )
+
+.. code-block:: python3
+
+    from tortoise.contrib.postgres.search import SearchHeadline
+
+    results = await Article.annotate(
+        snippet=SearchHeadline("body", query, start_sel="<b>", stop_sel="</b>")
+    )
+
+.. autoclass:: tortoise.contrib.postgres.search.SearchVector
+.. autoclass:: tortoise.contrib.postgres.search.SearchQuery
+.. autoclass:: tortoise.contrib.postgres.search.SearchRank
+.. autoclass:: tortoise.contrib.postgres.search.SearchHeadline
+.. autoclass:: tortoise.contrib.postgres.search.Lexeme
 .. autoclass:: tortoise.contrib.postgres.search.SearchCriterion
