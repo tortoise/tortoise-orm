@@ -225,4 +225,6 @@ exclude_dirs = [
     "examples/*/_tests.py",
     "conftest.py",
     "tortoise/migrations/schema_editor/mssql.py",
+    "examples/postgres_full_text_search.py",
+    "examples/postgres.py",
 ]
