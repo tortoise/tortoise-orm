@@ -1,13 +1,13 @@
 import datetime
 
 from tests.testmodels import (
+    DateFields,
     DatetimeFields,
     Event,
     IntFields,
     Reporter,
     Team,
     Tournament,
-    DateFields,
 )
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotEQ
@@ -165,10 +165,9 @@ class TestFiltering(test.TestCase):
         self.assertEqual(len(tournaments), 2)
         self.assertSetEqual({t.name for t in tournaments}, {"0", "1"})
 
-    @test.requireCapability(dialect="mysql")
-    @test.requireCapability(dialect="postgres")
+    @test.requireCapability(dialect__in=["postgres", "mysql"])
     async def test_filter_exact(self):
-        await DatetimeFields.create(
+        obj = await DatetimeFields.create(
             datetime=datetime.datetime(
                 year=2020, month=5, day=20, hour=0, minute=0, second=0, microsecond=0
             )
@@ -176,17 +175,32 @@ class TestFiltering(test.TestCase):
         self.assertEqual(await DatetimeFields.filter(datetime__year=2020).count(), 1)
         self.assertEqual(await DatetimeFields.filter(datetime__quarter=2).count(), 1)
         self.assertEqual(await DatetimeFields.filter(datetime__month=5).count(), 1)
-        self.assertEqual(await DatetimeFields.filter(datetime__week=20).count(), 1)
         self.assertEqual(await DatetimeFields.filter(datetime__day=20).count(), 1)
-        self.assertEqual(await DatetimeFields.filter(datetime__hour=0).count(), 1)
+        if test._TORTOISE_TEST_DB.startswith("mysql"):
+            self.assertEqual(await DatetimeFields.filter(datetime__week=20).count(), 1)
+            self.assertEqual(await DatetimeFields.filter(datetime__hour=0).count(), 1)
+        else:
+            # PostgreSQL enables tzinfo by default
+            dt = obj.datetime.astimezone()
+            week = dt.isocalendar()[1]
+            self.assertEqual(await DatetimeFields.filter(datetime__week=week).count(), 1)
+            self.assertEqual(await DatetimeFields.filter(datetime__hour=dt.hour).count(), 1)
         self.assertEqual(await DatetimeFields.filter(datetime__minute=0).count(), 1)
         self.assertEqual(await DatetimeFields.filter(datetime__second=0).count(), 1)
         self.assertEqual(await DatetimeFields.filter(datetime__microsecond=0).count(), 1)
 
         await DateFields.create(date=datetime.date(year=2021, month=6, day=21))
-        self.assertEqual(await DateFields.filter(date__year=2021).count(), 0)
-        self.assertEqual(await DateFields.filter(date__month=6).count(), 0)
-        self.assertEqual(await DateFields.filter(date__day=21).count(), 0)
+        self.assertEqual(await DateFields.filter(date__year=-2021).count(), 0)
+        self.assertEqual(await DateFields.filter(date__year=2021).count(), 1)
+        self.assertEqual(await DateFields.filter(date__month=6).count(), 1)
+        self.assertEqual(await DateFields.filter(date__day=21).count(), 1)
+        self.assertEqual(await DateFields.filter(date__year="2021").count(), 1)
+        self.assertEqual(await DateFields.filter(date__year=2021.0).count(), 1)
+        self.assertEqual(await DateFields.filter(date="20210621").count(), 1)
+        self.assertEqual(await DateFields.filter(date="2021-06-21").count(), 1)
+        self.assertEqual(
+            await DateFields.filter(date=datetime.date(year=2021, month=6, day=21)).count(), 1
+        )
 
     async def test_filter_by_aggregation_field(self):
         tournament = await Tournament.create(name="0")
