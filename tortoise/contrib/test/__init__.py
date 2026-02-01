@@ -362,11 +362,7 @@ def requireCapability(connection_name: str = "models", **conditions: Any) -> Cal
             def check_capabilities() -> None:
                 db = connections.get(connection_name)
                 for key, val in conditions.items():
-                    if key.endswith(s := "__in"):
-                        key = key.replace(s, "")
-                        if getattr(db.capabilities, key) not in val:
-                            raise SkipTest(f"Capability {key} not in {val}")
-                    elif getattr(db.capabilities, key) != val:
+                    if getattr(db.capabilities, key) != val:
                         raise SkipTest(f"Capability {key} != {val}")
 
             if hasattr(asyncio, "Runner") and inspect.iscoroutinefunction(test_item):

@@ -10,7 +10,7 @@ from tests.testmodels import (
     Tournament,
 )
 from tortoise.contrib import test
-from tortoise.contrib.test.condition import NotEQ
+from tortoise.contrib.test.condition import In, NotEQ
 from tortoise.expressions import Case, F, Q, When
 from tortoise.functions import Coalesce, Count, Length, Lower, Max, Trim, Upper
 
@@ -165,7 +165,7 @@ class TestFiltering(test.TestCase):
         self.assertEqual(len(tournaments), 2)
         self.assertSetEqual({t.name for t in tournaments}, {"0", "1"})
 
-    @test.requireCapability(dialect__in=["postgres", "mysql"])
+    @test.requireCapability(dialect=In("postgres", "mysql"))
     async def test_filter_exact(self):
         obj = await DatetimeFields.create(
             datetime=datetime.datetime(
