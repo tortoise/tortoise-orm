@@ -2,12 +2,13 @@
 This example demonstrates most basic operations with single model
 and a Table definition generation with comment support
 """
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.models import Model
 
 
 class Event(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField(description="Name of the event that corresponds to an action")
     datetime = fields.DatetimeField(
         null=True, description="Datetime of when the event was generated"

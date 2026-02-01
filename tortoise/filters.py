@@ -1,14 +1,31 @@
+from __future__ import annotations
+
 import operator
+import sys
+from collections.abc import Callable, Iterable, Sequence
 from functools import partial
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple
+from typing import TYPE_CHECKING, Any, TypedDict
 
-from pypika import Table
-from pypika.enums import DatePart, SqlTypes
-from pypika.functions import Cast, Extract, Upper
-from pypika.terms import BasicCriterion, Criterion, Equality, Term, ValueWrapper
+from pypika_tortoise import SqlContext, Table
+from pypika_tortoise.enums import DatePart, Matching, SqlTypes
+from pypika_tortoise.functions import Cast, Extract, Upper
+from pypika_tortoise.terms import (
+    Array,
+    BasicCriterion,
+    Criterion,
+    Equality,
+    Term,
+    ValueWrapper,
+)
 
+from tortoise.contrib.postgres.fields import ArrayField, TSVectorField
 from tortoise.fields import Field, JSONField
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
+
+if sys.version_info >= (3, 11):  # pragma：nocoverage
+    from typing import NotRequired
+else:
+    from typing_extensions import NotRequired
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
@@ -17,23 +34,18 @@ if TYPE_CHECKING:  # pragma: nocoverage
 ##############################################################################
 
 
-class Like(BasicCriterion):  # type: ignore
+class Like(BasicCriterion):
     def __init__(self, left, right, alias=None, escape=" ESCAPE '\\'") -> None:
         """
         A Like that supports an ESCAPE clause
         """
-        super().__init__(" LIKE ", left, right, alias=alias)
+        super().__init__(Matching.like, left, right, alias=alias)
         self.escape = escape
 
-    def get_sql(self, quote_char='"', with_alias=False, **kwargs):
-        sql = "{left}{comparator}{right}{escape}".format(
-            comparator=self.comparator,
-            left=self.left.get_sql(quote_char=quote_char, **kwargs),
-            right=self.right.get_sql(quote_char=quote_char, **kwargs),
-            escape=self.escape,
-        )
-        if with_alias and self.alias:  # pragma: nocoverage
-            return '{sql} "{alias}"'.format(sql=sql, alias=self.alias)
+    def get_sql(self, ctx: SqlContext):
+        sql = super().get_sql(ctx.copy(with_alias=False)) + str(self.escape)
+        if ctx.with_alias and self.alias:  # pragma: nocoverage
+            return f'{sql} "{self.alias}"'
         return sql
 
 
@@ -47,28 +59,39 @@ def escape_like(val: str) -> str:
 ##############################################################################
 
 
-def list_encoder(values: Iterable[Any], instance: "Model", field: Field) -> list:
+def list_encoder(values: Iterable[Any], instance: Model, field: Field) -> list:
     """Encodes an iterable of a given field into a database-compatible format."""
     return [field.to_db_value(element, instance) for element in values]
 
 
-def related_list_encoder(values: Iterable[Any], instance: "Model", field: Field) -> list:
+def related_list_encoder(values: Iterable[Any], instance: Model, field: Field) -> list:
     return [
         field.to_db_value(element.pk if hasattr(element, "pk") else element, instance)
         for element in values
     ]
 
 
-def bool_encoder(value: Any, instance: "Model", field: Field) -> bool:
+def bool_encoder(value: Any, instance: Model, field: Field) -> bool:
     return bool(value)
 
 
-def string_encoder(value: Any, instance: "Model", field: Field) -> str:
+def string_encoder(value: Any, instance: Model, field: Field) -> str:
     return str(value)
 
 
-def json_encoder(value: Any, instance: "Model", field: Field) -> Dict:
+def int_encoder(value: Any, instance: Model, field: Field) -> int:
+    return int(value)
+
+
+def json_encoder(value: Any, instance: Model, field: Field) -> dict:
     return value
+
+
+def array_encoder(value: Any | Sequence[Any], instance: Model, field: Field) -> Any:
+    # Casting to the exact type of the field to avoid issues with psycopg that tries
+    # to use the smallest possible type which can lead to errors,
+    # e.g. {1,2} will be casted to smallint[] instead of integer[].
+    return Cast(Array(*value), field.get_db_field_type())
 
 
 ##############################################################################
@@ -81,17 +104,25 @@ def is_in(field: Term, value: Any) -> Criterion:
     if value:
         return field.isin(value)
     # SQL has no False, so we return 1=0
-    return BasicCriterion(Equality.eq, ValueWrapper(1), ValueWrapper(0))
+    return BasicCriterion(
+        Equality.eq,
+        ValueWrapper(1, allow_parametrize=False),
+        ValueWrapper(0, allow_parametrize=False),
+    )
 
 
 def not_in(field: Term, value: Any) -> Criterion:
     if value:
         return field.notin(value) | field.isnull()
     # SQL has no True, so we return 1=1
-    return BasicCriterion(Equality.eq, ValueWrapper(1), ValueWrapper(1))
+    return BasicCriterion(
+        Equality.eq,
+        ValueWrapper(1, allow_parametrize=False),
+        ValueWrapper(1, allow_parametrize=False),
+    )
 
 
-def between_and(field: Term, value: Tuple[Any, Any]) -> Criterion:
+def between_and(field: Term, value: tuple[Any, Any]) -> Criterion:
     return field.between(value[0], value[1])
 
 
@@ -115,9 +146,23 @@ def contains(field: Term, value: str) -> Criterion:
     return Like(Cast(field, SqlTypes.VARCHAR), field.wrap_constant(f"%{escape_like(value)}%"))
 
 
-def search(field: Term, value: str):
+def search(field: Term, value: str) -> Any:
     # will be override in each executor
     pass
+
+
+def posix_regex(field: Term, value: str) -> Any:
+    # Will be overridden in each executor
+    raise NotImplementedError(
+        "The posix_regex filter operator is not supported by your database backend"
+    )
+
+
+def insensitive_posix_regex(field: Term, value: str):
+    # Will be overridden in each executor
+    raise NotImplementedError(
+        "The insensitive_posix_regex filter operator is not supported by your database backend"
+    )
 
 
 def starts_with(field: Term, value: str) -> Criterion:
@@ -187,18 +232,31 @@ def extract_microsecond_equal(field: Term, value: int) -> Criterion:
 
 
 def json_contains(field: Term, value: str) -> Criterion:
-    # will be override in each executor
-    pass
+    raise NotImplementedError("must be overridden in each executor")
 
 
 def json_contained_by(field: Term, value: str) -> Criterion:
-    # will be override in each executor
-    pass
+    raise NotImplementedError("must be overridden in each executor")
 
 
-def json_filter(field: Term, value: Dict) -> Criterion:
-    # will be override in each executor
-    pass
+def json_filter(field: Term, value: dict) -> Criterion:
+    raise NotImplementedError("must be overridden in each xecutor")
+
+
+def array_contains(field: Term, value: Any | Sequence[Any]) -> Criterion:
+    raise NotImplementedError("must be overridden in each executor")
+
+
+def array_contained_by(field: Term, value: Any | Sequence[Any]) -> Criterion:
+    raise NotImplementedError("must be overridden in each executor")
+
+
+def array_overlap(field: Term, value: Any | Sequence[Any]) -> Criterion:
+    raise NotImplementedError("must be overridden in each executor")
+
+
+def array_length(field: Term, value: int) -> Criterion:
+    raise NotImplementedError("must be overridden in each executor")
 
 
 ##############################################################################
@@ -206,7 +264,17 @@ def json_filter(field: Term, value: Dict) -> Criterion:
 ##############################################################################
 
 
-def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> Dict[str, dict]:
+class FilterInfoDict(TypedDict):
+    field: str
+    operator: Callable
+    backward_key: NotRequired[str]
+    table: NotRequired[Table]
+    value_encoder: NotRequired[Callable]
+    source_field: NotRequired[str]
+    is_tsvector: NotRequired[bool]
+
+
+def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> dict[str, FilterInfoDict]:
     target_table_pk = field.related_model._meta.pk
     return {
         field_name: {
@@ -240,7 +308,9 @@ def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> Dict[str
     }
 
 
-def get_backward_fk_filters(field_name: str, field: BackwardFKRelation) -> Dict[str, dict]:
+def get_backward_fk_filters(
+    field_name: str, field: BackwardFKRelation
+) -> dict[str, FilterInfoDict]:
     target_table_pk = field.related_model._meta.pk
     return {
         field_name: {
@@ -286,43 +356,42 @@ def get_backward_fk_filters(field_name: str, field: BackwardFKRelation) -> Dict[
     }
 
 
-def get_json_filter(field_name: str, source_field: str):
-    actual_field_name = field_name
+def get_json_filter(field_name: str, source_field: str) -> dict[str, FilterInfoDict]:
     return {
         field_name: {
-            "field": actual_field_name,
+            "field": field_name,
             "source_field": source_field,
             "operator": operator.eq,
         },
         f"{field_name}__not": {
-            "field": actual_field_name,
+            "field": field_name,
             "source_field": source_field,
             "operator": not_equal,
         },
         f"{field_name}__isnull": {
-            "field": actual_field_name,
+            "field": field_name,
             "source_field": source_field,
             "operator": is_null,
             "value_encoder": bool_encoder,
         },
         f"{field_name}__not_isnull": {
-            "field": actual_field_name,
+            "field": field_name,
             "source_field": source_field,
             "operator": not_null,
             "value_encoder": bool_encoder,
         },
         f"{field_name}__contains": {
-            "field": actual_field_name,
+            "field": field_name,
             "source_field": source_field,
             "operator": json_contains,
         },
         f"{field_name}__contained_by": {
-            "field": actual_field_name,
+            "field": field_name,
             "source_field": source_field,
             "operator": json_contained_by,
         },
         f"{field_name}__filter": {
-            "field": actual_field_name,
+            "field": field_name,
             "source_field": source_field,
             "operator": json_filter,
             "value_encoder": json_encoder,
@@ -330,15 +399,73 @@ def get_json_filter(field_name: str, source_field: str):
     }
 
 
+def get_array_filter(
+    field_name: str, source_field: str, field: ArrayField
+) -> dict[str, FilterInfoDict]:
+    return {
+        field_name: {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": operator.eq,
+            "value_encoder": array_encoder,
+        },
+        f"{field_name}__not": {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": not_equal,
+            "value_encoder": array_encoder,
+        },
+        f"{field_name}__isnull": {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": is_null,
+            "value_encoder": bool_encoder,
+        },
+        f"{field_name}__not_isnull": {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": not_null,
+            "value_encoder": bool_encoder,
+        },
+        f"{field_name}__contains": {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": array_contains,
+            "value_encoder": array_encoder,
+        },
+        f"{field_name}__contained_by": {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": array_contained_by,
+            "value_encoder": array_encoder,
+        },
+        f"{field_name}__overlap": {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": array_overlap,
+            "value_encoder": array_encoder,
+        },
+        f"{field_name}__len": {
+            "field": field_name,
+            "source_field": source_field,
+            "operator": array_length,
+            "value_encoder": int_encoder,
+        },
+    }
+
+
 def get_filters_for_field(
-    field_name: str, field: Optional[Field], source_field: str
-) -> Dict[str, dict]:
-    if isinstance(field, ManyToManyFieldInstance):
-        return get_m2m_filters(field_name, field)
-    if isinstance(field, BackwardFKRelation):
-        return get_backward_fk_filters(field_name, field)
-    if isinstance(field, JSONField):
-        return get_json_filter(field_name, source_field)
+    field_name: str, field: Field | None, source_field: str
+) -> dict[str, FilterInfoDict]:
+    if field is not None:
+        if isinstance(field, ManyToManyFieldInstance):
+            return get_m2m_filters(field_name, field)
+        if isinstance(field, BackwardFKRelation):
+            return get_backward_fk_filters(field_name, field)
+        if isinstance(field, JSONField):
+            return get_json_filter(field_name, source_field)
+        if isinstance(field, ArrayField):
+            return get_array_filter(field_name, source_field, field)
 
     actual_field_name = field_name
     if field_name == "pk" and field:
@@ -421,6 +548,7 @@ def get_filters_for_field(
             "source_field": source_field,
             "operator": search,
             "value_encoder": string_encoder,
+            "is_tsvector": isinstance(field, TSVectorField) if field else False,
         },
         f"{field_name}__endswith": {
             "field": actual_field_name,
@@ -450,6 +578,18 @@ def get_filters_for_field(
             "field": actual_field_name,
             "source_field": source_field,
             "operator": insensitive_ends_with,
+            "value_encoder": string_encoder,
+        },
+        f"{field_name}__posix_regex": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": posix_regex,
+            "value_encoder": string_encoder,
+        },
+        f"{field_name}__iposix_regex": {
+            "field": actual_field_name,
+            "source_field": source_field,
+            "operator": insensitive_posix_regex,
             "value_encoder": string_encoder,
         },
         f"{field_name}__year": {

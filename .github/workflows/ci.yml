@@ -8,7 +8,7 @@ on:
       - main
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     services:
       postgres:
         image: postgres
@@ -19,21 +19,21 @@ jobs:
           POSTGRES_USER: postgres
         options: --health-cmd=pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
       mysql:
-        image: mysql
+        image: mysql:8
         ports:
           - 3306:3306
         env:
           MYSQL_ROOT_PASSWORD: 123456
         options: --health-cmd="mysqladmin ping" --health-interval 10s --health-timeout 5s --health-retries 5
       mssql:
-        image: mcr.microsoft.com/mssql/server:2019-CU15-ubuntu-20.04
+        image: mcr.microsoft.com/mssql/server:2022-CU15-ubuntu-22.04
         ports:
           - 1433:1433
         env:
           ACCEPT_EULA: Y
           SA_PASSWORD: Abcd12345678
         options: >-
-          --health-cmd "/opt/mssql-tools/bin/sqlcmd -U sa -P Abcd12345678 -Q 'select 1' -b -o /dev/null"
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P Abcd12345678 -Q 'SELECT 1' -b -o /dev/null"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -45,34 +45,46 @@ jobs:
       TORTOISE_MSSQL_DRIVER: ODBC Driver 18 for SQL Server
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
-      - uses: actions/cache@v3
+      - uses: actions/cache@v5
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/poetry.lock') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install and configure Poetry
-        run: |
-          pip install -U pip poetry
-          poetry config virtualenvs.create false
-      - name: Install requirements
-        run: make deps
+      - uses: astral-sh/setup-uv@v7
       - name: Install ODBC driver
         run: |
-          sudo curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
-          sudo curl https://packages.microsoft.com/config/ubuntu/$(lsb_release -rs)/prod.list -o /etc/apt/sources.list.d/mssql-release.list
+          curl -sSL -O https://packages.microsoft.com/config/ubuntu/$(grep VERSION_ID /etc/os-release | cut -d '"' -f 2)/packages-microsoft-prod.deb
+          sudo dpkg -i packages-microsoft-prod.deb
           sudo apt-get update
-          ACCEPT_EULA=Y sudo apt-get install -y msodbcsql18
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
       - name: Run ci
         run: make ci
+      - name: Test FastAPI/Blacksheep Example
+        run: |
+          PYTHONPATH=$DEST_FASTAPI uv run --frozen pytest $PYTEST_ARGS $DEST_FASTAPI/_tests.py
+          PYTHONPATH=$DEST_BLACKSHEEP uv run --frozen pytest $PYTEST_ARGS $DEST_BLACKSHEEP/_tests.py
+          PYTHONPATH=$DEST_SANIC uv run --frozen pytest $PYTEST_ARGS $DEST_SANIC/_tests.py
+        env:
+          DEST_FASTAPI: examples/fastapi
+          DEST_BLACKSHEEP: examples/blacksheep
+          DEST_SANIC: examples/sanic
+          PYTHONDEVMODE: 1
+          PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
+      - name: Test No typing-extensions
+        if: matrix.python-version == 'py3.11'
+        run: |
+          uv pip uninstall typing-extensions
+          uv run --no-sync python examples/basic.py
       - name: Upload Coverage
-        run: coveralls --service=github
+        run: |
+          uvx coveralls --service=github
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COVERALLS_FLAG_NAME: ${{ matrix.python-version }}
@@ -81,7 +93,7 @@ jobs:
   coveralls:
     name: Finish Coveralls
     needs: test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Finished
         run: |

@@ -1,7 +1,8 @@
 """
 This example demonstrates model signals usage
 """
-from typing import List, Optional, Type
+
+from __future__ import annotations
 
 from tortoise import BaseDBAsyncClient, Tortoise, fields, run_async
 from tortoise.models import Model
@@ -9,7 +10,7 @@ from tortoise.signals import post_delete, post_save, pre_delete, pre_save
 
 
 class Signal(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.TextField()
 
     class Meta:
@@ -20,33 +21,31 @@ class Signal(Model):
 
 
 @pre_save(Signal)
-async def signal_pre_save(
-    sender: "Type[Signal]", instance: Signal, using_db, update_fields
-) -> None:
+async def signal_pre_save(sender: type[Signal], instance: Signal, using_db, update_fields) -> None:
     print(sender, instance, using_db, update_fields)
 
 
 @post_save(Signal)
 async def signal_post_save(
-    sender: "Type[Signal]",
+    sender: type[Signal],
     instance: Signal,
     created: bool,
-    using_db: "Optional[BaseDBAsyncClient]",
-    update_fields: List[str],
+    using_db: BaseDBAsyncClient | None,
+    update_fields: list[str],
 ) -> None:
     print(sender, instance, using_db, created, update_fields)
 
 
 @pre_delete(Signal)
 async def signal_pre_delete(
-    sender: "Type[Signal]", instance: Signal, using_db: "Optional[BaseDBAsyncClient]"
+    sender: type[Signal], instance: Signal, using_db: BaseDBAsyncClient | None
 ) -> None:
     print(sender, instance, using_db)
 
 
 @post_delete(Signal)
 async def signal_post_delete(
-    sender: "Type[Signal]", instance: Signal, using_db: "Optional[BaseDBAsyncClient]"
+    sender: type[Signal], instance: Signal, using_db: BaseDBAsyncClient | None
 ) -> None:
     print(sender, instance, using_db)
 

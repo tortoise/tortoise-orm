@@ -1,19 +1,24 @@
 """
 Tortoise PyLint plugin
 """
-from typing import Any, Dict, Iterator, List
+
+from __future__ import annotations
+
+from collections.abc import Iterator
+from typing import TYPE_CHECKING, Any
 
 from astroid import MANAGER, inference_tip, nodes
 from astroid.exceptions import AstroidError
-from astroid.node_classes import AnnAssign, Assign
-from astroid.nodes import ClassDef
-from pylint.lint import PyLinter
+from astroid.nodes import AnnAssign, Assign, ClassDef
 
-MODELS: Dict[str, ClassDef] = {}
-FUTURE_RELATIONS: Dict[str, list] = {}
+if TYPE_CHECKING:
+    from pylint.lint import PyLinter
+
+MODELS: dict[str, ClassDef] = {}
+FUTURE_RELATIONS: dict[str, list] = {}
 
 
-def register(linter: PyLinter) -> None:
+def register(linter: PyLinter) -> None:  # pylint: disable=unused-argument
     """
     Reset state every time this is called, since we now get new AST to transform.
     """
@@ -106,7 +111,9 @@ def transform_model(cls: ClassDef) -> None:
         MANAGER.ast_from_module_name("tortoise.models").lookup("MetaInfo")[1][0].instantiate_class()
     ]
     if "id" not in cls.locals:
-        cls.locals["id"] = [nodes.ClassDef("id", None)]
+        cls.locals["id"] = [
+            nodes.ClassDef("id", None, None, None, end_lineno=None, end_col_offset=None)
+        ]
 
 
 def is_model_field(cls: ClassDef) -> bool:
@@ -121,7 +128,7 @@ def apply_type_shim(cls: ClassDef, _context: Any = None) -> Iterator[ClassDef]:
     """
     Morphs model fields to representative type
     """
-    base_nodes: List[ClassDef] = [cls]
+    base_nodes: list[ClassDef] = [cls]
 
     # Use the type inference standard
     try:

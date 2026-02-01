@@ -4,7 +4,7 @@
 Indexes
 =======
 
-Default tortoise use `BTree` index when define index use `index=True` in field, or define indexes use in `Meta` class, but if you want use other index types, like `FullTextIndex` in `MySQL`, or `GinIndex` in `Postgres`, you should use `tortoise.indexes.Index` and its subclasses.
+Default tortoise use `BTree` index when define index use `db_index=True` in field, or define indexes use in `Meta` class, but if you want use other index types, like `FullTextIndex` in `MySQL`, or `GinIndex` in `Postgres`, you should use `tortoise.indexes.Index` and its subclasses.
 
 Usage
 =====
@@ -38,7 +38,7 @@ Extending index is simply, you just need to inherit the `tortoise.indexes.Index`
 .. code-block:: python3
 
     from typing import Optional, Set
-    from pypika.terms import Term
+    from pypika_tortoise.terms import Term
     from tortoise.indexes import Index
 
     class FullTextIndex(Index):

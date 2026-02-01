@@ -1,6 +1,7 @@
 """
 This example demonstrates pydantic serialisation of a recursively cycled model.
 """
+
 from tortoise import Tortoise, fields, run_async
 from tortoise.contrib.pydantic import pydantic_model_creator
 from tortoise.exceptions import NoValuesFetched
@@ -75,7 +76,7 @@ async def run():
     await _2_1.gets_talked_to.add(_2_2, _1_1, loose)
 
     p = await Employee_Pydantic.from_tortoise_orm(await Employee.get(name="Root"))
-    print(p.json(indent=4))
+    print(p.model_dump_json(indent=4))
 
 
 if __name__ == "__main__":

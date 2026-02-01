@@ -1,4 +1,4 @@
-from pypika import functions
+from pypika_tortoise import SqlContext, functions
 
 from tortoise.expressions import Aggregate, Function
 
@@ -57,6 +57,17 @@ class Upper(Function):
     database_func = functions.Upper
 
 
+class _Concat(functions.Concat):
+    @staticmethod
+    def get_arg_sql(arg, ctx: SqlContext):
+        sql = arg.get_sql(ctx.copy(with_alias=False)) if hasattr(arg, "get_sql") else str(arg)
+        # explicitly convert to text for postgres to avoid errors like
+        # "could not determine data type of parameter $1"
+        if ctx.dialect.value == "postgresql":
+            return f"{sql}::text"
+        return sql
+
+
 class Concat(Function):
     """
     Concate field or constant text.
@@ -65,7 +76,7 @@ class Concat(Function):
      :samp:`Concat("{FIELD_NAME}", {ANOTHER_FIELD_NAMES or CONSTANT_TEXT}, *args)`
     """
 
-    database_func = functions.Concat
+    database_func = _Concat
 
 
 ##############################################################################

@@ -15,7 +15,7 @@ class TestGenerateSchema(test.SimpleTestCase):
     async def asyncSetUp(self):
         await super().asyncSetUp()
         try:
-            Tortoise.apps = {}
+            Tortoise.apps = None
             Tortoise._inited = False
         except ConfigurationError:
             pass
@@ -25,9 +25,6 @@ class TestGenerateSchema(test.SimpleTestCase):
         self.engine = test.getDBConfig(app_label="models", modules=[])["connections"]["models"][
             "engine"
         ]
-
-    async def asyncTearDown(self) -> None:
-        await Tortoise._reset_apps()
 
     async def init_for(self, module: str, safe=False) -> None:
         if self.engine != "tortoise.backends.sqlite":

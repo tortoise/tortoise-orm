@@ -52,3 +52,31 @@ class TestValues(test.TestCase):
         with self.assertRaises(ValidationError):
             await ValidatorModel.create(comma_separated_integer_list="aaaaaa")
         await ValidatorModel.create(comma_separated_integer_list="1,2,3")
+
+    async def test__prevent_saving(self):
+        with self.assertRaises(ValidationError):
+            await ValidatorModel.create(min_value_decimal=Decimal("0.9"))
+
+        self.assertEqual(await ValidatorModel.all().count(), 0)
+
+    async def test_save(self):
+        with self.assertRaises(ValidationError):
+            record = ValidatorModel(min_value_decimal=Decimal("0.9"))
+            await record.save()
+
+        record.min_value_decimal = Decimal("1.5")
+        await record.save()
+
+    async def test_save_with_update_fields(self):
+        record = await ValidatorModel.create(min_value_decimal=Decimal("2"))
+
+        record.min_value_decimal = Decimal("0.9")
+        with self.assertRaises(ValidationError):
+            await record.save(update_fields=["min_value_decimal"])
+
+    async def test_update(self):
+        record = await ValidatorModel.create(min_value_decimal=Decimal("2"))
+
+        record.min_value_decimal = Decimal("0.9")
+        with self.assertRaises(ValidationError):
+            await record.save()

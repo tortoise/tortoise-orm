@@ -1,17 +1,21 @@
-from functools import wraps
-from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, cast
+from __future__ import annotations
 
-from tortoise import connections
+from collections.abc import Callable
+from functools import wraps
+from typing import TYPE_CHECKING, TypeVar, cast
+
+from tortoise.connection import connections
 from tortoise.exceptions import ParamsError
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient, TransactionContext
 
-FuncType = Callable[..., Any]
+T = TypeVar("T")
+FuncType = Callable[..., T]
 F = TypeVar("F", bound=FuncType)
 
 
-def _get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
+def _get_connection(connection_name: str | None) -> BaseDBAsyncClient:
     if connection_name:
         connection = connections.get(connection_name)
     elif len(connections.db_config) == 1:
@@ -25,7 +29,7 @@ def _get_connection(connection_name: Optional[str]) -> "BaseDBAsyncClient":
     return connection
 
 
-def in_transaction(connection_name: Optional[str] = None) -> "TransactionContext":
+def in_transaction(connection_name: str | None = None) -> TransactionContext:
     """
     Transaction context manager.
 
@@ -39,7 +43,7 @@ def in_transaction(connection_name: Optional[str] = None) -> "TransactionContext
     return connection._in_transaction()
 
 
-def atomic(connection_name: Optional[str] = None) -> Callable[[F], F]:
+def atomic(connection_name: str | None = None) -> Callable[[F], F]:
     """
     Transaction decorator.
 
@@ -52,7 +56,7 @@ def atomic(connection_name: Optional[str] = None) -> Callable[[F], F]:
 
     def wrapper(func: F) -> F:
         @wraps(func)
-        async def wrapped(*args, **kwargs):
+        async def wrapped(*args, **kwargs) -> T:
             async with in_transaction(connection_name):
                 return await func(*args, **kwargs)
 

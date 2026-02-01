@@ -1,18 +1,26 @@
+from __future__ import annotations
+
 import asyncio
 import inspect
 import os as _os
+import typing
 import unittest
-from asyncio.events import AbstractEventLoop
-from functools import wraps
+from collections.abc import Callable, Coroutine, Iterable
+from functools import partial, wraps
 from types import ModuleType
-from typing import Any, Iterable, List, Optional, Union
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 
 from tortoise import Model, Tortoise, connections
 from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise.exceptions import DBConnectionError, OperationalError
 
+if TYPE_CHECKING:
+    from asyncio.events import AbstractEventLoop
+
+
 __all__ = (
+    "MEMORY_SQLITE",
     "SimpleTestCase",
     "TestCase",
     "TruncationTestCase",
@@ -27,6 +35,7 @@ __all__ = (
     "skip",
     "skipIf",
     "skipUnless",
+    "init_memory_sqlite",
 )
 _TORTOISE_TEST_DB = "sqlite://:memory:"
 # pylint: disable=W0201
@@ -39,13 +48,12 @@ On success it will be marked as unexpected success.
 
 _CONFIG: dict = {}
 _CONNECTIONS: dict = {}
-_SELECTOR = None
 _LOOP: AbstractEventLoop = None  # type: ignore
-_MODULES: Iterable[Union[str, ModuleType]] = []
+_MODULES: Iterable[str | ModuleType] = []
 _CONN_CONFIG: dict = {}
 
 
-def getDBConfig(app_label: str, modules: Iterable[Union[str, ModuleType]]) -> dict:
+def getDBConfig(app_label: str, modules: Iterable[str | ModuleType]) -> dict:
     """
     DB Config factory, for use in testing.
 
@@ -74,18 +82,29 @@ async def _init_db(config: dict) -> None:
 
 
 def _restore_default() -> None:
-    Tortoise.apps = {}
+    Tortoise.apps = None
     connections._get_storage().update(_CONNECTIONS.copy())
     connections._db_config = _CONN_CONFIG.copy()
     Tortoise._init_apps(_CONFIG["apps"])
     Tortoise._inited = True
 
 
+async def truncate_all_models() -> None:
+    # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys
+    if not Tortoise.apps:
+        raise ValueError("apps are not loaded")
+    for model in Tortoise.apps.get_models_iterable():
+        quote_char = model._meta.db.query_class.SQL_CONTEXT.quote_char
+        await model._meta.db.execute_script(
+            f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"  # nosec
+        )
+
+
 def initializer(
-    modules: Iterable[Union[str, ModuleType]],
-    db_url: Optional[str] = None,
+    modules: Iterable[str | ModuleType],
+    db_url: str | None = None,
     app_label: str = "models",
-    loop: Optional[AbstractEventLoop] = None,
+    loop: AbstractEventLoop | None = None,
 ) -> None:
     """
     Sets up the DB for testing. Must be called as part of test environment setup.
@@ -98,7 +117,6 @@ def initializer(
     # pylint: disable=W0603
     global _CONFIG
     global _CONNECTIONS
-    global _SELECTOR
     global _LOOP
     global _TORTOISE_TEST_DB
     global _MODULES
@@ -107,15 +125,19 @@ def initializer(
     if db_url is not None:  # pragma: nobranch
         _TORTOISE_TEST_DB = db_url
     _CONFIG = getDBConfig(app_label=app_label, modules=_MODULES)
-    loop = loop or asyncio.get_event_loop()
+    if not loop:
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
     _LOOP = loop
-    _SELECTOR = loop._selector  # type: ignore
     loop.run_until_complete(_init_db(_CONFIG))
     _CONNECTIONS = connections._copy_storage()
     _CONN_CONFIG = connections.db_config.copy()
     connections._clear_storage()
     connections.db_config.clear()
-    Tortoise.apps = {}
+    Tortoise.apps = None
     Tortoise._inited = False
 
 
@@ -125,7 +147,6 @@ def finalizer() -> None:
     """
     _restore_default()
     loop = _LOOP
-    loop._selector = _SELECTOR  # type: ignore
     loop.run_until_complete(Tortoise._drop_databases())
 
 
@@ -197,6 +218,9 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
         loop.run_until_complete(self._asyncioCallsQueue.join())  # type: ignore
 
     async def asyncSetUp(self) -> None:
+        self._reset_conn_state()
+        Tortoise.apps = None
+        Tortoise._inited = False
         await self._setUpDB()
 
     def _reset_conn_state(self) -> None:
@@ -207,11 +231,11 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self) -> None:
         await self._tearDownDB()
         self._reset_conn_state()
-        Tortoise.apps = {}
+        Tortoise.apps = None
         Tortoise._inited = False
 
     def assertListSortEqual(
-        self, list1: List[Any], list2: List[Any], msg: Any = ..., sorted_key: Optional[str] = None
+        self, list1: list[Any], list2: list[Any], msg: Any = ..., sorted_key: str | None = None
     ) -> None:
         if isinstance(list1[0], Model):
             super().assertListEqual(
@@ -243,7 +267,7 @@ class IsolatedTestCase(SimpleTestCase):
     If you define a ``tortoise_test_modules`` list, it overrides the DB setup module for the tests.
     """
 
-    tortoise_test_modules: Iterable[Union[str, ModuleType]] = []
+    tortoise_test_modules: Iterable[str | ModuleType] = []
 
     async def _setUpDB(self) -> None:
         await super()._setUpDB()
@@ -271,50 +295,12 @@ class TruncationTestCase(SimpleTestCase):
 
     async def _tearDownDB(self) -> None:
         _restore_default()
-        # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys
-        for app in Tortoise.apps.values():
-            for model in app.values():
-                quote_char = model._meta.db.query_class._builder().QUOTE_CHAR
-                await model._meta.db.execute_script(  # nosec
-                    f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"
-                )
+        await truncate_all_models()
         await super()._tearDownDB()
 
 
-class TransactionTestContext:
-    __slots__ = ("connection", "connection_name", "token", "uses_pool")
-
-    def __init__(self, connection) -> None:
-        self.connection = connection
-        self.connection_name = connection.connection_name
-        self.uses_pool = hasattr(self.connection._parent, "_pool")
-
-    async def ensure_connection(self) -> None:
-        is_conn_established = self.connection._connection is not None
-        if self.uses_pool:
-            is_conn_established = self.connection._parent._pool is not None
-
-        # If the underlying pool/connection hasn't been established then
-        # first create the pool/connection
-        if not is_conn_established:
-            await self.connection._parent.create_connection(with_db=True)
-
-        if self.uses_pool:
-            self.connection._connection = await self.connection._parent._pool.acquire()
-        else:
-            self.connection._connection = self.connection._parent._connection
-
-    async def __aenter__(self):
-        await self.ensure_connection()
-        self.token = connections.set(self.connection_name, self.connection)
-        await self.connection.start()
-        return self.connection
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        await self.connection.rollback()
-        if self.uses_pool:
-            await self.connection._parent._pool.release(self.connection._connection)
-        connections.reset(self.token)
+class _RollbackException(Exception):
+    pass
 
 
 class TestCase(TruncationTestCase):
@@ -328,11 +314,12 @@ class TestCase(TruncationTestCase):
     async def asyncSetUp(self) -> None:
         await super().asyncSetUp()
         self._db = connections.get("models")
-        self._transaction = TransactionTestContext(self._db._in_transaction().connection)
-        await self._transaction.__aenter__()  # type: ignore
+        self._transaction = self._db._in_transaction()
+        await self._transaction.__aenter__()
 
     async def asyncTearDown(self) -> None:
-        await self._transaction.__aexit__(None, None, None)
+        # this will cause a rollback
+        await self._transaction.__aexit__(_RollbackException, _RollbackException(), None)
         await super().asyncTearDown()
 
     async def _tearDownDB(self) -> None:
@@ -342,7 +329,7 @@ class TestCase(TruncationTestCase):
             await super()._tearDownDB()
 
 
-def requireCapability(connection_name: str = "models", **conditions: Any):
+def requireCapability(connection_name: str = "models", **conditions: Any) -> Callable:
     """
     Skip a test if the required capabilities are not matched.
 
@@ -397,9 +384,9 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
 
         # Assume a class is decorated
         funcs = {
-            var: getattr(test_item, var)
+            var: f
             for var in dir(test_item)
-            if var.startswith("test_") and callable(getattr(test_item, var))
+            if var.startswith("test_") and callable(f := getattr(test_item, var))
         }
         for name, func in funcs.items():
             setattr(
@@ -411,3 +398,77 @@ def requireCapability(connection_name: str = "models", **conditions: Any):
         return test_item
 
     return decorator
+
+
+T = TypeVar("T")
+P = ParamSpec("P")
+AsyncFunc = Callable[P, Coroutine[None, None, T]]
+AsyncFuncDeco = Callable[..., AsyncFunc]
+ModulesConfigType = str | list[str]
+MEMORY_SQLITE = "sqlite://:memory:"
+
+
+@typing.overload
+def init_memory_sqlite(models: ModulesConfigType | None = None) -> AsyncFuncDeco: ...
+
+
+@typing.overload
+def init_memory_sqlite(models: AsyncFunc) -> AsyncFunc: ...
+
+
+def init_memory_sqlite(
+    models: ModulesConfigType | AsyncFunc | None = None,
+) -> AsyncFunc | AsyncFuncDeco:
+    """
+    For single file style to run code with memory sqlite
+
+    :param models: list_of_modules that should be discovered for models, default to ['__main__'].
+
+    Usage:
+
+    .. code-block:: python3
+
+        from tortoise import fields, models, run_async
+        from tortoise.contrib.test import init_memory_sqlite
+
+        class MyModel(models.Model):
+            id = fields.IntField(primary_key=True)
+            name = fields.TextField()
+
+        @init_memory_sqlite
+        async def run():
+            obj = await MyModel.create(name='')
+            assert obj.id == 1
+
+        if __name__ == '__main__'
+            run_async(run)
+
+
+    Custom models example:
+
+    .. code-block:: python3
+
+        @init_memory_sqlite(models=['app.models', 'aerich.models'])
+        async def run():
+            ...
+    """
+
+    def wrapper(func: AsyncFunc, ms: list[str]):
+        @wraps(func)
+        async def runner(*args, **kwargs) -> T:
+            await Tortoise.init(db_url=MEMORY_SQLITE, modules={"models": ms})
+            await Tortoise.generate_schemas()
+            return await func(*args, **kwargs)
+
+        return runner
+
+    default_models = ["__main__"]
+    if inspect.iscoroutinefunction(models):
+        return wrapper(models, default_models)
+    if models is None:
+        models = default_models
+    elif isinstance(models, str):
+        models = [models]
+    else:
+        models = cast(list, models)
+    return partial(wrapper, ms=models)

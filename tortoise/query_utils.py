@@ -1,24 +1,38 @@
+from __future__ import annotations
+
+import operator
+from collections.abc import Callable, Sequence
 from copy import copy
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, cast
 
-from pypika import Table
-from pypika.terms import Criterion
+from pypika_tortoise import Table
+from pypika_tortoise.terms import (
+    Criterion,
+    JSONAttributeCriterion,
+    Term,
+)
 
-from tortoise.exceptions import OperationalError
+from tortoise.exceptions import FieldError, OperationalError
+from tortoise.fields.base import Field
 from tortoise.fields.relational import (
     BackwardFKRelation,
+    ForeignKeyFieldInstance,
     ManyToManyFieldInstance,
     RelationalField,
 )
 
 if TYPE_CHECKING:  # pragma: nocoverage
+    from tortoise.models import Model
     from tortoise.queryset import QuerySet
 
 
-def _get_joins_for_related_field(
+TableCriterionTuple = tuple[Table, Criterion]
+
+
+def get_joins_for_related_field(
     table: Table, related_field: RelationalField, related_field_name: str
-) -> List[Tuple[Table, Criterion]]:
-    required_joins = []
+) -> list[TableCriterionTuple]:
+    required_joins: list[TableCriterionTuple] = []
 
     related_table: Table = related_field.related_model._meta.basetable
     if isinstance(related_field, ManyToManyFieldInstance):
@@ -70,11 +84,84 @@ def _get_joins_for_related_field(
     return required_joins
 
 
-class EmptyCriterion(Criterion):  # type: ignore
-    def __or__(self, other: Criterion) -> Criterion:
+def expand_lookup_expression(root_model: type[Model], lookup_expression: str) -> Sequence[Field]:
+    field_names = lookup_expression.split("__")
+    fields: list[Field | RelationalField] = []
+    model = root_model
+    for field_name in field_names[:-1]:
+        if field_name not in model._meta.fetch_fields:
+            raise FieldError(f"{lookup_expression} not resolvable")
+        field = cast(RelationalField, model._meta.fields_map[field_name])
+        fields.append(field)
+        model = field.related_model
+    # the last field is not necessarily a RelationalField, so threting it differently
+    try:
+        fields.append(model._meta.fields_map[field_names[-1]])
+    except KeyError:
+        raise FieldError(f"{lookup_expression} not resolvable")
+    return fields
+
+
+def resolve_nested_field(
+    model: type[Model], table: Table, field: str
+) -> tuple[Term, list[TableCriterionTuple], Field | None]:
+    """
+    Resolves a nested field string like events__participants__name and
+    returns the pypika term, required joins and the Field that can be used for
+    converting the value.
+    """
+    joins = []
+    fields = expand_lookup_expression(model, field)
+
+    for iter_field in fields[:-1]:
+        related_field = cast(RelationalField, iter_field)
+        joins.extend(get_joins_for_related_field(table, related_field, iter_field.model_field_name))
+
+        model = related_field.related_model
+        related_table: Table = related_field.related_model._meta.basetable
+        if isinstance(related_field, ForeignKeyFieldInstance):
+            # Only FK's can be to same table, so we only auto-alias FK join tables
+            related_table = related_table.as_(
+                f"{table.get_table_name()}__{iter_field.model_field_name}"
+            )
+        table = related_table
+
+    last_field = fields[-1]
+    if last_field.model_field_name in model._meta.fetch_fields:
+        related_field = cast(RelationalField, last_field)
+        related_field_meta = related_field.related_model._meta
+
+        joins.extend(
+            get_joins_for_related_field(table, related_field, related_field.model_field_name)
+        )
+        related_table = related_field_meta.basetable
+
+        if isinstance(related_field, BackwardFKRelation):
+            if table == related_table:
+                related_table = related_table.as_(
+                    f"{table.get_table_name()}__{related_field.model_field_name}"
+                )
+
+        term = related_table[related_field_meta.db_pk_column]
+    else:
+        if last_field.source_field:
+            term = table[last_field.source_field]
+        else:
+            term = table[last_field.model_field_name]
+
+        if last_field:  # pragma: nobranch
+            func = last_field.get_for_dialect(model._meta.db.capabilities.dialect, "function_cast")
+            if func:
+                term = func(last_field, term)
+
+    return term, joins, last_field
+
+
+class EmptyCriterion(Criterion):
+    def __or__(self, other: Criterion) -> Criterion:  # type:ignore[override]
         return other
 
-    def __and__(self, other: Criterion) -> Criterion:
+    def __and__(self, other: Criterion) -> Criterion:  # type:ignore[override]
         return other
 
     def __bool__(self) -> bool:
@@ -100,59 +187,43 @@ class QueryModifier:
 
     def __init__(
         self,
-        where_criterion: Optional[Criterion] = None,
-        joins: Optional[List[Tuple[Table, Criterion]]] = None,
-        having_criterion: Optional[Criterion] = None,
+        where_criterion: Criterion | None = None,
+        joins: list[TableCriterionTuple] | None = None,
+        having_criterion: Criterion | None = None,
     ) -> None:
         self.where_criterion: Criterion = where_criterion or EmptyCriterion()
-        self.joins = joins if joins else []
+        self.joins = joins or []
         self.having_criterion: Criterion = having_criterion or EmptyCriterion()
 
-    def __and__(self, other: "QueryModifier") -> "QueryModifier":
-        return QueryModifier(
+    def __and__(self, other: QueryModifier) -> QueryModifier:
+        return self.__class__(
             where_criterion=_and(self.where_criterion, other.where_criterion),
             joins=self.joins + other.joins,
             having_criterion=_and(self.having_criterion, other.having_criterion),
         )
 
-    def __or__(self, other: "QueryModifier") -> "QueryModifier":
+    def _and_criterion(self) -> Criterion:
+        return _and(self.where_criterion, self.having_criterion)
+
+    def __or__(self, other: QueryModifier) -> QueryModifier:
+        where_criterion = having_criterion = None
         if self.having_criterion or other.having_criterion:
-            # TODO: This could be optimized?
-            result_having_criterion = _or(
-                _and(self.where_criterion, self.having_criterion),
-                _and(other.where_criterion, other.having_criterion),
+            having_criterion = _or(self._and_criterion(), other._and_criterion())
+        else:
+            where_criterion = (
+                (self.where_criterion | other.where_criterion)
+                if self.where_criterion and other.where_criterion
+                else (self.where_criterion or other.where_criterion)
             )
-            return QueryModifier(
-                joins=self.joins + other.joins, having_criterion=result_having_criterion
-            )
+        return self.__class__(where_criterion, self.joins + other.joins, having_criterion)
 
-        if self.where_criterion and other.where_criterion:
-            return QueryModifier(
-                where_criterion=self.where_criterion | other.where_criterion,
-                joins=self.joins + other.joins,
-            )
-
-        return QueryModifier(
-            where_criterion=self.where_criterion or other.where_criterion,
-            joins=self.joins + other.joins,
-        )
-
-    def __invert__(self) -> "QueryModifier":
-        if not self.where_criterion and not self.having_criterion:
-            return QueryModifier(joins=self.joins)
+    def __invert__(self) -> QueryModifier:
+        where_criterion = having_criterion = None
         if self.having_criterion:
-            # TODO: This could be optimized?
-            return QueryModifier(
-                joins=self.joins,
-                having_criterion=_and(self.where_criterion, self.having_criterion).negate(),
-            )
-        return QueryModifier(where_criterion=self.where_criterion.negate(), joins=self.joins)
-
-    def get_query_modifiers(self) -> Tuple[Criterion, List[Tuple[Table, Criterion]], Criterion]:
-        """
-        Returns a tuple of the query criterion.
-        """
-        return self.where_criterion, self.joins, self.having_criterion
+            having_criterion = (self.where_criterion & self.having_criterion).negate()
+        elif self.where_criterion:
+            where_criterion = self.where_criterion.negate()
+        return self.__class__(where_criterion, self.joins, having_criterion)
 
 
 class Prefetch:
@@ -167,13 +238,13 @@ class Prefetch:
 
     __slots__ = ("relation", "queryset", "to_attr")
 
-    def __init__(self, relation: str, queryset: "QuerySet", to_attr: Optional[str] = None) -> None:
+    def __init__(self, relation: str, queryset: QuerySet, to_attr: str | None = None) -> None:
         self.to_attr = to_attr
         self.relation = relation
         self.queryset = queryset
         self.queryset.query = copy(self.queryset.model._meta.basequery)
 
-    def resolve_for_queryset(self, queryset: "QuerySet") -> None:
+    def resolve_for_queryset(self, queryset: QuerySet) -> None:
         """
         Called internally to generate prefetching query.
 
@@ -188,7 +259,7 @@ class Prefetch:
             )
 
         if forwarded_prefetch:
-            if first_level_field not in queryset._prefetch_map.keys():
+            if first_level_field not in queryset._prefetch_map:
                 queryset._prefetch_map[first_level_field] = set()
             queryset._prefetch_map[first_level_field].add(
                 Prefetch(forwarded_prefetch, self.queryset, to_attr=self.to_attr)
@@ -197,3 +268,27 @@ class Prefetch:
             queryset._prefetch_queries.setdefault(first_level_field, []).append(
                 (self.to_attr, self.queryset)
             )
+
+
+def get_json_filter_operator(
+    value: dict[str, Any], operator_keywords: dict[str, Callable[..., Criterion]]
+) -> tuple[list[str | int], Any, Callable[..., Criterion]]:
+    """
+    Extracts the key parts, filter value and operator from a JSON filter dictionary.
+    """
+    ((key, filter_value),) = value.items()
+    key_parts = [int(item) if item.isdigit() else str(item) for item in key.split("__")]
+    operator_ = (
+        operator_keywords[str(key_parts.pop(-1))]
+        if key_parts[-1] in operator_keywords
+        else operator.eq
+    )
+    return key_parts, filter_value, operator_
+
+
+def resolve_field_json_path(field_term: Term, key_parts: list[str | int]) -> Term:
+    """
+    Resolves a JSON path from a list of key parts, e.g. converting
+    (field, ['a', 'b', 'c']) to field->'a'->'b'->>'c'. Returns a pypika Term.
+    """
+    return JSONAttributeCriterion(field_term, key_parts)

@@ -1,117 +1,136 @@
-[tool.poetry]
+[project]
 name = "tortoise-orm"
-version = "0.20.0"
 description = "Easy async ORM for python, built with relations in mind"
-authors = ["Andrey Bondar <andrey@bondar.ru>", "Nickolas Grigoriadis <nagrigoriadis@gmail.com>", "long2ice <long2ice@gmail.com>"]
-license = "Apache-2.0"
+authors = [{name="Andrey Bondar", email="andrey@bondar.ru"}, {name="Nickolas Grigoriadis", email="nagrigoriadis@gmail.com"}, {name="long2ice", email="long2ice@gmail.com"}]
+license = {text="Apache-2.0"}
 readme = "README.rst"
-homepage = "https://github.com/tortoise/tortoise-orm"
-repository = "https://github.com/tortoise/tortoise-orm.git"
-documentation = "https://tortoise-orm.readthedocs.io"
 keywords = ["sql", "mysql", "postgres", "psql", "sqlite", "aiosqlite", "asyncpg", "relational", "database", "rdbms", "orm", "object mapper", "async", "asyncio", "aio", "psycopg"]
-packages = [
-    { include = "tortoise" }
+dynamic = [ "version" ]
+requires-python = ">=3.10"
+dependencies = [
+    "pypika-tortoise (>=0.6.3,<1.0.0)",
+    "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
+    "aiosqlite (>=0.16.0,<1.0.0)",
+    "anyio",
+    "ptpython",
+    "pytz",
+    "tomlkit (>=0.11.4,<1.0.0); python_version < '3.11'",
+    "typing-extensions (>= 4.1.0); python_version < '3.11'",
 ]
-include = ["CHANGELOG.rst", "LICENSE", "README.rst"]
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
     "Programming Language :: PL/SQL",
     "Framework :: AsyncIO",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Database",
+    "Typing :: Typed",
     "Operating System :: POSIX",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
 ]
 
-[tool.poetry.dependencies]
-python = "^3.8"
-pypika-tortoise = "^0.1.6"
-iso8601 = "^1.0.2"
-aiosqlite = ">=0.16.0, <0.18.0"
-pytz = "*"
-ciso8601 = { version = "*", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
-uvloop = { version = "*", markers = "sys_platform != 'win32' and implementation_name == 'cpython'", optional = true }
-orjson = { version = "*", optional = true }
-asyncpg = { version = "*", optional = true }
-aiomysql = { version = "*", optional = true }
-asyncmy = { version = "^0.2.8", optional = true, allow-prereleases = true }
-psycopg = { extras = ["pool", "binary"], version = "^3.0.12", optional = true }
-asyncodbc = { version = "^0.1.1", optional = true }
-
-[tool.poetry.dev-dependencies]
-# Linter tools
-mypy = "*"
-ruff = "*"
-darglint = "*"
-pylint = "*"
-pygments = "*"
-bandit = "*"
-black = "*"
-codespell = "*"
-# Test tools
-coveralls = "*"
-pytest = "*"
-pytest-xdist = "*"
-pytest-cov = "*"
-# Pypi
-twine = "*"
-# Sample integration - Quart
-quart = "*"
-# Sample integration - Sanic
-sanic = "*"
-# Sample integration - Starlette
-starlette = "*"
-# Pydantic support
-pydantic = "^2.0"
-# FastAPI support
-fastapi = "^0.100.0"
-asgi_lifespan = "*"
-httpx = "*"
-# Aiohttp support
-aiohttp = "*"
-# BlackSheep support
-blacksheep = "^1.0.9"
-# mypy
-types-PyYAML = "*"
-types-pytz = "*"
-types-PyMySQL = "*"
-# Documentation tools
-sphinx-immaterial = "*"
-sphinx-copybutton = "*"
-Pygments = "*"
-docutils = "*"
-
-[tool.poetry.extras]
-accel = ["ciso8601", "uvloop", "orjson"]
+[project.optional-dependencies]
+accel = [
+    "ciso8601; sys_platform != 'win32' and implementation_name == 'cpython'",
+    "uvloop; sys_platform != 'win32' and implementation_name == 'cpython'",
+    "orjson",
+]
 asyncpg = ["asyncpg"]
-psycopg = ["psycopg"]
 aiomysql = ["aiomysql"]
-asyncmy = ["asyncmy"]
-asyncodbc = ["asyncodbc"]
+asyncmy = ["asyncmy (>=0.2.11,<1.0.0)"]
+psycopg = ["psycopg[pool,binary] (>=3.0.12,<4.0.0)"]
+asyncodbc = ["asyncodbc (>=0.1.1,<1.0.0); python_version < '4.0'"]
+
+[project.urls]
+documentation = "https://tortoise.github.io"
+homepage = "https://github.com/tortoise/tortoise-orm"
+repository = "https://github.com/tortoise/tortoise-orm.git"
+
+[project.scripts]
+tortoise = "tortoise.cli:main"
+
+[tool.poetry]
+requires-poetry = ">=2.0"
+packages = [
+    { include = "tortoise" }
+]
+version = "0.0.0"
+
+[dependency-groups]
+dev = [
+    # Linter tools
+    "mypy",
+    "ruff",
+    "pylint",
+    "bandit",
+    "codespell",
+    # Pypi
+    "twine",
+    # mypy
+    "types-PyYAML",
+    "types-pytz",
+    "types-PyMySQL",
+]
+contrib=[
+    # Sample integration - Quart
+    "quart",
+    # Sample integration - Sanic
+    "sanic",
+    "sanic-testing",
+    # Sample integration - Starlette
+    "starlette",
+    # Pydantic support
+    "pydantic >=2.0,!=2.7.0",
+    # FastAPI support
+    "fastapi >=0.115.0",
+    "asgi_lifespan",
+    "httpx",
+    # Aiohttp support
+    "aiohttp",
+    # BlackSheep support
+    "blacksheep>=2.0.8",
+    "pytest-asyncio>=0.24.0",
+]
+test = [
+    # Test tools
+    "pytest",
+    "pytest-xdist",
+    "pytest-cov",
+    "pytest-codspeed",
+    "pytest-asyncio",
+]
+docs = [
+    # Documentation tools
+    "sphinx-immaterial",
+    "sphinx-copybutton",
+    "Pygments",
+    "docutils",
+]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
 
-[tool.isort]
-profile = "black"
+[tool.pdm]
+version = {source="file", path="tortoise/__init__.py"}
 
-[tool.black]
-line-length = 100
-target-version = ["py38", "py39", "py310", "py311"]
+[tool.pdm.build]
+excludes = ["./**/.git", "./**/.*_cache", "examples"]
+include = ["CHANGELOG.rst", "LICENSE", "README.rst"]
 
 [tool.mypy]
 pretty = true
+exclude = ["docs"]
 ignore_missing_imports = true
 check_untyped_defs = true
 disallow_subclassing_any = true
@@ -131,34 +150,37 @@ strict_equality = true
 show_error_context = true
 
 [[tool.mypy.overrides]]
-module = ["tests.*"]
+module = "tests.*"
 check_untyped_defs = false
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 warn_unreachable = false
 
 [[tool.mypy.overrides]]
-module = ["examples.*"]
+module = "examples.*"
 check_untyped_defs = false
 disallow_untyped_calls = false
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
 [[tool.mypy.overrides]]
-module = ["tortoise.contrib.test.*"]
+module = "examples.fastapi.*"
+check_untyped_defs = true
+disallow_untyped_calls = true
 disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
 [[tool.mypy.overrides]]
-module = ["tortoise.contrib.sanic.*"]
+module = "tortoise.contrib.test.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[[tool.mypy.overrides]]
+module = "tortoise.contrib.sanic.*"
 disallow_untyped_defs = false
 
 [[tool.mypy.overrides]]
-module = ["conftest"]
-disallow_untyped_defs = false
-
-[[tool.mypy.overrides]]
-module = ["tortoise.backends.base.client"]
+module = ["conftest", "tortoise.backends.base.client"]
 disallow_untyped_defs = false
 
 [tool.flake8]
@@ -172,12 +194,37 @@ per-file-ignores = [
 ]
 docstring_style = "sphinx"
 
-[tool.coverage.run]
-branch = true
-source = ["tortoise"]
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "session"
+filterwarnings = [
+    'ignore:`pk` is deprecated:DeprecationWarning',
+    'ignore:`index` is deprecated:DeprecationWarning',
+    'ignore:Do not add pk field to `update_fields`!:RuntimeWarning',
+]
 
 [tool.coverage.report]
 show_missing = true
 
 [tool.ruff]
+line-length = 100
+[tool.ruff.lint]
 ignore = ["E501"]
+extend-select = [
+    "I",      # https://docs.astral.sh/ruff/rules/#isort-i
+    "FA",     # https://docs.astral.sh/ruff/rules/#flake8-future-annotations-fa
+    "UP",     # https://docs.astral.sh/ruff/rules/#pyupgrade-up
+    "RUF100", # https://docs.astral.sh/ruff/rules/#ruff-specific-rules-ruf
+]
+
+[tool.ruff.lint.isort]
+extra-standard-library = ["tomllib"]
+
+[tool.bandit]
+exclude_dirs = [
+    "tests",
+    "examples/*/_tests.py",
+    "conftest.py",
+    "tortoise/migrations/schema_editor/mssql.py",
+    "examples/postgres_full_text_search.py",
+    "examples/postgres.py",
+]

@@ -5,7 +5,7 @@ from tortoise.models import Model
 
 
 class Tournament(Model):
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     name = fields.CharField(max_length=100)
     created_at = fields.DatetimeField(auto_now_add=True)
 
@@ -22,7 +22,7 @@ class Event(Model):
     This is multiline docs.
     """
 
-    id = fields.IntField(pk=True)
+    id = fields.IntField(primary_key=True)
     #: The Event NAME
     #:  It's pretty important
     name = fields.CharField(max_length=255)
@@ -35,8 +35,8 @@ class Event(Model):
         ordering = ["name"]
 
 
-class TestBasic(test.TestCase):
-    def test_early_init(self):
+class TestBasic(test.SimpleTestCase):
+    async def test_early_init(self):
         self.maxDiff = None
         Event_TooEarly = pydantic_model_creator(Event)
         self.assertEqual(
@@ -46,7 +46,12 @@ class TestBasic(test.TestCase):
                 "type": "object",
                 "description": "The Event model docstring.<br/><br/>This is multiline docs.",
                 "properties": {
-                    "id": {"title": "Id", "type": "integer", "maximum": 2147483647, "minimum": 1},
+                    "id": {
+                        "title": "Id",
+                        "type": "integer",
+                        "maximum": 2147483647,
+                        "minimum": -2147483648,
+                    },
                     "name": {
                         "title": "Name",
                         "type": "string",
@@ -87,7 +92,7 @@ class TestBasic(test.TestCase):
                     "default": None,
                     "description": None,
                     "docstring": None,
-                    "constraints": {"ge": 1, "le": 2147483647},
+                    "constraints": {"ge": -2147483648, "le": 2147483647},
                     "db_field_types": {"": "INT"},
                 },
                 "data_fields": [
@@ -104,7 +109,10 @@ class TestBasic(test.TestCase):
                         "description": "The Event NAME",
                         "docstring": "The Event NAME\nIt's pretty important",
                         "constraints": {"max_length": 255},
-                        "db_field_types": {"": "VARCHAR(255)"},
+                        "db_field_types": {
+                            "": "VARCHAR(255)",
+                            "oracle": "NVARCHAR2(255)",
+                        },
                     },
                     {
                         "name": "created_at",
@@ -162,12 +170,12 @@ class TestBasic(test.TestCase):
             Event_Pydantic.model_json_schema(),
             {
                 "$defs": {
-                    "leaf": {
+                    "Tournament_aapnxb_leaf": {
                         "additionalProperties": False,
                         "properties": {
                             "id": {
                                 "maximum": 2147483647,
-                                "minimum": 1,
+                                "minimum": -2147483648,
                                 "title": "Id",
                                 "type": "integer",
                             },
@@ -187,7 +195,12 @@ class TestBasic(test.TestCase):
                 "additionalProperties": False,
                 "description": "The Event model docstring.<br/><br/>This is multiline docs.",
                 "properties": {
-                    "id": {"maximum": 2147483647, "minimum": 1, "title": "Id", "type": "integer"},
+                    "id": {
+                        "maximum": 2147483647,
+                        "minimum": -2147483648,
+                        "title": "Id",
+                        "type": "integer",
+                    },
                     "name": {
                         "description": "The Event NAME<br/>It's pretty important",
                         "maxLength": 255,
@@ -201,7 +214,7 @@ class TestBasic(test.TestCase):
                         "type": "string",
                     },
                     "tournament": {
-                        "anyOf": [{"$ref": "#/$defs/leaf"}, {"type": "null"}],
+                        "anyOf": [{"$ref": "#/$defs/Tournament_aapnxb_leaf"}, {"type": "null"}],
                         "nullable": True,
                         "title": "Tournament",
                     },
@@ -235,14 +248,17 @@ class TestBasic(test.TestCase):
                     "default": None,
                     "description": None,
                     "docstring": None,
-                    "constraints": {"ge": 1, "le": 2147483647},
+                    "constraints": {"ge": -2147483648, "le": 2147483647},
                 },
                 "data_fields": [
                     {
                         "name": "name",
                         "field_type": "CharField",
                         "db_column": "name",
-                        "db_field_types": {"": "VARCHAR(255)"},
+                        "db_field_types": {
+                            "": "VARCHAR(255)",
+                            "oracle": "NVARCHAR2(255)",
+                        },
                         "python_type": "str",
                         "generated": False,
                         "nullable": False,
@@ -289,7 +305,7 @@ class TestBasic(test.TestCase):
                         "default": None,
                         "description": None,
                         "docstring": None,
-                        "constraints": {"ge": 1, "le": 2147483647},
+                        "constraints": {"ge": -2147483648, "le": 2147483647},
                     },
                 ],
                 "fk_fields": [

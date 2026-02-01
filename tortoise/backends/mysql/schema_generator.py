@@ -1,4 +1,7 @@
-from typing import TYPE_CHECKING, Any, List, Type
+from __future__ import annotations
+
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
@@ -11,9 +14,10 @@ if TYPE_CHECKING:  # pragma: nocoverage
 class MySQLSchemaGenerator(BaseSchemaGenerator):
     DIALECT = "mysql"
     TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({fields}){extra}{comment};"
-    INDEX_CREATE_TEMPLATE = "KEY `{index_name}` ({fields})"
+    INDEX_CREATE_TEMPLATE = "{index_type}KEY `{index_name}` ({fields}){extra}"
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE KEY `{index_name}` ({fields})"
-    FIELD_TEMPLATE = "`{name}` {type} {nullable} {unique}{primary}{comment}{default}"
+    UNIQUE_INDEX_CREATE_TEMPLATE = UNIQUE_CONSTRAINT_CREATE_TEMPLATE
+    FIELD_TEMPLATE = "`{name}` {type}{nullable}{unique}{primary}{comment}{default}"
     GENERATED_PK_TEMPLATE = "`{field_name}` {generated_sql}{comment}"
     FK_TEMPLATE = (
         "{constraint}FOREIGN KEY (`{db_column}`)"
@@ -28,10 +32,10 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         "){extra}{comment};"
     )
 
-    def __init__(self, client: "MySQLClient") -> None:
+    def __init__(self, client: MySQLClient) -> None:
         super().__init__(client)
-        self._field_indexes = []  # type: List[str]
-        self._foreign_keys = []  # type: List[str]
+        self._field_indexes = []  # type: list[str]
+        self._foreign_keys = []  # type: list[str]
 
     def quote(self, val: str) -> str:
         return f"`{val}`"
@@ -67,17 +71,20 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     def _escape_default_value(self, default: Any):
         return encoders.get(type(default))(default)  # type: ignore
 
-    def _get_index_sql(self, model: "Type[Model]", field_names: List[str], safe: bool) -> str:
+    def _get_index_sql(
+        self,
+        model: type[Model],
+        field_names: Sequence[str],
+        safe: bool,
+        index_name: str | None = None,
+        index_type: str | None = None,
+        extra: str | None = None,
+    ) -> str:
         """Get index SQLs, but keep them for ourselves"""
-        self._field_indexes.append(
-            self.INDEX_CREATE_TEMPLATE.format(
-                exists="IF NOT EXISTS " if safe else "",
-                index_name=self._generate_index_name("idx", model, field_names),
-                table_name=model._meta.db_table,
-                fields=", ".join(self.quote(f) for f in field_names),
-            )
+        index_create_sql = super()._get_index_sql(
+            model, field_names, safe, index_name=index_name, index_type=index_type, extra=extra
         )
-
+        self._field_indexes.append(index_create_sql)
         return ""
 
     def _create_fk_string(
@@ -102,7 +109,7 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
             return comment
         return fk
 
-    def _get_inner_statements(self) -> List[str]:
+    def _get_inner_statements(self) -> list[str]:
         extra = self._foreign_keys + list(dict.fromkeys(self._field_indexes))
         self._field_indexes.clear()
         self._foreign_keys.clear()

@@ -7,14 +7,11 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
-      - name: Install and configure Poetry
-        run: |
-          pip install -U pip poetry
-          poetry config virtualenvs.create false
+          python-version: "3.10"
+      - uses: astral-sh/setup-uv@v7
       - name: Build docs
         run: make docs
       - name: Deploy release docs

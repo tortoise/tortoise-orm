@@ -53,6 +53,20 @@ Contributors
 * Paul Serov ``@thakryptex``
 * Stanislav Zmiev ``@Ovsyanka83``
 * Waket Zheng ``@waketzheng``
+* Yuval Ben-Arie ``@yuvalbenarie``
+* Stephan Klein ``@privatwolke``
+* ``@WizzyGeek``
+* Ivan Pakeev ``@ipakeev``
+* Abdeldjalil Hezouat ``@Abdeldjalil-H``
+* Andrea Magistà ``@vlakius``
+* Daniel Szucs ``@Quasar6X``
+* Rui Catarino ``@ruitcatarino``
+* Lance Moe ``@lancemoe``
+* Markus Beckschulte ``@markus-96``
+* Frederic Aoustin ``@fraoustin``
+* Ludwig Hähne ``@pankrat``
+* Christian Tanul ``@scriptogre``
+* Qian Chen ``@shkey``
 
 Special Thanks
 ==============

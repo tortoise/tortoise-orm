@@ -1,4 +1,6 @@
 from tests.testmodels import (
+    Author,
+    Book,
     Event,
     IntFields,
     MinRelation,
@@ -8,6 +10,7 @@ from tests.testmodels import (
     Tree,
 )
 from tortoise import connections
+from tortoise.backends.psycopg.client import PsycopgClient
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotEQ
 from tortoise.exceptions import (
@@ -15,9 +18,11 @@ from tortoise.exceptions import (
     FieldError,
     IntegrityError,
     MultipleObjectsReturned,
+    NotExistOrMultiple,
     ParamsError,
 )
 from tortoise.expressions import F, RawSQL, Subquery
+from tortoise.functions import Avg
 
 # TODO: Test the many exceptions in QuerySet
 # TODO: .filter(intnum_null=None) does not work as expected
@@ -59,7 +64,7 @@ class TestQueryset(test.TestCase):
         sql = IntFields.all().only("id").limit(0).sql()
         self.assertEqual(
             sql,
-            'SELECT "id" "id" FROM "intfields" LIMIT 0',
+            'SELECT "id" "id" FROM "intfields" LIMIT ?',
         )
 
     async def test_offset_count(self):
@@ -68,6 +73,58 @@ class TestQueryset(test.TestCase):
     async def test_offset_negative(self):
         with self.assertRaisesRegex(ParamsError, "Offset should be non-negative number"):
             await IntFields.all().offset(-10)
+
+    async def test_slicing_start_and_stop(self) -> None:
+        sliced_queryset = IntFields.all().order_by("intnum")[1:5]
+        manually_sliced_queryset = IntFields.all().order_by("intnum").offset(1).limit(4)
+        self.assertSequenceEqual(await sliced_queryset, await manually_sliced_queryset)
+
+    async def test_slicing_only_limit(self) -> None:
+        sliced_queryset = IntFields.all().order_by("intnum")[:5]
+        manually_sliced_queryset = IntFields.all().order_by("intnum").limit(5)
+        self.assertSequenceEqual(await sliced_queryset, await manually_sliced_queryset)
+
+    async def test_slicing_only_offset(self) -> None:
+        sliced_queryset = IntFields.all().order_by("intnum")[5:]
+        manually_sliced_queryset = IntFields.all().order_by("intnum").offset(5)
+        self.assertSequenceEqual(await sliced_queryset, await manually_sliced_queryset)
+
+    async def test_slicing_count(self) -> None:
+        queryset = IntFields.all().order_by("intnum")[1:5]
+        self.assertEqual(await queryset.count(), 4)
+
+    def test_slicing_negative_values(self) -> None:
+        with self.assertRaisesRegex(
+            expected_exception=ParamsError,
+            expected_regex="Slice start should be non-negative number or None.",
+        ):
+            _ = IntFields.all()[-1:]
+
+        with self.assertRaisesRegex(
+            expected_exception=ParamsError,
+            expected_regex="Slice stop should be non-negative number greater that slice start, "
+            "or None.",
+        ):
+            _ = IntFields.all()[:-1]
+
+    def test_slicing_stop_before_start(self) -> None:
+        with self.assertRaisesRegex(
+            expected_exception=ParamsError,
+            expected_regex="Slice stop should be non-negative number greater that slice start, "
+            "or None.",
+        ):
+            _ = IntFields.all()[2:1]
+
+    async def test_slicing_steps(self) -> None:
+        sliced_queryset = IntFields.all().order_by("intnum")[::1]
+        manually_sliced_queryset = IntFields.all().order_by("intnum")
+        self.assertSequenceEqual(await sliced_queryset, await manually_sliced_queryset)
+
+        with self.assertRaisesRegex(
+            expected_exception=ParamsError,
+            expected_regex="Slice steps should be 1 or None.",
+        ):
+            _ = IntFields.all()[::2]
 
     async def test_join_count(self):
         tour = await Tournament.create(name="moo")
@@ -215,6 +272,99 @@ class TestQueryset(test.TestCase):
             await IntFields.all().order_by("intnum").filter(intnum__gte=400).first().values_list(),
             None,
         )
+
+    async def test_last(self):
+        self.assertEqual(
+            (await IntFields.all().order_by("intnum").filter(intnum__gte=40).last()).intnum, 97
+        )
+        self.assertEqual(
+            (await IntFields.all().order_by("intnum").filter(intnum__gte=40).last().values())[
+                "intnum"
+            ],
+            97,
+        )
+        self.assertEqual(
+            (await IntFields.all().order_by("intnum").filter(intnum__gte=40).last().values_list())[
+                1
+            ],
+            97,
+        )
+
+        self.assertEqual(
+            await IntFields.all().order_by("intnum").filter(intnum__gte=400).last(), None
+        )
+        self.assertEqual(
+            await IntFields.all().order_by("intnum").filter(intnum__gte=400).last().values(), None
+        )
+        self.assertEqual(
+            await IntFields.all().order_by("intnum").filter(intnum__gte=400).last().values_list(),
+            None,
+        )
+        self.assertEqual((await IntFields.all().filter(intnum__gte=40).last()).intnum, 97)
+
+    async def test_latest(self):
+        self.assertEqual((await IntFields.all().latest("intnum")).intnum, 97)
+        self.assertEqual(
+            (await IntFields.all().order_by("-intnum").first()).intnum,
+            (await IntFields.all().latest("intnum")).intnum,
+        )
+        self.assertEqual((await IntFields.all().filter(intnum__gte=40).latest("intnum")).intnum, 97)
+        self.assertEqual(
+            (await IntFields.all().filter(intnum__gte=40).latest("intnum").values())["intnum"],
+            97,
+        )
+        self.assertEqual(
+            (await IntFields.all().filter(intnum__gte=40).latest("intnum").values_list())[1],
+            97,
+        )
+
+        self.assertEqual(await IntFields.all().filter(intnum__gte=400).latest("intnum"), None)
+        self.assertEqual(
+            await IntFields.all().filter(intnum__gte=400).latest("intnum").values(), None
+        )
+        self.assertEqual(
+            await IntFields.all().filter(intnum__gte=400).latest("intnum").values_list(),
+            None,
+        )
+
+        with self.assertRaises(FieldError):
+            await IntFields.all().latest()
+
+        with self.assertRaises(FieldError):
+            await IntFields.all().latest("some_unkown_field")
+
+    async def test_earliest(self):
+        self.assertEqual((await IntFields.all().earliest("intnum")).intnum, 10)
+        self.assertEqual(
+            (await IntFields.all().order_by("intnum").first()).intnum,
+            (await IntFields.all().earliest("intnum")).intnum,
+        )
+        self.assertEqual(
+            (await IntFields.all().filter(intnum__gte=40).earliest("intnum")).intnum, 40
+        )
+        self.assertEqual(
+            (await IntFields.all().filter(intnum__gte=40).earliest("intnum").values())["intnum"],
+            40,
+        )
+        self.assertEqual(
+            (await IntFields.all().filter(intnum__gte=40).earliest("intnum").values_list())[1],
+            40,
+        )
+
+        self.assertEqual(await IntFields.all().filter(intnum__gte=400).earliest("intnum"), None)
+        self.assertEqual(
+            await IntFields.all().filter(intnum__gte=400).earliest("intnum").values(), None
+        )
+        self.assertEqual(
+            await IntFields.all().filter(intnum__gte=400).earliest("intnum").values_list(),
+            None,
+        )
+
+        with self.assertRaises(FieldError):
+            await IntFields.all().earliest()
+
+        with self.assertRaises(FieldError):
+            await IntFields.all().earliest("some_unkown_field")
 
     async def test_get_or_none(self):
         self.assertEqual((await IntFields.all().get_or_none(intnum=40)).intnum, 40)
@@ -423,8 +573,13 @@ class TestQueryset(test.TestCase):
         )
         self.assertEqual(data[0] + 1, data[1])
 
+    async def test_annotate_order_rawsql(self):
+        qs = IntFields.annotate(idp=RawSQL("id+1")).order_by("-idp")
+        data = await qs.first().values_list("id", "idp")
+        self.assertEqual(data[0] + 1, data[1])
+
     async def test_annotate_expression_filter(self):
-        count = await IntFields.annotate(intnum=F("intnum") + 1).filter(intnum__gt=30).count()
+        count = await IntFields.annotate(intnum1=F("intnum") + 1).filter(intnum1__gt=30).count()
         self.assertEqual(count, 23)
 
     async def test_get_raw_sql(self):
@@ -436,13 +591,13 @@ class TestQueryset(test.TestCase):
         sql = IntFields.filter(pk=1).only("id").force_index("index_name").sql()
         self.assertEqual(
             sql,
-            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_again = IntFields.filter(pk=1).only("id").force_index("index_name").sql()
         self.assertEqual(
             sql_again,
-            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s",
         )
 
     @test.requireCapability(support_index_hint=True)
@@ -450,7 +605,7 @@ class TestQueryset(test.TestCase):
         sql_ValuesQuery = IntFields.filter(pk=1).force_index("index_name").values("id").sql()
         self.assertEqual(
             sql_ValuesQuery,
-            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `id` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_ValuesListQuery = (
@@ -458,19 +613,19 @@ class TestQueryset(test.TestCase):
         )
         self.assertEqual(
             sql_ValuesListQuery,
-            "SELECT `id` `0` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `0` FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_CountQuery = IntFields.filter(pk=1).force_index("index_name").count().sql()
         self.assertEqual(
             sql_CountQuery,
-            "SELECT COUNT(*) FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT COUNT(*) FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_ExistsQuery = IntFields.filter(pk=1).force_index("index_name").exists().sql()
         self.assertEqual(
             sql_ExistsQuery,
-            "SELECT 1 FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=1 LIMIT 1",
+            "SELECT 1 FROM `intfields` FORCE INDEX (`index_name`) WHERE `id`=%s LIMIT %s",
         )
 
     @test.requireCapability(support_index_hint=True)
@@ -478,13 +633,13 @@ class TestQueryset(test.TestCase):
         sql = IntFields.filter(pk=1).only("id").use_index("index_name").sql()
         self.assertEqual(
             sql,
-            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_again = IntFields.filter(pk=1).only("id").use_index("index_name").sql()
         self.assertEqual(
             sql_again,
-            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s",
         )
 
     @test.requireCapability(support_index_hint=True)
@@ -492,25 +647,25 @@ class TestQueryset(test.TestCase):
         sql_ValuesQuery = IntFields.filter(pk=1).use_index("index_name").values("id").sql()
         self.assertEqual(
             sql_ValuesQuery,
-            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `id` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_ValuesListQuery = IntFields.filter(pk=1).use_index("index_name").values_list("id").sql()
         self.assertEqual(
             sql_ValuesListQuery,
-            "SELECT `id` `0` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT `id` `0` FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_CountQuery = IntFields.filter(pk=1).use_index("index_name").count().sql()
         self.assertEqual(
             sql_CountQuery,
-            "SELECT COUNT(*) FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1",
+            "SELECT COUNT(*) FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s",
         )
 
         sql_ExistsQuery = IntFields.filter(pk=1).use_index("index_name").exists().sql()
         self.assertEqual(
             sql_ExistsQuery,
-            "SELECT 1 FROM `intfields` USE INDEX (`index_name`) WHERE `id`=1 LIMIT 1",
+            "SELECT 1 FROM `intfields` USE INDEX (`index_name`) WHERE `id`=%s LIMIT %s",
         )
 
     @test.requireCapability(support_for_update=True)
@@ -519,41 +674,72 @@ class TestQueryset(test.TestCase):
         sql2 = IntFields.filter(pk=1).only("id").select_for_update(nowait=True).sql()
         sql3 = IntFields.filter(pk=1).only("id").select_for_update(skip_locked=True).sql()
         sql4 = IntFields.filter(pk=1).only("id").select_for_update(of=("intfields",)).sql()
+        sql5 = IntFields.filter(pk=1).only("id").select_for_update(no_key=True).sql()
 
         dialect = self.db.schema_generator.DIALECT
         if dialect == "postgres":
-            self.assertEqual(
-                sql1,
-                'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE',
-            )
-            self.assertEqual(
-                sql2,
-                'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE NOWAIT',
-            )
-            self.assertEqual(
-                sql3,
-                'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE SKIP LOCKED',
-            )
-            self.assertEqual(
-                sql4,
-                'SELECT "id" "id" FROM "intfields" WHERE "id"=1 FOR UPDATE OF "intfields"',
-            )
+            if isinstance(self.db, PsycopgClient):
+                self.assertEqual(
+                    sql1,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=%s FOR UPDATE',
+                )
+                self.assertEqual(
+                    sql2,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=%s FOR UPDATE NOWAIT',
+                )
+                self.assertEqual(
+                    sql3,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=%s FOR UPDATE SKIP LOCKED',
+                )
+                self.assertEqual(
+                    sql4,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=%s FOR UPDATE OF "intfields"',
+                )
+                self.assertEqual(
+                    sql5,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=%s FOR NO KEY UPDATE',
+                )
+            else:
+                self.assertEqual(
+                    sql1,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE',
+                )
+                self.assertEqual(
+                    sql2,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE NOWAIT',
+                )
+                self.assertEqual(
+                    sql3,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE SKIP LOCKED',
+                )
+                self.assertEqual(
+                    sql4,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR UPDATE OF "intfields"',
+                )
+                self.assertEqual(
+                    sql5,
+                    'SELECT "id" "id" FROM "intfields" WHERE "id"=$1 FOR NO KEY UPDATE',
+                )
         elif dialect == "mysql":
             self.assertEqual(
                 sql1,
-                "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE",
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=%s FOR UPDATE",
             )
             self.assertEqual(
                 sql2,
-                "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE NOWAIT",
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=%s FOR UPDATE NOWAIT",
             )
             self.assertEqual(
                 sql3,
-                "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE SKIP LOCKED",
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=%s FOR UPDATE SKIP LOCKED",
             )
             self.assertEqual(
                 sql4,
-                "SELECT `id` `id` FROM `intfields` WHERE `id`=1 FOR UPDATE OF `intfields`",
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=%s FOR UPDATE OF `intfields`",
+            )
+            self.assertEqual(
+                sql5,
+                "SELECT `id` `id` FROM `intfields` WHERE `id`=%s FOR UPDATE",
             )
 
     async def test_select_related(self):
@@ -621,3 +807,83 @@ class TestQueryset(test.TestCase):
         t1 = await Tournament.create(name="1")
         ret = await Tournament.filter(pk=t1.pk).annotate(id=RawSQL("id + 1")).values("id")
         self.assertEqual(ret, [{"id": t1.pk + 1}])
+
+    async def test_f_annotation_referenced_in_annotation(self):
+        instance = await IntFields.create(intnum=1)
+
+        events = (
+            await IntFields.filter(id=instance.id)
+            .annotate(intnum_plus_1=F("intnum") + 1)
+            .annotate(intnum_plus_2=F("intnum_plus_1") + 1)
+        )
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].intnum_plus_1, 2)
+        self.assertEqual(events[0].intnum_plus_2, 3)
+
+        # in a single annotate call
+        events = await IntFields.filter(id=instance.id).annotate(
+            intnum_plus_1=F("intnum") + 1, intnum_plus_2=F("intnum_plus_1") + 1
+        )
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].intnum_plus_1, 2)
+        self.assertEqual(events[0].intnum_plus_2, 3)
+
+    async def test_rawsql_annotation_referenced_in_annotation(self):
+        instance = await IntFields.create(intnum=1)
+
+        events = (
+            await IntFields.filter(id=instance.id)
+            .annotate(ten=RawSQL("20 / 2"))
+            .annotate(ten_plus_1=F("ten") + 1)
+        )
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].ten, 10)
+        self.assertEqual(events[0].ten_plus_1, 11)
+
+    async def test_joins_in_arithmetic_expressions(self):
+        author = await Author.create(name="1")
+        await Book.create(name="1", author=author, rating=1)
+        await Book.create(name="2", author=author, rating=5)
+
+        ret = await Author.annotate(rating=Avg(F("books__rating") + 1))
+        self.assertEqual(len(ret), 1)
+        self.assertEqual(ret[0].rating, 4.0)
+
+        ret = await Author.annotate(rating=Avg(F("books__rating") * 2 - F("books__rating")))
+        self.assertEqual(len(ret), 1)
+        self.assertEqual(ret[0].rating, 3.0)
+
+    async def test_annotations_in_flat_values_list(self):
+        author1 = await Author.create(name="1")
+        author2 = await Author.create(name="2")
+        author3 = await Author.create(name="3")
+        await Book.create(name="1", author=author1, rating=1)
+        await Book.create(name="2", author=author2, rating=3)
+        await Book.create(name="3", author=author3, rating=5)
+
+        subquery = Author.annotate(rating=Avg("books__rating")).filter(rating__gte=3)
+
+        subquery_ret = await subquery.order_by("id").values_list("id", flat=True)
+        self.assertEqual(len(subquery_ret), 2)
+        self.assertEqual(subquery_ret[0], author2.pk)
+        self.assertEqual(subquery_ret[1], author3.pk)
+
+        ret = await Author.filter(id__in=Subquery(subquery.values_list("id", flat=True))).order_by(
+            "id"
+        )
+        self.assertEqual(ret[0], author2)
+        self.assertEqual(ret[1], author3)
+
+
+class TestNotExist(test.TestCase):
+    exp_cls: type[NotExistOrMultiple] = DoesNotExist
+
+    @test.requireCapability(dialect="sqlite")
+    def test_does_not_exist(self):
+        assert str(self.exp_cls("old format")) == "old format"
+        assert str(self.exp_cls(Tournament)) == self.exp_cls.TEMPLATE.format(Tournament.__name__)
+
+
+class TestMultiple(TestNotExist):
+    exp_cls = MultipleObjectsReturned

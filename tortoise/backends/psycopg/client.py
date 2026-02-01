@@ -1,22 +1,28 @@
+from __future__ import annotations
+
 import asyncio
-import typing
+from collections.abc import Callable
+from contextlib import _AsyncGeneratorContextManager
 from ssl import SSLContext
+from typing import Any, TypeVar, cast
 
 import psycopg
 import psycopg.conninfo
 import psycopg.pq
 import psycopg.rows
 import psycopg_pool
+from pypika_tortoise import SqlContext
+from pypika_tortoise.dialects.postgresql import PostgreSQLQuery, PostgreSQLQueryBuilder
+from pypika_tortoise.terms import Parameterizer
 
 import tortoise.backends.base.client as base_client
 import tortoise.backends.base_postgres.client as postgres_client
 import tortoise.backends.psycopg.executor as executor
 import tortoise.exceptions as exceptions
-from tortoise.backends.base.client import PoolConnectionWrapper
 from tortoise.backends.psycopg.schema_generator import PsycopgSchemaGenerator
 
-FuncType = typing.Callable[..., typing.Any]
-F = typing.TypeVar("F", bound=FuncType)
+FuncType = Callable[..., Any]
+F = TypeVar("F", bound=FuncType)
 
 
 class AsyncConnectionPool(psycopg_pool.AsyncConnectionPool):
@@ -28,10 +34,30 @@ class AsyncConnectionPool(psycopg_pool.AsyncConnectionPool):
         await self.putconn(connection)
 
 
+class PsycopgSQLQuery(PostgreSQLQuery):
+    @classmethod
+    def _builder(cls, **kwargs) -> PostgreSQLQueryBuilder:
+        return PsycopgSQLQueryBuilder(**kwargs)
+
+
+class PsycopgSQLQueryBuilder(PostgreSQLQueryBuilder):
+    """
+    Psycopg opted to use a custom parameter placeholder, so we need to override the default
+    """
+
+    def get_parameterized_sql(self, ctx: SqlContext | None = None) -> tuple[str, list]:
+        if not ctx:
+            ctx = self.QUERY_CLS.SQL_CONTEXT
+        if not ctx.parameterizer:
+            ctx = ctx.copy(parameterizer=Parameterizer(placeholder_factory=lambda _: "%s"))
+        return super().get_parameterized_sql(ctx)
+
+
 class PsycopgClient(postgres_client.BasePostgresClient):
-    executor_class: typing.Type[executor.PsycopgExecutor] = executor.PsycopgExecutor
-    schema_generator: typing.Type[PsycopgSchemaGenerator] = PsycopgSchemaGenerator
-    _pool: typing.Optional[AsyncConnectionPool] = None
+    query_class: type[PsycopgSQLQuery] = PsycopgSQLQuery
+    executor_class: type[executor.PsycopgExecutor] = executor.PsycopgExecutor
+    schema_generator: type[PsycopgSchemaGenerator] = PsycopgSchemaGenerator
+    _pool: AsyncConnectionPool | None = None
     _connection: psycopg.AsyncConnection
     default_timeout: float = 30
 
@@ -85,7 +111,9 @@ class PsycopgClient(postgres_client.BasePostgresClient):
             )
 
     async def create_pool(self, **kwargs) -> AsyncConnectionPool:
-        return AsyncConnectionPool(**kwargs)
+        pool = AsyncConnectionPool(open=False, **kwargs)
+        await pool.open()
+        return pool
 
     async def db_delete(self) -> None:
         try:
@@ -93,7 +121,7 @@ class PsycopgClient(postgres_client.BasePostgresClient):
         except psycopg.errors.InvalidCatalogName:  # pragma: nocoverage
             pass
 
-    async def execute_insert(self, query: str, values: list) -> typing.Optional[typing.Any]:
+    async def execute_insert(self, query: str, values: list) -> Any | None:
         inserted, rows = await self.execute_query(query, values)
         if rows:
             return rows[0]
@@ -106,31 +134,21 @@ class PsycopgClient(postgres_client.BasePostgresClient):
         async with self.acquire_connection() as connection:
             async with connection.cursor() as cursor:
                 self.log.debug("%s: %s", query, values)
-                try:
-                    await cursor.executemany(query, values)
-                except Exception:
-                    await connection.rollback()
-                    raise
-                else:
-                    await connection.commit()
+                await cursor.executemany(query, values)
 
     @postgres_client.translate_exceptions
     async def execute_query(
         self,
         query: str,
-        values: typing.Optional[list] = None,
+        values: list | None = None,
         row_factory=psycopg.rows.dict_row,
-    ) -> typing.Tuple[int, typing.List[dict]]:
+    ) -> tuple[int, list[dict]]:
         connection: psycopg.AsyncConnection
         async with self.acquire_connection() as connection:
-            cursor: typing.Union[psycopg.AsyncCursor, psycopg.AsyncServerCursor]
+            cursor: psycopg.AsyncCursor | psycopg.AsyncServerCursor
             async with connection.cursor(row_factory=row_factory) as cursor:
                 self.log.debug("%s: %s", query, values)
-                try:
-                    await cursor.execute(query, values)
-                except psycopg.errors.IntegrityError:
-                    await connection.rollback()
-                    raise
+                await cursor.execute(query, values)
 
                 rowcount = int(cursor.rowcount or cursor.rownumber or 0)
 
@@ -139,11 +157,9 @@ class PsycopgClient(postgres_client.BasePostgresClient):
                 else:
                     rows = []
 
-                return rowcount, rows
+                return rowcount, cast(list[dict], rows)
 
-    async def execute_query_dict(
-        self, query: str, values: typing.Optional[list] = None
-    ) -> typing.List[dict]:
+    async def execute_query_dict(self, query: str, values: list | None = None) -> list[dict]:
         rowcount, rows = await self.execute_query(query, values, row_factory=psycopg.rows.dict_row)
         return rows
 
@@ -176,51 +192,63 @@ class PsycopgClient(postgres_client.BasePostgresClient):
         ) as exc:
             raise exceptions.TransactionManagementError(exc)
 
-    def acquire_connection(
-        self,
-    ) -> typing.Union[base_client.ConnectionWrapper, PoolConnectionWrapper]:
-        return PoolConnectionWrapper(self)
-
     def _in_transaction(self) -> base_client.TransactionContext:
-        return base_client.TransactionContextPooled(TransactionWrapper(self))
+        return base_client.TransactionContextPooled(TransactionWrapper(self), self._pool_init_lock)
 
 
-class TransactionWrapper(PsycopgClient, base_client.BaseTransactionWrapper):
+class TransactionWrapper(PsycopgClient, base_client.TransactionalDBClient):
+    """A transactional connection wrapper for psycopg.
+
+    psycopg implements nested transactions (savepoints) natively, so we don't need to.
+    """
+
     _connection: psycopg.AsyncConnection
 
     def __init__(self, connection: PsycopgClient) -> None:
         self._connection: psycopg.AsyncConnection = connection._connection
         self._lock = asyncio.Lock()
-        self._trxlock = asyncio.Lock()
         self.log = connection.log
         self.connection_name = connection.connection_name
+        self._transaction: _AsyncGeneratorContextManager[psycopg.AsyncTransaction] | None = None
         self._finalized = False
         self._parent = connection
 
     def _in_transaction(self) -> base_client.TransactionContext:
-        return base_client.NestedTransactionPooledContext(self)
+        # since we need to store the transaction object for each transaction block,
+        # we need to wrap the connection with its own TransactionWrapper
+        return base_client.NestedTransactionContext(TransactionWrapper(self))
 
-    def acquire_connection(self) -> base_client.ConnectionWrapper:
+    def acquire_connection(self) -> base_client.ConnectionWrapper[psycopg.AsyncConnection]:
         return base_client.ConnectionWrapper(self._lock, self)
 
     @postgres_client.translate_exceptions
-    async def start(self) -> None:
-        # We're not using explicit transactions here because psycopg takes care of that
-        # automatically when autocommit is disabled.
-        await self._connection.set_autocommit(False)
+    async def begin(self) -> None:
+        self._transaction = self._connection.transaction()
+        await self._transaction.__aenter__()
+
+    async def savepoint(self) -> None:
+        return await self.begin()
 
     async def commit(self) -> None:
+        if not self._transaction:
+            raise exceptions.TransactionManagementError("Transaction is in invalid state")
         if self._finalized:
             raise exceptions.TransactionManagementError("Transaction already finalised")
 
-        await self._connection.commit()
-        await self._connection.set_autocommit(True)
+        await self._transaction.__aexit__(None, None, None)
         self._finalized = True
+
+    async def release_savepoint(self) -> None:
+        await self.commit()
 
     async def rollback(self) -> None:
+        if not self._transaction:
+            raise exceptions.TransactionManagementError("Transaction is in invalid state")
         if self._finalized:
             raise exceptions.TransactionManagementError("Transaction already finalised")
 
-        await self._connection.rollback()
-        await self._connection.set_autocommit(True)
+        await self._transaction.__aexit__(psycopg.Rollback, psycopg.Rollback(), None)
         self._finalized = True
+
+    async def savepoint_rollback(self) -> None:
+        await self.rollback()

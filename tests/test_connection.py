@@ -71,18 +71,21 @@ class TestConnections(SimpleTestCase):
     @patch("tortoise.connection.importlib.import_module")
     def test_discover_client_class_proper_impl(self, mocked_import_module: Mock):
         mocked_import_module.return_value = Mock(client_class="some_class")
-        client_class = self.conn_handler._discover_client_class("blah")
+        del mocked_import_module.return_value.get_client_class
+        client_class = self.conn_handler._discover_client_class({"engine": "blah"})
+
         mocked_import_module.assert_called_once_with("blah")
         self.assertEqual(client_class, "some_class")
 
     @patch("tortoise.connection.importlib.import_module")
     def test_discover_client_class_improper_impl(self, mocked_import_module: Mock):
         del mocked_import_module.return_value.client_class
+        del mocked_import_module.return_value.get_client_class
         engine = "some_engine"
         with self.assertRaises(
             ConfigurationError, msg=f'Backend for engine "{engine}" does not implement db client'
         ):
-            _ = self.conn_handler._discover_client_class(engine)
+            _ = self.conn_handler._discover_client_class({"engine": engine})
 
     @patch("tortoise.connection.ConnectionHandler.db_config", new_callable=PropertyMock)
     def test_get_db_info_present(self, mocked_db_config: Mock):
@@ -156,7 +159,9 @@ class TestConnections(SimpleTestCase):
 
         mocked_get_db_info.assert_called_once_with(alias)
         mocked_expand_db_url.assert_called_once_with("some_db_url")
-        mocked_discover_client_class.assert_called_once_with("some_engine")
+        mocked_discover_client_class.assert_called_once_with(
+            {"engine": "some_engine", "credentials": {"cred_key": "some_val"}}
+        )
         expected_client_class.assert_called_once_with(**expected_db_params)
         self.assertEqual(ret_val, "some_connection")
 
@@ -182,7 +187,9 @@ class TestConnections(SimpleTestCase):
 
         mocked_get_db_info.assert_called_once_with(alias)
         mocked_expand_db_url.assert_not_called()
-        mocked_discover_client_class.assert_called_once_with("some_engine")
+        mocked_discover_client_class.assert_called_once_with(
+            {"engine": "some_engine", "credentials": {"cred_key": "some_val"}}
+        )
         expected_client_class.assert_called_once_with(**expected_db_params)
         self.assertEqual(ret_val, "some_connection")
 

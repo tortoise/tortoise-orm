@@ -18,6 +18,7 @@ Fields
 MySQL specific fields.
 
 .. autoclass:: tortoise.contrib.mysql.fields.GeometryField
+.. autoclass:: tortoise.contrib.mysql.fields.UUIDField
 
 Search
 ======

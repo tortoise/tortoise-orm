@@ -37,4 +37,9 @@ class TestBinaryFields(test.TestCase):
 
     def test_index_fail(self):
         with self.assertRaisesRegex(ConfigurationError, "can't be indexed"):
-            BinaryField(index=True)
+            with self.assertWarnsRegex(
+                DeprecationWarning, "`index` is deprecated, please use `db_index` instead"
+            ):
+                BinaryField(index=True)
+        with self.assertRaisesRegex(ConfigurationError, "can't be indexed"):
+            BinaryField(db_index=True)

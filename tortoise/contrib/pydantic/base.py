@@ -1,18 +1,25 @@
-from typing import TYPE_CHECKING, List, Type, Union
+from __future__ import annotations
+
+import sys
+import types
+from typing import TYPE_CHECKING, Any, Union, cast, get_args, get_origin
 
 import pydantic
 from pydantic import BaseModel, ConfigDict, RootModel
 
 from tortoise import fields
 
+if sys.version_info >= (3, 11):  # pragma: nocoverage
+    from typing import Self
+else:
+    from typing_extensions import Self
+
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
     from tortoise.queryset import QuerySet, QuerySetSingle
 
 
-def _get_fetch_fields(
-    pydantic_class: "Type[PydanticModel]", model_class: "Type[Model]"
-) -> List[str]:
+def _get_fetch_fields(pydantic_class: type[PydanticModel], model_class: type[Model]) -> list[str]:
     """
     Recursively collect fields needed to fetch
     :param pydantic_class: The pydantic model class
@@ -21,15 +28,26 @@ def _get_fetch_fields(
     """
     fetch_fields = []
     for field_name, field_type in pydantic_class.__annotations__.items():
-        origin = getattr(field_type, "__origin__", None)
-        if origin in (list, List, Union):
-            field_type = field_type.__args__[0]
+        field_type = cast(Any, field_type)
+        origin = cast(Any, get_origin(field_type))
+        if origin is list:
+            args = get_args(field_type)
+            if args:
+                field_type = args[0]
+        elif origin is Union or origin is types.UnionType:
+            args = get_args(field_type)
+            for arg in args:
+                if arg is not type(None):
+                    field_type = arg
+                    break
 
         # noinspection PyProtectedMember
+        if not isinstance(field_type, type):
+            continue
         if field_name in model_class._meta.fetch_fields and issubclass(field_type, PydanticModel):
-            subclass_fetch_fields = _get_fetch_fields(
-                field_type, field_type.model_config["orig_model"]
-            )
+            subclass = field_type
+            orig_model = cast(Any, subclass.model_config).get("orig_model")
+            subclass_fetch_fields = _get_fetch_fields(subclass, orig_model)
             if subclass_fetch_fields:
                 fetch_fields.extend([field_name + "__" + f for f in subclass_fetch_fields])
             else:
@@ -59,7 +77,7 @@ class PydanticModel(BaseModel):
         return value
 
     @classmethod
-    async def from_tortoise_orm(cls, obj: "Model") -> "PydanticModel":
+    async def from_tortoise_orm(cls, obj: Model) -> Self:
         """
         Returns a serializable pydantic model instance built from the provided model instance.
 
@@ -86,7 +104,7 @@ class PydanticModel(BaseModel):
         return cls.model_validate(obj)
 
     @classmethod
-    async def from_queryset_single(cls, queryset: "QuerySetSingle") -> "PydanticModel":
+    async def from_queryset_single(cls, queryset: QuerySetSingle) -> Self:
         """
         Returns a serializable pydantic model instance for a single model
         from the provided queryset.
@@ -99,7 +117,7 @@ class PydanticModel(BaseModel):
         return cls.model_validate(await queryset.prefetch_related(*fetch_fields))
 
     @classmethod
-    async def from_queryset(cls, queryset: "QuerySet") -> "List[PydanticModel]":
+    async def from_queryset(cls, queryset: QuerySet) -> list[Self]:
         """
         Returns a serializable pydantic model instance that contains a list of models,
         from the provided queryset.
@@ -117,11 +135,11 @@ class PydanticListModel(RootModel):
     Pydantic BaseModel for List of Tortoise Models
 
     This provides an extra method above the usual Pydantic
-    `model properties <https://pydantic-docs.helpmanual.io/usage/models/#model-properties>`__
+    `model properties <https://docs.pydantic.dev/latest/concepts/models/#model-methods-and-properties>`__
     """
 
     @classmethod
-    async def from_queryset(cls, queryset: "QuerySet") -> "PydanticListModel":
+    async def from_queryset(cls, queryset: QuerySet) -> Self:
         """
         Returns a serializable pydantic model instance that contains a list of models,
         from the provided queryset.
