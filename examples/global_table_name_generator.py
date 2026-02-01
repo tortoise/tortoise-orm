@@ -26,7 +26,7 @@ class BlogPost(Model):
     id = fields.IntField(primary_key=True)
     title = fields.TextField()
     author: fields.ForeignKeyRelation[UserProfile] = fields.ForeignKeyField(
-        "models.UserProfile", related_name="posts"
+        UserProfile, related_name="posts"
     )
 
     class Meta:

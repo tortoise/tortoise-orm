@@ -34,6 +34,13 @@ class ConnectionHandler:
         self._create_db = create_db
         await self._init_connections()
 
+    def _init_config(self, db_config: DBConfigType, create_db: bool = False) -> None:
+        if self._db_config is None:
+            self._db_config = db_config
+        else:
+            self._db_config.update(db_config)
+        self._create_db = create_db
+
     @property
     def db_config(self) -> DBConfigType:
         """

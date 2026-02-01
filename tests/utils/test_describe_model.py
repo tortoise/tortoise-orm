@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import uuid
-from typing import Union
 
 from tests.testmodels import (
     Event,
@@ -28,6 +27,13 @@ from tortoise.fields.relational import (
     ManyToManyFieldInstance,
     OneToOneFieldInstance,
 )
+
+
+def union_annotation(x: str, y: str) -> str:
+    return f"{x} | {y}"
+
+
+UNION_DICT_LIST = union_annotation("dict", "list")
 
 
 class TestDescribeModels(test.TestCase):
@@ -1366,7 +1372,7 @@ class TestDescribeModel(test.SimpleTestCase):
                             "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
-                        "python_type": "Union[dict, list]",
+                        "python_type": UNION_DICT_LIST,
                         "generated": False,
                         "nullable": False,
                         "unique": False,
@@ -1386,7 +1392,7 @@ class TestDescribeModel(test.SimpleTestCase):
                             "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
-                        "python_type": "Union[dict, list]",
+                        "python_type": UNION_DICT_LIST,
                         "generated": False,
                         "nullable": True,
                         "unique": False,
@@ -1406,7 +1412,7 @@ class TestDescribeModel(test.SimpleTestCase):
                             "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
-                        "python_type": "Union[dict, list]",
+                        "python_type": UNION_DICT_LIST,
                         "generated": False,
                         "nullable": False,
                         "unique": False,
@@ -1426,7 +1432,7 @@ class TestDescribeModel(test.SimpleTestCase):
                             "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
-                        "python_type": "Union[dict, list]",
+                        "python_type": UNION_DICT_LIST,
                         "generated": False,
                         "nullable": True,
                         "unique": False,
@@ -1505,7 +1511,7 @@ class TestDescribeModel(test.SimpleTestCase):
                             "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
-                        "python_type": Union[dict, list],
+                        "python_type": dict | list,
                         "generated": False,
                         "nullable": False,
                         "unique": False,
@@ -1525,7 +1531,7 @@ class TestDescribeModel(test.SimpleTestCase):
                             "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
-                        "python_type": Union[dict, list],
+                        "python_type": dict | list,
                         "generated": False,
                         "nullable": True,
                         "unique": False,
@@ -1545,7 +1551,7 @@ class TestDescribeModel(test.SimpleTestCase):
                             "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
-                        "python_type": Union[dict, list],
+                        "python_type": dict | list,
                         "generated": False,
                         "nullable": False,
                         "unique": False,
@@ -1565,7 +1571,7 @@ class TestDescribeModel(test.SimpleTestCase):
                             "oracle": "NCLOB",
                             "postgres": "JSONB",
                         },
-                        "python_type": Union[dict, list],
+                        "python_type": dict | list,
                         "generated": False,
                         "nullable": True,
                         "unique": False,

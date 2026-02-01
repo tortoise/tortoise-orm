@@ -23,7 +23,7 @@ DB_LOOKUP: dict[str, dict[str, Any]] = {
             "hostname": "host",
             "port": "port",
             "username": "user",
-            "password": "password",
+            "password": "password",  # nosec:B105
         },
         "defaults": {"port": 5432},
         "cast": {
@@ -45,7 +45,7 @@ DB_LOOKUP: dict[str, dict[str, Any]] = {
             "hostname": "host",
             "port": "port",
             "username": "user",
-            "password": "password",
+            "password": "password",  # nosec:B105
         },
         "defaults": {"port": 5432},
         "cast": {
@@ -77,7 +77,7 @@ DB_LOOKUP: dict[str, dict[str, Any]] = {
             "hostname": "host",
             "port": "port",
             "username": "user",
-            "password": "password",
+            "password": "password",  # nosec:B105
         },
         "defaults": {"port": 3306, "charset": "utf8mb4", "sql_mode": "STRICT_TRANS_TABLES"},
         "cast": {
@@ -97,7 +97,7 @@ DB_LOOKUP: dict[str, dict[str, Any]] = {
             "hostname": "host",
             "port": "port",
             "username": "user",
-            "password": "password",
+            "password": "password",  # nosec:B105
         },
         "defaults": {"port": 1433},
         "cast": {
@@ -114,7 +114,7 @@ DB_LOOKUP: dict[str, dict[str, Any]] = {
             "hostname": "host",
             "port": "port",
             "username": "user",
-            "password": "password",
+            "password": "password",  # nosec:B105
         },
         "defaults": {"port": 1521},
         "cast": {

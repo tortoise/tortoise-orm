@@ -11,17 +11,45 @@ Changelog
 ====
 
 0.26.0 (unreleased)
-------------------- 
-Added
-^^^^^
-- Add `create()` method to reverse ForeignKey relations, enabling `parent.children.create()` syntax
-
+-------------------
 Fixed
 ^^^^^
-- Fix sqlite decimal filter error with `__gt` (#2020)
+- Fix ``AttributeError`` when using ``tortoise-orm`` with Nuitka-compiled Python code (#2053)
+- Fix 'Self' in python standard library typing.py, but tortoise/model.py required it in 'typing_extensions' (#2051)
+- Fix annotations being selected in ValuesListQuery despite not specified in `.values_list` fields list (#2059)
+
+Changed
+^^^^^
+- feat: foreignkey to model type (#2027)
 
 0.25
 ====
+
+0.25.3
+------
+Fixed
+^^^^^
+- Fix exception when creating aiosqlite connections on aiosqlite==0.22.0 (#2035)
+- Fix implicit anyio dependency introduced, but not declared (#2045)
+
+0.25.2
+------
+Fixed
+^^^^^
+- Fix grouping by in subqueries (#2021)
+- Fix sqlite decimal filter error with `__gt` (#2019)
+
+Changed
+^^^^^
+- Official support python3.14 (#2026)
+- Migrate from poetry to uv (#1987)
+- Reorder imports by ruff (#1966)
+- Migrate lint tool from isort+black to ruff (#1963)
+
+Added
+^^^^^
+- Add `create()` method to reverse ForeignKey relations, enabling `parent.children.create()` syntax (#1991)
+
 
 0.25.1
 ------------------

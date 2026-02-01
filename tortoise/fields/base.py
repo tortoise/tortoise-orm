@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import inspect
+import operator
 import sys
 import warnings
 from collections.abc import Callable
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Generic, TypeVar, Union, overload
+from functools import reduce
+from typing import TYPE_CHECKING, Any, Generic, TypeVar, overload
 
 from pypika_tortoise.terms import Term
 
@@ -47,7 +50,8 @@ class _FieldMeta(type):
             # Instantiate class with only the 1st base class (should be Field)
             cls = type.__new__(mcs, name, (bases[0],), attrs)
             # All other base classes are our meta types, we store them in class attributes
-            cls.field_type = bases[1] if len(bases) == 2 else Union[bases[1:]]  # type: ignore
+            field_type = bases[1] if len(bases) == 2 else reduce(operator.or_, bases[1:])
+            setattr(cls, "field_type", field_type)
             return cls
         return type.__new__(mcs, name, bases, attrs)
 
@@ -460,3 +464,46 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
             desc["db_field_types"] = self.get_db_field_types()
 
         return desc
+
+    def deconstruct(self) -> tuple[str, list[Any], dict[str, Any]]:
+        path = f"{self.__class__.__module__}.{self.__class__.__name__}"
+        kwargs: dict[str, Any] = {}
+        if self.source_field:
+            kwargs["source_field"] = self.source_field
+        if self.generated:
+            kwargs["generated"] = self.generated
+        if self.pk:
+            kwargs["primary_key"] = self.pk
+        if self.null:
+            kwargs["null"] = self.null
+        if self.default is not None:
+            kwargs["default"] = self.default
+        if self.unique:
+            kwargs["unique"] = self.unique
+        if self.index:
+            kwargs["db_index"] = self.index
+        if self.description is not None:
+            kwargs["description"] = self.description
+        if hasattr(self, "db_constraint"):
+            kwargs["db_constraint"] = getattr(self, "db_constraint")
+        if hasattr(self, "to_field") and getattr(self, "to_field") is not None:
+            kwargs["to_field"] = getattr(self, "to_field")
+
+        signature = inspect.signature(self.__class__.__init__)
+        for name, param in signature.parameters.items():
+            if name in ("self", "args", "kwargs", "model", "validators"):
+                continue
+            if name == "field_type" and self.__class__.__name__ == "ManyToManyFieldInstance":
+                continue
+            if name in kwargs:
+                continue
+            if not hasattr(self, name):
+                continue
+            value = getattr(self, name)
+            if name == "model_name" and value is not None:
+                if not isinstance(value, str) and hasattr(value, "_meta"):
+                    value = f"{value._meta.app}.{value.__name__}"
+            if value is None and param.default is None:
+                continue
+            kwargs[name] = value
+        return path, [], kwargs

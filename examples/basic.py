@@ -11,6 +11,7 @@ class Event(Model):
     id = fields.IntField(primary_key=True)
     name = fields.TextField()
     datetime = fields.DatetimeField(null=True)
+    username = fields.CharField(max_length=150, unique=True, db_index=True)
 
     class Meta:
         table = "event"
@@ -21,13 +22,13 @@ class Event(Model):
 
 @init_memory_sqlite
 async def run() -> None:
-    event = await Event.create(name="Test")
+    event = await Event.create(name="Test", username="test")
     await Event.filter(id=event.id).update(name="Updated name")
 
-    print(await Event.filter(name="Updated name").first())
+    print(await Event.filter(username="test").first())
     # >>> Updated name
 
-    await Event(name="Test 2").save()
+    await Event(name="Test 2", username="test2").save()
     print(await Event.all().values_list("id", flat=True))
     # >>> [1, 2]
     print(await Event.all().values("id", "name"))

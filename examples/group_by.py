@@ -5,13 +5,15 @@ from tortoise.functions import Avg, Count, Sum
 class Author(Model):
     name = fields.CharField(max_length=255)
 
+    books: fields.ReverseRelation["Book"]
+
 
 class Book(Model):
     name = fields.CharField(max_length=255)
-    author: fields.ForeignKeyRelation[Author] = fields.ForeignKeyField(
-        "models.Author", related_name="books"
-    )
+    author: fields.ForeignKeyRelation[Author] = fields.ForeignKeyField(Author, related_name="books")
     rating = fields.FloatField()
+
+    author_id: int
 
 
 async def run():

@@ -218,7 +218,21 @@ class BaseDBAsyncClient(abc.ABC):
         :param query: The SQL string, pre-parametrized for the target DB dialect.
         :param values: A sequence of positional DB parameters.
         """
-        raise NotImplementedError()  # pragma: nocoverage
+        return (await self.execute_query_dict_with_affected(query, values))[0]
+
+    async def execute_query_dict_with_affected(
+        self, query: str, values: list | None = None
+    ) -> tuple[list[dict], int]:
+        """
+        Executes a RAW SQL query statement, and returns the resultset as a list of dicts
+        along with the rows affected if available.
+
+        :param query: The SQL string, pre-parametrized for the target DB dialect.
+        :param values: A sequence of positional DB parameters.
+        """
+        rowcount, rows = await self.execute_query(query, values)
+        normalized = [dict(row) for row in rows]
+        return normalized, rowcount
 
 
 class TransactionalDBClient(BaseDBAsyncClient, abc.ABC):

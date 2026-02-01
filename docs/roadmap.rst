@@ -23,12 +23,8 @@ Here we have all the features that is slightly further out, in no particular ord
     * Make it simple to inspect Models and Management Commands without using private APIs.
 
 * Migrations
-    * Comprehensive schema Migrations
-    * Automatic forward Migration building
-    * Ability to easily run arbitrary code in a migration
-    * Ability to get a the Models for that exact time of the migration, to ensure safe & consistent data migrations
-    * Cross-DB support
-    * Fixtures as a property of a migration
+    * Built-in migrations shipped (schema, autodetector, CLI, data migrations).
+    * Follow-ups: optimization/merging tools, fixture support, expanded docs/examples.
 
 * Serialization support
     * Add deserialization support

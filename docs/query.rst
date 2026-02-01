@@ -231,6 +231,21 @@ The following lookup types are available:
 - ``iexact`` - case insensitive equals
 - ``search`` - full text search
 
+For PostgreSQL, ``__search`` uses ``plainto_tsquery`` by default. Text and char fields are
+wrapped in ``to_tsvector``, while ``TSVectorField`` values are queried directly.
+You can also pass a :class:`~tortoise.contrib.postgres.search.SearchQuery` to control
+the search type and configuration.
+
+.. code-block:: python3
+
+    from tortoise.contrib.postgres.search import SearchQuery
+
+    await Article.filter(title__search="fast search")
+    await Article.filter(search__search="fast search")
+    await Article.filter(
+        search__search=SearchQuery("fast & search", search_type="raw", config="english")
+    )
+
 For PostgreSQL and MySQL, the following date related lookup types are available:
 
 - ``year`` - e.g. ``await Team.filter(created_at__year=2020)``

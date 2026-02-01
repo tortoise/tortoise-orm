@@ -7,7 +7,7 @@ import warnings
 from collections.abc import Callable
 from decimal import Decimal
 from enum import Enum, IntEnum
-from typing import TYPE_CHECKING, Any, TypeVar, Union
+from typing import TYPE_CHECKING, Any, TypeVar
 from uuid import UUID, uuid4
 
 from pypika_tortoise import functions
@@ -54,7 +54,7 @@ T = TypeVar("T")
 
 # Doing this we can replace json dumps/loads with different implementations
 JsonDumpsFunc = Callable[[Any], str]
-JsonLoadsFunc = Callable[[Union[str, bytes]], Any]
+JsonLoadsFunc = Callable[[str | bytes], Any]
 JSON_DUMPS: JsonDumpsFunc = functools.partial(json.dumps, separators=(",", ":"))
 JSON_LOADS: JsonLoadsFunc = json.loads
 

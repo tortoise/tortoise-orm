@@ -134,7 +134,12 @@ class AsyncpgDBClient(BasePostgresClient):
                 params = [query, *values]
             else:
                 params = [query]
-            if query.startswith("UPDATE") or query.startswith("DELETE"):
+            normalized = query.lstrip().upper()
+            if (
+                normalized.startswith("UPDATE")
+                or normalized.startswith("DELETE")
+                or normalized.startswith("INSERT")
+            ):
                 res = await connection.execute(*params)
                 try:
                     rows_affected = int(res.split(" ")[1])

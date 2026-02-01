@@ -1,9 +1,9 @@
-from tests.testmodels import CharPkModel, IntFields
+from tests.testmodels import CharPkModel, Event, IntFields
 from tortoise import connections
 from tortoise.backends.psycopg.client import PsycopgClient
 from tortoise.contrib import test
 from tortoise.expressions import F
-from tortoise.functions import Concat
+from tortoise.functions import Coalesce, Concat
 
 
 class TestSQL(test.TestCase):
@@ -67,6 +67,46 @@ class TestSQL(test.TestCase):
         else:
             expected = 'SELECT "id",CONCAT("id",?) "id_plus_one" FROM "charpkmodel"'
         self.assertEqual(sql, expected)
+
+    def test_annotate_concat_fields(self):
+        sql = CharPkModel.all().annotate(id_double=Concat(F("id"), F("id"))).sql()
+        if self.dialect == "mysql":
+            expected = "SELECT `id`,CONCAT(`id`,`id`) `id_double` FROM `charpkmodel`"
+        elif self.dialect == "postgres":
+            expected = 'SELECT "id",CONCAT("id"::text,"id"::text) "id_double" FROM "charpkmodel"'
+        else:
+            expected = 'SELECT "id",CONCAT("id","id") "id_double" FROM "charpkmodel"'
+        self.assertEqual(sql, expected)
+
+    def test_annotate_coalesce_field_expression(self):
+        sql = IntFields.all().annotate(num=Coalesce("intnum", F("intnum_null"))).values("num").sql()
+        if self.dialect == "mysql":
+            expected = "SELECT COALESCE(`intnum`,`intnum_null`) `num` FROM `intfields`"
+        elif self.dialect == "postgres":
+            expected = 'SELECT COALESCE("intnum","intnum_null") "num" FROM "intfields"'
+        else:
+            expected = 'SELECT COALESCE("intnum","intnum_null") "num" FROM "intfields"'
+        self.assertEqual(sql, expected)
+
+    def test_annotate_function_join_expression(self):
+        qset = (
+            Event.all()
+            .annotate(full_name=Concat("name", F("tournament__name")))
+            .values("full_name")
+        )
+        sql = qset.sql()
+        join_match = (
+            r'LEFT OUTER JOIN [`"]tournament[`"] [`"]event__tournament[`"] ON '
+            r'[`"]event__tournament[`"]\.[`"]id[`"]=[`"]event[`"]\.[`"]tournament_id[`"]'
+        )
+        self.assertRegex(sql, join_match)
+        concat_match = (
+            r"CONCAT\(`?event`?\.`?name`?(?:::text)?\s*,\s*`?event__tournament`?\.`?name`?"
+            r"(?:::text)?\)"
+            r'|CONCAT\("event"\."name"(?:::text)?\s*,\s*"event__tournament"\."name"'
+            r"(?:::text)?\)"
+        )
+        self.assertRegex(sql, concat_match)
 
     def test_values(self):
         sql = IntFields.filter(intnum=1).values("intnum").sql()
