@@ -31,6 +31,7 @@ async def test_await(
         use_tz=False,
         timezone="UTC",
         _create_db=False,
+        _enable_global_fallback=True,
     )
     await orm.close_orm()
     mocked_close_connections.assert_awaited_once()

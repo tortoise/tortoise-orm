@@ -45,15 +45,55 @@ _current_context: contextvars.ContextVar[TortoiseContext | None] = contextvars.C
     "tortoise_context", default=None
 )
 
+# Optional global fallback context for cross-task access.
+# This is used by RegisterTortoise (FastAPI) where asgi-lifespan runs lifespan
+# in a background task, but requests/tests run in a different task.
+# Disabled by default; enabled via Tortoise.init(_enable_global_fallback=True).
+_global_context: TortoiseContext | None = None
+
 
 def get_current_context() -> TortoiseContext | None:
     """
     Get the currently active TortoiseContext, or None if no context is active.
 
+    Checks the contextvar first (for proper isolation), then falls back to
+    the global context if one was set via _enable_global_fallback.
+
     Returns:
         The current TortoiseContext if one is active, None otherwise.
     """
-    return _current_context.get()
+    ctx = _current_context.get()
+    if ctx is not None:
+        return ctx
+    return _global_context
+
+
+def set_global_context(ctx: TortoiseContext) -> None:
+    """
+    Set the global fallback context for cross-task access.
+
+    This is used by RegisterTortoise (FastAPI) where asgi-lifespan runs lifespan
+    in a background task, but requests/tests run in a different task.
+    The global context allows these cross-task scenarios to work without
+    explicit context passing.
+
+    Args:
+        ctx: The TortoiseContext to set as global fallback.
+
+    Raises:
+        ConfigurationError: If a global context is already set. Only one global
+            context can be active at a time. For multiple isolated contexts,
+            use explicit TortoiseContext() without global fallback.
+    """
+    global _global_context
+    if _global_context is not None:
+        raise ConfigurationError(
+            "Global context fallback is already enabled by another Tortoise.init() call. "
+            "Only one global context can be active at a time. "
+            "Use explicit TortoiseContext() for multiple isolated contexts, "
+            "or set _enable_global_fallback=False for secondary apps."
+        )
+    _global_context = ctx
 
 
 def require_context() -> TortoiseContext:
@@ -230,6 +270,7 @@ class TortoiseContext:
         routers: list[str | type] | None = None,
         table_name_generator: Callable[[type[Model]], str] | None = None,
         init_connections: bool = True,
+        _enable_global_fallback: bool = False,
     ) -> None:
         """
         Initialize this context with database configuration.
@@ -255,6 +296,8 @@ class TortoiseContext:
             table_name_generator: Optional callable to generate table names.
             init_connections: If False, skips initializing connection clients while still
                 loading apps and validating connection names against the config.
+            _enable_global_fallback: If True, sets this context as the global fallback
+                for cross-task access (e.g., asgi-lifespan scenarios). Default is False.
 
         Raises:
             ConfigurationError: If configuration is invalid or incomplete.
@@ -333,6 +376,10 @@ class TortoiseContext:
             self._default_connection = None
 
         self._inited = True
+
+        # Set global fallback for cross-task access if enabled
+        if _enable_global_fallback:
+            set_global_context(self)
 
     def _init_timezone(self, use_tz: bool, timezone: str) -> None:
         """Initialize timezone settings for this context."""
@@ -478,9 +525,13 @@ class TortoiseContext:
         """
         Exit the async context manager, close connections, and restore previous context.
         """
+        global _global_context
         await self.close_connections()
         self._apps = None
         self._inited = False
+        # Clear global context if this context was set as the global fallback
+        if _global_context is self:
+            _global_context = None
         self.__exit__(exc_type, exc_val, exc_tb)
 
 
@@ -558,5 +609,6 @@ __all__ = [
     "TortoiseContext",
     "get_current_context",
     "require_context",
+    "set_global_context",
     "tortoise_test_context",
 ]

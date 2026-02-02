@@ -300,6 +300,7 @@ class Tortoise:
         routers: list[str | type] | None = None,
         table_name_generator: Callable[[type[Model]], str] | None = None,
         init_connections: bool = True,
+        _enable_global_fallback: bool = False,
     ) -> TortoiseContext:
         """
         Sets up Tortoise-ORM: loads apps and models, configures database connections but does not
@@ -368,6 +369,10 @@ class Tortoise:
         :param init_connections:
             When ``False``, skips initializing connection clients while still loading apps
             and validating connection names against the config.
+        :param _enable_global_fallback:
+            When ``True``, stores the context as a global fallback for cross-task access.
+            This is used by RegisterTortoise (FastAPI) where asgi-lifespan runs lifespan
+            in a background task. Default is ``False`` for pure context isolation.
 
         :raises ConfigurationError: For any configuration error
 
@@ -425,6 +430,7 @@ class Tortoise:
             routers=routers,
             table_name_generator=table_name_generator,
             init_connections=init_connections,
+            _enable_global_fallback=_enable_global_fallback,
         )
 
         return ctx
