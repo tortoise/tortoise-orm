@@ -24,6 +24,21 @@ def configure_psycopg():
 
 
 # ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+
+async def _truncate_all_tables(ctx) -> None:
+    """Truncate all tables in the given context."""
+    if ctx.apps:
+        for model in ctx.apps.get_models_iterable():
+            quote_char = model._meta.db.query_class.SQL_CONTEXT.quote_char
+            await model._meta.db.execute_script(
+                f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"  # nosec
+            )
+
+
+# ============================================================================
 # PYTEST FIXTURES FOR TESTS
 # These fixtures provide different isolation patterns for test scenarios
 # ============================================================================
@@ -57,6 +72,9 @@ async def db(db_module):
     Each test runs inside a transaction that gets rolled back at the end,
     providing isolation without the overhead of schema recreation.
 
+    For databases that don't support transactions (e.g., MySQL MyISAM),
+    falls back to truncation cleanup.
+
     This is the FASTEST isolation method - use for most tests.
 
     Usage:
@@ -69,18 +87,25 @@ async def db(db_module):
     # Get connection from the context using its default connection
     conn = db_module.db()
 
-    # Start a savepoint/transaction
-    transaction = conn._in_transaction()
-    await transaction.__aenter__()
+    # Check if the database supports transactions
+    if conn.capabilities.supports_transactions:
+        # Start a savepoint/transaction
+        transaction = conn._in_transaction()
+        await transaction.__aenter__()
 
-    try:
+        try:
+            yield db_module
+        finally:
+            # Rollback the transaction (discards all changes made during test)
+            class _RollbackException(Exception):
+                pass
+
+            await transaction.__aexit__(_RollbackException, _RollbackException(), None)
+    else:
+        # For databases without transaction support (e.g., MyISAM),
+        # fall back to truncation cleanup
         yield db_module
-    finally:
-        # Rollback the transaction (discards all changes made during test)
-        class _RollbackException(Exception):
-            pass
-
-        await transaction.__aexit__(_RollbackException, _RollbackException(), None)
+        await _truncate_all_tables(db_module)
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -148,14 +173,7 @@ async def db_truncate(db_module):
             # Table truncated after test
     """
     yield db_module
-
-    # Truncate all tables after the test using context's apps
-    if db_module.apps:
-        for model in db_module.apps.get_models_iterable():
-            quote_char = model._meta.db.query_class.SQL_CONTEXT.quote_char
-            await model._meta.db.execute_script(
-                f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"  # nosec
-            )
+    await _truncate_all_tables(db_module)
 
 
 # ============================================================================
