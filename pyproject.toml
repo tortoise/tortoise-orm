@@ -190,6 +190,7 @@ per-file-ignores = [
 docstring_style = "sphinx"
 
 [tool.pytest.ini_options]
+asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 filterwarnings = [

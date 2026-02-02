@@ -14,7 +14,7 @@ async def get_by_data_filter(obj, **kwargs) -> JSONFields:
 
 
 @pytest_asyncio.fixture
-async def json_obj(db):
+async def json_obj(db_postgres):
     """Create test object with JSON data for postgres tests."""
     obj = await JSONFields.create(
         data={

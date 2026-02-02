@@ -132,8 +132,7 @@ def requireCapability(
                     if getattr(db.capabilities, key) != val:
                         raise SkipTest(f"Capability {key} != {val}")
 
-            if hasattr(asyncio, "Runner") and inspect.iscoroutinefunction(test_item):
-                # For python3.11+
+            if inspect.iscoroutinefunction(test_item):
 
                 @wraps(test_item)
                 async def skip_wrapper(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
