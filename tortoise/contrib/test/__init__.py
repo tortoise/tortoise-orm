@@ -119,9 +119,6 @@ def requireCapability(
     :param connection_name: name of the connection to retrieve capabilities from.
     :param conditions: capability tests which must all pass for the test to run.
     """
-    import asyncio
-    import inspect
-    from functools import wraps
 
     def decorator(test_item: _FT) -> _FT:
         if not isinstance(test_item, type):
