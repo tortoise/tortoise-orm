@@ -291,6 +291,75 @@ If you use the built-in framework integrations (FastAPI, Starlette, etc.), no ch
 are required. The integrations have been updated internally to use ``Tortoise.close_connections()``
 instead of ``connections.close_all()``.
 
+Multiple FastAPI Apps (Global Fallback)
+---------------------------------------
+
+When using ``RegisterTortoise`` with FastAPI, a global fallback context is enabled by default.
+This allows Tortoise ORM to work correctly with ``asgi-lifespan`` (used in tests) where the
+lifespan runs in a separate background task from the requests.
+
+If you run **multiple FastAPI apps** in the same process (e.g., in tests), you may encounter:
+
+.. code-block:: text
+
+    ConfigurationError: Global context fallback is already enabled by another Tortoise.init() call.
+
+**Solution:** Disable global fallback for secondary apps and use explicit context access:
+
+.. code-block:: python
+
+    # main_app.py - Primary app (uses global fallback)
+    from tortoise.contrib.fastapi import RegisterTortoise
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        async with RegisterTortoise(
+            app,
+            db_url="sqlite://:memory:",
+            modules={"models": ["myapp.models"]},
+        ):
+            yield
+
+    app = FastAPI(lifespan=lifespan)
+
+.. code-block:: python
+
+    # secondary_app.py - Secondary app (explicit context)
+    from tortoise.contrib.fastapi import RegisterTortoise
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        async with RegisterTortoise(
+            app,
+            db_url="sqlite://:memory:",
+            modules={"models": ["myapp.models"]},
+            _enable_global_fallback=False,  # Disable global fallback
+        ):
+            yield
+
+    app_secondary = FastAPI(lifespan=lifespan)
+
+In tests, access the secondary app's context explicitly via ``app.state``:
+
+.. code-block:: python
+
+    @pytest.fixture
+    async def client_secondary():
+        async with LifespanManager(app_secondary) as manager:
+            # Get context from app.state and enter it
+            ctx = app_secondary.state._tortoise_context
+            with ctx:  # Make context current via contextvar
+                async with AsyncClient(app=app_secondary) as c:
+                    yield c
+
+The ``_enable_global_fallback`` parameter:
+
+- ``True`` (default): Sets context as global fallback for cross-task access
+- ``False``: Context only accessible via ``app.state._tortoise_context``
+
+This is also available in ``Tortoise.init()`` (default ``False``) and
+``TortoiseContext.init()`` (default ``False``).
+
 Custom Integration Migration
 ----------------------------
 
@@ -351,6 +420,18 @@ This error occurs when trying to access ORM features without an active context.
 1. Ensure ``Tortoise.init()`` was called before accessing models
 2. If using multiple ``asyncio.run()`` calls, use context manager pattern
 3. In tests, ensure the ``db`` fixture is being used
+
+"Global context fallback is already enabled"
+--------------------------------------------
+
+This error occurs when multiple ``Tortoise.init()`` or ``RegisterTortoise`` calls
+try to enable global fallback simultaneously.
+
+**Solutions:**
+
+1. For multiple FastAPI apps, set ``_enable_global_fallback=False`` on secondary apps
+2. Access secondary app's context explicitly via ``app.state._tortoise_context``
+3. See "Multiple FastAPI Apps (Global Fallback)" section above
 
 "ConfigurationError: Connections not initialized"
 -------------------------------------------------

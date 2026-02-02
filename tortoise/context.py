@@ -486,12 +486,17 @@ class TortoiseContext:
         Close all database connections owned by this context.
 
         This is called automatically when exiting the async context manager.
+        Also clears the global fallback if this context was set as global.
         """
+        global _global_context
         if self._connections is not None:
             # Only close if connections were actually initialized
             if self._connections._db_config is not None:
                 await self._connections.close_all(discard=True)
             self._connections = None
+        # Clear global context if this context was set as the global fallback
+        if _global_context is self:
+            _global_context = None
 
     def __enter__(self) -> TortoiseContext:
         """
@@ -525,13 +530,9 @@ class TortoiseContext:
         """
         Exit the async context manager, close connections, and restore previous context.
         """
-        global _global_context
         await self.close_connections()
         self._apps = None
         self._inited = False
-        # Clear global context if this context was set as the global fallback
-        if _global_context is self:
-            _global_context = None
         self.__exit__(exc_type, exc_val, exc_tb)
 
 

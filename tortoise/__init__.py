@@ -379,10 +379,13 @@ class Tortoise:
         :returns: The TortoiseContext that was initialized. For multiple asyncio.run()
             calls, capture this and use 'with ctx:' to maintain context.
         """
-        from tortoise.context import TortoiseContext, get_current_context
+        from tortoise.context import TortoiseContext, _current_context
 
-        # Get or create context
-        ctx = get_current_context()
+        # Get or create context - only use contextvar, not global fallback.
+        # Global fallback is for reading (queries), not for initialization.
+        # This allows multiple apps to initialize independently even if one
+        # has global fallback enabled.
+        ctx = _current_context.get()
         if ctx is None:
             ctx = TortoiseContext()
             ctx.__enter__()
