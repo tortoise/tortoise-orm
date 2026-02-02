@@ -890,15 +890,13 @@ async def test_annotations_in_flat_values_list(db):
     assert ret[1] == author3
 
 
-# Tests for exception classes
-@requireCapability(dialect="sqlite")
+# Tests for exception classes (no database needed, pure Python tests)
 def test_does_not_exist():
     exp_cls: type[NotExistOrMultiple] = DoesNotExist
     assert str(exp_cls("old format")) == "old format"
     assert str(exp_cls(Tournament)) == exp_cls.TEMPLATE.format(Tournament.__name__)
 
 
-@requireCapability(dialect="sqlite")
 def test_multiple_objects_returned():
     exp_cls: type[NotExistOrMultiple] = MultipleObjectsReturned
     assert str(exp_cls("old format")) == "old format"
