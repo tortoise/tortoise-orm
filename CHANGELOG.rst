@@ -12,13 +12,19 @@ Changelog
 
 0.26.0 (unreleased)
 -------------------
+
+0.25
+====
+
+0.25.4
+------
+
 Fixed
 ^^^^^
 - Fix ``AttributeError`` when using ``tortoise-orm`` with Nuitka-compiled Python code (#2053)
 - Fix 'Self' in python standard library typing.py, but tortoise/model.py required it in 'typing_extensions' (#2051)
+- Fix examples should not be installed (#2050)
 
-0.25
-====
 
 0.25.3
 ------
