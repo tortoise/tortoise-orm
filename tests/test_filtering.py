@@ -198,7 +198,7 @@ async def test_filter_exact(db):
     assert await DatetimeFields.filter(datetime__quarter=2).count() == 1
     assert await DatetimeFields.filter(datetime__month=5).count() == 1
     assert await DatetimeFields.filter(datetime__day=20).count() == 1
-    if test._TORTOISE_TEST_DB.startswith("mysql"):
+    if db.db().capabilities.dialect == "mysql":
         assert await DatetimeFields.filter(datetime__week=20).count() == 1
         assert await DatetimeFields.filter(datetime__hour=0).count() == 1
     else:
