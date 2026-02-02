@@ -95,7 +95,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS "uidx_teamevents_event_i_664dbc" ON "teamevent
     async def asyncSetUp(self):
         await super().asyncSetUp()
         try:
-            Tortoise.apps = {}
+            Tortoise.apps = None
             Tortoise._inited = False
         except ConfigurationError:
             pass
@@ -1106,7 +1106,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS "uidx_teamevents_event_i_664dbc" ON "teamevent
     "gist" TSVECTOR NOT NULL,
     "sp_gist" VARCHAR(200) NOT NULL,
     "hash" VARCHAR(200) NOT NULL,
-    "partial" VARCHAR(200) NOT NULL
+    "partial" VARCHAR(200) NOT NULL,
+    "title" TEXT NOT NULL,
+    "body" TEXT NOT NULL
 );
 CREATE INDEX "idx_index_bloom_280137" ON "index" USING BLOOM ("bloom");
 CREATE INDEX "idx_index_brin_a54a00" ON "index" USING BRIN ("brin");
@@ -1114,7 +1116,8 @@ CREATE INDEX "idx_index_gin_a403ee" ON "index" USING GIN ("gin");
 CREATE INDEX "idx_index_gist_c807bf" ON "index" USING GIST ("gist");
 CREATE INDEX "idx_index_sp_gist_2c0bad" ON "index" USING SPGIST ("sp_gist");
 CREATE INDEX "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");
-CREATE INDEX "idx_index_partial_c5be6a" ON "index" ("partial") WHERE id = 1;""",
+CREATE INDEX "idx_index_partial_c5be6a" ON "index" ("partial") WHERE id = 1;
+CREATE INDEX "idx_index_(TO_TSV_50a2c7" ON "index" USING GIN ((TO_TSVECTOR('english',(("title" || ' ') || "body"))));""",
         )
 
     async def test_index_safe(self):
@@ -1130,7 +1133,9 @@ CREATE INDEX "idx_index_partial_c5be6a" ON "index" ("partial") WHERE id = 1;""",
     "gist" TSVECTOR NOT NULL,
     "sp_gist" VARCHAR(200) NOT NULL,
     "hash" VARCHAR(200) NOT NULL,
-    "partial" VARCHAR(200) NOT NULL
+    "partial" VARCHAR(200) NOT NULL,
+    "title" TEXT NOT NULL,
+    "body" TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS "idx_index_bloom_280137" ON "index" USING BLOOM ("bloom");
 CREATE INDEX IF NOT EXISTS "idx_index_brin_a54a00" ON "index" USING BRIN ("brin");
@@ -1138,7 +1143,8 @@ CREATE INDEX IF NOT EXISTS "idx_index_gin_a403ee" ON "index" USING GIN ("gin");
 CREATE INDEX IF NOT EXISTS "idx_index_gist_c807bf" ON "index" USING GIST ("gist");
 CREATE INDEX IF NOT EXISTS "idx_index_sp_gist_2c0bad" ON "index" USING SPGIST ("sp_gist");
 CREATE INDEX IF NOT EXISTS "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");
-CREATE INDEX IF NOT EXISTS "idx_index_partial_c5be6a" ON "index" ("partial") WHERE id = 1;""",
+CREATE INDEX IF NOT EXISTS "idx_index_partial_c5be6a" ON "index" ("partial") WHERE id = 1;
+CREATE INDEX IF NOT EXISTS "idx_index_(TO_TSV_50a2c7" ON "index" USING GIN ((TO_TSVECTOR('english',(("title" || ' ') || "body"))));""",
         )
 
     async def test_m2m_no_auto_create(self):

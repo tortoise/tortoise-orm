@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Union
+import types
+from typing import TYPE_CHECKING, Any, Union, cast, get_args, get_origin
 
 import pydantic
 from pydantic import BaseModel, ConfigDict, RootModel
@@ -27,15 +28,26 @@ def _get_fetch_fields(pydantic_class: type[PydanticModel], model_class: type[Mod
     """
     fetch_fields = []
     for field_name, field_type in pydantic_class.__annotations__.items():
-        origin = getattr(field_type, "__origin__", None)
-        if origin in (list, list, Union):
-            field_type = field_type.__args__[0]
+        field_type = cast(Any, field_type)
+        origin = cast(Any, get_origin(field_type))
+        if origin is list:
+            args = get_args(field_type)
+            if args:
+                field_type = args[0]
+        elif origin is Union or origin is types.UnionType:
+            args = get_args(field_type)
+            for arg in args:
+                if arg is not type(None):
+                    field_type = arg
+                    break
 
         # noinspection PyProtectedMember
+        if not isinstance(field_type, type):
+            continue
         if field_name in model_class._meta.fetch_fields and issubclass(field_type, PydanticModel):
-            subclass_fetch_fields = _get_fetch_fields(
-                field_type, field_type.model_config["orig_model"]
-            )
+            subclass = field_type
+            orig_model = cast(Any, subclass.model_config).get("orig_model")
+            subclass_fetch_fields = _get_fetch_fields(subclass, orig_model)
             if subclass_fetch_fields:
                 fetch_fields.extend([field_name + "__" + f for f in subclass_fetch_fields])
             else:

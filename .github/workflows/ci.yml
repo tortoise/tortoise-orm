@@ -45,7 +45,7 @@ jobs:
       TORTOISE_MSSQL_DRIVER: ODBC Driver 18 for SQL Server
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13", "3.14"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14"]
     steps:
       - uses: actions/cache@v5
         with:
@@ -75,6 +75,14 @@ jobs:
           DEST_FASTAPI: examples/fastapi
           DEST_BLACKSHEEP: examples/blacksheep
           DEST_SANIC: examples/sanic
+          PYTHONDEVMODE: 1
+          PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
+      - name: Test poetry add
+        if: matrix.python-version == 'py3.10'
+        run: |
+          uv run --no-sync pytest $PYTEST_ARGS tests/test_version.py::test_added_by_poetry_v2
+        env:
+          TORTOISE_TEST_POETRY_ADD: 1
           PYTHONDEVMODE: 1
           PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
       - name: Test No typing-extensions

@@ -12,8 +12,8 @@ from typing import TYPE_CHECKING, Any, TypedDict, TypeVar, cast
 from pypika_tortoise import Order, Query, Table
 from pypika_tortoise.terms import Term
 
-from tortoise import connections
 from tortoise.backends.base.client import BaseDBAsyncClient
+from tortoise.connection import connections
 from tortoise.exceptions import (
     ConfigurationError,
     DoesNotExist,
@@ -309,6 +309,12 @@ class MetaInfo:
         self._generate_filters()
         self._generate_lazy_fk_m2m_fields()
         self._generate_db_fields()
+        self._resolve_index_expressions()
+
+    def _resolve_index_expressions(self) -> None:
+        for index in self.indexes:
+            if isinstance(index, Index):
+                index.resolve_expressions(self._model)
 
     def finalise_fields(self) -> None:
         self.db_fields = set(self.fields_db_projection.values())
@@ -472,7 +478,9 @@ class MetaInfo:
     def _generate_filters(self) -> None:
         get_overridden_filter_func = self.db.executor_class.get_overridden_filter_func
         for key, filter_info in self._filters.items():
-            overridden_operator = get_overridden_filter_func(filter_func=filter_info["operator"])
+            overridden_operator = get_overridden_filter_func(
+                filter_func=filter_info["operator"], filter_info=filter_info
+            )
             if overridden_operator:
                 filter_info = copy(filter_info)
                 filter_info["operator"] = overridden_operator
@@ -500,6 +508,8 @@ class ModelMeta(type):
         fields_map, filters, fk_fields, m2m_fields, o2o_fields = cls._dispatch_fields(
             attrs, fields_db_projection, is_abstract
         )
+        if name != "Model":
+            cls._check_field_name_conflicts(fields_map, name)
 
         # Clean the class attributes
         for slot in fields_map:
@@ -645,6 +655,18 @@ class ModelMeta(type):
         return (fields_map, filters, fk_fields, m2m_fields, o2o_fields)
 
     @staticmethod
+    def _check_field_name_conflicts(fields_map: dict[str, Field], name: str) -> None:
+        reserved_names = {key for key in Model.__dict__ if not key.startswith("__")}
+        reserved_names.update(key for key in ModelMeta.__dict__ if not key.startswith("__"))
+        conflicts = sorted(set(fields_map).intersection(reserved_names))
+        if conflicts:
+            conflict_list = ", ".join(conflicts)
+            raise ConfigurationError(
+                f"Model {name} has field name(s) that conflict with default Model attributes: "
+                f"{conflict_list}"
+            )
+
+    @staticmethod
     def build_meta(
         meta_class: Model.Meta,
         fields_map: dict[str, Field],
@@ -757,6 +779,11 @@ class Model(metaclass=ModelMeta):
                 )
 
         return passed_fields
+
+    @classmethod
+    def get_table(cls) -> Table:
+        """Return a PyPika table for this model."""
+        return Table(name=cls._meta.db_table, schema=cls._meta.schema)
 
     @classmethod
     def _init_from_db(cls: type[MODEL], **kwargs: Any) -> MODEL:

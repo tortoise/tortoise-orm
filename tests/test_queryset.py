@@ -854,6 +854,27 @@ class TestQueryset(test.TestCase):
         self.assertEqual(len(ret), 1)
         self.assertEqual(ret[0].rating, 3.0)
 
+    async def test_annotations_in_flat_values_list(self):
+        author1 = await Author.create(name="1")
+        author2 = await Author.create(name="2")
+        author3 = await Author.create(name="3")
+        await Book.create(name="1", author=author1, rating=1)
+        await Book.create(name="2", author=author2, rating=3)
+        await Book.create(name="3", author=author3, rating=5)
+
+        subquery = Author.annotate(rating=Avg("books__rating")).filter(rating__gte=3)
+
+        subquery_ret = await subquery.order_by("id").values_list("id", flat=True)
+        self.assertEqual(len(subquery_ret), 2)
+        self.assertEqual(subquery_ret[0], author2.pk)
+        self.assertEqual(subquery_ret[1], author3.pk)
+
+        ret = await Author.filter(id__in=Subquery(subquery.values_list("id", flat=True))).order_by(
+            "id"
+        )
+        self.assertEqual(ret[0], author2)
+        self.assertEqual(ret[1], author3)
+
 
 class TestNotExist(test.TestCase):
     exp_cls: type[NotExistOrMultiple] = DoesNotExist

@@ -1,4 +1,5 @@
 import importlib.metadata as importlib_metadata
+import os
 import re
 import shlex
 import shutil
@@ -7,6 +8,7 @@ import sys
 from pathlib import Path
 
 from tortoise import __version__
+from tortoise.contrib import test
 
 if sys.version_info >= (3, 11):
     from contextlib import chdir
@@ -45,6 +47,10 @@ def _capture_output(cmd: str) -> str:
     return _run_shell(cmd, text=True, capture_output=True, encoding="utf-8").stdout
 
 
+@test.skipIf(
+    os.getenv("TORTOISE_TEST_POETRY_ADD", "").lower() not in ("1", "true", "yes", "on"),
+    "Env 'TORTOISE_TEST_POETRY_ADD' is not true",
+)
 def test_added_by_poetry_v2(tmp_path: Path):
     tortoise_orm = Path(__file__).parent.resolve().parent
     py = "{}.{}".format(*sys.version_info)

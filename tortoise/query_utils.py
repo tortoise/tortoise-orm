@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import operator
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from copy import copy
-from typing import TYPE_CHECKING, Any, Callable, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from pypika_tortoise import Table
 from pypika_tortoise.terms import (

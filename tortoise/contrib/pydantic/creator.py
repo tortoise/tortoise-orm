@@ -6,7 +6,7 @@ from collections.abc import MutableMapping
 from copy import copy
 from enum import Enum, IntEnum
 from hashlib import sha3_224
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import ConfigDict, computed_field, create_model
 from pydantic import Field as PydanticField
@@ -100,7 +100,7 @@ def _pydantic_recursion_protector(
     return pmc.create_pydantic_model()
 
 
-class FieldMap(MutableMapping[str, Union[Field, ComputedFieldDescription]]):
+class FieldMap(MutableMapping[str, Field | ComputedFieldDescription]):
     def __init__(self, meta: PydanticMetaData, pk_field: Field | None = None):
         self._field_map: dict[str, Field | ComputedFieldDescription] = {}
         self.pk_raw_field = pk_field.model_field_name if pk_field is not None else ""
@@ -486,8 +486,7 @@ class PydanticModelCreator:
             if field.null:
                 json_schema_extra["nullable"] = True
             if field.null or field.default is not None:
-                model = Optional[model]  # type: ignore
-
+                return cast(type[PydanticModel] | None, model | None)
             return model
         return None
 
@@ -527,7 +526,7 @@ class PydanticModelCreator:
         if not field.pk and (
             field_name in self._optional or field.default is not None or field.null
         ):
-            ptype = Optional[ptype]
+            ptype = ptype | None
         if not (self._exclude_read_only and json_schema_extra.get("readOnly") is True):
             return annotation or ptype
         return None

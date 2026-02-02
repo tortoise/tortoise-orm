@@ -1,171 +1,223 @@
 .. _migration:
 
-=========
-Migration
-=========
+==========
+Migrations
+==========
+
+This document describes the built-in Tortoise migration system and CLI.
+It's designed to be clear and Tortoise native, while still being familiar.
 
 .. note::
-    Aerich is not as mature yet, expect some issues here and there.
+    Aerich is a legacy alternative. The built-in migrations described here are
+    the recommended path going forward.
 
-This document describes how to use `Aerich` to manage schema changes.
-
-Check out `aerich repository <https://github.com/tortoise/aerich>`_ for more details.
-
-Quick Start
+Quick start
 ===========
 
-.. code-block:: shell
+1) Configure migrations per app
 
-
-    > aerich -h
-
-    Usage: aerich [OPTIONS] COMMAND [ARGS]...
-
-    Options:
-      -V, --version      Show the version and exit.
-      -c, --config TEXT  Config file.  [default: pyproject.toml]
-      --app TEXT         Tortoise-ORM app name.
-      -h, --help         Show this message and exit.
-
-    Commands:
-      downgrade  Downgrade to specified version.
-      heads      Show currently available heads (unapplied migrations).
-      history    List all migrations.
-      init       Initialize aerich config and create migrations folder.
-      init-db    Generate schema and generate app migration folder.
-      inspectdb  Prints the current database tables to stdout as Tortoise-ORM...
-      migrate    Generate a migration file for the current state of the models.
-      upgrade    Upgrade to specified migration version.
-
-
-Usage
-=====
-
-Add ``aerich.models`` to your `Tortoise-ORM` config first:
-
-.. code-block:: python3
+.. code-block:: python
 
     TORTOISE_ORM = {
-        "connections": {"default": "mysql://root:123456@127.0.0.1:3306/test"},
+        "connections": {
+            "default": "sqlite://db.sqlite3",
+        },
         "apps": {
             "models": {
-                "models": ["tests.models", "aerich.models"],
+                "models": ["myapp.models"],
                 "default_connection": "default",
+                "migrations": "myapp.migrations",
             },
         },
     }
 
-Initialization
+2) Initialize the migrations package
+
+.. code-block:: shell
+
+    tortoise init
+
+3) Create and apply migrations
+
+.. code-block:: shell
+
+    tortoise makemigrations
+    tortoise migrate
+
+You can browse a working example in ``examples/migrations_project``.
+
+CLI reference
+=============
+
+All commands share config resolution (``-c/--config``, ``--config-file``, or
+``[tool.tortoise]`` in ``pyproject.toml``). The CLI favors explicit, copy/paste
+friendly output.
+
+init
+----
+
+Create migrations packages for configured apps.
+
+.. code-block:: shell
+
+    tortoise init
+
+makemigrations
 --------------
 
-.. code-block:: shell
-
-    > aerich init -h
-
-    Usage: aerich init [OPTIONS]
-
-      Initialize aerich config and create migrations folder.
-
-    Options:
-      -t, --tortoise-orm TEXT  Tortoise-ORM config dict location, like
-                              `settings.TORTOISE_ORM`.  [required]
-      --location TEXT          Migrations folder.  [default: ./migrations]
-      -s, --src_folder TEXT    Folder of the source, relative to the project root.
-      -h, --help               Show this message and exit.
-
-
-Init config file and location:
+Autodetect model changes and create new migration files.
 
 .. code-block:: shell
 
-    > aerich init -t tests.backends.mysql.TORTOISE_ORM
+    tortoise makemigrations
+    tortoise makemigrations --name add_posts_table
+    tortoise makemigrations --empty
 
-    Success create migrate location ./migrations
-    Success generate config file aerich.ini
+migrate / upgrade
+-----------------
 
+Apply migrations. ``upgrade`` is an alias of ``migrate``.
 
-Init db
+.. code-block:: shell
+
+    tortoise migrate
+    tortoise migrate models
+    tortoise migrate models 0002_add_field
+
+downgrade
+---------
+
+Unapply migrations for a specific app.
+
+.. code-block:: shell
+
+    tortoise downgrade models
+    tortoise downgrade models 0001_initial
+
+history
 -------
 
+List applied migrations from the database.
+
 .. code-block:: shell
 
-    > aerich init-db
+    tortoise history
 
-    Success create app migrate location ./migrations/models
-    Success generate schema for app "models"
+heads
+-----
 
+List migration heads on disk.
 
-If your Tortoise-ORM app is not default `models`, you must specify
-`--app` like `aerich --app other_models init-db`.
+.. code-block:: shell
 
-Update models and make migrate
-------------------------------
+    tortoise heads
 
-..  code-block:: shell
+Migration files
+===============
 
-    > aerich migrate --name drop_column
+Migration files are plain Python modules. Each module exposes a ``Migration``
+class with attributes like ``dependencies`` and ``operations``. Operations are
+serialized using ``deconstruct()`` so they can be re-imported and replayed.
 
-    Success migrate 1_202029051520102929_drop_column.json
+Minimal example:
 
+.. code-block:: python
 
-Format of migrate filename is
-`{version_num}_{datetime}_{name|update}.json`.
+    from tortoise import fields
+    from tortoise.migrations import CreateModel
+    from tortoise.migrations.migration import Migration
 
-And if `aerich` guess you are renaming a column, it will ask `Rename {old_column} to {new_column} [True]`, you can choice `True` to rename column without column drop, or choice `False` to drop column then create.
+    class Migration(Migration):
+        dependencies = []
+        operations = [
+            CreateModel(
+                name="Post",
+                fields={
+                    "id": fields.IntField(pk=True),
+                    "title": fields.CharField(max_length=200),
+                },
+                options={},
+            ),
+        ]
 
-If you use `MySQL`, only MySQL8.0+ support `rename..to` syntax.
+Historical models and data migrations
+=====================================
 
-Upgrade to latest version
+Data migrations can use historical models via ``RunPython``. The migration
+state recreates models as they existed at that point, so queries align with the
+schema being migrated.
+
+.. code-block:: python
+
+    from tortoise.migrations import RunPython
+    from tortoise.migrations.migration import Migration
+
+    async def forwards(apps, schema_editor):
+        Post = apps.get_model("models", "Post")
+        await Post.all().update(title="Migrated")
+
+    class Migration(Migration):
+        dependencies = [("models", "0001_initial")]
+        operations = [RunPython(forwards)]
+
+FAQ / common errors
+===================
+
+Migrations are not found
+    Check that each app config includes a ``migrations`` module path and that
+    the package exists (``tortoise init`` creates it).
+
+``App <label> has no migrations configured``
+    Add ``"migrations": "myapp.migrations"`` to the app config and rerun.
+
+``No module named <app>.migrations``
+    Ensure the migrations package exists and is importable on ``PYTHONPATH``.
+
+CLI shows no changes
+    Make sure the models are imported by the configured app and that you
+    initialized with the same config source (``-c`` or ``--config-file``).
+
+Data migration fails to import models
+    Use the historical models passed into ``RunPython`` via ``apps.get_model``
+    rather than importing runtime model classes directly.
+
+Migration package overview
+==========================
+
+The migration system is grouped into a few public entry points and internal
+building blocks. Most users will only need the CLI, but these modules are
+available when you need programmatic control or advanced workflows.
+
+Public entry points
+-------------------
+
+- ``tortoise.migrations.api.migrate``: apply migrations programmatically.
+- ``tortoise.migrations.api.plan``: build a dry-run plan without executing SQL.
+- ``tortoise.migrations``: re-exports operations and helpers for authoring
+  migrations (for example ``RunPython`` or ``CreateModel``).
+
+Runtime modules
+---------------
+
+- ``tortoise.migrations.executor``: migration planning and execution engine.
+- ``tortoise.migrations.loader``: loads migration modules from disk.
+- ``tortoise.migrations.graph``: dependency graph used for planning.
+- ``tortoise.migrations.recorder``: stores and reads applied migrations.
+- ``tortoise.migrations.migration``: ``Migration`` base class and apply/unapply
+  flow.
+
+Schema and state
+----------------
+
+- ``tortoise.migrations.schema_generator.state``: in-memory historical state.
+- ``tortoise.migrations.schema_generator.state_apps``: app registry for
+  historical models.
+- ``tortoise.migrations.schema_editor``: backend schema editors for DDL.
+- ``tortoise.migrations.operations``: operation definitions for schema changes.
+
+Autodetection and writing
 -------------------------
 
-.. code-block:: shell
-
-    > aerich upgrade
-
-    Success upgrade 1_202029051520102929_drop_column.json
-
-Now your db is migrated to latest.
-
-Downgrade to specified version
-------------------------------
-
-.. code-block:: shell
-
-    > aerich init -h
-
-    Usage: aerich downgrade [OPTIONS]
-
-      Downgrade to specified version.
-
-    Options:
-      -v, --version INTEGER  Specified version, default to last.  [default: -1]
-      -h, --help             Show this message and exit.
-
-.. code-block:: shell
-
-    > aerich downgrade
-
-    Success downgrade 1_202029051520102929_drop_column.json
-
-
-Now your db rollback to specified version.
-
-Show history
-------------
-
-.. code-block:: shell
-
-    > aerich history
-
-    1_202029051520102929_drop_column.json
-
-
-Show heads to be migrated
--------------------------
-
-.. code-block:: shell
-
-    > aerich heads
-
-    1_202029051520102929_drop_column.json
-
+- ``tortoise.migrations.autodetector``: compares current apps to migration
+  state and generates new operations.
+- ``tortoise.migrations.writer``: renders operations to migration modules.

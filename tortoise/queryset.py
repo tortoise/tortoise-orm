@@ -4,7 +4,7 @@ import types
 from collections import defaultdict
 from collections.abc import AsyncIterator, Callable, Collection, Generator, Iterable
 from copy import copy
-from typing import TYPE_CHECKING, Any, Generic, Literal, Optional, Protocol, TypeVar, cast, overload
+from typing import TYPE_CHECKING, Any, Generic, Literal, Protocol, TypeVar, cast, overload
 
 from pypika_tortoise import JoinType, Order, Table
 from pypika_tortoise.analytics import Count
@@ -118,9 +118,9 @@ class AwaitableQuery(Generic[MODEL]):
         if self._db is None:
             self._db = self._choose_db(for_write)  # type: ignore
 
-    def resolve_filters(self) -> None:
+    def resolve_filters(self, fields_for_select: Collection[str] | None = None) -> None:
         """Builds the common filters for a QuerySet."""
-        has_aggregate = self._resolve_annotate()
+        has_aggregate = self._resolve_annotate(fields_for_select)
 
         modifier = QueryModifier()
         for node in self._q_objects:
@@ -256,7 +256,7 @@ class AwaitableQuery(Generic[MODEL]):
 
                 self.query = self.query.orderby(field, order=ordering[1])
 
-    def _resolve_annotate(self) -> bool:
+    def _resolve_annotate(self, fields_for_select: Collection[str] | None = None) -> bool:
         if not self._annotations:
             return False
 
@@ -277,7 +277,7 @@ class AwaitableQuery(Generic[MODEL]):
         for key, info in annotation_info.items():
             for join in info.joins:
                 self._join_table(join)
-            if key in self._annotations:
+            if key in self._annotations and (fields_for_select is None or key in fields_for_select):
                 self.query._select_other(info.term.as_(key))  # type:ignore[arg-type]
 
         return any(info.term.is_aggregate for info in annotation_info.values())
@@ -471,7 +471,7 @@ class QuerySet(AwaitableQuery[MODEL]):
     def _as_single(self) -> QuerySetSingle[MODEL | None]:
         self._single = True
         self._limit = 1
-        return cast(QuerySetSingle[Optional[MODEL]], self)
+        return cast(QuerySetSingle[MODEL | None], self)
 
     def latest(self, *orderings: str) -> QuerySetSingle[MODEL | None]:
         """
@@ -1294,6 +1294,8 @@ class UpdateQuery(AwaitableQuery):
                 raise FieldError(f"Unknown keyword argument {key} for model {self.model}")
             if field_object.pk:
                 raise IntegrityError(f"Field {key} is PK and can not be updated")
+            if field_object.generated:
+                raise IntegrityError(f"Field {key} is generated and can not be updated")
             if isinstance(field_object, (ForeignKeyFieldInstance, OneToOneFieldInstance)):
                 self.model._validate_relation_type(key, value)
                 fk_field: str = field_object.source_field  # type: ignore
@@ -1618,6 +1620,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         "_group_bys",
         "_force_indexes",
         "_use_indexes",
+        "_fields_to_select_sql",
     )
 
     def __init__(
@@ -1659,6 +1662,10 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
         self._group_bys = group_bys
         self._force_indexes = force_indexes
         self._use_indexes = use_indexes
+        self._fields_to_select_sql = {
+            *self._fields_for_select_list,
+            *(key for key, value in self.fields.items() if value in self._fields_for_select_list),
+        }
 
     def _make_query(self) -> None:
         self._joined_tables = []
@@ -1674,7 +1681,7 @@ class ValuesListQuery(FieldSelectQuery, Generic[SINGLE]):
             annotations=self._annotations,
             fields_for_select=self._fields_for_select_list,
         )
-        self.resolve_filters()
+        self.resolve_filters(self._fields_to_select_sql)
         if self._limit:
             self.query._limit = self.query._wrapper_cls(self._limit)
         if self._offset:

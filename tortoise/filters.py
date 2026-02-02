@@ -18,7 +18,7 @@ from pypika_tortoise.terms import (
     ValueWrapper,
 )
 
-from tortoise.contrib.postgres.fields import ArrayField
+from tortoise.contrib.postgres.fields import ArrayField, TSVectorField
 from tortoise.fields import Field, JSONField
 from tortoise.fields.relational import BackwardFKRelation, ManyToManyFieldInstance
 
@@ -271,6 +271,7 @@ class FilterInfoDict(TypedDict):
     table: NotRequired[Table]
     value_encoder: NotRequired[Callable]
     source_field: NotRequired[str]
+    is_tsvector: NotRequired[bool]
 
 
 def get_m2m_filters(field_name: str, field: ManyToManyFieldInstance) -> dict[str, FilterInfoDict]:
@@ -547,6 +548,7 @@ def get_filters_for_field(
             "source_field": source_field,
             "operator": search,
             "value_encoder": string_encoder,
+            "is_tsvector": isinstance(field, TSVectorField) if field else False,
         },
         f"{field_name}__endswith": {
             "field": actual_field_name,

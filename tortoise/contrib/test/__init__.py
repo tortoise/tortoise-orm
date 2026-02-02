@@ -3,23 +3,17 @@ from __future__ import annotations
 import asyncio
 import inspect
 import os as _os
-import sys
 import typing
 import unittest
 from collections.abc import Callable, Coroutine, Iterable
 from functools import partial, wraps
 from types import ModuleType
-from typing import TYPE_CHECKING, Any, TypeVar, Union, cast
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 
 from tortoise import Model, Tortoise, connections
 from tortoise.backends.base.config_generator import generate_config as _generate_config
 from tortoise.exceptions import DBConnectionError, OperationalError
-
-if sys.version_info >= (3, 10):
-    from typing import ParamSpec
-else:
-    from typing_extensions import ParamSpec
 
 if TYPE_CHECKING:
     from asyncio.events import AbstractEventLoop
@@ -88,7 +82,7 @@ async def _init_db(config: dict) -> None:
 
 
 def _restore_default() -> None:
-    Tortoise.apps = {}
+    Tortoise.apps = None
     connections._get_storage().update(_CONNECTIONS.copy())
     connections._db_config = _CONN_CONFIG.copy()
     Tortoise._init_apps(_CONFIG["apps"])
@@ -97,12 +91,13 @@ def _restore_default() -> None:
 
 async def truncate_all_models() -> None:
     # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys
-    for app in Tortoise.apps.values():
-        for model in app.values():
-            quote_char = model._meta.db.query_class.SQL_CONTEXT.quote_char
-            await model._meta.db.execute_script(
-                f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"  # nosec
-            )
+    if not Tortoise.apps:
+        raise ValueError("apps are not loaded")
+    for model in Tortoise.apps.get_models_iterable():
+        quote_char = model._meta.db.query_class.SQL_CONTEXT.quote_char
+        await model._meta.db.execute_script(
+            f"DELETE FROM {quote_char}{model._meta.db_table}{quote_char}"  # nosec
+        )
 
 
 def initializer(
@@ -142,7 +137,7 @@ def initializer(
     _CONN_CONFIG = connections.db_config.copy()
     connections._clear_storage()
     connections.db_config.clear()
-    Tortoise.apps = {}
+    Tortoise.apps = None
     Tortoise._inited = False
 
 
@@ -223,6 +218,9 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
         loop.run_until_complete(self._asyncioCallsQueue.join())  # type: ignore
 
     async def asyncSetUp(self) -> None:
+        self._reset_conn_state()
+        Tortoise.apps = None
+        Tortoise._inited = False
         await self._setUpDB()
 
     def _reset_conn_state(self) -> None:
@@ -233,7 +231,7 @@ class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
     async def asyncTearDown(self) -> None:
         await self._tearDownDB()
         self._reset_conn_state()
-        Tortoise.apps = {}
+        Tortoise.apps = None
         Tortoise._inited = False
 
     def assertListSortEqual(
@@ -406,7 +404,7 @@ T = TypeVar("T")
 P = ParamSpec("P")
 AsyncFunc = Callable[P, Coroutine[None, None, T]]
 AsyncFuncDeco = Callable[..., AsyncFunc]
-ModulesConfigType = Union[str, list[str]]
+ModulesConfigType = str | list[str]
 MEMORY_SQLITE = "sqlite://:memory:"
 
 

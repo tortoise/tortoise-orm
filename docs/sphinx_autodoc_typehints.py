@@ -24,7 +24,7 @@ def format_annotation(annotation, fully_qualified=False):
         if annotation.__qualname__ == 'NoneType':
             return '``None``'
         else:
-            return ':py:class:`{}`'.format(annotation.__qualname__)
+            return f':py:class:`{annotation.__qualname__}`'
 
     annotation_cls = annotation if inspect.isclass(annotation) else type(annotation)
     if annotation_cls.__module__ == 'typing':
@@ -59,7 +59,7 @@ def format_annotation(annotation, fully_qualified=False):
                         except:
                             bound = bound.__forward_arg__
                 return format_annotation(bound, fully_qualified)
-            return '\\%r' % annotation
+            return f'\\{annotation!r}'
         elif (annotation is Union or getattr(annotation, '__origin__', None) is Union or
               hasattr(annotation, '__union_params__')):
             if hasattr(annotation, '__union_params__'):
@@ -190,7 +190,7 @@ def process_signature(app, what: str, name: str, obj, options, signature, return
                 # Python applies mangling so we need to prepend the class name.
                 # This doesn't happen if it always ends with double underscore.
                 class_name = obj.__qualname__.split('.')[-2]
-                method_name = "_{c}{m}".format(c=class_name, m=method_name)
+                method_name = f"_{class_name}{method_name}"
 
             method_object = outer.__dict__[method_name] if outer else obj
             if not isinstance(method_object, (classmethod, staticmethod)):
@@ -246,15 +246,9 @@ def get_all_type_hints(obj, name):
 
 
 def backfill_type_hints(obj, name):
-    parse_kwargs = {}
-    if sys.version_info < (3, 8):
-        try:
-            import typed_ast.ast3 as ast
-        except ImportError:
-            return {}
-    else:
-        import ast
-        parse_kwargs = {'type_comments': True}
+    import ast
+
+    parse_kwargs = {'type_comments': True}
 
     def _one_child(module):
         children = module.body  # use the body to ignore type comments
@@ -376,12 +370,12 @@ def process_docstring(app, what, name, obj, options, lines):
             if argname == 'return':
                 continue  # this is handled separately later
             if argname.endswith('_'):
-                argname = '{}\\_'.format(argname[:-1])
+                argname = f'{argname[:-1]}\\_'
 
             formatted_annotation = format_annotation(
                 annotation, fully_qualified=app.config.typehints_fully_qualified)
 
-            searchfor = ':param {}:'.format(argname)
+            searchfor = f':param {argname}:'
             insert_index = None
 
             for i, line in enumerate(lines):
@@ -396,7 +390,7 @@ def process_docstring(app, what, name, obj, options, lines):
             if insert_index is not None:
                 lines.insert(
                     insert_index,
-                    ':type {}: {}'.format(argname, formatted_annotation)
+                    f':type {argname}: {formatted_annotation}'
                 )
 
         if 'return' in type_hints and what not in ('class', 'exception'):
@@ -418,7 +412,7 @@ def process_docstring(app, what, name, obj, options, lines):
                     lines.append('')
                     insert_index += 1
 
-                lines.insert(insert_index, ':rtype: {}'.format(formatted_annotation))
+                lines.insert(insert_index, f':rtype: {formatted_annotation}')
 
 
 def builder_ready(app):

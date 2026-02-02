@@ -22,6 +22,7 @@ from tests.testmodels import (
     Tournament,
     UUIDFields,
 )
+from tortoise import timezone
 from tortoise.contrib import test
 from tortoise.contrib.test.condition import In, NotEQ
 from tortoise.expressions import Case, F, Q, Subquery, When
@@ -140,8 +141,7 @@ class TestUpdate(test.TestCase):
     async def test_update_auto_now(self):
         obj = await DefaultUpdate.create()
 
-        now = datetime.now()
-        updated_at = now - timedelta(days=1)
+        updated_at = timezone.now() - timedelta(days=1)
         await DefaultUpdate.filter(pk=obj.pk).update(updated_at=updated_at)
 
         obj1 = await DefaultUpdate.get(pk=obj.pk)
