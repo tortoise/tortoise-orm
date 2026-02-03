@@ -1,11 +1,11 @@
 .. _migration_guide:
 
 ====================================
-Migration Guide: Context-First ORM
+Migration Guide: Tortoise 1.0
 ====================================
 
-This guide covers the breaking changes and migration steps for upgrading to Tortoise ORM 0.26+
-which introduces a context-first architecture for improved test isolation and cleaner state management.
+This guide covers the breaking changes and migration steps for upgrading to Tortoise ORM 1.0+
+which introduces a isolated-context architecture for improved test isolation and cleaner state management.
 
 .. contents::
     :local:
@@ -14,11 +14,11 @@ which introduces a context-first architecture for improved test isolation and cl
 Overview
 ========
 
-Tortoise ORM 0.26 introduces a **context-first architecture** that:
+Tortoise ORM 1.0 introduces a **isolated-context architecture** that:
 
 - Removes global state (``_default_context``, metaclass)
 - Uses ``TortoiseContext`` as the single source of truth
-- Provides true test isolation with ``tortoise_test_context()``
+- Provides test isolation with ``tortoise_test_context()``
 - Simplifies connection management
 
 Most application code continues to work unchanged. The main changes affect:
@@ -105,7 +105,7 @@ Test Migration
 ==============
 
 The legacy test base classes (``TestCase``, ``IsolatedTestCase``, etc.) and helper
-functions (``initializer``, ``finalizer``) have been replaced with a modern pytest-based
+functions (``initializer``, ``finalizer``) have been replaced with a pytest-based
 approach using ``tortoise_test_context()``.
 
 Old Test Pattern
@@ -195,6 +195,9 @@ Multiple ``asyncio.run()`` Calls (Uncommon Pattern)
 If you use multiple separate ``asyncio.run()`` calls (sometimes seen in scripts or REPL
 sessions), the ContextVar that tracks ORM state is lost between runs due to Python's
 ContextVar scoping rules. This pattern now requires explicit context management.
+
+As a fallback `_enable_global_fallback` on `Tortoise.init(...)` can be used to set created
+context as global fallback.
 
 Old Pattern (No Longer Works)
 -----------------------------
@@ -446,7 +449,7 @@ Test isolation issues
 If tests are interfering with each other:
 
 1. Ensure using function-scoped ``db`` fixture (not session-scoped)
-2. Use ``tortoise_test_context()`` which provides true isolation
+2. Use ``tortoise_test_context()`` which provides explicit isolation
 3. Remove any ``@pytest.fixture(scope="session")`` that calls ``initializer()``
 
 Getting Help

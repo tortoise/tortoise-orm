@@ -168,18 +168,6 @@ Using ``{}`` in the URL creates randomized database names (useful for parallel t
     export TORTOISE_TEST_DB="sqlite:///tmp/test-{}.sqlite"
     export TORTOISE_TEST_DB="postgres://user:pass@localhost:5432/test_{}"
 
-Parallel Test Execution
-=======================
-
-The context-based architecture enables true parallel test execution with pytest-xdist:
-
-.. code-block:: bash
-
-    pytest tests/ -n auto
-
-Each test gets its own isolated context, so tests can run safely in parallel
-without database conflicts.
-
 Utility Functions
 =================
 

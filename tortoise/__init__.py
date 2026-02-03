@@ -108,15 +108,6 @@ class Tortoise:
         ctx = cls._get_context()
         return ctx.inited if ctx else False
 
-    # Explicit method versions (alternative API)
-    @classmethod
-    def get_apps(cls) -> Apps:
-        """Get the Apps registry, raising if not initialized."""
-        apps = cls._require_context().apps
-        if apps is None:
-            raise ConfigurationError("Tortoise ORM is not initialized. Call Tortoise.init() first.")
-        return apps
-
     @classmethod
     def is_inited(cls) -> bool:
         """Check if Tortoise is initialized."""

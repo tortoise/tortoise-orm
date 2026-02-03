@@ -33,7 +33,6 @@ Added
 - ``get_connection(alias)`` - function to get connection by alias from current context
 - ``get_connections()`` - function to get the ConnectionHandler from current context
 - ``Tortoise.close_connections()`` - class method to close all connections
-- ``Tortoise.get_apps()`` - explicit method version of ``Tortoise.apps`` property
 - ``Tortoise.is_inited()`` - explicit method version of ``Tortoise._inited`` property
 
 Changed

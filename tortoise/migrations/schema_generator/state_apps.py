@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
 from pypika_tortoise import Query, Table
 
 from tortoise.apps import Apps
+from tortoise.connection import ConnectionHandler
 from tortoise.context import get_current_context
 from tortoise.models import Model
-
-if TYPE_CHECKING:
-    from tortoise.connection import ConnectionHandler
 
 
 class StateApps(Apps):
@@ -20,8 +18,7 @@ class StateApps(Apps):
     ) -> None:
         if connections is None:
             ctx = get_current_context()
-            if ctx is not None:
-                connections = ctx.connections
+            connections = ctx.connections if ctx is not None else ConnectionHandler()
 
         super().__init__({}, connections)
         self._default_connections = default_connections or {}
@@ -39,9 +36,9 @@ class StateApps(Apps):
             model._meta.default_connection = self._default_connections[app_label]
 
     def _build_initial_querysets(self) -> None:
-        # Skip building querysets when no connections are available
+        # Skip building querysets when no DB config is available (state-only mode)
         # This allows pure state operations to work without database connections
-        if self._connections is None:
+        if self._connections._db_config is None:
             return
 
         for app in self.apps.values():

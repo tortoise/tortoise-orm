@@ -28,7 +28,7 @@ class Apps:
     def __init__(
         self,
         config: dict[str, dict[str, Any]] | None,
-        connections: ConnectionHandler | None,
+        connections: ConnectionHandler,
         table_name_generator: Callable[[type[Model]], str] | None = None,
         *,
         validate_connections: bool = True,
