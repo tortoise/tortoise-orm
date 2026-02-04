@@ -24,6 +24,7 @@ from tortoise.fields.base import Field
 from tortoise.fields.data import JSONField
 from tortoise.fields.relational import RelationalField
 from tortoise.filters import FilterInfoDict
+from tortoise.parameter import Parameter
 from tortoise.query_utils import (
     QueryModifier,
     TableCriterionTuple,
@@ -386,6 +387,9 @@ class Q:
         else:
             filter_info = model._meta.get_filter(key)
 
+        if isinstance(value, Parameter):
+            value.model = model
+
         field_object = None
         if "table" in filter_info:
             # join the table
@@ -395,15 +399,23 @@ class Q:
                 == filter_info["table"][filter_info["backward_key"]],
             )
             if "value_encoder" in filter_info:
-                value = filter_info["value_encoder"](value, model)
+                if isinstance(value, Parameter):
+                    value.value_encoder = filter_info["value_encoder"]
+                else:
+                    value = filter_info["value_encoder"](value, model)
             table = filter_info["table"]
         elif not isinstance(value, Term):
             field_object = model._meta.fields_map[filter_info["field"]]
-            value = (
-                filter_info["value_encoder"](value, model, field_object)
-                if "value_encoder" in filter_info
-                else field_object.to_db_value(value, model)
-            )
+            value_encoder = filter_info["value_encoder"] if "value_encoder" in filter_info else None
+            if isinstance(value, Parameter):
+                value.field_object = field_object
+                value.value_encoder = value_encoder
+            else:
+                value = (
+                    value_encoder(value, model, field_object)
+                    if value_encoder is not None
+                    else field_object.to_db_value(value, model)
+                )
         op = filter_info["operator"]
         term: Term = table[filter_info.get("source_field", filter_info["field"])]
         if field_object is not None:

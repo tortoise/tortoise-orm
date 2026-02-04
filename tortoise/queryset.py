@@ -27,6 +27,7 @@ from tortoise.fields.relational import (
     RelationalField,
 )
 from tortoise.filters import FilterInfoDict
+from tortoise.parameter import Parameter
 from tortoise.query_utils import (
     Prefetch,
     QueryModifier,
@@ -1240,6 +1241,73 @@ class QuerySet(AwaitableQuery[MODEL]):
         ).execute_select(
             *self.query.get_parameterized_sql(),
             custom_fields=list(self._annotations.keys()),
+        )
+        if self._single:
+            if len(instance_list) == 1:
+                return instance_list[0]
+            if not instance_list:
+                if self._raise_does_not_exist:
+                    raise DoesNotExist(self.model)
+                return None  # type: ignore
+            raise MultipleObjectsReturned(self.model)
+        return instance_list
+
+    def prepare(self) -> PreparedQuery[MODEL]:
+        if self._db is None:
+            self._db = self._choose_db(self._select_for_update)
+        self._make_query()
+        sql, params = self.query.get_parameterized_sql()
+        return PreparedQuery(
+            sql=sql,
+            params=params,
+            db=self._db,
+            model=self.model,
+            prefetch_map=self._prefetch_map,
+            prefetch_queries=self._prefetch_queries,
+            select_related_idx=self._select_related_idx,
+            custom_fields=list(self._annotations.keys()),
+            single=self._single,
+            raise_does_not_exist=self._raise_does_not_exist,
+        )
+
+
+class PreparedQuery(AwaitableQuery[MODEL]):
+    def __init__(
+            self, sql: str, params: list[Any], db: BaseDBAsyncClient, model: MODEL, prefetch_map: ..., prefetch_queries: ...,
+            select_related_idx: ..., custom_fields: list[...], single: bool, raise_does_not_exist: bool,
+    ) -> None:
+        super().__init__(model)
+
+        self._sql = sql
+        self._params = params
+        self._need_params = {
+            param.name: (param, idx)
+            for idx, param in enumerate(params)
+            if isinstance(param, Parameter)
+        }
+        self._executor = db.executor_class(
+            model=model,
+            db=db,
+            prefetch_map=prefetch_map,
+            prefetch_queries=prefetch_queries,
+            select_related_idx=select_related_idx,
+        )
+        self._model = model
+        self._custom_fields = custom_fields
+        self._single = single
+        self._raise_does_not_exist = raise_does_not_exist
+
+    async def execute(self, **params) -> list[MODEL]:
+        if self._need_params.keys() != params.keys():
+            raise ValueError("One of more parameters does not match prepared parameters")
+
+        filled_params = self._params.copy()
+        for name, (param, idx) in self._need_params.items():
+            filled_params[idx] = param.encode_value(params[name])
+
+        instance_list = await self._executor.execute_select(
+            self._sql, filled_params,
+            custom_fields=self._custom_fields,
         )
         if self._single:
             if len(instance_list) == 1:
