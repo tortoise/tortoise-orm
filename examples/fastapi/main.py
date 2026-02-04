@@ -7,7 +7,8 @@ from fastapi import FastAPI
 from routers import router as users_router
 
 from examples.fastapi.config import register_orm
-from tortoise import Tortoise, generate_config
+from tortoise import Tortoise
+from tortoise.backends.base.config_generator import generate_config
 from tortoise.contrib.fastapi import RegisterTortoise, tortoise_exception_handlers
 
 

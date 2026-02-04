@@ -7,7 +7,9 @@ from contextlib import AbstractAsyncContextManager, asynccontextmanager
 from types import ModuleType
 from typing import TYPE_CHECKING
 
-from tortoise import Tortoise, connections
+from tortoise import Tortoise
+from tortoise.connection import get_connections
+from tortoise.context import TortoiseContext
 from tortoise.exceptions import DoesNotExist, IntegrityError
 from tortoise.log import logger
 
@@ -102,6 +104,10 @@ class RegisterTortoise(AbstractAsyncContextManager):
         A boolean that specifies if datetime will be timezone-aware by default or not.
     timezone:
         Timezone to use, default is UTC.
+    _enable_global_fallback:
+        If True, enables global context fallback for cross-task access (e.g., when
+        using asgi-lifespan which runs lifespan in a background task). Default is True.
+        Set to False when running multiple apps in the same process to avoid conflicts.
 
     Raises
     ------
@@ -121,6 +127,7 @@ class RegisterTortoise(AbstractAsyncContextManager):
         use_tz: bool = False,
         timezone: str = "UTC",
         _create_db: bool = False,
+        _enable_global_fallback: bool = True,
     ) -> None:
         self.app = app
         self.config = config
@@ -131,6 +138,8 @@ class RegisterTortoise(AbstractAsyncContextManager):
         self.use_tz = use_tz
         self.timezone = timezone
         self._create_db = _create_db
+        self._enable_global_fallback = _enable_global_fallback
+        self._context: TortoiseContext | None = None
 
         if add_exception_handlers and app is not None:
             from starlette.middleware.exceptions import ExceptionMiddleware
@@ -150,8 +159,8 @@ class RegisterTortoise(AbstractAsyncContextManager):
 
             ExceptionMiddleware.__call__ = wrap_middleware_call  # type:ignore
 
-    async def init_orm(self) -> None:  # pylint: disable=W0612
-        await Tortoise.init(
+    async def init_orm(self) -> TortoiseContext:  # pylint: disable=W0612
+        self._context = await Tortoise.init(
             config=self.config,
             config_file=self.config_file,
             db_url=self.db_url,
@@ -159,15 +168,23 @@ class RegisterTortoise(AbstractAsyncContextManager):
             use_tz=self.use_tz,
             timezone=self.timezone,
             _create_db=self._create_db,
+            _enable_global_fallback=self._enable_global_fallback,
         )
-        logger.info("Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps)
+        # Store context in app.state for explicit access when global fallback is disabled
+        if self.app is not None:
+            self.app.state._tortoise_context = self._context
+        logger.info("Tortoise-ORM started, %s, %s", get_connections()._get_storage(), Tortoise.apps)
         if self.generate_schemas:
             logger.info("Tortoise-ORM generating schema")
             await Tortoise.generate_schemas()
+        return self._context
 
-    @staticmethod
-    async def close_orm() -> None:  # pylint: disable=W0612
-        await connections.close_all()
+    async def close_orm(self) -> None:  # pylint: disable=W0612
+        await Tortoise.close_connections()
+        # Clear context from app.state
+        if self.app is not None and hasattr(self.app.state, "_tortoise_context"):
+            delattr(self.app.state, "_tortoise_context")
+        self._context = None
         logger.info("Tortoise-ORM shutdown")
 
     def __call__(self, *args, **kwargs) -> Self:

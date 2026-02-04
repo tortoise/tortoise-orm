@@ -1,23 +1,19 @@
 from unittest.mock import AsyncMock, patch
 
 import asyncpg
+import pytest
 
-from tortoise import connections
-from tortoise.contrib import test
+from tortoise.context import TortoiseContext
 
 
-class TestConnectionParams(test.SimpleTestCase):
-    async def asyncSetUp(self) -> None:
-        await super().asyncSetUp()
-
-    async def asyncTearDown(self) -> None:
-        await super().asyncTearDown()
-
-    async def test_mysql_connection_params(self):
-        with patch(
-            "tortoise.backends.mysql.client.mysql.create_pool", new=AsyncMock()
-        ) as mysql_connect:
-            await connections._init(
+@pytest.mark.asyncio
+async def test_mysql_connection_params():
+    with patch(
+        "tortoise.backends.mysql.client.mysql.create_pool", new=AsyncMock()
+    ) as mysql_connect:
+        ctx = TortoiseContext()
+        async with ctx:
+            await ctx.connections._init(
                 {
                     "models": {
                         "engine": "tortoise.backends.mysql",
@@ -34,7 +30,7 @@ class TestConnectionParams(test.SimpleTestCase):
                 },
                 False,
             )
-            await connections.get("models").create_connection(with_db=True)
+            await ctx.connections.get("models").create_connection(with_db=True)
 
             mysql_connect.assert_awaited_once_with(  # nosec
                 autocommit=True,
@@ -50,12 +46,16 @@ class TestConnectionParams(test.SimpleTestCase):
                 sql_mode="STRICT_TRANS_TABLES",
             )
 
-    async def test_asyncpg_connection_params(self):
-        try:
-            with patch(
-                "tortoise.backends.asyncpg.client.asyncpg.create_pool", new=AsyncMock()
-            ) as asyncpg_connect:
-                await connections._init(
+
+@pytest.mark.asyncio
+async def test_asyncpg_connection_params():
+    try:
+        with patch(
+            "tortoise.backends.asyncpg.client.asyncpg.create_pool", new=AsyncMock()
+        ) as asyncpg_connect:
+            ctx = TortoiseContext()
+            async with ctx:
+                await ctx.connections._init(
                     {
                         "models": {
                             "engine": "tortoise.backends.asyncpg",
@@ -72,7 +72,7 @@ class TestConnectionParams(test.SimpleTestCase):
                     },
                     False,
                 )
-                await connections.get("models").create_connection(with_db=True)
+                await ctx.connections.get("models").create_connection(with_db=True)
 
                 asyncpg_connect.assert_awaited_once_with(  # nosec
                     None,
@@ -89,17 +89,21 @@ class TestConnectionParams(test.SimpleTestCase):
                     loop=None,
                     server_settings={},
                 )
-        except ImportError:
-            self.skipTest("asyncpg not installed")
+    except ImportError:
+        pytest.skip("asyncpg not installed")
 
-    async def test_psycopg_connection_params(self):
-        try:
-            with patch(
-                "tortoise.backends.psycopg.client.PsycopgClient.create_pool", new=AsyncMock()
-            ) as patched_create_pool:
-                mocked_pool = AsyncMock()
-                patched_create_pool.return_value = mocked_pool
-                await connections._init(
+
+@pytest.mark.asyncio
+async def test_psycopg_connection_params():
+    try:
+        with patch(
+            "tortoise.backends.psycopg.client.PsycopgClient.create_pool", new=AsyncMock()
+        ) as patched_create_pool:
+            mocked_pool = AsyncMock()
+            patched_create_pool.return_value = mocked_pool
+            ctx = TortoiseContext()
+            async with ctx:
+                await ctx.connections._init(
                     {
                         "models": {
                             "engine": "tortoise.backends.psycopg",
@@ -116,11 +120,12 @@ class TestConnectionParams(test.SimpleTestCase):
                     },
                     False,
                 )
-                await connections.get("models").create_connection(with_db=True)
+                await ctx.connections.get("models").create_connection(with_db=True)
+
                 patched_create_pool.assert_awaited_once()
                 mocked_pool.open.assert_awaited_once_with(  # nosec
                     wait=True,
                     timeout=1,
                 )
-        except ImportError:
-            self.skipTest("psycopg not installed")
+    except ImportError:
+        pytest.skip("psycopg not installed")

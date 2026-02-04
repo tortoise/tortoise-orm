@@ -7,7 +7,7 @@ from pypika_tortoise.queries import QueryBuilder
 from pypika_tortoise.terms import Parameterizer
 
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.connection import connections
+from tortoise.connection import get_connections
 from tortoise.exceptions import ParamsError
 
 if TYPE_CHECKING:
@@ -87,14 +87,16 @@ async def execute_pypika(
 ) -> QueryResult[SchemaT] | QueryResult[dict]:
     if using_db is not None:
         db = using_db
-    elif len(connections.db_config) == 1:
-        connection_name = next(iter(connections.db_config.keys()))
-        db = connections.get(connection_name)
     else:
-        raise ParamsError(
-            "You are running with multiple databases, so you should specify"
-            f" connection_name: {list(connections.db_config)}"
-        )
+        conn_handler = get_connections()
+        if len(conn_handler.db_config) == 1:
+            connection_name = next(iter(conn_handler.db_config.keys()))
+            db = conn_handler.get(connection_name)
+        else:
+            raise ParamsError(
+                "You are running with multiple databases, so you should specify"
+                f" connection_name: {list(conn_handler.db_config)}"
+            )
     sql, params = query.get_parameterized_sql(_get_sql_context(db))
     rows, rows_affected = await db.execute_query_dict_with_affected(sql, params)
 

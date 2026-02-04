@@ -13,8 +13,10 @@ from typing import Any
 
 from ptpython.repl import embed
 
-from tortoise import Tortoise, __version__, connections
+from tortoise import Tortoise, __version__
 from tortoise.cli import utils
+from tortoise.connection import get_connection
+from tortoise.context import TortoiseContext
 from tortoise.migrations.api import migrate as migrate_api
 from tortoise.migrations.autodetector import MigrationAutodetector
 from tortoise.migrations.executor import PlanStep
@@ -40,12 +42,10 @@ if platform.system() == "Windows":
 
 
 @contextlib.asynccontextmanager
-async def aclose_tortoise() -> AsyncGenerator[None]:
-    try:
-        yield
-    finally:
-        if Tortoise._inited:
-            await connections.close_all()
+async def tortoise_cli_context(config: dict[str, Any]) -> AsyncGenerator[TortoiseContext, None]:
+    async with TortoiseContext() as ctx:
+        await ctx.init(config=config)
+        yield ctx
 
 
 class _NoopRecorder(MigrationRecorder):
@@ -245,8 +245,7 @@ async def init(ctx: CLIContext, app_labels: tuple[str, ...]) -> None:
 
 async def shell(ctx: CLIContext) -> None:
     config = _normalized_config(_load_config(ctx))
-    async with aclose_tortoise():
-        await Tortoise.init(config=config)
+    async with tortoise_cli_context(config):
         with contextlib.suppress(EOFError, ValueError):
             await embed(
                 globals=globals(),
@@ -269,11 +268,10 @@ async def makemigrations(
         app_config["migrations"] = migrations_module
     config["apps"] = apps_config
 
-    async with aclose_tortoise():
-        await Tortoise.init(config=config)
-        if not Tortoise.apps:
+    async with tortoise_cli_context(config) as ctx:
+        if not ctx.apps:
             raise utils.CLIError("Tortoise apps are not initialized")
-        autodetector = MigrationAutodetector(Tortoise.apps, apps_config)
+        autodetector = MigrationAutodetector(ctx.apps, apps_config)
         if empty:
             await autodetector.loader.build_graph()
             old_state = await autodetector._project_state()
@@ -340,7 +338,7 @@ async def _run_migrate(
                 raise utils.CLIUsageError("MIGRATION requires APP_LABEL")
             target = f"{app_label}.{migration}"
 
-    async with aclose_tortoise():
+    async with tortoise_cli_context(config):
         await migrate_api(
             config=config,
             app_labels=None,
@@ -409,10 +407,9 @@ async def history(ctx: CLIContext, app_labels: tuple[str, ...]) -> None:
     config["apps"] = apps_config
     apps_by_connection = _group_apps_by_connection(apps_config)
 
-    async with aclose_tortoise():
-        await Tortoise.init(config=config)
+    async with tortoise_cli_context(config):
         for connection_name, subset in apps_by_connection.items():
-            recorder = MigrationRecorder(connections.get(connection_name))
+            recorder = MigrationRecorder(get_connection(connection_name))
             applied = await recorder.applied_migrations()
             _emit_history(applied, connection_name, subset)
 

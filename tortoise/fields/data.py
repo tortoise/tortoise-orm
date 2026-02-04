@@ -232,7 +232,15 @@ class TextField(Field[str], str):  # type: ignore
             raise ConfigurationError(
                 "TextField doesn't support unique indexes, consider CharField or another strategy"
             )
-        if db_index or kwargs.get("index"):
+        if (index := kwargs.pop("index", None)) is not None:
+            warnings.warn(
+                "`index` is deprecated, please use `db_index` instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            if index or db_index:
+                raise ConfigurationError("TextField can't be indexed, consider CharField")
+        elif db_index:
             raise ConfigurationError("TextField can't be indexed, consider CharField")
 
         super().__init__(primary_key=primary_key, **kwargs)

@@ -1,44 +1,60 @@
+"""
+Modern testing utilities for Tortoise ORM.
+
+Use tortoise_test_context() with pytest fixtures:
+
+    @pytest_asyncio.fixture
+    async def db():
+        async with tortoise_test_context(["myapp.models"]) as ctx:
+            yield ctx
+
+    @pytest.mark.asyncio
+    async def test_example(db):
+        user = await User.create(name="Test")
+        assert user.id is not None
+
+For capability-based test skipping:
+
+    @requireCapability(dialect="sqlite")
+    @pytest.mark.asyncio
+    async def test_sqlite_only(db):
+        # This test only runs on SQLite
+        ...
+"""
+
 from __future__ import annotations
 
-import asyncio
 import inspect
-import os as _os
 import typing
-import unittest
-from collections.abc import Callable, Coroutine, Iterable
+from collections.abc import Callable, Coroutine
 from functools import partial, wraps
-from types import ModuleType
-from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar, cast
+from typing import ParamSpec, TypeVar, cast
 from unittest import SkipTest, expectedFailure, skip, skipIf, skipUnless
 
-from tortoise import Model, Tortoise, connections
-from tortoise.backends.base.config_generator import generate_config as _generate_config
-from tortoise.exceptions import DBConnectionError, OperationalError
+from tortoise import Tortoise
+from tortoise.connection import get_connection
+from tortoise.context import TortoiseContext, tortoise_test_context
 
-if TYPE_CHECKING:
-    from asyncio.events import AbstractEventLoop
-
+T = TypeVar("T")
+P = ParamSpec("P")
+AsyncFunc = Callable[P, Coroutine[None, None, T]]
+AsyncFuncDeco = Callable[..., AsyncFunc]
+ModulesConfigType = str | list[str]
+MEMORY_SQLITE = "sqlite://:memory:"
 
 __all__ = (
     "MEMORY_SQLITE",
-    "SimpleTestCase",
-    "TestCase",
-    "TruncationTestCase",
-    "IsolatedTestCase",
-    "getDBConfig",
+    "TortoiseContext",
+    "tortoise_test_context",
     "requireCapability",
-    "env_initializer",
-    "initializer",
-    "finalizer",
+    "truncate_all_models",
+    "init_memory_sqlite",
     "SkipTest",
     "expectedFailure",
     "skip",
     "skipIf",
     "skipUnless",
-    "init_memory_sqlite",
 )
-_TORTOISE_TEST_DB = "sqlite://:memory:"
-# pylint: disable=W0201
 
 expectedFailure.__doc__ = """
 Mark test as expecting failure.
@@ -46,51 +62,20 @@ Mark test as expecting failure.
 On success it will be marked as unexpected success.
 """
 
-_CONFIG: dict = {}
-_CONNECTIONS: dict = {}
-_LOOP: AbstractEventLoop = None  # type: ignore
-_MODULES: Iterable[str | ModuleType] = []
-_CONN_CONFIG: dict = {}
-
-
-def getDBConfig(app_label: str, modules: Iterable[str | ModuleType]) -> dict:
-    """
-    DB Config factory, for use in testing.
-
-    :param app_label: Label of the app (must be distinct for multiple apps).
-    :param modules: List of modules to look for models in.
-    """
-    return _generate_config(
-        _TORTOISE_TEST_DB,
-        app_modules={app_label: modules},
-        testing=True,
-        connection_label=app_label,
-    )
-
-
-async def _init_db(config: dict) -> None:
-    # Placing init outside the try block since it doesn't
-    # establish connections to the DB eagerly.
-    await Tortoise.init(config)
-    try:
-        await Tortoise._drop_databases()
-    except (DBConnectionError, OperationalError):  # pragma: nocoverage
-        pass
-
-    await Tortoise.init(config, _create_db=True)
-    await Tortoise.generate_schemas(safe=False)
-
-
-def _restore_default() -> None:
-    Tortoise.apps = None
-    connections._get_storage().update(_CONNECTIONS.copy())
-    connections._db_config = _CONN_CONFIG.copy()
-    Tortoise._init_apps(_CONFIG["apps"])
-    Tortoise._inited = True
-
 
 async def truncate_all_models() -> None:
-    # TODO: This is a naive implementation: Will fail to clear M2M and non-cascade foreign keys
+    """
+    Truncate all models in the current context.
+
+    This is a utility function for test cleanup that deletes all rows from
+    all registered model tables.
+
+    Note: This is a naive implementation that may fail with M2M relations
+    and non-cascade foreign keys.
+
+    Raises:
+        ValueError: If Tortoise.apps is not loaded.
+    """
     if not Tortoise.apps:
         raise ValueError("apps are not loaded")
     for model in Tortoise.apps.get_models_iterable():
@@ -100,236 +85,12 @@ async def truncate_all_models() -> None:
         )
 
 
-def initializer(
-    modules: Iterable[str | ModuleType],
-    db_url: str | None = None,
-    app_label: str = "models",
-    loop: AbstractEventLoop | None = None,
-) -> None:
-    """
-    Sets up the DB for testing. Must be called as part of test environment setup.
-
-    :param modules: List of modules to look for models in.
-    :param db_url: The db_url, defaults to ``sqlite://:memory``.
-    :param app_label: The name of the APP to initialise the modules in, defaults to "models"
-    :param loop: Optional event loop.
-    """
-    # pylint: disable=W0603
-    global _CONFIG
-    global _CONNECTIONS
-    global _LOOP
-    global _TORTOISE_TEST_DB
-    global _MODULES
-    global _CONN_CONFIG
-    _MODULES = modules
-    if db_url is not None:  # pragma: nobranch
-        _TORTOISE_TEST_DB = db_url
-    _CONFIG = getDBConfig(app_label=app_label, modules=_MODULES)
-    if not loop:
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-    _LOOP = loop
-    loop.run_until_complete(_init_db(_CONFIG))
-    _CONNECTIONS = connections._copy_storage()
-    _CONN_CONFIG = connections.db_config.copy()
-    connections._clear_storage()
-    connections.db_config.clear()
-    Tortoise.apps = None
-    Tortoise._inited = False
+_FT = TypeVar("_FT", bound=Callable[..., typing.Any])
 
 
-def finalizer() -> None:
-    """
-    Cleans up the DB after testing. Must be called as part of the test environment teardown.
-    """
-    _restore_default()
-    loop = _LOOP
-    loop.run_until_complete(Tortoise._drop_databases())
-
-
-def env_initializer() -> None:  # pragma: nocoverage
-    """
-    Calls ``initializer()`` with parameters mapped from environment variables.
-
-    ``TORTOISE_TEST_MODULES``:
-        A comma-separated list of modules to include *(required)*
-    ``TORTOISE_TEST_APP``:
-        The name of the APP to initialise the modules in *(optional)*
-
-        If not provided, it will default to "models".
-    ``TORTOISE_TEST_DB``:
-        The db_url of the test db. *(optional*)
-
-        If not provided, it will default to an in-memory SQLite DB.
-    """
-    modules = str(_os.environ.get("TORTOISE_TEST_MODULES", "tests.testmodels")).split(",")
-    db_url = _os.environ.get("TORTOISE_TEST_DB", "sqlite://:memory:")
-    app_label = _os.environ.get("TORTOISE_TEST_APP", "models")
-    if not modules:  # pragma: nocoverage
-        raise Exception("TORTOISE_TEST_MODULES envvar not defined")
-    initializer(modules, db_url=db_url, app_label=app_label)
-
-
-class SimpleTestCase(unittest.IsolatedAsyncioTestCase):
-    """
-    The Tortoise base test class.
-
-    This will ensure that your DB environment has a test double set up for use.
-
-    An asyncio capable test class that provides some helper functions.
-
-    Will run any ``test_*()`` function either as sync or async, depending
-    on the signature of the function.
-    If you specify ``async test_*()`` then it will run it in an event loop.
-
-    Based on `asynctest <http://asynctest.readthedocs.io/>`_
-    """
-
-    def _setupAsyncioRunner(self) -> None:
-        if hasattr(asyncio, "Runner"):  # For python3.11+
-            runner = asyncio.Runner(debug=True, loop_factory=asyncio.get_event_loop)
-            self._asyncioRunner = runner
-
-    def _tearDownAsyncioRunner(self) -> None:
-        # Override runner tear down to avoid eventloop closing before testing completed.
-        pass
-
-    async def _setUpDB(self) -> None:
-        pass
-
-    async def _tearDownDB(self) -> None:
-        pass
-
-    def _setupAsyncioLoop(self):
-        loop = asyncio.get_event_loop()
-        loop.set_debug(True)
-        self._asyncioTestLoop = loop
-        fut = loop.create_future()
-        self._asyncioCallsTask = loop.create_task(self._asyncioLoopRunner(fut))  # type: ignore
-        loop.run_until_complete(fut)
-
-    def _tearDownAsyncioLoop(self):
-        loop = self._asyncioTestLoop
-        self._asyncioTestLoop = None  # type: ignore
-        self._asyncioCallsQueue.put_nowait(None)  # type: ignore
-        loop.run_until_complete(self._asyncioCallsQueue.join())  # type: ignore
-
-    async def asyncSetUp(self) -> None:
-        self._reset_conn_state()
-        Tortoise.apps = None
-        Tortoise._inited = False
-        await self._setUpDB()
-
-    def _reset_conn_state(self) -> None:
-        # clearing the storage and db config
-        connections._clear_storage()
-        connections.db_config.clear()
-
-    async def asyncTearDown(self) -> None:
-        await self._tearDownDB()
-        self._reset_conn_state()
-        Tortoise.apps = None
-        Tortoise._inited = False
-
-    def assertListSortEqual(
-        self, list1: list[Any], list2: list[Any], msg: Any = ..., sorted_key: str | None = None
-    ) -> None:
-        if isinstance(list1[0], Model):
-            super().assertListEqual(
-                sorted(list1, key=lambda x: x.pk), sorted(list2, key=lambda x: x.pk), msg=msg
-            )
-        elif isinstance(list1[0], dict) and sorted_key:
-            super().assertListEqual(
-                sorted(list1, key=lambda x: x[sorted_key]),
-                sorted(list2, key=lambda x: x[sorted_key]),
-                msg=msg,
-            )
-        else:
-            super().assertListEqual(sorted(list1), sorted(list2), msg=msg)
-
-
-class IsolatedTestCase(SimpleTestCase):
-    """
-    An asyncio capable test class that will ensure that an isolated test db
-    is available for each test.
-
-    Use this if your test needs perfect isolation.
-
-    Note to use ``{}`` as a string-replacement parameter, for your DB_URL.
-    That will create a randomised database name.
-
-    It will create and destroy a new DB instance for every test.
-    This is obviously slow, but guarantees a fresh DB.
-
-    If you define a ``tortoise_test_modules`` list, it overrides the DB setup module for the tests.
-    """
-
-    tortoise_test_modules: Iterable[str | ModuleType] = []
-
-    async def _setUpDB(self) -> None:
-        await super()._setUpDB()
-        config = getDBConfig(app_label="models", modules=self.tortoise_test_modules or _MODULES)
-        await Tortoise.init(config, _create_db=True)
-        await Tortoise.generate_schemas(safe=False)
-
-    async def _tearDownDB(self) -> None:
-        await Tortoise._drop_databases()
-
-
-class TruncationTestCase(SimpleTestCase):
-    """
-    An asyncio capable test class that will truncate the tables after a test.
-
-    Use this when your tests contain transactions.
-
-    This is slower than ``TestCase`` but faster than ``IsolatedTestCase``.
-    Note that usage of this does not guarantee that auto-number-pks will be reset to 1.
-    """
-
-    async def _setUpDB(self) -> None:
-        await super()._setUpDB()
-        _restore_default()
-
-    async def _tearDownDB(self) -> None:
-        _restore_default()
-        await truncate_all_models()
-        await super()._tearDownDB()
-
-
-class _RollbackException(Exception):
-    pass
-
-
-class TestCase(TruncationTestCase):
-    """
-    An asyncio capable test class that will ensure that each test will be run at
-    separate transaction that will rollback on finish.
-
-    This is a fast test runner. Don't use it if your test uses transactions.
-    """
-
-    async def asyncSetUp(self) -> None:
-        await super().asyncSetUp()
-        self._db = connections.get("models")
-        self._transaction = self._db._in_transaction()
-        await self._transaction.__aenter__()
-
-    async def asyncTearDown(self) -> None:
-        # this will cause a rollback
-        await self._transaction.__aexit__(_RollbackException, _RollbackException(), None)
-        await super().asyncTearDown()
-
-    async def _tearDownDB(self) -> None:
-        if self._db.capabilities.supports_transactions:
-            _restore_default()
-        else:
-            await super()._tearDownDB()
-
-
-def requireCapability(connection_name: str = "models", **conditions: Any) -> Callable:
+def requireCapability(
+    connection_name: str = "models", **conditions: typing.Any
+) -> Callable[[_FT], _FT]:
     """
     Skip a test if the required capabilities are not matched.
 
@@ -341,7 +102,8 @@ def requireCapability(connection_name: str = "models", **conditions: Any) -> Cal
     .. code-block:: python3
 
         @requireCapability(dialect='sqlite')
-        async def test_run_sqlite_only(self):
+        @pytest.mark.asyncio
+        async def test_run_sqlite_only(db):
             ...
 
     Or to conditionally skip a class:
@@ -349,38 +111,39 @@ def requireCapability(connection_name: str = "models", **conditions: Any) -> Cal
     .. code-block:: python3
 
         @requireCapability(dialect='sqlite')
-        class TestSqlite(test.TestCase):
-            ...
+        class TestSqlite:
+            @pytest.mark.asyncio
+            async def test_something(self, db):
+                ...
 
     :param connection_name: name of the connection to retrieve capabilities from.
     :param conditions: capability tests which must all pass for the test to run.
     """
 
-    def decorator(test_item):
+    def decorator(test_item: _FT) -> _FT:
         if not isinstance(test_item, type):
 
             def check_capabilities() -> None:
-                db = connections.get(connection_name)
+                db = get_connection(connection_name)
                 for key, val in conditions.items():
                     if getattr(db.capabilities, key) != val:
                         raise SkipTest(f"Capability {key} != {val}")
 
-            if hasattr(asyncio, "Runner") and inspect.iscoroutinefunction(test_item):
-                # For python3.11+
+            if inspect.iscoroutinefunction(test_item):
 
                 @wraps(test_item)
-                async def skip_wrapper(*args, **kwargs):
+                async def skip_wrapper(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
                     check_capabilities()
                     return await test_item(*args, **kwargs)
 
             else:
 
                 @wraps(test_item)
-                def skip_wrapper(*args, **kwargs):
+                def skip_wrapper(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
                     check_capabilities()
                     return test_item(*args, **kwargs)
 
-            return skip_wrapper
+            return cast(_FT, skip_wrapper)
 
         # Assume a class is decorated
         funcs = {
@@ -400,14 +163,6 @@ def requireCapability(connection_name: str = "models", **conditions: Any) -> Cal
     return decorator
 
 
-T = TypeVar("T")
-P = ParamSpec("P")
-AsyncFunc = Callable[P, Coroutine[None, None, T]]
-AsyncFuncDeco = Callable[..., AsyncFunc]
-ModulesConfigType = str | list[str]
-MEMORY_SQLITE = "sqlite://:memory:"
-
-
 @typing.overload
 def init_memory_sqlite(models: ModulesConfigType | None = None) -> AsyncFuncDeco: ...
 
@@ -420,9 +175,11 @@ def init_memory_sqlite(
     models: ModulesConfigType | AsyncFunc | None = None,
 ) -> AsyncFunc | AsyncFuncDeco:
     """
-    For single file style to run code with memory sqlite
+    Decorator for initializing Tortoise with an in-memory SQLite database.
 
-    :param models: list_of_modules that should be discovered for models, default to ['__main__'].
+    This is useful for simple scripts and examples that need a quick database setup.
+
+    :param models: List of modules to load models from. Defaults to ["__main__"].
 
     Usage:
 
@@ -440,9 +197,8 @@ def init_memory_sqlite(
             obj = await MyModel.create(name='')
             assert obj.id == 1
 
-        if __name__ == '__main__'
-            run_async(run)
-
+        if __name__ == '__main__':
+            run_async(run())
 
     Custom models example:
 

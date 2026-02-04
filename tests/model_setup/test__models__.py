@@ -2,60 +2,80 @@
 Tests for __models__
 """
 
+import os
 import re
 from unittest.mock import AsyncMock, patch
 
+import pytest
+
 from tortoise import Tortoise, connections
-from tortoise.contrib import test
+from tortoise.backends.base.config_generator import generate_config
 from tortoise.exceptions import ConfigurationError
 from tortoise.utils import get_schema_sql
 
 
-class TestGenerateSchema(test.SimpleTestCase):
-    async def asyncSetUp(self):
-        await super().asyncSetUp()
-        try:
-            Tortoise.apps = None
-            Tortoise._inited = False
-        except ConfigurationError:
-            pass
+async def _reset_tortoise():
+    """Helper to reset Tortoise state before each test."""
+    try:
+        Tortoise.apps = None
         Tortoise._inited = False
-        self.sqls = ""
-        self.post_sqls = ""
-        self.engine = test.getDBConfig(app_label="models", modules=[])["connections"]["models"][
-            "engine"
-        ]
+    except ConfigurationError:
+        pass
+    Tortoise._inited = False
 
-    async def init_for(self, module: str, safe=False) -> None:
-        if self.engine != "tortoise.backends.sqlite":
-            raise test.SkipTest("sqlite only")
-        with patch(
-            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=AsyncMock()
-        ):
-            await Tortoise.init(
-                {
-                    "connections": {
-                        "default": {
-                            "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
-                        }
-                    },
-                    "apps": {"models": {"models": [module], "default_connection": "default"}},
-                }
-            )
-            self.sqls = get_schema_sql(connections.get("default"), safe).split(";\n")
 
-    def get_sql(self, text: str) -> str:
-        return str(re.sub(r"[ \t\n\r]+", " ", [sql for sql in self.sqls if text in sql][0]))
+def _get_engine() -> str:
+    """Get the current test engine."""
+    db_url = os.getenv("TORTOISE_TEST_DB", "sqlite://:memory:")
+    config = generate_config(db_url, app_modules={"models": []}, connection_label="models")
+    return config["connections"]["models"]["engine"]
 
-    async def test_good(self):
-        await self.init_for("tests.model_setup.models__models__good")
-        self.assertIn("goodtournament", "; ".join(self.sqls))
-        self.assertIn("inaclasstournament", "; ".join(self.sqls))
-        self.assertNotIn("badtournament", "; ".join(self.sqls))
 
-    async def test_bad(self):
-        await self.init_for("tests.model_setup.models__models__bad")
-        self.assertNotIn("goodtournament", "; ".join(self.sqls))
-        self.assertNotIn("inaclasstournament", "; ".join(self.sqls))
-        self.assertIn("badtournament", "; ".join(self.sqls))
+async def _init_for(module: str, safe: bool = False) -> list[str]:
+    """
+    Initialize Tortoise for a specific module and return SQL statements.
+
+    Raises SkipTest if not using sqlite.
+    """
+    engine = _get_engine()
+    if engine != "tortoise.backends.sqlite":
+        pytest.skip("sqlite only")
+
+    with patch("tortoise.backends.sqlite.client.SqliteClient.create_connection", new=AsyncMock()):
+        await Tortoise.init(
+            {
+                "connections": {
+                    "default": {
+                        "engine": "tortoise.backends.sqlite",
+                        "credentials": {"file_path": ":memory:"},
+                    }
+                },
+                "apps": {"models": {"models": [module], "default_connection": "default"}},
+            }
+        )
+        return get_schema_sql(connections.get("default"), safe).split(";\n")
+
+
+def _get_sql(sqls: list[str], text: str) -> str:
+    """Get SQL statement containing the given text."""
+    return str(re.sub(r"[ \t\n\r]+", " ", [sql for sql in sqls if text in sql][0]))
+
+
+@pytest.mark.asyncio
+async def test_good():
+    await _reset_tortoise()
+    sqls = await _init_for("tests.model_setup.models__models__good")
+    sql_joined = "; ".join(sqls)
+    assert "goodtournament" in sql_joined
+    assert "inaclasstournament" in sql_joined
+    assert "badtournament" not in sql_joined
+
+
+@pytest.mark.asyncio
+async def test_bad():
+    await _reset_tortoise()
+    sqls = await _init_for("tests.model_setup.models__models__bad")
+    sql_joined = "; ".join(sqls)
+    assert "goodtournament" not in sql_joined
+    assert "inaclasstournament" not in sql_joined
+    assert "badtournament" in sql_joined

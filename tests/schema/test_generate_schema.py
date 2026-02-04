@@ -1,15 +1,23 @@
 # pylint: disable=C0301
+import os
 import re
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from tortoise import Tortoise, connections
-from tortoise.contrib import test
+from tortoise.backends.base.config_generator import generate_config
+from tortoise.context import TortoiseContext, get_current_context
 from tortoise.exceptions import ConfigurationError
 from tortoise.utils import get_schema_sql
 
+# Save original classproperties before any test can shadow them
+_original_apps_prop = Tortoise.__dict__["apps"]
+_original_inited_prop = Tortoise.__dict__["_inited"]
 
-class TestGenerateSchema(test.SimpleTestCase):
-    safe_schema_sql = """
+
+# Safe schema SQL expected for SQLite
+SAFE_SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS "company" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" TEXT NOT NULL,
@@ -92,152 +100,277 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
 CREATE UNIQUE INDEX IF NOT EXISTS "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");
 """.strip()
 
-    async def asyncSetUp(self):
-        await super().asyncSetUp()
-        try:
-            Tortoise.apps = None
-            Tortoise._inited = False
-        except ConfigurationError:
-            pass
-        Tortoise._inited = False
-        self.sqls = []
-        self.post_sqls = []
-        self.engine = test.getDBConfig(app_label="models", modules=[])["connections"]["models"][
-            "engine"
-        ]
 
-    async def asyncTearDown(self) -> None:
-        await Tortoise._reset_apps()
-        await super().asyncTearDown()
+async def _reset_tortoise():
+    """Helper to reset Tortoise state before each test.
 
-    async def init_for(self, module: str, safe=False) -> None:
-        with patch(
-            "tortoise.backends.sqlite.client.SqliteClient.create_connection", new=MagicMock()
-        ):
-            await Tortoise.init(
-                {
-                    "connections": {
-                        "default": {
-                            "engine": "tortoise.backends.sqlite",
-                            "credentials": {"file_path": ":memory:"},
-                        }
-                    },
-                    "apps": {"models": {"models": [module], "default_connection": "default"}},
-                }
-            )
-            self.sqls = get_schema_sql(connections.get("default"), safe).split(";\n")
+    Note: We MUST NOT set Tortoise.apps = None or Tortoise._inited = False
+    because these are classproperties and setting them shadows the property
+    with a class attribute, breaking future access.
+    """
+    # Restore original classproperties if they were shadowed
+    if not isinstance(Tortoise.__dict__.get("apps"), type(_original_apps_prop)):
+        type.__setattr__(Tortoise, "apps", _original_apps_prop)
+    if not isinstance(Tortoise.__dict__.get("_inited"), type(_original_inited_prop)):
+        type.__setattr__(Tortoise, "_inited", _original_inited_prop)
 
-    def get_sql(self, text: str) -> str:
-        return re.sub(r"[ \t\n\r]+", " ", " ".join([sql for sql in self.sqls if text in sql]))
+    # Get the current context and properly reset it
+    ctx = get_current_context()
+    if ctx is not None:
+        # Clear db_config first to prevent close_all from trying to import bad backends
+        if ctx._connections is not None:
+            # Clear storage without closing (to avoid importing bad backends)
+            ctx._connections._storage.clear()
+            ctx._connections._db_config = None
+            ctx._connections = None
+        ctx._apps = None
+        ctx._inited = False
+        ctx._default_connection = None
+    else:
+        # No context exists - create one for the test
+        ctx = TortoiseContext()
+        ctx.__enter__()
 
-    async def test_noid(self):
-        await self.init_for("tests.testmodels")
-        sql = self.get_sql('"noid"')
-        self.assertIn('"name" VARCHAR(255)', sql)
-        self.assertIn('"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL', sql)
 
-    async def test_minrelation(self):
-        await self.init_for("tests.testmodels")
-        sql = self.get_sql('"minrelation"')
-        self.assertIn(
-            '"tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("id") ON DELETE CASCADE',
-            sql,
+async def _teardown_tortoise():
+    """Helper to teardown Tortoise state after each test."""
+    await Tortoise._reset_apps()
+
+
+def _get_engine():
+    """Get the current test engine."""
+    db_url = os.getenv("TORTOISE_TEST_DB", "sqlite://:memory:")
+    config = generate_config(db_url, app_modules={"models": []}, connection_label="models")
+    return config["connections"]["models"]["engine"]
+
+
+def _get_sql(sqls: list[str], text: str) -> str:
+    """Get SQL statement containing the given text."""
+    return re.sub(r"[ \t\n\r]+", " ", " ".join([sql for sql in sqls if text in sql]))
+
+
+# ============================================================================
+# SQLite Tests
+# ============================================================================
+
+
+async def _init_for_sqlite(module: str, safe: bool = False) -> list[str]:
+    """Initialize Tortoise for SQLite and return SQL statements."""
+    with patch("tortoise.backends.sqlite.client.SqliteClient.create_connection", new=MagicMock()):
+        await Tortoise.init(
+            {
+                "connections": {
+                    "default": {
+                        "engine": "tortoise.backends.sqlite",
+                        "credentials": {"file_path": ":memory:"},
+                    }
+                },
+                "apps": {"models": {"models": [module], "default_connection": "default"}},
+            }
         )
-        self.assertNotIn("participants", sql)
+        return get_schema_sql(connections.get("default"), safe).split(";\n")
 
-        sql = self.get_sql('"minrelation_team"')
-        self.assertIn(
-            '"minrelation_id" INT NOT NULL REFERENCES "minrelation" ("id") ON DELETE CASCADE', sql
+
+@pytest.mark.asyncio
+async def test_noid():
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_sqlite("tests.testmodels")
+        sql = _get_sql(sqls, '"noid"')
+        assert '"name" VARCHAR(255)' in sql
+        assert '"id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL' in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_minrelation():
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_sqlite("tests.testmodels")
+        sql = _get_sql(sqls, '"minrelation"')
+        assert (
+            '"tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("id") ON DELETE CASCADE'
+            in sql
         )
-        self.assertIn('"team_id" INT NOT NULL REFERENCES "team" ("id") ON DELETE CASCADE', sql)
+        assert "participants" not in sql
 
-    async def test_safe_generation(self):
-        """Assert that the IF NOT EXISTS clause is included when safely generating schema."""
-        await self.init_for("tests.testmodels", True)
-        sql = self.get_sql("")
-        self.assertIn("IF NOT EXISTS", sql)
+        sql = _get_sql(sqls, '"minrelation_team"')
+        assert (
+            '"minrelation_id" INT NOT NULL REFERENCES "minrelation" ("id") ON DELETE CASCADE' in sql
+        )
+        assert '"team_id" INT NOT NULL REFERENCES "team" ("id") ON DELETE CASCADE' in sql
+    finally:
+        await _teardown_tortoise()
 
-    async def test_unsafe_generation(self):
-        """Assert that the IF NOT EXISTS clause is not included when generating schema."""
-        await self.init_for("tests.testmodels", False)
-        sql = self.get_sql("")
-        self.assertNotIn("IF NOT EXISTS", sql)
 
-    async def test_cyclic(self):
-        with self.assertRaisesRegex(
-            ConfigurationError, "Can't create schema due to cyclic fk references"
+@pytest.mark.asyncio
+async def test_safe_generation():
+    """Assert that the IF NOT EXISTS clause is included when safely generating schema."""
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_sqlite("tests.testmodels", True)
+        sql = _get_sql(sqls, "")
+        assert "IF NOT EXISTS" in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_unsafe_generation():
+    """Assert that the IF NOT EXISTS clause is not included when generating schema."""
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_sqlite("tests.testmodels", False)
+        sql = _get_sql(sqls, "")
+        assert "IF NOT EXISTS" not in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_cyclic():
+    await _reset_tortoise()
+    try:
+        with pytest.raises(
+            ConfigurationError, match="Can't create schema due to cyclic fk references"
         ):
-            await self.init_for("tests.schema.models_cyclic")
+            await _init_for_sqlite("tests.schema.models_cyclic")
+    finally:
+        await _teardown_tortoise()
 
-    async def test_create_index(self):
-        await self.init_for("tests.testmodels")
-        sql = self.get_sql("CREATE INDEX")
-        self.assertIsNotNone(re.search(r"idx_tournament_created_\w+", sql))
 
-    async def test_create_index_with_custom_name(self):
-        await self.init_for("tests.testmodels")
-        sql = self.get_sql("f3")
-        self.assertIn("model_with_indexes__f3", sql)
+@pytest.mark.asyncio
+async def test_create_index():
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_sqlite("tests.testmodels")
+        sql = _get_sql(sqls, "CREATE INDEX")
+        assert re.search(r"idx_tournament_created_\w+", sql) is not None
+    finally:
+        await _teardown_tortoise()
 
-    async def test_fk_bad_model_name(self):
-        with self.assertRaisesRegex(
-            ConfigurationError, 'ForeignKeyField accepts model name in format "app.Model"'
+
+@pytest.mark.asyncio
+async def test_create_index_with_custom_name():
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_sqlite("tests.testmodels")
+        sql = _get_sql(sqls, "f3")
+        assert "model_with_indexes__f3" in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_fk_bad_model_name():
+    await _reset_tortoise()
+    try:
+        with pytest.raises(
+            ConfigurationError, match='ForeignKeyField accepts model name in format "app.Model"'
         ):
-            await self.init_for("tests.schema.models_fk_1")
+            await _init_for_sqlite("tests.schema.models_fk_1")
+    finally:
+        await _teardown_tortoise()
 
-    async def test_fk_bad_on_delete(self):
-        with self.assertRaisesRegex(
+
+@pytest.mark.asyncio
+async def test_fk_bad_on_delete():
+    await _reset_tortoise()
+    try:
+        with pytest.raises(
             ConfigurationError,
-            "on_delete can only be CASCADE, RESTRICT, SET_NULL, SET_DEFAULT or NO_ACTION",
+            match="on_delete can only be CASCADE, RESTRICT, SET_NULL, SET_DEFAULT or NO_ACTION",
         ):
-            await self.init_for("tests.schema.models_fk_2")
+            await _init_for_sqlite("tests.schema.models_fk_2")
+    finally:
+        await _teardown_tortoise()
 
-    async def test_fk_bad_null(self):
-        with self.assertRaisesRegex(
-            ConfigurationError, "If on_delete is SET_NULL, then field must have null=True set"
+
+@pytest.mark.asyncio
+async def test_fk_bad_null():
+    await _reset_tortoise()
+    try:
+        with pytest.raises(
+            ConfigurationError, match="If on_delete is SET_NULL, then field must have null=True set"
         ):
-            await self.init_for("tests.schema.models_fk_3")
+            await _init_for_sqlite("tests.schema.models_fk_3")
+    finally:
+        await _teardown_tortoise()
 
-    async def test_o2o_bad_on_delete(self):
-        with self.assertRaisesRegex(
+
+@pytest.mark.asyncio
+async def test_o2o_bad_on_delete():
+    await _reset_tortoise()
+    try:
+        with pytest.raises(
             ConfigurationError,
-            "on_delete can only be CASCADE, RESTRICT, SET_NULL, SET_DEFAULT or NO_ACTION",
+            match="on_delete can only be CASCADE, RESTRICT, SET_NULL, SET_DEFAULT or NO_ACTION",
         ):
-            await self.init_for("tests.schema.models_o2o_2")
+            await _init_for_sqlite("tests.schema.models_o2o_2")
+    finally:
+        await _teardown_tortoise()
 
-    async def test_o2o_bad_null(self):
-        with self.assertRaisesRegex(
-            ConfigurationError, "If on_delete is SET_NULL, then field must have null=True set"
+
+@pytest.mark.asyncio
+async def test_o2o_bad_null():
+    await _reset_tortoise()
+    try:
+        with pytest.raises(
+            ConfigurationError, match="If on_delete is SET_NULL, then field must have null=True set"
         ):
-            await self.init_for("tests.schema.models_o2o_3")
+            await _init_for_sqlite("tests.schema.models_o2o_3")
+    finally:
+        await _teardown_tortoise()
 
-    async def test_m2m_bad_model_name(self):
-        with self.assertRaisesRegex(
-            ConfigurationError, 'ManyToManyField accepts model name in format "app.Model"'
+
+@pytest.mark.asyncio
+async def test_m2m_bad_model_name():
+    await _reset_tortoise()
+    try:
+        with pytest.raises(
+            ConfigurationError, match='ManyToManyField accepts model name in format "app.Model"'
         ):
-            await self.init_for("tests.schema.models_m2m_1")
+            await _init_for_sqlite("tests.schema.models_m2m_1")
+    finally:
+        await _teardown_tortoise()
 
-    async def test_multi_m2m_fields_in_a_model(self):
-        await self.init_for("tests.schema.models_m2m_2")
-        sql = self.get_sql("CASCADE")
-        self.assertNotRegex(sql, r'REFERENCES [`"]three_one[`"]')
-        self.assertNotRegex(sql, r'REFERENCES [`"]three_two[`"]')
-        self.assertRegex(sql, r'REFERENCES [`"](one|two|three)[`"]')
 
-    async def test_table_and_row_comment_generation(self):
-        await self.init_for("tests.testmodels")
-        sql = self.get_sql("comments")
-        self.assertRegex(sql, r".*\/\* Upvotes done on the comment.*\*\/")
-        self.assertRegex(sql, r".*\\n.*")
-        self.assertIn("\\/", sql)
+@pytest.mark.asyncio
+async def test_multi_m2m_fields_in_a_model():
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_sqlite("tests.schema.models_m2m_2")
+        sql = _get_sql(sqls, "CASCADE")
+        assert not re.search(r'REFERENCES [`"]three_one[`"]', sql)
+        assert not re.search(r'REFERENCES [`"]three_two[`"]', sql)
+        assert re.search(r'REFERENCES [`"](one|two|three)[`"]', sql)
+    finally:
+        await _teardown_tortoise()
 
-    async def test_schema_no_db_constraint(self):
-        self.maxDiff = None
-        await self.init_for("tests.schema.models_no_db_constraint")
+
+@pytest.mark.asyncio
+async def test_table_and_row_comment_generation():
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_sqlite("tests.testmodels")
+        sql = _get_sql(sqls, "comments")
+        assert re.search(r".*\/\* Upvotes done on the comment.*\*\/", sql)
+        assert re.search(r".*\\n.*", sql)
+        assert "\\/" in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_schema_no_db_constraint():
+    await _reset_tortoise()
+    try:
+        await _init_for_sqlite("tests.schema.models_no_db_constraint")
         sql = get_schema_sql(connections.get("default"), safe=False)
-        self.assertEqual(
-            sql.strip(),
-            r"""CREATE TABLE "team" (
+        assert (
+            sql.strip()
+            == r"""CREATE TABLE "team" (
     "name" VARCHAR(50) NOT NULL PRIMARY KEY /* The TEAM name (and PK) */,
     "key" INT NOT NULL,
     "manager_id" VARCHAR(50)
@@ -270,16 +403,21 @@ CREATE TABLE "teamevents" (
     "event_id" BIGINT NOT NULL,
     "team_id" VARCHAR(50) NOT NULL
 ) /* How participants relate */;
-CREATE UNIQUE INDEX "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");""",
+CREATE UNIQUE INDEX "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");"""
         )
+    finally:
+        await _teardown_tortoise()
 
-    async def test_schema(self):
-        self.maxDiff = None
-        await self.init_for("tests.schema.models_schema_create")
+
+@pytest.mark.asyncio
+async def test_schema():
+    await _reset_tortoise()
+    try:
+        await _init_for_sqlite("tests.schema.models_schema_create")
         sql = get_schema_sql(connections.get("default"), safe=False)
-        self.assertEqual(
-            sql.strip(),
-            """
+        assert (
+            sql.strip()
+            == """
 CREATE TABLE "company" (
     "id" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "name" TEXT NOT NULL,
@@ -360,22 +498,32 @@ CREATE TABLE "teamevents" (
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE SET NULL
 ) /* How participants relate */;
 CREATE UNIQUE INDEX "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");
-""".strip(),
+""".strip()
         )
+    finally:
+        await _teardown_tortoise()
 
-    async def test_schema_safe(self):
-        self.maxDiff = None
-        await self.init_for("tests.schema.models_schema_create")
+
+@pytest.mark.asyncio
+async def test_schema_safe():
+    await _reset_tortoise()
+    try:
+        await _init_for_sqlite("tests.schema.models_schema_create")
         sql = get_schema_sql(connections.get("default"), safe=True)
-        self.assertEqual(sql.strip(), self.safe_schema_sql)
+        assert sql.strip() == SAFE_SCHEMA_SQL
+    finally:
+        await _teardown_tortoise()
 
-    async def test_m2m_no_auto_create(self):
-        self.maxDiff = None
-        await self.init_for("tests.schema.models_no_auto_create_m2m")
+
+@pytest.mark.asyncio
+async def test_m2m_no_auto_create():
+    await _reset_tortoise()
+    try:
+        await _init_for_sqlite("tests.schema.models_no_auto_create_m2m")
         sql = get_schema_sql(connections.get("default"), safe=False)
-        self.assertEqual(
-            sql.strip(),
-            r"""CREATE TABLE "team" (
+        assert (
+            sql.strip()
+            == r"""CREATE TABLE "team" (
     "name" VARCHAR(50) NOT NULL PRIMARY KEY /* The TEAM name (and PK) */,
     "key" INT NOT NULL,
     "manager_id" VARCHAR(50) REFERENCES "team" ("name") ON DELETE CASCADE
@@ -411,80 +559,115 @@ CREATE TABLE "team_team" (
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
 );
 CREATE UNIQUE INDEX "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
-""".strip(),
+""".strip()
         )
+    finally:
+        await _teardown_tortoise()
 
 
-class TestGenerateSchemaMySQL(TestGenerateSchema):
-    async def init_for(self, module: str, safe=False) -> None:
-        try:
-            with patch("aiomysql.create_pool", new=MagicMock()):
-                await Tortoise.init(
-                    {
-                        "connections": {
-                            "default": {
-                                "engine": "tortoise.backends.mysql",
-                                "credentials": {
-                                    "database": "test",
-                                    "host": "127.0.0.1",
-                                    "password": "foomip",
-                                    "port": 3306,
-                                    "user": "root",
-                                    "connect_timeout": 1.5,
-                                    "charset": "utf8mb4",
-                                },
-                            }
-                        },
-                        "apps": {"models": {"models": [module], "default_connection": "default"}},
-                    }
-                )
-                self.sqls = get_schema_sql(connections.get("default"), safe).split("; ")
-        except ImportError:
-            raise test.SkipTest("aiomysql not installed")
+# ============================================================================
+# MySQL Tests
+# ============================================================================
 
-    async def test_noid(self):
-        await self.init_for("tests.testmodels")
-        sql = self.get_sql("`noid`")
-        self.assertIn("`name` VARCHAR(255)", sql)
-        self.assertIn("`id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT", sql)
 
-    async def test_create_index(self):
-        await self.init_for("tests.testmodels")
-        sql = self.get_sql("KEY")
-        self.assertIsNotNone(re.search(r"idx_tournament_created_\w+", sql))
+async def _init_for_mysql(module: str, safe: bool = False) -> list[str]:
+    """Initialize Tortoise for MySQL and return SQL statements."""
+    try:
+        with patch("aiomysql.create_pool", new=MagicMock()):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.mysql",
+                            "credentials": {
+                                "database": "test",
+                                "host": "127.0.0.1",
+                                "password": "foomip",
+                                "port": 3306,
+                                "user": "root",
+                                "connect_timeout": 1.5,
+                                "charset": "utf8mb4",
+                            },
+                        }
+                    },
+                    "apps": {"models": {"models": [module], "default_connection": "default"}},
+                }
+            )
+            return get_schema_sql(connections.get("default"), safe).split("; ")
+    except ImportError:
+        pytest.skip("aiomysql not installed")
 
-    async def test_minrelation(self):
-        await self.init_for("tests.testmodels")
-        sql = self.get_sql("`minrelation`")
-        self.assertIn("`tournament_id` SMALLINT NOT NULL,", sql)
-        self.assertIn(
-            "FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`id`) ON DELETE CASCADE", sql
+
+@pytest.mark.asyncio
+async def test_mysql_noid():
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_mysql("tests.testmodels")
+        sql = _get_sql(sqls, "`noid`")
+        assert "`name` VARCHAR(255)" in sql
+        assert "`id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT" in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_mysql_create_index():
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_mysql("tests.testmodels")
+        sql = _get_sql(sqls, "KEY")
+        assert re.search(r"idx_tournament_created_\w+", sql) is not None
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_mysql_minrelation():
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_mysql("tests.testmodels")
+        sql = _get_sql(sqls, "`minrelation`")
+        assert "`tournament_id` SMALLINT NOT NULL," in sql
+        assert (
+            "FOREIGN KEY (`tournament_id`) REFERENCES `tournament` (`id`) ON DELETE CASCADE" in sql
         )
-        self.assertNotIn("participants", sql)
+        assert "participants" not in sql
 
-        sql = self.get_sql("`minrelation_team`")
-        self.assertIn("`minrelation_id` INT NOT NULL", sql)
-        self.assertIn(
-            "FOREIGN KEY (`minrelation_id`) REFERENCES `minrelation` (`id`) ON DELETE CASCADE", sql
+        sql = _get_sql(sqls, "`minrelation_team`")
+        assert "`minrelation_id` INT NOT NULL" in sql
+        assert (
+            "FOREIGN KEY (`minrelation_id`) REFERENCES `minrelation` (`id`) ON DELETE CASCADE"
+            in sql
         )
-        self.assertIn("`team_id` INT NOT NULL", sql)
-        self.assertIn("FOREIGN KEY (`team_id`) REFERENCES `team` (`id`) ON DELETE CASCADE", sql)
+        assert "`team_id` INT NOT NULL" in sql
+        assert "FOREIGN KEY (`team_id`) REFERENCES `team` (`id`) ON DELETE CASCADE" in sql
+    finally:
+        await _teardown_tortoise()
 
-    async def test_table_and_row_comment_generation(self):
-        await self.init_for("tests.testmodels")
-        sql = self.get_sql("comments")
-        self.assertIn("COMMENT='Test Table comment'", sql)
-        self.assertIn("COMMENT 'This column acts as it\\'s own comment'", sql)
-        self.assertRegex(sql, r".*\\n.*")
-        self.assertRegex(sql, r".*it\\'s.*")
 
-    async def test_schema_no_db_constraint(self):
-        self.maxDiff = None
-        await self.init_for("tests.schema.models_no_db_constraint")
+@pytest.mark.asyncio
+async def test_mysql_table_and_row_comment_generation():
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_mysql("tests.testmodels")
+        sql = _get_sql(sqls, "comments")
+        assert "COMMENT='Test Table comment'" in sql
+        assert "COMMENT 'This column acts as it\\'s own comment'" in sql
+        assert re.search(r".*\\n.*", sql)
+        assert re.search(r".*it\\'s.*", sql)
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_mysql_schema_no_db_constraint():
+    await _reset_tortoise()
+    try:
+        await _init_for_mysql("tests.schema.models_no_db_constraint")
         sql = get_schema_sql(connections.get("default"), safe=False)
-        self.assertEqual(
-            sql.strip(),
-            r"""CREATE TABLE `team` (
+        assert (
+            sql.strip()
+            == r"""CREATE TABLE `team` (
     `name` VARCHAR(50) NOT NULL PRIMARY KEY COMMENT 'The TEAM name (and PK)',
     `key` INT NOT NULL,
     `manager_id` VARCHAR(50),
@@ -517,16 +700,21 @@ CREATE TABLE `teamevents` (
     `event_id` BIGINT NOT NULL,
     `team_id` VARCHAR(50) NOT NULL,
     UNIQUE KEY `uidx_teamevents_event_i_664dbc` (`event_id`, `team_id`)
-) CHARACTER SET utf8mb4 COMMENT='How participants relate';""",
+) CHARACTER SET utf8mb4 COMMENT='How participants relate';"""
         )
+    finally:
+        await _teardown_tortoise()
 
-    async def test_schema(self):
-        self.maxDiff = None
-        await self.init_for("tests.schema.models_schema_create")
+
+@pytest.mark.asyncio
+async def test_mysql_schema():
+    await _reset_tortoise()
+    try:
+        await _init_for_mysql("tests.schema.models_schema_create")
         sql = get_schema_sql(connections.get("default"), safe=False)
-        self.assertEqual(
-            sql.strip(),
-            """
+        assert (
+            sql.strip()
+            == """
 CREATE TABLE `company` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` LONGTEXT NOT NULL,
@@ -619,20 +807,25 @@ CREATE TABLE `teamevents` (
     FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL,
     UNIQUE KEY `uidx_teamevents_event_i_664dbc` (`event_id`, `team_id`)
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
-""".strip(),
+""".strip()
         )
+    finally:
+        await _teardown_tortoise()
 
-    async def test_schema_safe(self):
-        self.maxDiff = None
-        await self.init_for("tests.schema.models_schema_create")
+
+@pytest.mark.asyncio
+async def test_mysql_schema_safe():
+    await _reset_tortoise()
+    try:
+        await _init_for_mysql("tests.schema.models_schema_create")
         sql = get_schema_sql(connections.get("default"), safe=True).strip()
-        if sql == self.safe_schema_sql:
+        if sql == SAFE_SCHEMA_SQL:
             # Sometimes github action get different result from local machine(Ubuntu20)
-            self.assertEqual(sql, self.safe_schema_sql)
+            assert sql == SAFE_SCHEMA_SQL
             return
-        self.assertEqual(
-            sql,
-            """
+        assert (
+            sql
+            == """
 CREATE TABLE IF NOT EXISTS `company` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `name` LONGTEXT NOT NULL,
@@ -725,44 +918,61 @@ CREATE TABLE IF NOT EXISTS `teamevents` (
     FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE SET NULL,
     UNIQUE KEY `uidx_teamevents_event_i_664dbc` (`event_id`, `team_id`)
 ) CHARACTER SET utf8mb4 COMMENT='How participants relate';
-""".strip(),
+""".strip()
         )
+    finally:
+        await _teardown_tortoise()
 
-    async def test_index_safe(self):
-        await self.init_for("tests.schema.models_mysql_index")
+
+@pytest.mark.asyncio
+async def test_mysql_index_safe():
+    await _reset_tortoise()
+    try:
+        await _init_for_mysql("tests.schema.models_mysql_index")
         sql = get_schema_sql(connections.get("default"), safe=True)
-        self.assertEqual(
-            sql,
-            """CREATE TABLE IF NOT EXISTS `index` (
+        assert (
+            sql
+            == """CREATE TABLE IF NOT EXISTS `index` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `full_text` LONGTEXT NOT NULL,
     `geometry` GEOMETRY NOT NULL,
     FULLTEXT KEY `idx_index_full_te_3caba4` (`full_text`) WITH PARSER ngram,
     SPATIAL KEY `idx_index_geometr_0b4dfb` (`geometry`)
-) CHARACTER SET utf8mb4;""",
+) CHARACTER SET utf8mb4;"""
         )
+    finally:
+        await _teardown_tortoise()
 
-    async def test_index_unsafe(self):
-        await self.init_for("tests.schema.models_mysql_index")
+
+@pytest.mark.asyncio
+async def test_mysql_index_unsafe():
+    await _reset_tortoise()
+    try:
+        await _init_for_mysql("tests.schema.models_mysql_index")
         sql = get_schema_sql(connections.get("default"), safe=False)
-        self.assertEqual(
-            sql,
-            """CREATE TABLE `index` (
+        assert (
+            sql
+            == """CREATE TABLE `index` (
     `id` INT NOT NULL PRIMARY KEY AUTO_INCREMENT,
     `full_text` LONGTEXT NOT NULL,
     `geometry` GEOMETRY NOT NULL,
     FULLTEXT KEY `idx_index_full_te_3caba4` (`full_text`) WITH PARSER ngram,
     SPATIAL KEY `idx_index_geometr_0b4dfb` (`geometry`)
-) CHARACTER SET utf8mb4;""",
+) CHARACTER SET utf8mb4;"""
         )
+    finally:
+        await _teardown_tortoise()
 
-    async def test_m2m_no_auto_create(self):
-        self.maxDiff = None
-        await self.init_for("tests.schema.models_no_auto_create_m2m")
+
+@pytest.mark.asyncio
+async def test_mysql_m2m_no_auto_create():
+    await _reset_tortoise()
+    try:
+        await _init_for_mysql("tests.schema.models_no_auto_create_m2m")
         sql = get_schema_sql(connections.get("default"), safe=False)
-        self.assertEqual(
-            sql.strip(),
-            r"""CREATE TABLE `team` (
+        assert (
+            sql.strip()
+            == r"""CREATE TABLE `team` (
     `name` VARCHAR(50) NOT NULL PRIMARY KEY COMMENT 'The TEAM name (and PK)',
     `key` INT NOT NULL,
     `manager_id` VARCHAR(50),
@@ -804,40 +1014,80 @@ CREATE TABLE `team_team` (
     FOREIGN KEY (`team_id`) REFERENCES `team` (`name`) ON DELETE CASCADE,
     UNIQUE KEY `uidx_team_team_team_re_d994df` (`team_rel_id`, `team_id`)
 ) CHARACTER SET utf8mb4;
-""".strip(),
+""".strip()
         )
+    finally:
+        await _teardown_tortoise()
 
 
-class GenerateSchemaPostgresSQL(TestGenerateSchema):
-    async def init_for(self, module: str, safe=False) -> None:
-        raise test.SkipTest("This class is abstract")
+# ============================================================================
+# PostgreSQL Tests (asyncpg)
+# ============================================================================
 
-    async def test_noid(self):
-        await self.init_for("tests.testmodels")
-        sql = self.get_sql('"noid"')
-        self.assertIn('"name" VARCHAR(255)', sql)
-        self.assertIn('"id" SERIAL NOT NULL PRIMARY KEY', sql)
 
-    async def test_table_and_row_comment_generation(self):
-        await self.init_for("tests.testmodels")
-        sql = self.get_sql("comments")
-        self.assertIn("COMMENT ON TABLE \"comments\" IS 'Test Table comment'", sql)
-        self.assertIn(
+async def _init_for_asyncpg(module: str, safe: bool = False) -> list[str]:
+    """Initialize Tortoise for asyncpg and return SQL statements."""
+    try:
+        with patch("asyncpg.create_pool", new=MagicMock()):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.asyncpg",
+                            "credentials": {
+                                "database": "test",
+                                "host": "127.0.0.1",
+                                "password": "foomip",
+                                "port": 5432,
+                                "user": "root",
+                            },
+                        }
+                    },
+                    "apps": {"models": {"models": [module], "default_connection": "default"}},
+                }
+            )
+            return get_schema_sql(connections.get("default"), safe).split("; ")
+    except ImportError:
+        pytest.skip("asyncpg not installed")
+
+
+@pytest.mark.asyncio
+async def test_asyncpg_noid():
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_asyncpg("tests.testmodels")
+        sql = _get_sql(sqls, '"noid"')
+        assert '"name" VARCHAR(255)' in sql
+        assert '"id" SERIAL NOT NULL PRIMARY KEY' in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_asyncpg_table_and_row_comment_generation():
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_asyncpg("tests.testmodels")
+        sql = _get_sql(sqls, "comments")
+        assert "COMMENT ON TABLE \"comments\" IS 'Test Table comment'" in sql
+        assert (
             'COMMENT ON COLUMN "comments"."escaped_comment_field" IS '
-            "'This column acts as it''s own comment'",
-            sql,
+            "'This column acts as it''s own comment'" in sql
         )
-        self.assertIn(
-            'COMMENT ON COLUMN "comments"."multiline_comment" IS \'Some \\n comment\'', sql
-        )
+        assert 'COMMENT ON COLUMN "comments"."multiline_comment" IS \'Some \\n comment\'' in sql
+    finally:
+        await _teardown_tortoise()
 
-    async def test_schema_no_db_constraint(self):
-        self.maxDiff = None
-        await self.init_for("tests.schema.models_no_db_constraint")
+
+@pytest.mark.asyncio
+async def test_asyncpg_schema_no_db_constraint():
+    await _reset_tortoise()
+    try:
+        await _init_for_asyncpg("tests.schema.models_no_db_constraint")
         sql = get_schema_sql(connections.get("default"), safe=False)
-        self.assertEqual(
-            sql.strip(),
-            r"""CREATE TABLE "team" (
+        assert (
+            sql.strip()
+            == r"""CREATE TABLE "team" (
     "name" VARCHAR(50) NOT NULL PRIMARY KEY,
     "key" INT NOT NULL,
     "manager_id" VARCHAR(50)
@@ -880,16 +1130,21 @@ CREATE TABLE "teamevents" (
     "team_id" VARCHAR(50) NOT NULL
 );
 COMMENT ON TABLE "teamevents" IS 'How participants relate';
-CREATE UNIQUE INDEX "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");""",
+CREATE UNIQUE INDEX "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");"""
         )
+    finally:
+        await _teardown_tortoise()
 
-    async def test_schema(self):
-        self.maxDiff = None
-        await self.init_for("tests.schema.models_schema_create")
+
+@pytest.mark.asyncio
+async def test_asyncpg_schema():
+    await _reset_tortoise()
+    try:
+        await _init_for_asyncpg("tests.schema.models_schema_create")
         sql = get_schema_sql(connections.get("default"), safe=False)
-        self.assertEqual(
-            sql.strip(),
-            """
+        assert (
+            sql.strip()
+            == """
 CREATE TABLE "company" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
@@ -985,16 +1240,21 @@ CREATE TABLE "teamevents" (
 );
 COMMENT ON TABLE "teamevents" IS 'How participants relate';
 CREATE UNIQUE INDEX "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");
-""".strip(),
+""".strip()
         )
+    finally:
+        await _teardown_tortoise()
 
-    async def test_schema_safe(self):
-        self.maxDiff = None
-        await self.init_for("tests.schema.models_schema_create")
+
+@pytest.mark.asyncio
+async def test_asyncpg_schema_safe():
+    await _reset_tortoise()
+    try:
+        await _init_for_asyncpg("tests.schema.models_schema_create")
         sql = get_schema_sql(connections.get("default"), safe=True)
-        self.assertEqual(
-            sql.strip(),
-            """
+        assert (
+            sql.strip()
+            == """
 CREATE TABLE IF NOT EXISTS "company" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
@@ -1090,15 +1350,21 @@ CREATE TABLE IF NOT EXISTS "teamevents" (
 );
 COMMENT ON TABLE "teamevents" IS 'How participants relate';
 CREATE UNIQUE INDEX IF NOT EXISTS "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");
-""".strip(),
+""".strip()
         )
+    finally:
+        await _teardown_tortoise()
 
-    async def test_index_unsafe(self):
-        await self.init_for("tests.schema.models_postgres_index")
+
+@pytest.mark.asyncio
+async def test_asyncpg_index_unsafe():
+    await _reset_tortoise()
+    try:
+        await _init_for_asyncpg("tests.schema.models_postgres_index")
         sql = get_schema_sql(connections.get("default"), safe=False)
-        self.assertEqual(
-            sql,
-            """CREATE TABLE "index" (
+        assert (
+            sql
+            == """CREATE TABLE "index" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "bloom" VARCHAR(200) NOT NULL,
     "brin" VARCHAR(200) NOT NULL,
@@ -1117,15 +1383,21 @@ CREATE INDEX "idx_index_gist_c807bf" ON "index" USING GIST ("gist");
 CREATE INDEX "idx_index_sp_gist_2c0bad" ON "index" USING SPGIST ("sp_gist");
 CREATE INDEX "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");
 CREATE INDEX "idx_index_partial_c5be6a" ON "index" ("partial") WHERE id = 1;
-CREATE INDEX "idx_index_(TO_TSV_50a2c7" ON "index" USING GIN ((TO_TSVECTOR('english',(("title" || ' ') || "body"))));""",
+CREATE INDEX "idx_index_(TO_TSV_50a2c7" ON "index" USING GIN ((TO_TSVECTOR('english',(("title" || ' ') || "body"))));"""
         )
+    finally:
+        await _teardown_tortoise()
 
-    async def test_index_safe(self):
-        await self.init_for("tests.schema.models_postgres_index")
+
+@pytest.mark.asyncio
+async def test_asyncpg_index_safe():
+    await _reset_tortoise()
+    try:
+        await _init_for_asyncpg("tests.schema.models_postgres_index")
         sql = get_schema_sql(connections.get("default"), safe=True)
-        self.assertEqual(
-            sql,
-            """CREATE TABLE IF NOT EXISTS "index" (
+        assert (
+            sql
+            == """CREATE TABLE IF NOT EXISTS "index" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "bloom" VARCHAR(200) NOT NULL,
     "brin" VARCHAR(200) NOT NULL,
@@ -1144,16 +1416,21 @@ CREATE INDEX IF NOT EXISTS "idx_index_gist_c807bf" ON "index" USING GIST ("gist"
 CREATE INDEX IF NOT EXISTS "idx_index_sp_gist_2c0bad" ON "index" USING SPGIST ("sp_gist");
 CREATE INDEX IF NOT EXISTS "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");
 CREATE INDEX IF NOT EXISTS "idx_index_partial_c5be6a" ON "index" ("partial") WHERE id = 1;
-CREATE INDEX IF NOT EXISTS "idx_index_(TO_TSV_50a2c7" ON "index" USING GIN ((TO_TSVECTOR('english',(("title" || ' ') || "body"))));""",
+CREATE INDEX IF NOT EXISTS "idx_index_(TO_TSV_50a2c7" ON "index" USING GIN ((TO_TSVECTOR('english',(("title" || ' ') || "body"))));"""
         )
+    finally:
+        await _teardown_tortoise()
 
-    async def test_m2m_no_auto_create(self):
-        self.maxDiff = None
-        await self.init_for("tests.schema.models_no_auto_create_m2m")
+
+@pytest.mark.asyncio
+async def test_asyncpg_m2m_no_auto_create():
+    await _reset_tortoise()
+    try:
+        await _init_for_asyncpg("tests.schema.models_no_auto_create_m2m")
         sql = get_schema_sql(connections.get("default"), safe=False)
-        self.assertEqual(
-            sql.strip(),
-            r"""CREATE TABLE "team" (
+        assert (
+            sql.strip()
+            == r"""CREATE TABLE "team" (
     "name" VARCHAR(50) NOT NULL PRIMARY KEY,
     "key" INT NOT NULL,
     "manager_id" VARCHAR(50) REFERENCES "team" ("name") ON DELETE CASCADE
@@ -1199,15 +1476,21 @@ CREATE TABLE "team_team" (
     "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
 );
 CREATE UNIQUE INDEX "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
-""".strip(),
+""".strip()
         )
+    finally:
+        await _teardown_tortoise()
 
-    async def test_pgfields_unsafe(self):
-        await self.init_for("tests.schema.models_postgres_fields")
+
+@pytest.mark.asyncio
+async def test_asyncpg_pgfields_unsafe():
+    await _reset_tortoise()
+    try:
+        await _init_for_asyncpg("tests.schema.models_postgres_fields")
         sql = get_schema_sql(connections.get("default"), safe=False)
-        self.assertEqual(
-            sql,
-            """CREATE TABLE "postgres_fields" (
+        assert (
+            sql
+            == """CREATE TABLE "postgres_fields" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "tsvector" TSVECTOR NOT NULL,
     "text_array" TEXT[] NOT NULL DEFAULT '{"a","b","c"}',
@@ -1215,15 +1498,21 @@ CREATE UNIQUE INDEX "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id
     "int_array" INT[] DEFAULT '{1,2,3}',
     "real_array" REAL[] NOT NULL DEFAULT '{1.1,2.2,3.3}'
 );
-COMMENT ON COLUMN "postgres_fields"."real_array" IS 'this is array of real numbers';""",
+COMMENT ON COLUMN "postgres_fields"."real_array" IS 'this is array of real numbers';"""
         )
+    finally:
+        await _teardown_tortoise()
 
-    async def test_pgfields_safe(self):
-        await self.init_for("tests.schema.models_postgres_fields")
+
+@pytest.mark.asyncio
+async def test_asyncpg_pgfields_safe():
+    await _reset_tortoise()
+    try:
+        await _init_for_asyncpg("tests.schema.models_postgres_fields")
         sql = get_schema_sql(connections.get("default"), safe=True)
-        self.assertEqual(
-            sql,
-            """CREATE TABLE IF NOT EXISTS "postgres_fields" (
+        assert (
+            sql
+            == """CREATE TABLE IF NOT EXISTS "postgres_fields" (
     "id" SERIAL NOT NULL PRIMARY KEY,
     "tsvector" TSVECTOR NOT NULL,
     "text_array" TEXT[] NOT NULL DEFAULT '{"a","b","c"}',
@@ -1231,57 +1520,513 @@ COMMENT ON COLUMN "postgres_fields"."real_array" IS 'this is array of real numbe
     "int_array" INT[] DEFAULT '{1,2,3}',
     "real_array" REAL[] NOT NULL DEFAULT '{1.1,2.2,3.3}'
 );
-COMMENT ON COLUMN "postgres_fields"."real_array" IS 'this is array of real numbers';""",
+COMMENT ON COLUMN "postgres_fields"."real_array" IS 'this is array of real numbers';"""
         )
+    finally:
+        await _teardown_tortoise()
 
 
-class TestGenerateSchemaAsyncpg(GenerateSchemaPostgresSQL):
-    async def init_for(self, module: str, safe=False) -> None:
-        try:
-            with patch("asyncpg.create_pool", new=MagicMock()):
-                await Tortoise.init(
-                    {
-                        "connections": {
-                            "default": {
-                                "engine": "tortoise.backends.asyncpg",
-                                "credentials": {
-                                    "database": "test",
-                                    "host": "127.0.0.1",
-                                    "password": "foomip",
-                                    "port": 5432,
-                                    "user": "root",
-                                },
-                            }
-                        },
-                        "apps": {"models": {"models": [module], "default_connection": "default"}},
-                    }
-                )
-                self.sqls = get_schema_sql(connections.get("default"), safe).split("; ")
-        except ImportError:
-            raise test.SkipTest("asyncpg not installed")
+# ============================================================================
+# PostgreSQL Tests (psycopg)
+# ============================================================================
 
 
-class TestGenerateSchemaPsycopg(GenerateSchemaPostgresSQL):
-    async def init_for(self, module: str, safe=False) -> None:
-        try:
-            with patch("psycopg_pool.AsyncConnectionPool.open", new=MagicMock()):
-                await Tortoise.init(
-                    {
-                        "connections": {
-                            "default": {
-                                "engine": "tortoise.backends.psycopg",
-                                "credentials": {
-                                    "database": "test",
-                                    "host": "127.0.0.1",
-                                    "password": "foomip",
-                                    "port": 5432,
-                                    "user": "root",
-                                },
-                            }
-                        },
-                        "apps": {"models": {"models": [module], "default_connection": "default"}},
-                    }
-                )
-                self.sqls = get_schema_sql(connections.get("default"), safe).split("; ")
-        except ImportError:
-            raise test.SkipTest("psycopg not installed")
+async def _init_for_psycopg(module: str, safe: bool = False) -> list[str]:
+    """Initialize Tortoise for psycopg and return SQL statements."""
+    try:
+        with patch("psycopg_pool.AsyncConnectionPool.open", new=MagicMock()):
+            await Tortoise.init(
+                {
+                    "connections": {
+                        "default": {
+                            "engine": "tortoise.backends.psycopg",
+                            "credentials": {
+                                "database": "test",
+                                "host": "127.0.0.1",
+                                "password": "foomip",
+                                "port": 5432,
+                                "user": "root",
+                            },
+                        }
+                    },
+                    "apps": {"models": {"models": [module], "default_connection": "default"}},
+                }
+            )
+            return get_schema_sql(connections.get("default"), safe).split("; ")
+    except ImportError:
+        pytest.skip("psycopg not installed")
+
+
+@pytest.mark.asyncio
+async def test_psycopg_noid():
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_psycopg("tests.testmodels")
+        sql = _get_sql(sqls, '"noid"')
+        assert '"name" VARCHAR(255)' in sql
+        assert '"id" SERIAL NOT NULL PRIMARY KEY' in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_psycopg_table_and_row_comment_generation():
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_psycopg("tests.testmodels")
+        sql = _get_sql(sqls, "comments")
+        assert "COMMENT ON TABLE \"comments\" IS 'Test Table comment'" in sql
+        assert (
+            'COMMENT ON COLUMN "comments"."escaped_comment_field" IS '
+            "'This column acts as it''s own comment'" in sql
+        )
+        assert 'COMMENT ON COLUMN "comments"."multiline_comment" IS \'Some \\n comment\'' in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_psycopg_schema_no_db_constraint():
+    await _reset_tortoise()
+    try:
+        await _init_for_psycopg("tests.schema.models_no_db_constraint")
+        sql = get_schema_sql(connections.get("default"), safe=False)
+        assert (
+            sql.strip()
+            == r"""CREATE TABLE "team" (
+    "name" VARCHAR(50) NOT NULL PRIMARY KEY,
+    "key" INT NOT NULL,
+    "manager_id" VARCHAR(50)
+);
+CREATE INDEX "idx_team_manager_676134" ON "team" ("manager_id", "key");
+CREATE INDEX "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
+COMMENT ON COLUMN "team"."name" IS 'The TEAM name (and PK)';
+COMMENT ON TABLE "team" IS 'The TEAMS!';
+CREATE TABLE "tournament" (
+    "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
+    "name" VARCHAR(100) NOT NULL,
+    "created" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
+COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
+COMMENT ON COLUMN "tournament"."created" IS 'Created */''`/* datetime';
+COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
+CREATE TABLE "event" (
+    "id" BIGSERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "modified" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "prize" DECIMAL(10,2),
+    "token" VARCHAR(100) NOT NULL UNIQUE,
+    "key" VARCHAR(100) NOT NULL,
+    "tournament_id" SMALLINT NOT NULL,
+    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
+    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
+);
+COMMENT ON COLUMN "event"."id" IS 'Event ID';
+COMMENT ON COLUMN "event"."token" IS 'Unique token';
+COMMENT ON COLUMN "event"."tournament_id" IS 'FK to tournament';
+COMMENT ON TABLE "event" IS 'This table contains a list of all the events';
+CREATE TABLE "team_team" (
+    "team_rel_id" VARCHAR(50) NOT NULL,
+    "team_id" VARCHAR(50) NOT NULL
+);
+CREATE UNIQUE INDEX "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
+CREATE TABLE "teamevents" (
+    "event_id" BIGINT NOT NULL,
+    "team_id" VARCHAR(50) NOT NULL
+);
+COMMENT ON TABLE "teamevents" IS 'How participants relate';
+CREATE UNIQUE INDEX "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");"""
+        )
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_psycopg_schema():
+    await _reset_tortoise()
+    try:
+        await _init_for_psycopg("tests.schema.models_schema_create")
+        sql = get_schema_sql(connections.get("default"), safe=False)
+        assert (
+            sql.strip()
+            == """
+CREATE TABLE "company" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "uuid" UUID NOT NULL UNIQUE
+);
+CREATE TABLE "defaultpk" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "val" INT NOT NULL
+);
+CREATE TABLE "employee" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "company_id" UUID NOT NULL REFERENCES "company" ("uuid") ON DELETE CASCADE
+);
+CREATE TABLE "inheritedmodel" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "zero" INT NOT NULL,
+    "one" VARCHAR(40),
+    "new_field" VARCHAR(100) NOT NULL,
+    "two" VARCHAR(40) NOT NULL,
+    "name" TEXT NOT NULL
+);
+CREATE TABLE "sometable" (
+    "sometable_id" SERIAL NOT NULL PRIMARY KEY,
+    "some_chars_table" VARCHAR(255) NOT NULL,
+    "fk_sometable" INT REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
+);
+CREATE INDEX "idx_sometable_some_ch_3d69eb" ON "sometable" ("some_chars_table");
+CREATE TABLE "team" (
+    "name" VARCHAR(50) NOT NULL PRIMARY KEY,
+    "key" INT NOT NULL,
+    "manager_id" VARCHAR(50) REFERENCES "team" ("name") ON DELETE CASCADE
+);
+CREATE INDEX "idx_team_manager_676134" ON "team" ("manager_id", "key");
+CREATE INDEX "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
+COMMENT ON COLUMN "team"."name" IS 'The TEAM name (and PK)';
+COMMENT ON TABLE "team" IS 'The TEAMS!';
+CREATE TABLE "teamaddress" (
+    "city" VARCHAR(50) NOT NULL,
+    "country" VARCHAR(50) NOT NULL,
+    "street" VARCHAR(128) NOT NULL,
+    "team_id" VARCHAR(50) NOT NULL PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+);
+COMMENT ON COLUMN "teamaddress"."city" IS 'City';
+COMMENT ON COLUMN "teamaddress"."country" IS 'Country';
+COMMENT ON COLUMN "teamaddress"."street" IS 'Street Address';
+COMMENT ON TABLE "teamaddress" IS 'The Team''s address';
+CREATE TABLE "tournament" (
+    "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
+    "name" VARCHAR(100) NOT NULL,
+    "created" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
+COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
+COMMENT ON COLUMN "tournament"."created" IS 'Created */''`/* datetime';
+COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
+CREATE TABLE "event" (
+    "id" BIGSERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "modified" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "prize" DECIMAL(10,2),
+    "token" VARCHAR(100) NOT NULL UNIQUE,
+    "key" VARCHAR(100) NOT NULL,
+    "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("tid") ON DELETE CASCADE,
+    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
+    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
+);
+COMMENT ON COLUMN "event"."id" IS 'Event ID';
+COMMENT ON COLUMN "event"."token" IS 'Unique token';
+COMMENT ON COLUMN "event"."tournament_id" IS 'FK to tournament';
+COMMENT ON TABLE "event" IS 'This table contains a list of all the events';
+CREATE TABLE "venueinformation" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "name" VARCHAR(128) NOT NULL,
+    "capacity" INT NOT NULL,
+    "rent" DOUBLE PRECISION NOT NULL,
+    "team_id" VARCHAR(50) UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
+);
+COMMENT ON COLUMN "venueinformation"."capacity" IS 'No. of seats';
+CREATE TABLE "sometable_self" (
+    "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
+    "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX "uidx_sometable_s_backwar_fc8fc8" ON "sometable_self" ("backward_sts", "sts_forward");
+CREATE TABLE "team_team" (
+    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
+CREATE TABLE "teamevents" (
+    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE SET NULL,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE SET NULL
+);
+COMMENT ON TABLE "teamevents" IS 'How participants relate';
+CREATE UNIQUE INDEX "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");
+""".strip()
+        )
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_psycopg_schema_safe():
+    await _reset_tortoise()
+    try:
+        await _init_for_psycopg("tests.schema.models_schema_create")
+        sql = get_schema_sql(connections.get("default"), safe=True)
+        assert (
+            sql.strip()
+            == """
+CREATE TABLE IF NOT EXISTS "company" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "uuid" UUID NOT NULL UNIQUE
+);
+CREATE TABLE IF NOT EXISTS "defaultpk" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "val" INT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS "employee" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "company_id" UUID NOT NULL REFERENCES "company" ("uuid") ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS "inheritedmodel" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "zero" INT NOT NULL,
+    "one" VARCHAR(40),
+    "new_field" VARCHAR(100) NOT NULL,
+    "two" VARCHAR(40) NOT NULL,
+    "name" TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS "sometable" (
+    "sometable_id" SERIAL NOT NULL PRIMARY KEY,
+    "some_chars_table" VARCHAR(255) NOT NULL,
+    "fk_sometable" INT REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS "idx_sometable_some_ch_3d69eb" ON "sometable" ("some_chars_table");
+CREATE TABLE IF NOT EXISTS "team" (
+    "name" VARCHAR(50) NOT NULL PRIMARY KEY,
+    "key" INT NOT NULL,
+    "manager_id" VARCHAR(50) REFERENCES "team" ("name") ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS "idx_team_manager_676134" ON "team" ("manager_id", "key");
+CREATE INDEX IF NOT EXISTS "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
+COMMENT ON COLUMN "team"."name" IS 'The TEAM name (and PK)';
+COMMENT ON TABLE "team" IS 'The TEAMS!';
+CREATE TABLE IF NOT EXISTS "teamaddress" (
+    "city" VARCHAR(50) NOT NULL,
+    "country" VARCHAR(50) NOT NULL,
+    "street" VARCHAR(128) NOT NULL,
+    "team_id" VARCHAR(50) NOT NULL PRIMARY KEY REFERENCES "team" ("name") ON DELETE CASCADE
+);
+COMMENT ON COLUMN "teamaddress"."city" IS 'City';
+COMMENT ON COLUMN "teamaddress"."country" IS 'Country';
+COMMENT ON COLUMN "teamaddress"."street" IS 'Street Address';
+COMMENT ON TABLE "teamaddress" IS 'The Team''s address';
+CREATE TABLE IF NOT EXISTS "tournament" (
+    "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
+    "name" VARCHAR(100) NOT NULL,
+    "created" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS "idx_tournament_name_6fe200" ON "tournament" ("name");
+COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
+COMMENT ON COLUMN "tournament"."created" IS 'Created */''`/* datetime';
+COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
+CREATE TABLE IF NOT EXISTS "event" (
+    "id" BIGSERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "modified" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "prize" DECIMAL(10,2),
+    "token" VARCHAR(100) NOT NULL UNIQUE,
+    "key" VARCHAR(100) NOT NULL,
+    "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("tid") ON DELETE CASCADE,
+    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
+    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
+);
+COMMENT ON COLUMN "event"."id" IS 'Event ID';
+COMMENT ON COLUMN "event"."token" IS 'Unique token';
+COMMENT ON COLUMN "event"."tournament_id" IS 'FK to tournament';
+COMMENT ON TABLE "event" IS 'This table contains a list of all the events';
+CREATE TABLE IF NOT EXISTS "venueinformation" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "name" VARCHAR(128) NOT NULL,
+    "capacity" INT NOT NULL,
+    "rent" DOUBLE PRECISION NOT NULL,
+    "team_id" VARCHAR(50) UNIQUE REFERENCES "team" ("name") ON DELETE SET NULL
+);
+COMMENT ON COLUMN "venueinformation"."capacity" IS 'No. of seats';
+CREATE TABLE IF NOT EXISTS "sometable_self" (
+    "backward_sts" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE,
+    "sts_forward" INT NOT NULL REFERENCES "sometable" ("sometable_id") ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "uidx_sometable_s_backwar_fc8fc8" ON "sometable_self" ("backward_sts", "sts_forward");
+CREATE TABLE IF NOT EXISTS "team_team" (
+    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
+CREATE TABLE IF NOT EXISTS "teamevents" (
+    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE SET NULL,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE SET NULL
+);
+COMMENT ON TABLE "teamevents" IS 'How participants relate';
+CREATE UNIQUE INDEX IF NOT EXISTS "uidx_teamevents_event_i_664dbc" ON "teamevents" ("event_id", "team_id");
+""".strip()
+        )
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_psycopg_index_unsafe():
+    await _reset_tortoise()
+    try:
+        await _init_for_psycopg("tests.schema.models_postgres_index")
+        sql = get_schema_sql(connections.get("default"), safe=False)
+        assert (
+            sql
+            == """CREATE TABLE "index" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "bloom" VARCHAR(200) NOT NULL,
+    "brin" VARCHAR(200) NOT NULL,
+    "gin" TSVECTOR NOT NULL,
+    "gist" TSVECTOR NOT NULL,
+    "sp_gist" VARCHAR(200) NOT NULL,
+    "hash" VARCHAR(200) NOT NULL,
+    "partial" VARCHAR(200) NOT NULL,
+    "title" TEXT NOT NULL,
+    "body" TEXT NOT NULL
+);
+CREATE INDEX "idx_index_bloom_280137" ON "index" USING BLOOM ("bloom");
+CREATE INDEX "idx_index_brin_a54a00" ON "index" USING BRIN ("brin");
+CREATE INDEX "idx_index_gin_a403ee" ON "index" USING GIN ("gin");
+CREATE INDEX "idx_index_gist_c807bf" ON "index" USING GIST ("gist");
+CREATE INDEX "idx_index_sp_gist_2c0bad" ON "index" USING SPGIST ("sp_gist");
+CREATE INDEX "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");
+CREATE INDEX "idx_index_partial_c5be6a" ON "index" ("partial") WHERE id = 1;
+CREATE INDEX "idx_index_(TO_TSV_50a2c7" ON "index" USING GIN ((TO_TSVECTOR('english',(("title" || ' ') || "body"))));"""
+        )
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_psycopg_index_safe():
+    await _reset_tortoise()
+    try:
+        await _init_for_psycopg("tests.schema.models_postgres_index")
+        sql = get_schema_sql(connections.get("default"), safe=True)
+        assert (
+            sql
+            == """CREATE TABLE IF NOT EXISTS "index" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "bloom" VARCHAR(200) NOT NULL,
+    "brin" VARCHAR(200) NOT NULL,
+    "gin" TSVECTOR NOT NULL,
+    "gist" TSVECTOR NOT NULL,
+    "sp_gist" VARCHAR(200) NOT NULL,
+    "hash" VARCHAR(200) NOT NULL,
+    "partial" VARCHAR(200) NOT NULL,
+    "title" TEXT NOT NULL,
+    "body" TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS "idx_index_bloom_280137" ON "index" USING BLOOM ("bloom");
+CREATE INDEX IF NOT EXISTS "idx_index_brin_a54a00" ON "index" USING BRIN ("brin");
+CREATE INDEX IF NOT EXISTS "idx_index_gin_a403ee" ON "index" USING GIN ("gin");
+CREATE INDEX IF NOT EXISTS "idx_index_gist_c807bf" ON "index" USING GIST ("gist");
+CREATE INDEX IF NOT EXISTS "idx_index_sp_gist_2c0bad" ON "index" USING SPGIST ("sp_gist");
+CREATE INDEX IF NOT EXISTS "idx_index_hash_cfe6b5" ON "index" USING HASH ("hash");
+CREATE INDEX IF NOT EXISTS "idx_index_partial_c5be6a" ON "index" ("partial") WHERE id = 1;
+CREATE INDEX IF NOT EXISTS "idx_index_(TO_TSV_50a2c7" ON "index" USING GIN ((TO_TSVECTOR('english',(("title" || ' ') || "body"))));"""
+        )
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_psycopg_m2m_no_auto_create():
+    await _reset_tortoise()
+    try:
+        await _init_for_psycopg("tests.schema.models_no_auto_create_m2m")
+        sql = get_schema_sql(connections.get("default"), safe=False)
+        assert (
+            sql.strip()
+            == r"""CREATE TABLE "team" (
+    "name" VARCHAR(50) NOT NULL PRIMARY KEY,
+    "key" INT NOT NULL,
+    "manager_id" VARCHAR(50) REFERENCES "team" ("name") ON DELETE CASCADE
+);
+CREATE INDEX "idx_team_manager_676134" ON "team" ("manager_id", "key");
+CREATE INDEX "idx_team_manager_ef8f69" ON "team" ("manager_id", "name");
+COMMENT ON COLUMN "team"."name" IS 'The TEAM name (and PK)';
+COMMENT ON TABLE "team" IS 'The TEAMS!';
+CREATE TABLE "tournament" (
+    "tid" SMALLSERIAL NOT NULL PRIMARY KEY,
+    "name" VARCHAR(100) NOT NULL,
+    "created" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX "idx_tournament_name_6fe200" ON "tournament" ("name");
+COMMENT ON COLUMN "tournament"."name" IS 'Tournament name';
+COMMENT ON COLUMN "tournament"."created" IS 'Created */''`/* datetime';
+COMMENT ON TABLE "tournament" IS 'What Tournaments */''`/* we have';
+CREATE TABLE "event" (
+    "id" BIGSERIAL NOT NULL PRIMARY KEY,
+    "name" TEXT NOT NULL,
+    "modified" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "prize" DECIMAL(10,2),
+    "token" VARCHAR(100) NOT NULL UNIQUE,
+    "key" VARCHAR(100) NOT NULL,
+    "tournament_id" SMALLINT NOT NULL REFERENCES "tournament" ("tid") ON DELETE CASCADE,
+    CONSTRAINT "uid_event_name_c6f89f" UNIQUE ("name", "prize"),
+    CONSTRAINT "uid_event_tournam_a5b730" UNIQUE ("tournament_id", "key")
+);
+COMMENT ON COLUMN "event"."id" IS 'Event ID';
+COMMENT ON COLUMN "event"."token" IS 'Unique token';
+COMMENT ON COLUMN "event"."tournament_id" IS 'FK to tournament';
+COMMENT ON TABLE "event" IS 'This table contains a list of all the events';
+CREATE TABLE "teamevents" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "score" INT NOT NULL,
+    "event_id" BIGINT NOT NULL REFERENCES "event" ("id") ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
+    CONSTRAINT "uid_teamevents_team_id_9e89fc" UNIQUE ("team_id", "event_id")
+);
+COMMENT ON TABLE "teamevents" IS 'How participants relate';
+CREATE TABLE "team_team" (
+    "team_rel_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE,
+    "team_id" VARCHAR(50) NOT NULL REFERENCES "team" ("name") ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX "uidx_team_team_team_re_d994df" ON "team_team" ("team_rel_id", "team_id");
+""".strip()
+        )
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_psycopg_pgfields_unsafe():
+    await _reset_tortoise()
+    try:
+        await _init_for_psycopg("tests.schema.models_postgres_fields")
+        sql = get_schema_sql(connections.get("default"), safe=False)
+        assert (
+            sql
+            == """CREATE TABLE "postgres_fields" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "tsvector" TSVECTOR NOT NULL,
+    "text_array" TEXT[] NOT NULL DEFAULT '{"a","b","c"}',
+    "varchar_array" VARCHAR(32)[] NOT NULL DEFAULT '{"aa","bbb","cccc"}',
+    "int_array" INT[] DEFAULT '{1,2,3}',
+    "real_array" REAL[] NOT NULL DEFAULT '{1.1,2.2,3.3}'
+);
+COMMENT ON COLUMN "postgres_fields"."real_array" IS 'this is array of real numbers';"""
+        )
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_psycopg_pgfields_safe():
+    await _reset_tortoise()
+    try:
+        await _init_for_psycopg("tests.schema.models_postgres_fields")
+        sql = get_schema_sql(connections.get("default"), safe=True)
+        assert (
+            sql
+            == """CREATE TABLE IF NOT EXISTS "postgres_fields" (
+    "id" SERIAL NOT NULL PRIMARY KEY,
+    "tsvector" TSVECTOR NOT NULL,
+    "text_array" TEXT[] NOT NULL DEFAULT '{"a","b","c"}',
+    "varchar_array" VARCHAR(32)[] NOT NULL DEFAULT '{"aa","bbb","cccc"}',
+    "int_array" INT[] DEFAULT '{1,2,3}',
+    "real_array" REAL[] NOT NULL DEFAULT '{1.1,2.2,3.3}'
+);
+COMMENT ON COLUMN "postgres_fields"."real_array" IS 'this is array of real numbers';"""
+        )
+    finally:
+        await _teardown_tortoise()

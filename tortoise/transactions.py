@@ -4,7 +4,7 @@ from collections.abc import Callable
 from functools import wraps
 from typing import TYPE_CHECKING, TypeVar, cast
 
-from tortoise.connection import connections
+from tortoise.connection import get_connections
 from tortoise.exceptions import ParamsError
 
 if TYPE_CHECKING:  # pragma: nocoverage
@@ -16,15 +16,16 @@ F = TypeVar("F", bound=FuncType)
 
 
 def _get_connection(connection_name: str | None) -> BaseDBAsyncClient:
+    conn_handler = get_connections()
     if connection_name:
-        connection = connections.get(connection_name)
-    elif len(connections.db_config) == 1:
-        connection_name = next(iter(connections.db_config.keys()))
-        connection = connections.get(connection_name)
+        connection = conn_handler.get(connection_name)
+    elif len(conn_handler.db_config) == 1:
+        connection_name = next(iter(conn_handler.db_config.keys()))
+        connection = conn_handler.get(connection_name)
     else:
         raise ParamsError(
             "You are running with multiple databases, so you should specify"
-            f" connection_name: {list(connections.db_config)}"
+            f" connection_name: {list(conn_handler.db_config)}"
         )
     return connection
 

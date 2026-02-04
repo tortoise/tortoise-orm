@@ -79,3 +79,44 @@ To ensure connections are properly closed, make sure to call ``Tortoise.close_co
     await Tortoise.close_connections()
 
 The helper function ``tortoise.run_async()`` automatically ensures that connections are closed when your application terminates.
+
+.. _global_fallback:
+
+Global Context Fallback
+=======================
+
+By default, Tortoise ORM uses Python's ``contextvars`` to track the active context. This works
+well when ``Tortoise.init()`` is called from the same task that will execute queries.
+
+However, in some scenarios, initialization happens in a **different task** than where queries
+run. For example:
+
+- ASGI lifespan handlers that run in a background task
+- Framework setup code that spawns a separate initialization task
+- Test harnesses that manage app lifecycle in background tasks
+
+In these cases, the context set in the initialization task is not visible to other tasks,
+resulting in ``RuntimeError: No TortoiseContext is currently active``.
+
+To solve this, use the ``_enable_global_fallback`` parameter:
+
+.. code-block:: python3
+
+    await Tortoise.init(
+        db_url='sqlite://db.sqlite3',
+        modules={'models': ['app.models']},
+        _enable_global_fallback=True,
+    )
+
+When enabled, the context is stored in a global variable in addition to the contextvar,
+making it accessible from any task in the process.
+
+**Important considerations:**
+
+- Only **one** global fallback context can be active at a time
+- Attempting to enable global fallback when one is already set raises ``ConfigurationError``
+- For multiple isolated contexts, use explicit ``TortoiseContext()`` instances instead
+- The global fallback is automatically cleared when ``Tortoise.close_connections()`` is called
+
+This parameter is also available in ``TortoiseContext.init()`` and framework integrations
+like ``RegisterTortoise`` (where it defaults to ``True``).

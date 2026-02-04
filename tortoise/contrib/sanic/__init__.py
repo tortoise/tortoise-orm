@@ -5,7 +5,8 @@ from types import ModuleType
 
 from sanic import Sanic  # pylint: disable=E0401
 
-from tortoise import Tortoise, connections
+from tortoise import Tortoise
+from tortoise.connection import get_connections
 from tortoise.log import logger
 
 
@@ -81,7 +82,7 @@ def register_tortoise(
 
     async def tortoise_init() -> None:
         await Tortoise.init(config=config, config_file=config_file, db_url=db_url, modules=modules)
-        logger.info("Tortoise-ORM started, %s, %s", connections._get_storage(), Tortoise.apps)  # pylint: disable=W0212
+        logger.info("Tortoise-ORM started, %s, %s", get_connections()._get_storage(), Tortoise.apps)  # pylint: disable=W0212
 
     if generate_schemas:
 
@@ -100,5 +101,5 @@ def register_tortoise(
 
     @app.after_server_stop
     async def close_orm(app):  # pylint: disable=W0612
-        await connections.close_all()
+        await Tortoise.close_connections()
         logger.info("Tortoise-ORM shutdown")

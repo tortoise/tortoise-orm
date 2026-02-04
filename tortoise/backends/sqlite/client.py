@@ -22,7 +22,7 @@ from tortoise.backends.base.client import (
 )
 from tortoise.backends.sqlite.executor import SqliteExecutor
 from tortoise.backends.sqlite.schema_generator import SqliteSchemaGenerator
-from tortoise.connection import connections
+from tortoise.connection import get_connections
 from tortoise.contrib.sqlite.regex import (
     install_regexp_functions as install_regexp_functions_to_db,
 )
@@ -191,7 +191,7 @@ class SqliteTransactionContext(TransactionContext):
     async def __aenter__(self) -> T_conn:
         await self._trxlock.acquire()
         await self.ensure_connection()
-        self.token = connections.set(self.connection_name, self.connection)
+        self.token = get_connections().set(self.connection_name, self.connection)
         await self.connection.begin()
         return self.connection
 
@@ -205,7 +205,7 @@ class SqliteTransactionContext(TransactionContext):
                 else:
                     await self.connection.commit()
         finally:
-            connections.reset(self.token)
+            get_connections().reset(self.token)
             self._trxlock.release()
 
 

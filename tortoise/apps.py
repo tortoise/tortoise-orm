@@ -86,6 +86,8 @@ class Apps:
         return self.apps[label]
 
     def _load_from_config(self) -> None:
+        if self._connections is None:
+            raise ConfigurationError("ConnectionHandler is required to load from config")
         for name, info in self._config.items():
             default_connection = info.get("default_connection", "default")
             if self._validate_connections:

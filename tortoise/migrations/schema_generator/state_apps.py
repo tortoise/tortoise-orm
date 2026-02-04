@@ -5,12 +5,21 @@ from typing import cast
 from pypika_tortoise import Query, Table
 
 from tortoise.apps import Apps
-from tortoise.connection import connections
+from tortoise.connection import ConnectionHandler
+from tortoise.context import get_current_context
 from tortoise.models import Model
 
 
 class StateApps(Apps):
-    def __init__(self, default_connections: dict[str, str] | None = None) -> None:
+    def __init__(
+        self,
+        default_connections: dict[str, str] | None = None,
+        connections: ConnectionHandler | None = None,
+    ) -> None:
+        if connections is None:
+            ctx = get_current_context()
+            connections = ctx.connections if ctx is not None else ConnectionHandler()
+
         super().__init__({}, connections)
         self._default_connections = default_connections or {}
 
@@ -27,6 +36,11 @@ class StateApps(Apps):
             model._meta.default_connection = self._default_connections[app_label]
 
     def _build_initial_querysets(self) -> None:
+        # Skip building querysets when no DB config is available (state-only mode)
+        # This allows pure state operations to work without database connections
+        if self._connections._db_config is None:
+            return
+
         for app in self.apps.values():
             for model in app.values():
                 if model._meta.default_connection is None:
@@ -67,7 +81,10 @@ class StateApps(Apps):
     def clone(self) -> StateApps:
         from tortoise.migrations.schema_generator.state import ModelState
 
-        state_apps = self.__class__(default_connections=dict(self._default_connections))
+        state_apps = self.__class__(
+            default_connections=dict(self._default_connections),
+            connections=self._connections,
+        )
         for app_label, app in self.apps.items():
             for model in app.values():
                 model_clone = ModelState.make_from_model(app_label, model).render(state_apps)

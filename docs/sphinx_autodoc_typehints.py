@@ -2,12 +2,12 @@ import inspect
 import sys
 import textwrap
 import typing
-from typing import get_type_hints, TypeVar, Any, AnyStr, Generic, Union
-
-from sphinx.util import logging
-from sphinx.util.inspect import signature as Signature, stringify_signature
+from typing import Any, AnyStr, Generic, TypeVar, Union, get_type_hints
 
 import type_globals
+from sphinx.util import logging
+from sphinx.util.inspect import signature as Signature
+from sphinx.util.inspect import stringify_signature
 
 try:
     from typing_extensions import Protocol
@@ -212,7 +212,7 @@ def get_all_type_hints(obj, name):
         # Introspecting a slot wrapper will raise TypeError, and and some recursive type
         # definitions will cause a RecursionError (https://github.com/python/typing/issues/574).
         pass
-    except NameError as exc:
+    except NameError:
         try:
             rv = get_type_hints(obj, localns=type_globals.__dict__)
         except Exception as exc:

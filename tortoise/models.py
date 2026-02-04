@@ -13,7 +13,7 @@ from pypika_tortoise import Order, Query, Table
 from pypika_tortoise.terms import Term
 
 from tortoise.backends.base.client import BaseDBAsyncClient
-from tortoise.connection import connections
+from tortoise.connection import get_connection
 from tortoise.exceptions import (
     ConfigurationError,
     DoesNotExist,
@@ -286,7 +286,7 @@ class MetaInfo:
             raise ConfigurationError(
                 f"default_connection for the model {self._model} cannot be None"
             )
-        return connections.get(self.default_connection)
+        return get_connection(self.default_connection)
 
     @property
     def ordering(self) -> tuple[tuple[str, Order], ...]:

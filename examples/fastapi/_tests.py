@@ -57,8 +57,12 @@ async def client() -> ClientManagerType:
 
 @pytest.fixture(scope="module")
 async def client_east() -> ClientManagerType:
+    # app_east uses _enable_global_fallback=False, so we need to explicitly
+    # enter the context from app.state to make it current for tests
     async with client_manager(app_east) as c:
-        yield c
+        ctx = app_east.state._tortoise_context
+        with ctx:  # Enter context to make it current via contextvar
+            yield c
 
 
 class UserTester:

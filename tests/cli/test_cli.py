@@ -315,7 +315,7 @@ TORTOISE_ORM = {
 
     monkeypatch.setattr(cli_module.Tortoise, "init", fake_init)
     monkeypatch.setattr(cli_module.MigrationRecorder, "applied_migrations", fake_applied)
-    monkeypatch.setattr(cli_module.connections, "get", lambda _name: object())
+    monkeypatch.setattr(cli_module, "get_connection", lambda _name: object())
 
     result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "history"])
     assert result.exit_code == 0

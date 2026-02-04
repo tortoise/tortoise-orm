@@ -3,6 +3,8 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+import pytest
+
 from tests.testmodels import (
     CharFkRelatedModel,
     CharM2MRelatedModel,
@@ -13,55 +15,59 @@ from tests.testmodels import (
     UUIDPkModel,
 )
 from tortoise import fields
-from tortoise.contrib import test
 from tortoise.exceptions import ConfigurationError
 
 
-class TestQueryset(test.TestCase):
-    async def test_implicit_pk(self):
+class TestQueryset:
+    @pytest.mark.asyncio
+    async def test_implicit_pk(self, db):
         instance = await ImplicitPkModel.create(value="test")
-        self.assertTrue(instance.id)
-        self.assertEqual(instance.pk, instance.id)
+        assert instance.id
+        assert instance.pk == instance.id
 
-    async def test_uuid_pk(self):
+    @pytest.mark.asyncio
+    async def test_uuid_pk(self, db):
         value = uuid.uuid4()
         await UUIDPkModel.create(id=value)
 
         instance2 = await UUIDPkModel.get(id=value)
-        self.assertEqual(instance2.id, value)
-        self.assertEqual(instance2.pk, value)
+        assert instance2.id == value
+        assert instance2.pk == value
 
-    async def test_uuid_pk_default(self):
+    @pytest.mark.asyncio
+    async def test_uuid_pk_default(self, db):
         instance1 = await UUIDPkModel.create()
-        self.assertIsInstance(instance1.id, uuid.UUID)
-        self.assertEqual(instance1.pk, instance1.pk)
+        assert isinstance(instance1.id, uuid.UUID)
+        assert instance1.pk == instance1.pk
 
         instance2 = await UUIDPkModel.get(id=instance1.id)
-        self.assertEqual(instance2.id, instance1.id)
-        self.assertEqual(instance2.pk, instance1.id)
+        assert instance2.id == instance1.id
+        assert instance2.pk == instance1.id
 
-    async def test_uuid_pk_fk(self):
+    @pytest.mark.asyncio
+    async def test_uuid_pk_fk(self, db):
         value = uuid.uuid4()
         instance = await UUIDPkModel.create(id=value)
         instance2 = await UUIDPkModel.create(id=uuid.uuid4())
         await UUIDFkRelatedModel.create(model=instance2)
 
         related_instance = await UUIDFkRelatedModel.create(model=instance)
-        self.assertEqual(related_instance.model_id, value)
+        assert related_instance.model_id == value
 
         related_instance = await UUIDFkRelatedModel.filter(model=instance).first()
-        self.assertEqual(related_instance.model_id, value)
+        assert related_instance.model_id == value
 
         related_instance = await UUIDFkRelatedModel.filter(model_id=value).first()
-        self.assertEqual(related_instance.model_id, value)
+        assert related_instance.model_id == value
 
         await related_instance.fetch_related("model")
-        self.assertEqual(related_instance.model, instance)
+        assert related_instance.model == instance
 
         await instance.fetch_related("children")
-        self.assertEqual(instance.children[0], related_instance)
+        assert instance.children[0] == related_instance
 
-    async def test_uuid_m2m(self):
+    @pytest.mark.asyncio
+    async def test_uuid_m2m(self, db):
         value = uuid.uuid4()
         instance = await UUIDPkModel.create(id=value)
         instance2 = await UUIDPkModel.create(id=uuid.uuid4())
@@ -73,52 +79,55 @@ class TestQueryset(test.TestCase):
         await related_instance2.models.add(instance, instance2)
 
         await instance.fetch_related("peers")
-        self.assertEqual(len(instance.peers), 2)
-        self.assertEqual(set(instance.peers), {related_instance, related_instance2})
+        assert len(instance.peers) == 2
+        assert set(instance.peers) == {related_instance, related_instance2}
 
         await related_instance.fetch_related("models")
-        self.assertEqual(len(related_instance.models), 1)
-        self.assertEqual(related_instance.models[0], instance)
+        assert len(related_instance.models) == 1
+        assert related_instance.models[0] == instance
 
         await related_instance2.fetch_related("models")
-        self.assertEqual(len(related_instance2.models), 2)
-        self.assertEqual({m.pk for m in related_instance2.models}, {instance.pk, instance2.pk})
+        assert len(related_instance2.models) == 2
+        assert {m.pk for m in related_instance2.models} == {instance.pk, instance2.pk}
 
         related_instance_list = await UUIDM2MRelatedModel.filter(models=instance2)
-        self.assertEqual(len(related_instance_list), 1)
-        self.assertEqual(related_instance_list[0], related_instance2)
+        assert len(related_instance_list) == 1
+        assert related_instance_list[0] == related_instance2
 
         related_instance_list = await UUIDM2MRelatedModel.filter(models__in=[instance2])
-        self.assertEqual(len(related_instance_list), 1)
-        self.assertEqual(related_instance_list[0], related_instance2)
+        assert len(related_instance_list) == 1
+        assert related_instance_list[0] == related_instance2
 
-    async def test_char_pk(self):
+    @pytest.mark.asyncio
+    async def test_char_pk(self, db):
         value = "Da-PK"
         await CharPkModel.create(id=value)
 
         instance2 = await CharPkModel.get(id=value)
-        self.assertEqual(instance2.id, value)
-        self.assertEqual(instance2.pk, value)
+        assert instance2.id == value
+        assert instance2.pk == value
 
-    async def test_char_pk_fk(self):
+    @pytest.mark.asyncio
+    async def test_char_pk_fk(self, db):
         value = "Da-PK-for-FK"
         instance = await CharPkModel.create(id=value)
         instance2 = await CharPkModel.create(id=uuid.uuid4())
         await CharFkRelatedModel.create(model=instance2)
 
         related_instance = await CharFkRelatedModel.create(model=instance)
-        self.assertEqual(related_instance.model_id, value)
+        assert related_instance.model_id == value
 
         related_instance = await CharFkRelatedModel.filter(model=instance).first()
-        self.assertEqual(related_instance.model_id, value)
+        assert related_instance.model_id == value
 
         related_instance = await CharFkRelatedModel.filter(model_id=value).first()
-        self.assertEqual(related_instance.model_id, value)
+        assert related_instance.model_id == value
 
         await instance.fetch_related("children")
-        self.assertEqual(instance.children[0], related_instance)
+        assert instance.children[0] == related_instance
 
-    async def test_char_m2m(self):
+    @pytest.mark.asyncio
+    async def test_char_m2m(self, db):
         value = "Da-PK-for-M2M"
         instance = await CharPkModel.create(id=value)
         instance2 = await CharPkModel.create(id=uuid.uuid4())
@@ -130,111 +139,149 @@ class TestQueryset(test.TestCase):
         await related_instance2.models.add(instance, instance2)
 
         await related_instance.fetch_related("models")
-        self.assertEqual(len(related_instance.models), 1)
-        self.assertEqual(related_instance.models[0], instance)
+        assert len(related_instance.models) == 1
+        assert related_instance.models[0] == instance
 
         await related_instance2.fetch_related("models")
-        self.assertEqual(len(related_instance2.models), 2)
-        self.assertEqual({m.pk for m in related_instance2.models}, {instance.pk, instance2.pk})
+        assert len(related_instance2.models) == 2
+        assert {m.pk for m in related_instance2.models} == {instance.pk, instance2.pk}
 
         related_instance_list = await CharM2MRelatedModel.filter(models=instance2)
-        self.assertEqual(len(related_instance_list), 1)
-        self.assertEqual(related_instance_list[0], related_instance2)
+        assert len(related_instance_list) == 1
+        assert related_instance_list[0] == related_instance2
 
         related_instance_list = await CharM2MRelatedModel.filter(models__in=[instance2])
-        self.assertEqual(len(related_instance_list), 1)
-        self.assertEqual(related_instance_list[0], related_instance2)
+        assert len(related_instance_list) == 1
+        assert related_instance_list[0] == related_instance2
 
 
-class TestPkIndexAlias(test.TestCase):
-    Field: Any = fields.CharField
-    init_kwargs = {"max_length": 10}
+# Test parameters for pk index alias tests
+# Format: (Field class, init_kwargs, field_id)
+PK_INDEX_ALIAS_PARAMS = [
+    pytest.param(fields.CharField, {"max_length": 10}, id="CharField"),
+    pytest.param(fields.UUIDField, {}, id="UUIDField"),
+    pytest.param(fields.IntField, {}, id="IntField"),
+    pytest.param(fields.BigIntField, {}, id="BigIntField"),
+    pytest.param(fields.SmallIntField, {}, id="SmallIntField"),
+]
 
-    async def test_pk_alias_warning(self):
+
+class TestPkIndexAlias:
+    """Test pk alias functionality for various field types."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("Field,init_kwargs", PK_INDEX_ALIAS_PARAMS)
+    async def test_pk_alias_warning(self, Field: Any, init_kwargs: dict):
         msg = "`pk` is deprecated, please use `primary_key` instead"
-        with self.assertWarnsRegex(DeprecationWarning, msg):
-            f = self.Field(pk=True, **self.init_kwargs)
+        with pytest.warns(DeprecationWarning, match=msg):
+            f = Field(pk=True, **init_kwargs)
         assert f.pk is True
-        with self.assertWarnsRegex(DeprecationWarning, msg):
-            f = self.Field(pk=False, **self.init_kwargs)
+        with pytest.warns(DeprecationWarning, match=msg):
+            f = Field(pk=False, **init_kwargs)
         assert f.pk is False
 
-    async def test_pk_alias_error(self):
-        with self.assertRaises(ConfigurationError):
-            self.Field(pk=True, primary_key=False, **self.init_kwargs)
-        with self.assertRaises(ConfigurationError):
-            self.Field(pk=False, primary_key=True, **self.init_kwargs)
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("Field,init_kwargs", PK_INDEX_ALIAS_PARAMS)
+    async def test_pk_alias_error(self, Field: Any, init_kwargs: dict):
+        with pytest.raises(ConfigurationError):
+            Field(pk=True, primary_key=False, **init_kwargs)
+        with pytest.raises(ConfigurationError):
+            Field(pk=False, primary_key=True, **init_kwargs)
 
-    async def test_pk_alias_compare(self):
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("Field,init_kwargs", PK_INDEX_ALIAS_PARAMS)
+    async def test_pk_alias_compare(self, Field: Any, init_kwargs: dict):
         # Only for compare, not recommended
-        f = self.Field(pk=True, primary_key=True, **self.init_kwargs)
+        f = Field(pk=True, primary_key=True, **init_kwargs)
         assert f.pk is True
-        f = self.Field(pk=False, primary_key=False, **self.init_kwargs)
+        f = Field(pk=False, primary_key=False, **init_kwargs)
         assert f.pk is False
 
 
-class TestPkIndexAliasUUID(TestPkIndexAlias):
-    Field: Any = fields.UUIDField
-    init_kwargs = {}
+class TestPkIndexAliasUUID:
+    """UUID-specific pk alias tests."""
 
+    @pytest.mark.asyncio
     async def test_default(self):
         msg = "`pk` is deprecated, please use `primary_key` instead"
-        with self.assertWarnsRegex(DeprecationWarning, msg):
-            f = self.Field(pk=True)
+        with pytest.warns(DeprecationWarning, match=msg):
+            f = fields.UUIDField(pk=True)
         assert f.default == uuid.uuid4
-        f = self.Field(primary_key=True)
+        f = fields.UUIDField(primary_key=True)
         assert f.default == uuid.uuid4
-        f = self.Field()
+        f = fields.UUIDField()
         assert f.default is None
-        f = self.Field(default=1)
+        f = fields.UUIDField(default=1)
         assert f.default == 1
 
 
-class TestPkIndexAliasInt(TestPkIndexAlias):
-    Field: Any = fields.IntField
-    init_kwargs = {}
+# Int field types that support positional pk argument
+INT_FIELD_TYPES = [
+    pytest.param(fields.IntField, id="IntField"),
+    pytest.param(fields.BigIntField, id="BigIntField"),
+    pytest.param(fields.SmallIntField, id="SmallIntField"),
+]
 
-    async def test_argument(self):
-        f = self.Field(True)
+
+class TestPkIndexAliasInt:
+    """Int field types support positional pk argument."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("Field", INT_FIELD_TYPES)
+    async def test_argument(self, Field: Any):
+        f = Field(True)
         assert f.pk is True
-        f = self.Field(False)
+        f = Field(False)
         assert f.pk is False
 
 
-class TestPkIndexAliasBigInt(TestPkIndexAliasInt):
-    Field = fields.BigIntField
+class TestPkIndexAliasText:
+    """TextField pk alias tests with deprecation warnings."""
 
-
-class TestPkIndexAliasSmallInt(TestPkIndexAliasInt):
-    Field = fields.SmallIntField
-
-
-class TestPkIndexAliasText(TestPkIndexAlias):
-    Field = fields.TextField
     message = "TextField as a PrimaryKey is Deprecated, use CharField instead"
+    pk_deprecation_msg = "`pk` is deprecated, please use `primary_key` instead"
 
     def test_warning(self):
-        with self.assertWarnsRegex(DeprecationWarning, self.message):
-            f = self.Field(pk=True)
+        # TextField(pk=True) emits both warnings: pk deprecation and TextField as PK
+        with pytest.warns(DeprecationWarning, match=self.message):
+            f = fields.TextField(pk=True)
         assert f.pk is True
-        with self.assertWarnsRegex(DeprecationWarning, self.message):
-            f = self.Field(primary_key=True)
+        with pytest.warns(DeprecationWarning, match=self.message):
+            f = fields.TextField(primary_key=True)
         assert f.pk is True
-        with self.assertWarnsRegex(DeprecationWarning, self.message):
-            f = self.Field(True)
+        # Positional arg goes to primary_key, so only TextField as PK warning
+        with pytest.warns(DeprecationWarning, match=self.message):
+            f = fields.TextField(True)
         assert f.pk is True
 
+    @pytest.mark.asyncio
+    async def test_pk_alias_warning(self):
+        # TextField(pk=True) emits TextField as PK warning (and pk deprecation)
+        with pytest.warns(DeprecationWarning, match=self.message):
+            f = fields.TextField(pk=True)
+        assert f.pk is True
+        # pk=False does not trigger TextField as PK warning, but triggers pk deprecation
+        with pytest.warns(DeprecationWarning, match=self.pk_deprecation_msg):
+            f = fields.TextField(pk=False)
+        assert f.pk is False
+
+    @pytest.mark.asyncio
     async def test_pk_alias_error(self):
-        with self.assertRaises(ConfigurationError):
-            with self.assertWarnsRegex(DeprecationWarning, self.message):
-                self.Field(pk=True, primary_key=False, **self.init_kwargs)
-        with self.assertRaises(ConfigurationError):
-            with self.assertWarnsRegex(DeprecationWarning, self.message):
-                self.Field(pk=False, primary_key=True, **self.init_kwargs)
+        # Both pk=True and primary_key=False triggers TextField warning first, then raises
+        with pytest.raises(ConfigurationError):
+            with pytest.warns(DeprecationWarning, match=self.message):
+                fields.TextField(pk=True, primary_key=False)
+        # pk=False and primary_key=True triggers TextField as PK warning, then raises
+        with pytest.raises(ConfigurationError):
+            with pytest.warns(DeprecationWarning, match=self.message):
+                fields.TextField(pk=False, primary_key=True)
 
+    @pytest.mark.asyncio
     async def test_pk_alias_compare(self):
-        with self.assertWarnsRegex(DeprecationWarning, self.message):
-            f = self.Field(pk=True, primary_key=True, **self.init_kwargs)
+        # Both pk=True and primary_key=True: TextField as PK warning is emitted
+        with pytest.warns(DeprecationWarning, match=self.message):
+            f = fields.TextField(pk=True, primary_key=True)
         assert f.pk is True
-        f = self.Field(pk=False, primary_key=False, **self.init_kwargs)
+        # pk=False and primary_key=False: no warnings
+        f = fields.TextField(pk=False, primary_key=False)
         assert f.pk is False

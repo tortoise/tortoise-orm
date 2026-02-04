@@ -3,8 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextvars
 import importlib
-from contextvars import ContextVar
-from copy import copy
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from tortoise.backends.base.config_generator import expand_db_url
@@ -16,15 +15,67 @@ if TYPE_CHECKING:
     DBConfigType = dict[str, Any]
 
 
+@dataclass(slots=True)
+class ConnectionToken:
+    """
+    Token for resetting connection storage modifications.
+
+    Used by transactions to temporarily replace a connection with a transaction client,
+    then restore the original connection when the transaction completes.
+    """
+
+    _handler: ConnectionHandler
+    _alias: str
+    _old_value: BaseDBAsyncClient | None
+    _cv_token: contextvars.Token | None = field(default=None)
+    _used: bool = field(default=False)
+
+
 class ConnectionHandler:
-    _conn_storage: ContextVar[dict[str, BaseDBAsyncClient]] = contextvars.ContextVar(
-        "_conn_storage", default={}
-    )
+    """
+    Connection management for a single TortoiseContext.
+
+    Each TortoiseContext owns its own ConnectionHandler instance with isolated storage.
+    """
 
     def __init__(self) -> None:
-        """Unified connection management interface."""
+        """Initialize connection handler with empty storage."""
         self._db_config: DBConfigType | None = None
         self._create_db: bool = False
+        # Use ContextVar for task isolation within this handler instance.
+        # This ensures transactions (which use .set()) are isolated to the task.
+        self._storage_var: contextvars.ContextVar[dict[str, BaseDBAsyncClient]] = (
+            contextvars.ContextVar(f"storage_{id(self)}", default={})
+        )
+
+    @property
+    def _storage(self) -> dict[str, BaseDBAsyncClient]:
+        """
+        Internal storage for connections.
+        We use a property to provide a dict-like interface while being backed by a ContextVar.
+        """
+        return self._get_storage()
+
+    @_storage.setter
+    def _storage(self, value: dict[str, BaseDBAsyncClient]) -> None:
+        """Allow direct assignment to storage for legacy compatibility (and tests)."""
+        self._storage_var.set(value)
+
+    def _get_storage(self) -> dict[str, BaseDBAsyncClient]:
+        """Get the connection storage dict for the current task context."""
+        return self._storage_var.get()
+
+    def _set_storage(self, new_storage: dict[str, BaseDBAsyncClient]) -> None:
+        """Set the connection storage dict. Used for testing purposes."""
+        self._storage = new_storage
+
+    def _copy_storage(self) -> dict[str, BaseDBAsyncClient]:
+        """Return a shallow copy of the storage."""
+        return dict(self._get_storage())
+
+    def _clear_storage(self) -> None:
+        """Clear all connections from storage in the current context."""
+        self._storage_var.set({})
 
     async def _init(self, db_config: DBConfigType, create_db: bool) -> None:
         if self._db_config is None:
@@ -60,19 +111,6 @@ class ConnectionHandler:
                 "to create connections."
             )
         return self._db_config
-
-    def _get_storage(self) -> dict[str, BaseDBAsyncClient]:
-        return self._conn_storage.get()
-
-    def _set_storage(self, new_storage: dict[str, BaseDBAsyncClient]) -> contextvars.Token:
-        # Should be used only for testing purposes.
-        return self._conn_storage.set(new_storage)
-
-    def _copy_storage(self) -> dict[str, BaseDBAsyncClient]:
-        return copy(self._get_storage())
-
-    def _clear_storage(self) -> None:
-        self._get_storage().clear()
 
     def _discover_client_class(self, db_info: dict) -> type[BaseDBAsyncClient]:
         # Let exception bubble up for transparency
@@ -126,7 +164,7 @@ class ConnectionHandler:
 
         :raises ConfigurationError: If the connection alias does not exist.
         """
-        storage: dict[str, BaseDBAsyncClient] = self._get_storage()
+        storage = self._get_storage()
         try:
             return storage[conn_alias]
         except KeyError:
@@ -134,22 +172,27 @@ class ConnectionHandler:
             storage[conn_alias] = connection
             return connection
 
-    def set(self, conn_alias: str, conn_obj: BaseDBAsyncClient) -> contextvars.Token:
+    def set(self, conn_alias: str, conn_obj: BaseDBAsyncClient) -> ConnectionToken:
         """
-        Sets the given alias to the provided connection object.
+        Sets the given alias to the provided connection object for the current task.
 
         :param conn_alias: The alias to set the connection for.
         :param conn_obj: The connection object that needs to be set for this alias.
 
+        :returns: A token that can be used to restore the previous context via reset().
+
         .. note::
-            This method copies the storage from the `current context`, updates the
-            ``conn_alias`` with the provided ``conn_obj`` and sets the updated storage
-            in a `new context` and therefore returns a ``contextvars.Token`` in order to restore
-            the original context storage.
+            This method is primarily used by transactions to temporarily replace a connection
+            with a transaction client. Call reset() with the returned token to restore the
+            original connection when the transaction completes.
         """
+        old_value = self._get_storage().get(conn_alias)
         storage_copy = self._copy_storage()
         storage_copy[conn_alias] = conn_obj
-        return self._conn_storage.set(storage_copy)
+        cv_token = self._storage_var.set(storage_copy)
+        return ConnectionToken(
+            _handler=self, _alias=conn_alias, _old_value=old_value, _cv_token=cv_token
+        )
 
     def discard(self, conn_alias: str) -> BaseDBAsyncClient | None:
         """
@@ -163,25 +206,32 @@ class ConnectionHandler:
         """
         return self._get_storage().pop(conn_alias, None)
 
-    def reset(self, token: contextvars.Token) -> None:
+    def reset(self, token: ConnectionToken | None) -> None:
         """
-        Reset the underlying storage to the previous context state.
+        Reset the connection storage to the previous context state.
 
-        Resets the storage state to the `context` associated with the provided token. After
-        resetting storage state, any additional `connections` created in the `old context` are
-        copied into the `current context`.
+        Restores the connection state for all aliases to what it was before the set() call.
 
         :param token:
-            The token corresponding to the `context` to which the storage state has to
-            be reset. Typically, this token is obtained by calling the
-            :meth:`set<tortoise.connection.ConnectionHandler.set>` method of this class.
+            The token returned by the set() method. Can be None (no-op).
         """
-        current_storage = self._get_storage()
-        self._conn_storage.reset(token)
-        prev_storage = self._get_storage()
-        for alias, conn in current_storage.items():
-            if alias not in prev_storage:
-                prev_storage[alias] = conn
+        if token is None:
+            return
+
+        if token._used:
+            raise ValueError("Token has already been used")
+        token._used = True
+
+        if token._cv_token and isinstance(token._cv_token, contextvars.Token):
+            self._storage_var.reset(token._cv_token)
+        else:
+            # Fallback when no ContextVar token (e.g., mock tokens in tests)
+            storage = self._copy_storage()
+            if token._old_value is None:
+                storage.pop(token._alias, None)
+            else:
+                storage[token._alias] = token._old_value
+            self._storage = storage
 
     def all(self) -> list[BaseDBAsyncClient]:
         """Returns a list of connection objects from the storage in the `current context`."""
@@ -200,6 +250,9 @@ class ConnectionHandler:
         :param discard:
             If ``False``, all connection objects are closed but `retained` in the storage.
         """
+        # Handle case where connections were never initialized (e.g., init failed)
+        if self._db_config is None:
+            return
         tasks = [conn.close() for conn in self.all()]
         await asyncio.gather(*tasks)
         if discard:
@@ -207,4 +260,62 @@ class ConnectionHandler:
                 self.discard(alias)
 
 
-connections = ConnectionHandler()
+class _ConnectionsProxy:
+    """
+    Simple delegator that forwards all operations to the current context's ConnectionHandler.
+
+    This provides backward compatibility for code using the `connections` module-level singleton.
+    All operations require an active TortoiseContext - if no context is active, a clear error is raised.
+
+    .. deprecated::
+        Direct use of `connections` is deprecated. Use `get_connection()` or `get_connections()` instead,
+        or access connections through the context: `ctx.connections`.
+    """
+
+    def _get_handler(self) -> ConnectionHandler:
+        """Get the ConnectionHandler from the current context."""
+        from tortoise.context import require_context
+
+        return require_context().connections
+
+    def __getattr__(self, name: str):
+        """Delegate attribute access to the current context's ConnectionHandler."""
+        return getattr(self._get_handler(), name)
+
+    # Properties must be explicit since __getattr__ doesn't intercept descriptor access
+    @property
+    def db_config(self) -> DBConfigType:
+        """Return the DB config."""
+        return self._get_handler().db_config
+
+
+connections = _ConnectionsProxy()
+
+
+def get_connection(alias: str) -> BaseDBAsyncClient:
+    """
+    Get a database connection by alias from the current context.
+
+    This is a convenience function. Prefer accessing connections directly
+    via context: `ctx.connections.get(alias)`
+
+    :param alias: The connection alias (e.g., "default")
+    :raises ConfigurationError: If no context is active or connection not found
+    """
+    from tortoise.context import require_context
+
+    return require_context().connections.get(alias)
+
+
+def get_connections() -> ConnectionHandler:
+    """
+    Get the ConnectionHandler from the current context.
+
+    This is a convenience function. Prefer accessing connections directly
+    via context: `ctx.connections`
+
+    :raises ConfigurationError: If no context is active
+    """
+    from tortoise.context import require_context
+
+    return require_context().connections

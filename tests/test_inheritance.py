@@ -1,15 +1,17 @@
+import pytest
+
 from tests.testmodels import MyAbstractBaseModel, MyDerivedModel
-from tortoise.contrib import test
 
 
-class TestInheritance(test.TestCase):
-    async def test_basic(self):
-        model = MyDerivedModel(name="test")
-        self.assertTrue(hasattr(MyAbstractBaseModel(), "name"))
-        self.assertTrue(hasattr(model, "created_at"))
-        self.assertTrue(hasattr(model, "modified_at"))
-        self.assertTrue(hasattr(model, "name"))
-        self.assertTrue(hasattr(model, "first_name"))
-        await model.save()
-        self.assertIsNotNone(model.created_at)
-        self.assertIsNotNone(model.modified_at)
+@pytest.mark.asyncio
+async def test_basic(db):
+    """Test basic model inheritance with abstract base model."""
+    model = MyDerivedModel(name="test")
+    assert hasattr(MyAbstractBaseModel(), "name")
+    assert hasattr(model, "created_at")
+    assert hasattr(model, "modified_at")
+    assert hasattr(model, "name")
+    assert hasattr(model, "first_name")
+    await model.save()
+    assert model.created_at is not None
+    assert model.modified_at is not None

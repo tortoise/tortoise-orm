@@ -1,19 +1,21 @@
+import pytest
+
 from tests.testmodels import ManagerModel, ManagerModelExtra
-from tortoise.contrib import test
 
 
-class TestManager(test.TestCase):
-    async def test_manager(self):
-        m1 = await ManagerModel.create()
-        m2 = await ManagerModel.create(status=1)
+@pytest.mark.asyncio
+async def test_manager(db):
+    """Test custom manager functionality with active status filtering."""
+    m1 = await ManagerModel.create()
+    m2 = await ManagerModel.create(status=1)
 
-        self.assertEqual(await ManagerModel.all().active().count(), 1)
-        self.assertEqual(await ManagerModel.all_objects.count(), 2)
+    assert await ManagerModel.all().active().count() == 1
+    assert await ManagerModel.all_objects.count() == 2
 
-        self.assertIsNone(await ManagerModel.all().active().get_or_none(pk=m1.pk))
-        self.assertIsNotNone(await ManagerModel.all_objects.get_or_none(pk=m1.pk))
-        self.assertIsNotNone(await ManagerModel.get_or_none(pk=m2.pk))
+    assert await ManagerModel.all().active().get_or_none(pk=m1.pk) is None
+    assert await ManagerModel.all_objects.get_or_none(pk=m1.pk) is not None
+    assert await ManagerModel.get_or_none(pk=m2.pk) is not None
 
-        await ManagerModelExtra.create(extra="extra")
-        self.assertEqual(await ManagerModelExtra.all_objects.count(), 1)
-        self.assertEqual(await ManagerModelExtra.all().count(), 1)
+    await ManagerModelExtra.create(extra="extra")
+    assert await ManagerModelExtra.all_objects.count() == 1
+    assert await ManagerModelExtra.all().count() == 1
