@@ -8,13 +8,30 @@ import importlib.util
 import platform
 import sys
 from collections.abc import AsyncGenerator, Iterable
+from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from ptpython.repl import embed
+# Conditional imports for optional shell dependencies
+try:
+    from IPython.terminal.embed import embed as ipython_embed
+
+    HAS_IPYTHON = True
+except ImportError:
+    ipython_embed = None
+    HAS_IPYTHON = False
+
+try:
+    from ptpython.repl import embed as ptpython_embed
+
+    HAS_PTPYTHON = True
+except ImportError:
+    ptpython_embed = None
+    HAS_PTPYTHON = False
 
 from tortoise import Tortoise, __version__
 from tortoise.cli import utils
+from tortoise.config import AppConfig, TortoiseConfig
 from tortoise.connection import get_connection
 from tortoise.context import TortoiseContext
 from tortoise.migrations.api import migrate as migrate_api
@@ -26,10 +43,14 @@ from tortoise.migrations.recorder import MigrationRecorder
 from tortoise.migrations.writer import MigrationWriter, format_migration_name
 
 if platform.system() == "Windows":
+    # Windows-specific patch for ptpython signal handler issues
+    # Only applied when launching ptpython shell on Windows
     # Remove when prompt-toolkit/ptpython#582 is fixed.
     from asyncio import get_event_loop_policy
 
     def _patch_loop_factory_for_ptpython() -> None:
+        """Patch event loop policy to work around ptpython signal handler bug on Windows."""
+
         def do_nothing(*_args, **_kwargs) -> None:
             return None
 
@@ -38,11 +59,98 @@ if platform.system() == "Windows":
             for attr in ("add_signal_handler", "remove_signal_handler"):
                 setattr(loop_factory, attr, do_nothing)
 
-    _patch_loop_factory_for_ptpython()
+
+class ShellProvider(Enum):
+    IPYTHON = "ipython"
+    PTPYTHON = "ptpython"
+
+
+def _get_available_shell_provider() -> ShellProvider | None:
+    if HAS_IPYTHON:
+        return ShellProvider.IPYTHON
+    elif HAS_PTPYTHON:
+        return ShellProvider.PTPYTHON
+    return None
+
+
+def _launch_ipython_shell(namespace: dict[str, Any]) -> None:
+    """Launch IPython shell synchronously.
+
+    IPython manages its own event loop for autoawait, so this must be called
+    from a synchronous context to avoid nested event loop errors.
+
+    Args:
+        namespace: The namespace dict to make available in the shell
+    """
+    # Apply nest_asyncio to allow IPython to run its own event loop
+    # This is needed because we're already inside an async context
+    import nest_asyncio
+
+    nest_asyncio.apply()
+
+    with contextlib.suppress(EOFError, ValueError):
+        # Configure IPython for async/await support
+        from IPython.terminal.embed import InteractiveShellEmbed
+
+        model_names = [
+            k for k in namespace.keys() if k not in ("Tortoise", "tortoise", "connections", "apps")
+        ]
+        models_info = (
+            f"Available models: {', '.join(model_names)}" if model_names else "No models loaded"
+        )
+
+        banner = (
+            "Tortoise ORM Shell (IPython with async support)\n"
+            f"{models_info}\n"
+            "Use 'await' directly for async operations (e.g., 'await YourModel.all()').\n"
+        )
+
+        # Create IPython shell with async autoawait enabled
+        ipshell = InteractiveShellEmbed(
+            user_ns=namespace,
+            banner1=banner,
+        )
+        # Enable autoawait for top-level await
+        ipshell.autoawait = True
+        ipshell()
+
+
+async def _launch_ptpython_shell(namespace: dict[str, Any]) -> None:
+    """Launch ptpython shell asynchronously.
+
+    Args:
+        namespace: The namespace dict to make available in the shell
+    """
+    # Apply Windows patch for ptpython signal handler issues
+    if platform.system() == "Windows":
+        _patch_loop_factory_for_ptpython()
+
+    model_names = [
+        k for k in namespace.keys() if k not in ("Tortoise", "tortoise", "connections", "apps")
+    ]
+
+    # Print banner before launching ptpython
+    models_info = (
+        f"Available models: {', '.join(model_names)}" if model_names else "No models loaded"
+    )
+    print("Tortoise ORM Shell (ptpython)")
+    print(models_info)
+    print("Use 'await' directly for async operations (e.g., 'await YourModel.all()').\n")
+
+    with contextlib.suppress(EOFError, ValueError):
+        await ptpython_embed(
+            globals=namespace,
+            title="Tortoise Shell",
+            vi_mode=True,
+            return_asyncio_coroutine=True,
+            patch_stdout=True,
+        )
 
 
 @contextlib.asynccontextmanager
-async def tortoise_cli_context(config: dict[str, Any]) -> AsyncGenerator[TortoiseContext, None]:
+async def tortoise_cli_context(
+    config: dict[str, Any] | TortoiseConfig,
+) -> AsyncGenerator[TortoiseContext, None]:
     async with TortoiseContext() as ctx:
         await ctx.init(config=config)
         yield ctx
@@ -59,11 +167,17 @@ class _NoopRecorder(MigrationRecorder):
         return None
 
 
-def _load_config(ctx: CLIContext) -> dict[str, Any]:
+def _load_config(ctx: CLIContext) -> TortoiseConfig:
+    """Load Tortoise ORM configuration from various sources.
+
+    Returns:
+        TortoiseConfig: Validated configuration object
+    """
     config_value = ctx.config
     config_file = ctx.config_file
     if config_file:
-        return Tortoise._get_config_from_config_file(config_file)
+        config_dict = Tortoise._get_config_from_config_file(config_file)
+        return TortoiseConfig.from_dict(config_dict)
     if not config_value:
         config_value = utils.tortoise_orm_config()
     if not config_value:
@@ -73,25 +187,17 @@ def _load_config(ctx: CLIContext) -> dict[str, Any]:
     return utils.get_tortoise_config(config_value)
 
 
-def _normalized_config(config: dict[str, Any]) -> dict[str, Any]:
-    normalized = dict(config)
-    apps_config = config.get("apps", {})
-    normalized["apps"] = utils.normalize_apps_config(apps_config)
-    return normalized
-
-
-def _select_apps(
-    apps_config: dict[str, dict[str, Any]], app_labels: Iterable[str] | None
-) -> dict[str, dict[str, Any]]:
-    if not apps_config:
+def _select_apps(config: TortoiseConfig, app_labels: Iterable[str] | None) -> dict[str, AppConfig]:
+    """Select specific apps from config, or all if no labels specified."""
+    if not config.apps:
         raise utils.CLIError("No apps configured in TORTOISE_ORM")
     if not app_labels:
-        return apps_config
-    selected: dict[str, dict[str, Any]] = {}
+        return dict(config.apps)
+    selected: dict[str, AppConfig] = {}
     for label in app_labels:
-        if label not in apps_config:
+        if label not in config.apps:
             raise utils.CLIUsageError(f"Unknown app label {label}")
-        selected[label] = apps_config[label]
+        selected[label] = config.apps[label]
     return selected
 
 
@@ -236,24 +342,71 @@ class CLIContext:
 
 
 async def init(ctx: CLIContext, app_labels: tuple[str, ...]) -> None:
-    config = _normalized_config(_load_config(ctx))
-    apps_config = _select_apps(config.get("apps", {}), app_labels or None)
+    config = _load_config(ctx)
+    apps_config = _select_apps(config, app_labels or None)
     for label, app_config in apps_config.items():
-        module, path = _ensure_migrations_package(label, app_config)
+        # Convert AppConfig to dict for _ensure_migrations_package
+        app_dict = app_config.to_dict()
+        module, path = _ensure_migrations_package(label, app_dict)
         print(f"{label}: {module} -> {path}")
 
 
 async def shell(ctx: CLIContext) -> None:
-    config = _normalized_config(_load_config(ctx))
-    async with tortoise_cli_context(config):
-        with contextlib.suppress(EOFError, ValueError):
-            await embed(
-                globals=globals(),
-                title="Tortoise Shell",
-                vi_mode=True,
-                return_asyncio_coroutine=True,
-                patch_stdout=True,
-            )
+    """Launch an interactive shell with Tortoise ORM context.
+
+    Prefers IPython if available, falls back to ptpython.
+    Requires at least one shell provider to be installed.
+
+    Raises:
+        CLIError: If neither IPython nor ptpython is installed
+    """
+    # Detect which shell provider is available
+    provider = _get_available_shell_provider()
+
+    if provider is None:
+        raise utils.CLIError(
+            "No interactive shell available. Please install one of the following:\n"
+            "  - IPython (recommended): pip install tortoise-orm[ipython]\\n"
+            "  - ptpython: pip install tortoise-orm[ptpython]\\n"
+            "  - Or install directly: pip install ipython (or ptpython)"
+        )
+
+    config = _load_config(ctx)
+
+    # For IPython: Initialize context, prepare namespace, then launch synchronously
+    # IPython manages its own event loop for autoawait
+    if provider == ShellProvider.IPYTHON:
+        async with tortoise_cli_context(config) as tortoise_ctx:
+            # Prepare namespace with Tortoise context and useful imports
+            namespace = {
+                "Tortoise": Tortoise,
+                "tortoise": tortoise_ctx,
+                "apps": tortoise_ctx.apps,
+            }
+            # Add all models to namespace for easy access
+            if tortoise_ctx.apps:
+                for app_name, models_dict in tortoise_ctx.apps.items():
+                    for model_name, model_class in models_dict.items():
+                        namespace[model_name] = model_class
+
+            # Launch IPython synchronously - it will manage its own event loop
+            _launch_ipython_shell(namespace)
+    else:
+        # ptpython works fine in async context
+        async with tortoise_cli_context(config) as tortoise_ctx:
+            # Prepare namespace with Tortoise context and useful imports
+            namespace = {
+                "Tortoise": Tortoise,
+                "tortoise": tortoise_ctx,
+                "apps": tortoise_ctx.apps,
+            }
+            # Add all models to namespace for easy access
+            if tortoise_ctx.apps:
+                for app_name, models_dict in tortoise_ctx.apps.items():
+                    for model_name, model_class in models_dict.items():
+                        namespace[model_name] = model_class
+
+            await _launch_ptpython_shell(namespace)
 
 
 async def makemigrations(
@@ -261,23 +414,27 @@ async def makemigrations(
 ) -> None:
     if empty and not app_labels:
         raise utils.CLIUsageError("--empty requires at least one APP_LABEL")
-    config = _normalized_config(_load_config(ctx))
-    apps_config = _select_apps(config.get("apps", {}), app_labels or None)
-    for label, app_config in apps_config.items():
+    tortoise_config = _load_config(ctx)
+    apps_config = _select_apps(tortoise_config, app_labels or None)
+
+    apps_dict = {label: app.to_dict() for label, app in apps_config.items()}
+    for label, app_config in apps_dict.items():
         migrations_module, _ = _ensure_migrations_package(label, app_config)
         app_config["migrations"] = migrations_module
-    config["apps"] = apps_config
 
-    async with tortoise_cli_context(config) as ctx:
+    config_dict = tortoise_config.to_dict()
+    config_dict["apps"] = apps_dict
+
+    async with tortoise_cli_context(config_dict) as ctx:
         if not ctx.apps:
             raise utils.CLIError("Tortoise apps are not initialized")
-        autodetector = MigrationAutodetector(ctx.apps, apps_config)
+        autodetector = MigrationAutodetector(ctx.apps, apps_dict)
         if empty:
             await autodetector.loader.build_graph()
             old_state = await autodetector._project_state()
             new_state = autodetector._current_state()
             writers = []
-            for label, app_config in apps_config.items():
+            for label, app_config in apps_dict.items():
                 migrations_module_name = app_config.get("migrations")
                 if not isinstance(migrations_module_name, str):
                     continue
@@ -327,7 +484,7 @@ async def _run_migrate(
     if app_label and not migration and "." in app_label:
         app_label, migration = app_label.split(".", 1)
 
-    config = _normalized_config(_load_config(ctx))
+    config = _load_config(ctx)
 
     target = target_override
     if target is None:
@@ -402,12 +559,15 @@ async def downgrade(
 
 
 async def history(ctx: CLIContext, app_labels: tuple[str, ...]) -> None:
-    config = _normalized_config(_load_config(ctx))
-    apps_config = _select_apps(config.get("apps", {}), app_labels or None)
-    config["apps"] = apps_config
-    apps_by_connection = _group_apps_by_connection(apps_config)
+    tortoise_config = _load_config(ctx)
+    apps_config = _select_apps(tortoise_config, app_labels or None)
+    apps_dict = {label: app.to_dict() for label, app in apps_config.items()}
+    apps_by_connection = _group_apps_by_connection(apps_dict)
 
-    async with tortoise_cli_context(config):
+    config_dict = tortoise_config.to_dict()
+    config_dict["apps"] = apps_dict
+
+    async with tortoise_cli_context(config_dict):
         for connection_name, subset in apps_by_connection.items():
             recorder = MigrationRecorder(get_connection(connection_name))
             applied = await recorder.applied_migrations()
@@ -415,12 +575,12 @@ async def history(ctx: CLIContext, app_labels: tuple[str, ...]) -> None:
 
 
 async def heads(ctx: CLIContext, app_labels: tuple[str, ...]) -> None:
-    config = _normalized_config(_load_config(ctx))
-    apps_config = _select_apps(config.get("apps", {}), app_labels or None)
-    config["apps"] = apps_config
-    apps_by_connection = _group_apps_by_connection(apps_config)
+    tortoise_config = _load_config(ctx)
+    apps_config = _select_apps(tortoise_config, app_labels or None)
+    apps_dict = {label: app.to_dict() for label, app in apps_config.items()}
+    apps_by_connection = _group_apps_by_connection(apps_dict)
 
-    loader = MigrationLoader(apps_config, _NoopRecorder(), load=False)
+    loader = MigrationLoader(apps_dict, _NoopRecorder(), load=False)
     await loader.build_graph()
 
     for connection_name, subset in apps_by_connection.items():
@@ -449,7 +609,9 @@ def _add_init_parser(subparsers: argparse._SubParsersAction) -> None:
 
 
 def _add_shell_parser(subparsers: argparse._SubParsersAction) -> None:
-    shell_parser = subparsers.add_parser("shell", help="Start an interactive shell.")
+    shell_parser = subparsers.add_parser(
+        "shell", help="Start an interactive shell (requires ipython or ptpython)."
+    )
     shell_parser.set_defaults(func=_run_shell)
 
 

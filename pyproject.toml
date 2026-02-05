@@ -12,10 +12,10 @@ dependencies = [
     "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
     "aiosqlite (>=0.16.0,<1.0.0)",
     "anyio",
-    "ptpython",
     "pytz",
     "tomlkit (>=0.11.4,<1.0.0); python_version < '3.11'",
     "typing-extensions (>= 4.1.0); python_version < '3.11'",
+    "nest-asyncio>=1.6.0",
 ]
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
@@ -40,6 +40,10 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
+ipython = []
+ptpython = [
+    "ptpython>=3.0.0",
+]
 accel = [
     "ciso8601; sys_platform != 'win32' and implementation_name == 'cpython'",
     "uvloop; sys_platform != 'win32' and implementation_name == 'cpython'",

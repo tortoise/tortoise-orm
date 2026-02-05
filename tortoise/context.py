@@ -322,15 +322,12 @@ class TortoiseContext:
         elif isinstance(config, TortoiseConfig):
             typed_config = config
         else:
-            # Validate and convert dict config to TortoiseConfig
             typed_config = TortoiseConfig.from_dict(config)
 
-        # Convert to dict for Apps and ConnectionHandler (they expect dict format)
         config_dict = typed_config.to_dict()
         connections_config = config_dict["connections"]
         apps_config = config_dict["apps"]
 
-        # Use typed config values with fallback to parameters
         effective_use_tz = typed_config.use_tz if typed_config.use_tz is not None else use_tz
         effective_timezone = (
             typed_config.timezone if typed_config.timezone is not None else timezone
@@ -339,20 +336,16 @@ class TortoiseContext:
 
         self._table_name_generator = table_name_generator
 
-        # Validate init_connections and _create_db combination
         if not init_connections and _create_db:
             raise ConfigurationError("init_connections=False cannot be used with _create_db=True")
 
-        # Initialize timezone
         self._init_timezone(effective_use_tz, effective_timezone)
 
-        # Initialize connections for this context
         if init_connections:
             await self.connections._init(connections_config, _create_db)
         else:
             self.connections._init_config(connections_config)
 
-        # Initialize apps for this context
         self._apps = Apps(
             apps_config,
             self.connections,
@@ -360,24 +353,18 @@ class TortoiseContext:
             validate_connections=init_connections,
         )
 
-        # Initialize routers
         self._init_routers(effective_routers)
 
-        # Detect default connection
         connection_names = list(typed_config.connections.keys())
         if len(connection_names) == 1:
-            # Single connection becomes the default automatically
             self._default_connection = connection_names[0]
         elif "default" in connection_names:
-            # Connection named "default" is used as default
             self._default_connection = "default"
         else:
-            # Multiple connections without a "default" - require explicit specification
             self._default_connection = None
 
         self._inited = True
 
-        # Set global fallback for cross-task access if enabled
         if _enable_global_fallback:
             set_global_context(self)
 
@@ -588,7 +575,6 @@ async def tortoise_test_context(
     """
     ctx = TortoiseContext()
     async with ctx:
-        # Build config with explicit connection label if provided
         config = generate_config(
             db_url,
             app_modules={app_label: modules},

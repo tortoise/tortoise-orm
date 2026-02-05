@@ -35,9 +35,17 @@ def test_tortoise_orm_config_empty(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 
 
 def test_get_tortoise_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from tortoise.config import TortoiseConfig
+
     module_name = f"cli_settings_{tmp_path.name}"
     settings = tmp_path / f"{module_name}.py"
-    settings.write_text("TORTOISE_ORM = {'connections': {}, 'apps': {}}\n", encoding="utf-8")
+    settings.write_text(
+        "TORTOISE_ORM = {\n"
+        "    'connections': {'default': 'sqlite://:memory:'},\n"
+        "    'apps': {'models': {'models': ['__main__'], 'default_connection': 'default'}}\n"
+        "}\n",
+        encoding="utf-8",
+    )
     monkeypatch.syspath_prepend(str(tmp_path))
     importlib.invalidate_caches()
     import sys
@@ -45,18 +53,22 @@ def test_get_tortoise_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     sys.modules.pop("cli_app", None)
     sys.modules.pop("cli_app.migrations", None)
 
-    assert utils.get_tortoise_config(f"{module_name}.TORTOISE_ORM") == {
-        "connections": {},
-        "apps": {},
-    }
+    result = utils.get_tortoise_config(f"{module_name}.TORTOISE_ORM")
+    assert isinstance(result, TortoiseConfig)
+    config_dict = result.to_dict()
+    assert config_dict["connections"] == {"default": "sqlite://:memory:"}
+    assert config_dict["apps"]["models"]["models"] == ["__main__"]
 
     with pytest.raises(
         utils.CLIError,
-        match="Error while importing configuration module: No module named 'missing'",
+        match="Cannot import configuration module: 'missing'",
     ):
         utils.get_tortoise_config("missing.TORTOISE_ORM")
 
-    with pytest.raises(utils.CLIUsageError):
+    with pytest.raises(
+        utils.CLIError,
+        match="Variable 'MISSING' not found in module",
+    ):
         utils.get_tortoise_config(f"{module_name}.MISSING")
 
 

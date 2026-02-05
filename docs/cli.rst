@@ -109,9 +109,32 @@ shell
 
 Start an interactive shell with Tortoise initialized.
 
+**Installation**
+
+The shell command requires either IPython or ptpython. Install your preferred shell:
+
+.. code-block:: shell
+
+    # Install IPython (recommended)
+    pip install tortoise-orm[ipython]
+
+    # Or install ptpython
+    pip install tortoise-orm[ptpython]
+
+IPython is preferred when both are available.
+
+**Usage**
+
 .. code-block:: shell
 
     tortoise shell
+
+**Supported Shells**
+
+- **IPython** (>=8.0.0) - Preferred, better async/await support
+- **ptpython** (>=3.0.0) - Alternative with good async support
+
+If neither shell is installed, the command will display an error with installation instructions.
 
 Target shorthand
 ================

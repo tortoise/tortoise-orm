@@ -55,7 +55,7 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
         default_str = " DEFAULT"
         if not (auto_now or auto_now_add):
             default_str += f" {default}"
-        if auto_now_add:
+        if auto_now_add or auto_now:
             default_str += " CURRENT_TIMESTAMP"
         return default_str
 

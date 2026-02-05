@@ -63,6 +63,7 @@ class ConnectionConfig:
 class AppConfig:
     models: list[str]
     default_connection: str | None = None
+    migrations: str | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.models, list) or not self.models:
@@ -72,11 +73,15 @@ class AppConfig:
                 raise ConfigurationError("AppConfig.models must contain non-empty strings")
         if self.default_connection is not None and not isinstance(self.default_connection, str):
             raise ConfigurationError("AppConfig.default_connection must be a string or None")
+        if self.migrations is not None and not isinstance(self.migrations, str):
+            raise ConfigurationError("AppConfig.migrations must be a string or None")
 
     def to_dict(self) -> dict[str, Any]:
         data: dict[str, Any] = {"models": self.models}
         if self.default_connection is not None:
             data["default_connection"] = self.default_connection
+        if self.migrations is not None:
+            data["migrations"] = self.migrations
         return data
 
     @classmethod
@@ -90,6 +95,7 @@ class AppConfig:
         return cls(
             models=list(data["models"]),
             default_connection=data.get("default_connection"),
+            migrations=data.get("migrations"),
         )
 
 

@@ -356,7 +356,7 @@ class DatetimeField(Field[datetime.datetime], datetime.datetime):
             raise ConfigurationError("You can choose only 'auto_now' or 'auto_now_add'")
         super().__init__(**kwargs)
         self.auto_now = auto_now
-        self.auto_now_add = auto_now | auto_now_add
+        self.auto_now_add = auto_now_add
 
     def to_python_value(self, value: Any) -> datetime.datetime | None:
         if value is not None:
@@ -398,7 +398,7 @@ class DatetimeField(Field[datetime.datetime], datetime.datetime):
     @property
     def constraints(self) -> dict:
         data = {}
-        if self.auto_now_add:
+        if self.auto_now_add or self.auto_now:
             data["readOnly"] = True
         return data
 
@@ -448,7 +448,7 @@ class TimeField(Field[datetime.time], datetime.time):
             raise ConfigurationError("You can choose only 'auto_now' or 'auto_now_add'")
         super().__init__(**kwargs)
         self.auto_now = auto_now
-        self.auto_now_add = auto_now | auto_now_add
+        self.auto_now_add = auto_now_add
 
     def to_python_value(self, value: Any) -> datetime.time | datetime.timedelta | None:
         if value is not None:

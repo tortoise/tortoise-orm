@@ -8,6 +8,7 @@ from types import ModuleType
 from typing import TYPE_CHECKING
 
 from tortoise import Tortoise
+from tortoise.config import TortoiseConfig
 from tortoise.connection import get_connections
 from tortoise.context import TortoiseContext
 from tortoise.exceptions import DoesNotExist, IntegrityError
@@ -54,7 +55,7 @@ class RegisterTortoise(AbstractAsyncContextManager):
     app:
         FastAPI app.
     config:
-        Dict containing config:
+        Dict containing config or TortoiseConfig instance:
 
         Example
         -------
@@ -118,7 +119,7 @@ class RegisterTortoise(AbstractAsyncContextManager):
     def __init__(
         self,
         app: FastAPI | None = None,
-        config: dict | None = None,
+        config: dict | TortoiseConfig | None = None,
         config_file: str | None = None,
         db_url: str | None = None,
         modules: dict[str, Iterable[str | ModuleType]] | None = None,
@@ -206,7 +207,7 @@ class RegisterTortoise(AbstractAsyncContextManager):
 
 def register_tortoise(
     app: FastAPI,
-    config: dict | None = None,
+    config: dict | TortoiseConfig | None = None,
     config_file: str | None = None,
     db_url: str | None = None,
     modules: dict[str, Iterable[str | ModuleType]] | None = None,
@@ -226,7 +227,7 @@ def register_tortoise(
     app:
         FastAPI app.
     config:
-        Dict containing config:
+        Dict containing config or TortoiseConfig instance:
 
         Example
         -------

@@ -7,7 +7,7 @@ import io
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any
 
 import pytest
 
@@ -280,8 +280,16 @@ TORTOISE_ORM = {
     assert called["target"] == "orders.__first__"
     assert called["direction"] == "backward"
     assert called["app_labels"] is None
-    called_config = cast(dict[str, Any], called["config"])
-    assert set(called_config["apps"].keys()) == {"accounts", "orders"}
+    called_config = called["config"]
+    # Config can be either dict or TortoiseConfig
+    if isinstance(called_config, dict):
+        apps = called_config["apps"]
+    else:
+        from tortoise.config import TortoiseConfig
+
+        assert isinstance(called_config, TortoiseConfig)
+        apps = called_config.apps
+    assert set(apps.keys()) == {"accounts", "orders"}
 
 
 @pytest.mark.asyncio
