@@ -86,13 +86,13 @@ jobs:
           TORTOISE_TEST_POETRY_ADD: 1
           PYTHONDEVMODE: 1
           PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
-      - name: Rename coverage file
-        run: mv .coverage .coverage.sqlite.${{ matrix.python-version }}
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
           name: coverage-sqlite-${{ matrix.python-version }}
-          path: .coverage.sqlite.${{ matrix.python-version }}
+          path: .coverage
+          if-no-files-found: error
+          include-hidden-files: true
 
   test-postgres:
     runs-on: ubuntu-22.04
@@ -133,13 +133,13 @@ jobs:
         run: make test_postgres_psycopg
         env:
           PYTHONDEVMODE: 1
-      - name: Rename coverage file
-        run: mv .coverage .coverage.postgres.${{ matrix.python-version }}
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
           name: coverage-postgres-${{ matrix.python-version }}
-          path: .coverage.postgres.${{ matrix.python-version }}
+          path: .coverage
+          if-no-files-found: error
+          include-hidden-files: true
 
   test-mysql:
     runs-on: ubuntu-22.04
@@ -183,13 +183,13 @@ jobs:
         run: make test_mysql_asyncmy
         env:
           PYTHONDEVMODE: 1
-      - name: Rename coverage file
-        run: mv .coverage .coverage.mysql.${{ matrix.python-version }}
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
           name: coverage-mysql-${{ matrix.python-version }}
-          path: .coverage.mysql.${{ matrix.python-version }}
+          path: .coverage
+          if-no-files-found: error
+          include-hidden-files: true
 
   test-mssql:
     runs-on: ubuntu-22.04
@@ -237,13 +237,13 @@ jobs:
         run: make test_mssql
         env:
           PYTHONDEVMODE: 1
-      - name: Rename coverage file
-        run: mv .coverage .coverage.mssql.${{ matrix.python-version }}
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
         with:
           name: coverage-mssql-${{ matrix.python-version }}
-          path: .coverage.mssql.${{ matrix.python-version }}
+          path: .coverage
+          if-no-files-found: error
+          include-hidden-files: true
 
   coverage:
     needs: [test-sqlite, test-postgres, test-mysql, test-mssql]
@@ -260,10 +260,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: coverage-*
-          merge-multiple: true
-          path: coverage-data
       - name: Combine coverage
-        run: uv run --frozen coverage combine coverage-data/.coverage.*
+        run: |
+          uv run --frozen coverage combine coverage-*/.coverage
       - name: Coverage report
         run: uv run --frozen coverage report
       - name: Upload to Coveralls
