@@ -45,46 +45,48 @@ class StateApps(Apps):
         Models with unresolved relations are left with ``_inited = False`` so
         they will be fully initialised on the next ``_reload`` call once the
         target model exists."""
-        # Mark models that have unresolvable relations so we can reset _inited
-        models_with_missing_refs: set[type[Model]] = set()
-
+        uninited_models: list[type[Model]] = []
         for app in self.apps.values():
             for model in app.values():
-                if model._meta._inited:
-                    continue
+                if not model._meta._inited:
+                    uninited_models.append(model)
 
-                for field_name in (*model._meta.fk_fields, *model._meta.o2o_fields):
-                    fk_object = model._meta.fields_map[field_name]
-                    reference = fk_object.model_name  # type: ignore[attr-defined]
-                    if isinstance(reference, str):
-                        parts = reference.split(".")
-                        if len(parts) == 2:
-                            ref_app, ref_model = parts
-                            if ref_app not in self.apps or ref_model not in self.apps.get(
-                                ref_app, {}
-                            ):
-                                models_with_missing_refs.add(model)
+        if not uninited_models:
+            return
 
-                for field_name in model._meta.m2m_fields:
-                    m2m_object = model._meta.fields_map[field_name]
-                    reference = m2m_object.model_name  # type: ignore[attr-defined]
-                    if isinstance(reference, str):
-                        parts = reference.split(".")
-                        if len(parts) == 2:
-                            ref_app, ref_model = parts
-                            if ref_app not in self.apps or ref_model not in self.apps.get(
-                                ref_app, {}
-                            ):
-                                models_with_missing_refs.add(model)
+        models_with_missing_refs: set[type[Model]] = set()
 
-        # Temporarily mark models with missing refs as _inited so the parent
-        # _init_relations skips them
+        for model in uninited_models:
+            for field_name in (*model._meta.fk_fields, *model._meta.o2o_fields):
+                fk_object = model._meta.fields_map[field_name]
+                reference = fk_object.model_name  # type: ignore[attr-defined]
+                if isinstance(reference, str):
+                    parts = reference.split(".")
+                    if len(parts) == 2:
+                        ref_app, ref_model = parts
+                        if ref_app not in self.apps or ref_model not in self.apps.get(ref_app, {}):
+                            models_with_missing_refs.add(model)
+                            break  # No need to check remaining fields
+
+            if model in models_with_missing_refs:
+                continue
+
+            for field_name in model._meta.m2m_fields:
+                m2m_object = model._meta.fields_map[field_name]
+                reference = m2m_object.model_name  # type: ignore[attr-defined]
+                if isinstance(reference, str):
+                    parts = reference.split(".")
+                    if len(parts) == 2:
+                        ref_app, ref_model = parts
+                        if ref_app not in self.apps or ref_model not in self.apps.get(ref_app, {}):
+                            models_with_missing_refs.add(model)
+                            break
+
         for model in models_with_missing_refs:
             model._meta._inited = True
 
         super()._init_relations()
 
-        # Reset so they will be re-processed on the next _reload
         for model in models_with_missing_refs:
             model._meta._inited = False
 
