@@ -52,6 +52,7 @@ class ModelState(BaseEntityState):
         else:
             attrs = dict(self.fields)
         attrs["Meta"] = meta_class
+        attrs["_no_comments"] = True
 
         model = type(self.name, self.bases, attrs)
         return cast(type[Model], model)

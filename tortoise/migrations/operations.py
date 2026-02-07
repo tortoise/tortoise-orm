@@ -162,6 +162,7 @@ class CreateModel(TortoiseOperation):
 
             attributes: dict[str, Any] = dict(self.fields)
             attributes["Meta"] = meta_class
+            attributes["_no_comments"] = True
             self._model = cast(type[Model], type(self.name, (Model,), attributes))
 
         return self._model

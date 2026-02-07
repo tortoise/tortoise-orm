@@ -277,7 +277,7 @@ class BooleanField(Field[bool]):
         SQL_TYPE = "NUMBER(1)"
 
 
-class DecimalField(Field[Decimal], Decimal):
+class DecimalField(Field[Decimal], Decimal):  # type: ignore
     """
     Accurate decimal field.
 

@@ -529,11 +529,12 @@ class ModelMeta(type):
         for field in meta.fields_map.values():
             field.model = new_class  # type: ignore
 
-        for fname, comment in _get_comments(new_class).items():  # type: ignore
-            if fname in fields_map:
-                fields_map[fname].docstring = comment
-                if fields_map[fname].description is None:
-                    fields_map[fname].description = comment.split("\n")[0]
+        if not attrs.get("_no_comments"):
+            for fname, comment in _get_comments(new_class).items():  # type: ignore
+                if fname in fields_map:
+                    fields_map[fname].docstring = comment
+                    if fields_map[fname].description is None:
+                        fields_map[fname].description = comment.split("\n")[0]
 
         if new_class.__doc__ and not meta.table_description:
             meta.table_description = inspect.cleandoc(new_class.__doc__).split("\n")[0]
