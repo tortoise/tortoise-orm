@@ -213,7 +213,6 @@ class MetaInfo:
         "db_complex_fields",
         "_default_ordering",
         "_ordering_validated",
-        "_python_value_cache",
     )
 
     def __init__(self, meta: Model.Meta) -> None:
@@ -253,7 +252,6 @@ class MetaInfo:
         self.db_native_fields: list[tuple[str, str, Field]] = []
         self.db_default_fields: list[tuple[str, str, Field]] = []
         self.db_complex_fields: list[tuple[str, str, Field]] = []
-        self._python_value_cache: dict[str, Callable] = {}
 
     @property
     def full_name(self) -> str:
