@@ -73,7 +73,7 @@ def test_select_related_100_rows(benchmark, db):
     loop = asyncio.get_event_loop()
 
     async def _setup():
-        authors = await Author.bulk_create([Author(name=f"Author {i}") for i in range(10)])
+        await Author.bulk_create([Author(name=f"Author {i}") for i in range(10)])
         author_ids = [a.id for a in await Author.all()]
         await Book.bulk_create(
             [
