@@ -261,8 +261,9 @@ jobs:
         with:
           pattern: coverage-*
           merge-multiple: true
+          path: coverage-data
       - name: Combine coverage
-        run: uv run --frozen coverage combine
+        run: uv run --frozen coverage combine coverage-data/.coverage.*
       - name: Coverage report
         run: uv run --frozen coverage report
       - name: Upload to Coveralls
