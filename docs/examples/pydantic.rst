@@ -26,6 +26,15 @@ Early model Init
 
 .. rst-class:: html-toggle
 
+.. _example_pydantic_computed_fields:
+
+Computed fields & Nullable relations
+=====================================
+.. literalinclude::  ../../examples/pydantic/computed_fields.py
+
+
+.. rst-class:: html-toggle
+
 .. _example_pydantic_recursive:
 
 Recursive models + Computed fields

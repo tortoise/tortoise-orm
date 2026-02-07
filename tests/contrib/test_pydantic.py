@@ -119,13 +119,13 @@ async def test_event_schema(db, pydantic_setup):
     Event_Pydantic = pydantic_setup["Event_Pydantic"]
     assert Event_Pydantic.model_json_schema() == {
         "$defs": {
-            "Address_e4rhju_leaf": {
+            "Address_zwygvk_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "city": {"maxLength": 64, "title": "City", "type": "string"},
                     "street": {"maxLength": 128, "title": "Street", "type": "string"},
                     "m2mwitho2opks": {
-                        "items": {"$ref": "#/$defs/M2mWithO2oPk_leajz6_leaf"},
+                        "items": {"$ref": "#/$defs/M2mWithO2oPk_zpacbp_leaf"},
                         "title": "M2Mwitho2Opks",
                         "type": "array",
                     },
@@ -140,7 +140,7 @@ async def test_event_schema(db, pydantic_setup):
                 "title": "Address",
                 "type": "object",
             },
-            "M2mWithO2oPk_leajz6_leaf": {
+            "M2mWithO2oPk_zpacbp_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "id": {
@@ -155,7 +155,7 @@ async def test_event_schema(db, pydantic_setup):
                 "title": "M2mWithO2oPk",
                 "type": "object",
             },
-            "Reporter_fgnv33_leaf": {
+            "Reporter_ifqfo2_leaf": {
                 "additionalProperties": False,
                 "description": "Whom is assigned as the reporter",
                 "properties": {
@@ -171,7 +171,7 @@ async def test_event_schema(db, pydantic_setup):
                 "title": "Reporter",
                 "type": "object",
             },
-            "Team_ip4pg6_leaf": {
+            "Team_fcszy2_leaf": {
                 "additionalProperties": False,
                 "description": "Team that is a playing",
                 "properties": {
@@ -200,7 +200,7 @@ async def test_event_schema(db, pydantic_setup):
                 "title": "Team",
                 "type": "object",
             },
-            "Tournament_5y7e7j_leaf": {
+            "Tournament_zh4alg_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "id": {
@@ -239,19 +239,20 @@ async def test_event_schema(db, pydantic_setup):
             },
             "name": {"description": "The name", "title": "Name", "type": "string"},
             "tournament": {
-                "$ref": "#/$defs/Tournament_5y7e7j_leaf",
+                "$ref": "#/$defs/Tournament_zh4alg_leaf",
                 "description": "What tournaments is a happenin'",
             },
             "reporter": {
                 "anyOf": [
-                    {"$ref": "#/$defs/Reporter_fgnv33_leaf"},
+                    {"$ref": "#/$defs/Reporter_ifqfo2_leaf"},
                     {"type": "null"},
                 ],
+                "default": None,
                 "nullable": True,
                 "title": "Reporter",
             },
             "participants": {
-                "items": {"$ref": "#/$defs/Team_ip4pg6_leaf"},
+                "items": {"$ref": "#/$defs/Team_fcszy2_leaf"},
                 "title": "Participants",
                 "type": "array",
             },
@@ -273,9 +274,10 @@ async def test_event_schema(db, pydantic_setup):
             },
             "address": {
                 "anyOf": [
-                    {"$ref": "#/$defs/Address_e4rhju_leaf"},
+                    {"$ref": "#/$defs/Address_zwygvk_leaf"},
                     {"type": "null"},
                 ],
+                "default": None,
                 "nullable": True,
                 "title": "Address",
             },
@@ -284,11 +286,9 @@ async def test_event_schema(db, pydantic_setup):
             "event_id",
             "name",
             "tournament",
-            "reporter",
             "participants",
             "modified",
             "token",
-            "address",
         ],
         "title": "Event",
         "type": "object",
@@ -300,7 +300,7 @@ async def test_eventlist_schema(db, pydantic_setup):
     Event_Pydantic_List = pydantic_setup["Event_Pydantic_List"]
     assert Event_Pydantic_List.model_json_schema() == {
         "$defs": {
-            "Event_mfxmwb": {
+            "Event_bx6qaa": {
                 "additionalProperties": False,
                 "description": "Events on the calendar",
                 "properties": {
@@ -312,19 +312,20 @@ async def test_eventlist_schema(db, pydantic_setup):
                     },
                     "name": {"description": "The name", "title": "Name", "type": "string"},
                     "tournament": {
-                        "$ref": "#/$defs/Tournament_5y7e7j_leaf",
+                        "$ref": "#/$defs/Tournament_zh4alg_leaf",
                         "description": "What tournaments is a happenin'",
                     },
                     "reporter": {
                         "anyOf": [
-                            {"$ref": "#/$defs/Reporter_fgnv33_leaf"},
+                            {"$ref": "#/$defs/Reporter_ifqfo2_leaf"},
                             {"type": "null"},
                         ],
+                        "default": None,
                         "nullable": True,
                         "title": "Reporter",
                     },
                     "participants": {
-                        "items": {"$ref": "#/$defs/Team_ip4pg6_leaf"},
+                        "items": {"$ref": "#/$defs/Team_fcszy2_leaf"},
                         "title": "Participants",
                         "type": "array",
                     },
@@ -353,9 +354,10 @@ async def test_eventlist_schema(db, pydantic_setup):
                     },
                     "address": {
                         "anyOf": [
-                            {"$ref": "#/$defs/Address_e4rhju_leaf"},
+                            {"$ref": "#/$defs/Address_zwygvk_leaf"},
                             {"type": "null"},
                         ],
+                        "default": None,
                         "nullable": True,
                         "title": "Address",
                     },
@@ -364,22 +366,20 @@ async def test_eventlist_schema(db, pydantic_setup):
                     "event_id",
                     "name",
                     "tournament",
-                    "reporter",
                     "participants",
                     "modified",
                     "token",
-                    "address",
                 ],
                 "title": "Event",
                 "type": "object",
             },
-            "Address_e4rhju_leaf": {
+            "Address_zwygvk_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "city": {"maxLength": 64, "title": "City", "type": "string"},
                     "street": {"maxLength": 128, "title": "Street", "type": "string"},
                     "m2mwitho2opks": {
-                        "items": {"$ref": "#/$defs/M2mWithO2oPk_leajz6_leaf"},
+                        "items": {"$ref": "#/$defs/M2mWithO2oPk_zpacbp_leaf"},
                         "title": "M2Mwitho2Opks",
                         "type": "array",
                     },
@@ -394,7 +394,7 @@ async def test_eventlist_schema(db, pydantic_setup):
                 "title": "Address",
                 "type": "object",
             },
-            "M2mWithO2oPk_leajz6_leaf": {
+            "M2mWithO2oPk_zpacbp_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "id": {
@@ -409,7 +409,7 @@ async def test_eventlist_schema(db, pydantic_setup):
                 "title": "M2mWithO2oPk",
                 "type": "object",
             },
-            "Reporter_fgnv33_leaf": {
+            "Reporter_ifqfo2_leaf": {
                 "additionalProperties": False,
                 "description": "Whom is assigned as the reporter",
                 "properties": {
@@ -425,7 +425,7 @@ async def test_eventlist_schema(db, pydantic_setup):
                 "title": "Reporter",
                 "type": "object",
             },
-            "Team_ip4pg6_leaf": {
+            "Team_fcszy2_leaf": {
                 "additionalProperties": False,
                 "description": "Team that is a playing",
                 "properties": {
@@ -454,7 +454,7 @@ async def test_eventlist_schema(db, pydantic_setup):
                 "title": "Team",
                 "type": "object",
             },
-            "Tournament_5y7e7j_leaf": {
+            "Tournament_zh4alg_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "id": {
@@ -483,7 +483,7 @@ async def test_eventlist_schema(db, pydantic_setup):
             },
         },
         "description": "Events on the calendar",
-        "items": {"$ref": "#/$defs/Event_mfxmwb"},
+        "items": {"$ref": "#/$defs/Event_bx6qaa"},
         "title": "Event_list",
         "type": "array",
     }
@@ -494,7 +494,7 @@ async def test_address_schema(db, pydantic_setup):
     Address_Pydantic = pydantic_setup["Address_Pydantic"]
     assert Address_Pydantic.model_json_schema() == {
         "$defs": {
-            "Event_zvunzw_leaf": {
+            "Event_lkfyxk_leaf": {
                 "additionalProperties": False,
                 "description": "Events on the calendar",
                 "properties": {
@@ -506,19 +506,20 @@ async def test_address_schema(db, pydantic_setup):
                     },
                     "name": {"description": "The name", "title": "Name", "type": "string"},
                     "tournament": {
-                        "$ref": "#/$defs/Tournament_5y7e7j_leaf",
+                        "$ref": "#/$defs/Tournament_zh4alg_leaf",
                         "description": "What tournaments is a happenin'",
                     },
                     "reporter": {
                         "anyOf": [
-                            {"$ref": "#/$defs/Reporter_fgnv33_leaf"},
+                            {"$ref": "#/$defs/Reporter_ifqfo2_leaf"},
                             {"type": "null"},
                         ],
+                        "default": None,
                         "nullable": True,
                         "title": "Reporter",
                     },
                     "participants": {
-                        "items": {"$ref": "#/$defs/Team_ip4pg6_leaf"},
+                        "items": {"$ref": "#/$defs/Team_fcszy2_leaf"},
                         "title": "Participants",
                         "type": "array",
                     },
@@ -550,7 +551,6 @@ async def test_address_schema(db, pydantic_setup):
                     "event_id",
                     "name",
                     "tournament",
-                    "reporter",
                     "participants",
                     "modified",
                     "token",
@@ -558,7 +558,7 @@ async def test_address_schema(db, pydantic_setup):
                 "title": "Event",
                 "type": "object",
             },
-            "M2mWithO2oPk_leajz6_leaf": {
+            "M2mWithO2oPk_zpacbp_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "id": {
@@ -573,7 +573,7 @@ async def test_address_schema(db, pydantic_setup):
                 "title": "M2mWithO2oPk",
                 "type": "object",
             },
-            "Reporter_fgnv33_leaf": {
+            "Reporter_ifqfo2_leaf": {
                 "additionalProperties": False,
                 "description": "Whom is assigned as the reporter",
                 "properties": {
@@ -589,7 +589,7 @@ async def test_address_schema(db, pydantic_setup):
                 "title": "Reporter",
                 "type": "object",
             },
-            "Team_ip4pg6_leaf": {
+            "Team_fcszy2_leaf": {
                 "additionalProperties": False,
                 "description": "Team that is a playing",
                 "properties": {
@@ -618,7 +618,7 @@ async def test_address_schema(db, pydantic_setup):
                 "title": "Team",
                 "type": "object",
             },
-            "Tournament_5y7e7j_leaf": {
+            "Tournament_zh4alg_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "id": {
@@ -651,11 +651,11 @@ async def test_address_schema(db, pydantic_setup):
             "city": {"maxLength": 64, "title": "City", "type": "string"},
             "street": {"maxLength": 128, "title": "Street", "type": "string"},
             "m2mwitho2opks": {
-                "items": {"$ref": "#/$defs/M2mWithO2oPk_leajz6_leaf"},
+                "items": {"$ref": "#/$defs/M2mWithO2oPk_zpacbp_leaf"},
                 "title": "M2Mwitho2Opks",
                 "type": "array",
             },
-            "event": {"$ref": "#/$defs/Event_zvunzw_leaf"},
+            "event": {"$ref": "#/$defs/Event_lkfyxk_leaf"},
             "event_id": {
                 "maximum": 9223372036854775807,
                 "minimum": -9223372036854775808,
@@ -674,7 +674,7 @@ async def test_tournament_schema(db, pydantic_setup):
     Tournament_Pydantic = pydantic_setup["Tournament_Pydantic"]
     assert Tournament_Pydantic.model_json_schema() == {
         "$defs": {
-            "Event_ln6p2q_leaf": {
+            "Event_xsdgtc_leaf": {
                 "additionalProperties": False,
                 "description": "Events on the calendar",
                 "properties": {
@@ -687,14 +687,15 @@ async def test_tournament_schema(db, pydantic_setup):
                     "name": {"description": "The name", "title": "Name", "type": "string"},
                     "reporter": {
                         "anyOf": [
-                            {"$ref": "#/$defs/Reporter_fgnv33_leaf"},
+                            {"$ref": "#/$defs/Reporter_ifqfo2_leaf"},
                             {"type": "null"},
                         ],
+                        "default": None,
                         "nullable": True,
                         "title": "Reporter",
                     },
                     "participants": {
-                        "items": {"$ref": "#/$defs/Team_ip4pg6_leaf"},
+                        "items": {"$ref": "#/$defs/Team_fcszy2_leaf"},
                         "title": "Participants",
                         "type": "array",
                     },
@@ -723,9 +724,10 @@ async def test_tournament_schema(db, pydantic_setup):
                     },
                     "address": {
                         "anyOf": [
-                            {"$ref": "#/$defs/Address_e4rhju_leaf"},
+                            {"$ref": "#/$defs/Address_zwygvk_leaf"},
                             {"type": "null"},
                         ],
+                        "default": None,
                         "nullable": True,
                         "title": "Address",
                     },
@@ -733,22 +735,20 @@ async def test_tournament_schema(db, pydantic_setup):
                 "required": [
                     "event_id",
                     "name",
-                    "reporter",
                     "participants",
                     "modified",
                     "token",
-                    "address",
                 ],
                 "title": "Event",
                 "type": "object",
             },
-            "Address_e4rhju_leaf": {
+            "Address_zwygvk_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "city": {"maxLength": 64, "title": "City", "type": "string"},
                     "street": {"maxLength": 128, "title": "Street", "type": "string"},
                     "m2mwitho2opks": {
-                        "items": {"$ref": "#/$defs/M2mWithO2oPk_leajz6_leaf"},
+                        "items": {"$ref": "#/$defs/M2mWithO2oPk_zpacbp_leaf"},
                         "title": "M2Mwitho2Opks",
                         "type": "array",
                     },
@@ -763,7 +763,7 @@ async def test_tournament_schema(db, pydantic_setup):
                 "title": "Address",
                 "type": "object",
             },
-            "M2mWithO2oPk_leajz6_leaf": {
+            "M2mWithO2oPk_zpacbp_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "id": {
@@ -778,7 +778,7 @@ async def test_tournament_schema(db, pydantic_setup):
                 "title": "M2mWithO2oPk",
                 "type": "object",
             },
-            "Reporter_fgnv33_leaf": {
+            "Reporter_ifqfo2_leaf": {
                 "additionalProperties": False,
                 "description": "Whom is assigned as the reporter",
                 "properties": {
@@ -794,7 +794,7 @@ async def test_tournament_schema(db, pydantic_setup):
                 "title": "Reporter",
                 "type": "object",
             },
-            "Team_ip4pg6_leaf": {
+            "Team_fcszy2_leaf": {
                 "additionalProperties": False,
                 "description": "Team that is a playing",
                 "properties": {
@@ -842,7 +842,7 @@ async def test_tournament_schema(db, pydantic_setup):
             },
             "events": {
                 "description": "What tournaments is a happenin'",
-                "items": {"$ref": "#/$defs/Event_ln6p2q_leaf"},
+                "items": {"$ref": "#/$defs/Event_xsdgtc_leaf"},
                 "title": "Events",
                 "type": "array",
             },
@@ -858,7 +858,7 @@ async def test_team_schema(db, pydantic_setup):
     Team_Pydantic = pydantic_setup["Team_Pydantic"]
     assert Team_Pydantic.model_json_schema() == {
         "$defs": {
-            "Event_lfs4vy_leaf": {
+            "Event_xx2apk_leaf": {
                 "additionalProperties": False,
                 "description": "Events on the calendar",
                 "properties": {
@@ -870,14 +870,15 @@ async def test_team_schema(db, pydantic_setup):
                     },
                     "name": {"description": "The name", "title": "Name", "type": "string"},
                     "tournament": {
-                        "$ref": "#/$defs/Tournament_5y7e7j_leaf",
+                        "$ref": "#/$defs/Tournament_zh4alg_leaf",
                         "description": "What tournaments is a happenin'",
                     },
                     "reporter": {
                         "anyOf": [
-                            {"$ref": "#/$defs/Reporter_fgnv33_leaf"},
+                            {"$ref": "#/$defs/Reporter_ifqfo2_leaf"},
                             {"type": "null"},
                         ],
+                        "default": None,
                         "nullable": True,
                         "title": "Reporter",
                     },
@@ -906,9 +907,10 @@ async def test_team_schema(db, pydantic_setup):
                     },
                     "address": {
                         "anyOf": [
-                            {"$ref": "#/$defs/Address_e4rhju_leaf"},
+                            {"$ref": "#/$defs/Address_zwygvk_leaf"},
                             {"type": "null"},
                         ],
+                        "default": None,
                         "nullable": True,
                         "title": "Address",
                     },
@@ -917,21 +919,19 @@ async def test_team_schema(db, pydantic_setup):
                     "event_id",
                     "name",
                     "tournament",
-                    "reporter",
                     "modified",
                     "token",
-                    "address",
                 ],
                 "title": "Event",
                 "type": "object",
             },
-            "Address_e4rhju_leaf": {
+            "Address_zwygvk_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "city": {"maxLength": 64, "title": "City", "type": "string"},
                     "street": {"maxLength": 128, "title": "Street", "type": "string"},
                     "m2mwitho2opks": {
-                        "items": {"$ref": "#/$defs/M2mWithO2oPk_leajz6_leaf"},
+                        "items": {"$ref": "#/$defs/M2mWithO2oPk_zpacbp_leaf"},
                         "title": "M2Mwitho2Opks",
                         "type": "array",
                     },
@@ -946,7 +946,7 @@ async def test_team_schema(db, pydantic_setup):
                 "title": "Address",
                 "type": "object",
             },
-            "M2mWithO2oPk_leajz6_leaf": {
+            "M2mWithO2oPk_zpacbp_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "id": {
@@ -961,7 +961,7 @@ async def test_team_schema(db, pydantic_setup):
                 "title": "M2mWithO2oPk",
                 "type": "object",
             },
-            "Reporter_fgnv33_leaf": {
+            "Reporter_ifqfo2_leaf": {
                 "additionalProperties": False,
                 "description": "Whom is assigned as the reporter",
                 "properties": {
@@ -977,7 +977,7 @@ async def test_team_schema(db, pydantic_setup):
                 "title": "Reporter",
                 "type": "object",
             },
-            "Tournament_5y7e7j_leaf": {
+            "Tournament_zh4alg_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "id": {
@@ -1025,7 +1025,7 @@ async def test_team_schema(db, pydantic_setup):
                 "title": "Alias",
             },
             "events": {
-                "items": {"$ref": "#/$defs/Event_lfs4vy_leaf"},
+                "items": {"$ref": "#/$defs/Event_xx2apk_leaf"},
                 "title": "Events",
                 "type": "array",
             },
@@ -1490,7 +1490,7 @@ async def test_cycle_schema(db, pydantic_cycle_setup):
     Employee_Pydantic = pydantic_cycle_setup["Employee_Pydantic"]
     assert Employee_Pydantic.model_json_schema() == {
         "$defs": {
-            "Employee_6tkbjb_leaf": {
+            "Employee_eywjnx_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "id": {
@@ -1501,7 +1501,7 @@ async def test_cycle_schema(db, pydantic_cycle_setup):
                     },
                     "name": {"maxLength": 50, "title": "Name", "type": "string"},
                     "talks_to": {
-                        "items": {"$ref": "#/$defs/Employee_fj2ly4_leaf"},
+                        "items": {"$ref": "#/$defs/Employee_ic5xpw_leaf"},
                         "title": "Talks To",
                         "type": "array",
                     },
@@ -1519,7 +1519,7 @@ async def test_cycle_schema(db, pydantic_cycle_setup):
                         "title": "Manager Id",
                     },
                     "team_members": {
-                        "items": {"$ref": "#/$defs/Employee_fj2ly4_leaf"},
+                        "items": {"$ref": "#/$defs/Employee_ic5xpw_leaf"},
                         "title": "Team Members",
                         "type": "array",
                     },
@@ -1528,7 +1528,7 @@ async def test_cycle_schema(db, pydantic_cycle_setup):
                 "title": "Employee",
                 "type": "object",
             },
-            "Employee_fj2ly4_leaf": {
+            "Employee_ic5xpw_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "id": {
@@ -1567,7 +1567,7 @@ async def test_cycle_schema(db, pydantic_cycle_setup):
             },
             "name": {"maxLength": 50, "title": "Name", "type": "string"},
             "talks_to": {
-                "items": {"$ref": "#/$defs/Employee_6tkbjb_leaf"},
+                "items": {"$ref": "#/$defs/Employee_eywjnx_leaf"},
                 "title": "Talks To",
                 "type": "array",
             },
@@ -1581,7 +1581,7 @@ async def test_cycle_schema(db, pydantic_cycle_setup):
                 "title": "Manager Id",
             },
             "team_members": {
-                "items": {"$ref": "#/$defs/Employee_6tkbjb_leaf"},
+                "items": {"$ref": "#/$defs/Employee_eywjnx_leaf"},
                 "title": "Team Members",
                 "type": "array",
             },
@@ -1712,7 +1712,7 @@ async def test_computed_field_schema(db, pydantic_computed_setup):
     Employee_Pydantic = pydantic_computed_setup["Employee_Pydantic"]
     assert Employee_Pydantic.model_json_schema(mode="serialization") == {
         "$defs": {
-            "Employee_fj2ly4_leaf": {
+            "Employee_ic5xpw_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "id": {
@@ -1752,7 +1752,7 @@ async def test_computed_field_schema(db, pydantic_computed_setup):
                 "title": "Employee",
                 "type": "object",
             },
-            "Employee_6tkbjb_leaf": {
+            "Employee_eywjnx_leaf": {
                 "additionalProperties": False,
                 "properties": {
                     "id": {
@@ -1763,7 +1763,7 @@ async def test_computed_field_schema(db, pydantic_computed_setup):
                     },
                     "name": {"maxLength": 50, "title": "Name", "type": "string"},
                     "talks_to": {
-                        "items": {"$ref": "#/$defs/Employee_fj2ly4_leaf"},
+                        "items": {"$ref": "#/$defs/Employee_ic5xpw_leaf"},
                         "title": "Talks To",
                         "type": "array",
                     },
@@ -1781,7 +1781,7 @@ async def test_computed_field_schema(db, pydantic_computed_setup):
                         "title": "Manager Id",
                     },
                     "team_members": {
-                        "items": {"$ref": "#/$defs/Employee_fj2ly4_leaf"},
+                        "items": {"$ref": "#/$defs/Employee_ic5xpw_leaf"},
                         "title": "Team Members",
                         "type": "array",
                     },
@@ -1820,7 +1820,7 @@ async def test_computed_field_schema(db, pydantic_computed_setup):
             },
             "name": {"maxLength": 50, "title": "Name", "type": "string"},
             "talks_to": {
-                "items": {"$ref": "#/$defs/Employee_6tkbjb_leaf"},
+                "items": {"$ref": "#/$defs/Employee_eywjnx_leaf"},
                 "title": "Talks To",
                 "type": "array",
             },
@@ -1834,7 +1834,7 @@ async def test_computed_field_schema(db, pydantic_computed_setup):
                 "title": "Manager Id",
             },
             "team_members": {
-                "items": {"$ref": "#/$defs/Employee_6tkbjb_leaf"},
+                "items": {"$ref": "#/$defs/Employee_eywjnx_leaf"},
                 "title": "Team Members",
                 "type": "array",
             },
@@ -2191,3 +2191,105 @@ def test_enum(db):
         "title": "EnumFields",
         "type": "object",
     } == EnumFields_Pydantic.model_json_schema()
+
+
+def test_nullable_fk_not_required(db):
+    """Nullable FK/O2O relation fields should be optional (default=None) in the schema,
+    not marked as required. This is the fix for issue #1481."""
+    Event_Pydantic = pydantic_model_creator(Event, name="EventNullableTest")
+    schema = Event_Pydantic.model_json_schema()
+
+    # 'reporter' is a nullable FK (null=True) so it must NOT be required
+    assert "reporter" not in schema["required"]
+    reporter_prop = schema["properties"]["reporter"]
+    assert reporter_prop.get("nullable") is True
+    assert reporter_prop.get("default") is None
+
+    # 'tournament' is a non-nullable FK so it MUST be required
+    assert "tournament" in schema["required"]
+
+    # 'address' is a nullable O2O backward relation so it must NOT be required
+    assert "address" not in schema["required"]
+    address_prop = schema["properties"]["address"]
+    assert address_prop.get("nullable") is True
+    assert address_prop.get("default") is None
+
+
+# Tests for computed fields accessing relations (#1440)
+@pytest.mark.asyncio
+async def test_computed_field_excluded_relation_not_prefetched(db):
+    """Computed field accessing an excluded, non-prefetched relation.
+
+    When team_members is excluded from the Pydantic model AND not manually prefetched,
+    the wrapped function dispatches to the ORM object which raises NoValuesFetched.
+    If the user's function handles the error gracefully (like team_size does),
+    it returns a default. If it doesn't, NoValuesFetched propagates with a clear message.
+    """
+    Employee_Pydantic_NoTeam = pydantic_model_creator(
+        Employee,
+        name="Employee_NoTeam",
+        exclude=("team_members", "manager", "gets_talked_to"),
+        computed=("name_length", "team_size"),
+        allow_cycles=True,
+    )
+
+    root = await Employee.create(name="Root")
+    await Employee.create(name="Member1", manager=root)
+    await Employee.create(name="Member2", manager=root)
+
+    empp = await Employee_Pydantic_NoTeam.from_tortoise_orm(await Employee.get(name="Root"))
+    empdict = empp.model_dump()
+
+    assert "team_members" not in empdict
+    # team_size returns 0 because team_members was not prefetched and the
+    # team_size function gracefully handles NoValuesFetched
+    assert empdict["team_size"] == 0
+    assert empdict["name_length"] == 4
+
+
+@pytest.mark.asyncio
+async def test_computed_field_excluded_relation_works_with_manual_prefetch(db):
+    """Computed field accessing an excluded relation works when manually prefetched.
+
+    If the user prefetches the relation before calling from_tortoise_orm, the computed
+    field can access it on the ORM object even though it's excluded from the schema.
+    """
+    Employee_Pydantic_NoTeam = pydantic_model_creator(
+        Employee,
+        name="Employee_NoTeam2",
+        exclude=("team_members", "manager", "gets_talked_to"),
+        computed=("name_length", "team_size"),
+        allow_cycles=True,
+    )
+
+    root = await Employee.create(name="Root")
+    await Employee.create(name="Member1", manager=root)
+    await Employee.create(name="Member2", manager=root)
+
+    obj = await Employee.get(name="Root")
+    await obj.fetch_related("team_members")
+    empp = await Employee_Pydantic_NoTeam.from_tortoise_orm(obj)
+    empdict = empp.model_dump()
+
+    assert "team_members" not in empdict
+    assert empdict["team_size"] == 2
+    assert empdict["name_length"] == 4
+
+
+@pytest.mark.asyncio
+async def test_computed_field_relation_in_model(db, pydantic_cycle_setup):
+    """Computed field accessing a reverse relation that IS in the Pydantic model.
+
+    This tests the happy path where team_members is a Pydantic field AND team_size
+    accesses it via the ORM object.
+    """
+    Employee_Pydantic = pydantic_cycle_setup["Employee_Pydantic"]
+
+    empp = await Employee_Pydantic.from_tortoise_orm(await Employee.get(name="Root"))
+    empdict = empp.model_dump()
+
+    # team_members is present in the schema
+    assert "team_members" in empdict
+    # team_size correctly reports the count
+    assert empdict["team_size"] == 2
+    assert empdict["name_length"] == 4

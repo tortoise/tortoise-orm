@@ -14,7 +14,7 @@ import pytz
 from pydantic import BaseModel, ConfigDict
 
 from tortoise import fields
-from tortoise.exceptions import ValidationError
+from tortoise.exceptions import NoValuesFetched, ValidationError
 from tortoise.fields import NO_ACTION
 from tortoise.indexes import Index
 from tortoise.manager import Manager
@@ -623,7 +623,7 @@ class Employee(Model):
         """
         try:
             return len(self.team_members)
-        except AttributeError:
+        except (NoValuesFetched, AttributeError):
             return 0
 
     def not_annotated(self):

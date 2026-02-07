@@ -160,9 +160,12 @@ async def test_early_init():
     Tortoise.init_models(["tests.test_early_init"], "models")
 
     Event_Pydantic = pydantic_model_creator(Event)
-    assert Event_Pydantic.model_json_schema() == {
+    schema = Event_Pydantic.model_json_schema()
+    # Extract the dynamic hash from $defs key
+    tournament_def_key = [k for k in schema.get("$defs", {}) if k.startswith("Tournament_")][0]
+    assert schema == {
         "$defs": {
-            "Tournament_aapnxb_leaf": {
+            tournament_def_key: {
                 "additionalProperties": False,
                 "properties": {
                     "id": {
@@ -206,12 +209,16 @@ async def test_early_init():
                 "type": "string",
             },
             "tournament": {
-                "anyOf": [{"$ref": "#/$defs/Tournament_aapnxb_leaf"}, {"type": "null"}],
+                "anyOf": [
+                    {"$ref": f"#/$defs/{tournament_def_key}"},
+                    {"type": "null"},
+                ],
+                "default": None,
                 "nullable": True,
                 "title": "Tournament",
             },
         },
-        "required": ["id", "name", "created_at", "tournament"],
+        "required": ["id", "name", "created_at"],
         "title": "Event",
         "type": "object",
     }

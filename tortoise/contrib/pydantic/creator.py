@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import functools
 import inspect
 from base64 import b32encode
-from collections.abc import MutableMapping
+from collections.abc import Iterator, MutableMapping
 from copy import copy
 from enum import Enum, IntEnum
 from hashlib import sha3_224
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 from pydantic import ConfigDict, computed_field, create_model
 from pydantic import Field as PydanticField
@@ -26,11 +27,19 @@ from tortoise.contrib.pydantic.descriptions import (
     PydanticMetaData,
 )
 from tortoise.contrib.pydantic.utils import get_annotations
+from tortoise.exceptions import NoValuesFetched
 from tortoise.fields import Field, JSONField
 from tortoise.fields.data import CharEnumFieldInstance, IntEnumFieldInstance
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
+
+# Type alias for a single entry in the recursion stack: (model_class, field_name, max_recursion)
+StackEntry: TypeAlias = tuple["type[Model]", str, int]
+
+# Type alias for property values stored in _properties.
+# Regular fields are stored as (type, FieldInfo) tuples; computed fields as decorator instances.
+PropertyValue: TypeAlias = "tuple[type, Any] | Any"
 
 _MODEL_INDEX: dict[str, type[PydanticModel]] = {}
 """
@@ -53,55 +62,8 @@ def _cleandoc(obj: Any) -> str:
     return _br_it(inspect.cleandoc(obj.__doc__ or ""))
 
 
-def _pydantic_recursion_protector(
-    cls: type[Model],
-    *,
-    stack: tuple,
-    exclude: tuple[str, ...] = (),
-    include: tuple[str, ...] = (),
-    computed: tuple[str, ...] = (),
-    name=None,
-    allow_cycles: bool = False,
-    sort_alphabetically: bool | None = None,
-) -> type[PydanticModel] | None:
-    """
-    It is an inner function to protect pydantic model creator against cyclic recursion
-    """
-    if not allow_cycles and cls in (c[0] for c in stack[:-1]):
-        return None
-
-    caller_fname = stack[0][1]
-    prop_path = [caller_fname]  # It stores the fields in the hierarchy
-    level = 1
-    for _, parent_fname, parent_max_recursion in stack[1:]:
-        # Check recursion level
-        prop_path.insert(0, parent_fname)
-        if level >= parent_max_recursion:
-            # This is too verbose, Do we even need a way of reporting truncated models?
-            # tortoise.logger.warning(
-            #     "Recursion level %i has reached for model %s",
-            #     level,
-            #     parent_cls.__qualname__ + "." + ".".join(prop_path),
-            # )
-            return None
-
-        level += 1
-    pmc = PydanticModelCreator(
-        cls,
-        exclude=exclude,
-        include=include,
-        computed=computed,
-        name=name,
-        _stack=stack,
-        allow_cycles=allow_cycles,
-        sort_alphabetically=sort_alphabetically,
-        _as_submodel=True,
-    )
-    return pmc.create_pydantic_model()
-
-
 class FieldMap(MutableMapping[str, Field | ComputedFieldDescription]):
-    def __init__(self, meta: PydanticMetaData, pk_field: Field | None = None):
+    def __init__(self, meta: PydanticMetaData, pk_field: Field | None = None) -> None:
         self._field_map: dict[str, Field | ComputedFieldDescription] = {}
         self.pk_raw_field = pk_field.model_field_name if pk_field is not None else ""
         if pk_field:
@@ -109,19 +71,19 @@ class FieldMap(MutableMapping[str, Field | ComputedFieldDescription]):
             self.field_map_update([pk_field], meta)
         self.computed_fields: dict[str, ComputedFieldDescription] = {}
 
-    def __delitem__(self, __key):
+    def __delitem__(self, __key: str) -> None:
         self._field_map.__delitem__(__key)
 
-    def __getitem__(self, __key):
+    def __getitem__(self, __key: str) -> Field | ComputedFieldDescription:
         return self._field_map.__getitem__(__key)
 
-    def __len__(self):  # pragma: no-coverage
+    def __len__(self) -> int:  # pragma: no-coverage
         return self._field_map.__len__()
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         return self._field_map.__iter__()
 
-    def __setitem__(self, __key, __value):
+    def __setitem__(self, __key: str, __value: Field | ComputedFieldDescription) -> None:
         self._field_map.__setitem__(__key, __value)
 
     def sort_alphabetically(self) -> None:
@@ -151,11 +113,10 @@ class FieldMap(MutableMapping[str, Field | ComputedFieldDescription]):
                     self.pop(raw_field, None)
             self[name] = field
 
-    def computed_field_map_update(self, computed: tuple[str, ...], cls: type[Model]):
+    def computed_field_map_update(self, computed: tuple[str, ...], cls: type[Model]) -> None:
         self._field_map.update(
             {
                 k: ComputedFieldDescription(
-                    field_type=callable,
                     function=getattr(cls, k),
                     description=None,
                 )
@@ -167,7 +128,7 @@ class FieldMap(MutableMapping[str, Field | ComputedFieldDescription]):
 def pydantic_queryset_creator(
     cls: type[Model],
     *,
-    name=None,
+    name: str | None = None,
     exclude: tuple[str, ...] = (),
     include: tuple[str, ...] = (),
     computed: tuple[str, ...] = (),
@@ -209,15 +170,12 @@ def pydantic_queryset_creator(
     )
     lname = name or f"{submodel.__name__}_list"
 
-    # Creating Pydantic class for the properties generated before
     model = create_model(
         lname,
         __base__=PydanticListModel,
         root=(list[submodel], PydanticField(default_factory=list)),  # type: ignore
     )
-    # Copy the Model docstring over
     model.__doc__ = _cleandoc(cls)
-    # The title of the model to hide the hash postfix
     model.model_config["title"] = name or f"{submodel.model_config['title']}_list"
     model.model_config["submodel"] = submodel  # type: ignore
     return model
@@ -239,13 +197,11 @@ class PydanticModelCreator:
         model_config: ConfigDict | None = None,
         validators: dict[str, Any] | None = None,
         module: str = __name__,
-        _stack: tuple = (),
+        _stack: tuple[StackEntry, ...] = (),
         _as_submodel: bool = False,
     ) -> None:
         self._cls: type[Model] = cls
-        self._stack: tuple[tuple[type[Model], str, int], ...] = (
-            _stack  # ((type[Model], field_name, max_recursion),)
-        )
+        self._stack: tuple[StackEntry, ...] = _stack
         self._is_default: bool = (
             exclude is None
             and include is None
@@ -294,7 +250,7 @@ class PydanticModelCreator:
 
         self._pconfig: ConfigDict
 
-        self._properties: dict[str, Any] = dict()
+        self._properties: dict[str, PropertyValue] = dict()
         self._relational_fields_index: list[tuple[str, str]] = list()
 
         self._model_description: ModelDescription = ModelDescription.from_model(cls)
@@ -310,11 +266,22 @@ class PydanticModelCreator:
         self._stack = _stack
 
     @property
-    def _hash(self):
+    def _hash(self) -> str:
         if self.__hash == "":
+            field_info = []
+            for name, prop in self._properties.items():
+                if isinstance(prop, tuple):
+                    field_info.append(f"{name}:{prop[0]}")
+                else:
+                    field_info.append(f"{name}:computed")
             hashval = (
-                f"{self._fqname};{self._properties.keys()};{self._relational_fields_index};{self._optional};"
-                f"{self.meta.allow_cycles}"
+                f"{self._fqname};"
+                f"{field_info};"
+                f"{self._relational_fields_index};"
+                f"{self._optional};"
+                f"{self.meta.allow_cycles};"
+                f"{self._exclude_read_only};"
+                f"{self.meta.computed}"
             )
             self.__hash = (
                 b32encode(sha3_224(hashval.encode("utf-8")).digest()).decode("utf-8").lower()[:6]
@@ -377,16 +344,13 @@ class PydanticModelCreator:
         self._name, self._title = self.get_name()
 
         if self._hash in _MODEL_INDEX:
-            # there is a model exactly the same, but the name could be different
             hashed_model = _MODEL_INDEX[self._hash]
             if hashed_model.__name__ == self._name:
-                # also the same name
                 return _MODEL_INDEX[self._hash]
 
         self._pconfig = self._initialize_pconfig()
-        # Extract the computed fields
-        computed_fields = {}
-        common_fields = {}
+        computed_fields: dict[str, Any] = {}
+        common_fields: dict[str, Any] = {}
         for k, v in self._properties.items():
             if isinstance(getattr(v, "decorator_info", None), ComputedFieldInfo):
                 computed_fields[k] = v
@@ -404,11 +368,8 @@ class PydanticModelCreator:
             __validators__=self._validators,
             **common_fields,
         )
-        # Copy the Model docstring over
         model.__doc__ = _cleandoc(self._cls)
-        # Store the base class
         model.model_config["orig_model"] = self._cls  # type: ignore
-        # Store model reference so we can de-dup it later on if needed.
         _MODEL_INDEX[self._hash] = model
         return model
 
@@ -417,44 +378,45 @@ class PydanticModelCreator:
         field_name: str,
         field: Field | ComputedFieldDescription,
     ) -> None:
+        if isinstance(field, Field):
+            self._process_orm_field(field_name, field)
+        elif isinstance(field, ComputedFieldDescription):
+            self._process_computed_field_entry(field_name, field)
+
+    def _process_orm_field(self, field_name: str, field: Field) -> None:
         json_schema_extra: dict[str, Any] = {}
         fconfig: dict[str, Any] = {
             "json_schema_extra": json_schema_extra,
         }
-        field_property: Any | None = None
-        is_to_one_relation: bool = False
-        if isinstance(field, Field):
-            field_property, is_to_one_relation = self._process_normal_field(
-                field_name, field, json_schema_extra, fconfig
-            )
-            if field_property:
-                fconfig["title"] = field_name.replace("_", " ").title()
-                description = _br_it(field.docstring or field.description or "")
-                if description:
-                    fconfig["description"] = description
-                if field_name in self._optional or (
-                    field.default is not None and not callable(field.default)
+        field_property, _ = self._process_normal_field(
+            field_name, field, json_schema_extra, fconfig
+        )
+        if field_property:
+            fconfig["title"] = field_name.replace("_", " ").title()
+            description = _br_it(field.docstring or field.description or "")
+            if description:
+                fconfig["description"] = description
+            if field_name in self._optional or (
+                field.default is not None and not callable(field.default)
+            ):
+                self._properties[field_name] = (
+                    field_property,
+                    PydanticField(default=field.default, **fconfig),
+                )
+            else:
+                if json_schema_extra.get("nullable") or (
+                    self._exclude_read_only and json_schema_extra.get("readOnly")
                 ):
-                    self._properties[field_name] = (
-                        field_property,
-                        PydanticField(default=field.default, **fconfig),
-                    )
-                else:
-                    if (json_schema_extra.get("nullable") and not is_to_one_relation) or (
-                        self._exclude_read_only and json_schema_extra.get("readOnly")
-                    ):
-                        # see: https://docs.pydantic.dev/latest/migration/#required-optional-and-nullable-fields
-                        fconfig["default"] = None
-                    self._properties[field_name] = (field_property, PydanticField(**fconfig))
-        elif isinstance(field, ComputedFieldDescription):
-            field_property, is_to_one_relation = self._process_computed_field(field), False
-            if field_property:
-                comment = _cleandoc(field.function)
-                fconfig["title"] = field_name.replace("_", " ").title()
-                description = comment or _br_it(field.description or "")
-                if description:
-                    fconfig["description"] = description
-                self._properties[field_name] = field_property
+                    # see: https://docs.pydantic.dev/latest/migration/#required-optional-and-nullable-fields
+                    fconfig["default"] = None
+                self._properties[field_name] = (field_property, PydanticField(**fconfig))
+
+    def _process_computed_field_entry(
+        self, field_name: str, field: ComputedFieldDescription
+    ) -> None:
+        field_property = self._process_computed_field(field)
+        if field_property:
+            self._properties[field_name] = field_property
 
     def _process_normal_field(
         self,
@@ -537,12 +499,63 @@ class PydanticModelCreator:
     ) -> Any | None:
         func = field.function
         annotation = get_annotations(self._cls, func).get("return", None)
-        comment = _cleandoc(func)
         if annotation is not None:
+            original_func = func
+
+            @functools.wraps(original_func)
+            def wrapped_func(self_pydantic):
+                orm_obj = getattr(self_pydantic, "__orm_obj__", None)
+                if orm_obj is not None:
+                    try:
+                        return original_func(orm_obj)
+                    except NoValuesFetched:
+                        raise NoValuesFetched(
+                            f"Computed field '{original_func.__name__}' tried to access a "
+                            f"relation that has not been fetched. Either include the relation "
+                            f"in the Pydantic model so it is auto-prefetched, or call "
+                            f"fetch_related() before serialization."
+                        )
+                return original_func(self_pydantic)
+
+            comment = _cleandoc(func)
             c_f = computed_field(return_type=annotation, description=comment)
-            ret = c_f(func)
-            return ret
+            return c_f(wrapped_func)
         return None
+
+    @staticmethod
+    def _create_submodel(
+        cls: type[Model],
+        *,
+        stack: tuple[StackEntry, ...],
+        exclude: tuple[str, ...] = (),
+        include: tuple[str, ...] = (),
+        computed: tuple[str, ...] = (),
+        name: str | None = None,
+        allow_cycles: bool = False,
+        sort_alphabetically: bool | None = None,
+    ) -> type[PydanticModel] | None:
+        """Create a Pydantic submodel with recursion protection against cyclic references."""
+        if not allow_cycles and cls in (c[0] for c in stack[:-1]):
+            return None
+
+        level = 1
+        for _, _, parent_max_recursion in stack[1:]:
+            if level >= parent_max_recursion:
+                return None
+
+            level += 1
+        pmc = PydanticModelCreator(
+            cls,
+            exclude=exclude,
+            include=include,
+            computed=computed,
+            name=name,
+            _stack=stack,
+            allow_cycles=allow_cycles,
+            sort_alphabetically=sort_alphabetically,
+            _as_submodel=True,
+        )
+        return pmc.create_pydantic_model()
 
     def _get_submodel(
         self, _model: type[Model] | None, field_name: str
@@ -552,7 +565,6 @@ class PydanticModelCreator:
         if _model:
             new_stack = self._stack + ((self._cls, field_name, self.meta.max_recursion),)
 
-            # Get pydantic schema for the submodel
             prefix_len = len(field_name) + 1
 
             def get_fields_to_carry_on(field_tuple: tuple[str, ...]) -> tuple[str, ...]:
@@ -560,7 +572,7 @@ class PydanticModelCreator:
                     str(v[prefix_len:]) for v in field_tuple if v.startswith(field_name + ".")
                 )
 
-            pmodel = _pydantic_recursion_protector(
+            pmodel = self._create_submodel(
                 _model,
                 exclude=get_fields_to_carry_on(self.meta.exclude),
                 include=get_fields_to_carry_on(self.meta.include),
@@ -572,7 +584,6 @@ class PydanticModelCreator:
         else:
             pmodel = None
 
-        # If the result is None it has been excluded and we need to exclude the field
         if pmodel is None:
             self.meta.exclude += (field_name,)
 
@@ -582,7 +593,7 @@ class PydanticModelCreator:
 def pydantic_model_creator(
     cls: type[Model],
     *,
-    name=None,
+    name: str | None = None,
     exclude: tuple[str, ...] | None = None,
     include: tuple[str, ...] | None = None,
     computed: tuple[str, ...] | None = None,
