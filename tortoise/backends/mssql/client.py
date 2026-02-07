@@ -48,7 +48,7 @@ class MSSQLClient(ODBCClient):
         )
         extra_params = kwargs.pop("extra_params", kwargs.pop("ExtraParams", None))
         super().__init__(**kwargs)
-        dsn = f"DRIVER={driver};SERVER={host},{port};UID={user};PWD={password};MARS_Connection=Yes;"
+        dsn = f"DRIVER={driver};SERVER={host},{port};UID={user};PWD={password};"
         if encrypt is not None:
             dsn += f"Encrypt={encrypt};"
         if trust_cert is not None:
@@ -65,8 +65,7 @@ class MSSQLClient(ODBCClient):
         async with self.acquire_connection() as connection:
             self.log.debug("%s: %s", query, values)
             async with connection.cursor() as cursor:
-                await cursor.execute(query, values)
-                await cursor.execute("SELECT @@IDENTITY;")
+                await cursor.execute(f"SET NOCOUNT ON; {query}; SELECT @@IDENTITY", values)
                 return (await cursor.fetchone())[0]
 
     async def db_delete(self) -> None:
