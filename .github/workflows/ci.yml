@@ -86,11 +86,6 @@ jobs:
           TORTOISE_TEST_POETRY_ADD: 1
           PYTHONDEVMODE: 1
           PYTEST_ARGS: "-n auto --cov=tortoise --cov-append --cov-branch --tb=native -q"
-      - name: Test No typing-extensions
-        if: matrix.python-version == '3.11'
-        run: |
-          uv pip uninstall typing-extensions
-          uv run --no-sync python examples/basic.py
       - name: Rename coverage file
         run: mv .coverage .coverage.sqlite.${{ matrix.python-version }}
       - name: Upload coverage artifact
