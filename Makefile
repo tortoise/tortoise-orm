@@ -55,6 +55,9 @@ _codeqc:
 test: deps
 	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: uv run --frozen pytest $(pytest_opts)
 
+test_fast: deps
+	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: uv run --frozen pytest -n auto --tb=native -q
+
 test_sqlite:
 	$(py_warn) TORTOISE_TEST_DB=sqlite://:memory: uv run --frozen pytest --cov-report= $(pytest_opts)
 

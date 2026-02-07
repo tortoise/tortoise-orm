@@ -375,23 +375,23 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset.model = self.model
         queryset.query = self.query
         queryset.capabilities = self.capabilities
-        queryset._prefetch_map = copy(self._prefetch_map)
-        queryset._prefetch_queries = copy(self._prefetch_queries)
+        queryset._prefetch_map = copy(self._prefetch_map) if self._prefetch_map else {}
+        queryset._prefetch_queries = copy(self._prefetch_queries) if self._prefetch_queries else {}
         queryset._single = self._single
         queryset._raise_does_not_exist = self._raise_does_not_exist
         queryset._db = self._db
         queryset._limit = self._limit
         queryset._offset = self._offset
         queryset._fields_for_select = self._fields_for_select
-        queryset._filter_kwargs = copy(self._filter_kwargs)
-        queryset._orderings = copy(self._orderings)
-        queryset._joined_tables = copy(self._joined_tables)
-        queryset._q_objects = copy(self._q_objects)
+        queryset._filter_kwargs = copy(self._filter_kwargs) if self._filter_kwargs else {}
+        queryset._orderings = copy(self._orderings) if self._orderings else []
+        queryset._joined_tables = copy(self._joined_tables) if self._joined_tables else []
+        queryset._q_objects = copy(self._q_objects) if self._q_objects else []
         queryset._distinct = self._distinct
-        queryset._annotations = copy(self._annotations)
-        queryset._having = copy(self._having)
-        queryset._custom_filters = copy(self._custom_filters)
-        queryset._group_bys = copy(self._group_bys)
+        queryset._annotations = copy(self._annotations) if self._annotations else {}
+        queryset._having = copy(self._having) if self._having else {}
+        queryset._custom_filters = copy(self._custom_filters) if self._custom_filters else {}
+        queryset._group_bys = copy(self._group_bys) if self._group_bys else ()
         queryset._select_for_update = self._select_for_update
         queryset._select_for_update_nowait = self._select_for_update_nowait
         queryset._select_for_update_skip_locked = self._select_for_update_skip_locked
@@ -1572,13 +1572,7 @@ class FieldSelectQuery(AwaitableQuery):
         raise FieldError(f'Unknown field "{field}" for model "{self.model.__name__}"')
 
     def resolve_to_python_value(self, model: type[MODEL], field: str) -> Callable:
-        if field in model._meta.fetch_fields:
-            # return as is to get whole model objects
-            return lambda x: x
-
-        if field in (x[1] for x in model._meta.db_native_fields):
-            return lambda x: x
-
+        # Check annotation-dependent lookups first (not cacheable on model)
         if field in self._annotations:
             annotation = self._annotations[field]
             field_object = getattr(annotation, "field_object", None)
@@ -1586,13 +1580,34 @@ class FieldSelectQuery(AwaitableQuery):
                 return field_object.to_python_value
             return lambda x: x
 
+        # Model-level lookups are cacheable
+        cache = model._meta._python_value_cache
+        cached = cache.get(field)
+        if cached is not None:
+            return cached
+
+        if field in model._meta.fetch_fields:
+            # return as is to get whole model objects
+            result: Callable = lambda x: x
+            cache[field] = result
+            return result
+
+        if field in (x[1] for x in model._meta.db_native_fields):
+            result = lambda x: x
+            cache[field] = result
+            return result
+
         if field in model._meta.fields_map:
-            return model._meta.fields_map[field].to_python_value
+            result = model._meta.fields_map[field].to_python_value
+            cache[field] = result
+            return result
 
         field_, __, forwarded_fields = field.partition("__")
         if field_ in model._meta.fetch_fields:
             new_model = model._meta.fields_map[field_].related_model  # type: ignore
-            return self.resolve_to_python_value(new_model, forwarded_fields)
+            result = self.resolve_to_python_value(new_model, forwarded_fields)
+            cache[field] = result
+            return result
 
         raise FieldError(f'Unknown field "{field}" for model "{model}"')
 

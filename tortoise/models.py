@@ -213,6 +213,7 @@ class MetaInfo:
         "db_complex_fields",
         "_default_ordering",
         "_ordering_validated",
+        "_python_value_cache",
     )
 
     def __init__(self, meta: Model.Meta) -> None:
@@ -252,6 +253,7 @@ class MetaInfo:
         self.db_native_fields: list[tuple[str, str, Field]] = []
         self.db_default_fields: list[tuple[str, str, Field]] = []
         self.db_complex_fields: list[tuple[str, str, Field]] = []
+        self._python_value_cache: dict[str, Callable] = {}
 
     @property
     def full_name(self) -> str:
@@ -734,7 +736,11 @@ class Model(metaclass=ModelMeta):
             elif callable(field_default):
                 setattr(self, key, field_default())
             else:
-                setattr(self, key, deepcopy(field_object.default))
+                default = field_object.default
+                if default is None or isinstance(default, (int, float, str, bool, bytes)):
+                    setattr(self, key, default)
+                else:
+                    setattr(self, key, deepcopy(default))
 
     def __setattr__(self, key, value) -> None:
         # set field value override async default function
@@ -795,44 +801,40 @@ class Model(metaclass=ModelMeta):
         self._await_when_save = {}
 
         meta = self._meta
-        inited_keys: set[str] = set()
+        _setattr = object.__setattr__  # bypass __setattr__ override for performance
         try:
             # This is like so for performance reasons.
             #  We want to avoid conditionals and calling .to_python_value()
             # Native fields are fields that are already converted to/from python to DB type
             #  by the DB driver
             for key, model_field, field in meta.db_native_fields:
-                setattr(self, model_field, kwargs[key])
-                inited_keys.add(key)
+                _setattr(self, model_field, kwargs[key])
             # Fields that don't override .to_python_value() are converted without a call
             #  as we already know what we will be doing.
             for key, model_field, field in meta.db_default_fields:
                 if (value := kwargs[key]) is not None:
                     value = field.field_type(value)
-                setattr(self, model_field, value)
-                inited_keys.add(key)
+                _setattr(self, model_field, value)
             # These fields need manual .to_python_value()
             for key, model_field, field in meta.db_complex_fields:
-                setattr(self, model_field, field.to_python_value(kwargs[key]))
-                inited_keys.add(key)
+                _setattr(self, model_field, field.to_python_value(kwargs[key]))
         except KeyError:
+            # Partial model (.only() query) — slower but correct fallback
             self._partial = True
-            native_fields: list[Field] = [f for *_, f in meta.db_native_fields]
-            default_fields = complex_fields = None
+            native_keys = {k for k, _, _ in meta.db_native_fields}
+            default_keys = {k for k, _, _ in meta.db_default_fields}
             for key, value in kwargs.items():
-                if key in inited_keys or key not in meta.fields_map:
+                if key not in meta.fields_map:
                     continue
-                if (field := meta.fields_map[key]) not in native_fields:
-                    if default_fields is None:
-                        default_fields = [f for *_, f in meta.db_default_fields]
-                    if field in default_fields:
+                field = meta.fields_map[key]
+                if key not in native_keys:
+                    if key in default_keys:
                         if value is not None:
                             value = field.field_type(value)
                     else:
-                        if complex_fields is None:
-                            complex_fields = [f for *_, f in meta.db_complex_fields]
                         value = field.to_python_value(value)
-                setattr(self, key, value)
+                model_field = meta.fields_db_projection_reverse.get(key, key)
+                _setattr(self, model_field, value)
 
         return self
 
