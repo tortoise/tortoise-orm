@@ -48,7 +48,7 @@ class MSSQLClient(ODBCClient):
         )
         extra_params = kwargs.pop("extra_params", kwargs.pop("ExtraParams", None))
         super().__init__(**kwargs)
-        dsn = f"DRIVER={driver};SERVER={host},{port};UID={user};PWD={password};"
+        dsn = f"DRIVER={driver};SERVER={host},{port};UID={user};PWD={password};MARS_Connection=Yes;"
         if encrypt is not None:
             dsn += f"Encrypt={encrypt};"
         if trust_cert is not None:
