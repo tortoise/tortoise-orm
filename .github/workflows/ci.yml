@@ -86,7 +86,7 @@ jobs:
           uv run --no-sync python examples/basic.py
       - name: Run performance benchmarks
         run: |
-          uv run --frozen pytest -m benchmark --tb=native -q
+          uv run --frozen pytest -m benchmark --tb=native -q -s
         env:
           PYTHONDEVMODE: 1
       - name: Test Comprehensive Migrations Example

@@ -58,7 +58,7 @@ async def test_state_building_performance_200_models():
     elapsed = time.perf_counter() - t0
 
     assert len(state.models) == 200
-    print(f"\nState building: {elapsed*1000:.1f}ms ({elapsed/200*1000:.2f}ms/model)")
+    print(f"\nState building: {elapsed * 1000:.1f}ms ({elapsed / 200 * 1000:.2f}ms/model)")
     assert elapsed < 2.0, f"State building took {elapsed:.1f}s, expected < 2s"
 
 
