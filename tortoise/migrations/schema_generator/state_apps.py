@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import cast
 
 from pypika_tortoise import Query, Table
@@ -7,7 +8,10 @@ from pypika_tortoise import Query, Table
 from tortoise.apps import Apps
 from tortoise.connection import ConnectionHandler
 from tortoise.context import get_current_context
+from tortoise.exceptions import ConfigurationError
 from tortoise.models import Model
+
+logger = logging.getLogger(__name__)
 
 
 class StateApps(Apps):
@@ -52,6 +56,25 @@ class StateApps(Apps):
                 model._meta.basequery_all_fields = cast(
                     Query, basequery.select(*model._meta.db_fields)
                 )
+
+    def _init_relations(self) -> None:
+        """Override to tolerate missing related models during state reconstruction.
+
+        When replaying migrations, ``CreateModel`` operations may reference
+        models that are defined later in the same migration (the operations are
+        emitted in alphabetical order).  The base ``Apps._init_relations``
+        raises ``ConfigurationError`` if a referenced model is not yet
+        registered.  In the migration-state context we simply skip those
+        models; they will be fully initialised once all ``CreateModel``
+        operations in the migration have been applied and a final reload is
+        performed.
+        """
+        try:
+            super()._init_relations()
+        except ConfigurationError:
+            # A related model is not registered yet – safe to ignore during
+            # incremental state construction.
+            pass
 
     def unregister_model(self, app_label: str, model_name: str) -> None:
         try:

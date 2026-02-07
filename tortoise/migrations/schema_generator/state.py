@@ -155,6 +155,8 @@ class State:
 
     def _reload(self, models_to_reload: set[tuple[str, str]]) -> None:
         for app_label, model_name in models_to_reload:
+            if (app_label, model_name) not in self.models:
+                continue
             self.apps.unregister_model(app_label, model_name)
             model_state = self.models[(app_label, model_name)]
             model = model_state.render(self.apps)
@@ -177,7 +179,11 @@ class State:
         for app_label, model_name in model_tuples:
             model_state = self.models.get((app_label, model_name))
             if not model_state:
-                raise LookupError(f"Model state {app_label}.{model_name} is unknown")
+                # The referenced model may not exist in state yet (e.g. when
+                # CreateModel operations reference models defined later in the
+                # same migration).  Skip the validation here; the model will
+                # be added by a subsequent operation and reloaded then.
+                continue
 
             related_models |= self._find_related_models(app_label, model_name)
 

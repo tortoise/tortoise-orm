@@ -334,3 +334,110 @@ def test_alter_field(state_with_model: State):
 
     model = state_with_model.apps.get_model("models.TestModel")
     assert model._meta.fields_map["name"].unique
+
+
+def test_create_models_with_fk_reference_to_later_model(empty_state: State):
+    """Regression test for #2074.
+
+    When CreateModel operations are emitted in alphabetical order, a model
+    that references another model via ForeignKey may appear *before* the
+    referenced model.  ``state_forward`` must not raise ``LookupError`` in
+    this case — it should gracefully skip the not-yet-created model and let
+    the subsequent ``CreateModel`` complete the state.
+    """
+    from tortoise.fields.base import OnDelete
+
+    state = empty_state
+
+    # Event references Tournament via FK, but Tournament is created later
+    # (alphabetical order: Event < Tournament).
+    event_op = CreateModel(
+        name="Event",
+        fields=[
+            ("id", fields.IntField(pk=True)),
+            ("name", fields.CharField(max_length=255)),
+            (
+                "tournament",
+                ForeignKeyFieldInstance(
+                    "models.Tournament",
+                    related_name="events",
+                    on_delete=OnDelete.CASCADE,
+                ),
+            ),
+        ],
+        options={"table": "event", "app": "models", "pk_attr": "id"},
+    )
+    tournament_op = CreateModel(
+        name="Tournament",
+        fields=[
+            ("id", fields.IntField(pk=True)),
+            ("name", fields.CharField(max_length=255)),
+        ],
+        options={"table": "tournament", "app": "models", "pk_attr": "id"},
+    )
+
+    # This must not raise LookupError
+    event_op.state_forward("models", state)
+    tournament_op.state_forward("models", state)
+
+    assert ("models", "Event") in state.models
+    assert ("models", "Tournament") in state.models
+
+    # Both models should be registered in apps
+    event_model = state.apps.get_model("models.Event")
+    tournament_model = state.apps.get_model("models.Tournament")
+    assert event_model is not None
+    assert tournament_model is not None
+
+
+def test_add_field_after_replaying_migration_with_fk(empty_state: State):
+    """End-to-end regression test for #2074.
+
+    Simulates the exact scenario: replaying an initial migration that has
+    CreateModel operations in alphabetical order (with FK references to
+    later models), then adding a new field.
+    """
+    from tortoise.fields.base import OnDelete
+
+    state = empty_state
+
+    # Simulate replaying the initial migration (alphabetical order)
+    CreateModel(
+        name="Event",
+        fields=[
+            ("id", fields.IntField(pk=True)),
+            ("name", fields.CharField(max_length=255)),
+            (
+                "tournament",
+                ForeignKeyFieldInstance(
+                    "models.Tournament",
+                    related_name="events",
+                    on_delete=OnDelete.CASCADE,
+                ),
+            ),
+        ],
+        options={"table": "event", "app": "models", "pk_attr": "id"},
+    ).state_forward("models", state)
+
+    CreateModel(
+        name="Tournament",
+        fields=[
+            ("id", fields.IntField(pk=True)),
+            ("name", fields.CharField(max_length=255)),
+        ],
+        options={"table": "tournament", "app": "models", "pk_attr": "id"},
+    ).state_forward("models", state)
+
+    # Now simulate adding a field (the second makemigrations scenario)
+    add_field_op = AddField(
+        model_name="Tournament",
+        name="order",
+        field=fields.IntField(default=0),
+    )
+    add_field_op.state_forward("models", state)
+
+    model_state = state.models[("models", "Tournament")]
+    assert "order" in model_state.fields
+
+    tournament_model = state.apps.get_model("models.Tournament")
+    assert "order" in tournament_model._meta.fields_map
