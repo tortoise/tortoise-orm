@@ -3,7 +3,7 @@ from __future__ import annotations
 import importlib
 import warnings
 from collections.abc import Callable, Iterable, Iterator
-from copy import deepcopy
+from copy import copy
 from inspect import isclass
 from itertools import chain
 from types import ModuleType
@@ -185,7 +185,7 @@ class Apps:
             else:
                 fk_object.to_field = related_model._meta.pk_attr
                 related_field = related_model._meta.pk
-            key_fk_object = deepcopy(related_field)
+            key_fk_object = copy(related_field)
             fk_object.to_field_instance = related_field
             fk_object.field_type = fk_object.to_field_instance.field_type
 

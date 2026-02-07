@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Iterable
-from copy import deepcopy
+from copy import copy
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -41,14 +41,14 @@ class ModelState(BaseEntityState):
             options=dict(self.options),
             bases=self.bases,
             pk_field_name=self.pk_field_name,
-            fields={name: deepcopy(field) for name, field in self.fields.items()},
+            fields={name: copy(field) for name, field in self.fields.items()},
         )
 
     def render(self, apps: StateApps, *, deepcopy_fields: bool = True) -> type[Model]:
         meta_class = type("Meta", (), self.options)
 
         if deepcopy_fields:
-            attrs: dict[str, Any] = {name: deepcopy(field) for name, field in self.fields.items()}
+            attrs: dict[str, Any] = {name: copy(field) for name, field in self.fields.items()}
         else:
             attrs = dict(self.fields)
         attrs["Meta"] = meta_class
@@ -69,7 +69,7 @@ class ModelState(BaseEntityState):
             if getattr(field, "reference", None) is not None:
                 continue
 
-            fields[name] = deepcopy(field)
+            fields[name] = copy(field)
 
         options: dict[str, Any] = {}
         if model._meta.abstract:

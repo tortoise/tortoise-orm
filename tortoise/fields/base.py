@@ -235,6 +235,13 @@ class Field(Generic[VALUE], metaclass=_FieldMeta):
         self.model: type[Model] = model  # type: ignore
         self.reference: Field | None = None
 
+    def __copy__(self) -> Field:
+        cls = self.__class__
+        result = cls.__new__(cls)
+        result.__dict__.update(self.__dict__)
+        result.validators = list(self.validators)
+        return result
+
     def to_db_value(self, value: Any, instance: type[Model] | Model) -> Any:
         """
         Converts from the Python type to the DB type.
