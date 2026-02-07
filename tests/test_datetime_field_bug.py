@@ -12,7 +12,6 @@ def test_datetimefield_auto_now_only():
     assert field.auto_now is True
     assert field.auto_now_add is False
 
-    # Verify describe() returns correct values
     desc = field.describe(serializable=True)
     assert desc["auto_now"] is True
     assert desc["auto_now_add"] is False
@@ -24,7 +23,6 @@ def test_datetimefield_auto_now_add_only():
     assert field.auto_now is False
     assert field.auto_now_add is True
 
-    # Verify describe() returns correct values
     desc = field.describe(serializable=True)
     assert desc["auto_now"] is False
     assert desc["auto_now_add"] is True

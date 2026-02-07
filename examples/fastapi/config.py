@@ -11,7 +11,7 @@ TORTOISE_ORM = TortoiseConfig(
         "models": AppConfig(
             models=["models"],
             default_connection="default",
-            migrations="migrations",  # Explicit path since models.py is a file, not a package
+            migrations="migrations",
         )
     },
 )

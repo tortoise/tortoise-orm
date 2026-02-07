@@ -49,8 +49,25 @@ class BaseSchemaEditor:
         'ALTER TABLE "{table}" RENAME CONSTRAINT "{old_name}" TO "{new_name}"'
     )
 
-    def __init__(self, connection: BaseDBAsyncClient) -> None:
+    def __init__(
+        self, connection: BaseDBAsyncClient, atomic: bool = True, collect_sql: bool = False
+    ) -> None:
         self.client = connection
+        self.atomic = atomic
+        self.atomic_migration = connection.capabilities.can_rollback_ddl and atomic
+        self.collect_sql = collect_sql
+        self.collected_sql: list[str] = []
+
+    async def _run_sql(self, sql: str) -> None:
+        """Execute DDL SQL. Subclasses may override for backend-specific handling.
+
+        If ``collect_sql`` is True, append the SQL to ``collected_sql`` instead
+        of executing it.
+        """
+        if self.collect_sql:
+            self.collected_sql.append(sql)
+            return
+        await self.client.execute_script(sql)
 
     def _get_table_comment_sql(self, table: str, comment: str) -> str:
         # Databases have their own way of supporting comments for table level
@@ -406,31 +423,29 @@ class BaseSchemaEditor:
         model_sql_data = self._get_model_sql_data(model)
 
         model_statement = "\n".join([model_sql_data.table_sql, *model_sql_data.m2m_tables_sql])
-        await self.client.execute_script(model_statement)
+        await self._run_sql(model_statement)
 
     async def rename_table(self, model: type[Model], old_name: str, new_name: str) -> None:
         if old_name == new_name:
             return
 
-        await self.client.execute_script(
+        await self._run_sql(
             self.RENAME_TABLE_TEMPLATE.format(old_table=old_name, new_table=new_name)
         )
 
     async def delete_model(self, model: type[Model]) -> None:
         for field_name in model._meta.m2m_fields:
             field = cast(ManyToManyFieldInstance, model._meta.fields_map[field_name])
-            await self.client.execute_script(self.DELETE_TABLE_TEMPLATE.format(table=field.through))
+            await self._run_sql(self.DELETE_TABLE_TEMPLATE.format(table=field.through))
 
-        await self.client.execute_script(
-            self.DELETE_TABLE_TEMPLATE.format(table=model._meta.db_table)
-        )
+        await self._run_sql(self.DELETE_TABLE_TEMPLATE.format(table=model._meta.db_table))
 
     async def add_field(self, model: type[Model], field_name: str) -> None:
         field = model._meta.fields_map[field_name]
         if isinstance(field, ManyToManyFieldInstance):
             table_string = self._get_m2m_table_definition(model, field)
             if table_string:
-                await self.client.execute_script(table_string)
+                await self._run_sql(table_string)
             return
 
         if isinstance(field, ForeignKeyFieldInstance):
@@ -464,7 +479,7 @@ class BaseSchemaEditor:
                 comment=comment,
             )
 
-        await self.client.execute_script(
+        await self._run_sql(
             self.ADD_FIELD_TEMPLATE.format(table=model._meta.db_table, definition=field_definition)
         )
 
@@ -475,14 +490,14 @@ class BaseSchemaEditor:
         new_field: ManyToManyFieldInstance,
     ) -> None:
         if old_field.through != new_field.through:
-            await self.client.execute_script(
+            await self._run_sql(
                 self.RENAME_TABLE_TEMPLATE.format(
                     old_table=old_field.through, new_table=new_field.through
                 )
             )
 
         if old_field.forward_key != new_field.forward_key:
-            await self.client.execute_script(
+            await self._run_sql(
                 self.RENAME_FIELD_TEMPLATE.format(
                     table=new_field.through,
                     old_column=old_field.forward_key,
@@ -491,7 +506,7 @@ class BaseSchemaEditor:
             )
 
         if old_field.backward_key != new_field.backward_key:
-            await self.client.execute_script(
+            await self._run_sql(
                 self.RENAME_FIELD_TEMPLATE.format(
                     table=new_field.through,
                     old_column=old_field.backward_key,
@@ -570,7 +585,7 @@ class BaseSchemaEditor:
         if not actions:
             return
         result_query = ";\n".join(actions)
-        await self.client.execute_script(result_query)
+        await self._run_sql(result_query)
 
     async def alter_field(
         self, old_model: type[Model], new_model: type[Model], field_name: str
@@ -599,7 +614,7 @@ class BaseSchemaEditor:
 
     async def remove_field(self, model: type[Model], field: Field) -> None:
         if isinstance(field, ManyToManyFieldInstance):
-            await self.client.execute_script(self.DELETE_TABLE_TEMPLATE.format(table=field.through))
+            await self._run_sql(self.DELETE_TABLE_TEMPLATE.format(table=field.through))
             return
 
         if isinstance(field, ForeignKeyFieldInstance):
@@ -609,7 +624,7 @@ class BaseSchemaEditor:
         db_field = model._meta.fields_db_projection.get(
             field.model_field_name, field.source_field or field.model_field_name
         )
-        await self.client.execute_script(
+        await self._run_sql(
             self.DELETE_FIELD_TEMPLATE.format(table=model._meta.db_table, column=db_field)
         )
 
@@ -634,11 +649,11 @@ class BaseSchemaEditor:
             extra=index.extra,
         )
         if index_sql:
-            await self.client.execute_script(index_sql)
+            await self._run_sql(index_sql)
 
     async def remove_index(self, model: type[Model], index: Index) -> None:
         index_name = self._index_name_for_model(model, index)
-        await self.client.execute_script(
+        await self._run_sql(
             self.DROP_INDEX_TEMPLATE.format(name=index_name, table=model._meta.db_table)
         )
 
@@ -648,7 +663,7 @@ class BaseSchemaEditor:
         if old_name == new_name:
             return
         if self.RENAME_INDEX_TEMPLATE:
-            await self.client.execute_script(
+            await self._run_sql(
                 self.RENAME_INDEX_TEMPLATE.format(
                     table=model._meta.db_table, old_name=old_name, new_name=new_name
                 )
@@ -663,7 +678,7 @@ class BaseSchemaEditor:
             index_name=constraint_name,
             fields=", ".join([self.quote(f) for f in constraint.fields]),
         )
-        await self.client.execute_script(
+        await self._run_sql(
             self.ADD_CONSTRAINT_TEMPLATE.format(
                 table=model._meta.db_table, constraint=constraint_sql
             )
@@ -671,7 +686,7 @@ class BaseSchemaEditor:
 
     async def remove_constraint(self, model: type[Model], constraint: UniqueConstraint) -> None:
         constraint_name = self._constraint_name_for_model(model, constraint)
-        await self.client.execute_script(
+        await self._run_sql(
             self.DELETE_CONSTRAINT_TEMPLATE.format(table=model._meta.db_table, name=constraint_name)
         )
 
@@ -683,7 +698,7 @@ class BaseSchemaEditor:
         if old_name == new_name:
             return
         if self.RENAME_CONSTRAINT_TEMPLATE:
-            await self.client.execute_script(
+            await self._run_sql(
                 self.RENAME_CONSTRAINT_TEMPLATE.format(
                     table=model._meta.db_table, old_name=old_name, new_name=new_name
                 )

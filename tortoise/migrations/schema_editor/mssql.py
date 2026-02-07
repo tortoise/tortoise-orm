@@ -34,8 +34,8 @@ class MSSQLSchemaEditor(BaseSchemaEditor):
     RENAME_INDEX_TEMPLATE = "EXEC sp_rename '{table}.{old_name}', '{new_name}', 'INDEX'"
     RENAME_CONSTRAINT_TEMPLATE = "EXEC sp_rename '{table}.{old_name}', '{new_name}', 'OBJECT'"
 
-    def __init__(self, connection) -> None:
-        super().__init__(connection)
+    def __init__(self, connection, atomic: bool = True, collect_sql: bool = False) -> None:
+        super().__init__(connection, atomic, collect_sql=collect_sql)
         self._foreign_keys: list[str] = []
 
     @staticmethod
@@ -136,7 +136,7 @@ class MSSQLSchemaEditor(BaseSchemaEditor):
         return m2m_create_string
 
     async def remove_constraint(self, model, constraint) -> None:
-        await self.client.execute_script(
+        await self._run_sql(
             self.DELETE_CONSTRAINT_TEMPLATE.format(
                 table=model._meta.db_table, name=self._constraint_name_for_model(model, constraint)
             )
@@ -144,7 +144,7 @@ class MSSQLSchemaEditor(BaseSchemaEditor):
 
     async def remove_field(self, model: type[Model], field) -> None:
         if isinstance(field, ManyToManyFieldInstance):
-            await self.client.execute_script(self.DELETE_TABLE_TEMPLATE.format(table=field.through))
+            await self._run_sql(self.DELETE_TABLE_TEMPLATE.format(table=field.through))
             return
 
         db_field = model._meta.fields_db_projection.get(
@@ -178,7 +178,7 @@ JOIN sys.tables t ON dc.parent_object_id = t.object_id
 WHERE t.name = '{model._meta.db_table}' AND c.name = '{db_field}';
 EXEC sp_executesql @sql;
 """
-        await self.client.execute_script(cleanup_sql)
-        await self.client.execute_script(
+        await self._run_sql(cleanup_sql)
+        await self._run_sql(
             self.DELETE_FIELD_TEMPLATE.format(table=model._meta.db_table, column=db_field)
         )

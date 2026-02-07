@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
 from tortoise.backends.base.client import BaseDBAsyncClient
@@ -21,6 +21,7 @@ from tortoise.migrations.schema_editor import (
 )
 from tortoise.migrations.schema_generator.state import State
 from tortoise.migrations.schema_generator.state_apps import StateApps
+from tortoise.transactions import in_transaction
 
 
 @dataclass(frozen=True)
@@ -50,13 +51,15 @@ class MigrationExecutor:
         fake: bool = False,
         dry_run: bool = False,
         direction: str = "both",
+        progress: Callable[[str, str, str], object] | None = None,
     ) -> None:
         self._logger.debug("Building migration graph")
         await self.loader.build_graph()
 
-        schema_editor = self._schema_editor()
+        # Create a non-atomic schema editor for recorder operations only
+        recorder_schema_editor = self._schema_editor(atomic=False)
         self._logger.debug("Ensuring migration schema")
-        await self.recorder.ensure_schema(schema_editor)
+        await self.recorder.ensure_schema(recorder_schema_editor)
 
         self._logger.debug("Loading applied migrations")
         applied = set(await self.recorder.applied_migrations())
@@ -79,10 +82,19 @@ class MigrationExecutor:
                 else:
                     state_before = await self._project_state(applied, upto=key)
                 if not fake:
-                    self._logger.debug("Rolling back %s.%s", key.app_label, key.name)
-                    await step.migration.unapply(
-                        state_before, dry_run=dry_run, schema_editor=schema_editor
-                    )
+                    self._emit(progress, "rollback_start", key)
+                    schema_editor = self._schema_editor(atomic=step.migration.atomic)
+                    if schema_editor.atomic_migration:
+                        async with in_transaction(self.connection.connection_name) as txn_client:
+                            schema_editor.client = txn_client
+                            await step.migration.unapply(
+                                state_before, dry_run=dry_run, schema_editor=schema_editor
+                            )
+                    else:
+                        await step.migration.unapply(
+                            state_before, dry_run=dry_run, schema_editor=schema_editor
+                        )
+                    self._emit(progress, "rollback_done", key)
                 if not dry_run:
                     await self.recorder.record_unapplied(key.app_label, key.name)
                 applied.discard(key)
@@ -91,10 +103,19 @@ class MigrationExecutor:
                 if state_cache is None:
                     state_cache = await self._project_state(applied)
                 if not fake:
-                    self._logger.debug("Applying %s.%s", key.app_label, key.name)
-                    await step.migration.apply(
-                        state_cache, dry_run=dry_run, schema_editor=schema_editor
-                    )
+                    self._emit(progress, "apply_start", key)
+                    schema_editor = self._schema_editor(atomic=step.migration.atomic)
+                    if schema_editor.atomic_migration:
+                        async with in_transaction(self.connection.connection_name) as txn_client:
+                            schema_editor.client = txn_client
+                            await step.migration.apply(
+                                state_cache, dry_run=dry_run, schema_editor=schema_editor
+                            )
+                    else:
+                        await step.migration.apply(
+                            state_cache, dry_run=dry_run, schema_editor=schema_editor
+                        )
+                    self._emit(progress, "apply_done", key)
                 if not dry_run:
                     await self.recorder.record_applied(key.app_label, key.name)
                 applied.add(key)
@@ -104,24 +125,95 @@ class MigrationExecutor:
         applied = set(await self.recorder.applied_migrations())
         return self._migration_plan(targets, applied, self.loader.graph)
 
-    def _schema_editor(self) -> BaseSchemaEditor:
+    @staticmethod
+    def _emit(
+        progress: Callable[[str, str, str], object] | None,
+        event: str,
+        key: MigrationKey,
+    ) -> None:
+        if progress is not None:
+            progress(event, key.app_label, key.name)
+
+    def _schema_editor(self, atomic: bool = True, collect_sql: bool = False) -> BaseSchemaEditor:
         module = self.connection.__class__.__module__
         dialect = self.connection.capabilities.dialect
         if "sqlite" in module:
-            return SqliteSchemaEditor(self.connection)
+            return SqliteSchemaEditor(self.connection, atomic=atomic, collect_sql=collect_sql)
         if "asyncpg" in module:
-            return AsyncpgSchemaEditor(self.connection)
+            return AsyncpgSchemaEditor(self.connection, atomic=atomic, collect_sql=collect_sql)
         if "psycopg" in module:
-            return PsycopgSchemaEditor(self.connection)
+            return PsycopgSchemaEditor(self.connection, atomic=atomic, collect_sql=collect_sql)
         if "mysql" in module:
-            return MySQLSchemaEditor(self.connection)
+            return MySQLSchemaEditor(self.connection, atomic=atomic, collect_sql=collect_sql)
         if "mssql" in module or "odbc" in module:
-            return MSSQLSchemaEditor(self.connection)
+            return MSSQLSchemaEditor(self.connection, atomic=atomic, collect_sql=collect_sql)
         if "oracle" in module:
-            return OracleSchemaEditor(self.connection)
+            return OracleSchemaEditor(self.connection, atomic=atomic, collect_sql=collect_sql)
         if dialect == "postgres":
-            return BasePostgresSchemaEditor(self.connection)
-        return BaseSchemaEditor(self.connection)
+            return BasePostgresSchemaEditor(self.connection, atomic=atomic, collect_sql=collect_sql)
+        return BaseSchemaEditor(self.connection, atomic=atomic, collect_sql=collect_sql)
+
+    async def collect_sql(
+        self,
+        app_label: str,
+        migration_name: str,
+        *,
+        backward: bool = False,
+    ) -> list[str]:
+        """Collect SQL statements for a single migration without executing them.
+
+        Args:
+            app_label: The application label.
+            migration_name: The migration name (exact or prefix match).
+            backward: If True, collect SQL for unapplying the migration.
+
+        Returns:
+            A list of SQL strings (including comment annotations).
+        """
+        await self.loader.build_graph()
+
+        # Resolve migration key — support prefix matching
+        key = self._resolve_migration_key(app_label, migration_name)
+        migration = self.loader.graph.nodes[key]
+        if not isinstance(migration, Migration):
+            raise ValueError(f"Missing migration for {key}")
+
+        # For SQL collection we don't need the real database — treat all
+        # migrations in the graph as "applied" so _project_state replays
+        # them up to the target.
+        all_keys = set(self.loader.graph.nodes.keys())
+        state = await self._project_state(all_keys, upto=key)
+
+        editor = self._schema_editor(atomic=False, collect_sql=True)
+
+        if backward:
+            await migration.unapply(state, schema_editor=editor, collect_sql=True)
+        else:
+            await migration.apply(state, schema_editor=editor, collect_sql=True)
+
+        return editor.collected_sql
+
+    def _resolve_migration_key(self, app_label: str, migration_name: str) -> MigrationKey:
+        """Resolve a migration name to a MigrationKey, supporting prefix matching."""
+        exact_key = MigrationKey(app_label=app_label, name=migration_name)
+        if exact_key in self.loader.graph.nodes:
+            return exact_key
+
+        # Try prefix matching
+        matches = [
+            key
+            for key in self.loader.graph.nodes
+            if key.app_label == app_label and key.name.startswith(migration_name)
+        ]
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            names = ", ".join(m.name for m in matches)
+            raise ValueError(
+                f"Ambiguous migration name {migration_name!r} for app {app_label!r}. "
+                f"Matches: {names}"
+            )
+        raise ValueError(f"Cannot find migration {migration_name!r} in app {app_label!r}")
 
     async def _project_state(
         self, applied: set[MigrationKey], *, upto: MigrationKey | None = None

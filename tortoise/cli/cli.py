@@ -5,6 +5,7 @@ import asyncio
 import contextlib
 import importlib
 import importlib.util
+import os
 import platform
 import sys
 from collections.abc import AsyncGenerator, Iterable
@@ -12,7 +13,6 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-# Conditional imports for optional shell dependencies
 try:
     from IPython.terminal.embed import embed as ipython_embed
 
@@ -35,6 +35,7 @@ from tortoise.config import AppConfig, TortoiseConfig
 from tortoise.connection import get_connection
 from tortoise.context import TortoiseContext
 from tortoise.migrations.api import migrate as migrate_api
+from tortoise.migrations.api import sqlmigrate as sqlmigrate_api
 from tortoise.migrations.autodetector import MigrationAutodetector
 from tortoise.migrations.executor import PlanStep
 from tortoise.migrations.graph import MigrationKey
@@ -262,12 +263,34 @@ def _ensure_migrations_package(app_label: str, app_config: dict[str, Any]) -> tu
     return migrations_module, package_path
 
 
+def _supports_color() -> bool:
+    """Check if the terminal supports ANSI colors."""
+    if not hasattr(sys.stdout, "isatty") or not sys.stdout.isatty():
+        return False
+    if sys.platform == "win32":
+        # Windows 10+ supports ANSI via Virtual Terminal Processing
+        return "WT_SESSION" in os.environ or "ANSICON" in os.environ
+    return True
+
+
+_COLOR = _supports_color()
+
+# ANSI color codes
+_BOLD = "\033[1m" if _COLOR else ""
+_DIM = "\033[2m" if _COLOR else ""
+_GREEN = "\033[32m" if _COLOR else ""
+_YELLOW = "\033[33m" if _COLOR else ""
+_CYAN = "\033[36m" if _COLOR else ""
+_RED = "\033[31m" if _COLOR else ""
+_RESET = "\033[0m" if _COLOR else ""
+
+
 def _echo_connection_header(connection_name: str, *, suffix: str = "") -> None:
-    print(f"Connection: {connection_name}{suffix}")
+    print(f"{_BOLD}Connection: {connection_name}{suffix}{_RESET}")
 
 
 def _echo_app_header(app_label: str) -> None:
-    print(f"  {app_label}:")
+    print(f"  {_BOLD}{app_label}:{_RESET}")
 
 
 def _emit_history(
@@ -284,10 +307,10 @@ def _emit_history(
         _echo_app_header(app_label)
         names = by_app[app_label]
         if not names:
-            print("    (no applied migrations)")
+            print(f"    {_DIM}(no applied migrations){_RESET}")
             continue
         for name in names:
-            print(f"    - {app_label} {name}")
+            print(f"    {_GREEN}-{_RESET} {app_label} {name}")
 
 
 def _emit_heads(
@@ -300,10 +323,10 @@ def _emit_heads(
         _echo_app_header(app_label)
         keys = list(loader.graph.leaf_nodes(app_label))
         if not keys:
-            print("    (no heads)")
+            print(f"    {_DIM}(no heads){_RESET}")
             continue
         for key in keys:
-            print(f"    - {app_label}.{key.name}")
+            print(f"    {_CYAN}-{_RESET} {app_label}.{key.name}")
 
 
 def _emit_migration_plan(
@@ -320,7 +343,7 @@ def _emit_migration_plan(
     suffix = f" ({', '.join(suffixes)})" if suffixes else ""
     _echo_connection_header(connection_name, suffix=suffix)
     if not plan:
-        print("  No migrations to apply")
+        print(f"  {_DIM}No migrations to apply{_RESET}")
         return
     applied = 0
     rolled_back = 0
@@ -328,11 +351,11 @@ def _emit_migration_plan(
         label = f"{step.migration.app_label}.{step.migration.name}"
         if step.backward:
             rolled_back += 1
-            print(f"  ROLLBACK  {label}")
+            print(f"  {_YELLOW}ROLLBACK{_RESET}  {label}")
         else:
             applied += 1
-            print(f"  APPLY     {label}")
-    print(f"  Plan: {applied} apply, {rolled_back} rollback")
+            print(f"  {_CYAN}APPLY{_RESET}     {label}")
+    print(f"  {_DIM}Plan: {applied} to apply, {rolled_back} to roll back{_RESET}")
 
 
 class CLIContext:
@@ -456,7 +479,7 @@ async def makemigrations(
             writers = await autodetector.changes()
 
     if not writers:
-        print("No changes detected")
+        print(f"{_DIM}No changes detected{_RESET}")
         return
 
     for writer in writers:
@@ -467,8 +490,21 @@ async def makemigrations(
                 number = 1
             writer.name = format_migration_name(number, name)
         path = writer.write()
-        print(f"Created {writer.app_label}.{writer.name}")
-        print(f"  {path}")
+        print(f"  {_GREEN}Created{_RESET} {writer.app_label}.{writer.name}")
+        print(f"    {_DIM}{path}{_RESET}")
+
+
+def _progress_reporter(event: str, app_label: str, name: str) -> None:
+    """Inline progress reporter for migration execution."""
+    label = f"{app_label}.{name}"
+    if event == "apply_start":
+        print(f"  Applying {_CYAN}{label}{_RESET}...", end="", flush=True)
+    elif event == "apply_done":
+        print(f" {_GREEN}OK{_RESET}")
+    elif event == "rollback_start":
+        print(f"  Rolling back {_YELLOW}{label}{_RESET}...", end="", flush=True)
+    elif event == "rollback_done":
+        print(f" {_GREEN}OK{_RESET}")
 
 
 async def _run_migrate(
@@ -504,6 +540,7 @@ async def _run_migrate(
             dry_run=dry_run,
             direction=direction,
             reporter=_emit_migration_plan,
+            progress=_progress_reporter,
         )
 
 
@@ -585,6 +622,57 @@ async def heads(ctx: CLIContext, app_labels: tuple[str, ...]) -> None:
 
     for connection_name, subset in apps_by_connection.items():
         _emit_heads(loader, connection_name, subset)
+
+
+async def sqlmigrate_cmd(
+    ctx: CLIContext,
+    app_label: str,
+    migration_name: str,
+    backward: bool,
+) -> None:
+    config = _load_config(ctx)
+    try:
+        statements = await sqlmigrate_api(
+            config=config,
+            app_label=app_label,
+            migration_name=migration_name,
+            backward=backward,
+        )
+    except ValueError as exc:
+        raise utils.CLIError(str(exc)) from None
+
+    if not statements:
+        print(f"{_DIM}-- (no SQL statements){_RESET}")
+        return
+
+    config_dict = config.to_dict()
+    app_cfg = config_dict.get("apps", {}).get(app_label, {})
+    connection_name = app_cfg.get("default_connection", "default")
+    connection_url = config_dict.get("connections", {}).get(connection_name, "")
+    if isinstance(connection_url, dict):
+        engine = connection_url.get("engine", "")
+        supports_transactional_ddl = "postgres" in engine or "psycopg" in engine
+    else:
+        supports_transactional_ddl = "postgres" in str(connection_url) or "psycopg" in str(
+            connection_url
+        )
+
+    wrap_in_transaction = supports_transactional_ddl
+
+    if wrap_in_transaction:
+        print(f"{_DIM}BEGIN;{_RESET}")
+
+    for statement in statements:
+        if statement.startswith("--"):
+            print(f"{_DIM}{statement}{_RESET}")
+        else:
+            if not statement.rstrip().endswith(";"):
+                print(f"{statement};")
+            else:
+                print(statement)
+
+    if wrap_in_transaction:
+        print(f"{_DIM}COMMIT;{_RESET}")
 
 
 def _add_global_options(parser: argparse.ArgumentParser) -> None:
@@ -680,6 +768,18 @@ def _add_heads_parser(subparsers: argparse._SubParsersAction) -> None:
     heads_parser.set_defaults(func=_run_heads)
 
 
+def _add_sqlmigrate_parser(subparsers: argparse._SubParsersAction) -> None:
+    sqlmigrate_parser = subparsers.add_parser("sqlmigrate", help="Print the SQL for a migration.")
+    sqlmigrate_parser.add_argument("app_label", help="App label.")
+    sqlmigrate_parser.add_argument("migration_name", help="Migration name.")
+    sqlmigrate_parser.add_argument(
+        "--backward",
+        action="store_true",
+        help="Generate SQL to unapply the migration.",
+    )
+    sqlmigrate_parser.set_defaults(func=_run_sqlmigrate)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="tortoise")
     _add_global_options(parser)
@@ -693,6 +793,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_downgrade_parser(subparsers)
     _add_history_parser(subparsers)
     _add_heads_parser(subparsers)
+    _add_sqlmigrate_parser(subparsers)
 
     return parser
 
@@ -727,6 +828,10 @@ async def _run_history(ctx: CLIContext, args: argparse.Namespace) -> None:
 
 async def _run_heads(ctx: CLIContext, args: argparse.Namespace) -> None:
     await heads(ctx, tuple(args.app_labels))
+
+
+async def _run_sqlmigrate(ctx: CLIContext, args: argparse.Namespace) -> None:
+    await sqlmigrate_cmd(ctx, args.app_label, args.migration_name, args.backward)
 
 
 async def run_cli_async(argv: list[str] | None = None) -> int:

@@ -63,7 +63,10 @@ try:
     # Use orjson as an optional accelerator
     import orjson
 
-    JSON_DUMPS = lambda x: orjson.dumps(x).decode()  # noqa: E731
+    def _orjson_dumps(obj: Any) -> str:
+        return orjson.dumps(obj).decode()
+
+    JSON_DUMPS = _orjson_dumps
     JSON_LOADS = orjson.loads
 except ImportError:  # pragma: nocoverage
     pass

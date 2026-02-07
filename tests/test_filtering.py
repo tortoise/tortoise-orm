@@ -202,8 +202,15 @@ async def test_filter_exact(db):
         assert await DatetimeFields.filter(datetime__week=20).count() == 1
         assert await DatetimeFields.filter(datetime__hour=0).count() == 1
     else:
-        # PostgreSQL enables tzinfo by default
-        dt = obj.datetime.astimezone()
+        # PostgreSQL stores timestamptz and EXTRACT uses the session timezone.
+        # Refresh from DB to get the tz-aware datetime that the driver returns,
+        # then convert to the PG session timezone so the expected values match.
+        obj = await DatetimeFields.get(id=obj.id)
+        tz_rows = await db.db().execute_query_dict("SHOW timezone")
+        import zoneinfo
+
+        server_tz = zoneinfo.ZoneInfo(tz_rows[0]["TimeZone"])
+        dt = obj.datetime.astimezone(server_tz)
         week = dt.isocalendar()[1]
         assert await DatetimeFields.filter(datetime__week=week).count() == 1
         assert await DatetimeFields.filter(datetime__hour=dt.hour).count() == 1

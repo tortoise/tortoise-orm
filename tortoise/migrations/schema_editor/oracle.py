@@ -29,8 +29,8 @@ class OracleSchemaEditor(BaseSchemaEditor):
     DELETE_TABLE_TEMPLATE = 'DROP TABLE "{table}" CASCADE CONSTRAINTS'
     DELETE_FIELD_TEMPLATE = 'ALTER TABLE "{table}" DROP COLUMN "{column}"'
 
-    def __init__(self, connection) -> None:
-        super().__init__(connection)
+    def __init__(self, connection, atomic: bool = True, collect_sql: bool = False) -> None:
+        super().__init__(connection, atomic, collect_sql=collect_sql)
         self.comments_array: list[str] = []
 
     @classmethod

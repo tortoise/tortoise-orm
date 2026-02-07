@@ -20,6 +20,7 @@ async def migrate(
     dry_run: bool = False,
     direction: str = "both",
     reporter: Callable[[str, list[PlanStep], bool, bool], object] | None = None,
+    progress: Callable[[str, str, str], object] | None = None,
 ) -> None:
     """Run migrations for configured apps."""
     if isinstance(config, TortoiseConfig):
@@ -58,6 +59,7 @@ async def migrate(
             fake=fake,
             dry_run=dry_run,
             direction=direction,
+            progress=progress,
         )
 
 

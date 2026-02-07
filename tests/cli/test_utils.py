@@ -5,6 +5,7 @@ from types import ModuleType
 import pytest
 
 from tortoise.cli import utils
+from tortoise.config import TortoiseConfig
 
 EMPTY_TORTOISE_ORM = None
 
@@ -35,8 +36,6 @@ def test_tortoise_orm_config_empty(tmp_path: Path, monkeypatch: pytest.MonkeyPat
 
 
 def test_get_tortoise_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    from tortoise.config import TortoiseConfig
-
     module_name = f"cli_settings_{tmp_path.name}"
     settings = tmp_path / f"{module_name}.py"
     settings.write_text(

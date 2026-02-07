@@ -35,8 +35,8 @@ class MySQLSchemaEditor(BaseSchemaEditor):
     RENAME_INDEX_TEMPLATE = "ALTER TABLE `{table}` RENAME INDEX `{old_name}` TO `{new_name}`"
     RENAME_CONSTRAINT_TEMPLATE = RENAME_INDEX_TEMPLATE
 
-    def __init__(self, connection) -> None:
-        super().__init__(connection)
+    def __init__(self, connection, atomic: bool = True, collect_sql: bool = False) -> None:
+        super().__init__(connection, atomic, collect_sql=collect_sql)
         self._field_indexes: list[str] = []
         self._foreign_keys: list[str] = []
 
@@ -171,10 +171,10 @@ class MySQLSchemaEditor(BaseSchemaEditor):
 
     async def add_constraint(self, model, constraint) -> None:
         unique_index_sql = self._get_unique_index_sql(model._meta.db_table, list(constraint.fields))
-        await self.client.execute_script(unique_index_sql)
+        await self._run_sql(unique_index_sql)
 
     async def remove_constraint(self, model, constraint) -> None:
-        await self.client.execute_script(
+        await self._run_sql(
             self.DROP_INDEX_TEMPLATE.format(
                 table=model._meta.db_table, name=self._constraint_name_for_model(model, constraint)
             )

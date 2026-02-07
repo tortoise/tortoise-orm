@@ -16,8 +16,8 @@ class BasePostgresSchemaEditor(BaseSchemaEditor):
     COLUMN_COMMENT_TEMPLATE = 'COMMENT ON COLUMN "{table}"."{column}" IS \'{comment}\';'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}'
 
-    def __init__(self, connection) -> None:
-        super().__init__(connection)
+    def __init__(self, connection, atomic: bool = True, collect_sql: bool = False) -> None:
+        super().__init__(connection, atomic, collect_sql=collect_sql)
         self.comments_array: list[str] = []
 
     @classmethod

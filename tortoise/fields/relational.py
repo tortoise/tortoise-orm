@@ -365,6 +365,12 @@ class OneToOneFieldInstance(ForeignKeyFieldInstance[MODEL]):
     ) -> None:
         super().__init__(model_name, related_name, on_delete, unique=True, **kwargs)
 
+    def deconstruct(self) -> tuple[str, list[Any], dict[str, Any]]:
+        path, args, kwargs = super().deconstruct()
+        # unique=True is set implicitly by OneToOneField.__init__
+        kwargs.pop("unique", None)
+        return path, args, kwargs
+
 
 class BackwardOneToOneRelation(BackwardFKRelation[MODEL]):
     pass

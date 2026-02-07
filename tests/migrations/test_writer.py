@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import functools
 import textwrap
+from enum import Enum, IntEnum
 from pathlib import Path
 
 import pytest
@@ -18,6 +19,20 @@ from tortoise.migrations.operations import (
     RunPython,
 )
 from tortoise.migrations.writer import MigrationWriter
+
+
+class Status(IntEnum):
+    """Status enum for testing IntEnumField."""
+
+    ACTIVE = 1
+    INACTIVE = 2
+
+
+class Role(str, Enum):
+    """Role enum for testing CharEnumField."""
+
+    ADMIN = "admin"
+    USER = "user"
 
 
 def _prepare_migration_package(tmp_path: Path, app_label: str) -> str:
@@ -399,6 +414,81 @@ def test_writer_rejects_local_function_default(tmp_path: Path, monkeypatch) -> N
     )
     with pytest.raises(ValueError, match="local function"):
         writer.as_string()
+
+
+def test_writer_handles_one_to_one_field(tmp_path: Path, monkeypatch) -> None:
+    """Test that OneToOneField is rendered without unique=True (it's implicit)."""
+    operations = [
+        CreateModel(
+            name="Profile",
+            fields=[
+                ("id", fields.IntField(pk=True)),
+                (
+                    "user",
+                    fields.OneToOneField(
+                        "app.User", related_name="profile", on_delete=fields.CASCADE
+                    ),
+                ),
+            ],
+        ),
+    ]
+    expected = textwrap.dedent(
+        """\
+        from tortoise import migrations
+        from tortoise.migrations import operations as ops
+        from tortoise.fields.base import OnDelete
+        from tortoise import fields
+
+        class Migration(migrations.Migration):
+            operations = [
+                ops.CreateModel(
+                    name='Profile',
+                    fields=[
+                        ('id', fields.IntField(generated=True, primary_key=True, unique=True, db_index=True)),
+                        ('user', fields.OneToOneField('app.User', db_constraint=True, related_name='profile', on_delete=OnDelete.CASCADE)),
+                    ],
+                ),
+            ]
+        """
+    )
+    _write_migration(tmp_path, monkeypatch, "0009_one_to_one", operations, expected)
+
+
+def test_writer_handles_enum_fields(tmp_path: Path, monkeypatch) -> None:
+    """Test that IntEnumField and CharEnumField are rendered correctly (not as FieldInstance)."""
+    operations = [
+        CreateModel(
+            name="Entity",
+            fields=[
+                ("id", fields.IntField(pk=True)),
+                ("status", fields.IntEnumField(Status, default=Status.ACTIVE)),  # type: ignore[list-item]
+                ("role", fields.CharEnumField(Role)),  # type: ignore[list-item]
+            ],
+        ),
+    ]
+    # The migration should use fields.IntEnumField and fields.CharEnumField
+    # NOT fields.IntEnumFieldInstance or fields.CharEnumFieldInstance
+    expected = textwrap.dedent(
+        """\
+        from tortoise import migrations
+        from tortoise.migrations import operations as ops
+        from tests.migrations.test_writer import Role, Status
+        from tortoise import fields
+
+        class Migration(migrations.Migration):
+            operations = [
+                ops.CreateModel(
+                    name='Entity',
+                    fields=[
+                        ('id', fields.IntField(generated=True, primary_key=True, unique=True, db_index=True)),
+                        ('status', fields.IntEnumField(default=Status.ACTIVE, description='ACTIVE: 1\\nINACTIVE: 2', enum_type=Status, generated=False)),
+                        ('role', fields.CharEnumField(description='ADMIN: admin\\nUSER: user', enum_type=Role, max_length=5)),
+                    ],
+                ),
+            ]
+        """
+    )
+    _write_migration(tmp_path, monkeypatch, "0010_enum_fields", operations, expected)
 
 
 def _runpython_forward(apps, schema_editor) -> None:

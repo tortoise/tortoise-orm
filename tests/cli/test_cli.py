@@ -12,6 +12,7 @@ from typing import Any
 import pytest
 
 from tortoise.cli import cli as cli_module
+from tortoise.config import TortoiseConfig
 from tortoise.migrations.autodetector import MigrationAutodetector
 from tortoise.migrations.graph import MigrationKey
 from tortoise.migrations.writer import MigrationWriter
@@ -281,12 +282,9 @@ TORTOISE_ORM = {
     assert called["direction"] == "backward"
     assert called["app_labels"] is None
     called_config = called["config"]
-    # Config can be either dict or TortoiseConfig
     if isinstance(called_config, dict):
         apps = called_config["apps"]
     else:
-        from tortoise.config import TortoiseConfig
-
         assert isinstance(called_config, TortoiseConfig)
         apps = called_config.apps
     assert set(apps.keys()) == {"accounts", "orders"}

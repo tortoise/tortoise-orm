@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import cast
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from tortoise.migrations.schema_generator.state import ModelState
 
 from pypika_tortoise import Query, Table
 
@@ -34,6 +37,56 @@ class StateApps(Apps):
         model._meta.app = app_label
         if app_label in self._default_connections:
             model._meta.default_connection = self._default_connections[app_label]
+
+    def _init_relations(self) -> None:
+        """Override to gracefully skip relations whose target model hasn't been
+        registered yet.  This happens when ``CreateModel`` operations are sorted
+        alphabetically and a model with a FK is processed before the FK target.
+        Models with unresolved relations are left with ``_inited = False`` so
+        they will be fully initialised on the next ``_reload`` call once the
+        target model exists."""
+        # Mark models that have unresolvable relations so we can reset _inited
+        models_with_missing_refs: set[type[Model]] = set()
+
+        for app in self.apps.values():
+            for model in app.values():
+                if model._meta._inited:
+                    continue
+
+                for field_name in (*model._meta.fk_fields, *model._meta.o2o_fields):
+                    fk_object = model._meta.fields_map[field_name]
+                    reference = fk_object.model_name  # type: ignore[attr-defined]
+                    if isinstance(reference, str):
+                        parts = reference.split(".")
+                        if len(parts) == 2:
+                            ref_app, ref_model = parts
+                            if ref_app not in self.apps or ref_model not in self.apps.get(
+                                ref_app, {}
+                            ):
+                                models_with_missing_refs.add(model)
+
+                for field_name in model._meta.m2m_fields:
+                    m2m_object = model._meta.fields_map[field_name]
+                    reference = m2m_object.model_name  # type: ignore[attr-defined]
+                    if isinstance(reference, str):
+                        parts = reference.split(".")
+                        if len(parts) == 2:
+                            ref_app, ref_model = parts
+                            if ref_app not in self.apps or ref_model not in self.apps.get(
+                                ref_app, {}
+                            ):
+                                models_with_missing_refs.add(model)
+
+        # Temporarily mark models with missing refs as _inited so the parent
+        # _init_relations skips them
+        for model in models_with_missing_refs:
+            model._meta._inited = True
+
+        super()._init_relations()
+
+        # Reset so they will be re-processed on the next _reload
+        for model in models_with_missing_refs:
+            model._meta._inited = False
 
     def _build_initial_querysets(self) -> None:
         # Skip building querysets when no DB config is available (state-only mode)
@@ -78,17 +131,25 @@ class StateApps(Apps):
             app_label, model_name = self.split_reference(app_label)
         return self.apps[app_label][model_name]
 
-    def clone(self) -> StateApps:
+    def clone(
+        self,
+        model_states: dict[tuple[str, str], ModelState] | None = None,
+    ) -> StateApps:
         from tortoise.migrations.schema_generator.state import ModelState
 
         state_apps = self.__class__(
             default_connections=dict(self._default_connections),
             connections=self._connections,
         )
-        for app_label, app in self.apps.items():
-            for model in app.values():
-                model_clone = ModelState.make_from_model(app_label, model).render(state_apps)
-                state_apps.register_model(app_label, model_clone)
+        if model_states is not None:
+            for (app_label, _model_name), model_state in model_states.items():
+                model = model_state.render(state_apps, deepcopy_fields=False)
+                state_apps.register_model(app_label, model)
+        else:
+            for app_label, app in self.apps.items():
+                for model in app.values():
+                    model_clone = ModelState.make_from_model(app_label, model).render(state_apps)
+                    state_apps.register_model(app_label, model_clone)
 
         state_apps._init_relations()
         state_apps._build_initial_querysets()

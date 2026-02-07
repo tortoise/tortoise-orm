@@ -115,6 +115,7 @@ def _resolve_import(value: Any) -> tuple[str, str, bool]:
 
 
 def render_value(value: Any, imports: ImportManager) -> str:
+    # StrEnum instances are both str and Enum, so check Enum first
     if isinstance(value, Enum):
         enum_cls = value.__class__
         module_name, name, use_module = _resolve_import(enum_cls)
@@ -179,7 +180,17 @@ def render_value(value: Any, imports: ImportManager) -> str:
             func_ref = name
         imports.add_module("functools")
         return f"functools.partial({', '.join([func_ref, parts]) if parts else func_ref})"
-    if inspect.isfunction(value) or callable(value) or isinstance(value, type):
+    # Check type before inspect.isfunction (classes are callable too)
+    if isinstance(value, type):
+        if value.__module__ == "builtins":
+            return value.__name__
+        module_name, name, use_module = _resolve_import(value)
+        if use_module:
+            imports.add_module(module_name)
+            return name
+        imports.add_from(module_name, name)
+        return name
+    if inspect.isfunction(value) or callable(value):
         if getattr(value, "__name__", "") == "<lambda>":
             raise ValueError("Cannot serialize lambda; use a module-level function instead.")
         if hasattr(value, "__qualname__") and "<locals>" in value.__qualname__:
@@ -196,9 +207,11 @@ def render_value(value: Any, imports: ImportManager) -> str:
 def _render_call(path: str, args: list[Any], kwargs: dict[str, Any], imports: ImportManager) -> str:
     if path.startswith("tortoise.fields."):
         class_name = path.rsplit(".", 1)[1]
-        if path.startswith("tortoise.fields.relational.") and class_name.endswith("FieldInstance"):
+        # Render FieldInstance classes as their public Field name
+        if class_name.endswith("FieldInstance"):
             class_name = class_name.replace("FieldInstance", "Field")
-            if "model_name" in kwargs:
+            # For relational fields, move model_name to first positional arg
+            if path.startswith("tortoise.fields.relational.") and "model_name" in kwargs:
                 args = [kwargs.pop("model_name")] + list(args)
         imports.add_fields_alias()
         callee = f"fields.{class_name}"
