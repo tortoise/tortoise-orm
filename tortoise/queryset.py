@@ -45,6 +45,7 @@ if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.models import Model
 
 MODEL = TypeVar("MODEL", bound="Model")
+PRIMARY_KEY = TypeVar("PRIMARY_KEY")
 T_co = TypeVar("T_co", covariant=True)
 SINGLE = TypeVar("SINGLE", bound=bool)
 
@@ -855,7 +856,9 @@ class QuerySet(AwaitableQuery[MODEL]):
         queryset._raise_does_not_exist = True
         return queryset  # type: ignore
 
-    async def in_bulk(self, id_list: Iterable[str | int], field_name: str) -> dict[str, MODEL]:
+    async def in_bulk(
+        self, id_list: Iterable[PRIMARY_KEY], field_name: str
+    ) -> dict[PRIMARY_KEY, MODEL]:
         """
         Return a dictionary mapping each of the given IDs to the object with
         that ID. If `id_list` isn't provided, evaluate the entire QuerySet.

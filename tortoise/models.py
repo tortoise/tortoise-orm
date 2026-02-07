@@ -61,6 +61,7 @@ if TYPE_CHECKING:
         from typing_extensions import Self
 
 MODEL = TypeVar("MODEL", bound="Model")
+PRIMARY_KEY = TypeVar("PRIMARY_KEY")
 EMPTY = object()
 
 
@@ -1278,10 +1279,10 @@ class Model(metaclass=ModelMeta):
     @classmethod
     async def in_bulk(
         cls: type[MODEL],
-        id_list: Iterable[str | int],
+        id_list: Iterable[PRIMARY_KEY],
         field_name: str = "pk",
         using_db: BaseDBAsyncClient | None = None,
-    ) -> dict[str, MODEL]:
+    ) -> dict[PRIMARY_KEY, MODEL]:
         """
         Return a dictionary mapping each of the given IDs to the object with
         that ID. If `id_list` isn't provided, evaluate the entire QuerySet.
