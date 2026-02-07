@@ -45,14 +45,10 @@ def _build_migrations(num_models: int, batch_size: int = 20) -> list[Migration]:
     return migrations
 
 
+@pytest.mark.benchmark
 @pytest.mark.asyncio
 async def test_state_building_performance_200_models():
-    """State building from 200 CreateModel operations must complete quickly.
-
-    Before the lazy-clone optimization this took ~6s. With the fix it should
-    complete in well under 2s because State.clone() is no longer called in
-    the dry-run path.
-    """
+    """State building from 200 CreateModel operations must complete quickly."""
     migrations = _build_migrations(200)
     state = State(models={}, apps=StateApps())
 

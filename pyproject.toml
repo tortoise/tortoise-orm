@@ -199,6 +199,9 @@ docstring_style = "sphinx"
 asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
+markers = [
+    "benchmark: Performance regression tests (excluded from coverage runs)",
+]
 filterwarnings = [
     'ignore:`pk` is deprecated:DeprecationWarning',
     'ignore:`index` is deprecated:DeprecationWarning',

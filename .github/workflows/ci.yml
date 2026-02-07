@@ -90,6 +90,25 @@ jobs:
         run: |
           uv pip uninstall typing-extensions
           uv run --no-sync python examples/basic.py
+      - name: Run performance benchmarks
+        if: matrix.python-version == '3.14'
+        run: |
+          uv run --frozen pytest -m benchmark --tb=native -q
+        env:
+          PYTHONDEVMODE: 1
+      - name: Test Comprehensive Migrations Example
+        run: |
+          cd examples/comprehensive_migrations_project
+          # Apply all migrations forward
+          uv run --frozen tortoise -c config.TORTOISE_ORM migrate
+          # Verify migration history
+          uv run --frozen tortoise -c config.TORTOISE_ORM history
+          # Rollback all migrations to zero (defaults to __first__)
+          uv run --frozen tortoise -c config.TORTOISE_ORM downgrade erp
+          # Verify we're back to zero
+          uv run --frozen tortoise -c config.TORTOISE_ORM history
+        env:
+          PYTHONDEVMODE: 1
       - name: Upload Coverage
         run: |
           uvx coveralls --service=github
