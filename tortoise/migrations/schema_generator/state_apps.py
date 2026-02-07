@@ -100,6 +100,8 @@ class StateApps(Apps):
             for model in app.values():
                 if model._meta.default_connection is None:
                     continue
+                if not model._meta._inited:
+                    continue
                 model._meta.finalise_model()
                 model._meta.basetable = Table(name=model._meta.db_table, schema=model._meta.schema)
                 basequery = model._meta.db.query_class.from_(model._meta.basetable)

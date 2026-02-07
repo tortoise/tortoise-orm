@@ -64,8 +64,8 @@ jobs:
           sudo dpkg -i packages-microsoft-prod.deb
           sudo apt-get update
           sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18
-      - name: Run ci
-        run: make ci
+      - name: Install deps
+        run: make dependencies
       - name: Test FastAPI/Blacksheep Example
         run: |
           PYTHONPATH=$DEST_FASTAPI uv run --frozen pytest $PYTEST_ARGS $DEST_FASTAPI/_tests.py
@@ -91,7 +91,6 @@ jobs:
           uv pip uninstall typing-extensions
           uv run --no-sync python examples/basic.py
       - name: Run performance benchmarks
-        if: matrix.python-version == '3.14'
         run: |
           uv run --frozen pytest -m benchmark --tb=native -q
         env:
@@ -107,6 +106,8 @@ jobs:
           uv run --frozen tortoise -c config.TORTOISE_ORM downgrade erp
           # Verify we're back to zero
           uv run --frozen tortoise -c config.TORTOISE_ORM history
+      - name: Run ci
+        run: make ci
         env:
           PYTHONDEVMODE: 1
       - name: Upload Coverage
