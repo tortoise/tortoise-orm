@@ -67,6 +67,7 @@ Contributors
 * Ludwig Hähne ``@pankrat``
 * Christian Tanul ``@scriptogre``
 * Qian Chen ``@shkey``
+* Varun Chawla ``@veeceey``
 
 Special Thanks
 ==============

@@ -262,7 +262,7 @@ async def test_event_schema(db, pydantic_setup):
                 "title": "Modified",
                 "type": "string",
             },
-            "token": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Token"},
+            "token": {"title": "Token", "type": "string"},
             "alias": {
                 "anyOf": [
                     {"maximum": 2147483647, "minimum": -2147483648, "type": "integer"},
@@ -300,7 +300,7 @@ async def test_eventlist_schema(db, pydantic_setup):
     Event_Pydantic_List = pydantic_setup["Event_Pydantic_List"]
     assert Event_Pydantic_List.model_json_schema() == {
         "$defs": {
-            "Event_bx6qaa": {
+            "Event_rgfzbr": {
                 "additionalProperties": False,
                 "description": "Events on the calendar",
                 "properties": {
@@ -335,10 +335,7 @@ async def test_eventlist_schema(db, pydantic_setup):
                         "title": "Modified",
                         "type": "string",
                     },
-                    "token": {
-                        "anyOf": [{"type": "string"}, {"type": "null"}],
-                        "title": "Token",
-                    },
+                    "token": {"title": "Token", "type": "string"},
                     "alias": {
                         "anyOf": [
                             {
@@ -483,7 +480,7 @@ async def test_eventlist_schema(db, pydantic_setup):
             },
         },
         "description": "Events on the calendar",
-        "items": {"$ref": "#/$defs/Event_bx6qaa"},
+        "items": {"$ref": "#/$defs/Event_rgfzbr"},
         "title": "Event_list",
         "type": "array",
     }
@@ -494,7 +491,7 @@ async def test_address_schema(db, pydantic_setup):
     Address_Pydantic = pydantic_setup["Address_Pydantic"]
     assert Address_Pydantic.model_json_schema() == {
         "$defs": {
-            "Event_lkfyxk_leaf": {
+            "Event_bhjepe_leaf": {
                 "additionalProperties": False,
                 "description": "Events on the calendar",
                 "properties": {
@@ -529,10 +526,7 @@ async def test_address_schema(db, pydantic_setup):
                         "title": "Modified",
                         "type": "string",
                     },
-                    "token": {
-                        "anyOf": [{"type": "string"}, {"type": "null"}],
-                        "title": "Token",
-                    },
+                    "token": {"title": "Token", "type": "string"},
                     "alias": {
                         "anyOf": [
                             {
@@ -655,7 +649,7 @@ async def test_address_schema(db, pydantic_setup):
                 "title": "M2Mwitho2Opks",
                 "type": "array",
             },
-            "event": {"$ref": "#/$defs/Event_lkfyxk_leaf"},
+            "event": {"$ref": "#/$defs/Event_bhjepe_leaf"},
             "event_id": {
                 "maximum": 9223372036854775807,
                 "minimum": -9223372036854775808,
@@ -674,7 +668,7 @@ async def test_tournament_schema(db, pydantic_setup):
     Tournament_Pydantic = pydantic_setup["Tournament_Pydantic"]
     assert Tournament_Pydantic.model_json_schema() == {
         "$defs": {
-            "Event_xsdgtc_leaf": {
+            "Event_tymecz_leaf": {
                 "additionalProperties": False,
                 "description": "Events on the calendar",
                 "properties": {
@@ -705,10 +699,7 @@ async def test_tournament_schema(db, pydantic_setup):
                         "title": "Modified",
                         "type": "string",
                     },
-                    "token": {
-                        "anyOf": [{"type": "string"}, {"type": "null"}],
-                        "title": "Token",
-                    },
+                    "token": {"title": "Token", "type": "string"},
                     "alias": {
                         "anyOf": [
                             {
@@ -842,7 +833,7 @@ async def test_tournament_schema(db, pydantic_setup):
             },
             "events": {
                 "description": "What tournaments is a happenin'",
-                "items": {"$ref": "#/$defs/Event_xsdgtc_leaf"},
+                "items": {"$ref": "#/$defs/Event_tymecz_leaf"},
                 "title": "Events",
                 "type": "array",
             },
@@ -858,7 +849,7 @@ async def test_team_schema(db, pydantic_setup):
     Team_Pydantic = pydantic_setup["Team_Pydantic"]
     assert Team_Pydantic.model_json_schema() == {
         "$defs": {
-            "Event_xx2apk_leaf": {
+            "Event_3zjun4_leaf": {
                 "additionalProperties": False,
                 "description": "Events on the calendar",
                 "properties": {
@@ -888,10 +879,7 @@ async def test_team_schema(db, pydantic_setup):
                         "title": "Modified",
                         "type": "string",
                     },
-                    "token": {
-                        "anyOf": [{"type": "string"}, {"type": "null"}],
-                        "title": "Token",
-                    },
+                    "token": {"title": "Token", "type": "string"},
                     "alias": {
                         "anyOf": [
                             {
@@ -1025,7 +1013,7 @@ async def test_team_schema(db, pydantic_setup):
                 "title": "Alias",
             },
             "events": {
-                "items": {"$ref": "#/$defs/Event_xx2apk_leaf"},
+                "items": {"$ref": "#/$defs/Event_3zjun4_leaf"},
                 "title": "Events",
                 "type": "array",
             },
@@ -2213,6 +2201,24 @@ def test_nullable_fk_not_required(db):
     address_prop = schema["properties"]["address"]
     assert address_prop.get("nullable") is True
     assert address_prop.get("default") is None
+
+
+def test_field_with_default_not_optional(db):
+    """Fields with a default value but null=False should not be marked as Optional."""
+    Event_Pydantic = pydantic_model_creator(Event, name="EventDefaultNotOptional")
+    schema = Event_Pydantic.model_json_schema()
+
+    # 'token' has default=generate_token but null is not set (defaults to False),
+    # so it must NOT allow None values
+    token_prop = schema["properties"]["token"]
+    assert token_prop == {"title": "Token", "type": "string"}
+    assert "anyOf" not in token_prop
+
+    # Validation should reject None for a non-nullable field with a default
+    with pytest.raises(ValidationError):
+        Event_Pydantic(
+            event_id=1, name="test", tournament=1, token=None, modified="2024-01-01T00:00:00"
+        )
 
 
 # Tests for computed fields accessing relations (#1440)
