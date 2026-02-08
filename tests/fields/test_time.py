@@ -430,12 +430,13 @@ async def test_datetime_auto_now_naive_with_use_tz_false(db):
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect=NotIn("mssql"))
+@test.requireCapability(dialect=NotIn("mssql", "mysql"))
 async def test_datetime_auto_now_add_matches_db_on_create(db):
     """Test auto_now_add value on instance after create() matches what DB returns.
 
-    Note: MSSQL uses DATETIME2 (timezone-naive) and requires additional timezone
-    handling not yet implemented for auto_now fields with custom timezones.
+    Note: MSSQL (DATETIME2) and MySQL (DATETIME) use timezone-naive columns.
+    Python drivers strip timezone info before sending, causing UTC wall-clock time
+    to be stored and misinterpreted as local time on read with custom timezones.
     """
     model = testmodels.DatetimeFields
     old_use_tz = os.environ.get("USE_TZ")
@@ -461,12 +462,13 @@ async def test_datetime_auto_now_add_matches_db_on_create(db):
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect=NotIn("mssql"))
+@test.requireCapability(dialect=NotIn("mssql", "mysql"))
 async def test_datetime_auto_now_matches_db_on_save(db):
     """Test auto_now value on instance after save() matches what DB returns.
 
-    Note: MSSQL uses DATETIME2 (timezone-naive) and requires additional timezone
-    handling not yet implemented for auto_now fields with custom timezones.
+    Note: MSSQL (DATETIME2) and MySQL (DATETIME) use timezone-naive columns.
+    Python drivers strip timezone info before sending, causing UTC wall-clock time
+    to be stored and misinterpreted as local time on read with custom timezones.
     """
     model = testmodels.DatetimeFields
     old_use_tz = os.environ.get("USE_TZ")
