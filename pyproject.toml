@@ -12,7 +12,6 @@ dependencies = [
     "iso8601 (>=2.1.0,<3.0.0); python_version < '4.0'",
     "aiosqlite (>=0.16.0,<1.0.0)",
     "anyio",
-    "pytz",
     "tomlkit (>=0.11.4,<1.0.0); python_version < '3.11'",
     "typing-extensions (>= 4.1.0); python_version < '3.11'",
 ]
@@ -109,6 +108,7 @@ test = [
     "pytest-asyncio",
     "cryptography>=46.0.3",
     "aiomysql>=0.3.2",
+    "pytz>=2025.2",
 ]
 docs = [
     # Documentation tools

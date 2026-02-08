@@ -3,7 +3,6 @@ from decimal import Decimal
 
 import pytest
 import pytest_asyncio
-import pytz
 
 from tests.testmodels import DefaultModel
 from tortoise import connections
@@ -11,6 +10,7 @@ from tortoise.backends.asyncpg import AsyncpgDBClient
 from tortoise.backends.mysql import MySQLClient
 from tortoise.backends.psycopg import PsycopgClient
 from tortoise.backends.sqlite import SqliteClient
+from tortoise.timezone import UTC
 
 # Optional imports for database clients that require system dependencies
 try:
@@ -60,5 +60,5 @@ async def test_default(default_row):
     assert default_model.char_default == "tortoise"
     assert default_model.date_default == datetime.date(year=2020, month=5, day=21)
     assert default_model.datetime_default == datetime.datetime(
-        year=2020, month=5, day=20, tzinfo=pytz.utc
+        year=2020, month=5, day=20, tzinfo=UTC
     )

@@ -1,11 +1,12 @@
+import contextlib
 import os
 from datetime import date, datetime, time, timedelta
 from datetime import timezone as dt_timezone
 from time import sleep
 from unittest.mock import patch
+from zoneinfo import ZoneInfoNotFoundError
 
 import pytest
-import pytz
 from iso8601 import ParseError
 
 from tests import testmodels
@@ -14,7 +15,7 @@ from tortoise.contrib import test
 from tortoise.contrib.test.condition import NotIn
 from tortoise.exceptions import ConfigurationError, IntegrityError
 from tortoise.expressions import F
-from tortoise.timezone import get_default_timezone
+from tortoise.timezone import UTC, ZoneInfo, get_default_timezone, parse_timezone
 
 # ============================================================================
 # TestEmpty -> test_empty_*
@@ -177,7 +178,7 @@ async def test_datetime_set_timezone(db):
     old_tz = os.environ["TIMEZONE"]
     tz = "Asia/Shanghai"
     os.environ["TIMEZONE"] = tz
-    now = datetime.now(pytz.timezone(tz))
+    now = datetime.now(parse_timezone(tz))
     obj = await model.create(datetime=now)
     assert obj.datetime.tzinfo.zone == tz
 
@@ -198,7 +199,7 @@ async def test_datetime_timezone(db):
     os.environ["TIMEZONE"] = tz
     os.environ["USE_TZ"] = "True"
 
-    now = datetime.now(pytz.timezone(tz))
+    now = datetime.now(parse_timezone(tz))
     obj = await model.create(datetime=now)
     assert obj.datetime.tzinfo.zone == tz
     obj_get = await model.get(pk=obj.pk)
@@ -225,15 +226,15 @@ async def test_datetime_filter_by_year_month_day(db):
 
 
 # ============================================================================
-# TestTimeFields (sqlite/postgres) -> test_time_*
+# TestTimeFields (postgres) -> test_time_*
 # ============================================================================
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect="sqlite")
+@test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
 @test.requireCapability(dialect="postgres")
 async def test_time_create(db):
-    """Test creating time fields (sqlite/postgres)."""
+    """Test creating time fields (postgres)."""
     model = testmodels.TimeFields
     now = timezone.now().timetz()
     obj0 = await model.create(time=now)
@@ -242,10 +243,10 @@ async def test_time_create(db):
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect="sqlite")
+@test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
 @test.requireCapability(dialect="postgres")
 async def test_time_cast(db):
-    """Test time field accepts ISO format string (sqlite/postgres)."""
+    """Test time field accepts ISO format string (postgres)."""
     model = testmodels.TimeFields
     obj0 = await model.create(time="21:00+00:00")
     obj1 = await model.get(id=obj0.id)
@@ -253,10 +254,10 @@ async def test_time_cast(db):
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect="sqlite")
+@test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
 @test.requireCapability(dialect="postgres")
 async def test_time_values(db):
-    """Test time field in values() query (sqlite/postgres)."""
+    """Test time field in values() query (postgres)."""
     model = testmodels.TimeFields
     now = timezone.now().timetz()
     obj0 = await model.create(time=now)
@@ -265,10 +266,10 @@ async def test_time_values(db):
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect="sqlite")
+@test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
 @test.requireCapability(dialect="postgres")
 async def test_time_values_list(db):
-    """Test time field in values_list() query (sqlite/postgres)."""
+    """Test time field in values_list() query (postgres)."""
     model = testmodels.TimeFields
     now = timezone.now().timetz()
     obj0 = await model.create(time=now)
@@ -277,10 +278,10 @@ async def test_time_values_list(db):
 
 
 @pytest.mark.asyncio
-@test.requireCapability(dialect="sqlite")
+@test.requireCapability(dialect=NotIn("sqlite"))  # 'datetime.time' is not supported by sqlite3
 @test.requireCapability(dialect="postgres")
 async def test_time_get(db):
-    """Test getting by time field (sqlite/postgres)."""
+    """Test getting by time field (postgres)."""
     model = testmodels.TimeFields
     now = timezone.now().timetz()
     await model.create(time=now)
@@ -504,3 +505,69 @@ async def test_timedelta_get(db):
     await model.create(timedelta=delta)
     obj = await model.get(timedelta=delta)
     assert obj.timedelta == delta
+
+
+def test_zoneinfo():
+    tz = parse_timezone("Asia/Shanghai")
+    tz2 = parse_timezone("asia/shanghai")
+    tz3 = parse_timezone("asia/ShangHai")
+    now = datetime.now()
+    assert now.replace(tzinfo=tz) == now.replace(tzinfo=tz2) == now.replace(tzinfo=tz3)
+    tz = parse_timezone("US/central")
+    tz2 = parse_timezone("US/Central")
+    assert now.replace(tzinfo=tz) == now.replace(tzinfo=tz2)
+    tz_utc = parse_timezone("UTC")
+    tz_utc2 = parse_timezone("utc")
+    tz_utc3 = parse_timezone("Utc")
+    assert tz_utc.key == tz_utc2.zone == "UTC"
+    assert (
+        now.replace(tzinfo=UTC)
+        == now.replace(tzinfo=tz_utc)
+        == now.replace(tzinfo=tz_utc2)
+        == now.replace(tzinfo=tz_utc3)
+    )
+    with pytest.raises(ZoneInfoNotFoundError):
+        parse_timezone("invalid-zone-name")
+    with pytest.raises(ZoneInfoNotFoundError):
+        parse_timezone("Invalid/Zonename")
+
+
+def test_timezone():
+    # test localtime
+    assert timezone.localtime() <= timezone.now() <= timezone.localtime()
+    utcnow = datetime.now(UTC)
+    tz_shanghai = ZoneInfo("Asia/Shanghai")
+    assert timezone.localtime(utcnow).utcoffset() == timezone.now().utcoffset()
+    localtime_shanghai = timezone.localtime(utcnow, tz_shanghai.key)
+    assert timezone.localtime(utcnow, tz_shanghai) == localtime_shanghai
+    assert localtime_shanghai.utcoffset() != timezone.localtime(utcnow, "UTC").utcoffset()
+    naive_dt = datetime.now()
+    with pytest.raises(ValueError):
+        timezone.localtime(naive_dt)
+    # test make_naive
+    assert timezone.make_naive(timezone.now()).tzinfo is None
+    with pytest.raises(ValueError):
+        timezone.make_naive(naive_dt)
+    tz_shanghai = ZoneInfo("Asia/Shanghai")
+    now_shanghai = datetime.now(tz_shanghai)
+    offset = now_shanghai.utcoffset()
+    naive_now = timezone.make_naive(utcnow, tz_shanghai.key)
+    assert (utcnow + offset).isoformat().split("+")[0] == naive_now.isoformat()
+    # test make_aware
+    with pytest.raises(ValueError):
+        timezone.make_aware(utcnow)
+    aware_now = timezone.make_aware(naive_now, tz_shanghai.key)
+    assert aware_now.utcoffset() == now_shanghai.utcoffset()
+    assert "+" in timezone.make_aware(naive_now).isoformat()
+    # test compatible with pytz
+    with contextlib.suppress(ImportError):
+        import pytz
+
+        aware_now = timezone.make_aware(naive_now, pytz.timezone(tz_shanghai.key))
+        assert aware_now.utcoffset() == now_shanghai.utcoffset()
+        pytz_shanghai = pytz.timezone(tz_shanghai.key)
+        assert pytz_shanghai.zone == tz_shanghai.zone == tz_shanghai.key
+        assert localtime_shanghai == timezone.localtime(utcnow, pytz_shanghai)
+        assert (
+            localtime_shanghai.utcoffset() == timezone.localtime(timezone=pytz_shanghai).utcoffset()
+        )

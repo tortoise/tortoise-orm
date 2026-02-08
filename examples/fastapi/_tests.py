@@ -10,12 +10,12 @@ from pathlib import Path
 
 import anyio
 import pytest
-import pytz
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
 
 from tortoise.contrib.test import MEMORY_SQLITE
 from tortoise.fields.data import JSON_LOADS
+from tortoise.timezone import UTC, localtime
 
 os.environ["DB_URL"] = MEMORY_SQLITE
 try:
@@ -79,7 +79,7 @@ class UserTester:
         return user_obj
 
     async def user_list(self, async_client: AsyncClient) -> tuple[datetime, Users, User_Pydantic]:
-        utc_now = datetime.now(pytz.utc)
+        utc_now = datetime.now(UTC)
         user_obj = await Users.create(username="test")
         response = await async_client.get("/users")
         assert response.status_code == 200, response.text
@@ -127,13 +127,11 @@ class TestUserEast(UserTester):
         created_at = user_obj.created_at
 
         # Verify time zone
-        asia_tz = pytz.timezone(self.timezone)
-        asia_now = datetime.now(pytz.utc).astimezone(asia_tz)
+        asia_now = localtime(timezone=self.timezone)
         assert created_at.hour - asia_now.hour == 0
 
         # UTC timezone
-        utc_tz = pytz.timezone("UTC")
-        utc_now = datetime.now(pytz.utc).astimezone(utc_tz)
+        utc_now = localtime(timezone="UTC")
         assert (created_at.hour - utc_now.hour) in [self.delta_hours, self.delta_hours - 24]
 
     @pytest.mark.anyio

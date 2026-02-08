@@ -40,9 +40,10 @@ Changed
 - Framework integrations (FastAPI, Starlette, Sanic, etc.) now use ``Tortoise.close_connections()`` internally
 - ``ConnectionHandler`` now uses instance-based ContextVar storage (each context has isolated connections)
 - ``Tortoise.apps`` and ``Tortoise._inited`` now use ``classproperty`` descriptor (no metaclass)
-- feat: foreignkey to model type (#2027)
 - **Shell command now uses optional dependencies**: Install with ``pip install tortoise-orm[ipython]`` (recommended) or ``pip install tortoise-orm[ptpython]`` to enable. IPython is preferred over ptpython. Both shells are supported.
 - **DatetimeField and TimeField behavior change**: Fields with ``auto_now=True`` no longer incorrectly set ``auto_now_add=True`` internally.
+- feat: foreignkey to model type (#2027)
+- refactor: remove `pytz` and use standard library `zoneinfo` (#2023)
 
 Deprecated
 ^^^^^^^^^^
