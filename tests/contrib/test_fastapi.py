@@ -28,7 +28,7 @@ async def test_await(
         config_file=None,
         db_url="sqlite://:memory:",
         modules={"models": ["__main__"]},
-        use_tz=False,
+        use_tz=True,
         timezone="UTC",
         _create_db=False,
         _enable_global_fallback=True,

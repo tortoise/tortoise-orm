@@ -125,7 +125,7 @@ class RegisterTortoise(AbstractAsyncContextManager):
         modules: dict[str, Iterable[str | ModuleType]] | None = None,
         generate_schemas: bool = False,
         add_exception_handlers: bool = False,
-        use_tz: bool = False,
+        use_tz: bool = True,
         timezone: str = "UTC",
         _create_db: bool = False,
         _enable_global_fallback: bool = True,

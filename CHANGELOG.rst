@@ -20,6 +20,7 @@ Changelog
 
 Breaking Changes
 ^^^^^^^^^^^^^^^^
+- **``use_tz`` now defaults to ``True``** (was ``False``). Set ``use_tz=False`` explicitly if you need naive datetimes.
 - **Context-first architecture**: All ORM state now lives in ``TortoiseContext`` instances
 - **Removed** legacy test classes: ``test.TestCase``, ``test.IsolatedTestCase``, ``test.TruncationTestCase``, ``test.SimpleTestCase``
 - **Removed** legacy test helpers: ``initializer()``, ``finalizer()``, ``env_initializer()``, ``getDBConfig()``
@@ -51,6 +52,7 @@ Deprecated
 
 Fixed
 ^^^^^
+- ``use_tz=False`` now correctly preserves naive datetimes instead of silently making them timezone-aware (#631)
 - Fix annotations being selected in ValuesListQuery despite not specified in `.values_list` fields list (#2059)
 
 0.25

@@ -369,10 +369,17 @@ class DatetimeField(Field[datetime.datetime], datetime.datetime):
                 value = datetime.datetime.fromtimestamp(value)
             else:
                 value = parse_datetime(value)
-            if timezone.is_naive(value):
-                value = timezone.make_aware(value, get_timezone())
+            if get_use_tz():
+                # When use_tz=True, ensure all datetimes are timezone-aware
+                if timezone.is_naive(value):
+                    value = timezone.make_aware(value, get_timezone())
+                else:
+                    value = localtime(value)
             else:
-                value = localtime(value)
+                # When use_tz=False, ensure all datetimes are naive
+                # Some backends (PostgreSQL TIMESTAMPTZ) return aware datetimes natively
+                if timezone.is_aware(value):
+                    value = value.replace(tzinfo=None)
         return value
 
     def to_db_value(

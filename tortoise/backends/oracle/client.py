@@ -28,7 +28,7 @@ from tortoise.backends.odbc.client import (
 )
 from tortoise.backends.oracle.executor import OracleExecutor
 from tortoise.backends.oracle.schema_generator import OracleSchemaGenerator
-from tortoise.timezone import UTC
+from tortoise.timezone import UTC, get_use_tz
 
 if TYPE_CHECKING:  # pragma: nocoverage
     import asyncodbc  # pylint: disable=W0611
@@ -102,7 +102,13 @@ class OraclePoolConnectionWrapper(PoolConnectionWrapper):
         try:
             return parse_datetime(value.decode()).date()
         except ValueError:
-            return parse_datetime(value.decode()[:-32]).astimezone(tz=UTC)
+            dt = parse_datetime(value.decode()[:-32])
+            # Only convert to UTC-aware when use_tz=True
+            if get_use_tz():
+                return dt.astimezone(tz=UTC)
+            else:
+                # When use_tz=False, strip timezone info to return naive datetime
+                return dt.replace(tzinfo=None)
 
     async def __aenter__(self) -> asyncodbc.Connection:
         connection = await super().__aenter__()

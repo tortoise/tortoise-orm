@@ -470,7 +470,7 @@ class TestTimezoneAndRouters:
     def test_context_default_timezone_settings(self):
         """Context has default timezone settings."""
         ctx = TortoiseContext()
-        assert ctx.use_tz is False
+        assert ctx.use_tz is True
         assert ctx.timezone == "UTC"
         assert ctx.routers == []
 

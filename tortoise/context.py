@@ -154,7 +154,7 @@ class TortoiseContext:
         self._table_name_generator: Callable[[type[Model]], str] | None = None
         self._default_connection: str | None = None
         # Timezone settings
-        self._use_tz: bool = False
+        self._use_tz: bool = True
         self._timezone: str = "UTC"
         # Routers
         self._routers: list[type] = []
@@ -265,7 +265,7 @@ class TortoiseContext:
         db_url: str | None = None,
         modules: dict[str, Iterable[str | ModuleType]] | None = None,
         _create_db: bool = False,
-        use_tz: bool = False,
+        use_tz: bool = True,
         timezone: str = "UTC",
         routers: list[str | type] | None = None,
         table_name_generator: Callable[[type[Model]], str] | None = None,
@@ -530,7 +530,7 @@ async def tortoise_test_context(
     app_label: str = "models",
     *,
     connection_label: str | None = None,
-    use_tz: bool = False,
+    use_tz: bool = True,
     timezone: str = "UTC",
     routers: list[str | type] | None = None,
 ) -> AsyncIterator[TortoiseContext]:

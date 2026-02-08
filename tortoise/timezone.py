@@ -45,7 +45,7 @@ def get_use_tz() -> bool:
     """
     Get use_tz from env set in Tortoise config.
     """
-    return os.environ.get("USE_TZ") == "True"
+    return os.environ.get("USE_TZ", "True").lower() not in ("false", "0", "")
 
 
 @functools.cache
@@ -58,12 +58,15 @@ def get_timezone() -> str:
 
 def now() -> datetime:
     """
-    Return an aware datetime.datetime, depending on use_tz and timezone.
+    Return a datetime.datetime, aware or naive depending on use_tz setting.
+
+    When use_tz=True, returns an aware datetime in UTC.
+    When use_tz=False, returns a naive datetime.
     """
     if get_use_tz():
         return datetime.now(tz=UTC)
     else:
-        return datetime.now(get_default_timezone())
+        return datetime.now()
 
 
 @functools.cache

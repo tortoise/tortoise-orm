@@ -38,6 +38,7 @@ from tortoise.exceptions import (
     OperationalError,
     TransactionManagementError,
 )
+from tortoise.timezone import get_use_tz
 
 T = TypeVar("T")
 FuncType = Callable[..., Coroutine[None, None, T]]
@@ -134,9 +135,11 @@ class MySQLClient(BaseDBAsyncClient):
                             )
                             if self.storage_engine.lower() != "innodb":  # pragma: nobranch
                                 self.capabilities.__dict__["supports_transactions"] = False
-                        hours = timezone.now().utcoffset().seconds / 3600  # type: ignore
-                        tz = f"{int(hours):+d}:{int((hours % 1) * 60):02d}"
-                        await cursor.execute(f"SET time_zone='{tz}';")
+                        # Only set session timezone when use_tz=True
+                        if get_use_tz():
+                            hours = timezone.now().utcoffset().seconds / 3600  # type: ignore
+                            tz = f"{int(hours):+d}:{int((hours % 1) * 60):02d}"
+                            await cursor.execute(f"SET time_zone='{tz}';")
             self.log.debug("Created connection %s pool with params: %s", self._pool, self._template)
         except errors.OperationalError:
             raise DBConnectionError(f"Can't connect to MySQL server: {self._template}")
