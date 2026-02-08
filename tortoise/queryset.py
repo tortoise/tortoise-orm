@@ -1256,10 +1256,8 @@ class QuerySet(AwaitableQuery[MODEL]):
         if self._db is None:
             self._db = self._choose_db(self._select_for_update)
         self._make_query()
-        sql, params = self.query.get_parameterized_sql()
         return PreparedQuery(
-            sql=sql,
-            params=params,
+            query=self.query,
             db=self._db,
             model=self.model,
             prefetch_map=self._prefetch_map,
@@ -1271,20 +1269,37 @@ class QuerySet(AwaitableQuery[MODEL]):
         )
 
 
-class PreparedQuery(AwaitableQuery[MODEL]):
-    def __init__(
-            self, sql: str, params: list[Any], db: BaseDBAsyncClient, model: MODEL, prefetch_map: ..., prefetch_queries: ...,
-            select_related_idx: ..., custom_fields: list[...], single: bool, raise_does_not_exist: bool,
-    ) -> None:
-        super().__init__(model)
-
-        self._sql = sql
-        self._params = params
-        self._need_params = {
+class CachedSql:
+    def __init__(self, sql: str, params: list[Parameter | Any]) -> None:
+        self.sql = sql
+        self.params = params
+        self.need_params = {
             param.name: (param, idx)
             for idx, param in enumerate(params)
             if isinstance(param, Parameter)
         }
+
+    def make_filled_params(self, params: dict[str, Any]) -> list[Any]:
+        if self.need_params.keys() != params.keys():
+            raise ValueError("One of more parameters does not match prepared parameters")
+
+        filled_params = self.params.copy()
+        for name, (param, idx) in self.need_params.items():
+            filled_params[idx] = param.encode_value(params[name])
+
+        return filled_params
+
+
+class PreparedQuery(AwaitableQuery[MODEL]):
+    def __init__(
+            self, query: QueryBuilder, db: BaseDBAsyncClient, model: type[MODEL], prefetch_map: ...,
+            prefetch_queries: ..., select_related_idx: ..., custom_fields: list[...], single: bool,
+            raise_does_not_exist: bool,
+    ) -> None:
+        super().__init__(model)
+
+        self._query = query
+        self._cached_sql = {}
         self._executor = db.executor_class(
             model=model,
             db=db,
@@ -1297,16 +1312,34 @@ class PreparedQuery(AwaitableQuery[MODEL]):
         self._single = single
         self._raise_does_not_exist = raise_does_not_exist
 
-    async def execute(self, **params) -> list[MODEL]:
-        if self._need_params.keys() != params.keys():
-            raise ValueError("One of more parameters does not match prepared parameters")
+    def _get_or_create_cached_sql(self, params: dict[str, Any]) -> CachedSql:
+        _, sql_params = self._query.get_parameterized_sql()
+        need_params = {
+            param.name: param
+            for param in sql_params
+            if isinstance(param, Parameter)
+        }
 
-        filled_params = self._params.copy()
-        for name, (param, idx) in self._need_params.items():
-            filled_params[idx] = param.encode_value(params[name])
+        cache_key = "query"
+        for param, value in params.items():
+            if param not in need_params:
+                continue
+            if isinstance(value, (tuple, list, set)):
+                cache_key += f"-{param}{len(value)}"
+                need_params[param].container_size = len(value)
+
+        if cache_key not in self._cached_sql:
+            sql, params = self._query.get_parameterized_sql()
+            self._cached_sql[cache_key] = CachedSql(sql, params)
+
+        return self._cached_sql[cache_key]
+
+    async def execute(self, **params) -> list[MODEL]:
+        cached_query = self._get_or_create_cached_sql(params)
+        filled_params = cached_query.make_filled_params(params)
 
         instance_list = await self._executor.execute_select(
-            self._sql, filled_params,
+            cached_query.sql, filled_params,
             custom_fields=self._custom_fields,
         )
         if self._single:
