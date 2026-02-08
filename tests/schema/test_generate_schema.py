@@ -7,7 +7,7 @@ import pytest
 
 from tortoise import Tortoise, connections
 from tortoise.backends.base.config_generator import generate_config
-from tortoise.context import TortoiseContext, get_current_context
+from tortoise.context import get_current_context
 from tortoise.exceptions import ConfigurationError
 from tortoise.utils import get_schema_sql
 
@@ -126,6 +126,9 @@ async def _reset_tortoise():
         ctx._apps = None
         ctx._inited = False
         ctx._default_connection = None
+        # Exit the context to reset contextvar (only if it was entered)
+        if ctx._token is not None:
+            ctx.__exit__(None, None, None)
     # If no context exists, Tortoise.init() will create one when needed
 
 

@@ -566,7 +566,6 @@ def run_async(coro: Coroutine) -> None:
 
         run_async(do_stuff())
     """
-    from tortoise.context import get_current_context
 
     async def main() -> None:
         try:
