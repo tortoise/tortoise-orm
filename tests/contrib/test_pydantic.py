@@ -262,7 +262,7 @@ async def test_event_schema(db, pydantic_setup):
                 "title": "Modified",
                 "type": "string",
             },
-            "token": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Token"},
+            "token": {"title": "Token", "type": "string"},
             "alias": {
                 "anyOf": [
                     {"maximum": 2147483647, "minimum": -2147483648, "type": "integer"},
@@ -300,7 +300,7 @@ async def test_eventlist_schema(db, pydantic_setup):
     Event_Pydantic_List = pydantic_setup["Event_Pydantic_List"]
     assert Event_Pydantic_List.model_json_schema() == {
         "$defs": {
-            "Event_bx6qaa": {
+            "Event_rgfzbr": {
                 "additionalProperties": False,
                 "description": "Events on the calendar",
                 "properties": {
@@ -336,8 +336,8 @@ async def test_eventlist_schema(db, pydantic_setup):
                         "type": "string",
                     },
                     "token": {
-                        "anyOf": [{"type": "string"}, {"type": "null"}],
                         "title": "Token",
+                        "type": "string",
                     },
                     "alias": {
                         "anyOf": [
@@ -483,7 +483,7 @@ async def test_eventlist_schema(db, pydantic_setup):
             },
         },
         "description": "Events on the calendar",
-        "items": {"$ref": "#/$defs/Event_bx6qaa"},
+        "items": {"$ref": "#/$defs/Event_rgfzbr"},
         "title": "Event_list",
         "type": "array",
     }
@@ -494,7 +494,7 @@ async def test_address_schema(db, pydantic_setup):
     Address_Pydantic = pydantic_setup["Address_Pydantic"]
     assert Address_Pydantic.model_json_schema() == {
         "$defs": {
-            "Event_lkfyxk_leaf": {
+            "Event_bhjepe_leaf": {
                 "additionalProperties": False,
                 "description": "Events on the calendar",
                 "properties": {
@@ -530,8 +530,8 @@ async def test_address_schema(db, pydantic_setup):
                         "type": "string",
                     },
                     "token": {
-                        "anyOf": [{"type": "string"}, {"type": "null"}],
                         "title": "Token",
+                        "type": "string",
                     },
                     "alias": {
                         "anyOf": [
@@ -655,7 +655,7 @@ async def test_address_schema(db, pydantic_setup):
                 "title": "M2Mwitho2Opks",
                 "type": "array",
             },
-            "event": {"$ref": "#/$defs/Event_lkfyxk_leaf"},
+            "event": {"$ref": "#/$defs/Event_bhjepe_leaf"},
             "event_id": {
                 "maximum": 9223372036854775807,
                 "minimum": -9223372036854775808,
@@ -674,7 +674,7 @@ async def test_tournament_schema(db, pydantic_setup):
     Tournament_Pydantic = pydantic_setup["Tournament_Pydantic"]
     assert Tournament_Pydantic.model_json_schema() == {
         "$defs": {
-            "Event_xsdgtc_leaf": {
+            "Event_tymecz_leaf": {
                 "additionalProperties": False,
                 "description": "Events on the calendar",
                 "properties": {
@@ -706,8 +706,8 @@ async def test_tournament_schema(db, pydantic_setup):
                         "type": "string",
                     },
                     "token": {
-                        "anyOf": [{"type": "string"}, {"type": "null"}],
                         "title": "Token",
+                        "type": "string",
                     },
                     "alias": {
                         "anyOf": [
@@ -842,7 +842,7 @@ async def test_tournament_schema(db, pydantic_setup):
             },
             "events": {
                 "description": "What tournaments is a happenin'",
-                "items": {"$ref": "#/$defs/Event_xsdgtc_leaf"},
+                "items": {"$ref": "#/$defs/Event_tymecz_leaf"},
                 "title": "Events",
                 "type": "array",
             },
@@ -858,7 +858,7 @@ async def test_team_schema(db, pydantic_setup):
     Team_Pydantic = pydantic_setup["Team_Pydantic"]
     assert Team_Pydantic.model_json_schema() == {
         "$defs": {
-            "Event_xx2apk_leaf": {
+            "Event_3zjun4_leaf": {
                 "additionalProperties": False,
                 "description": "Events on the calendar",
                 "properties": {
@@ -889,8 +889,8 @@ async def test_team_schema(db, pydantic_setup):
                         "type": "string",
                     },
                     "token": {
-                        "anyOf": [{"type": "string"}, {"type": "null"}],
                         "title": "Token",
+                        "type": "string",
                     },
                     "alias": {
                         "anyOf": [
@@ -1025,7 +1025,7 @@ async def test_team_schema(db, pydantic_setup):
                 "title": "Alias",
             },
             "events": {
-                "items": {"$ref": "#/$defs/Event_xx2apk_leaf"},
+                "items": {"$ref": "#/$defs/Event_3zjun4_leaf"},
                 "title": "Events",
                 "type": "array",
             },
