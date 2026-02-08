@@ -94,7 +94,10 @@ class UserTester:
             if key in ("created_at", "modified_at"):
                 # Compare as datetime objects to handle timezone format differences
                 # (Pydantic normalizes to UTC, FastAPI preserves original timezone)
-                assert datetime.fromisoformat(api_item[key]) == datetime.fromisoformat(value)
+                # Replace trailing 'Z' with '+00:00' for fromisoformat() compatibility
+                a = datetime.fromisoformat(api_item[key].replace("Z", "+00:00"))
+                b = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                assert a == b, f"Datetime mismatch on {key!r}: {api_item[key]} != {value}"
             else:
                 assert api_item[key] == value, f"Mismatch on {key!r}"
         return utc_now, user_obj, item
