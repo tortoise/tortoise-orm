@@ -37,9 +37,12 @@ def union_annotation(x: str, y: str) -> str:
 UNION_DICT_LIST = union_annotation("dict", "list")
 
 
-# Tests that require database connection (TestDescribeModels)
+# Tests that require database connection AND Tortoise.apps to resolve via contextvar.
+# Use db_isolated (function-scoped context) so the contextvar is set directly in
+# the test's asyncio Task — module-scoped db_module sets it in a separate Task
+# and the contextvar may not propagate.
 @pytest.mark.asyncio
-async def test_describe_models_all_serializable(db):
+async def test_describe_models_all_serializable(db_isolated):
     val = Tortoise.describe_models()
     json.dumps(val)
     assert "models.SourceFields" in val.keys()
@@ -47,7 +50,7 @@ async def test_describe_models_all_serializable(db):
 
 
 @pytest.mark.asyncio
-async def test_describe_models_all_not_serializable(db):
+async def test_describe_models_all_not_serializable(db_isolated):
     val = Tortoise.describe_models(serializable=False)
     with pytest.raises(TypeError, match="not JSON serializable"):
         json.dumps(val)
