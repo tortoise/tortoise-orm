@@ -1,10 +1,12 @@
 # pylint: disable=C0301
 import os
 import re
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+import tortoise.context as _tortoise_context
 from tortoise import Tortoise, connections
 from tortoise.backends.base.config_generator import generate_config
 from tortoise.context import _current_context
@@ -101,6 +103,32 @@ CREATE UNIQUE INDEX IF NOT EXISTS "uidx_teamevents_event_i_664dbc" ON "teamevent
 """.strip()
 
 
+def _log_schema_context(label):
+    """Log context state for debugging flaky test interactions."""
+    import asyncio
+    import threading
+
+    cv = _current_context.get()
+    gl = _tortoise_context._global_context
+    task = asyncio.current_task()
+    print(f"\n[SCHEMA-DEBUG {label}]", file=sys.stderr)
+    print(f"  thread          = {threading.current_thread().name}", file=sys.stderr)
+    print(f"  asyncio task    = {task.get_name() if task else None}", file=sys.stderr)
+    print(f"  contextvar.get  = {id(cv) if cv else None}", file=sys.stderr)
+    if cv is not None:
+        print(f"  cv._apps        = {cv._apps is not None}", file=sys.stderr)
+        print(f"  cv._inited      = {cv._inited}", file=sys.stderr)
+        print(f"  cv._token       = {cv._token is not None}", file=sys.stderr)
+        print(f"  cv._connections = {cv._connections is not None}", file=sys.stderr)
+    else:
+        print("  cv              = None", file=sys.stderr)
+    print(f"  _global_context = {id(gl) if gl else None}", file=sys.stderr)
+    if gl is not None:
+        print(f"  global._apps    = {gl._apps is not None}", file=sys.stderr)
+        print(f"  global._inited  = {gl._inited}", file=sys.stderr)
+    sys.stderr.flush()
+
+
 async def _reset_tortoise():
     """Helper to reset Tortoise state before each test.
 
@@ -108,6 +136,8 @@ async def _reset_tortoise():
     because these are classproperties and setting them shadows the property
     with a class attribute, breaking future access.
     """
+    _log_schema_context("_reset_tortoise ENTER")
+
     # Restore original classproperties if they were shadowed
     if not isinstance(Tortoise.__dict__.get("apps"), type(_original_apps_prop)):
         type.__setattr__(Tortoise, "apps", _original_apps_prop)
@@ -118,6 +148,7 @@ async def _reset_tortoise():
     # another module's db_module fixture running in the same xdist worker).
     ctx = _current_context.get()
     if ctx is not None:
+        print(f"  resetting ctx {id(ctx)}", file=sys.stderr)
         # Clear db_config first to prevent close_all from trying to import bad backends
         if ctx._connections is not None:
             # Clear storage without closing (to avoid importing bad backends)
@@ -127,7 +158,11 @@ async def _reset_tortoise():
         ctx._apps = None
         ctx._inited = False
         ctx._default_connection = None
+    else:
+        print("  no contextvar ctx, Tortoise.init() will create one", file=sys.stderr)
     # If no context exists, Tortoise.init() will create one when needed
+
+    _log_schema_context("_reset_tortoise EXIT")
 
 
 async def _teardown_tortoise():
@@ -137,12 +172,21 @@ async def _teardown_tortoise():
     falling through to _global_context, which may belong to another module's
     db_module fixture in the same xdist worker.
     """
+    _log_schema_context("_teardown_tortoise ENTER")
+
     ctx = _current_context.get()
     if ctx is not None and ctx._apps is not None:
+        print(f"  tearing down ctx {id(ctx)}, clearing apps", file=sys.stderr)
         for model in ctx._apps.get_models_iterable():
             model._meta.default_connection = None
         ctx._apps.clear()
         ctx._apps = None
+    elif ctx is not None:
+        print(f"  ctx {id(ctx)} has no apps, nothing to tear down", file=sys.stderr)
+    else:
+        print("  no contextvar ctx, nothing to tear down", file=sys.stderr)
+
+    _log_schema_context("_teardown_tortoise EXIT")
 
 
 def _get_engine():
@@ -164,6 +208,8 @@ def _get_sql(sqls: list[str], text: str) -> str:
 
 async def _init_for_sqlite(module: str, safe: bool = False) -> list[str]:
     """Initialize Tortoise for SQLite and return SQL statements."""
+    _log_schema_context(f"_init_for_sqlite ENTER module={module}")
+
     with patch("tortoise.backends.sqlite.client.SqliteClient.create_connection", new=MagicMock()):
         await Tortoise.init(
             {
@@ -176,6 +222,8 @@ async def _init_for_sqlite(module: str, safe: bool = False) -> list[str]:
                 "apps": {"models": {"models": [module], "default_connection": "default"}},
             }
         )
+
+        _log_schema_context(f"_init_for_sqlite AFTER init module={module}")
         return get_schema_sql(connections.get("default"), safe).split(";\n")
 
 

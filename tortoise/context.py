@@ -492,16 +492,49 @@ class TortoiseContext:
         Returns:
             This context instance.
         """
+        import sys
+        import traceback
+
+        old = _current_context.get()
         self._token = _current_context.set(self)
+        print(
+            f"\n[CTX __enter__] ctx={id(self)} old={id(old) if old else None} "
+            f"apps={self._apps is not None} inited={self._inited}",
+            file=sys.stderr,
+        )
+        # Print compact caller info (skip __enter__ and __aenter__)
+        stack = traceback.extract_stack(limit=5)
+        for frame in stack[:-1]:
+            print(f"  {frame.filename}:{frame.lineno} {frame.name}", file=sys.stderr)
+        sys.stderr.flush()
         return self
 
     def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """
         Exit the context manager and restore the previous context.
         """
+        import sys
+        import traceback
+
         if self._token is not None:
             _current_context.reset(self._token)
+            restored = _current_context.get()
+            print(
+                f"\n[CTX __exit__] ctx={id(self)} restored={id(restored) if restored else None} "
+                f"apps_was={self._apps is not None}",
+                file=sys.stderr,
+            )
+            stack = traceback.extract_stack(limit=5)
+            for frame in stack[:-1]:
+                print(f"  {frame.filename}:{frame.lineno} {frame.name}", file=sys.stderr)
+            sys.stderr.flush()
             self._token = None
+        else:
+            print(
+                f"\n[CTX __exit__] ctx={id(self)} NO TOKEN (not entered or already exited)",
+                file=sys.stderr,
+            )
+            sys.stderr.flush()
 
     async def __aenter__(self) -> TortoiseContext:
         """
@@ -517,6 +550,14 @@ class TortoiseContext:
         """
         Exit the async context manager, close connections, and restore previous context.
         """
+        import sys
+
+        print(
+            f"\n[CTX __aexit__] ctx={id(self)} apps={self._apps is not None} "
+            f"inited={self._inited}",
+            file=sys.stderr,
+        )
+        sys.stderr.flush()
         await self.close_connections()
         self._apps = None
         self._inited = False

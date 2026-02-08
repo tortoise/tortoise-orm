@@ -37,13 +37,50 @@ def union_annotation(x: str, y: str) -> str:
 UNION_DICT_LIST = union_annotation("dict", "list")
 
 
-# Tests that require database connection AND Tortoise.apps to resolve via contextvar.
-# Use db_isolated (function-scoped context) so the contextvar is set directly in
-# the test's asyncio Task — module-scoped db_module sets it in a separate Task
-# and the contextvar may not propagate.
+def _debug_context(fixture_ctx, label):
+    """Dump context state for debugging flaky failures."""
+    import asyncio
+    import sys
+    import threading
+
+    from tortoise.context import _current_context, _global_context
+
+    cv = _current_context.get()
+    task = asyncio.current_task()
+    print(f"\n[DEBUG {label}]", file=sys.stderr)
+    print(f"  thread          = {threading.current_thread().name}", file=sys.stderr)
+    print(f"  asyncio task    = {task.get_name() if task else None}", file=sys.stderr)
+    print(f"  fixture ctx id  = {id(fixture_ctx)}", file=sys.stderr)
+    print(f"  fixture _apps   = {fixture_ctx._apps is not None}", file=sys.stderr)
+    print(f"  fixture _inited = {fixture_ctx._inited}", file=sys.stderr)
+    print(f"  fixture _token  = {fixture_ctx._token is not None}", file=sys.stderr)
+    print(f"  contextvar.get  = {id(cv) if cv else None}", file=sys.stderr)
+    print(f"  cv == fixture?  = {cv is fixture_ctx}", file=sys.stderr)
+    if cv is not None:
+        print(f"  cv._apps        = {cv._apps is not None}", file=sys.stderr)
+        print(f"  cv._inited      = {cv._inited}", file=sys.stderr)
+        print(f"  cv._token       = {cv._token is not None}", file=sys.stderr)
+        print(f"  cv id           = {id(cv)}", file=sys.stderr)
+    else:
+        print("  cv              = None", file=sys.stderr)
+    print(f"  _global_context = {id(_global_context) if _global_context else None}", file=sys.stderr)
+    if _global_context is not None:
+        print(f"  global._apps    = {_global_context._apps is not None}", file=sys.stderr)
+        print(f"  global._inited  = {_global_context._inited}", file=sys.stderr)
+    print(f"  Tortoise.apps   = {Tortoise.apps is not None}", file=sys.stderr)
+    if Tortoise.apps:
+        models = list(Tortoise.apps.get_models_iterable())
+        print(f"  model count     = {len(models)}", file=sys.stderr)
+    else:
+        print("  model count     = 0 (apps is None/falsy)", file=sys.stderr)
+    sys.stderr.flush()
+
+
 @pytest.mark.asyncio
 async def test_describe_models_all_serializable(db_isolated):
+    _debug_context(db_isolated, "test_describe_models_all_serializable")
     val = Tortoise.describe_models()
+    assert len(val) > 0, f"describe_models() returned empty dict, keys={list(val.keys())}"
     json.dumps(val)
     assert "models.SourceFields" in val.keys()
     assert "models.Event" in val.keys()
@@ -51,7 +88,9 @@ async def test_describe_models_all_serializable(db_isolated):
 
 @pytest.mark.asyncio
 async def test_describe_models_all_not_serializable(db_isolated):
+    _debug_context(db_isolated, "test_describe_models_all_not_serializable")
     val = Tortoise.describe_models(serializable=False)
+    assert len(val) > 0, f"describe_models() returned empty dict, keys={list(val.keys())}"
     with pytest.raises(TypeError, match="not JSON serializable"):
         json.dumps(val)
     assert "models.SourceFields" in val.keys()
