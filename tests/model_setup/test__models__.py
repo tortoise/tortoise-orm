@@ -10,29 +10,13 @@ import pytest
 
 from tortoise import Tortoise, connections
 from tortoise.backends.base.config_generator import generate_config
-from tortoise.context import _current_context
+from tortoise.context import get_current_context
 from tortoise.utils import get_schema_sql
-
-# Save original classproperties before any test can shadow them
-_original_apps_prop = Tortoise.__dict__["apps"]
-_original_inited_prop = Tortoise.__dict__["_inited"]
 
 
 async def _reset_tortoise():
-    """Helper to reset Tortoise state before each test.
-
-    Note: We MUST NOT set Tortoise.apps = None or Tortoise._inited = False
-    because these are classproperties and setting them shadows the property
-    with a class attribute, breaking future access.
-    """
-    # Restore original classproperties if they were shadowed
-    if not isinstance(Tortoise.__dict__.get("apps"), type(_original_apps_prop)):
-        type.__setattr__(Tortoise, "apps", _original_apps_prop)
-    if not isinstance(Tortoise.__dict__.get("_inited"), type(_original_inited_prop)):
-        type.__setattr__(Tortoise, "_inited", _original_inited_prop)
-
-    # Get this test's own context (NOT the global fallback)
-    ctx = _current_context.get()
+    """Helper to reset Tortoise state before each test."""
+    ctx = get_current_context()
     if ctx is not None:
         if ctx._connections is not None:
             ctx._connections._storage.clear()

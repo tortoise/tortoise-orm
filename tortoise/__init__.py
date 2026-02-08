@@ -42,10 +42,6 @@ class classproperty:
 
     Note: This only supports getters, not setters. Internal code must
     work with context directly for mutations.
-
-    WARNING: Class-level assignment (Tortoise.apps = value) will SHADOW
-    this descriptor. Python's descriptor protocol only intercepts instance-level
-    assignment. Use TortoiseContext directly instead.
     """
 
     def __init__(self, func: Callable[..., Any]) -> None:
@@ -55,7 +51,26 @@ class classproperty:
         return self.func(objtype)
 
 
-class Tortoise:
+class _TortoiseMeta(type):
+    """Metaclass that prevents accidental shadowing of classproperty descriptors.
+
+    Direct assignment like ``Tortoise.apps = None`` silently replaces the
+    classproperty descriptor with a plain attribute, breaking dynamic context
+    resolution for the rest of the process. This metaclass intercepts such
+    assignments and raises a clear error.
+    """
+
+    def __setattr__(cls, name: str, value: Any) -> None:
+        if name in cls.__dict__ and isinstance(cls.__dict__[name], classproperty):
+            raise AttributeError(
+                f"Cannot assign to Tortoise.{name} — it is a classproperty that resolves "
+                f"from the current TortoiseContext. Modify the context directly instead "
+                f"(e.g. ctx._apps = None)."
+            )
+        super().__setattr__(name, value)
+
+
+class Tortoise(metaclass=_TortoiseMeta):
     """
     Tortoise ORM main interface.
 

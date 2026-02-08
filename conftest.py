@@ -4,35 +4,12 @@ Pytest configuration for Tortoise ORM tests.
 Uses function-scoped fixtures for true test isolation.
 """
 
-import asyncio
 import os
-import sys
-import threading
 
 import pytest
 import pytest_asyncio
 
-import tortoise.context as _tortoise_context
-from tortoise.context import _current_context, tortoise_test_context
-
-
-def _log_fixture(label):
-    """Log fixture lifecycle for debugging flaky test interactions."""
-    cv = _current_context.get()
-    gl = _tortoise_context._global_context
-    task = asyncio.current_task()
-    print(f"\n[FIXTURE-DEBUG {label}]", file=sys.stderr)
-    print(f"  thread          = {threading.current_thread().name}", file=sys.stderr)
-    print(f"  asyncio task    = {task.get_name() if task else None}", file=sys.stderr)
-    print(f"  contextvar.get  = {id(cv) if cv else None}", file=sys.stderr)
-    if cv is not None:
-        print(f"  cv._apps        = {cv._apps is not None}", file=sys.stderr)
-        print(f"  cv._inited      = {cv._inited}", file=sys.stderr)
-    print(f"  _global_context = {id(gl) if gl else None}", file=sys.stderr)
-    if gl is not None:
-        print(f"  global._apps    = {gl._apps is not None}", file=sys.stderr)
-        print(f"  global._inited  = {gl._inited}", file=sys.stderr)
-    sys.stderr.flush()
+from tortoise.context import tortoise_test_context
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -77,7 +54,6 @@ async def db_module():
 
     Note: Uses connection_label="models" to match standard test infrastructure.
     """
-    _log_fixture("db_module SETUP start")
     db_url = os.getenv("TORTOISE_TEST_DB", "sqlite://:memory:")
     async with tortoise_test_context(
         modules=["tests.testmodels"],
@@ -85,18 +61,7 @@ async def db_module():
         app_label="models",
         connection_label="models",
     ) as ctx:
-        # Set global context fallback so tests can find it even when the
-        # contextvar doesn't propagate across asyncio Task boundaries.
-        # _global_context is a plain module-level variable (not a contextvar),
-        # so it's immune to Task isolation issues.
-        old_global = _tortoise_context._global_context
-        _tortoise_context._global_context = ctx
-        _log_fixture(f"db_module YIELD ctx={id(ctx)}")
-        try:
-            yield ctx
-        finally:
-            _log_fixture(f"db_module TEARDOWN ctx={id(ctx)}")
-            _tortoise_context._global_context = old_global
+        yield ctx
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -119,35 +84,28 @@ async def db(db_module):
             assert obj.id is not None
             # Changes are rolled back after test
     """
-    # Ensure the module-scoped context is visible in this function's execution context.
-    # The module-scoped db_module fixture sets the contextvar in its own asyncio Task,
-    # which may not propagate to function-scoped fixtures/tests running in separate Tasks.
-    token = _current_context.set(db_module)
-    try:
-        # Get connection from the context using its default connection
-        conn = db_module.db()
+    # Get connection from the context using its default connection
+    conn = db_module.db()
 
-        # Check if the database supports transactions
-        if conn.capabilities.supports_transactions:
-            # Start a savepoint/transaction
-            transaction = conn._in_transaction()
-            await transaction.__aenter__()
+    # Check if the database supports transactions
+    if conn.capabilities.supports_transactions:
+        # Start a savepoint/transaction
+        transaction = conn._in_transaction()
+        await transaction.__aenter__()
 
-            try:
-                yield db_module
-            finally:
-                # Rollback the transaction (discards all changes made during test)
-                class _RollbackException(Exception):
-                    pass
-
-                await transaction.__aexit__(_RollbackException, _RollbackException(), None)
-        else:
-            # For databases without transaction support (e.g., MyISAM),
-            # fall back to truncation cleanup
+        try:
             yield db_module
-            await _truncate_all_tables(db_module)
-    finally:
-        _current_context.reset(token)
+        finally:
+            # Rollback the transaction (discards all changes made during test)
+            class _RollbackException(Exception):
+                pass
+
+            await transaction.__aexit__(_RollbackException, _RollbackException(), None)
+    else:
+        # For databases without transaction support (e.g., MyISAM),
+        # fall back to truncation cleanup
+        yield db_module
+        await _truncate_all_tables(db_module)
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -165,11 +123,7 @@ async def db_simple(db_module):
             config = get_config()
             assert "host" in config
     """
-    token = _current_context.set(db_module)
-    try:
-        yield db_module
-    finally:
-        _current_context.reset(token)
+    yield db_module
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -191,7 +145,6 @@ async def db_isolated():
             # Completely fresh database
             ...
     """
-    _log_fixture("db_isolated SETUP start")
     db_url = os.getenv("TORTOISE_TEST_DB", "sqlite://:memory:")
     async with tortoise_test_context(
         modules=["tests.testmodels"],
@@ -199,9 +152,7 @@ async def db_isolated():
         app_label="models",
         connection_label="models",
     ) as ctx:
-        _log_fixture(f"db_isolated YIELD ctx={id(ctx)}")
         yield ctx
-    _log_fixture("db_isolated TEARDOWN done")
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -221,12 +172,8 @@ async def db_truncate(db_module):
                 await Model.create(name="test")
             # Table truncated after test
     """
-    token = _current_context.set(db_module)
-    try:
-        yield db_module
-        await _truncate_all_tables(db_module)
-    finally:
-        _current_context.reset(token)
+    yield db_module
+    await _truncate_all_tables(db_module)
 
 
 # ============================================================================
