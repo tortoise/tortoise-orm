@@ -5,7 +5,7 @@ import pytest
 
 from tortoise import Tortoise, connections
 from tortoise.config import AppConfig, ConnectionConfig, TortoiseConfig
-from tortoise.context import TortoiseContext, get_current_context
+from tortoise.context import TortoiseContext, _current_context
 from tortoise.exceptions import ConfigurationError
 
 # Save original classproperties before any test can shadow them
@@ -26,12 +26,10 @@ async def _reset_tortoise():
     if not isinstance(Tortoise.__dict__.get("_inited"), type(_original_inited_prop)):
         type.__setattr__(Tortoise, "_inited", _original_inited_prop)
 
-    # Get the current context and properly reset it
-    ctx = get_current_context()
+    # Get this test's own context (NOT the global fallback)
+    ctx = _current_context.get()
     if ctx is not None:
-        # Clear db_config first to prevent close_all from trying to import bad backends
         if ctx._connections is not None:
-            # Clear storage without closing (to avoid importing bad backends)
             ctx._connections._storage.clear()
             ctx._connections._db_config = None
             ctx._connections = None
@@ -39,7 +37,7 @@ async def _reset_tortoise():
         ctx._inited = False
         ctx._default_connection = None
     else:
-        # No context exists - create one for the test
+        # Create a context so tests can patch connections before Tortoise.init()
         ctx = TortoiseContext()
         ctx.__enter__()
 

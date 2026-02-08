@@ -1,7 +1,7 @@
 import pytest
 
 from tortoise import Tortoise
-from tortoise.context import TortoiseContext, get_current_context
+from tortoise.context import _current_context
 from tortoise.exceptions import ConfigurationError
 
 # Save original classproperties before any test can shadow them
@@ -22,27 +22,26 @@ async def _reset_tortoise():
     if not isinstance(Tortoise.__dict__.get("_inited"), type(_original_inited_prop)):
         type.__setattr__(Tortoise, "_inited", _original_inited_prop)
 
-    # Get the current context and properly reset it
-    ctx = get_current_context()
+    # Get this test's own context (NOT the global fallback)
+    ctx = _current_context.get()
     if ctx is not None:
-        # Clear db_config first to prevent close_all from trying to import bad backends
         if ctx._connections is not None:
-            # Clear storage without closing (to avoid importing bad backends)
             ctx._connections._storage.clear()
             ctx._connections._db_config = None
             ctx._connections = None
         ctx._apps = None
         ctx._inited = False
         ctx._default_connection = None
-    else:
-        # No context exists - create one for the test
-        ctx = TortoiseContext()
-        ctx.__enter__()
 
 
 async def _teardown_tortoise():
     """Helper to teardown Tortoise state after each test."""
-    await Tortoise._reset_apps()
+    ctx = _current_context.get()
+    if ctx is not None and ctx._apps is not None:
+        for model in ctx._apps.get_models_iterable():
+            model._meta.default_connection = None
+        ctx._apps.clear()
+        ctx._apps = None
 
 
 @pytest.mark.asyncio
