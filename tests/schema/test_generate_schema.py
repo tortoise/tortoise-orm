@@ -2030,3 +2030,127 @@ COMMENT ON COLUMN "postgres_fields"."real_array" IS 'this is array of real numbe
         )
     finally:
         await _teardown_tortoise()
+
+
+# ============================================================================
+# Schema-Qualified Table Tests
+# ============================================================================
+
+
+@pytest.mark.asyncio
+async def test_sqlite_schema_qualified_ignores_schema():
+    """SQLite should ignore Meta.schema and produce standard table names."""
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_sqlite("tests.schema.models_schema_qualified", safe=True)
+        sql = " ".join(sqls)
+        # SQLite should NOT have schema-qualified names
+        assert '"custom"."category"' not in sql
+        # Should have regular quoted table names
+        assert '"category"' in sql
+        assert '"product"' in sql
+        assert '"tag"' in sql
+        assert "CREATE SCHEMA" not in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_asyncpg_schema_qualified_safe():
+    """Postgres (asyncpg) should produce schema-qualified names with CREATE SCHEMA."""
+    await _reset_tortoise()
+    try:
+        await _init_for_asyncpg("tests.schema.models_schema_qualified")
+        sql = get_schema_sql(connections.get("default"), safe=True)
+        # Should have CREATE SCHEMA
+        assert 'CREATE SCHEMA IF NOT EXISTS "custom";' in sql
+        # Should have schema-qualified CREATE TABLE
+        assert 'CREATE TABLE IF NOT EXISTS "custom"."category"' in sql
+        assert 'CREATE TABLE IF NOT EXISTS "custom"."product"' in sql
+        assert 'CREATE TABLE IF NOT EXISTS "custom"."tag"' in sql
+        # FK should reference schema-qualified table
+        assert 'REFERENCES "custom"."category"' in sql
+        # M2M through table should be schema-qualified
+        assert 'CREATE TABLE IF NOT EXISTS "custom"."product_tags"' in sql
+        # M2M FK references should be schema-qualified
+        assert 'REFERENCES "custom"."product"' in sql
+        assert 'REFERENCES "custom"."tag"' in sql
+        # Comments should use schema-qualified table
+        assert 'COMMENT ON COLUMN "custom"."category"."name" IS \'Category name\'' in sql
+        assert 'COMMENT ON TABLE "custom"."product" IS \'Products table\'' in sql
+        # Unique index on M2M through table should use schema-qualified table
+        assert 'ON "custom"."product_tags"' in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_psycopg_schema_qualified_safe():
+    """Postgres (psycopg) should produce schema-qualified names with CREATE SCHEMA."""
+    await _reset_tortoise()
+    try:
+        await _init_for_psycopg("tests.schema.models_schema_qualified")
+        sql = get_schema_sql(connections.get("default"), safe=True)
+        # Should have CREATE SCHEMA
+        assert 'CREATE SCHEMA IF NOT EXISTS "custom";' in sql
+        # Should have schema-qualified CREATE TABLE
+        assert 'CREATE TABLE IF NOT EXISTS "custom"."category"' in sql
+        assert 'CREATE TABLE IF NOT EXISTS "custom"."product"' in sql
+        assert 'CREATE TABLE IF NOT EXISTS "custom"."tag"' in sql
+        # FK should reference schema-qualified table
+        assert 'REFERENCES "custom"."category"' in sql
+        # M2M through table should be schema-qualified
+        assert 'CREATE TABLE IF NOT EXISTS "custom"."product_tags"' in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_psycopg_schema_qualified_unsafe():
+    """Postgres (psycopg) unsafe should produce CREATE SCHEMA without IF NOT EXISTS."""
+    await _reset_tortoise()
+    try:
+        await _init_for_psycopg("tests.schema.models_schema_qualified")
+        sql = get_schema_sql(connections.get("default"), safe=False)
+        # Should have CREATE SCHEMA without IF NOT EXISTS
+        assert 'CREATE SCHEMA "custom";' in sql
+        assert "IF NOT EXISTS" not in sql.split("CREATE TABLE")[0].replace(
+            'CREATE SCHEMA "custom";', ""
+        )
+        # Should have schema-qualified CREATE TABLE
+        assert 'CREATE TABLE "custom"."category"' in sql
+        assert 'CREATE TABLE "custom"."product"' in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_mysql_schema_qualified():
+    """MySQL should produce schema-qualified names with backtick quoting."""
+    await _reset_tortoise()
+    try:
+        sqls = await _init_for_mysql("tests.schema.models_schema_qualified", safe=True)
+        sql = " ".join(sqls)
+        # MySQL should have backtick-qualified names
+        assert "`custom`.`category`" in sql
+        assert "`custom`.`product`" in sql
+        assert "`custom`.`tag`" in sql
+        # FK should reference qualified table
+        assert "REFERENCES `custom`.`category`" in sql
+        # M2M through table should be qualified
+        assert "`custom`.`product_tags`" in sql
+    finally:
+        await _teardown_tortoise()
+
+
+@pytest.mark.asyncio
+async def test_schema_qualified_single_schema_creation():
+    """Only one CREATE SCHEMA per unique schema value."""
+    await _reset_tortoise()
+    try:
+        await _init_for_asyncpg("tests.schema.models_schema_qualified")
+        sql = get_schema_sql(connections.get("default"), safe=True)
+        # All 3 models share schema "custom" — should create only once
+        assert sql.count('CREATE SCHEMA IF NOT EXISTS "custom"') == 1
+    finally:
+        await _teardown_tortoise()

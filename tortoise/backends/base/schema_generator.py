@@ -9,6 +9,7 @@ from tortoise.exceptions import ConfigurationError
 from tortoise.fields import JSONField, TextField, UUIDField
 from tortoise.fields.relational import OneToOneFieldInstance
 from tortoise.indexes import Index
+from tortoise.schema_quoting import SchemaQuotingMixin
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.base.client import BaseDBAsyncClient
@@ -22,19 +23,19 @@ if TYPE_CHECKING:  # pragma: nocoverage
 # pylint: disable=R0201
 
 
-class BaseSchemaGenerator:
+class BaseSchemaGenerator(SchemaQuotingMixin):
     DIALECT = "sql"
-    TABLE_CREATE_TEMPLATE = 'CREATE TABLE {exists}"{table_name}" ({fields}){extra}{comment};'
+    TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}{table_name} ({fields}){extra}{comment};"
     FIELD_TEMPLATE = '"{name}" {type}{nullable}{unique}{primary}{default}{comment}'
     INDEX_CREATE_TEMPLATE = (
-        'CREATE {index_type}INDEX {exists}"{index_name}" ON "{table_name}" ({fields}){extra};'
+        'CREATE {index_type}INDEX {exists}"{index_name}" ON {table_name} ({fields}){extra};'
     )
     UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace("INDEX", "UNIQUE INDEX")
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{index_name}" UNIQUE ({fields})'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}{comment}'
-    FK_TEMPLATE = ' REFERENCES "{table}" ("{field}") ON DELETE {on_delete}{comment}'
+    FK_TEMPLATE = ' REFERENCES {table} ("{field}") ON DELETE {on_delete}{comment}'
     M2M_TABLE_TEMPLATE = (
-        'CREATE TABLE {exists}"{table_name}" (\n'
+        "CREATE TABLE {exists}{table_name} (\n"
         '    "{backward_key}" {backward_type} NOT NULL{backward_fk},\n'
         '    "{forward_key}" {forward_type} NOT NULL{forward_fk}\n'
         "){extra}{comment};"
@@ -136,8 +137,8 @@ class BaseSchemaGenerator:
     def _get_inner_statements(self) -> list[str]:
         return []
 
-    def quote(self, val: str) -> str:
-        return f'"{val}"'
+    def _get_schema_create_sql(self, schema: str, safe: bool) -> str:
+        return ""
 
     @staticmethod
     def _is_index_expression(field: str) -> bool:
@@ -185,20 +186,24 @@ class BaseSchemaGenerator:
             exists="IF NOT EXISTS " if safe else "",
             index_name=index_name or self._get_index_name("idx", model, field_names),
             index_type=f"{index_type} " if index_type else "",
-            table_name=model._meta.db_table,
+            table_name=self._qualify_table_name(model._meta.db_table, model._meta.schema),
             fields=self._format_index_fields(field_names),
             extra=f"{extra}" if extra else "",
         )
 
     def _get_unique_index_sql(
-        self, exists: str, table_name: str, field_names: Sequence[str]
+        self,
+        exists: str,
+        table_name: str,
+        field_names: Sequence[str],
+        schema: str | None = None,
     ) -> str:
         index_name = self._get_index_name("uidx", table_name, field_names)
         return self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
             exists=exists,
             index_name=index_name,
             index_type="",
-            table_name=table_name,
+            table_name=self._qualify_table_name(table_name, schema),
             fields=", ".join([self.quote(f) for f in field_names]),
             extra="",
         )
@@ -235,22 +240,30 @@ class BaseSchemaGenerator:
         return ""
 
     def _get_field_sql_and_related_table(
-        self, field_object: Field, table_name: str, column_name: str, default: str, comment: str
+        self,
+        field_object: Field,
+        table_name: str,
+        column_name: str,
+        default: str,
+        comment: str,
+        schema: str | None = None,
     ) -> tuple[str, str]:
         nullable = " NOT NULL" if not field_object.null else ""
         unique = " UNIQUE" if field_object.unique else ""
         field_type = field_object.get_for_dialect(self.DIALECT, "SQL_TYPE")
+        qualified_table_name = self._qualify_table_name(table_name, schema)
 
         field_creation_string, related_table_name = "", ""
         if getattr(field_object, "reference", None):
             reference = cast("ForeignKeyFieldInstance", field_object.reference)
-            comment = self._get_field_comment(reference, table_name, column_name)
+            comment = self._get_field_comment(reference, qualified_table_name, column_name)
 
             to_field_name = reference.to_field_instance.source_field
             if not to_field_name:
                 to_field_name = reference.to_field_instance.model_field_name
 
             related_table_name = reference.related_model._meta.db_table
+            related_schema = reference.related_model._meta.schema
             if reference.db_constraint:
                 field_creation_string = self._create_string(
                     db_column=column_name,
@@ -268,7 +281,7 @@ class BaseSchemaGenerator:
                         to_field_name,
                     ),
                     db_column=column_name,
-                    table=related_table_name,
+                    table=self._qualify_table_name(related_table_name, related_schema),
                     field=to_field_name,
                     on_delete=reference.on_delete,
                     comment=comment,
@@ -309,6 +322,7 @@ class BaseSchemaGenerator:
         self, model: type[Model], db_table: str, safe: bool, models_tables: list[str]
     ) -> list[str]:
         m2m_tables_for_create = []
+        schema = model._meta.schema
         for m2m_field in model._meta.m2m_fields:
             field_object = cast("ManyToManyFieldInstance", model._meta.fields_map[m2m_field])
             if field_object._generated or field_object.through in models_tables:
@@ -318,7 +332,7 @@ class BaseSchemaGenerator:
                 backward_fk = self._create_fk_string(
                     "",
                     backward_key,
-                    db_table,
+                    self._qualify_table_name(db_table, schema),
                     model._meta.db_pk_column,
                     field_object.on_delete,
                     "",
@@ -326,7 +340,10 @@ class BaseSchemaGenerator:
                 forward_fk = self._create_fk_string(
                     "",
                     forward_key,
-                    field_object.related_model._meta.db_table,
+                    self._qualify_table_name(
+                        field_object.related_model._meta.db_table,
+                        field_object.related_model._meta.schema,
+                    ),
                     field_object.related_model._meta.db_pk_column,
                     field_object.on_delete,
                     "",
@@ -335,14 +352,15 @@ class BaseSchemaGenerator:
                 backward_fk = forward_fk = ""
             exists = "IF NOT EXISTS " if safe else ""
             through_table_name = field_object.through
+            qualified_through = self._qualify_table_name(through_table_name, schema)
             backward_type = self._get_pk_field_sql_type(model._meta.pk)
             forward_type = self._get_pk_field_sql_type(field_object.related_model._meta.pk)
             comment = ""
             if desc := field_object.description:
-                comment = self._table_comment_generator(table=through_table_name, comment=desc)
+                comment = self._table_comment_generator(table=qualified_through, comment=desc)
             m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
                 exists=exists,
-                table_name=through_table_name,
+                table_name=qualified_through,
                 backward_fk=backward_fk,
                 forward_fk=forward_fk,
                 backward_key=backward_key,
@@ -362,7 +380,10 @@ class BaseSchemaGenerator:
             m2m_create_string += self._post_table_hook()
             if field_object.unique:
                 unique_index_create_sql = self._get_unique_index_sql(
-                    exists, through_table_name, [backward_key, forward_key]
+                    exists,
+                    through_table_name,
+                    [backward_key, forward_key],
+                    schema=schema,
                 )
                 if unique_index_create_sql.endswith(";"):
                     m2m_create_string += "\n" + unique_index_create_sql
@@ -404,10 +425,12 @@ class BaseSchemaGenerator:
         references = set()
         models_to_create: list[type[Model]] = self._get_models_to_create()
         table_name = model._meta.db_table
+        schema = model._meta.schema
+        qualified_table_name = self._qualify_table_name(table_name, schema)
         models_tables = [model._meta.db_table for model in models_to_create]
         for field_name, column_name in model._meta.fields_db_projection.items():
             field_object = model._meta.fields_map[field_name]
-            comment = self._get_field_comment(field_object, table_name, column_name)
+            comment = self._get_field_comment(field_object, qualified_table_name, column_name)
             default = self._get_field_default(field_object, table_name, column_name, model)
 
             # TODO: PK generation needs to move out of schema generator.
@@ -431,7 +454,12 @@ class BaseSchemaGenerator:
                     continue
 
             field_creation_string, related_table_name = self._get_field_sql_and_related_table(
-                field_object, table_name, column_name, default, comment
+                field_object,
+                table_name,
+                column_name,
+                default,
+                comment,
+                schema=schema,
             )
             if related_table_name:
                 references.add(related_table_name)
@@ -456,14 +484,16 @@ class BaseSchemaGenerator:
 
         table_fields_string = "\n    {}\n".format(",\n    ".join(fields_to_create))
         table_comment = (
-            self._table_comment_generator(table=table_name, comment=model._meta.table_description)
+            self._table_comment_generator(
+                table=qualified_table_name, comment=model._meta.table_description
+            )
             if model._meta.table_description
             else ""
         )
 
         table_create_string = self.TABLE_CREATE_TEMPLATE.format(
             exists="IF NOT EXISTS " if safe else "",
-            table_name=table_name,
+            table_name=qualified_table_name,
             fields=table_fields_string,
             comment=table_comment,
             extra=self._table_generate_extra(table=table_name),
@@ -507,6 +537,14 @@ class BaseSchemaGenerator:
     def get_create_schema_sql(self, safe: bool = True) -> str:
         models_to_create = self._get_models_to_create()
 
+        # Collect unique database schemas that need creation
+        schemas_to_create = list(
+            dict.fromkeys(model._meta.schema for model in models_to_create if model._meta.schema)
+        )
+        schema_create_statements = [
+            s for schema in schemas_to_create if (s := self._get_schema_create_sql(schema, safe))
+        ]
+
         tables_to_create = []
         for model in models_to_create:
             tables_to_create.append(self._get_table_sql(model, safe))
@@ -532,7 +570,8 @@ class BaseSchemaGenerator:
             ordered_tables_for_create.append(next_table_for_create["table_creation_string"])
             m2m_tables_to_create += next_table_for_create["m2m_tables"]
 
-        schema_creation_string = "\n".join(ordered_tables_for_create + m2m_tables_to_create)
+        all_parts = schema_create_statements + ordered_tables_for_create + m2m_tables_to_create
+        schema_creation_string = "\n".join(all_parts)
         return schema_creation_string
 
     async def generate_from_string(self, creation_string: str) -> None:

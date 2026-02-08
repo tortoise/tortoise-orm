@@ -11,12 +11,13 @@ from tortoise.fields.relational import (
 from tortoise.indexes import Index
 from tortoise.migrations.constraints import UniqueConstraint
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
+from tortoise.schema_quoting import SqliteQuotingMixin
 
 
-class SqliteSchemaEditor(BaseSchemaEditor):
+class SqliteSchemaEditor(SqliteQuotingMixin, BaseSchemaEditor):
     DIALECT = "sqlite"
-    DELETE_TABLE_TEMPLATE = 'DROP TABLE "{table}"'
-    DELETE_FIELD_TEMPLATE = 'ALTER TABLE "{table}" DROP COLUMN "{column}"'
+    DELETE_TABLE_TEMPLATE = "DROP TABLE {table}"
+    DELETE_FIELD_TEMPLATE = 'ALTER TABLE {table} DROP COLUMN "{column}"'
     DROP_INDEX_TEMPLATE = 'DROP INDEX "{name}"'
     RENAME_INDEX_TEMPLATE = None
 
@@ -61,6 +62,7 @@ class SqliteSchemaEditor(BaseSchemaEditor):
             if table_string:
                 await self._run_sql(table_string)
             return
+        qualified_table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
         if isinstance(field, ForeignKeyFieldInstance):
             key_field_name = field.source_field or field_name
             db_field = model._meta.fields_db_projection.get(key_field_name, key_field_name)
@@ -68,7 +70,7 @@ class SqliteSchemaEditor(BaseSchemaEditor):
             fk_field = cast(ForeignKeyFieldInstance, key_field.reference)
             comment = (
                 self._get_column_comment_sql(
-                    table=model._meta.db_table,
+                    table=qualified_table,
                     column=db_field,
                     comment=fk_field.description,
                 )
@@ -95,7 +97,9 @@ class SqliteSchemaEditor(BaseSchemaEditor):
                     to_field_name,
                 ),
                 db_field=db_field,
-                table=fk_field.related_model._meta.db_table,
+                table=self._qualify_table_name(
+                    fk_field.related_model._meta.db_table, fk_field.related_model._meta.schema
+                ),
                 field=to_field_name,
                 on_delete=fk_field.on_delete,
                 comment=comment,
@@ -105,7 +109,7 @@ class SqliteSchemaEditor(BaseSchemaEditor):
             db_field = model._meta.fields_db_projection[field_name]
             comment = (
                 self._get_column_comment_sql(
-                    table=model._meta.db_table, column=db_field, comment=field.description
+                    table=qualified_table, column=db_field, comment=field.description
                 )
                 if field.description
                 else ""
@@ -122,7 +126,7 @@ class SqliteSchemaEditor(BaseSchemaEditor):
             unique_field = field.unique and not field.pk
 
         await self._run_sql(
-            self.ADD_FIELD_TEMPLATE.format(table=model._meta.db_table, definition=field_definition)
+            self.ADD_FIELD_TEMPLATE.format(table=qualified_table, definition=field_definition)
         )
 
         if unique_field:
@@ -132,7 +136,7 @@ class SqliteSchemaEditor(BaseSchemaEditor):
         constraint_name = self._constraint_name_for_model(model, constraint)
         index_sql = self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
             index_name=constraint_name,
-            table_name=model._meta.db_table,
+            table_name=self._qualify_table_name(model._meta.db_table, model._meta.schema),
             fields=", ".join([self.quote(f) for f in constraint.fields]),
             extra="",
         )
@@ -156,7 +160,11 @@ class SqliteSchemaEditor(BaseSchemaEditor):
 
     async def remove_field(self, model, field) -> None:
         if isinstance(field, ManyToManyFieldInstance):
-            await self._run_sql(self.DELETE_TABLE_TEMPLATE.format(table=field.through))
+            await self._run_sql(
+                self.DELETE_TABLE_TEMPLATE.format(
+                    table=self._qualify_table_name(field.through, model._meta.schema)
+                )
+            )
             return
         await self._remake_table(model, delete_field=field)
 
@@ -173,7 +181,10 @@ class SqliteSchemaEditor(BaseSchemaEditor):
             and not old_field.pk
             and not new_field.pk
         ):
-            rename_sql = f'ALTER TABLE "{model._meta.db_table}" RENAME COLUMN "{old_db_field}" TO "{new_db_field}"'
+            qualified_table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
+            rename_sql = (
+                f'ALTER TABLE {qualified_table} RENAME COLUMN "{old_db_field}" TO "{new_db_field}"'
+            )
             await self._run_sql(rename_sql)
             return
 
@@ -188,7 +199,8 @@ class SqliteSchemaEditor(BaseSchemaEditor):
     ) -> None:
         """Recreate a table with modified schema (SQLite's recommended ALTER TABLE approach)."""
         alter_fields = alter_fields or []
-        new_table_name = f"new__{model._meta.db_table}"
+        db_table = model._meta.db_table
+        new_table_name = f"new__{db_table}"
 
         column_mapping = {}
         for field in model._meta.fields_map.values():
@@ -274,13 +286,16 @@ class SqliteSchemaEditor(BaseSchemaEditor):
                     comment="",
                 ) + self._get_fk_reference_string(
                     constraint_name=self._generate_fk_name(
-                        model._meta.db_table,
+                        db_table,
                         db_field,
                         fk_field.related_model._meta.db_table,
                         to_field_name,
                     ),
                     db_field=db_field,
-                    table=fk_field.related_model._meta.db_table,
+                    table=self._qualify_table_name(
+                        fk_field.related_model._meta.db_table,
+                        fk_field.related_model._meta.schema,
+                    ),
                     field=to_field_name,
                     on_delete=fk_field.on_delete,
                     comment="",
@@ -297,19 +312,21 @@ class SqliteSchemaEditor(BaseSchemaEditor):
 
             field_definitions.append(field_def)
 
-        create_sql = f'CREATE TABLE "{new_table_name}" ({", ".join(field_definitions)})'
+        qualified_new = self._qualify_table_name(new_table_name, model._meta.schema)
+        qualified_old = self._qualify_table_name(db_table, model._meta.schema)
+        create_sql = f"CREATE TABLE {qualified_new} ({', '.join(field_definitions)})"
         await self._run_sql(create_sql)
 
         if column_mapping:
             columns = list(column_mapping.keys())
             values = list(column_mapping.values())
-            insert_sql = f'''INSERT INTO "{new_table_name}" ({", ".join(self.quote(c) for c in columns)})
+            insert_sql = f"""INSERT INTO {qualified_new} ({", ".join(self.quote(c) for c in columns)})
                 SELECT {", ".join(values)}
-                FROM "{model._meta.db_table}"'''  # nosec B608
+                FROM {qualified_old}"""  # nosec B608
             await self._run_sql(insert_sql)
 
-        await self._run_sql(f'DROP TABLE "{model._meta.db_table}"')
-        await self._run_sql(f'ALTER TABLE "{new_table_name}" RENAME TO "{model._meta.db_table}"')
+        await self._run_sql(f"DROP TABLE {qualified_old}")
+        await self._run_sql(f"ALTER TABLE {qualified_new} RENAME TO {qualified_old}")
 
     @staticmethod
     def _default_to_sql_literal(value) -> str:

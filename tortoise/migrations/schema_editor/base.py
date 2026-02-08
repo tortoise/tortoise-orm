@@ -10,43 +10,44 @@ from tortoise.indexes import Index
 from tortoise.migrations.constraints import UniqueConstraint
 from tortoise.migrations.schema_editor.data import ModelSqlData
 from tortoise.models import Model
+from tortoise.schema_quoting import SchemaQuotingMixin
 
 
-class BaseSchemaEditor:
+class BaseSchemaEditor(SchemaQuotingMixin):
     DIALECT = "sql"
-    TABLE_CREATE_TEMPLATE = 'CREATE TABLE "{table_name}" ({fields}){extra}{comment};'
+    TABLE_CREATE_TEMPLATE = "CREATE TABLE {table_name} ({fields}){extra}{comment};"
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}{comment}'
-    INDEX_CREATE_TEMPLATE = 'CREATE INDEX "{index_name}" ON "{table_name}" ({fields}){extra};'
+    INDEX_CREATE_TEMPLATE = 'CREATE INDEX "{index_name}" ON {table_name} ({fields}){extra};'
     UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace("INDEX", "UNIQUE INDEX")
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = 'CONSTRAINT "{index_name}" UNIQUE ({fields})'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}{comment}'
-    FK_TEMPLATE = ' REFERENCES "{table}" ("{field}") ON DELETE {on_delete}{comment}'
+    FK_TEMPLATE = ' REFERENCES {table} ("{field}") ON DELETE {on_delete}{comment}'
     M2M_TABLE_TEMPLATE = (
-        'CREATE TABLE "{table_name}" (\n'
-        '    "{backward_key}" {backward_type} NOT NULL REFERENCES "{backward_table}"'
+        "CREATE TABLE {table_name} (\n"
+        '    "{backward_key}" {backward_type} NOT NULL REFERENCES {backward_table}'
         ' ("{backward_field}") ON DELETE CASCADE,\n'
-        '    "{forward_key}" {forward_type} NOT NULL REFERENCES "{forward_table}"'
+        '    "{forward_key}" {forward_type} NOT NULL REFERENCES {forward_table}'
         ' ("{forward_field}") ON DELETE CASCADE\n'
         "){extra}{comment};"
     )
-    RENAME_TABLE_TEMPLATE = 'ALTER TABLE "{old_table}" RENAME TO "{new_table}"'
-    DELETE_TABLE_TEMPLATE = 'DROP TABLE "{table}" CASCADE'
-    ADD_FIELD_TEMPLATE = 'ALTER TABLE "{table}" ADD COLUMN {definition}'
+    RENAME_TABLE_TEMPLATE = "ALTER TABLE {old_table} RENAME TO {new_table}"
+    DELETE_TABLE_TEMPLATE = "DROP TABLE {table} CASCADE"
+    ADD_FIELD_TEMPLATE = "ALTER TABLE {table} ADD COLUMN {definition}"
 
-    ALTER_FIELD_TEMPLATE = 'ALTER TABLE "{table}" {changes}'
-    RENAME_FIELD_TEMPLATE = 'ALTER TABLE "{table}" RENAME COLUMN "{old_column}" TO "{new_column}"'
+    ALTER_FIELD_TEMPLATE = "ALTER TABLE {table} {changes}"
+    RENAME_FIELD_TEMPLATE = 'ALTER TABLE {table} RENAME COLUMN "{old_column}" TO "{new_column}"'
     ALTER_FIELD_NULL_TEMPLATE = 'ALTER COLUMN "{column}" DROP NOT NULL'
     ALTER_FIELD_NOT_NULL_TEMPLATE = 'ALTER COLUMN "{column}" SET NOT NULL'
 
-    DELETE_FIELD_TEMPLATE = 'ALTER TABLE "{table}" DROP COLUMN "{column}" CASCADE'
+    DELETE_FIELD_TEMPLATE = 'ALTER TABLE {table} DROP COLUMN "{column}" CASCADE'
 
-    DELETE_CONSTRAINT_TEMPLATE = 'ALTER TABLE "{table}" DROP CONSTRAINT "{name}"'
+    DELETE_CONSTRAINT_TEMPLATE = 'ALTER TABLE {table} DROP CONSTRAINT "{name}"'
     DELETE_FK_TEMPLATE = DELETE_CONSTRAINT_TEMPLATE
-    ADD_CONSTRAINT_TEMPLATE = 'ALTER TABLE "{table}" ADD {constraint}'
+    ADD_CONSTRAINT_TEMPLATE = "ALTER TABLE {table} ADD {constraint}"
     DROP_INDEX_TEMPLATE = 'DROP INDEX "{name}"'
     RENAME_INDEX_TEMPLATE: str | None = 'ALTER INDEX "{old_name}" RENAME TO "{new_name}"'
     RENAME_CONSTRAINT_TEMPLATE = (
-        'ALTER TABLE "{table}" RENAME CONSTRAINT "{old_name}" TO "{new_name}"'
+        'ALTER TABLE {table} RENAME CONSTRAINT "{old_name}" TO "{new_name}"'
     )
 
     def __init__(
@@ -156,10 +157,6 @@ class BaseSchemaEditor:
         return f"{prefix}_{table_name[:11]}_{field_names[0][:7]}_{self._make_hash(table_name, *field_names, length=6)}"
 
     @staticmethod
-    def quote(val: str) -> str:
-        return f'"{val}"'
-
-    @staticmethod
     def _is_index_expression(field: str) -> bool:
         return any(token in field for token in ("(", ")", " ", '"', ".", ":"))
 
@@ -189,16 +186,18 @@ class BaseSchemaEditor:
     ) -> str:
         return self.INDEX_CREATE_TEMPLATE.format(
             index_name=index_name or self._generate_index_name("idx", model, field_names),
-            table_name=model._meta.db_table,
+            table_name=self._qualify_table_name(model._meta.db_table, model._meta.schema),
             fields=self._format_index_fields(field_names),
             index_type=f"{index_type} " if index_type else "",
             extra=f"{extra}" if extra else "",
         )
 
-    def _get_unique_index_sql(self, table_name: str, field_names: list[str]) -> str:
+    def _get_unique_index_sql(
+        self, table_name: str, field_names: list[str], schema: str | None = None
+    ) -> str:
         return self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
             index_name=self._generate_index_name_for_table("uidx", table_name, field_names),
-            table_name=table_name,
+            table_name=self._qualify_table_name(table_name, schema),
             fields=", ".join([self.quote(f) for f in field_names]),
             extra="",
         )
@@ -214,10 +213,13 @@ class BaseSchemaEditor:
         related_model = field.related_model
         if not related_model:
             return None
+        m2m_schema = model._meta.schema
         m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
-            table_name=field.through,
-            backward_table=model._meta.db_table,
-            forward_table=related_model._meta.db_table,
+            table_name=self._qualify_table_name(field.through, m2m_schema),
+            backward_table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+            forward_table=self._qualify_table_name(
+                related_model._meta.db_table, related_model._meta.schema
+            ),
             backward_field=model._meta.db_pk_column,
             forward_field=related_model._meta.db_pk_column,
             backward_key=field.backward_key,
@@ -232,7 +234,7 @@ class BaseSchemaEditor:
         m2m_create_string += self._post_table_hook()
         if field.unique:
             unique_index_sql = self._get_unique_index_sql(
-                field.through, [field.backward_key, field.forward_key]
+                field.through, [field.backward_key, field.forward_key], schema=m2m_schema
             )
             if unique_index_sql.endswith(";"):
                 m2m_create_string += "\n" + unique_index_sql
@@ -249,9 +251,10 @@ class BaseSchemaEditor:
         key_field = model._meta.fields_map[key_field_name]
         fk_field = cast(ForeignKeyFieldInstance, key_field.reference)
         db_field = model._meta.fields_db_projection[key_field_name]
+        qualified_table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
         comment = (
             self._get_column_comment_sql(
-                table=model._meta.db_table, column=db_field, comment=fk_field.description
+                table=qualified_table, column=db_field, comment=fk_field.description
             )
             if fk_field.description
             else ""
@@ -261,6 +264,7 @@ class BaseSchemaEditor:
         if not to_field_name:
             to_field_name = fk_field.to_field_instance.model_field_name
 
+        related_model = fk_field.related_model
         field_creation_string = self._get_field_sql(
             db_field=db_field,
             field_type=key_field.get_for_dialect(self.DIALECT, "SQL_TYPE"),
@@ -272,11 +276,13 @@ class BaseSchemaEditor:
             constraint_name=self._generate_fk_name(
                 model._meta.db_table,
                 db_field,
-                fk_field.related_model._meta.db_table,
+                related_model._meta.db_table,
                 to_field_name,
             ),
             db_field=db_field,
-            table=fk_field.related_model._meta.db_table,
+            table=self._qualify_table_name(
+                related_model._meta.db_table, related_model._meta.schema
+            ),
             field=to_field_name,
             on_delete=fk_field.on_delete,
             comment=comment,
@@ -288,12 +294,13 @@ class BaseSchemaEditor:
         fields_with_index: list[str] = []
         m2m_tables_for_create: list[str] = []
         references = set()
+        qualified_table_name = self._qualify_table_name(model._meta.db_table, model._meta.schema)
 
         for field_name, db_field in model._meta.fields_db_projection.items():
             field_object = model._meta.fields_map[field_name]
             comment = (
                 self._get_column_comment_sql(
-                    table=model._meta.db_table,
+                    table=qualified_table_name,
                     column=db_field,
                     comment=field_object.description,
                 )
@@ -388,14 +395,14 @@ class BaseSchemaEditor:
         table_fields_string = "\n    {}\n".format(",\n    ".join(in_table_definitions))
         table_comment = (
             self._get_table_comment_sql(
-                table=model._meta.db_table, comment=model._meta.table_description
+                table=qualified_table_name, comment=model._meta.table_description
             )
             if model._meta.table_description
             else ""
         )
 
         table_create_string = self.TABLE_CREATE_TEMPLATE.format(
-            table_name=model._meta.db_table,
+            table_name=qualified_table_name,
             fields=table_fields_string,
             comment=table_comment,
             extra=self._table_generate_extra(table=model._meta.db_table),
@@ -419,6 +426,17 @@ class BaseSchemaEditor:
             m2m_tables_sql=m2m_tables_for_create,
         )
 
+    async def create_schema(self, schema_name: str) -> None:
+        """Create a database schema. Override in dialect-specific editors.
+
+        The default implementation is a no-op, suitable for backends that
+        do not support schemas (SQLite) or that handle them differently
+        (MySQL, Oracle).
+        """
+
+    async def drop_schema(self, schema_name: str) -> None:
+        """Drop a database schema. Override in dialect-specific editors."""
+
     async def create_model(self, model: type[Model]) -> None:
         model_sql_data = self._get_model_sql_data(model)
 
@@ -428,17 +446,29 @@ class BaseSchemaEditor:
     async def rename_table(self, model: type[Model], old_name: str, new_name: str) -> None:
         if old_name == new_name:
             return
-
+        schema = model._meta.schema
         await self._run_sql(
-            self.RENAME_TABLE_TEMPLATE.format(old_table=old_name, new_table=new_name)
+            self.RENAME_TABLE_TEMPLATE.format(
+                old_table=self._qualify_table_name(old_name, schema),
+                new_table=self._qualify_table_name(new_name, schema),
+            )
         )
 
     async def delete_model(self, model: type[Model]) -> None:
+        schema = model._meta.schema
         for field_name in model._meta.m2m_fields:
             field = cast(ManyToManyFieldInstance, model._meta.fields_map[field_name])
-            await self._run_sql(self.DELETE_TABLE_TEMPLATE.format(table=field.through))
+            await self._run_sql(
+                self.DELETE_TABLE_TEMPLATE.format(
+                    table=self._qualify_table_name(field.through, schema)
+                )
+            )
 
-        await self._run_sql(self.DELETE_TABLE_TEMPLATE.format(table=model._meta.db_table))
+        await self._run_sql(
+            self.DELETE_TABLE_TEMPLATE.format(
+                table=self._qualify_table_name(model._meta.db_table, schema)
+            )
+        )
 
     async def add_field(self, model: type[Model], field_name: str) -> None:
         field = model._meta.fields_map[field_name]
@@ -455,7 +485,9 @@ class BaseSchemaEditor:
             db_field = model._meta.fields_db_projection[field_name]
             comment = (
                 self._get_column_comment_sql(
-                    table=model._meta.db_table, column=db_field, comment=field.description
+                    table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+                    column=db_field,
+                    comment=field.description,
                 )
                 if field.description
                 else ""
@@ -480,7 +512,10 @@ class BaseSchemaEditor:
             )
 
         await self._run_sql(
-            self.ADD_FIELD_TEMPLATE.format(table=model._meta.db_table, definition=field_definition)
+            self.ADD_FIELD_TEMPLATE.format(
+                table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+                definition=field_definition,
+            )
         )
 
     async def _alter_m2m_field(
@@ -489,17 +524,20 @@ class BaseSchemaEditor:
         old_field: ManyToManyFieldInstance,
         new_field: ManyToManyFieldInstance,
     ) -> None:
+        schema = model._meta.schema
         if old_field.through != new_field.through:
             await self._run_sql(
                 self.RENAME_TABLE_TEMPLATE.format(
-                    old_table=old_field.through, new_table=new_field.through
+                    old_table=self._qualify_table_name(old_field.through, schema),
+                    new_table=self._qualify_table_name(new_field.through, schema),
                 )
             )
 
+        qualified_through = self._qualify_table_name(new_field.through, schema)
         if old_field.forward_key != new_field.forward_key:
             await self._run_sql(
                 self.RENAME_FIELD_TEMPLATE.format(
-                    table=new_field.through,
+                    table=qualified_through,
                     old_column=old_field.forward_key,
                     new_column=new_field.forward_key,
                 )
@@ -508,7 +546,7 @@ class BaseSchemaEditor:
         if old_field.backward_key != new_field.backward_key:
             await self._run_sql(
                 self.RENAME_FIELD_TEMPLATE.format(
-                    table=new_field.through,
+                    table=qualified_through,
                     old_column=old_field.backward_key,
                     new_column=new_field.backward_key,
                 )
@@ -543,6 +581,7 @@ class BaseSchemaEditor:
         actions: list[str] = []
         old_db_field = old_field.source_field or old_field.model_field_name
         new_db_field = new_field.source_field or new_field.model_field_name
+        qualified_table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
         if await self._alter_generated_field(model, old_field, new_field):
             return
         if old_field.null != new_field.null:
@@ -551,9 +590,7 @@ class BaseSchemaEditor:
             else:
                 changes = self.ALTER_FIELD_NOT_NULL_TEMPLATE.format(column=new_db_field)
 
-            actions.append(
-                self.ALTER_FIELD_TEMPLATE.format(table=model._meta.db_table, changes=changes)
-            )
+            actions.append(self.ALTER_FIELD_TEMPLATE.format(table=qualified_table, changes=changes))
 
         if old_field.index != new_field.index:
             index = Index(fields=(new_db_field,))
@@ -576,7 +613,7 @@ class BaseSchemaEditor:
         if old_db_field != new_db_field:
             actions.append(
                 self.RENAME_FIELD_TEMPLATE.format(
-                    table=model._meta.db_table,
+                    table=qualified_table,
                     old_column=old_db_field,
                     new_column=new_db_field,
                 )
@@ -614,7 +651,11 @@ class BaseSchemaEditor:
 
     async def remove_field(self, model: type[Model], field: Field) -> None:
         if isinstance(field, ManyToManyFieldInstance):
-            await self._run_sql(self.DELETE_TABLE_TEMPLATE.format(table=field.through))
+            await self._run_sql(
+                self.DELETE_TABLE_TEMPLATE.format(
+                    table=self._qualify_table_name(field.through, model._meta.schema)
+                )
+            )
             return
 
         if isinstance(field, ForeignKeyFieldInstance):
@@ -625,7 +666,10 @@ class BaseSchemaEditor:
             field.model_field_name, field.source_field or field.model_field_name
         )
         await self._run_sql(
-            self.DELETE_FIELD_TEMPLATE.format(table=model._meta.db_table, column=db_field)
+            self.DELETE_FIELD_TEMPLATE.format(
+                table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+                column=db_field,
+            )
         )
 
     def _index_name_for_model(self, model: type[Model], index: Index) -> str:
@@ -654,7 +698,10 @@ class BaseSchemaEditor:
     async def remove_index(self, model: type[Model], index: Index) -> None:
         index_name = self._index_name_for_model(model, index)
         await self._run_sql(
-            self.DROP_INDEX_TEMPLATE.format(name=index_name, table=model._meta.db_table)
+            self.DROP_INDEX_TEMPLATE.format(
+                name=index_name,
+                table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+            )
         )
 
     async def rename_index(self, model: type[Model], old_index: Index, new_index: Index) -> None:
@@ -665,7 +712,9 @@ class BaseSchemaEditor:
         if self.RENAME_INDEX_TEMPLATE:
             await self._run_sql(
                 self.RENAME_INDEX_TEMPLATE.format(
-                    table=model._meta.db_table, old_name=old_name, new_name=new_name
+                    table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+                    old_name=old_name,
+                    new_name=new_name,
                 )
             )
             return
@@ -680,14 +729,18 @@ class BaseSchemaEditor:
         )
         await self._run_sql(
             self.ADD_CONSTRAINT_TEMPLATE.format(
-                table=model._meta.db_table, constraint=constraint_sql
+                table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+                constraint=constraint_sql,
             )
         )
 
     async def remove_constraint(self, model: type[Model], constraint: UniqueConstraint) -> None:
         constraint_name = self._constraint_name_for_model(model, constraint)
         await self._run_sql(
-            self.DELETE_CONSTRAINT_TEMPLATE.format(table=model._meta.db_table, name=constraint_name)
+            self.DELETE_CONSTRAINT_TEMPLATE.format(
+                table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+                name=constraint_name,
+            )
         )
 
     async def rename_constraint(
@@ -700,7 +753,9 @@ class BaseSchemaEditor:
         if self.RENAME_CONSTRAINT_TEMPLATE:
             await self._run_sql(
                 self.RENAME_CONSTRAINT_TEMPLATE.format(
-                    table=model._meta.db_table, old_name=old_name, new_name=new_name
+                    table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+                    old_name=old_name,
+                    new_name=new_name,
                 )
             )
             return

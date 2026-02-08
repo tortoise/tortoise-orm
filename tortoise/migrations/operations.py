@@ -595,7 +595,9 @@ class RenameField(TortoiseOperation):
             return
         await state_editor._run_sql(
             state_editor.RENAME_FIELD_TEMPLATE.format(
-                table=new_model._meta.db_table,
+                table=state_editor._qualify_table_name(
+                    new_model._meta.db_table, new_model._meta.schema
+                ),
                 old_column=old_db_field,
                 new_column=new_db_field,
             )
@@ -620,7 +622,9 @@ class RenameField(TortoiseOperation):
             return
         await state_editor._run_sql(
             state_editor.RENAME_FIELD_TEMPLATE.format(
-                table=new_model._meta.db_table,
+                table=state_editor._qualify_table_name(
+                    new_model._meta.db_table, new_model._meta.schema
+                ),
                 old_column=old_db_field,
                 new_column=new_db_field,
             )
@@ -1063,6 +1067,70 @@ class RunPython(TortoiseOperation):
     @staticmethod
     def noop(apps: StateApps, schema_editor: BaseSchemaEditor) -> None:
         return None
+
+
+class CreateSchema(TortoiseOperation):
+    """Create a database schema before tables that use it."""
+
+    def __init__(self, schema_name: str) -> None:
+        self.schema_name = schema_name
+
+    def describe(self) -> str:
+        return f"Create schema {self.schema_name}"
+
+    async def database_forward(
+        self,
+        app_label: str,
+        old_state: State,
+        new_state: State,
+        state_editor: BaseSchemaEditor | None = None,
+    ) -> None:
+        if not state_editor:
+            return
+        await state_editor.create_schema(self.schema_name)
+
+    async def database_backward(
+        self,
+        app_label: str,
+        old_state: State,
+        new_state: State,
+        state_editor: BaseSchemaEditor | None = None,
+    ) -> None:
+        if not state_editor:
+            return
+        await state_editor.drop_schema(self.schema_name)
+
+
+class DropSchema(TortoiseOperation):
+    """Drop a database schema."""
+
+    def __init__(self, schema_name: str) -> None:
+        self.schema_name = schema_name
+
+    def describe(self) -> str:
+        return f"Drop schema {self.schema_name}"
+
+    async def database_forward(
+        self,
+        app_label: str,
+        old_state: State,
+        new_state: State,
+        state_editor: BaseSchemaEditor | None = None,
+    ) -> None:
+        if not state_editor:
+            return
+        await state_editor.drop_schema(self.schema_name)
+
+    async def database_backward(
+        self,
+        app_label: str,
+        old_state: State,
+        new_state: State,
+        state_editor: BaseSchemaEditor | None = None,
+    ) -> None:
+        if not state_editor:
+            return
+        await state_editor.create_schema(self.schema_name)
 
 
 class RunSQL(TortoiseOperation):

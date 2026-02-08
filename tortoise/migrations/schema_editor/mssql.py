@@ -4,20 +4,26 @@ from tortoise.fields.base import CASCADE
 from tortoise.fields.relational import ManyToManyFieldInstance
 from tortoise.migrations.schema_editor.base import BaseSchemaEditor
 from tortoise.models import Model
+from tortoise.schema_quoting import MSSQLQuotingMixin
+
+# MSSQL sp_rename expects:
+#   arg1: schema-qualified old name (e.g. '[schema].[old_name]')
+#   arg2: unqualified new name only (e.g. 'new_name')
+# This differs from standard ALTER TABLE RENAME where both sides are qualified.
 
 
-class MSSQLSchemaEditor(BaseSchemaEditor):
+class MSSQLSchemaEditor(MSSQLQuotingMixin, BaseSchemaEditor):
     DIALECT = "mssql"
-    TABLE_CREATE_TEMPLATE = "CREATE TABLE [{table_name}] ({fields}){extra};"
+    TABLE_CREATE_TEMPLATE = "CREATE TABLE {table_name} ({fields}){extra};"
     FIELD_TEMPLATE = "[{name}] {type} {nullable} {unique}{primary}"
-    INDEX_CREATE_TEMPLATE = "CREATE INDEX [{index_name}] ON [{table_name}] ({fields});"
+    INDEX_CREATE_TEMPLATE = "CREATE INDEX [{index_name}] ON {table_name} ({fields});"
     GENERATED_PK_TEMPLATE = "[{field_name}] {generated_sql}"
     FK_TEMPLATE = (
         "{constraint}FOREIGN KEY ([{db_column}])"
-        " REFERENCES [{table}] ([{field}]) ON DELETE {on_delete}"
+        " REFERENCES {table} ([{field}]) ON DELETE {on_delete}"
     )
     M2M_TABLE_TEMPLATE = (
-        "CREATE TABLE [{table_name}] (\n"
+        "CREATE TABLE {table_name} (\n"
         "    {backward_key} {backward_type} NOT NULL,\n"
         "    {forward_key} {forward_type} NOT NULL,\n"
         "    {backward_fk},\n"
@@ -25,12 +31,12 @@ class MSSQLSchemaEditor(BaseSchemaEditor):
         "){extra};"
     )
     RENAME_TABLE_TEMPLATE = "EXEC sp_rename '{old_table}', '{new_table}'"
-    DELETE_TABLE_TEMPLATE = "DROP TABLE [{table}]"
-    ADD_FIELD_TEMPLATE = "ALTER TABLE [{table}] ADD {definition}"
-    ALTER_FIELD_TEMPLATE = "ALTER TABLE [{table}] {changes}"
+    DELETE_TABLE_TEMPLATE = "DROP TABLE {table}"
+    ADD_FIELD_TEMPLATE = "ALTER TABLE {table} ADD {definition}"
+    ALTER_FIELD_TEMPLATE = "ALTER TABLE {table} {changes}"
     RENAME_FIELD_TEMPLATE = "EXEC sp_rename '{table}.{old_column}', '{new_column}', 'COLUMN'"
-    DELETE_FIELD_TEMPLATE = "ALTER TABLE [{table}] DROP COLUMN [{column}]"
-    DROP_INDEX_TEMPLATE = "DROP INDEX [{name}] ON [{table}]"
+    DELETE_FIELD_TEMPLATE = "ALTER TABLE {table} DROP COLUMN [{column}]"
+    DROP_INDEX_TEMPLATE = "DROP INDEX [{name}] ON {table}"
     RENAME_INDEX_TEMPLATE = "EXEC sp_rename '{table}.{old_name}', '{new_name}', 'INDEX'"
     RENAME_CONSTRAINT_TEMPLATE = "EXEC sp_rename '{table}.{old_name}', '{new_name}', 'OBJECT'"
 
@@ -38,9 +44,25 @@ class MSSQLSchemaEditor(BaseSchemaEditor):
         super().__init__(connection, atomic, collect_sql=collect_sql)
         self._foreign_keys: list[str] = []
 
-    @staticmethod
-    def quote(val: str) -> str:
-        return f"[{val}]"
+    async def create_schema(self, schema_name: str) -> None:
+        await self._run_sql(
+            f"IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = N'{schema_name}')"
+            f" EXEC(N'CREATE SCHEMA [{schema_name}]');"
+        )
+
+    async def drop_schema(self, schema_name: str) -> None:
+        await self._run_sql(f"DROP SCHEMA [{schema_name}];")
+
+    async def rename_table(self, model: type[Model], old_name: str, new_name: str) -> None:
+        if old_name == new_name:
+            return
+        schema = model._meta.schema
+        await self._run_sql(
+            self.RENAME_TABLE_TEMPLATE.format(
+                old_table=self._qualify_table_name(old_name, schema),
+                new_table=new_name,
+            )
+        )
 
     def _get_table_comment_sql(self, table: str, comment: str) -> str:
         return ""
@@ -92,22 +114,25 @@ class MSSQLSchemaEditor(BaseSchemaEditor):
         related_model = field.related_model
         if not related_model:
             return None
+        m2m_schema = model._meta.schema
         backward_fk = self._format_m2m_fk(
             field.through,
             field.backward_key,
-            model._meta.db_table,
+            self._qualify_table_name(model._meta.db_table, model._meta.schema),
             model._meta.db_pk_column,
         )
         forward_fk = self._format_m2m_fk(
             field.through,
             field.forward_key,
-            related_model._meta.db_table,
+            self._qualify_table_name(related_model._meta.db_table, related_model._meta.schema),
             related_model._meta.db_pk_column,
         )
         m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
-            table_name=field.through,
-            backward_table=model._meta.db_table,
-            forward_table=related_model._meta.db_table,
+            table_name=self._qualify_table_name(field.through, m2m_schema),
+            backward_table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+            forward_table=self._qualify_table_name(
+                related_model._meta.db_table, related_model._meta.schema
+            ),
             backward_field=model._meta.db_pk_column,
             forward_field=related_model._meta.db_pk_column,
             backward_key=field.backward_key,
@@ -138,47 +163,58 @@ class MSSQLSchemaEditor(BaseSchemaEditor):
     async def remove_constraint(self, model, constraint) -> None:
         await self._run_sql(
             self.DELETE_CONSTRAINT_TEMPLATE.format(
-                table=model._meta.db_table, name=self._constraint_name_for_model(model, constraint)
+                table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+                name=self._constraint_name_for_model(model, constraint),
             )
         )
 
     async def remove_field(self, model: type[Model], field) -> None:
         if isinstance(field, ManyToManyFieldInstance):
-            await self._run_sql(self.DELETE_TABLE_TEMPLATE.format(table=field.through))
+            await self._run_sql(
+                self.DELETE_TABLE_TEMPLATE.format(
+                    table=self._qualify_table_name(field.through, model._meta.schema)
+                )
+            )
             return
 
         db_field = model._meta.fields_db_projection.get(
             field.model_field_name, field.source_field or field.model_field_name
         )
+        qualified_table = self._qualify_table_name(model._meta.db_table, model._meta.schema)
 
+        schema = model._meta.schema
+        schema_filter = f" AND s.name = '{schema}'" if schema else ""
         cleanup_sql = f"""
 DECLARE @sql NVARCHAR(MAX) = N'';
-SELECT @sql += N'ALTER TABLE [' + t.name + '] DROP CONSTRAINT [' + kc.name + '];'
+SELECT @sql += N'ALTER TABLE [' + s.name + '].[' + t.name + '] DROP CONSTRAINT [' + kc.name + '];'
 FROM sys.key_constraints kc
 JOIN sys.tables t ON kc.parent_object_id = t.object_id
+JOIN sys.schemas s ON t.schema_id = s.schema_id
 JOIN sys.index_columns ic ON kc.parent_object_id = ic.object_id AND kc.unique_index_id = ic.index_id
 JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
-WHERE t.name = '{model._meta.db_table}' AND c.name = '{db_field}';
+WHERE t.name = '{model._meta.db_table}' AND c.name = '{db_field}'{schema_filter};
 EXEC sp_executesql @sql;
 
 SET @sql = N'';
-SELECT @sql += N'DROP INDEX [' + i.name + '] ON [' + t.name + '];'
+SELECT @sql += N'DROP INDEX [' + i.name + '] ON [' + s.name + '].[' + t.name + '];'
 FROM sys.indexes i
 JOIN sys.index_columns ic ON i.object_id = ic.object_id AND i.index_id = ic.index_id
 JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
 JOIN sys.tables t ON i.object_id = t.object_id
-WHERE t.name = '{model._meta.db_table}' AND c.name = '{db_field}' AND i.is_unique = 1 AND i.is_primary_key = 0;
+JOIN sys.schemas s ON t.schema_id = s.schema_id
+WHERE t.name = '{model._meta.db_table}' AND c.name = '{db_field}' AND i.is_unique = 1 AND i.is_primary_key = 0{schema_filter};
 EXEC sp_executesql @sql;
 
 SET @sql = N'';
-SELECT @sql += N'ALTER TABLE [' + t.name + '] DROP CONSTRAINT [' + dc.name + '];'
+SELECT @sql += N'ALTER TABLE [' + s.name + '].[' + t.name + '] DROP CONSTRAINT [' + dc.name + '];'
 FROM sys.default_constraints dc
 JOIN sys.columns c ON dc.parent_object_id = c.object_id AND dc.parent_column_id = c.column_id
 JOIN sys.tables t ON dc.parent_object_id = t.object_id
-WHERE t.name = '{model._meta.db_table}' AND c.name = '{db_field}';
+JOIN sys.schemas s ON t.schema_id = s.schema_id
+WHERE t.name = '{model._meta.db_table}' AND c.name = '{db_field}'{schema_filter};
 EXEC sp_executesql @sql;
 """
         await self._run_sql(cleanup_sql)
         await self._run_sql(
-            self.DELETE_FIELD_TEMPLATE.format(table=model._meta.db_table, column=db_field)
+            self.DELETE_FIELD_TEMPLATE.format(table=qualified_table, column=db_field)
         )

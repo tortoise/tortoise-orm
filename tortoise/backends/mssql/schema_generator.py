@@ -5,24 +5,25 @@ from typing import TYPE_CHECKING, Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
+from tortoise.schema_quoting import MSSQLQuotingMixin
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.mssql import MSSQLClient
     from tortoise.models import Model
 
 
-class MSSQLSchemaGenerator(BaseSchemaGenerator):
+class MSSQLSchemaGenerator(MSSQLQuotingMixin, BaseSchemaGenerator):
     DIALECT = "mssql"
-    TABLE_CREATE_TEMPLATE = "CREATE TABLE [{table_name}] ({fields}){extra};"
+    TABLE_CREATE_TEMPLATE = "CREATE TABLE {table_name} ({fields}){extra};"
     FIELD_TEMPLATE = "[{name}] {type}{nullable}{unique}{primary}{default}"
-    INDEX_CREATE_TEMPLATE = "CREATE INDEX [{index_name}] ON [{table_name}] ({fields});"
+    INDEX_CREATE_TEMPLATE = "CREATE INDEX [{index_name}] ON {table_name} ({fields});"
     GENERATED_PK_TEMPLATE = "[{field_name}] {generated_sql}"
     FK_TEMPLATE = (
         "{constraint}FOREIGN KEY ([{db_column}])"
-        " REFERENCES [{table}] ([{field}]) ON DELETE {on_delete}"
+        " REFERENCES {table} ([{field}]) ON DELETE {on_delete}"
     )
     M2M_TABLE_TEMPLATE = (
-        "CREATE TABLE [{table_name}] (\n"
+        "CREATE TABLE {table_name} (\n"
         "    {backward_key} {backward_type} NOT NULL,\n"
         "    {forward_key} {forward_type} NOT NULL,\n"
         "    {backward_fk},\n"
@@ -35,8 +36,13 @@ class MSSQLSchemaGenerator(BaseSchemaGenerator):
         self._field_indexes = []  # type: list[str]
         self._foreign_keys = []  # type: list[str]
 
-    def quote(self, val: str) -> str:
-        return f"[{val}]"
+    def _get_schema_create_sql(self, schema: str, safe: bool) -> str:
+        if safe:
+            return (
+                f"IF NOT EXISTS (SELECT * FROM sys.schemas WHERE name = N'{schema}')"  # nosec B608
+                f" EXEC(N'CREATE SCHEMA [{schema}]');"
+            )
+        return f"CREATE SCHEMA [{schema}];"
 
     def _table_comment_generator(self, table: str, comment: str) -> str:
         return ""

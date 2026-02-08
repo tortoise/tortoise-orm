@@ -9,16 +9,22 @@ from tortoise.models import Model
 class BasePostgresSchemaEditor(BaseSchemaEditor):
     DIALECT = "postgres"
     INDEX_CREATE_TEMPLATE = (
-        'CREATE INDEX "{index_name}" ON "{table_name}" {index_type}({fields}){extra};'
+        'CREATE INDEX "{index_name}" ON {table_name} {index_type}({fields}){extra};'
     )
     UNIQUE_INDEX_CREATE_TEMPLATE = INDEX_CREATE_TEMPLATE.replace("INDEX", "UNIQUE INDEX")
-    TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE \"{table}\" IS '{comment}';"
-    COLUMN_COMMENT_TEMPLATE = 'COMMENT ON COLUMN "{table}"."{column}" IS \'{comment}\';'
+    TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE {table} IS '{comment}';"
+    COLUMN_COMMENT_TEMPLATE = "COMMENT ON COLUMN {table}.\"{column}\" IS '{comment}';"
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}'
 
     def __init__(self, connection, atomic: bool = True, collect_sql: bool = False) -> None:
         super().__init__(connection, atomic, collect_sql=collect_sql)
         self.comments_array: list[str] = []
+
+    async def create_schema(self, schema_name: str) -> None:
+        await self._run_sql(f"CREATE SCHEMA IF NOT EXISTS {self.quote(schema_name)};")
+
+    async def drop_schema(self, schema_name: str) -> None:
+        await self._run_sql(f"DROP SCHEMA IF EXISTS {self.quote(schema_name)} CASCADE;")
 
     @classmethod
     def _get_escape_translation_table(cls) -> list[str]:
@@ -66,10 +72,12 @@ class BasePostgresSchemaEditor(BaseSchemaEditor):
             extra=extra,
         )
 
-    def _get_unique_index_sql(self, table_name: str, field_names: list[str]) -> str:
+    def _get_unique_index_sql(
+        self, table_name: str, field_names: list[str], schema: str | None = None
+    ) -> str:
         return self.UNIQUE_INDEX_CREATE_TEMPLATE.format(
             index_name=self._generate_index_name_for_table("uidx", table_name, field_names),
-            table_name=table_name,
+            table_name=self._qualify_table_name(table_name, schema),
             index_type="",
             fields=", ".join([self.quote(f) for f in field_names]),
             extra="",

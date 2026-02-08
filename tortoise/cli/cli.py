@@ -389,8 +389,8 @@ async def shell(ctx: CLIContext) -> None:
     if provider is None:
         raise utils.CLIError(
             "No interactive shell available. Please install one of the following:\n"
-            "  - IPython (recommended): pip install tortoise-orm[ipython]\\n"
-            "  - ptpython: pip install tortoise-orm[ptpython]\\n"
+            "  - IPython (recommended): pip install tortoise-orm[ipython]\n"
+            "  - ptpython: pip install tortoise-orm[ptpython]\n"
             "  - Or install directly: pip install ipython (or ptpython)"
         )
 
@@ -573,11 +573,16 @@ async def upgrade(
 
 async def downgrade(
     ctx: CLIContext,
-    app_label: str,
+    app_label: str | None,
     migration: str | None,
     fake: bool,
     dry_run: bool,
 ) -> None:
+    if not app_label:
+        config = _load_config(ctx)
+        labels = sorted(config.apps) if config.apps else []
+        available = ", ".join(labels) if labels else "(none)"
+        raise utils.CLIUsageError(f"app_label is required. Available app labels: {available}")
     if not migration and "." in app_label:
         app_label, migration = app_label.split(".", 1)
     if migration:
@@ -626,11 +631,19 @@ async def heads(ctx: CLIContext, app_labels: tuple[str, ...]) -> None:
 
 async def sqlmigrate_cmd(
     ctx: CLIContext,
-    app_label: str,
-    migration_name: str,
+    app_label: str | None,
+    migration_name: str | None,
     backward: bool,
 ) -> None:
     config = _load_config(ctx)
+    if not app_label or not migration_name:
+        labels = sorted(config.apps) if config.apps else []
+        available = ", ".join(labels) if labels else "(none)"
+        if not app_label:
+            raise utils.CLIUsageError(f"app_label is required. Available app labels: {available}")
+        raise utils.CLIUsageError(
+            f"migration_name is required. Usage: sqlmigrate {app_label} <migration_name>"
+        )
     try:
         statements = await sqlmigrate_api(
             config=config,
@@ -743,7 +756,7 @@ def _add_upgrade_parser(subparsers: argparse._SubParsersAction) -> None:
 
 def _add_downgrade_parser(subparsers: argparse._SubParsersAction) -> None:
     downgrade_parser = subparsers.add_parser("downgrade", help="Unapply migrations.")
-    downgrade_parser.add_argument("app_label")
+    downgrade_parser.add_argument("app_label", nargs="?")
     downgrade_parser.add_argument("migration", nargs="?")
     downgrade_parser.add_argument(
         "--fake", action="store_true", help="Record migrations without executing SQL."
@@ -770,8 +783,8 @@ def _add_heads_parser(subparsers: argparse._SubParsersAction) -> None:
 
 def _add_sqlmigrate_parser(subparsers: argparse._SubParsersAction) -> None:
     sqlmigrate_parser = subparsers.add_parser("sqlmigrate", help="Print the SQL for a migration.")
-    sqlmigrate_parser.add_argument("app_label", help="App label.")
-    sqlmigrate_parser.add_argument("migration_name", help="Migration name.")
+    sqlmigrate_parser.add_argument("app_label", nargs="?", help="App label.")
+    sqlmigrate_parser.add_argument("migration_name", nargs="?", help="Migration name.")
     sqlmigrate_parser.add_argument(
         "--backward",
         action="store_true",

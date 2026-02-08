@@ -8,26 +8,26 @@ from tortoise.models import Model
 
 class OracleSchemaEditor(BaseSchemaEditor):
     DIALECT = "oracle"
-    TABLE_CREATE_TEMPLATE = 'CREATE TABLE "{table_name}" ({fields}){extra};'
+    TABLE_CREATE_TEMPLATE = "CREATE TABLE {table_name} ({fields}){extra};"
     FIELD_TEMPLATE = '"{name}" {type} {nullable} {unique}{primary}'
-    TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE \"{table}\" IS '{comment}';"
-    COLUMN_COMMENT_TEMPLATE = 'COMMENT ON COLUMN "{table}"."{column}" IS \'{comment}\';'
-    INDEX_CREATE_TEMPLATE = 'CREATE INDEX "{index_name}" ON "{table_name}" ({fields});'
+    TABLE_COMMENT_TEMPLATE = "COMMENT ON TABLE {table} IS '{comment}';"
+    COLUMN_COMMENT_TEMPLATE = "COMMENT ON COLUMN {table}.\"{column}\" IS '{comment}';"
+    INDEX_CREATE_TEMPLATE = 'CREATE INDEX "{index_name}" ON {table_name} ({fields});'
     GENERATED_PK_TEMPLATE = '"{field_name}" {generated_sql}'
     FK_TEMPLATE = (
         '{constraint}FOREIGN KEY ("{db_column}")'
-        ' REFERENCES "{table}" ("{field}") ON DELETE {on_delete}'
+        ' REFERENCES {table} ("{field}") ON DELETE {on_delete}'
     )
     M2M_TABLE_TEMPLATE = (
-        'CREATE TABLE "{table_name}" (\n'
+        "CREATE TABLE {table_name} (\n"
         '    "{backward_key}" {backward_type} NOT NULL,\n'
         '    "{forward_key}" {forward_type} NOT NULL,\n'
         "    {backward_fk},\n"
         "    {forward_fk}\n"
         "){extra};"
     )
-    DELETE_TABLE_TEMPLATE = 'DROP TABLE "{table}" CASCADE CONSTRAINTS'
-    DELETE_FIELD_TEMPLATE = 'ALTER TABLE "{table}" DROP COLUMN "{column}"'
+    DELETE_TABLE_TEMPLATE = "DROP TABLE {table} CASCADE CONSTRAINTS"
+    DELETE_FIELD_TEMPLATE = 'ALTER TABLE {table} DROP COLUMN "{column}"'
 
     def __init__(self, connection, atomic: bool = True, collect_sql: bool = False) -> None:
         super().__init__(connection, atomic, collect_sql=collect_sql)
@@ -90,22 +90,25 @@ class OracleSchemaEditor(BaseSchemaEditor):
         related_model = field.related_model
         if not related_model:
             return None
+        m2m_schema = model._meta.schema
         backward_fk = self._format_m2m_fk(
             field.through,
             field.backward_key,
-            model._meta.db_table,
+            self._qualify_table_name(model._meta.db_table, model._meta.schema),
             model._meta.db_pk_column,
         )
         forward_fk = self._format_m2m_fk(
             field.through,
             field.forward_key,
-            related_model._meta.db_table,
+            self._qualify_table_name(related_model._meta.db_table, related_model._meta.schema),
             related_model._meta.db_pk_column,
         )
         m2m_create_string = self.M2M_TABLE_TEMPLATE.format(
-            table_name=field.through,
-            backward_table=model._meta.db_table,
-            forward_table=related_model._meta.db_table,
+            table_name=self._qualify_table_name(field.through, m2m_schema),
+            backward_table=self._qualify_table_name(model._meta.db_table, model._meta.schema),
+            forward_table=self._qualify_table_name(
+                related_model._meta.db_table, related_model._meta.schema
+            ),
             backward_field=model._meta.db_pk_column,
             forward_field=related_model._meta.db_pk_column,
             backward_key=field.backward_key,
@@ -120,7 +123,7 @@ class OracleSchemaEditor(BaseSchemaEditor):
         m2m_create_string += self._post_table_hook()
         if field.unique:
             unique_index_sql = self._get_unique_index_sql(
-                field.through, [field.backward_key, field.forward_key]
+                field.through, [field.backward_key, field.forward_key], schema=m2m_schema
             )
             if unique_index_sql.endswith(";"):
                 m2m_create_string += "\n" + unique_index_sql

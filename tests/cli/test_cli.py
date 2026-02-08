@@ -400,7 +400,7 @@ TORTOISE_ORM = {
 
     result = await _run_cli(["-c", f"{module_name}.TORTOISE_ORM", "downgrade"])
     assert result.exit_code != 0
-    assert "required: app_label" in result.output
+    assert "app_label is required" in result.output
 
 
 @pytest.mark.asyncio

@@ -24,7 +24,9 @@ from tortoise.migrations.operations import (
     AlterField,
     AlterModelOptions,
     CreateModel,
+    CreateSchema,
     DeleteModel,
+    DropSchema,
     Operation,
     RemoveConstraint,
     RemoveField,
@@ -298,6 +300,10 @@ class MigrationWriter:
     def _format_operation(
         self, operation: Operation, imports: ImportManager, *, indent: str
     ) -> list[str]:
+        if isinstance(operation, CreateSchema):
+            return [f"{indent}ops.CreateSchema(schema_name={operation.schema_name!r}),"]
+        if isinstance(operation, DropSchema):
+            return [f"{indent}ops.DropSchema(schema_name={operation.schema_name!r}),"]
         if isinstance(operation, CreateModel):
             return self._format_create_model(operation, imports, indent=indent)
         if isinstance(operation, DeleteModel):

@@ -4,9 +4,10 @@ from typing import Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
+from tortoise.schema_quoting import SqliteQuotingMixin
 
 
-class SqliteSchemaGenerator(BaseSchemaGenerator):
+class SqliteSchemaGenerator(SqliteQuotingMixin, BaseSchemaGenerator):
     DIALECT = "sqlite"
 
     @classmethod

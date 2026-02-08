@@ -5,15 +5,16 @@ from typing import TYPE_CHECKING, Any
 
 from tortoise.backends.base.schema_generator import BaseSchemaGenerator
 from tortoise.converters import encoders
+from tortoise.schema_quoting import MySQLQuotingMixin
 
 if TYPE_CHECKING:  # pragma: nocoverage
     from tortoise.backends.mysql.client import MySQLClient
     from tortoise.models import Model
 
 
-class MySQLSchemaGenerator(BaseSchemaGenerator):
+class MySQLSchemaGenerator(MySQLQuotingMixin, BaseSchemaGenerator):
     DIALECT = "mysql"
-    TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}`{table_name}` ({fields}){extra}{comment};"
+    TABLE_CREATE_TEMPLATE = "CREATE TABLE {exists}{table_name} ({fields}){extra}{comment};"
     INDEX_CREATE_TEMPLATE = "{index_type}KEY `{index_name}` ({fields}){extra}"
     UNIQUE_CONSTRAINT_CREATE_TEMPLATE = "UNIQUE KEY `{index_name}` ({fields})"
     UNIQUE_INDEX_CREATE_TEMPLATE = UNIQUE_CONSTRAINT_CREATE_TEMPLATE
@@ -21,10 +22,10 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
     GENERATED_PK_TEMPLATE = "`{field_name}` {generated_sql}{comment}"
     FK_TEMPLATE = (
         "{constraint}FOREIGN KEY (`{db_column}`)"
-        " REFERENCES `{table}` (`{field}`) ON DELETE {on_delete}"
+        " REFERENCES {table} (`{field}`) ON DELETE {on_delete}"
     )
     M2M_TABLE_TEMPLATE = (
-        "CREATE TABLE {exists}`{table_name}` (\n"
+        "CREATE TABLE {exists}{table_name} (\n"
         "    `{backward_key}` {backward_type} NOT NULL,\n"
         "    `{forward_key}` {forward_type} NOT NULL,\n"
         "    {backward_fk},\n"
@@ -36,9 +37,6 @@ class MySQLSchemaGenerator(BaseSchemaGenerator):
         super().__init__(client)
         self._field_indexes = []  # type: list[str]
         self._foreign_keys = []  # type: list[str]
-
-    def quote(self, val: str) -> str:
-        return f"`{val}`"
 
     def _table_generate_extra(self, table: str) -> str:
         return (
