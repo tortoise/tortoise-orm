@@ -370,8 +370,6 @@ class Tortoise:
         :returns: The TortoiseContext that was initialized. For multiple asyncio.run()
             calls, capture this and use 'with ctx:' to maintain context.
         """
-        import sys
-
         from tortoise.context import TortoiseContext, _current_context
 
         # Get or create context - only use contextvar, not global fallback.
@@ -380,25 +378,11 @@ class Tortoise:
         # has global fallback enabled.
         ctx = _current_context.get()
         if ctx is None:
-            print(
-                "\n[Tortoise.init] No contextvar ctx, creating new TortoiseContext",
-                file=sys.stderr,
-            )
             ctx = TortoiseContext()
             ctx.__enter__()
         elif ctx.inited:
             # Re-initializing existing context
-            print(
-                f"\n[Tortoise.init] Re-init existing ctx={id(ctx)}, closing connections",
-                file=sys.stderr,
-            )
             await ctx.close_connections()
-        else:
-            print(
-                f"\n[Tortoise.init] Reusing existing uninited ctx={id(ctx)}",
-                file=sys.stderr,
-            )
-        sys.stderr.flush()
 
         # Validate config source - must provide exactly one
         if int(bool(config) + bool(config_file) + bool(db_url)) != 1:
