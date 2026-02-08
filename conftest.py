@@ -9,6 +9,7 @@ import os
 import pytest
 import pytest_asyncio
 
+import tortoise.context as _tortoise_context
 from tortoise.context import _current_context, tortoise_test_context
 
 
@@ -61,7 +62,16 @@ async def db_module():
         app_label="models",
         connection_label="models",
     ) as ctx:
-        yield ctx
+        # Set global context fallback so tests can find it even when the
+        # contextvar doesn't propagate across asyncio Task boundaries.
+        # _global_context is a plain module-level variable (not a contextvar),
+        # so it's immune to Task isolation issues.
+        old_global = _tortoise_context._global_context
+        _tortoise_context._global_context = ctx
+        try:
+            yield ctx
+        finally:
+            _tortoise_context._global_context = old_global
 
 
 @pytest_asyncio.fixture(scope="function")
