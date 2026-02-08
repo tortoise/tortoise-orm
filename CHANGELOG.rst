@@ -10,6 +10,13 @@ Changelog
 1.0
 ===
 
+1.0.1 (unreleased)
+------------------
+Fixed
+^^^^^
+- Type checking of None assignment to nullable fields (#2089)
+
+
 1.0.0
 -----
 
