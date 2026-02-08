@@ -20,10 +20,6 @@ Tortoise ORM is an easy-to-use ``asyncio`` ORM *(Object Relational Mapper)* insp
 
 You can find the docs at `Documentation <https://tortoise.github.io>`_
 
-.. note::
-   Tortoise ORM is a young project and breaking changes are to be expected.
-   We keep a `Changelog <https://tortoise.github.io/CHANGELOG.html>`_ and it will have possible breakage clearly documented.
-
 Tortoise ORM supports CPython 3.10 and later for SQLite, MySQL, PostgreSQL, Microsoft SQL Server, and Oracle.
 
 Why was Tortoise ORM built?
@@ -31,7 +27,7 @@ Why was Tortoise ORM built?
 
 Tortoise ORM was built to provide a lightweight, async-native Object-Relational Mapper for Python with a familiar Django-like API.
 
-Tortoise ORM performs well when compared to other Python ORMs. In `our benchmarks <https://github.com/tortoise/orm-benchmarks>`_, where we measure different read and write operations (rows/sec, more is better), it's trading places with Pony ORM:
+Tortoise ORM performs well when compared to other Python ORMs. Here are `our benchmarks <https://github.com/tortoise/orm-benchmarks>`_ on PostgreSQL 17, where we measure different read and write operations (rows/sec, more is better):
 
 .. image:: https://raw.githubusercontent.com/tortoise/tortoise-orm/develop/docs/ORM_Perf.png
     :target: https://github.com/tortoise/orm-benchmarks
@@ -191,9 +187,21 @@ Learn more at the `documentation site <https://tortoise.github.io>`_
 Migrations
 ==========
 
-Tortoise ORM ships with built-in migrations and a CLI. See the
-`migrations documentation <https://tortoise.github.io/migration.html>`_ for
-setup, commands, and examples.
+Tortoise ORM ships with a built-in migration framework and CLI.
+Autodetect model changes, generate migration files, and apply them:
+
+.. code-block:: shell
+
+    tortoise init                # create migration packages
+    tortoise makemigrations      # detect changes and generate migrations
+    tortoise migrate             # apply pending migrations
+    tortoise sqlmigrate app 001  # preview SQL without executing
+
+Migrations support ``RunPython`` and ``RunSQL`` for data migrations, offline migration generation,
+reversible operations, and multi-app and multi db-schema projects.
+
+See the `migrations documentation <https://tortoise.github.io/migration.html>`_ for
+full setup and examples.
 
 Contributing
 ============
