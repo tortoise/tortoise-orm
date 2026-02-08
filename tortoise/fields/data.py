@@ -391,7 +391,9 @@ class DatetimeField(Field[datetime.datetime], datetime.datetime):
             or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
         ):
             now = timezone.now()
-            setattr(instance, self.model_field_name, now)
+            # Convert to match what would be read from DB (apply timezone conversion)
+            now_python = self.to_python_value(now)
+            setattr(instance, self.model_field_name, now_python)
             return now  # type:ignore[return-value]
         if value is not None:
             if isinstance(value, datetime.datetime) and get_use_tz():
@@ -466,8 +468,12 @@ class TimeField(Field[datetime.time], datetime.time):
                 value = datetime.time.fromisoformat(value)
             if isinstance(value, datetime.timedelta):
                 return value
-            if timezone.is_naive(value):
-                value = value.replace(tzinfo=get_default_timezone())
+            if get_use_tz():
+                if timezone.is_naive(value):
+                    value = value.replace(tzinfo=get_default_timezone())
+            else:
+                if timezone.is_aware(value):
+                    value = value.replace(tzinfo=None)
         return value
 
     def to_db_value(
@@ -481,7 +487,9 @@ class TimeField(Field[datetime.time], datetime.time):
             or (self.auto_now_add and getattr(instance, self.model_field_name) is None)
         ):
             now = timezone.now().time()
-            setattr(instance, self.model_field_name, now)
+            # Convert to match what would be read from DB (apply timezone conversion)
+            now_python = self.to_python_value(now)
+            setattr(instance, self.model_field_name, now_python)
             return now
         if value is not None:
             if isinstance(value, datetime.timedelta):

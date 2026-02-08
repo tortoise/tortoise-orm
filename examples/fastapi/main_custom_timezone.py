@@ -14,7 +14,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # (main app already uses global fallback). Context is stored in app.state.
     async with register_orm(
         app,
-        use_tz=False,
+        use_tz=True,
         timezone="Asia/Shanghai",
         add_exception_handlers=True,
         _enable_global_fallback=False,
